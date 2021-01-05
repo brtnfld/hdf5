@@ -460,7 +460,7 @@ external_links(void)
     const char *filename_ext = "HDF5test_ext.h5";
     const char *group_path = "/Base/Block/Step";
     const char *link_name = "link"; /* external link */
-    char link_path[30];
+    char link_path[50];
 
     if (VERBOSE_MED)
         HDprintf("Check external links\n");
