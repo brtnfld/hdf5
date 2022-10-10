@@ -523,33 +523,40 @@ CONTAINS
 !! \param shhdr    Shared object header version number.
 !! \param hdferr   \fortran_error
 !!
+!! \deprecated Deprecated in favor of the function H5Fget_info_f()
+!!
 !! See C API: @ref herr_t H5Pget_version(hid_t plist_id, unsigned *boot , unsigned *freelist, unsigned *stab, unsigned *shhdr);
 !!
-  SUBROUTINE h5pget_version_f(prp_id, boot, freelist, &
-       stab, shhdr, hdferr)
+  SUBROUTINE h5pget_version_f(prp_id, boot, freelist, stab, shhdr, hdferr)
     IMPLICIT NONE
-    INTEGER(HID_T), INTENT(IN) :: prp_id
-    INTEGER, DIMENSION(:), INTENT(OUT) :: boot
-    INTEGER, DIMENSION(:), INTENT(OUT) :: freelist
-
-    INTEGER, DIMENSION(:), INTENT(OUT) :: stab
-    INTEGER, DIMENSION(:), INTENT(OUT) :: shhdr
+    INTEGER(HID_T), INTENT(IN)   :: prp_id
+    INTEGER, INTENT(OUT), TARGET :: boot
+    INTEGER, INTENT(OUT), TARGET :: freelist
+    INTEGER, INTENT(OUT), TARGET :: stab
+    INTEGER, INTENT(OUT), TARGET :: shhdr
     INTEGER, INTENT(OUT) :: hdferr
+    TYPE(C_PTR) :: fptr_boot, fptr_freelist, fptr_stab, fptr_shhdr
 
     INTERFACE
-       INTEGER FUNCTION h5pget_version_c(prp_id, boot, freelist, stab, shhdr) &
-            BIND(C,NAME='h5pget_version_c')
-         IMPORT :: HID_T
+       INTEGER FUNCTION h5pget_version(prp_id, boot, freelist, stab, shhdr) &
+            BIND(C,NAME='H5Pget_version')
+         IMPORT :: HID_T, C_PTR
          IMPLICIT NONE
-         INTEGER(HID_T), INTENT(IN) :: prp_id
-         INTEGER, DIMENSION(*), INTENT(OUT) :: boot
-         INTEGER, DIMENSION(*), INTENT(OUT) :: freelist
-         INTEGER, DIMENSION(*), INTENT(OUT) :: stab
-         INTEGER, DIMENSION(*), INTENT(OUT) :: shhdr
-       END FUNCTION h5pget_version_c
+         INTEGER(HID_T), VALUE :: prp_id
+         TYPE(C_PTR), VALUE :: boot
+         TYPE(C_PTR), VALUE :: freelist
+         TYPE(C_PTR), VALUE :: stab
+         TYPE(C_PTR), VALUE :: shhdr
+       END FUNCTION h5pget_version
     END INTERFACE
 
-    hdferr = h5pget_version_c(prp_id, boot, freelist, stab, shhdr)
+    fptr_boot     = C_LOC(boot)
+    fptr_freelist = C_LOC(freelist)
+    fptr_stab     = C_LOC(stab)
+    fptr_shhdr    = C_LOC(shhdr)
+
+    hdferr = h5pget_version(prp_id, fptr_boot, fptr_freelist, fptr_stab, fptr_shhdr)
+
   END SUBROUTINE h5pget_version_f
 
 !>

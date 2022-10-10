@@ -98,7 +98,7 @@ SUBROUTINE test_create(total_error)
   INTEGER, INTENT(INOUT) :: total_error
   INTEGER(HID_T) :: fapl
 
-  INTEGER(hid_t) :: file=-1, space=-1, dcpl=-1, comp_type_id=-1
+  INTEGER(hid_t) :: file=-1, space=-1, dcpl=-1, comp_type_id=-1, fcpl=-1
   INTEGER(hid_t) :: dset9=-1
   INTEGER(hsize_t), DIMENSION(1:5), PARAMETER :: cur_size = (/2, 8, 8, 4, 2/)
   INTEGER(hsize_t), DIMENSION(1:5), PARAMETER :: ch_size= (/1, 1, 1, 4, 1/)
@@ -113,12 +113,27 @@ SUBROUTINE test_create(total_error)
   REAL :: rfill
   REAL(KIND=dp) :: dpfill
   INTEGER :: low, high
+  INTEGER :: super=2, freelist=2, stab=2, shhdr=2
 
   !
   ! * Create a file.
   !
   CALL h5fcreate_f(filename,H5F_ACC_TRUNC_F,file,error)
   CALL check("h5fcreate_f", error, total_error)
+
+  CALL h5fget_create_plist_f(file, fcpl, error)
+  CALL check("h5fget_create_plist_f", error, total_error)
+
+  CALL h5pget_version_f(fcpl, super, freelist, stab, shhdr, error)
+  CALL check("h5pget_version_f", error, total_error)
+
+  CALL VERIFY("H5Pget_version_f", super, 0, total_error)
+  CALL VERIFY("H5Pget_version_f", freelist, 0, total_error)
+  CALL VERIFY("H5Pget_version_f", stab, 0, total_error)
+  CALL VERIFY("H5Pget_version_f", shhdr, 0, total_error)
+
+  CALL H5Pclose_f(fcpl,error)
+  CALL check("h5pclose_f", error, total_error)
 
   CALL h5screate_simple_f(5, cur_size, space, error, cur_size)
   CALL check("h5screate_simple_f", error, total_error)
