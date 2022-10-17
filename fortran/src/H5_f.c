@@ -528,6 +528,7 @@ h5init_flags_c(int_f *h5d_flags, size_t_f *h5d_size_flags, int_f *h5e_flags, hid
 #ifdef H5_HAVE_SUBFILING_VFD
     h5fd_flags[11] = (int_f)H5FD_SUBFILING_CURR_FAPL_VERSION;
     h5fd_flags[12] = (int_f)H5FD_SUBFILING_FAPL_MAGIC;
+    printf("C H5FD_SUBFILING_FAPL_MAGIC %lld %lld\n",(int_f)H5FD_IOC_FAPL_MAGIC, h5fd_flags[12]);
     h5fd_flags[13] = (int_f)H5FD_SUBFILING_DEFAULT_STRIPE_COUNT;
     h5fd_flags[14] = (int_f)H5FD_IOC_FAPL_MAGIC;
     h5fd_flags[15] = (int_f)H5FD_IOC_CURR_FAPL_VERSION;

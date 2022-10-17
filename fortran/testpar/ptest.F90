@@ -19,15 +19,16 @@ PROGRAM parallel_test
   USE HDF5
   USE MPI
   USE TH5_MISC
+  USE, INTRINSIC :: ISO_C_BINDING, ONLY : C_INT
 
   IMPLICIT NONE
 
-  INTEGER :: mpierror                             ! MPI hdferror flag
+  INTEGER(KIND=C_INT) :: mpierror                             ! MPI hdferror flag
   INTEGER :: hdferror                             ! HDF hdferror flag
   INTEGER :: ret_total_error = 0                  ! number of errors in subroutine
   INTEGER :: total_error = 0                      ! sum of the number of errors
-  INTEGER :: mpi_size                             ! number of processes in the group of communicator
-  INTEGER :: mpi_rank                             ! rank of the calling process in the communicator
+  INTEGER(KIND=C_INT) :: mpi_size                             ! number of processes in the group of communicator
+  INTEGER(KIND=C_INT) :: mpi_rank                             ! rank of the calling process in the communicator
   INTEGER :: length = 12000                       ! length of array
   INTEGER :: i,j, sum
   ! use collective MPI I/O
@@ -94,7 +95,7 @@ PROGRAM parallel_test
      ENDIF
   ELSE
      WRITE(*,*) 'Errors detected in process ', mpi_rank
-     CALL mpi_abort(MPI_COMM_WORLD, 1, mpierror)
+     CALL mpi_abort(MPI_COMM_WORLD, 1_C_INT, mpierror)
      IF (mpierror .NE. MPI_SUCCESS) THEN
         WRITE(*,*) "MPI_ABORT  *FAILED* Process = ", mpi_rank
      ENDIF

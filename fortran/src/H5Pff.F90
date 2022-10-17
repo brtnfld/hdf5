@@ -5022,17 +5022,17 @@ SUBROUTINE h5pset_attr_phase_change_f(ocpl_id, max_compact, min_dense, hdferr)
   SUBROUTINE h5pset_fapl_mpio_f(prp_id, comm, info, hdferr)
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: prp_id
-    INTEGER, INTENT(IN) :: comm
-    INTEGER, INTENT(IN) :: info
+    INTEGER(C_INT), INTENT(IN) :: comm
+    INTEGER(C_INT), INTENT(IN) :: info
     INTEGER, INTENT(OUT) :: hdferr
     INTERFACE
        INTEGER FUNCTION h5pset_fapl_mpio_c(prp_id, comm, info) &
             BIND(C,NAME='h5pset_fapl_mpio_c')
-         IMPORT :: HID_T
+         IMPORT :: HID_T, C_INT
          IMPLICIT NONE
          INTEGER(HID_T), INTENT(IN) :: prp_id
-         INTEGER       , INTENT(IN) :: comm
-         INTEGER       , INTENT(IN) :: info
+         INTEGER(C_INT), INTENT(IN) :: comm
+         INTEGER(C_INT), INTENT(IN) :: info
        END FUNCTION h5pset_fapl_mpio_c
     END INTERFACE
 
@@ -5055,17 +5055,17 @@ SUBROUTINE h5pset_attr_phase_change_f(ocpl_id, max_compact, min_dense, hdferr)
   SUBROUTINE h5pget_fapl_mpio_f(prp_id, comm, info, hdferr)
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: prp_id
-    INTEGER, INTENT(OUT) :: comm
-    INTEGER, INTENT(OUT) :: info
+    INTEGER(C_INT), INTENT(OUT) :: comm
+    INTEGER(C_INT), INTENT(OUT) :: info
     INTEGER, INTENT(OUT) :: hdferr
     INTERFACE
        INTEGER FUNCTION h5pget_fapl_mpio_c(prp_id, comm, info) &
             BIND(C,NAME='h5pget_fapl_mpio_c')
-         IMPORT :: HID_T
+         IMPORT :: HID_T, C_INT
          IMPLICIT NONE
          INTEGER(HID_T), INTENT(IN)  :: prp_id
-         INTEGER       , INTENT(OUT) :: comm
-         INTEGER       , INTENT(OUT) :: info
+         INTEGER(C_INT), INTENT(OUT) :: comm
+         INTEGER(C_INT), INTENT(OUT) :: info
        END FUNCTION h5pget_fapl_mpio_c
     END INTERFACE
 
@@ -5232,18 +5232,18 @@ SUBROUTINE h5pset_attr_phase_change_f(ocpl_id, max_compact, min_dense, hdferr)
   SUBROUTINE H5Pset_mpi_params_f(prp_id, comm, info, hdferr)
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN)  :: prp_id
-    INTEGER       , INTENT(IN)  :: comm
-    INTEGER       , INTENT(IN)  :: info
+    INTEGER(C_INT), INTENT(IN)  :: comm
+    INTEGER(C_INT), INTENT(IN)  :: info
     INTEGER       , INTENT(OUT) :: hdferr
 
     INTERFACE
        INTEGER FUNCTION h5pset_mpi_params_c(prp_id, comm, info) &
             BIND(C,NAME='h5pset_mpi_params_c')
-         IMPORT :: HID_T
+         IMPORT :: HID_T, C_INT
          IMPLICIT NONE
          INTEGER(HID_T) :: prp_id
-         INTEGER :: comm
-         INTEGER :: info
+         INTEGER(C_INT) :: comm
+         INTEGER(C_INT) :: info
        END FUNCTION H5pset_mpi_params_c
     END INTERFACE
 
@@ -5266,18 +5266,18 @@ SUBROUTINE h5pset_attr_phase_change_f(ocpl_id, max_compact, min_dense, hdferr)
   SUBROUTINE H5Pget_mpi_params_f(prp_id, comm, info, hdferr)
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN)  :: prp_id
-    INTEGER       , INTENT(OUT) :: comm
-    INTEGER       , INTENT(OUT) :: info
+    INTEGER(C_INT), INTENT(OUT) :: comm
+    INTEGER(C_INT), INTENT(OUT) :: info
     INTEGER       , INTENT(OUT) :: hdferr
 
     INTERFACE
        INTEGER FUNCTION h5pget_mpi_params_c(prp_id, comm, info) &
             BIND(C,NAME='h5pget_mpi_params_c')
-         IMPORT :: HID_T
+         IMPORT :: HID_T, C_INT
          IMPLICIT NONE
          INTEGER(HID_T) :: prp_id
-         INTEGER        :: comm
-         INTEGER        :: info
+         INTEGER(C_INT) :: comm
+         INTEGER(C_INT) :: info
        END FUNCTION H5pget_mpi_params_c
     END INTERFACE
 

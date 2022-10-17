@@ -20,14 +20,15 @@ SUBROUTINE hyper(length,do_collective,do_chunk, mpi_size, mpi_rank, nerrors)
   USE HDF5
   USE MPI
   USE TH5_MISC
+  USE, INTRINSIC :: ISO_C_BINDING, ONLY : C_INT
 
   IMPLICIT NONE
 
   INTEGER, INTENT(in) :: length                     ! array length
   LOGICAL, INTENT(in) :: do_collective              ! use collective I/O
   LOGICAL, INTENT(in) :: do_chunk                   ! use chunking
-  INTEGER, INTENT(in) :: mpi_size                   ! number of processes in the group of communicator
-  INTEGER, INTENT(in) :: mpi_rank                   ! rank of the calling process in the communicator
+  INTEGER(C_INT), INTENT(in) :: mpi_size                   ! number of processes in the group of communicator
+  INTEGER(C_INT), INTENT(in) :: mpi_rank                   ! rank of the calling process in the communicator
   INTEGER, INTENT(inout) :: nerrors                 ! number of errors
   INTEGER :: hdferror                               ! HDF hdferror flag
   INTEGER(hsize_t), DIMENSION(1) :: dims            ! dataset dimensions

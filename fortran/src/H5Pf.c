@@ -28,12 +28,12 @@
 #include <mpi.h>
 /* Support for C to Fortran translation in MPI */
 #ifndef H5_HAVE_MPI_MULTI_LANG_Comm
-#define MPI_Comm_c2f(comm) (int_f)(comm)
+#define MPI_Comm_c2f(comm) (int)(comm)
 #define MPI_Comm_f2c(comm) (MPI_Comm)(comm)
 #endif /*MPI Comm*/
 
 #ifndef H5_HAVE_MPI_MULTI_LANG_Info
-#define MPI_Info_c2f(info) (int_f)(info)
+#define MPI_Info_c2f(info) (int)(info)
 #define MPI_Info_f2c(info) (MPI_Info)(info)
 #endif /*MPI Info*/
 
@@ -5412,7 +5412,7 @@ h5pget_file_image_c(hid_t_f *fapl_id, void **buf_ptr, size_t_f *buf_len_ptr)
  * SOURCE
  */
 int_f
-h5pset_fapl_mpio_c(hid_t_f *prp_id, int_f *comm, int_f *info)
+h5pset_fapl_mpio_c(hid_t_f *prp_id, int *comm, int *info)
 /******/
 {
     int      ret_value = -1;
@@ -5452,7 +5452,7 @@ h5pset_fapl_mpio_c(hid_t_f *prp_id, int_f *comm, int_f *info)
  * SOURCE
  */
 int_f
-h5pget_fapl_mpio_c(hid_t_f *prp_id, int_f *comm, int_f *info)
+h5pget_fapl_mpio_c(hid_t_f *prp_id, int *comm, int *info)
 /******/
 {
     int      ret_value = -1;
@@ -5492,7 +5492,7 @@ h5pget_fapl_mpio_c(hid_t_f *prp_id, int_f *comm, int_f *info)
  * SOURCE
  */
 int_f
-h5pset_mpi_params_c(hid_t_f *prp_id, int_f *comm, int_f *info)
+h5pset_mpi_params_c(hid_t_f *prp_id, int *comm, int *info)
 /******/
 {
     int      ret_value = -1;
@@ -5532,7 +5532,7 @@ h5pset_mpi_params_c(hid_t_f *prp_id, int_f *comm, int_f *info)
  * SOURCE
  */
 int_f
-h5pget_mpi_params_c(hid_t_f *prp_id, int_f *comm, int_f *info)
+h5pget_mpi_params_c(hid_t_f *prp_id, int *comm, int *info)
 /******/
 {
     int      ret_value = -1;
