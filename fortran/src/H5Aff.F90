@@ -125,7 +125,7 @@ CONTAINS
 !>
 !! \ingroup FH5A
 !!
-!! \brief Creates a dataset as an attribute of a group, dataset, or named datatype
+!! \brief Creates a dataset as an attribute of a group, dataset, or named datatype.
 !!
 !! \param loc_id   Identifier of an object (group, dataset, or named datatype) attribute is attached to
 !! \param name     Attribute name
@@ -135,12 +135,16 @@ CONTAINS
 !! \param hdferr   \fortran_error
 !! \param acpl_id  Attribute creation property list identifier
 !! \param aapl_id  Attribute access property list identifier
+!! \param es_id    Event set identifier
 !!
 !! See C API: @ref H5Acreate2()
 !!
   SUBROUTINE h5acreate_f(loc_id, name, type_id, space_id, attr_id, &
-       hdferr, acpl_id, aapl_id )
+       hdferr, acpl_id, aapl_id, es_id, file, func, line)
+
     IMPLICIT NONE
+    INTEGER, PARAMETER :: CHR_MAX=256      ! longest file name allowed on linux, 63 for func names
+
     INTEGER(HID_T), INTENT(IN) :: loc_id
     CHARACTER(LEN=*), INTENT(IN) :: name
     INTEGER(HID_T), INTENT(IN) :: type_id
@@ -148,11 +152,20 @@ CONTAINS
     INTEGER(HID_T), INTENT(OUT) :: attr_id
     INTEGER, INTENT(OUT) :: hdferr
 
-    INTEGER(HID_T), OPTIONAL, INTENT(IN) :: acpl_id
-    INTEGER(HID_T), OPTIONAL, INTENT(IN) :: aapl_id
+    INTEGER(HID_T)  , OPTIONAL, INTENT(IN) :: acpl_id
+    INTEGER(HID_T)  , OPTIONAL, INTENT(IN) :: aapl_id
+    INTEGER(HID_T)  , OPTIONAL, INTENT(IN) :: es_id
+    CHARACTER(LEN=*), OPTIONAL, INTENT(IN) :: file
+    CHARACTER(LEN=*), OPTIONAL, INTENT(IN) :: func
+    INTEGER         , OPTIONAL, INTENT(IN) :: line
 
     INTEGER(HID_T) :: acpl_id_default
     INTEGER(HID_T) :: aapl_id_default
+    INTEGER(HID_T) :: es_id_default
+    CHARACTER(LEN=CHR_MAX,KIND=C_CHAR) :: file_default = C_NULL_CHAR
+    CHARACTER(LEN=CHR_MAX,KIND=C_CHAR) :: func_default = C_NULL_CHAR
+    INTEGER(KIND=C_INT)                :: line_default = 0
+
     CHARACTER(LEN=LEN_TRIM(name)+1,KIND=C_CHAR) :: c_name
     INTERFACE
        INTEGER(HID_T) FUNCTION H5Acreate2(loc_id, name, type_id, &
@@ -168,14 +181,46 @@ CONTAINS
        END FUNCTION H5Acreate2
     END INTERFACE
 
+    INTERFACE
+       INTEGER(HID_T) FUNCTION H5Acreate_async(file, func, line, loc_id, name, type_id, &
+            space_id, acpl_id_default, aapl_id_default, es_id) BIND(C,NAME='H5Acreate_async')
+         IMPORT :: C_CHAR, C_INT
+         IMPORT :: HID_T
+         CHARACTER(KIND=C_CHAR), DIMENSION(*) :: file
+         CHARACTER(KIND=C_CHAR), DIMENSION(*) :: func
+         INTEGER(C_INT), VALUE :: line
+         INTEGER(HID_T), VALUE :: loc_id
+         CHARACTER(KIND=C_CHAR), DIMENSION(*) :: name
+         INTEGER(HID_T), VALUE :: type_id
+         INTEGER(HID_T), VALUE :: space_id
+         INTEGER(HID_T), VALUE :: acpl_id_default
+         INTEGER(HID_T), VALUE :: aapl_id_default
+         INTEGER(HID_T), VALUE :: es_id
+       END FUNCTION H5Acreate_async
+    END INTERFACE
+
+    c_name = TRIM(name)//C_NULL_CHAR
+
     acpl_id_default = H5P_DEFAULT_F
     aapl_id_default = H5P_DEFAULT_F
     IF (PRESENT(acpl_id)) acpl_id_default = acpl_id
     IF (PRESENT(aapl_id)) aapl_id_default = aapl_id
+    IF (PRESENT(es_id)) THEN
+       es_id_default   = es_id
+       IF (PRESENT(file)) file_default = TRIM(file)//C_NULL_CHAR
+       IF (PRESENT(func)) func_default = TRIM(func)//C_NULL_CHAR
+       IF (PRESENT(line)) line_default = INT(line, C_INT)
 
-    c_name = TRIM(name)//C_NULL_CHAR
-    attr_id = h5acreate2(loc_id, c_name, type_id, space_id, &
-         acpl_id_default, aapl_id_default)
+       attr_id = h5acreate_async(file_default, func_default, line_default, &
+            loc_id, c_name, type_id, space_id, &
+            acpl_id_default, aapl_id_default, es_id)
+
+    ELSE
+
+       attr_id = h5acreate2(loc_id, c_name, type_id, space_id, &
+            acpl_id_default, aapl_id_default)
+
+    ENDIF
 
     hdferr = 0
     IF(attr_id.LT.0) hdferr = -1
@@ -185,10 +230,90 @@ CONTAINS
 !>
 !! \ingroup FH5A
 !!
+!! \brief asynchronously creates a dataset as an attribute of a group, dataset, or named datatype.
+!!
+!! \param loc_id   Identifier of an object (group, dataset, or named datatype) attribute is attached to
+!! \param name     Attribute name
+!! \param type_id  Attribute datatype identifier
+!! \param space_id Attribute dataspace identifier
+!! \param attr_id  Attribute identifier
+!! \param es_id    Event set identifier
+!! \param hdferr   \fortran_error
+!! \param acpl_id  Attribute creation property list identifier
+!! \param aapl_id  Attribute access property list identifier
+!!
+!! See C API: @ref H5Acreate_async()
+!!
+  SUBROUTINE h5acreate_aysnc_f(loc_id, name, type_id, space_id, attr_id, &
+       es_id, hdferr, acpl_id, aapl_id, file, func, line )
+    IMPLICIT NONE
+    INTEGER, PARAMETER :: CHR_MAX=256      ! longest file name allowed on linux, 63 for func names
+
+    INTEGER(HID_T), INTENT(IN) :: loc_id
+    CHARACTER(LEN=*), INTENT(IN) :: name
+    INTEGER(HID_T), INTENT(IN) :: type_id
+    INTEGER(HID_T), INTENT(IN) :: space_id
+    INTEGER(HID_T), INTENT(OUT) :: attr_id
+    INTEGER(HID_T), INTENT(IN) :: es_id
+    INTEGER, INTENT(OUT) :: hdferr
+
+    INTEGER(HID_T)  , INTENT(IN), OPTIONAL :: acpl_id
+    INTEGER(HID_T)  , INTENT(IN), OPTIONAL :: aapl_id
+    CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: file
+    CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: func
+    INTEGER         , INTENT(IN), OPTIONAL :: line
+
+    INTEGER(HID_T) :: acpl_id_default
+    INTEGER(HID_T) :: aapl_id_default
+    CHARACTER(LEN=CHR_MAX,KIND=C_CHAR) ::  file_default = C_NULL_CHAR
+    CHARACTER(LEN=CHR_MAX,KIND=C_CHAR) ::  func_default = C_NULL_CHAR
+    INTEGER(KIND=C_INT) :: line_default = 0
+    
+    CHARACTER(LEN=LEN_TRIM(name)+1,KIND=C_CHAR) :: c_name
+
+    INTERFACE
+       INTEGER(HID_T) FUNCTION H5Acreate_async(file, func, line, loc_id, name, type_id, &
+            space_id, acpl_id_default, aapl_id_default, es_id) BIND(C,NAME='H5Acreate_async')
+         IMPORT :: C_CHAR, C_INT
+         IMPORT :: HID_T
+         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: file
+         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: func
+         INTEGER(C_INT), INTENT(IN), VALUE :: line
+         INTEGER(HID_T), INTENT(IN), VALUE :: loc_id
+         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: name
+         INTEGER(HID_T), INTENT(IN), VALUE :: type_id
+         INTEGER(HID_T), INTENT(IN), VALUE :: space_id
+         INTEGER(HID_T), INTENT(IN), VALUE :: acpl_id_default
+         INTEGER(HID_T), INTENT(IN), VALUE :: aapl_id_default
+         INTEGER(HID_T), INTENT(IN), VALUE :: es_id
+       END FUNCTION H5Acreate_async
+    END INTERFACE
+
+    acpl_id_default = H5P_DEFAULT_F
+    aapl_id_default = H5P_DEFAULT_F
+    IF (PRESENT(acpl_id)) acpl_id_default = acpl_id
+    IF (PRESENT(aapl_id)) aapl_id_default = aapl_id
+    IF (PRESENT(file)) file_default = TRIM(file)//C_NULL_CHAR
+    IF (PRESENT(func)) func_default = TRIM(func)//C_NULL_CHAR
+    IF (PRESENT(line)) line_default = INT(line, C_INT)
+
+    c_name = TRIM(name)//C_NULL_CHAR
+
+    attr_id = h5acreate_async(file_default, func_default, line_default, &
+         loc_id, c_name, type_id, space_id, &
+         acpl_id_default, aapl_id_default, es_id)
+
+    hdferr = 0
+    IF(attr_id.LT.0) hdferr = -1
+
+  END SUBROUTINE h5acreate_aysnc_f
+
+!>
+!! \ingroup FH5A
+!!
 !! \brief Opens an attribute specified by name.
 !!
-!! \param obj_id  Identifier of a group, dataset, or named
-!!                       datatype attribute to be attached to
+!! \param obj_id  Identifier of a group, dataset, or named datatype attribute to be attached to
 !! \param name    Attribute name
 !! \param attr_id Attribute identifier
 !! \param hdferr  \fortran_error
