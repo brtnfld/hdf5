@@ -1267,6 +1267,100 @@ CONTAINS
 !>
 !! \ingroup FH5A
 !!
+!! \brief Creates an attribute attached to a specified object
+!!
+!! \param loc_id    Location or object identifier; may be dataset or group
+!! \param obj_name  Name, relative to loc_id, of object that attribute is to be attached to
+!! \param attr_name Attribute name
+!! \param type_id   Attribute datatype identifier
+!! \param space_id  Attribute dataspace identifier
+!! \param es_id     \es_id
+!! \param attr      An attribute identifier
+!! \param hdferr    \fortran_error
+!! \param acpl_id   Attribute creation property list identifier (Currently not used.)
+!! \param aapl_id   Attribute access property list identifier (Currently not used.)
+!! \param lapl_id   Link access property list
+!! \param file      Filename H5Acreate_by_name_async_f() is being called from
+!! \param func      Function name H5Acreate_by_name_async_f() is being called in
+!! \param line      Line number H5Acreate_by_name_async_f() is being called at
+!!
+!! See C API: @ref H5Acreate_by_name_async()
+!!
+  SUBROUTINE H5Acreate_by_name_async_f(loc_id, obj_name, attr_name, type_id, space_id, es_id, attr, hdferr, &
+       acpl_id, aapl_id, lapl_id, file, func, line)
+
+    IMPLICIT NONE
+    INTEGER(HID_T),   INTENT(IN)  :: loc_id
+    CHARACTER(LEN=*), INTENT(IN)  :: obj_name
+    CHARACTER(LEN=*), INTENT(IN)  :: attr_name
+    INTEGER(HID_T),   INTENT(IN)  :: type_id
+    INTEGER(HID_T),   INTENT(IN)  :: space_id
+    INTEGER(HID_T),   INTENT(IN)  :: es_id
+    INTEGER(HID_T),   INTENT(OUT) :: attr
+    INTEGER,          INTENT(OUT) :: hdferr
+
+    INTEGER(HID_T),   INTENT(IN), OPTIONAL :: acpl_id
+    INTEGER(HID_T),   INTENT(IN), OPTIONAL :: aapl_id
+    INTEGER(HID_T),   INTENT(IN), OPTIONAL :: lapl_id
+    CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: file
+    CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: func
+    INTEGER         , INTENT(IN), OPTIONAL :: line
+
+    INTEGER(HID_T) :: acpl_id_default
+    INTEGER(HID_T) :: aapl_id_default
+    INTEGER(HID_T) :: lapl_id_default
+    CHARACTER(LEN=LEN_TRIM(obj_name)+1,KIND=C_CHAR) :: c_obj_name
+    CHARACTER(LEN=LEN_TRIM(attr_name)+1,KIND=C_CHAR) :: c_attr_name
+
+    CHARACTER(LEN=CHR_MAX,KIND=C_CHAR) ::  file_default = C_NULL_CHAR
+    CHARACTER(LEN=CHR_MAX,KIND=C_CHAR) ::  func_default = C_NULL_CHAR
+    INTEGER(KIND=C_INT) :: line_default = 0
+
+    INTERFACE
+       INTEGER(HID_T) FUNCTION H5Acreate_by_name_async(file, func, line, loc_id, obj_name, attr_name, &
+            type_id, space_id, acpl_id_default, aapl_id_default, lapl_id_default, es_id) &
+            BIND(C,NAME='H5Acreate_by_name_async')
+         IMPORT :: C_CHAR, C_INT
+         IMPORT :: HID_T, SIZE_T
+         IMPLICIT NONE
+         CHARACTER(KIND=C_CHAR), DIMENSION(*) :: file
+         CHARACTER(KIND=C_CHAR), DIMENSION(*) :: func
+         INTEGER(C_INT), VALUE :: line
+         INTEGER(HID_T), VALUE :: loc_id
+         CHARACTER(KIND=C_CHAR), DIMENSION(*) :: obj_name
+         CHARACTER(KIND=C_CHAR), DIMENSION(*) :: attr_name
+         INTEGER(HID_T), VALUE :: type_id
+         INTEGER(HID_T), VALUE :: space_id
+         INTEGER(HID_T), VALUE :: acpl_id_default
+         INTEGER(HID_T), VALUE :: aapl_id_default
+         INTEGER(HID_T), VALUE :: lapl_id_default
+         INTEGER(HID_T), VALUE :: es_id
+       END FUNCTION H5Acreate_by_name_async
+    END INTERFACE
+
+    c_obj_name  = TRIM(obj_name)//C_NULL_CHAR
+    c_attr_name = TRIM(attr_name)//C_NULL_CHAR
+
+    acpl_id_default = H5P_DEFAULT_F
+    aapl_id_default = H5P_DEFAULT_F
+    lapl_id_default = H5P_DEFAULT_F
+
+    IF(PRESENT(acpl_id)) acpl_id_default = acpl_id
+    IF(PRESENT(aapl_id)) aapl_id_default = aapl_id
+    IF(PRESENT(lapl_id)) lapl_id_default = lapl_id
+
+    attr = H5Acreate_by_name_async(file_default, func_default, line_default, &
+         loc_id, c_obj_name, c_attr_name, &
+         type_id, space_id, acpl_id_default, aapl_id_default, lapl_id_default, es_id)
+
+    hdferr = 0
+    IF(attr.LT.0) hdferr = -1
+
+  END SUBROUTINE H5Acreate_by_name_async_f
+
+!>
+!! \ingroup FH5A
+!!
 !! \brief Determines whether an attribute with a given name exists on an object
 !!
 !! \param obj_id      Object identifier
@@ -1307,6 +1401,67 @@ CONTAINS
     IF(attr_exists_c.LT.0) hdferr = -1
 
   END SUBROUTINE H5Aexists_f
+
+!>
+!! \ingroup FH5A
+!!
+!! \brief Determines whether an attribute with a given name exists on an object
+!!
+!! \param obj_id      Object identifier
+!! \param attr_name   Attribute name
+!! \param es_id       \es_id
+!! \param attr_exists Attribute exists status
+!! \param hdferr      \fortran_error
+!! \param file        Filename H5Aexists_async_f() is being called from
+!! \param func        Function name H5Aexists_async_f() is being called in
+!! \param line        Line number H5Aexists_async_f() is being called at
+!!
+!! See C API: @ref H5Aexists_async()
+!!
+  SUBROUTINE H5Aexists_async_f(obj_id, attr_name, es_id, attr_exists, hdferr, file, func, line)
+    IMPLICIT NONE
+    INTEGER(HID_T)  , INTENT(IN) :: obj_id
+    CHARACTER(LEN=*), INTENT(IN) :: attr_name
+    INTEGER(HID_T)  , INTENT(IN) :: es_id
+    LOGICAL, INTENT(OUT) :: attr_exists
+    INTEGER, INTENT(OUT) :: hdferr
+    CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: file
+    CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: func
+    INTEGER         , INTENT(IN), OPTIONAL :: line
+
+    CHARACTER(LEN=LEN_TRIM(attr_name)+1,KIND=C_CHAR) :: c_attr_name
+    LOGICAL(C_BOOL) :: attr_exists_c = .FALSE.
+    CHARACTER(LEN=CHR_MAX,KIND=C_CHAR) ::  file_default = C_NULL_CHAR
+    CHARACTER(LEN=CHR_MAX,KIND=C_CHAR) ::  func_default = C_NULL_CHAR
+    INTEGER(KIND=C_INT) :: line_default = 0
+
+    INTERFACE
+       INTEGER(C_INT) FUNCTION H5Aexists_async(file, func, line, &
+            obj_id, attr_name, exists, es_id) BIND(C,NAME='H5Aexists_async')
+         IMPORT :: C_CHAR, C_INT, C_BOOL
+         IMPORT :: HID_T, SIZE_T
+         IMPLICIT NONE
+         CHARACTER(KIND=C_CHAR), DIMENSION(*) :: file
+         CHARACTER(KIND=C_CHAR), DIMENSION(*) :: func
+         INTEGER(C_INT), VALUE :: line
+         INTEGER(HID_T), VALUE :: obj_id
+         CHARACTER(KIND=C_CHAR), DIMENSION(*) :: attr_name
+         LOGICAL(C_BOOL), VALUE :: exists
+         INTEGER(HID_T), VALUE :: es_id
+       END FUNCTION H5Aexists_async
+    END INTERFACE
+
+    c_attr_name = TRIM(attr_name)//C_NULL_CHAR
+    IF (PRESENT(file)) file_default = TRIM(file)//C_NULL_CHAR
+    IF (PRESENT(func)) func_default = TRIM(func)//C_NULL_CHAR
+    IF (PRESENT(line)) line_default = INT(line, C_INT)
+
+    hdferr = H5Aexists_async(file_default, func_default, line_default, obj_id, c_attr_name, attr_exists_c, es_id)
+
+    attr_exists = .FALSE.
+    IF(attr_exists_c) attr_exists = .TRUE.
+
+  END SUBROUTINE H5Aexists_async_f
 
 !>
 !! \ingroup FH5A
