@@ -21,20 +21,26 @@
 
 MODULE H5ES
 
-  USE, INTRINSIC :: ISO_C_BINDING, ONLY : C_PTR, C_CHAR, C_INT64_T, C_BOOL
+  USE, INTRINSIC :: ISO_C_BINDING, ONLY : C_PTR, C_FUNPTR, C_CHAR, C_INT64_T, C_BOOL
   USE H5GLOBAL
   IMPLICIT NONE
 
-#if 0
 !> @brief H5ES_err_info_t derived type
-  TYPE :: H5ES_err_info_t
-
+  TYPE, BIND(C) :: H5ES_err_info_t
+#if 0
     CHARACTER(KIND=C_CHAR, LEN=:), POINTER :: api_name !< Name of HDF5 API routine called
     CHARACTER(KIND=C_CHAR, LEN=:), POINTER :: api_args !< "Argument string" for arguments to HDF5 API routine called
 
     ! Application info
     CHARACTER(KIND=C_CHAR, LEN=:), POINTER :: app_file_name !< Name of source file where the HDF5 API routine was called
     CHARACTER(KIND=C_CHAR, LEN=:), POINTER :: app_func_name !< Name of function where the HDF5 API routine was called
+#endif
+    CHARACTER(KIND=C_CHAR, LEN=1) :: api_name !< Name of HDF5 API routine called
+    CHARACTER(KIND=C_CHAR, LEN=1) :: api_args !< "Argument string" for arguments to HDF5 API routine called
+
+    ! Application info
+    CHARACTER(KIND=C_CHAR, LEN=1) :: app_file_name !< Name of source file where the HDF5 API routine was called
+    CHARACTER(KIND=C_CHAR, LEN=1) :: app_func_name !< Name of function where the HDF5 API routine was called
     INTEGER(C_INT)   :: app_line_num                        !< Line # of source file where the HDF5 API routine was called
 
     ! Operation info
@@ -44,7 +50,25 @@ MODULE H5ES
     INTEGER(C_INT64_T) :: op_exec_time  !< Execution time for operation (in ns)
 
   END TYPE H5ES_err_info_t
-#endif
+
+!> @brief H5ES_op_info_t derived type
+  TYPE, BIND(C) :: H5ES_op_info_t
+
+     TYPE(C_PTR) :: api_name !< Name of HDF5 API routine called
+     TYPE(C_PTR) ::  api_args !< "Argument string" for arguments to HDF5 API routine called
+
+     ! Application info
+     TYPE(C_PTR) :: app_file_name !< Name of source file where the HDF5 API routine was called
+     TYPE(C_PTR) :: app_func_name !< Name of function where the HDF5 API routine was called
+     INTEGER(C_INT)   :: app_line_num                        !< Line # of source file where the HDF5 API routine was called
+
+     ! Operation info
+     INTEGER(C_INT64_T) :: op_ins_count  !< Counter of operation's insertion into event set
+     INTEGER(C_INT64_T) :: op_ins_ts     !< Timestamp for when the operation was inserted into the event set
+     INTEGER(C_INT64_T) :: op_exec_ts    !< Timestamp for when the operation began execution
+     INTEGER(C_INT64_T) :: op_exec_time  !< Execution time for operation (in ns)
+
+  END TYPE H5ES_op_info_t
 
 CONTAINS
 
@@ -340,5 +364,73 @@ CONTAINS
     hdferr = INT(H5ESclose(es_id))
 
   END SUBROUTINE H5ESclose_f
+
+!>
+!! \ingroup FH5ES
+!!
+!! \brief Registers a callback to invoke when an operation completes within an event set.
+!!
+!! \param es_id  \es_id
+!! \param func	 The completion function to register
+!! \param ctx    User-specified information (context) to pass to func
+!! \param hdferr \fortran_error
+!!
+!! See C API: @ref H5ESregister_complete_func()
+!!
+  SUBROUTINE H5ESregister_complete_func_f(es_id, func, ctx, hdferr)
+
+    IMPLICIT NONE
+    INTEGER(HID_T), INTENT(IN)  :: es_id
+    TYPE(C_FUNPTR), INTENT(IN)  :: func
+    TYPE(C_PTR)   , INTENT(IN)  :: ctx
+    INTEGER       , INTENT(OUT) :: hdferr
+
+    INTERFACE
+       INTEGER(C_INT) FUNCTION H5ESregister_complete_func(es_id, func, ctx) BIND(C,NAME='H5ESregister_complete_func')
+         IMPORT :: C_INT, C_PTR, C_FUNPTR
+         IMPORT :: HID_T
+         INTEGER(HID_T), VALUE :: es_id
+         TYPE(C_FUNPTR), VALUE :: func
+         TYPE(C_PTR)   , VALUE :: ctx
+       END FUNCTION H5ESregister_complete_func
+    END INTERFACE
+
+    hdferr = INT(H5ESregister_complete_func(es_id, func, ctx))
+
+  END SUBROUTINE H5ESregister_complete_func_f
+
+!>
+!! \ingroup FH5ES
+!!
+!! \brief Registers a callback to invoke when a new operation is inserted into an event set.
+!!
+!! \param es_id  \es_id
+!! \param func	 The insert function to register
+!! \param ctx    User-specified information (context) to pass to func
+!! \param hdferr \fortran_error
+!!
+!! See C API: @ref H5ESregister_insert_func()
+!!
+  SUBROUTINE H5ESregister_insert_func_f(es_id, func, ctx, hdferr)
+
+    IMPLICIT NONE
+    INTEGER(HID_T), INTENT(IN)  :: es_id
+    TYPE(C_FUNPTR), INTENT(IN)  :: func
+    TYPE(C_PTR)   , INTENT(IN)  :: ctx
+    INTEGER       , INTENT(OUT) :: hdferr
+
+    INTERFACE
+       INTEGER(C_INT) FUNCTION H5ESregister_insert_func(es_id, func, ctx) BIND(C,NAME='H5ESregister_insert_func')
+         IMPORT :: C_INT, C_PTR, C_FUNPTR
+         IMPORT :: HID_T
+         INTEGER(HID_T), VALUE :: es_id
+         TYPE(C_FUNPTR), VALUE :: func
+         TYPE(C_PTR)   , VALUE :: ctx
+       END FUNCTION H5ESregister_insert_func
+    END INTERFACE
+
+    hdferr = INT(H5ESregister_insert_func(es_id, func, ctx))
+
+  END SUBROUTINE H5ESregister_insert_func_f
 
 END MODULE H5ES

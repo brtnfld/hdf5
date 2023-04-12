@@ -10,27 +10,35 @@
 !   help@hdfgroup.org.                                                        *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-MODULE posix
-  USE, INTRINSIC :: iso_c_binding, ONLY: C_INT, C_INT32_T
+! Tests async Fortran wrappers, it needs an async VOL.
+
+MODULE callbacks
+
+  USE HDF5 ! This module contains all necessary modules
+  USE, INTRINSIC :: ISO_C_BINDING
   IMPLICIT NONE
 
-  INTERFACE
+CONTAINS
 
-     ! sleep - suspend execution for second intervals
-     INTEGER(C_INT) FUNCTION c_sleep(seconds) BIND(C, name='sleep')
-       IMPORT :: C_INT
-       INTEGER(kind=C_INT), VALUE :: seconds
-     END FUNCTION c_sleep
+  INTEGER(KIND=C_INT) FUNCTION event_complete_func(op_info, status, err_stack, ctx) bind(C)
 
-     ! usleep - suspend execution for microsecond intervals
-     INTEGER(C_INT) FUNCTION c_usleep(usec) bind(c, name='usleep')
-       IMPORT :: C_INT, C_INT32_T
-       INTEGER(KIND=C_INT32_T), VALUE :: usec
-     END FUNCTION c_usleep
+    IMPLICIT NONE
 
-  END INTERFACE
+    TYPE(H5ES_err_info_t) :: op_info
+    INTEGER(C_INT),VALUE :: status
+    INTEGER(HID_T),VALUE :: err_stack
+    INTEGER :: ctx
 
-END MODULE posix
+   ! PRINT*,"event_complete_func",ctx, err_stack, status, H5ES_STATUS_IN_PROGRESS_F,H5ES_STATUS_SUCCEED_F
+
+  !  PRINT*,op_info%op_ins_count,op_info%op_ins_ts,op_info%op_exec_ts,op_info%op_exec_time
+    PRINT*,op_info%app_line_num
+  !  PRINT*,op_info%api_args    !op_info%app_func_name !,op_info%app_func_name
+
+  END FUNCTION event_complete_func
+
+END MODULE callbacks
+
 
 MODULE test_async_APIs
 
@@ -76,7 +84,10 @@ CONTAINS
 
   END FUNCTION liter_cb
 
+
   SUBROUTINE H5ES_tests(cleanup, total_error)
+
+    USE callbacks
     !
     ! Test H5ES routines
     !
@@ -93,8 +104,12 @@ CONTAINS
     INTEGER(HID_T)  :: es_id
     INTEGER(SIZE_T)    :: count
     INTEGER(C_INT64_T) :: counter
+    INTEGER(SIZE_T) :: num_not_canceled
     INTEGER(SIZE_T) :: num_in_progress
     LOGICAL         :: err_occurred
+    TYPE(C_FUNPTR) :: f1
+    TYPE(C_PTR) :: f2
+    INTEGER, TARGET :: ctx
 
     CALL h5pcreate_f(H5P_FILE_ACCESS_F, fapl_id, hdferror)
     CALL check("h5pcreate_f", hdferror, nerrors)
@@ -105,9 +120,45 @@ CONTAINS
     CALL H5EScreate_f(es_id, hdferror)
     CALL check("H5EScreate_f", hdferror, nerrors)
 
+    ctx = 42
+    f1 = C_FUNLOC(event_complete_func)
+    f2 = C_LOC(ctx)
+
+    CALL H5ESregister_complete_func_f(es_id,f1,f2,hdferror)
+    CALL check("H5ESregister_complete_func_f", hdferror, nerrors)
+
     CALL H5ESget_count_f(es_id, count, hdferror)
     CALL check("H5ESget_count_f", hdferror, nerrors)
     CALL VERIFY("H5ESget_count_f", count, 0_SIZE_T,total_error)
+#if 0
+    CALL H5Fcreate_async_f(filename, H5F_ACC_TRUNC_F, file_id, es_id, hdferror, access_prp = fapl_id)
+    CALL check("h5fcreate_f", hdferror, nerrors)
+
+    CALL H5EScancel_f(es_id, num_not_canceled, err_occurred, hdferror)
+    CALL check("H5EScancel_f", hdferror, nerrors)
+    CALL VERIFY("H5EScancel_f", num_not_canceled, 0_size_t, total_error)
+    CALL VERIFY("H5EScancel_f", err_occurred, .FALSE., total_error)
+
+#endif
+
+ !   CALL H5Fcreate_async_f(filename, H5F_ACC_TRUNC_F, file_id, es_id, hdferror, access_prp = fapl_id)
+ !   CALL check("h5fcreate_f", hdferror, nerrors)
+
+ !   CALL H5ESget_count_f(es_id, count, hdferror)
+ !   CALL check("H5ESget_count_f", hdferror, nerrors)
+ !   CALL VERIFY("H5ESget_count_f", count, 2_SIZE_T,total_error)
+
+ !   CALL H5ESget_op_counter_f(es_id, counter, hdferror)
+ !   CALL check("H5ESget_op_counter_f", hdferror, nerrors)
+ !   CALL VERIFY("H5ESget_op_counter_f", counter, 2_C_INT64_T, total_error)
+
+
+  !  CALL H5Fclose_async_f(file_id, es_id, hdferror)
+  !  CALL check("h5fclose_f", hdferror, nerrors)
+
+  !  CALL H5ESwait_f(es_id, H5ES_WAIT_FOREVER_F, num_in_progress, err_occurred, hdferror);
+  !  CALL check("H5ESwait_f", hdferror, nerrors)
+  !  CALL VERIFY("H5ESwait_f", err_occurred, .FALSE., total_error)
 
     CALL H5Fcreate_async_f(filename, H5F_ACC_TRUNC_F, file_id, es_id, hdferror, access_prp = fapl_id)
     CALL check("h5fcreate_f", hdferror, nerrors)
@@ -118,7 +169,7 @@ CONTAINS
 
     CALL H5ESget_op_counter_f(es_id, counter, hdferror)
     CALL check("H5ESget_op_counter_f", hdferror, nerrors)
-    CALL VERIFY("H5ESget_op_counter_f", counter, 2_C_INT64_T, total_error) ! FIXME: I think this is wrong, it should be 3
+    CALL VERIFY("H5ESget_op_counter_f", counter, 2_C_INT64_T, total_error)
 
     CALL H5Pclose_f(fapl_id, hdferror)
     CALL check("h5pclose_f", hdferror, nerrors)
@@ -1248,7 +1299,6 @@ PROGRAM async_test
   USE MPI
   USE TH5_MISC
   USE TH5_MISC_GEN
-  USE POSIX
   USE test_async_APIs
 
   IMPLICIT NONE
