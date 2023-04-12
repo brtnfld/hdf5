@@ -83,89 +83,6 @@
  * to the HGOTO_ERROR macro, which may not be appropriate in all cases.
  * If so, we will need versions of the insertion and deletion macros which
  * do not reference the sanity checking macros.
- *                            JRM - 5/5/04
- *
- * Changes:
- *
- *  - Removed the line:
- *
- *        ( ( (Size) == (entry_ptr)->size ) && ( (len) != 1 ) ) ||
- *
- *    from the H5C__DLL_PRE_REMOVE_SC macro.  With the addition of the
- *    epoch markers used in the age out based cache size reduction algorithm,
- *    this invariant need not hold, as the epoch markers are of size 0.
- *
- *    One could argue that I should have given the epoch markers a positive
- *    size, but this would break the index_size = LRU_list_size + pl_size
- *    + pel_size invariant.
- *
- *    Alternatively, I could pass the current decr_mode in to the macro,
- *    and just skip the check whenever epoch markers may be in use.
- *
- *    However, any size errors should be caught when the cache is flushed
- *    and destroyed.  Until we are tracking such an error, this should be
- *    good enough.
- *                                                     JRM - 12/9/04
- *
- *
- *  - In the H5C__DLL_PRE_INSERT_SC macro, replaced the lines:
- *
- *    ( ( (len) == 1 ) &&
- *      ( ( (head_ptr) != (tail_ptr) ) || ( (Size) <= 0 ) ||
- *        ( (head_ptr) == NULL ) || ( (head_ptr)->size != (Size) )
- *      )
- *    ) ||
- *
- *    with:
- *
- *    ( ( (len) == 1 ) &&
- *      ( ( (head_ptr) != (tail_ptr) ) ||
- *        ( (head_ptr) == NULL ) || ( (head_ptr)->size != (Size) )
- *      )
- *    ) ||
- *
- *    Epoch markers have size 0, so we can now have a non-empty list with
- *    zero size.  Hence the "( (Size) <= 0 )" clause cause false failures
- *    in the sanity check.  Since "Size" is typically a size_t, it can't
- *    take on negative values, and thus the revised clause "( (Size) < 0 )"
- *    caused compiler warnings.
- *                                                     JRM - 12/22/04
- *
- *  - In the H5C__DLL_SC macro, replaced the lines:
- *
- *    ( ( (len) == 1 ) &&
- *      ( ( (head_ptr) != (tail_ptr) ) || ( (cache_ptr)->size <= 0 ) ||
- *        ( (head_ptr) == NULL ) || ( (head_ptr)->size != (Size) )
- *      )
- *    ) ||
- *
- *    with
- *
- *    ( ( (len) == 1 ) &&
- *      ( ( (head_ptr) != (tail_ptr) ) ||
- *        ( (head_ptr) == NULL ) || ( (head_ptr)->size != (Size) )
- *      )
- *    ) ||
- *
- *    Epoch markers have size 0, so we can now have a non-empty list with
- *    zero size.  Hence the "( (Size) <= 0 )" clause cause false failures
- *    in the sanity check.  Since "Size" is typically a size_t, it can't
- *    take on negative values, and thus the revised clause "( (Size) < 0 )"
- *    caused compiler warnings.
- *                                                     JRM - 1/10/05
- *
- *  - Added the H5C__DLL_UPDATE_FOR_SIZE_CHANGE macro and the associated
- *    sanity checking macros.  These macro are used to update the size of
- *    a DLL when one of its entries changes size.
- *
- *                            JRM - 9/8/05
- *
- *  - Added macros supporting the index list -- a doubly liked list of
- *    all entries in the index.  This list is necessary to reduce the
- *    cost of visiting all entries in the cache, which was previously
- *    done via a scan of the hash table.
- *
- *                            JRM - 10/15/15
  *
  ****************************************************************************/
 
@@ -295,7 +212,7 @@ if ( ( (new_size) > (dll_size) ) ||                                            \
        (head_ptr) = (entry_ptr);                                             \
     }                                                                        \
     (len)++;                                                                 \
-    (Size) += entry_ptr->size;                                               \
+    (Size) += (entry_ptr)->size;                                             \
 } /* H5C__DLL_PREPEND() */
 
 #define H5C__DLL_REMOVE(entry_ptr, head_ptr, tail_ptr, len, Size, fail_val) \
@@ -319,10 +236,10 @@ if ( ( (new_size) > (dll_size) ) ||                                            \
        }                                                                    \
        else                                                                 \
           (entry_ptr)->next->prev = (entry_ptr)->prev;                      \
-       entry_ptr->next = NULL;                                              \
-       entry_ptr->prev = NULL;                                              \
+       (entry_ptr)->next = NULL;                                            \
+       (entry_ptr)->prev = NULL;                                            \
        (len)--;                                                             \
-       (Size) -= entry_ptr->size;                                           \
+       (Size) -= (entry_ptr)->size;                                         \
     }                                                                       \
 } /* H5C__DLL_REMOVE() */
 
@@ -608,61 +525,55 @@ if ( ( ( ( (head_ptr) == NULL ) || ( (tail_ptr) == NULL ) ) &&             \
  ***********************************************************************/
 
 #define H5C__UPDATE_CACHE_HIT_RATE_STATS(cache_ptr, hit) \
-        (cache_ptr->cache_accesses)++;                   \
-        if ( hit ) {                                     \
-            (cache_ptr->cache_hits)++;                   \
-        }                                                \
+    (cache_ptr)->cache_accesses++;                     \
+    if (hit)                                             \
+        (cache_ptr)->cache_hits++;
 
 #if H5C_COLLECT_CACHE_STATS
 
 #define H5C__UPDATE_MAX_INDEX_SIZE_STATS(cache_ptr)                        \
-        if ( (cache_ptr)->index_size > (cache_ptr)->max_index_size )       \
-            (cache_ptr)->max_index_size = (cache_ptr)->index_size;         \
-        if ( (cache_ptr)->clean_index_size >                               \
-                (cache_ptr)->max_clean_index_size )                        \
-            (cache_ptr)->max_clean_index_size =                            \
-                (cache_ptr)->clean_index_size;                             \
-        if ( (cache_ptr)->dirty_index_size >                               \
-                (cache_ptr)->max_dirty_index_size )                        \
-            (cache_ptr)->max_dirty_index_size =                            \
-                (cache_ptr)->dirty_index_size;
+    if ((cache_ptr)->index_size > (cache_ptr)->max_index_size)             \
+        (cache_ptr)->max_index_size = (cache_ptr)->index_size;             \
+    if ((cache_ptr)->clean_index_size > (cache_ptr)->max_clean_index_size) \
+        (cache_ptr)->max_clean_index_size = (cache_ptr)->clean_index_size; \
+    if ((cache_ptr)->dirty_index_size > (cache_ptr)->max_dirty_index_size) \
+        (cache_ptr)->max_dirty_index_size = (cache_ptr)->dirty_index_size;
 
 #define H5C__UPDATE_STATS_FOR_DIRTY_PIN(cache_ptr, entry_ptr) \
-    (((cache_ptr)->dirty_pins)[(entry_ptr)->type->id])++;
+    (cache_ptr)->dirty_pins[(entry_ptr)->type->id]++;
 
-#define H5C__UPDATE_STATS_FOR_UNPROTECT(cache_ptr)                   \
-        if ( (cache_ptr)->slist_len > (cache_ptr)->max_slist_len )   \
-        (cache_ptr)->max_slist_len = (cache_ptr)->slist_len;     \
-        if ( (cache_ptr)->slist_size > (cache_ptr)->max_slist_size ) \
-        (cache_ptr)->max_slist_size = (cache_ptr)->slist_size;   \
-    if ( (cache_ptr)->pel_len > (cache_ptr)->max_pel_len )       \
-        (cache_ptr)->max_pel_len = (cache_ptr)->pel_len;         \
-    if ( (cache_ptr)->pel_size > (cache_ptr)->max_pel_size )     \
+#define H5C__UPDATE_STATS_FOR_UNPROTECT(cache_ptr)             \
+    if ((cache_ptr)->slist_len > (cache_ptr)->max_slist_len)   \
+        (cache_ptr)->max_slist_len = (cache_ptr)->slist_len;   \
+    if ((cache_ptr)->slist_size > (cache_ptr)->max_slist_size) \
+        (cache_ptr)->max_slist_size = (cache_ptr)->slist_size; \
+    if ((cache_ptr)->pel_len > (cache_ptr)->max_pel_len)       \
+        (cache_ptr)->max_pel_len = (cache_ptr)->pel_len;       \
+    if ((cache_ptr)->pel_size > (cache_ptr)->max_pel_size)     \
         (cache_ptr)->max_pel_size = (cache_ptr)->pel_size;
 
-#define H5C__UPDATE_STATS_FOR_MOVE(cache_ptr, entry_ptr)               \
-    if ( cache_ptr->flush_in_progress )                            \
-            ((cache_ptr)->cache_flush_moves[(entry_ptr)->type->id])++; \
-        if ( entry_ptr->flush_in_progress )                            \
-            ((cache_ptr)->entry_flush_moves[(entry_ptr)->type->id])++; \
-    (((cache_ptr)->moves)[(entry_ptr)->type->id])++;               \
-        (cache_ptr)->entries_relocated_counter++;
+#define H5C__UPDATE_STATS_FOR_MOVE(cache_ptr, entry_ptr)                \
+    if ((cache_ptr)->flush_in_progress)                                 \
+        (cache_ptr)->cache_flush_moves[(entry_ptr)->type->id]++;      \
+    if ((entry_ptr)->flush_in_progress)                                 \
+        (cache_ptr)->entry_flush_moves[(entry_ptr)->type->id]++;      \
+    (cache_ptr)->moves[(entry_ptr)->type->id]++;                      \
+    (cache_ptr)->entries_relocated_counter++;
 
 #define H5C__UPDATE_STATS_FOR_ENTRY_SIZE_CHANGE(cache_ptr, entry_ptr, new_size)\
-    if ( cache_ptr->flush_in_progress )                                    \
-            ((cache_ptr)->cache_flush_size_changes[(entry_ptr)->type->id])++;  \
-        if ( entry_ptr->flush_in_progress )                                    \
-            ((cache_ptr)->entry_flush_size_changes[(entry_ptr)->type->id])++;  \
-    if ( (entry_ptr)->size < (new_size) ) {                                \
-        ((cache_ptr)->size_increases[(entry_ptr)->type->id])++;            \
-            H5C__UPDATE_MAX_INDEX_SIZE_STATS(cache_ptr)                        \
-            if ( (cache_ptr)->slist_size > (cache_ptr)->max_slist_size )       \
-                (cache_ptr)->max_slist_size = (cache_ptr)->slist_size;         \
-            if ( (cache_ptr)->pl_size > (cache_ptr)->max_pl_size )             \
-                (cache_ptr)->max_pl_size = (cache_ptr)->pl_size;               \
-    } else if ( (entry_ptr)->size > (new_size) ) {                         \
-        ((cache_ptr)->size_decreases[(entry_ptr)->type->id])++;            \
-    }
+    if ((cache_ptr)->flush_in_progress)                                    \
+        (cache_ptr)->cache_flush_size_changes[(entry_ptr)->type->id]++;  \
+    if ((entry_ptr)->flush_in_progress)                                    \
+        (cache_ptr)->entry_flush_size_changes[(entry_ptr)->type->id]++;  \
+    if ((entry_ptr)->size < (new_size)) {                                \
+        (cache_ptr)->size_increases[(entry_ptr)->type->id]++;            \
+        H5C__UPDATE_MAX_INDEX_SIZE_STATS(cache_ptr)                        \
+        if ((cache_ptr)->slist_size > (cache_ptr)->max_slist_size)       \
+            (cache_ptr)->max_slist_size = (cache_ptr)->slist_size;         \
+        if ((cache_ptr)->pl_size > (cache_ptr)->max_pl_size)             \
+            (cache_ptr)->max_pl_size = (cache_ptr)->pl_size;               \
+    } else if ((entry_ptr)->size > (new_size))                          \
+        (cache_ptr)->size_decreases[(entry_ptr)->type->id]++;
 
 #define H5C__UPDATE_STATS_FOR_HT_INSERTION(cache_ptr) \
     (cache_ptr)->total_ht_insertions++;
@@ -671,7 +582,7 @@ if ( ( ( ( (head_ptr) == NULL ) || ( (tail_ptr) == NULL ) ) &&             \
     (cache_ptr)->total_ht_deletions++;
 
 #define H5C__UPDATE_STATS_FOR_HT_SEARCH(cache_ptr, success, depth)  \
-    if ( success ) {                                            \
+    if (success) {                                              \
         (cache_ptr)->successful_ht_searches++;                  \
         (cache_ptr)->total_successful_ht_search_depth += depth; \
     } else {                                                    \
@@ -680,21 +591,19 @@ if ( ( ( ( (head_ptr) == NULL ) || ( (tail_ptr) == NULL ) ) &&             \
     }
 
 #define H5C__UPDATE_STATS_FOR_UNPIN(cache_ptr, entry_ptr) \
-    ((cache_ptr)->unpins)[(entry_ptr)->type->id]++;
+    (cache_ptr)->unpins[(entry_ptr)->type->id]++;
 
 #define H5C__UPDATE_STATS_FOR_SLIST_SCAN_RESTART(cache_ptr) \
-    ((cache_ptr)->slist_scan_restarts)++;
+    (cache_ptr)->slist_scan_restarts++;
 
 #define H5C__UPDATE_STATS_FOR_LRU_SCAN_RESTART(cache_ptr) \
-    ((cache_ptr)->LRU_scan_restarts)++;
+    (cache_ptr)->LRU_scan_restarts++;
 
 #define H5C__UPDATE_STATS_FOR_INDEX_SCAN_RESTART(cache_ptr) \
-    ((cache_ptr)->index_scan_restarts)++;
+    (cache_ptr)->index_scan_restarts++;
 
 #define H5C__UPDATE_STATS_FOR_CACHE_IMAGE_CREATE(cache_ptr) \
-{                                                           \
-    (cache_ptr)->images_created++;                          \
-}
+    (cache_ptr)->images_created++;
 
 #define H5C__UPDATE_STATS_FOR_CACHE_IMAGE_READ(cache_ptr)  \
 {                                                          \
@@ -714,14 +623,12 @@ if ( ( ( ( (head_ptr) == NULL ) || ( (tail_ptr) == NULL ) ) &&             \
 #define H5C__UPDATE_STATS_FOR_PREFETCH(cache_ptr, dirty) \
 {                                                        \
     (cache_ptr)->prefetches++;                           \
-    if ( dirty )                                         \
+    if (dirty)                                           \
         (cache_ptr)->dirty_prefetches++;                 \
 }
 
 #define H5C__UPDATE_STATS_FOR_PREFETCH_HIT(cache_ptr) \
-{                                                     \
-    (cache_ptr)->prefetch_hits++;                     \
-}
+    (cache_ptr)->prefetch_hits++;
 
 #if H5C_COLLECT_CACHE_ENTRY_STATS
 
@@ -735,113 +642,96 @@ if ( ( ( ( (head_ptr) == NULL ) || ( (tail_ptr) == NULL ) ) &&             \
 
 #define H5C__UPDATE_STATS_FOR_CLEAR(cache_ptr, entry_ptr)        \
 {                                                                \
-    (((cache_ptr)->clears)[(entry_ptr)->type->id])++;            \
+    (cache_ptr)->clears[(entry_ptr)->type->id]++;            \
     if((entry_ptr)->is_pinned)                                   \
-        (((cache_ptr)->pinned_clears)[(entry_ptr)->type->id])++; \
-    ((entry_ptr)->clears)++;                                     \
+        (cache_ptr)->pinned_clears[(entry_ptr)->type->id]++; \
+    (entry_ptr)->clears++;                                     \
 }
 
 #define H5C__UPDATE_STATS_FOR_FLUSH(cache_ptr, entry_ptr)         \
 {                                                                 \
-    (((cache_ptr)->flushes)[(entry_ptr)->type->id])++;            \
+    (cache_ptr)->flushes[(entry_ptr)->type->id]++;            \
     if((entry_ptr)->is_pinned)                                    \
-        (((cache_ptr)->pinned_flushes)[(entry_ptr)->type->id])++; \
-    ((entry_ptr)->flushes)++;                                     \
+        (cache_ptr)->pinned_flushes[(entry_ptr)->type->id]++; \
+    (entry_ptr)->flushes++;                                     \
 }
 
 #define H5C__UPDATE_STATS_FOR_EVICTION(cache_ptr, entry_ptr, take_ownership) \
 {                                                                            \
-    if ( take_ownership )                                                    \
-        (((cache_ptr)->take_ownerships)[(entry_ptr)->type->id])++;           \
+    if (take_ownership)                                                    \
+        (cache_ptr)->take_ownerships[(entry_ptr)->type->id]++;           \
     else                                                                     \
-        (((cache_ptr)->evictions)[(entry_ptr)->type->id])++;                 \
-    if ( (entry_ptr)->accesses >                                         \
-            ((cache_ptr)->max_accesses)[(entry_ptr)->type->id] )         \
-        ((cache_ptr)->max_accesses)[(entry_ptr)->type->id] =             \
-            (entry_ptr)->accesses;                                       \
-    if ( (entry_ptr)->accesses <                                         \
-            ((cache_ptr)->min_accesses)[(entry_ptr)->type->id] )         \
-        ((cache_ptr)->min_accesses)[(entry_ptr)->type->id] =             \
-            (entry_ptr)->accesses;                                       \
-    if ( (entry_ptr)->clears >                                           \
-             ((cache_ptr)->max_clears)[(entry_ptr)->type->id] )          \
-            ((cache_ptr)->max_clears)[(entry_ptr)->type->id]             \
-                 = (entry_ptr)->clears;                                  \
-    if ( (entry_ptr)->flushes >                                          \
-            ((cache_ptr)->max_flushes)[(entry_ptr)->type->id] )          \
-        ((cache_ptr)->max_flushes)[(entry_ptr)->type->id]                \
-            = (entry_ptr)->flushes;                                      \
-    if ( (entry_ptr)->size >                                             \
-            ((cache_ptr)->max_size)[(entry_ptr)->type->id] )             \
-        ((cache_ptr)->max_size)[(entry_ptr)->type->id]                   \
-            = (entry_ptr)->size;                                         \
-    if ( (entry_ptr)->pins >                                             \
-            ((cache_ptr)->max_pins)[(entry_ptr)->type->id] )             \
-        ((cache_ptr)->max_pins)[(entry_ptr)->type->id]                   \
-            = (entry_ptr)->pins;                                         \
+        (cache_ptr)->evictions[(entry_ptr)->type->id]++;                 \
+    if ((entry_ptr)->accesses > (cache_ptr)->max_accesses[(entry_ptr)->type->id]) \
+        (cache_ptr)->max_accesses[(entry_ptr)->type->id] = (entry_ptr)->accesses; \
+    if ((entry_ptr)->accesses < (cache_ptr)->min_accesses[(entry_ptr)->type->id]) \
+        (cache_ptr)->min_accesses[(entry_ptr)->type->id] = (entry_ptr)->accesses; \
+    if ((entry_ptr)->clears > (cache_ptr)->max_clears[(entry_ptr)->type->id]) \
+        (cache_ptr)->max_clears[(entry_ptr)->type->id] = (entry_ptr)->clears; \
+    if ((entry_ptr)->flushes > (cache_ptr)->max_flushes[(entry_ptr)->type->id]) \
+        (cache_ptr)->max_flushes[(entry_ptr)->type->id] = (entry_ptr)->flushes; \
+    if ((entry_ptr)->size > (cache_ptr)->max_size[(entry_ptr)->type->id]) \
+        (cache_ptr)->max_size[(entry_ptr)->type->id] = (entry_ptr)->size; \
+    if ((entry_ptr)->pins > (cache_ptr)->max_pins[(entry_ptr)->type->id]) \
+        (cache_ptr)->max_pins[(entry_ptr)->type->id] = (entry_ptr)->pins; \
 }
 
 #define H5C__UPDATE_STATS_FOR_INSERTION(cache_ptr, entry_ptr)        \
 {                                                                    \
-    (((cache_ptr)->insertions)[(entry_ptr)->type->id])++;            \
-    if ( (entry_ptr)->is_pinned ) {                                  \
-        (((cache_ptr)->pinned_insertions)[(entry_ptr)->type->id])++; \
-        ((cache_ptr)->pins)[(entry_ptr)->type->id]++;                \
+    (cache_ptr)->insertions[(entry_ptr)->type->id]++;            \
+    if ((entry_ptr)->is_pinned) {                                  \
+        (cache_ptr)->pinned_insertions[(entry_ptr)->type->id]++; \
+        (cache_ptr)->pins[(entry_ptr)->type->id]++;                \
         (entry_ptr)->pins++;                                         \
-        if ( (cache_ptr)->pel_len > (cache_ptr)->max_pel_len )       \
+        if ((cache_ptr)->pel_len > (cache_ptr)->max_pel_len)       \
             (cache_ptr)->max_pel_len = (cache_ptr)->pel_len;         \
-        if ( (cache_ptr)->pel_size > (cache_ptr)->max_pel_size )     \
+        if ((cache_ptr)->pel_size > (cache_ptr)->max_pel_size)     \
             (cache_ptr)->max_pel_size = (cache_ptr)->pel_size;       \
     }                                                                \
-    if ( (cache_ptr)->index_len > (cache_ptr)->max_index_len )       \
+    if ((cache_ptr)->index_len > (cache_ptr)->max_index_len)       \
         (cache_ptr)->max_index_len = (cache_ptr)->index_len;         \
     H5C__UPDATE_MAX_INDEX_SIZE_STATS(cache_ptr)                      \
-    if ( (cache_ptr)->slist_len > (cache_ptr)->max_slist_len )       \
+    if ((cache_ptr)->slist_len > (cache_ptr)->max_slist_len)       \
         (cache_ptr)->max_slist_len = (cache_ptr)->slist_len;         \
-    if ( (cache_ptr)->slist_size > (cache_ptr)->max_slist_size )     \
+    if ((cache_ptr)->slist_size > (cache_ptr)->max_slist_size)     \
         (cache_ptr)->max_slist_size = (cache_ptr)->slist_size;       \
-    if ( (entry_ptr)->size >                                         \
-            ((cache_ptr)->max_size)[(entry_ptr)->type->id] )         \
-        ((cache_ptr)->max_size)[(entry_ptr)->type->id]               \
-             = (entry_ptr)->size;                                    \
-    cache_ptr->entries_inserted_counter++;                           \
+    if ((entry_ptr)->size > (cache_ptr)->max_size[(entry_ptr)->type->id]) \
+        (cache_ptr)->max_size[(entry_ptr)->type->id] = (entry_ptr)->size; \
+    (cache_ptr)->entries_inserted_counter++;                           \
 }
 
 #define H5C__UPDATE_STATS_FOR_PROTECT(cache_ptr, entry_ptr, hit)            \
 {                                                                           \
-    if ( hit )                                                              \
-        ((cache_ptr)->hits)[(entry_ptr)->type->id]++;                       \
+    if (hit)                                                              \
+        (cache_ptr)->hits[(entry_ptr)->type->id]++;                       \
     else                                                                    \
-        ((cache_ptr)->misses)[(entry_ptr)->type->id]++;                     \
-    if ( ! ((entry_ptr)->is_read_only) ) {                                  \
-        ((cache_ptr)->write_protects)[(entry_ptr)->type->id]++;             \
-    } else {                                                                \
-        ((cache_ptr)->read_protects)[(entry_ptr)->type->id]++;              \
-        if ( ((entry_ptr)->ro_ref_count) >                                  \
-                ((cache_ptr)->max_read_protects)[(entry_ptr)->type->id] )   \
-            ((cache_ptr)->max_read_protects)[(entry_ptr)->type->id] =       \
-                    ((entry_ptr)->ro_ref_count);                            \
+        (cache_ptr)->misses[(entry_ptr)->type->id]++;                     \
+    if (!(entry_ptr)->is_read_only)                                   \
+        (cache_ptr)->write_protects[(entry_ptr)->type->id]++;             \
+    else {                                                                \
+        (cache_ptr)->read_protects[(entry_ptr)->type->id]++;              \
+        if ((entry_ptr)->ro_ref_count > (cache_ptr)->max_read_protects[(entry_ptr)->type->id])   \
+            (cache_ptr)->max_read_protects[(entry_ptr)->type->id] = (entry_ptr)->ro_ref_count;                            \
     }                                                                       \
-    if ( (cache_ptr)->index_len > (cache_ptr)->max_index_len )              \
+    if ((cache_ptr)->index_len > (cache_ptr)->max_index_len)              \
         (cache_ptr)->max_index_len = (cache_ptr)->index_len;                \
     H5C__UPDATE_MAX_INDEX_SIZE_STATS(cache_ptr)                             \
-    if ( (cache_ptr)->pl_len > (cache_ptr)->max_pl_len )                    \
+    if ((cache_ptr)->pl_len > (cache_ptr)->max_pl_len)                    \
         (cache_ptr)->max_pl_len = (cache_ptr)->pl_len;                      \
-    if ( (cache_ptr)->pl_size > (cache_ptr)->max_pl_size )                  \
+    if ((cache_ptr)->pl_size > (cache_ptr)->max_pl_size)                  \
         (cache_ptr)->max_pl_size = (cache_ptr)->pl_size;                    \
-    if ( (entry_ptr)->size >                                                \
-            ((cache_ptr)->max_size)[(entry_ptr)->type->id] )                \
-        ((cache_ptr)->max_size)[(entry_ptr)->type->id] = (entry_ptr)->size; \
-    ((entry_ptr)->accesses)++;                                              \
+    if ((entry_ptr)->size > (cache_ptr)->max_size[(entry_ptr)->type->id])   \
+        (cache_ptr)->max_size[(entry_ptr)->type->id] = (entry_ptr)->size; \
+    (entry_ptr)->accesses++;                                              \
 }
 
 #define H5C__UPDATE_STATS_FOR_PIN(cache_ptr, entry_ptr)      \
 {                                                            \
-    ((cache_ptr)->pins)[(entry_ptr)->type->id]++;            \
+    (cache_ptr)->pins[(entry_ptr)->type->id]++;            \
     (entry_ptr)->pins++;                                     \
-    if ( (cache_ptr)->pel_len > (cache_ptr)->max_pel_len )   \
+    if ((cache_ptr)->pel_len > (cache_ptr)->max_pel_len)   \
         (cache_ptr)->max_pel_len = (cache_ptr)->pel_len;     \
-    if ( (cache_ptr)->pel_size > (cache_ptr)->max_pel_size ) \
+    if ((cache_ptr)->pel_size > (cache_ptr)->max_pel_size) \
         (cache_ptr)->max_pel_size = (cache_ptr)->pel_size;   \
 }
 
@@ -851,24 +741,24 @@ if ( ( ( ( (head_ptr) == NULL ) || ( (tail_ptr) == NULL ) ) &&             \
 
 #define H5C__UPDATE_STATS_FOR_CLEAR(cache_ptr, entry_ptr)         \
 {                                                                 \
-    (((cache_ptr)->clears)[(entry_ptr)->type->id])++;             \
+    (cache_ptr)->clears[(entry_ptr)->type->id]++;             \
     if((entry_ptr)->is_pinned)                                    \
-        (((cache_ptr)->pinned_clears)[(entry_ptr)->type->id])++;  \
+        (cache_ptr)->pinned_clears[(entry_ptr)->type->id]++;  \
 }
 
 #define H5C__UPDATE_STATS_FOR_FLUSH(cache_ptr, entry_ptr)         \
 {                                                                 \
-    (((cache_ptr)->flushes)[(entry_ptr)->type->id])++;            \
-    if ( (entry_ptr)->is_pinned )                                 \
-        (((cache_ptr)->pinned_flushes)[(entry_ptr)->type->id])++; \
+    (cache_ptr)->flushes[(entry_ptr)->type->id]++;            \
+    if ((entry_ptr)->is_pinned)                                 \
+        (cache_ptr)->pinned_flushes[(entry_ptr)->type->id]++; \
 }
 
 #define H5C__UPDATE_STATS_FOR_EVICTION(cache_ptr, entry_ptr, take_ownership) \
 {                                                                            \
-    if ( take_ownership )                                                    \
-        (((cache_ptr)->take_ownerships)[(entry_ptr)->type->id])++;           \
+    if (take_ownership)                                                    \
+        (cache_ptr)->take_ownerships[(entry_ptr)->type->id]++;           \
     else                                                                     \
-        (((cache_ptr)->evictions)[(entry_ptr)->type->id])++;                 \
+        (cache_ptr)->evictions[(entry_ptr)->type->id]++;                 \
 }
 
 #define H5C__UPDATE_STATS_FOR_INSERTION(cache_ptr, entry_ptr)        \
@@ -889,7 +779,7 @@ if ( ( ( ( (head_ptr) == NULL ) || ( (tail_ptr) == NULL ) ) &&             \
         (cache_ptr)->max_slist_len = (cache_ptr)->slist_len;         \
     if ( (cache_ptr)->slist_size > (cache_ptr)->max_slist_size )     \
         (cache_ptr)->max_slist_size = (cache_ptr)->slist_size;       \
-    cache_ptr->entries_inserted_counter++;                           \
+    (cache_ptr)->entries_inserted_counter++;                           \
 }
 
 #define H5C__UPDATE_STATS_FOR_PROTECT(cache_ptr, entry_ptr, hit)            \
@@ -938,7 +828,7 @@ if ( ( ( ( (head_ptr) == NULL ) || ( (tail_ptr) == NULL ) ) &&             \
 #define H5C__UPDATE_STATS_FOR_HT_DELETION(cache_ptr)
 #define H5C__UPDATE_STATS_FOR_HT_SEARCH(cache_ptr, success, depth)
 #define H5C__UPDATE_STATS_FOR_INSERTION(cache_ptr, entry_ptr)
-#define H5C__UPDATE_STATS_FOR_CLEAR(cache_ptr, entry_ptr)
+#define H5C__UPDATE_STATS_FOR_CLEAR(cache_ptr, entry_ptr)                       {}
 #define H5C__UPDATE_STATS_FOR_FLUSH(cache_ptr, entry_ptr)
 #define H5C__UPDATE_STATS_FOR_EVICTION(cache_ptr, entry_ptr, take_ownership)
 #define H5C__UPDATE_STATS_FOR_PROTECT(cache_ptr, entry_ptr, hit)
@@ -965,28 +855,6 @@ if ( ( ( ( (head_ptr) == NULL ) || ( (tail_ptr) == NULL ) ) &&             \
  *
  * When modifying these macros, remember to modify the similar macros
  * in tst/cache.c
- *
- * Changes:
- *
- *   - Updated existing index macros and sanity check macros to maintain
- *     the clean_index_size and dirty_index_size fields of H5C_t.  Also
- *     added macros to allow us to track entry cleans and dirties.
- *
- *                             JRM -- 11/5/08
- *
- *   - Updated existing index macros and sanity check macros to maintain
- *     the index_ring_len, index_ring_size, clean_index_ring_size, and
- *     dirty_index_ring_size fields of H5C_t.
- *
- *                        JRM -- 9/1/15
- *
- *   - Updated existing index macros and sanity checks macros to
- *     maintain an doubly linked list of all entries in the index.
- *     This is necessary to reduce the computational cost of visiting
- *     all entries in the index, which used to be done by scanning
- *     the hash table.
- *
- *                                              JRM -- 10/15/15
  *
  ***********************************************************************/
 
@@ -1343,16 +1211,16 @@ if ( ( (cache_ptr)->index_size !=                                           \
     ((cache_ptr)->index)[k] = (entry_ptr);                                   \
     (cache_ptr)->index_len++;                                                \
     (cache_ptr)->index_size += (entry_ptr)->size;                            \
-    ((cache_ptr)->index_ring_len[entry_ptr->ring])++;                        \
-    ((cache_ptr)->index_ring_size[entry_ptr->ring])                          \
+    ((cache_ptr)->index_ring_len[(entry_ptr)->ring])++;                        \
+    ((cache_ptr)->index_ring_size[(entry_ptr)->ring])                          \
             += (entry_ptr)->size;                                            \
     if((entry_ptr)->is_dirty) {                                              \
         (cache_ptr)->dirty_index_size += (entry_ptr)->size;                  \
-        ((cache_ptr)->dirty_index_ring_size[entry_ptr->ring])                \
+        ((cache_ptr)->dirty_index_ring_size[(entry_ptr)->ring])                \
                 += (entry_ptr)->size;                                        \
     } else {                                                                 \
         (cache_ptr)->clean_index_size += (entry_ptr)->size;                  \
-        ((cache_ptr)->clean_index_ring_size[entry_ptr->ring])                \
+        ((cache_ptr)->clean_index_ring_size[(entry_ptr)->ring])                \
                 += (entry_ptr)->size;                                        \
     }                                                                        \
     if((entry_ptr)->flush_me_last) {                                         \
@@ -1381,16 +1249,16 @@ if ( ( (cache_ptr)->index_size !=                                           \
     (entry_ptr)->ht_prev = NULL;                                             \
     (cache_ptr)->index_len--;                                                \
     (cache_ptr)->index_size -= (entry_ptr)->size;                            \
-    ((cache_ptr)->index_ring_len[entry_ptr->ring])--;                        \
-    ((cache_ptr)->index_ring_size[entry_ptr->ring])                          \
+    ((cache_ptr)->index_ring_len[(entry_ptr)->ring])--;                        \
+    ((cache_ptr)->index_ring_size[(entry_ptr)->ring])                          \
             -= (entry_ptr)->size;                                            \
     if((entry_ptr)->is_dirty) {                                              \
         (cache_ptr)->dirty_index_size -= (entry_ptr)->size;                  \
-        ((cache_ptr)->dirty_index_ring_size[entry_ptr->ring])                \
+        ((cache_ptr)->dirty_index_ring_size[(entry_ptr)->ring])                \
                 -= (entry_ptr)->size;                                        \
     } else {                                                                 \
         (cache_ptr)->clean_index_size -= (entry_ptr)->size;                  \
-        ((cache_ptr)->clean_index_ring_size[entry_ptr->ring])                \
+        ((cache_ptr)->clean_index_ring_size[(entry_ptr)->ring])                \
                 -= (entry_ptr)->size;                                        \
     }                                                                        \
     if((entry_ptr)->flush_me_last) {                                         \
@@ -1463,10 +1331,10 @@ if ( ( (cache_ptr)->index_size !=                                           \
 {                                                                 \
     H5C__PRE_HT_UPDATE_FOR_ENTRY_CLEAN_SC(cache_ptr, entry_ptr);  \
     (cache_ptr)->dirty_index_size -= (entry_ptr)->size;           \
-    ((cache_ptr)->dirty_index_ring_size[entry_ptr->ring])         \
+    ((cache_ptr)->dirty_index_ring_size[(entry_ptr)->ring])         \
         -= (entry_ptr)->size;                                     \
     (cache_ptr)->clean_index_size += (entry_ptr)->size;           \
-    ((cache_ptr)->clean_index_ring_size[entry_ptr->ring])         \
+    ((cache_ptr)->clean_index_ring_size[(entry_ptr)->ring])         \
         += (entry_ptr)->size;                                     \
     H5C__POST_HT_UPDATE_FOR_ENTRY_CLEAN_SC(cache_ptr, entry_ptr); \
 }
@@ -1475,10 +1343,10 @@ if ( ( (cache_ptr)->index_size !=                                           \
 {                                                                 \
     H5C__PRE_HT_UPDATE_FOR_ENTRY_DIRTY_SC(cache_ptr, entry_ptr);  \
     (cache_ptr)->clean_index_size -= (entry_ptr)->size;           \
-    ((cache_ptr)->clean_index_ring_size[entry_ptr->ring])         \
+    ((cache_ptr)->clean_index_ring_size[(entry_ptr)->ring])         \
         -= (entry_ptr)->size;                                     \
     (cache_ptr)->dirty_index_size += (entry_ptr)->size;           \
-    ((cache_ptr)->dirty_index_ring_size[entry_ptr->ring])         \
+    ((cache_ptr)->dirty_index_ring_size[(entry_ptr)->ring])         \
         += (entry_ptr)->size;                                     \
     H5C__POST_HT_UPDATE_FOR_ENTRY_DIRTY_SC(cache_ptr, entry_ptr); \
 }
@@ -1490,21 +1358,21 @@ if ( ( (cache_ptr)->index_size !=                                           \
                             entry_ptr, was_clean)                           \
     (cache_ptr)->index_size -= (old_size);                                  \
     (cache_ptr)->index_size += (new_size);                                  \
-    ((cache_ptr)->index_ring_size[entry_ptr->ring]) -= (old_size);          \
-    ((cache_ptr)->index_ring_size[entry_ptr->ring]) += (new_size);          \
+    ((cache_ptr)->index_ring_size[(entry_ptr)->ring]) -= (old_size);          \
+    ((cache_ptr)->index_ring_size[(entry_ptr)->ring]) += (new_size);          \
     if(was_clean) {                                                         \
         (cache_ptr)->clean_index_size -= (old_size);                        \
-        ((cache_ptr)->clean_index_ring_size[entry_ptr->ring])-= (old_size); \
+        ((cache_ptr)->clean_index_ring_size[(entry_ptr)->ring])-= (old_size); \
     } else {                                                                \
     (cache_ptr)->dirty_index_size -= (old_size);                            \
-        ((cache_ptr)->dirty_index_ring_size[entry_ptr->ring])-= (old_size); \
+        ((cache_ptr)->dirty_index_ring_size[(entry_ptr)->ring])-= (old_size); \
     }                                                                       \
     if((entry_ptr)->is_dirty) {                                             \
         (cache_ptr)->dirty_index_size += (new_size);                        \
-        ((cache_ptr)->dirty_index_ring_size[entry_ptr->ring])+= (new_size); \
+        ((cache_ptr)->dirty_index_ring_size[(entry_ptr)->ring])+= (new_size); \
     } else {                                                                \
     (cache_ptr)->clean_index_size += (new_size);                            \
-        ((cache_ptr)->clean_index_ring_size[entry_ptr->ring])+= (new_size); \
+        ((cache_ptr)->clean_index_ring_size[(entry_ptr)->ring])+= (new_size); \
     }                                                                       \
     H5C__DLL_UPDATE_FOR_SIZE_CHANGE((cache_ptr)->il_len,                    \
                                     (cache_ptr)->il_size,                   \
@@ -1517,9 +1385,6 @@ if ( ( (cache_ptr)->index_size !=                                           \
 /**************************************************************************
  *
  * Skip list insertion and deletion macros:
- *
- * These used to be functions, but I converted them to macros to avoid some
- * function call overhead.
  *
  **************************************************************************/
 
@@ -1534,56 +1399,6 @@ if ( ( (cache_ptr)->index_size !=                                           \
  * Return:      N/A
  *
  * Programmer:  John Mainzer, 5/10/04
- *
- * Modifications:
- *
- *        JRM -- 7/21/04
- *        Updated function to set the in_tree flag when inserting
- *        an entry into the tree.  Also modified the function to
- *        update the tree size and len fields instead of the similar
- *        index fields.
- *
- *        All of this is part of the modifications to support the
- *        hash table.
- *
- *        JRM -- 7/27/04
- *        Converted the function H5C_insert_entry_in_tree() into
- *        the macro H5C__INSERT_ENTRY_IN_TREE in the hopes of
- *        wringing a little more speed out of the cache.
- *
- *        Note that we don't bother to check if the entry is already
- *        in the tree -- if it is, H5SL_insert() will fail.
- *
- *        QAK -- 11/27/04
- *        Switched over to using skip list routines.
- *
- *        JRM -- 6/27/06
- *        Added fail_val parameter.
- *
- *        JRM -- 8/25/06
- *        Added the H5C_DO_SANITY_CHECKS version of the macro.
- *
- *        This version maintains the slist_len_increase and
- *        slist_size_increase fields that are used in sanity
- *        checks in the flush routines.
- *
- *        All this is needed as the fractal heap needs to be
- *        able to dirty, resize and/or move entries during the
- *        flush.
- *
- *        JRM -- 12/13/14
- *        Added code to set cache_ptr->slist_changed to TRUE
- *        when an entry is inserted in the slist.
- *
- *        JRM -- 9/1/15
- *        Added code to maintain the cache_ptr->slist_ring_len
- *        and cache_ptr->slist_ring_size arrays.
- *
- *              JRM -- 4/29/20
- *              Reworked macro to support the slist_enabled field
- *              of H5C_t.  If slist_enabled == TRUE, the macro
- *              functions as before.  Otherwise, the macro is a no-op,
- *              and the slist must be empty.
  *
  *-------------------------------------------------------------------------
  */
@@ -1716,33 +1531,6 @@ if ( ( (cache_ptr)->index_size !=                                           \
  *
  * Programmer:  John Mainzer, 5/10/04
  *
- * Modifications:
- *
- *              JRM -- 7/21/04
- *              Updated function for the addition of the hash table.
- *
- *              JRM - 7/27/04
- *              Converted from the function H5C_remove_entry_from_tree()
- *              to the macro H5C__REMOVE_ENTRY_FROM_TREE in the hopes of
- *              wringing a little more performance out of the cache.
- *
- *              QAK -- 11/27/04
- *              Switched over to using skip list routines.
- *
- *              JRM -- 3/28/07
- *              Updated sanity checks for the new is_read_only and
- *              ro_ref_count fields in H5C_cache_entry_t.
- *
- *              JRM -- 12/13/14
- *              Added code to set cache_ptr->slist_changed to TRUE
- *              when an entry is removed from the slist.
- *
- *              JRM -- 4/29/20
- *              Reworked macro to support the slist_enabled field
- *              of H5C_t.  If slist_enabled == TRUE, the macro
- *              functions as before.  Otherwise, the macro is a no-op,
- *              and the slist must be empty.
- *
  *-------------------------------------------------------------------------
  */
 
@@ -1780,7 +1568,7 @@ if ( ( (cache_ptr)->index_size !=                                           \
         HDassert( (cache_ptr)->slist_size >= (entry_ptr)->size );              \
         (cache_ptr)->slist_size -= (entry_ptr)->size;                          \
         ((cache_ptr)->slist_ring_len[(entry_ptr)->ring])--;                    \
-        HDassert( (cache_ptr)->slist_ring_size[(entry_ptr->ring)] >=           \
+        HDassert( (cache_ptr)->slist_ring_size[((entry_ptr)->ring)] >=           \
                   (entry_ptr)->size );                                         \
         ((cache_ptr)->slist_ring_size[(entry_ptr)->ring]) -= (entry_ptr)->size;\
         (cache_ptr)->slist_len_increase--;                                     \
@@ -1827,7 +1615,7 @@ if ( ( (cache_ptr)->index_size !=                                           \
         HDassert( (cache_ptr)->slist_size >= (entry_ptr)->size );              \
         (cache_ptr)->slist_size -= (entry_ptr)->size;                          \
         ((cache_ptr)->slist_ring_len[(entry_ptr)->ring])--;                    \
-        HDassert( (cache_ptr)->slist_ring_size[(entry_ptr->ring)] >=           \
+        HDassert( (cache_ptr)->slist_ring_size[((entry_ptr)->ring)] >=           \
                   (entry_ptr)->size );                                         \
         ((cache_ptr)->slist_ring_size[(entry_ptr)->ring]) -= (entry_ptr)->size;\
         (entry_ptr)->in_slist = FALSE;                                         \
@@ -1852,33 +1640,6 @@ if ( ( (cache_ptr)->index_size !=                                           \
  * Return:      N/A
  *
  * Programmer:  John Mainzer, 9/07/05
- *
- * Modifications:
- *
- *              JRM -- 8/27/06
- *              Added the H5C_DO_SANITY_CHECKS version of the macro.
- *
- *              This version maintains the slist_size_increase field
- *              that are used in sanity checks in the flush routines.
- *
- *              All this is needed as the fractal heap needs to be
- *              able to dirty, resize and/or move entries during the
- *              flush.
- *
- *              JRM -- 12/13/14
- *              Note that we do not set cache_ptr->slist_changed to TRUE
- *              in this case, as the structure of the slist is not
- *              modified.
- *
- *              JRM -- 9/1/15
- *              Added code to maintain the cache_ptr->slist_ring_len
- *              and cache_ptr->slist_ring_size arrays.
- *
- *              JRM -- 4/29/20
- *              Reworked macro to support the slist_enabled field
- *              of H5C_t.  If slist_enabled == TRUE, the macro
- *              functions as before.  Otherwise, the macro is a no-op,
- *              and the slist must be empty.
  *
  *-------------------------------------------------------------------------
  */
@@ -1908,7 +1669,7 @@ if ( ( (cache_ptr)->index_size !=                                           \
         (cache_ptr)->slist_size -= (old_size);                                \
         (cache_ptr)->slist_size += (new_size);                                \
                                                                               \
-        HDassert( (cache_ptr)->slist_ring_size[(entry_ptr->ring)]             \
+        HDassert( (cache_ptr)->slist_ring_size[((entry_ptr)->ring)]             \
                   >= (old_size) );                                            \
                                                                               \
         ((cache_ptr)->slist_ring_size[(entry_ptr)->ring]) -= (old_size);      \
@@ -1953,7 +1714,7 @@ if ( ( (cache_ptr)->index_size !=                                           \
         (cache_ptr)->slist_size -= (old_size);                                \
         (cache_ptr)->slist_size += (new_size);                                \
                                                                               \
-        HDassert( (cache_ptr)->slist_ring_size[(entry_ptr->ring)] >=          \
+        HDassert( (cache_ptr)->slist_ring_size[((entry_ptr)->ring)] >=          \
                   (old_size) );                                               \
         ((cache_ptr)->slist_ring_size[(entry_ptr)->ring]) -= (old_size);      \
         ((cache_ptr)->slist_ring_size[(entry_ptr)->ring]) += (new_size);      \
@@ -1976,9 +1737,6 @@ if ( ( (cache_ptr)->index_size !=                                           \
  *
  * Replacement policy update macros:
  *
- * These used to be functions, but I converted them to macros to avoid some
- * function call overhead.
- *
  **************************************************************************/
 
 /*-------------------------------------------------------------------------
@@ -1999,18 +1757,6 @@ if ( ( (cache_ptr)->index_size !=                                           \
  * Return:      N/A
  *
  * Programmer:  John Mainzer, 10/13/05
- *
- * Modifications:
- *
- *        JRM -- 3/20/06
- *        Modified macro to ignore pinned entries.  Pinned entries
- *        do not appear in the data structures maintained by the
- *        replacement policy code, and thus this macro has nothing
- *        to do if called for such an entry.
- *
- *        JRM -- 3/28/07
- *        Added sanity checks using the new is_read_only and
- *        ro_ref_count fields of struct H5C_cache_entry_t.
  *
  *-------------------------------------------------------------------------
  */
@@ -2130,30 +1876,6 @@ if ( ( (cache_ptr)->index_size !=                                           \
  *
  * Programmer:  John Mainzer, 5/10/04
  *
- * Modifications:
- *
- *        JRM - 7/27/04
- *        Converted the function H5C_update_rp_for_eviction() to the
- *        macro H5C__UPDATE_RP_FOR_EVICTION in an effort to squeeze
- *        a bit more performance out of the cache.
- *
- *        At least for the first cut, I am leaving the comments and
- *        white space in the macro.  If they cause difficulties with
- *        the pre-processor, I'll have to remove them.
- *
- *        JRM - 7/28/04
- *        Split macro into two version, one supporting the clean and
- *        dirty LRU lists, and the other not.  Yet another attempt
- *        at optimization.
- *
- *        JRM - 3/20/06
- *        Pinned entries can't be evicted, so this entry should never
- *        be called on a pinned entry.  Added assert to verify this.
- *
- *        JRM -- 3/28/07
- *        Added sanity checks for the new is_read_only and
- *        ro_ref_count fields of struct H5C_cache_entry_t.
- *
  *-------------------------------------------------------------------------
  */
 
@@ -2240,32 +1962,6 @@ if ( ( (cache_ptr)->index_size !=                                           \
  * Return:      N/A
  *
  * Programmer:  John Mainzer, 5/6/04
- *
- * Modifications:
- *
- *        JRM - 7/27/04
- *        Converted the function H5C_update_rp_for_flush() to the
- *        macro H5C__UPDATE_RP_FOR_FLUSH in an effort to squeeze
- *        a bit more performance out of the cache.
- *
- *        At least for the first cut, I am leaving the comments and
- *        white space in the macro.  If they cause difficulties with
- *        pre-processor, I'll have to remove them.
- *
- *        JRM - 7/28/04
- *        Split macro into two versions, one supporting the clean and
- *        dirty LRU lists, and the other not.  Yet another attempt
- *        at optimization.
- *
- *        JRM - 3/20/06
- *        While pinned entries can be flushed, they don't reside in
- *        the replacement policy data structures when unprotected.
- *        Thus I modified this macro to do nothing if the entry is
- *        pinned.
- *
- *        JRM - 3/28/07
- *        Added sanity checks based on the new is_read_only and
- *        ro_ref_count fields of struct H5C_cache_entry_t.
  *
  *-------------------------------------------------------------------------
  */
@@ -2430,7 +2126,7 @@ if ( ( (cache_ptr)->index_size !=                                           \
          * appropriate.                                                    \
          */                                                                \
                                                                            \
-        if ( entry_ptr->is_dirty ) {                                       \
+        if ( (entry_ptr)->is_dirty ) {                                       \
             H5C__AUX_DLL_APPEND((entry_ptr), (cache_ptr)->dLRU_head_ptr,   \
                                 (cache_ptr)->dLRU_tail_ptr,                \
                                 (cache_ptr)->dLRU_list_len,                \
@@ -2499,34 +2195,6 @@ if ( ( (cache_ptr)->index_size !=                                           \
  *
  * Programmer:  John Mainzer, 5/17/04
  *
- * Modifications:
- *
- *        JRM - 7/27/04
- *        Converted the function H5C_update_rp_for_insertion() to the
- *        macro H5C__UPDATE_RP_FOR_INSERTION in an effort to squeeze
- *        a bit more performance out of the cache.
- *
- *        At least for the first cut, I am leaving the comments and
- *        white space in the macro.  If they cause difficulties with
- *        pre-processor, I'll have to remove them.
- *
- *        JRM - 7/28/04
- *        Split macro into two version, one supporting the clean and
- *        dirty LRU lists, and the other not.  Yet another attempt
- *        at optimization.
- *
- *        JRM - 3/10/06
- *        This macro should never be called on a pinned entry.
- *        Inserted an assert to verify this.
- *
- *        JRM - 8/9/06
- *        Not any more.  We must now allow insertion of pinned
- *        entries.  Updated macro to support this.
- *
- *        JRM - 3/28/07
- *        Added sanity checks using the new is_read_only and
- *        ro_ref_count fields of struct H5C_cache_entry_t.
- *
  *-------------------------------------------------------------------------
  */
 
@@ -2564,7 +2232,7 @@ if ( ( (cache_ptr)->index_size !=                                           \
          * appropriate.                                                    \
          */                                                                \
                                                                            \
-        if ( entry_ptr->is_dirty ) {                                       \
+        if ( (entry_ptr)->is_dirty ) {                                       \
             H5C__AUX_DLL_PREPEND((entry_ptr), (cache_ptr)->dLRU_head_ptr,  \
                                  (cache_ptr)->dLRU_tail_ptr,               \
                                  (cache_ptr)->dLRU_list_len,               \
@@ -2636,31 +2304,6 @@ if ( ( (cache_ptr)->index_size !=                                           \
  * Return:      N/A
  *
  * Programmer:  John Mainzer, 5/17/04
- *
- * Modifications:
- *
- *        JRM - 7/27/04
- *        Converted the function H5C_update_rp_for_protect() to the
- *        macro H5C__UPDATE_RP_FOR_PROTECT in an effort to squeeze
- *        a bit more performance out of the cache.
- *
- *        At least for the first cut, I am leaving the comments and
- *        white space in the macro.  If they cause difficulties with
- *        pre-processor, I'll have to remove them.
- *
- *        JRM - 7/28/04
- *        Split macro into two version, one supporting the clean and
- *        dirty LRU lists, and the other not.  Yet another attempt
- *        at optimization.
- *
- *        JRM - 3/17/06
- *        Modified macro to attempt to remove pinned entriese from
- *        the pinned entry list instead of from the data structures
- *        maintained by the replacement policy.
- *
- *        JRM - 3/28/07
- *        Added sanity checks based on the new is_read_only and
- *        ro_ref_count fields of struct H5C_cache_entry_t.
  *
  *-------------------------------------------------------------------------
  */
@@ -2803,7 +2446,7 @@ if ( ( (cache_ptr)->index_size !=                                           \
     HDassert( ((entry_ptr)->ro_ref_count) == 0 );                            \
     HDassert( (entry_ptr)->size > 0 );                                       \
                                                                              \
-    if ( ! ( (entry_ptr)->is_pinned ) && ! ( (entry_ptr->is_protected ) ) ) {\
+    if ( ! ( (entry_ptr)->is_pinned ) && ! ( ((entry_ptr)->is_protected ) ) ) {\
                                                                              \
         /* modified LRU specific code */                                     \
                                                                              \
@@ -2880,7 +2523,7 @@ if ( ( (cache_ptr)->index_size !=                                           \
     HDassert( ((entry_ptr)->ro_ref_count) == 0 );                            \
     HDassert( (entry_ptr)->size > 0 );                                       \
                                                                              \
-    if ( ! ( (entry_ptr)->is_pinned ) && ! ( (entry_ptr->is_protected ) ) ) {\
+    if ( ! ( (entry_ptr)->is_pinned ) && ! ( ((entry_ptr)->is_protected ) ) ) {\
                                                                              \
         /* modified LRU specific code */                                     \
                                                                              \
@@ -2926,12 +2569,6 @@ if ( ( (cache_ptr)->index_size !=                                           \
  * Return:      N/A
  *
  * Programmer:  John Mainzer, 8/23/06
- *
- * Modifications:
- *
- *         JRM -- 3/28/07
- *        Added sanity checks based on the new is_read_only and
- *        ro_ref_count fields of struct H5C_cache_entry_t.
  *
  *-------------------------------------------------------------------------
  */
@@ -3060,12 +2697,6 @@ if ( ( (cache_ptr)->index_size !=                                           \
  *
  * Programmer:  John Mainzer, 3/22/06
  *
- * Modifications:
- *
- *        JRM -- 3/28/07
- *        Added sanity checks based on the new is_read_only and
- *        ro_ref_count fields of struct H5C_cache_entry_t.
- *
  *-------------------------------------------------------------------------
  */
 
@@ -3180,27 +2811,6 @@ if ( ( (cache_ptr)->index_size !=                                           \
  * Return:      N/A
  *
  * Programmer:  John Mainzer, 5/19/04
- *
- * Modifications:
- *
- *        JRM - 7/27/04
- *        Converted the function H5C_update_rp_for_unprotect() to
- *        the macro H5C__UPDATE_RP_FOR_UNPROTECT in an effort to
- *        squeeze a bit more performance out of the cache.
- *
- *        At least for the first cut, I am leaving the comments and
- *        white space in the macro.  If they cause difficulties with
- *        pre-processor, I'll have to remove them.
- *
- *        JRM - 7/28/04
- *        Split macro into two version, one supporting the clean and
- *        dirty LRU lists, and the other not.  Yet another attempt
- *        at optimization.
- *
- *        JRM - 3/17/06
- *        Modified macro to put pinned entries on the pinned entry
- *        list instead of inserting them in the data structures
- *        maintained by the replacement policy.
  *
  *-------------------------------------------------------------------------
  */
@@ -3525,9 +3135,9 @@ if ( ( (entry_ptr) == NULL ) ||                                                \
 
 #define H5C__MOVE_TO_TOP_IN_COLL_LIST(cache_ptr, entry_ptr, fail_val)   \
 {                                                                       \
-    HDassert( (cache_ptr) );                                            \
-    HDassert( (cache_ptr)->magic == H5C__H5C_T_MAGIC );                 \
-    HDassert( (entry_ptr) );                                            \
+    HDassert((cache_ptr));                                              \
+    HDassert((cache_ptr)->magic == H5C__H5C_T_MAGIC);                   \
+    HDassert((entry_ptr));                                              \
                                                                         \
     /* Remove entry and insert at the head of the list. */              \
     H5C__COLL_DLL_REMOVE((entry_ptr), (cache_ptr)->coll_head_ptr,       \
@@ -3608,24 +3218,9 @@ typedef struct H5C_tag_info_t {
  * While the cache was designed with multiple replacement policies in mind,
  * at present only a modified form of LRU is supported.
  *
- *                                              JRM - 4/26/04
- *
- * Profiling has indicated that searches in the instance of H5TB_TREE are
- * too expensive.  To deal with this issue, I have augmented the cache
- * with a hash table in which all entries will be stored.  Given the
- * advantages of flushing entries in increasing address order, the TBBT
- * is retained, but only dirty entries are stored in it.  At least for
- * now, we will leave entries in the TBBT after they are flushed.
- *
- * Note that index_size and index_len now refer to the total size of
- * and number of entries in the hash table.
- *
- *                        JRM - 7/19/04
- *
- * The TBBT has since been replaced with a skip list.  This change
- * greatly predates this note.
- *
- *                        JRM - 9/26/05
+ * The cache has a hash table in which all entries are stored.  Given the
+ * advantages of flushing entries in increasing address order, a skip list
+ * is used to track dirty entries.
  *
  * magic:    Unsigned 32 bit integer always set to H5C__H5C_T_MAGIC.
  *         This field is used to validate pointers to instances of
@@ -3719,13 +3314,8 @@ typedef struct H5C_tag_info_t {
  * The cache requires an index to facilitate searching for entries.  The
  * following fields support that index.
  *
- * Addendum:  JRM -- 10/14/15
- *
- * We sometimes need to visit all entries in the cache.  In the past, this
- * was done by scanning the hash table.  However, this is expensive, and
- * we have come to scan the hash table often enough that it has become a
- * performance issue.  To repair this, I have added code to maintain a
- * list of all entries in the index -- call this list the index list.
+ * We sometimes need to visit all entries in the cache, they are stored in
+ * the index list.
  *
  * The index list is maintained by the same macros that maintain the
  * index, and must have the same length and size as the index proper.
@@ -3759,12 +3349,10 @@ typedef struct H5C_tag_info_t {
  *        dirty_index_size == index_size.
  *
  *        WARNING:
- *
- *           The value of the clean_index_size must not be mistaken
- *           for the current clean size of the cache.  Rather, the
- *           clean size of the cache is the current value of
- *           clean_index_size plus the amount of empty space (if any)
- *                 in the cache.
+ *           The value of the clean_index_size must not be mistaken for
+ *           the current clean size of the cache.  Rather, the clean size
+ *           of the cache is the current value of clean_index_size plus
+ *           the amount of empty space (if any) in the cache.
  *
  * clean_index_ring_size: Array of size_t of length H5C_RING_NTYPES used to
  *        maintain the sum of the sizes of all clean entries in the
@@ -3786,7 +3374,7 @@ typedef struct H5C_tag_info_t {
  *        H5C__HASH_TABLE_LEN.  At present, this value is a power
  *        of two, not the usual prime number.
  *
- *        I hope that the variable size of cache elements, the large
+ *        Hopefully the variable size of cache elements, the large
  *        hash table size, and the way in which HDF5 allocates space
  *        will combine to avoid problems with periodicity.  If so, we
  *        can use a trivial hash function (a bit-and and a 3 bit left
@@ -3827,11 +3415,10 @@ typedef struct H5C_tag_info_t {
  *              This field is NULL if the index is empty.
  *
  *
- * With the addition of the take ownership flag, it is possible that
- * an entry may be removed from the cache as the result of the flush of
- * a second entry.  In general, this causes little trouble, but it is
- * possible that the entry removed may be the next entry in the scan of
- * a list.  In this case, we must be able to detect the fact that the
+ * It is possible that an entry may be removed from the cache as the result
+ * of the flush of a second entry.  In general, this causes little trouble,
+ * but it is possible that the entry removed may be the next entry in the
+ * scan of a list.  In this case, we must be able to detect the fact that the
  * entry has been removed, so that the scan doesn't attempt to proceed with
  * an entry that is no longer in the cache.
  *
@@ -3859,29 +3446,19 @@ typedef struct H5C_tag_info_t {
  *        one.
  *
  * entry_watched_for_removal:    Pointer to an instance of H5C_cache_entry_t
- *              which contains the 'next' entry for an iteration.  Removing
- *              this entry must trigger a rescan of the iteration, so each
- *              entry removed from the cache is compared against this pointer
- *              and the pointer is reset to NULL if the watched entry is
- *              removed.
- *              (This functions similarly to a "dead man's switch")
+ *        which contains the 'next' entry for an iteration.  Removing
+ *        this entry must trigger a rescan of the iteration, so each
+ *        entry removed from the cache is compared against this pointer
+ *        and the pointer is reset to NULL if the watched entry is
+ *        removed.  (This functions similarly to a "dead man's switch")
  *
  *
  * When we flush the cache, we need to write entries out in increasing
  * address order.  An instance of a skip list is used to store dirty entries in
- * sorted order.  Whether it is cheaper to sort the dirty entries as needed,
- * or to maintain the list is an open question.  At a guess, it depends
- * on how frequently the cache is flushed.  We will see how it goes.
+ * sorted order.
  *
- * For now at least, I will not remove dirty entries from the list as they
- * are flushed. (this has been changed -- dirty entries are now removed from
- * the skip list as they are flushed.  JRM - 10/25/05)
- *
- * Update 4/21/20:
- *
- * Profiling indicates that the cost of maintaining the skip list is
- * significant.  As it is only used on flush and close, maintaining it
- * only when needed is an obvious optimization.
+ * The cost of maintaining the skip list is significant.  As it is only used
+ * on flush and close, it is maintained only when needed.
  *
  * To do this, we add a flag to control maintenanace of the skip list.
  * This flag is initially set to FALSE, which disables all operations
@@ -3940,30 +3517,21 @@ typedef struct H5C_tag_info_t {
  *                 order, which results in significant savings.
  *
  *              b) It facilitates checking for adjacent dirty entries when
- *                 attempting to evict entries from the cache.  While we
- *                 don't use this at present, I hope that this will allow
- *                 some optimizations when I get to it.
+ *                 attempting to evict entries from the cache.
  *
  * num_last_entries: The number of entries in the cache that can only be
  *        flushed after all other entries in the cache have
- *              been flushed. At this time, this will only ever be
- *              one entry (the superblock), and the code has been
- *              protected with HDasserts to enforce this. This restraint
- *              can certainly be relaxed in the future if the need for
- *              multiple entries being flushed last arises, though
- *              explicit tests for that case should be added when said
- *              HDasserts are removed.
+ *              been flushed.
  *
- *        Update: There are now two possible last entries
- *        (superblock and file driver info message).  This
- *        number will probably increase as we add superblock
- *        messages.   JRM -- 11/18/14
+ *        Note: At this time, the this field will only be applied to
+ *              two types of entries: the superblock and the file driver info
+ *              message.  The code utilizing these flags is protected with
+ *              HDasserts to enforce this.
  *
- * With the addition of the fractal heap, the cache must now deal with
- * the case in which entries may be dirtied, moved, or have their sizes
- * changed during a flush.  To allow sanity checks in this situation, the
- * following two fields have been added.  They are only compiled in when
- * H5C_DO_SANITY_CHECKS is TRUE.
+ * The cache must deal with the case in which entries may be dirtied, moved,
+ * or have their sizes changed during a flush.  To allow sanity checks in this
+ * situation, the following two fields have been added.  They are only
+ * compiled in when H5C_DO_SANITY_CHECKS is TRUE.
  *
  * slist_len_increase: Number of entries that have been added to the
  *         slist since the last time this field was set to zero.
@@ -4020,8 +3588,8 @@ typedef struct H5C_tag_info_t {
  *
  *
  * For very frequently used entries, the protect/unprotect overhead can
- * become burdensome.  To avoid this overhead, I have modified the cache
- * to allow entries to be "pinned".  A pinned entry is similar to a
+ * become burdensome.  To avoid this overhead, the cache
+ * allows entries to be "pinned".  A pinned entry is similar to a
  * protected entry, in the sense that it cannot be evicted, and that
  * the entry can be modified at any time.
  *
@@ -4072,29 +3640,15 @@ typedef struct H5C_tag_info_t {
  * The cache must have a replacement policy, and the fields supporting this
  * policy must be accessible from this structure.
  *
- * While there has been interest in several replacement policies for
- * this cache, the initial development schedule is tight.  Thus I have
- * elected to support only a modified LRU (least recently used) policy
- * for the first cut.
- *
- * To further simplify matters, I have simply included the fields needed
- * by the modified LRU in this structure.  When and if we add support for
- * other policies, it will probably be easiest to just add the necessary
- * fields to this structure as well -- we only create one instance of this
- * structure per file, so the overhead is not excessive.
- *
- *
  * Fields supporting the modified LRU policy:
- *
- * See most any OS text for a discussion of the LRU replacement policy.
  *
  * When operating in parallel mode, we must ensure that a read does not
  * cause a write.  If it does, the process will hang, as the write will
  * be collective and the other processes will not know to participate.
  *
- * To deal with this issue, I have modified the usual LRU policy by adding
+ * To deal with this issue, the usual LRU policy has been modified by adding
  * clean and dirty LRU lists to the usual LRU list.  In general, these
- * lists are only exist in parallel builds.
+ * lists only exist in parallel builds.
  *
  * The clean LRU list is simply the regular LRU list with all dirty cache
  * entries removed.
@@ -4191,7 +3745,7 @@ typedef struct H5C_tag_info_t {
  * While the default cache size is adequate for most cases, we can run into
  * cases where the default is too small.  Ideally, we will let the user
  * adjust the cache size as required.  However, this is not possible in all
- * cases.  Thus I have added automatic cache size adjustment code.
+ * cases, so the cache has automatic cache size adjustment code.
  *
  * The configuration for the automatic cache size adjustment is stored in
  * the structure described below:
@@ -4222,10 +3776,9 @@ typedef struct H5C_tag_info_t {
  *
  * resize_enabled:  This is another convenience flag which is set whenever
  *        a new set of values for resize_ctl are provided.  Very
- *        simply,
+ *        simply:
  *
- *            resize_enabled = size_increase_possible ||
- *                                   size_decrease_possible;
+ *        resize_enabled = size_increase_possible || size_decrease_possible;
  *
  * cache_full:    Boolean flag used to keep track of whether the cache is
  *        full, so we can refrain from increasing the size of a
@@ -4248,11 +3801,6 @@ typedef struct H5C_tag_info_t {
  *        and to prevent the infinite recursion that would otherwise
  *        occur.
  *
- *        Note that this issue is not hypothetical -- this field
- *        was added 12/29/15 to fix a bug exposed in the testing
- *        of changes to the file driver info superblock extension
- *        management code needed to support rings.
- *
  * msic_in_progress: As the metadata cache has become re-entrant, and as
  *              the free space manager code has become more tightly
  *              integrated with the metadata cache, it is possible that
@@ -4264,11 +3812,6 @@ typedef struct H5C_tag_info_t {
  *              The msic_in_progress boolean flag is used to detect this,
  *              and prevent the infinite regression that would otherwise
  *              occur.
- *
- *              Note that this is issue is not hypothetical -- this field
- *              was added 2/16/17 to address this issue when it was
- *              exposed by modifications to test/fheap.c to cause it to
- *              use paged allocation.
  *
  * resize_ctl:    Instance of H5C_auto_size_ctl_t containing configuration
  *         data for automatic cache resizing.
@@ -4362,8 +3905,8 @@ typedef struct H5C_tag_info_t {
  *        call to H5C_protect().
  *
  * image_loaded:  Boolean flag indicating that the metadata cache has
- *              loaded the metadata cache image as directed by the
- *              MDC cache image superblock extension message.
+ *        loaded the metadata cache image as directed by the
+ *        MDC cache image superblock extension message.
  *
  * delete_image: Boolean flag indicating whether the metadata cache image
  *        superblock message should be deleted and the cache image
@@ -4476,11 +4019,11 @@ typedef struct H5C_tag_info_t {
  *        free space manager metadata.
  *
  * mdfsm_settled:  Boolean flag indicating whether the meta data free space
- *              manager is settled -- i.e. whether the correct space has
- *              been allocated for it in the file.
+ *        manager is settled -- i.e. whether the correct space has
+ *        been allocated for it in the file.
  *
- *              Note that the name of this field is deceptive.  In the
- *              multi file case, the flag applies only to free space
+ *        Note that the name of this field is deceptive.  In the
+ *        multi-file case, the flag applies only to free space
  *        managers that are involved in allocating space for free
  *        space managers.
  *
@@ -4699,16 +4242,16 @@ typedef struct H5C_tag_info_t {
  *        close, this field should only be set at that time.
  *
  * images_read: Integer field containing the number of cache images
- *              read from file.  Note that reading an image is different
- *              from loading it -- reading the image means just that,
- *              while loading the image refers to decoding it and loading
- *              it into the metadata cache.
+ *        read from file.  Note that reading an image is different
+ *        from loading it -- reading the image means just that,
+ *        while loading the image refers to decoding it and loading
+ *        it into the metadata cache.
  *
- *              In the serial case, image_read should always equal
- *              images_loaded.  However, in the parallel case, the
- *              image should only be read by process 0.  All other
- *              processes should receive the cache image via a broadcast
- *              from process 0.
+ *        In the serial case, image_read should always equal
+ *        images_loaded.  However, in the parallel case, the
+ *        image should only be read by process 0.  All other
+ *        processes should receive the cache image via a broadcast
+ *        from process 0.
  *
  * images_loaded:  Integer field containing the number of cache images
  *        loaded since the last time statistics were reset.
@@ -4719,21 +4262,19 @@ typedef struct H5C_tag_info_t {
  *        should only change on those events.
  *
  * last_image_size:  Size of the most recently loaded metadata cache image
- *             loaded into the cache, or zero if no image has been
- *             loaded.
+ *        loaded into the cache, or zero if no image has been loaded.
  *
- *             At present, at most one cache image can be loaded into
- *             the metadata cache for any given file, and this image
- *             will be loaded either on the first protect, or on file
- *             close if no entry is protected before then.
+ *        At present, at most one cache image can be loaded into
+ *        the metadata cache for any given file, and this image
+ *        will be loaded either on the first protect, or on file
+ *        close if no entry is protected before then.
  *
  *
  * Fields for tracking prefetched entries.  Note that flushes and evictions
  * of prefetched entries are tracked in the flushes and evictions arrays
  * discussed above.
  *
- * prefetches:    Number of prefetched entries that are loaded to the
- *        cache.
+ * prefetches:    Number of prefetched entries that are loaded to the cache.
  *
  * dirty_prefetches:  Number of dirty prefetched entries that are loaded
  *        into the cache.
@@ -4741,9 +4282,9 @@ typedef struct H5C_tag_info_t {
  * prefetch_hits:  Number of prefetched entries that are actually used.
  *
  *
- * As entries are now capable of moving, loading, dirtying, and deleting
- * other entries in their pre_serialize and serialize callbacks, it has
- * been necessary to insert code to restart scans of lists so as to avoid
+ * Entries may move, load, dirty, and delete
+ * other entries in their pre_serialize and serialize callbacks, there is
+ * code to restart scans of lists so as to avoid
  * improper behavior if the next entry in the list is the target of one on
  * these operations.
  *
@@ -4757,9 +4298,9 @@ typedef struct H5C_tag_info_t {
  *        entry in the scan.
  *
  * LRU_scan_restarts: Number of times a scan of the LRU list (that contains
- *              calls to H5C__flush_single_entry()) has been restarted to
- *              avoid potential issues with change of status of the next
- *              entry in the scan.
+ *        calls to H5C__flush_single_entry()) has been restarted to
+ *        avoid potential issues with change of status of the next
+ *        entry in the scan.
  *
  * index_scan_restarts: Number of times a scan of the index has been
  *        restarted to avoid potential issues with load, insertion
@@ -4794,14 +4335,14 @@ typedef struct H5C_tag_info_t {
  *        flushed in the current epoch.
  *
  * max_size:    Array of size_t of length H5C__MAX_NUM_TYPE_IDS + 1.  The cells
- *              are used to record the maximum size of any single entry
+ *        are used to record the maximum size of any single entry
  *        with type id equal to the array index that has resided in
  *        the cache in the current epoch.
  *
  * max_pins:    Array of size_t of length H5C__MAX_NUM_TYPE_IDS + 1.  The cells
- *              are used to record the maximum number of times that any single
- *              entry with type id equal to the array index that has been
- *              marked as pinned in the cache in the current epoch.
+ *        are used to record the maximum number of times that any single
+ *        entry with type id equal to the array index that has been
+ *        marked as pinned in the cache in the current epoch.
  *
  *
  * Fields supporting testing:
@@ -4811,9 +4352,9 @@ typedef struct H5C_tag_info_t {
  *        the processes mpi rank.
  *
  * get_entry_ptr_from_addr_counter: Counter used to track the number of
- *              times the H5C_get_entry_ptr_from_addr() function has been
- *              called successfully.  This field is only defined when
- *              NDEBUG is not #defined.
+ *        times the H5C_get_entry_ptr_from_addr() function has been
+ *        called successfully.  This field is only defined when
+ *        NDEBUG is not #defined.
  *
  ****************************************************************************/
 
