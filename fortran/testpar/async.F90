@@ -184,15 +184,11 @@ CONTAINS
 
     CALL H5ESget_op_counter_f(es_id, counter, hdferror)
     CALL check("H5ESget_op_counter_f", hdferror, nerrors)
-<<<<<<< HEAD
-    CALL VERIFY("H5ESget_op_counter_f", counter, 2_C_INT64_T, total_error)
-=======
     IF(async_enabled)THEN
        CALL VERIFY("H5ESget_op_counter_f", counter, 2_C_INT64_T, total_error)
     ELSE
        CALL VERIFY("H5ESget_op_counter_f", counter, 0_C_INT64_T, total_error)
     ENDIF
->>>>>>> origin/ASYNC_F
 
     CALL H5Pclose_f(fapl_id, hdferror)
     CALL check("h5pclose_f", hdferror, nerrors)
