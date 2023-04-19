@@ -27,21 +27,14 @@ MODULE H5ES
 
 !> @brief H5ES_err_info_t derived type
   TYPE, BIND(C) :: H5ES_err_info_t
-#if 0
-    CHARACTER(KIND=C_CHAR, LEN=:), POINTER :: api_name !< Name of HDF5 API routine called
-    CHARACTER(KIND=C_CHAR, LEN=:), POINTER :: api_args !< "Argument string" for arguments to HDF5 API routine called
+
+    TYPE(C_PTR) :: api_name !< Name of HDF5 API routine called
+    TYPE(C_PTR) :: api_args !< "Argument string" for arguments to HDF5 API routine called
 
     ! Application info
-    CHARACTER(KIND=C_CHAR, LEN=:), POINTER :: app_file_name !< Name of source file where the HDF5 API routine was called
-    CHARACTER(KIND=C_CHAR, LEN=:), POINTER :: app_func_name !< Name of function where the HDF5 API routine was called
-#endif
-    CHARACTER(KIND=C_CHAR, LEN=1) :: api_name !< Name of HDF5 API routine called
-    CHARACTER(KIND=C_CHAR, LEN=1) :: api_args !< "Argument string" for arguments to HDF5 API routine called
-
-    ! Application info
-    CHARACTER(KIND=C_CHAR, LEN=1) :: app_file_name !< Name of source file where the HDF5 API routine was called
-    CHARACTER(KIND=C_CHAR, LEN=1) :: app_func_name !< Name of function where the HDF5 API routine was called
-    INTEGER(C_INT)   :: app_line_num                        !< Line # of source file where the HDF5 API routine was called
+    TYPE(C_PTR)    :: app_file_name !< Name of source file where the HDF5 API routine was called
+    TYPE(C_PTR)    :: app_func_name !< Name of function where the HDF5 API routine was called
+    INTEGER(C_INT) :: app_line_num  !< Line # of source file where the HDF5 API routine was called
 
     ! Operation info
     INTEGER(C_INT64_T) :: op_ins_count  !< Counter of operation's insertion into event set
@@ -55,12 +48,12 @@ MODULE H5ES
   TYPE, BIND(C) :: H5ES_op_info_t
 
      TYPE(C_PTR) :: api_name !< Name of HDF5 API routine called
-     TYPE(C_PTR) ::  api_args !< "Argument string" for arguments to HDF5 API routine called
+     TYPE(C_PTR) :: api_args !< "Argument string" for arguments to HDF5 API routine called
 
      ! Application info
-     TYPE(C_PTR) :: app_file_name !< Name of source file where the HDF5 API routine was called
-     TYPE(C_PTR) :: app_func_name !< Name of function where the HDF5 API routine was called
-     INTEGER(C_INT)   :: app_line_num                        !< Line # of source file where the HDF5 API routine was called
+     TYPE(C_PTR) :: app_file_name      !< Name of source file where the HDF5 API routine was called
+     TYPE(C_PTR) :: app_func_name      !< Name of function where the HDF5 API routine was called
+     INTEGER(C_INT)   :: app_line_num  !< Line # of source file where the HDF5 API routine was called
 
      ! Operation info
      INTEGER(C_INT64_T) :: op_ins_count  !< Counter of operation's insertion into event set

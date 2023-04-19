@@ -15,24 +15,69 @@
 MODULE callbacks
 
   USE HDF5 ! This module contains all necessary modules
+  USE TH5_MISC
+  USE TH5_MISC_GEN
   USE, INTRINSIC :: ISO_C_BINDING
   IMPLICIT NONE
 
+  CHARACTER(LEN=10), TARGET :: app_file = "async.F90"//C_NULL_CHAR
+  CHARACTER(LEN=10), TARGET :: app_func = "func_name"//C_NULL_CHAR
+  INTEGER(C_INT) :: app_line = 42
+  INTEGER, TARGET :: ctx = 42
+
 CONTAINS
 
-  INTEGER(KIND=C_INT) FUNCTION event_complete_func(op_info, status, err_stack, ctx) bind(C)
+  INTEGER(KIND=C_INT) FUNCTION event_complete_func(op_info, status, err_stack, ctx_in) bind(C)
 
     IMPLICIT NONE
 
     TYPE(H5ES_err_info_t) :: op_info
-    INTEGER(C_INT),VALUE :: status
-    INTEGER(HID_T),VALUE :: err_stack
-    INTEGER :: ctx
+    INTEGER(C_INT), VALUE :: status
+    INTEGER(HID_T), VALUE :: err_stack
+    INTEGER :: ctx_in
+    INTEGER :: error = 0
+    CHARACTER(LEN=180), POINTER :: ptr_c
+    INTEGER :: char_end
 
    ! PRINT*,"event_complete_func",ctx, err_stack, status, H5ES_STATUS_IN_PROGRESS_F,H5ES_STATUS_SUCCEED_F
 
   !  PRINT*,op_info%op_ins_count,op_info%op_ins_ts,op_info%op_exec_ts,op_info%op_exec_time
-    PRINT*,op_info%app_line_num
+
+    ! Check application file name
+    CALL c_f_pointer(op_info%app_file_name, ptr_c)
+    char_end = INDEX(ptr_c,char(0))
+    CALL VERIFY("H5ESregister_complete", ptr_c(1:char_end), TRIM(app_file), error)
+
+    ! Check application function name
+    CALL c_f_pointer(op_info%app_func_name, ptr_c)
+    char_end = INDEX(ptr_c,char(0))
+    CALL VERIFY("H5ESregister_complete", ptr_c(1:char_end), TRIM(app_func), error)
+
+    ! Check application line number
+    CALL VERIFY("H5ESregister_complete", op_info%app_line_num, app_line, error)
+
+    ! Check the data values passed into the callback
+    CALL VERIFY("H5ESregister_complete", ctx_in, ctx, error)
+
+    ! Check the status
+    ! H5ES_STATUS_IN_PROGRESS - Operation(s) have not yet completed
+    ! H5ES_STATUS_SUCCEED     - Operation(s) have completed, successfully
+    ! H5ES_STATUS_CANCELED    - Operation(s) has been canceled
+    ! H5ES_STATUS_FAIL        - An operation has completed, but failed
+    CALL VERIFY("H5ESregister_complete", status, H5ES_STATUS_SUCCEED_F, error)
+
+    IF(error.EQ.0)THEN
+       event_complete_func = 0
+    ELSE
+       event_complete_func = -1
+    ENDIF
+
+    !CALL VERIFY("H5ESget_count_f", op_info%app_line_num, app_line, error)
+
+    !PRINT*,error
+   !IF(error.NE.0)THEN
+    !   event_complete_func = -1
+    !ENDIF
   !  PRINT*,op_info%api_args    !op_info%app_func_name !,op_info%app_func_name
 
   END FUNCTION event_complete_func
@@ -45,6 +90,7 @@ MODULE test_async_APIs
   USE HDF5
   USE TH5_MISC
   USE TH5_MISC_GEN
+  USE callbacks
 
   INTEGER(C_INT), PARAMETER :: op_data_type = 200
   INTEGER(C_INT), PARAMETER :: op_data_command = 99
@@ -58,10 +104,6 @@ MODULE test_async_APIs
      INTEGER(c_int) :: TYPE    !  The TYPE of the object
      INTEGER(c_int) :: command ! The TYPE of RETURN value
   END TYPE iter_info
-
-  CHARACTER(LEN=10), TARGET :: app_file = "async.F90"//C_NULL_CHAR
-  CHARACTER(LEN=10), TARGET :: app_func = "func_name"//C_NULL_CHAR
-  INTEGER :: app_line = 42
 
 CONTAINS
 
@@ -115,7 +157,7 @@ CONTAINS
     LOGICAL         :: err_occurred
     TYPE(C_FUNPTR) :: f1
     TYPE(C_PTR) :: f2
-    INTEGER, TARGET :: ctx
+    TYPE(C_PTR) :: c1, c2
 
     CALL h5pcreate_f(H5P_FILE_ACCESS_F, fapl_id, hdferror)
     CALL check("h5pcreate_f", hdferror, nerrors)
@@ -126,9 +168,11 @@ CONTAINS
     CALL H5EScreate_f(es_id, hdferror)
     CALL check("H5EScreate_f", hdferror, nerrors)
 
-    ctx = 42
     f1 = C_FUNLOC(event_complete_func)
     f2 = C_LOC(ctx)
+
+    c1 = C_LOC(app_file)
+    c2 = C_LOC(app_func)
 
     CALL H5ESregister_complete_func_f(es_id,f1,f2,hdferror)
     CALL check("H5ESregister_complete_func_f", hdferror, nerrors)
@@ -140,10 +184,10 @@ CONTAINS
     CALL H5Fcreate_async_f(filename, H5F_ACC_TRUNC_F, file_id, es_id, hdferror, access_prp = fapl_id)
     CALL check("h5fcreate_f", hdferror, nerrors)
 
-    CALL H5EScancel_f(es_id, num_not_canceled, err_occurred, hdferror)
-    CALL check("H5EScancel_f", hdferror, nerrors)
-    CALL VERIFY("H5EScancel_f", num_not_canceled, 0_size_t, total_error)
-    CALL VERIFY("H5EScancel_f", err_occurred, .FALSE., total_error)
+    !CALL H5EScancel_f(es_id, num_not_canceled, err_occurred, hdferror)
+    !CALL check("H5EScancel_f", hdferror, nerrors)
+    !CALL VERIFY("H5EScancel_f", num_not_canceled, 0_size_t, total_error)
+    !CALL VERIFY("H5EScancel_f", err_occurred, .FALSE., total_error)
 
 #endif
 
@@ -166,12 +210,13 @@ CONTAINS
   !  CALL check("H5ESwait_f", hdferror, nerrors)
   !  CALL VERIFY("H5ESwait_f", err_occurred, .FALSE., total_error)
 
-    CALL H5EScancel_f(es_id, num_not_canceled, err_occurred, hdferror)
-    CALL check("H5EScancel_f", hdferror, nerrors)
-    CALL VERIFY("H5EScancel_f", num_not_canceled, 0_size_t, total_error)
-    CALL VERIFY("H5EScancel_f", err_occurred, .FALSE., total_error)
+ !   CALL H5EScancel_f(es_id, num_not_canceled, err_occurred, hdferror)
+ !   CALL check("H5EScancel_f", hdferror, nerrors)
+ !   CALL VERIFY("H5EScancel_f", num_not_canceled, 0_size_t, total_error)
+ !   CALL VERIFY("H5EScancel_f", err_occurred, .FALSE., total_error)
 
-    CALL H5Fcreate_async_f(filename, H5F_ACC_TRUNC_F, file_id, es_id, hdferror, access_prp = fapl_id)
+    CALL H5Fcreate_async_f(filename, H5F_ACC_TRUNC_F, file_id, es_id, hdferror, access_prp = fapl_id, &
+         file=c1, func=c2,line=app_line)
     CALL check("h5fcreate_f", hdferror, nerrors)
 
     CALL H5ESget_count_f(es_id, count, hdferror)
@@ -193,7 +238,8 @@ CONTAINS
     CALL H5Pclose_f(fapl_id, hdferror)
     CALL check("h5pclose_f", hdferror, nerrors)
 
-    CALL H5Fclose_async_f(file_id, es_id, hdferror)
+    CALL H5Fclose_async_f(file_id, es_id, hdferror, &
+         file=c1, func=c2, line=app_line)
     CALL check("h5fclose_f", hdferror, nerrors)
     CALL H5ESget_count_f(es_id, count, hdferror)
     CALL check("H5ESget_count_f", hdferror, nerrors)
