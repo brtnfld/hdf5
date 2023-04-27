@@ -66,6 +66,18 @@ CONTAINS
     ! H5ES_STATUS_FAIL        - An operation has completed, but failed
     CALL VERIFY("H5ESregister_complete", status, H5ES_STATUS_SUCCEED_F, error)
 
+    ! Check application function name
+    CALL c_f_pointer(op_info%api_name, ptr_c)
+    char_end = INDEX(ptr_c,char(0))
+    PRINT*,ptr_c(1:char_end)
+
+    CALL c_f_pointer(op_info%api_args, ptr_c)
+    char_end = INDEX(ptr_c,char(0))
+    PRINT*,ptr_c(1:char_end)
+
+
+   ! CALL VERIFY("H5ESregister_complete", ptr_c(1:char_end), TRIM(app_func), error)
+
     IF(error.EQ.0)THEN
        event_complete_func = 0
     ELSE
