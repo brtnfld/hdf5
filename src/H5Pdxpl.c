@@ -2595,7 +2595,7 @@ H5Pget_no_selection_io_cause(hid_t plist_id, uint32_t *no_selection_io_cause /*o
     herr_t          ret_value = SUCCEED; /* return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE2("e", "ixx", plist_id, no_selection_io_cause);
+    H5TRACE2("e", "ix", plist_id, no_selection_io_cause);
 
     /* Get the plist structure */
     if (NULL == (plist = H5P_object_verify(plist_id, H5P_DATASET_XFER)))
@@ -2693,6 +2693,7 @@ H5Pset_modify_write_buf(hid_t dxpl_id, hbool_t modify_write_buf)
     herr_t          ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_API(FAIL)
+    H5TRACE2("e", "ib", dxpl_id, modify_write_buf);
 
     /* Check arguments */
     if (dxpl_id == H5P_DEFAULT)
@@ -2726,6 +2727,7 @@ H5Pget_modify_write_buf(hid_t dxpl_id, hbool_t *modify_write_buf)
     herr_t          ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_API(FAIL)
+    H5TRACE2("e", "i*b", dxpl_id, modify_write_buf);
 
     /* Check arguments */
     if (NULL == (plist = H5P_object_verify(dxpl_id, H5P_DATASET_XFER)))
