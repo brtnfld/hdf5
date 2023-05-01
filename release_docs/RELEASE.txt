@@ -47,6 +47,20 @@ New Features
 
     Configuration:
     -------------
+    - Added support for CMake presets file.
+
+      CMake supports two main files, CMakePresets.json and CMakeUserPresets.json,
+      that allow users to specify common configure options and share them with others.
+      HDF added a CMakePresets.json file of a typical configuration and support
+      file, config/cmake-presets/hidden-presets.json. 
+      Also added a section to INSTALL_CMake.txt with very basic explanation of the
+      process to use CMakePresets.
+
+    - Deprecated and removed old SZIP library in favor of LIBAEC library
+
+      LIBAEC library has been used in HDF5 binaries as the szip library of choice
+      for a few years. We are removing the options for using the old SZIP library.
+
     - Enabled instrumentation of the library by default in CMake for parallel
       debug builds
 
@@ -90,6 +104,16 @@ New Features
       for cases where the application wishes to write subfiles to a
       machine's node-local storage while placing the subfiling configuration
       file on a file system readable by all machine nodes.
+
+    - Added H5Pset_selection_io(), H5Pget_selection_io(), and
+      H5Pget_no_selection_io_cause() API functions to manage the selection I/O
+      feature.  This can be used to enable collective I/O with type conversion,
+      or it can be used with custom VFDs that support vector or selection I/O.
+
+    - Added H5Pset_modify_write_buf() and H5Pget_modify_write_buf() API
+      functions to allow the library to modify the contents of write buffers, in
+      order to avoid malloc/memcpy.  Currently only used for type conversion
+      with selection I/O.
 
 
     Parallel Library:
@@ -146,6 +170,37 @@ Bug Fixes since HDF5-1.14.0 release
 ===================================
     Library
     -------
+    - Fixed a bug in H5Ocopy that could generate invalid HDF5 files
+
+      H5Ocopy was missing a check to determine whether the new object's
+      object header version is greater than version 1. Without this check,
+      copying of objects with object headers that are smaller than a
+      certain size would cause H5Ocopy to create an object header for the
+      new object that has a gap in the header data. According to the
+      HDF5 File Format Specification, this is not allowed for version
+      1 of the object header format.
+
+      Fixes GitHub issue #2653
+
+    - Fixed H5Pget_vol_cap_flags and H5Pget_vol_id to accept H5P_DEFAULT
+
+      H5Pget_vol_cap_flags and H5Pget_vol_id were updated to correctly
+      accept H5P_DEFAULT for the 'plist_id' FAPL parameter. Previously,
+      they would fail if provided with H5P_DEFAULT as the FAPL.
+
+    - Fixed ROS3 VFD anonymous credential usage with h5dump and h5ls
+
+      ROS3 VFD anonymous credential functionality became broken in h5dump
+      and h5ls in the HDF5 1.14.0 release with the added support for VFD
+      plugins, which changed the way that the tools handled setting of
+      credential information that the VFD uses. The tools could be
+      provided the command-line option of "--s3-cred=(,,)" as a workaround
+      for anonymous credential usage, but the documentation for this
+      option stated that anonymous credentials could be used by simply
+      omitting the option. The latter functionality has been restored.
+
+      Fixes GitHub issue #2406
+
     - Fixed memory leaks when processing malformed object header continuation messages
 
       Malformed object header continuation messages can result in a too-small
@@ -347,6 +402,13 @@ Bug Fixes since HDF5-1.14.0 release
 
     Tools
     -----
+    - Names of objects with square brackets will have trouble without the
+      special argument, --no-compact-subset, on the h5dump command line.
+
+      h5diff did not have this option and now it has been added.
+
+      Fixes GitHub issue #2682
+
     - In the tools traverse function - an error in either visit call
       will bypass the cleanup of the local data variables.
 
