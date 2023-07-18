@@ -5076,8 +5076,7 @@ done:
 herr_t
 H5T__conv_schar_uchar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts, size_t buf_stride,
                       size_t H5_ATTR_UNUSED bkg_stride, void *buf,
-                      void H5_ATTR_UNUSED *bkg)
-{H5T_CONV_su(SCHAR, UCHAR, signed char, unsigned char, -, -)}
+                      void H5_ATTR_UNUSED *bkg){H5T_CONV_su(SCHAR, UCHAR, signed char, unsigned char, -, -)}
 
 /*-------------------------------------------------------------------------
  * Function:    H5T__conv_uchar_schar
@@ -6944,8 +6943,7 @@ H5T__conv_llong_ldouble(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t n
 herr_t
 H5T__conv_ullong_float(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts, size_t buf_stride,
                        size_t H5_ATTR_UNUSED bkg_stride, void *buf,
-                       void H5_ATTR_UNUSED *bkg)
-{H5T_CONV_xF(ULLONG, FLOAT, unsigned long long, float, -, -)}
+                       void H5_ATTR_UNUSED *bkg){H5T_CONV_xF(ULLONG, FLOAT, unsigned long long, float, -, -)}
 
 /*-------------------------------------------------------------------------
  * Function:    H5T__conv_ullong_double
@@ -6995,8 +6993,7 @@ H5T__conv_ullong_ldouble(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t 
  */
 herr_t
 H5T__conv_float_schar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts, size_t buf_stride,
-                      size_t H5_ATTR_UNUSED bkg_stride, void *buf, void H5_ATTR_UNUSED *bkg)
-{
+                      size_t H5_ATTR_UNUSED bkg_stride, void *buf, void H5_ATTR_UNUSED *bkg){
     H5_GCC_CLANG_DIAG_OFF("float-equal") H5T_CONV_Fx(FLOAT, SCHAR, float, signed char, SCHAR_MIN, SCHAR_MAX)
         H5_GCC_CLANG_DIAG_ON("float-equal")}
 
