@@ -6274,5 +6274,71 @@ END SUBROUTINE h5pget_virtual_dsetname_f
 
   END SUBROUTINE h5pset_file_locking_f
 
+!>
+!! \ingroup FH5P
+!!
+!! \brief Retrieves local and global causes that broke collective I/O on the last parallel I/O call.
+!!
+!! \param plist_id                   Dataset transfer property list identifier 
+!! \param local_no_collective_cause  An enumerated set value indicating the causes that prevented collective I/O in the local process 
+!! \param global_no_collective_cause An enumerated set value indicating the causes across all processes that prevented collective I/O
+!! \param hdferr                     \fortran_error
+!!
+!! See C API: @ref H5Pget_mpio_no_collective_cause()
+!!
+   SUBROUTINE h5pget_mpio_no_collective_cause_f(plist_id, local_no_collective_cause, global_no_collective_cause, hdferr)
+     IMPLICIT NONE
+     INTEGER(HID_T)    , INTENT(IN)  :: plist_id
+     INTEGER(C_INT32_T), INTENT(OUT) :: local_no_collective_cause
+     INTEGER(C_INT32_T), INTENT(OUT) :: global_no_collective_cause
+     INTEGER           , INTENT(OUT) :: hdferr
+     
+     INTERFACE
+        INTEGER(C_INT) FUNCTION H5Pget_mpio_no_collective_cause(plist_id, local_no_collective_cause, global_no_collective_cause) &
+             BIND(C, NAME='H5Pget_mpio_no_collective_cause')
+          IMPORT :: HID_T, C_INT, C_INT32_T
+          IMPLICIT NONE
+          INTEGER(HID_T)    , VALUE :: plist_id
+          INTEGER(C_INT32_T), VALUE :: local_no_collective_cause
+          INTEGER(C_INT32_T), VALUE :: global_no_collective_cause
+        END FUNCTION H5Pget_mpio_no_collective_cause
+     END INTERFACE
+     
+     hdferr = INT(H5Pget_mpio_no_collective_cause(plist_id, local_no_collective_cause, global_no_collective_cause))
+     
+   END SUBROUTINE h5pget_mpio_no_collective_cause_f
+
+!>
+!! \ingroup FH5P
+!!
+!! \brief Retrieves local and global causes that broke collective I/O on the last parallel I/O call.
+!!
+!! \param plist_id                   Dataset transfer property list identifier 
+!! \param local_no_collective_cause  An enumerated set value indicating the causes that prevented collective I/O in the local process 
+!! \param global_no_collective_cause An enumerated set value indicating the causes across all processes that prevented collective I/O
+!! \param hdferr                     \fortran_error
+!!
+!! See C API: @ref H5Pget_mpio_no_collective_cause()
+!!
+   SUBROUTINE h5pget_no_selection_io_cause_f(plist_id, no_selection_io_cause, hdferr)
+     IMPLICIT NONE
+     INTEGER(HID_T)    , INTENT(IN)  :: plist_id
+     INTEGER(C_INT32_T), INTENT(OUT) :: no_selection_io_cause
+     INTEGER           , INTENT(OUT) :: hdferr
+     
+     INTERFACE
+        INTEGER(C_INT) FUNCTION H5Pget_no_selection_io_cause(plist_id, no_selection_io_cause) &
+             BIND(C, NAME='H5Pget_no_selection_io_cause')
+          IMPORT :: HID_T, C_INT, C_INT32_T
+          IMPLICIT NONE
+          INTEGER(HID_T)    , VALUE :: plist_id
+          INTEGER(C_INT32_T), VALUE :: no_selection_io_cause
+        END FUNCTION H5Pget_no_selection_io_cause
+     END INTERFACE
+     
+     hdferr = INT( H5Pget_no_selection_io_cause(plist_id, no_selection_io_cause))
+     
+   END SUBROUTINE h5pget_no_selection_io_cause_f
+
 END MODULE H5P
 
