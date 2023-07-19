@@ -2266,6 +2266,9 @@ CONTAINS
     CALL h5dfill_ptr(f_ptr_fill_value, fill_type_id, f_ptr_buf, mem_type_id, space_id, hdferr)
 
   END SUBROUTINE h5dfill_char
+
+#endif
+
 !>
 !! \ingroup FH5D
 !!
@@ -2472,8 +2475,6 @@ CONTAINS
     hdferr = H5Dwrite_chunk(dset_id, dxpl_id_default, filters, offset, data_size, buf, hdferr)
 
   END SUBROUTINE h5dwrite_chunk_f
-
-#endif
 
 END MODULE H5D
 
