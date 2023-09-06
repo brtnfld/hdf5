@@ -1512,6 +1512,10 @@ H5Dwrite_chunk(hid_t dset_id, hid_t dxpl_id, uint32_t filters, const hsize_t *of
     H5VL_native_dataset_optional_args_t dset_opt_args; /* Arguments for optional operation */
     uint32_t                            data_size_32;  /* Chunk data size (limited to 32-bits currently) */
     herr_t                              ret_value = SUCCEED; /* Return value */
+    H5T_t                               *dt = NULL; /* dataset type */
+    size_t                              type_size; /* Datatype element size */
+    H5D_t                               *dset = NULL; /* Dataset */
+    hsize_t                             chunk_size = 0; /* chunk size */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE6("e", "iiIu*hz*x", dset_id, dxpl_id, filters, offset, data_size, buf);
@@ -1525,6 +1529,35 @@ H5Dwrite_chunk(hid_t dset_id, hid_t dxpl_id, uint32_t filters, const hsize_t *of
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "offset cannot be NULL");
     if (0 == data_size)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "data_size cannot be zero");
+
+#if 0
+    /* Verify size of data is equal to the chunk size, and the offset is correct */
+    if (NULL == (dset = (H5D_t *)H5VL_object_verify(dset_id, H5I_DATASET)))
+      HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset");
+
+    //   H5D__chunk_allocated(dset, &nbytes);
+#if 0
+    if (H5D__get_chunk_storage_size(dset, offset, &chunk_size) < 0)
+      HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't get storage size of chunk - check offset");
+#endif
+    printf("%zu %zu \n", data_size, nbytes);
+
+    //    if ( data_size != chunk_size )
+    //    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid data_size - data size does not fit into a chunk");
+#endif
+
+#if 1
+    /* Get datatype element size */
+    if (NULL == (dt = (H5T_t *)H5I_object(dset_id)))
+        HGOTO_ERROR(H5E_DATATYPE, H5E_BADTYPE, FAIL, "not a datatype");
+
+    if (0 == (type_size = H5T_GET_SIZE(dt)))
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't get datatype size");
+
+    printf("%zu %zu \n",data_size/type_size, (size_t)offset);
+    if ( (data_size/type_size) % (size_t)offset != 0)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid data_size - data size does not fit into chunk");
+#endif
 
     /* Make sure data size is less than 4 GiB */
     data_size_32 = (uint32_t)data_size;
