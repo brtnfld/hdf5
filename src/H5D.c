@@ -1512,10 +1512,10 @@ H5Dwrite_chunk(hid_t dset_id, hid_t dxpl_id, uint32_t filters, const hsize_t *of
     H5VL_native_dataset_optional_args_t dset_opt_args; /* Arguments for optional operation */
     uint32_t                            data_size_32;  /* Chunk data size (limited to 32-bits currently) */
     herr_t                              ret_value = SUCCEED; /* Return value */
-    H5T_t                               *dt = NULL; /* dataset type */
-    size_t                              type_size; /* Datatype element size */
-    H5D_t                               *dset = NULL; /* Dataset */
-    hsize_t                             chunk_size = 0; /* chunk size */
+    H5T_t                              *dt        = NULL;    /* dataset type */
+    size_t                              type_size;           /* Datatype element size */
+    H5D_t                              *dset       = NULL;   /* Dataset */
+    hsize_t                             chunk_size = 0;      /* chunk size */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE6("e", "iiIu*hz*x", dset_id, dxpl_id, filters, offset, data_size, buf);
@@ -1554,8 +1554,8 @@ H5Dwrite_chunk(hid_t dset_id, hid_t dxpl_id, uint32_t filters, const hsize_t *of
     if (0 == (type_size = H5T_GET_SIZE(dt)))
         HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't get datatype size");
 
-    printf("%zu %zu \n",data_size/type_size, (size_t)offset);
-    if ( (data_size/type_size) % (size_t)offset != 0)
+    printf("%zu %zu \n", data_size / type_size, (size_t)offset);
+    if ((data_size / type_size) % (size_t)offset != 0)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid data_size - data size does not fit into chunk");
 #endif
 
