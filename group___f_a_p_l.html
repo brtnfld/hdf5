@@ -37,7 +37,7 @@
   <td id="projectlogo"><img alt="Logo" src="HDFG-logo.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname"><a href="https://www.hdfgroup.org">HDF5</a>
-   &#160;<span id="projectnumber">1.15.0.627fba0</span>
+   &#160;<span id="projectnumber">1.15.0.a0edeee</span>
    </div>
    <div id="projectbrief">API Reference</div>
   </td>
@@ -205,7 +205,7 @@ $(document).ready(function(){initNavTree('group___f_a_p_l.html',''); initResizab
 <tr>
 <td><a class="el" href="group___f_a_p_l.html#ga714340ec9cbb65cb0a819e1d775825f0" title="Modifies the specified File Access Property List to use the H5FD_IOC driver.">H5Pset_fapl_ioc</a>/<a class="el" href="group___f_a_p_l.html#ga8482cdac1272818e4e0f86a665f8ef98" title="Queries a File Access Property List for H5FD_IOC file driver properties.">H5Pget_fapl_ioc</a> </td><td>Modifies/queries the file driver properties of the I/O concentrator driver.  </td></tr>
 <tr>
-<td><a class="el" href="group___f_a_p_l.html#ga4e03be2fe83ed02b32266a6c81427beb" title="Sets up the logging virtual file driver (H5FD_LOG) for use.">H5Pset_fapl_log</a> </td><td>Sets logging driver.  </td></tr>
+<td><a class="el" href="group___f_a_p_l.html#ga4e03be2fe83ed02b32266a6c81427beb" title="Sets up the logging virtual file driver (H5FD_LOG) for use.">H5Pset_fapl_log</a> </td><td>The logging driver is a clone of the standard SEC2 (<a class="el" href="_h5_f_dsec2_8h.html#a15ae1f958e1cf11cb239916d76b10606">H5FD_SEC2</a>) driver with additional facilities for logging metrics and activity to a file.  </td></tr>
 <tr>
 <td><a class="el" href="group___f_a_p_l.html#ga8491676811ccc7ba582e30fb63da6563">H5Pset_fapl_mirror</a>/<a class="el" href="group___f_a_p_l.html#ga2c0636d9bb9c50d381afbd0d3140e593">H5Pget_fapl_mirror</a> </td><td>Modifies/queries the file driver properties of the mirror driver.  </td></tr>
 <tr>
@@ -217,9 +217,13 @@ $(document).ready(function(){initNavTree('group___f_a_p_l.html',''); initResizab
 <tr>
 <td><a class="el" href="group___f_a_p_l.html#ga4d053c7682e54287e550113972b7dda6" title="set the onion info for the file access property list">H5Pset_fapl_onion</a>/<a class="el" href="group___f_a_p_l.html#ga89b9f918d53dee5e6c80060667b8d32f" title="get the onion info from the file access property list">H5Pget_fapl_onion</a> </td><td>Modifies/queries the file driver properties of the onion driver.  </td></tr>
 <tr>
+<td><a class="el" href="group___f_a_p_l.html#gaad28d8c24f236590193215c5ae7a8f18" title="Modifies the specified File Access Property List to use the H5FD_ROS3 driver.">H5Pset_fapl_ros3</a>/<a class="el" href="group___f_a_p_l.html#ga13e273711e160cbd58e60c701b4f50e6" title="Queries a File Access Property List for H5FD_ROS3 file driver properties.">H5Pget_fapl_ros3</a> </td><td>Modifies/queries the file driver properties of the ros3 driver.  </td></tr>
+<tr>
 <td><a class="el" href="_h5_f_dsec2_8h.html#af581bceca36ad4eef3cd45b16eabbb20">H5Pset_fapl_sec2</a> </td><td>Sets driver for unbuffered permanent files or retrieves information regarding driver.  </td></tr>
 <tr>
-<td><a class="el" href="group___f_a_p_l.html#ga502f1ad38f5143cf281df8282fef26ed" title="Emulates the old split file driver.">H5Pset_fapl_split</a> </td><td>Sets driver for split files, a limited case of multiple files with one metadata file and one raw data file.  </td></tr>
+<td><a class="el" href="group___f_a_p_l.html#ga502f1ad38f5143cf281df8282fef26ed" title="Emulates the old split file driver.">H5Pset_fapl_split</a> </td><td>Sets driver for split files, a limited case of multi driver with one metadata file and one raw data file.  </td></tr>
+<tr>
+<td><a class="el" href="group___f_a_p_l.html#ga49f386ea235bb48128e54c962c499f07">H5Pset_fapl_splitter</a>/<a class="el" href="group___f_a_p_l.html#gaf6ac1c131acee33dfb878593dfefb4ac">H5Pget_fapl_splitter</a> </td><td>Modifies/queries the file driver properties of the splitter driver.  </td></tr>
 <tr>
 <td><a class="el" href="group___f_a_p_l.html#ga77f0643117835e7f7992d573761b5052" title="Sets the standard I/O driver.">H5Pset_fapl_stdio</a> </td><td>Sets driver for buffered permanent files.  </td></tr>
 <tr>
@@ -746,33 +750,49 @@ For optimum performance, the <code>page_size</code> parameter should be a power 
 <dl class="section return"><dt>Returns</dt><dd>Returns a low level driver identifier if successful; otherwise returns <a class="el" href="_h5_ipublic_8h.html#a01eab13dccc91afd6909d74dccb780ba">H5I_INVALID_HID</a>.</dd></dl>
 <p><a class="el" href="group___f_a_p_l.html#ga43a733fe9723dd15f5ad7abda909a1b8" title="Returns low-lever driver identifier.">H5Pget_driver()</a> returns the identifier of the low-level file driver associated with the file access property list or data transfer property list <code>plist_id</code>.</p>
 <p>Valid driver identifiers distributed with HDF5 are listed and described in the following table.</p>
+<p><a class="anchor" id="table_file_drivers"></a>
 <table class="doxtable">
+<caption>Supported file drivers</caption>
 <tr>
-<th>Driver Name </th><th>Driver Identifier </th><th>Description </th><th>Related Function  </th></tr>
+<th>Driver Name </th><th>Driver Identifier </th><th>Description </th><th>Related API  </th></tr>
 <tr>
-<td>POSIX </td><td><a class="el" href="_h5_f_dsec2_8h.html#a15ae1f958e1cf11cb239916d76b10606">H5FD_SEC2</a> </td><td>This driver uses POSIX file-system functions like read and write to perform I/O to a single, permanent file on local disk with no system buffering. This driver is POSIX-compliant and is the default file driver for all systems. </td><td><a class="el" href="_h5_f_dsec2_8h.html#af581bceca36ad4eef3cd45b16eabbb20">H5Pset_fapl_sec2()</a>  </td></tr>
+<td>POSIX </td><td><a class="el" href="_h5_f_dsec2_8h.html#a15ae1f958e1cf11cb239916d76b10606">H5FD_SEC2</a> </td><td>This driver uses POSIX file-system functions like read and write to perform I/O to a single, permanent file on local disk with no system buffering. This driver is POSIX-compliant and is the default file driver for all systems. </td><td><a class="el" href="_h5_f_dsec2_8h.html#af581bceca36ad4eef3cd45b16eabbb20">H5Pset_fapl_sec2</a>  </td></tr>
 <tr>
-<td>Direct </td><td><a class="el" href="_h5_f_ddirect_8h.html#a99213f218f9ab0c51f9c679228a1e436">H5FD_DIRECT</a> </td><td>This is the <a class="el" href="_h5_f_dsec2_8h.html#a15ae1f958e1cf11cb239916d76b10606">H5FD_SEC2</a> driver, except data is written to or read from the file synchronously without being cached by the system. </td><td><a class="el" href="group___f_a_p_l.html#ga2839252e149484ef30fb214ae7b44ac7" title="Sets up use of the direct I/O driver.">H5Pset_fapl_direct()</a>  </td></tr>
+<td>Memory </td><td><a class="el" href="_h5_f_dcore_8h.html#ae449696f6b86abcd1120beab21fff76a">H5FD_CORE</a> </td><td>With this driver, an application can work with a file in memory for faster reads and writes. File contents are kept in memory until the file is closed. At closing, the memory version of the file can be written back to disk or abandoned. </td><td><a class="el" href="group___f_a_p_l.html#ga6e6628f620a1c58c704129cf07282849" title="Modifies the file access property list to use the H5FD_CORE driver.">H5Pset_fapl_core</a>  </td></tr>
 <tr>
-<td>Log </td><td><a class="el" href="_h5_f_dlog_8h.html#a027aaf28f5104c77c4f51ecd29a5f7f4">H5FD_LOG</a> </td><td>This is the <a class="el" href="_h5_f_dsec2_8h.html#a15ae1f958e1cf11cb239916d76b10606">H5FD_SEC2</a> driver with logging capabilities. </td><td><a class="el" href="group___f_a_p_l.html#ga4e03be2fe83ed02b32266a6c81427beb" title="Sets up the logging virtual file driver (H5FD_LOG) for use.">H5Pset_fapl_log()</a>  </td></tr>
+<td>Log </td><td><a class="el" href="_h5_f_dlog_8h.html#a027aaf28f5104c77c4f51ecd29a5f7f4">H5FD_LOG</a> </td><td>This is the <a class="el" href="_h5_f_dsec2_8h.html#a15ae1f958e1cf11cb239916d76b10606">H5FD_SEC2</a> driver with logging capabilities. </td><td><a class="el" href="group___f_a_p_l.html#ga4e03be2fe83ed02b32266a6c81427beb" title="Sets up the logging virtual file driver (H5FD_LOG) for use.">H5Pset_fapl_log</a>  </td></tr>
 <tr>
-<td>Windows </td><td><a class="el" href="_h5_f_dwindows_8h.html#ab5173993ddefd103bfb3d37c2837a9a4">H5FD_WINDOWS</a> </td><td>This driver was modified in HDF5-1.8.8 to be a wrapper of the POSIX driver, <a class="el" href="_h5_f_dsec2_8h.html#a15ae1f958e1cf11cb239916d76b10606">H5FD_SEC2</a>. This change should not affect user applications. </td><td><a class="el" href="group___f_a_p_l.html#ga0017f78e0f3de465621fde556f679830" title="Sets the Windows I/O driver.">H5Pset_fapl_windows()</a>  </td></tr>
+<td>Family </td><td><a class="el" href="_h5_f_dfamily_8h.html#adbf24f060712550a2a9649589a6060c6">H5FD_FAMILY</a> </td><td>With this driver, the HDF5 file's address space is partitioned into pieces and sent to separate storage files using an underlying driver of the user's choice. This driver is for systems that do not support files larger than 2 gigabytes. </td><td><a class="el" href="group___f_a_p_l.html#ga95d19da25f196ce1ace10af00f49ab53" title="Sets the file access property list to use the family driver.">H5Pset_fapl_family</a>  </td></tr>
 <tr>
-<td>STDIO </td><td><a class="el" href="_h5_f_dstdio_8h.html#a030a03b96a9f6e46035ce64e25389085">H5FD_STDIO</a> </td><td>This driver uses functions from the standard C stdio.h to perform I/O to a single, permanent file on local disk with additional system buffering. </td><td><a class="el" href="group___f_a_p_l.html#ga77f0643117835e7f7992d573761b5052" title="Sets the standard I/O driver.">H5Pset_fapl_stdio()</a>  </td></tr>
+<td>Multi </td><td><a class="el" href="_h5_f_dmulti_8h.html#a754e05ae5e0f2d86f64002b338c0fd5c">H5FD_MULTI</a> </td><td>With this driver, data can be stored in multiple files according to the type of the data. I/O might work better if data is stored in separate files based on the type of data. The Split driver is a special case of this driver. </td><td><a class="el" href="group___f_a_p_l.html#ga296bd22cc1e462351f8f0a00a46baf58" title="Sets up use of the multi-file driver.">H5Pset_fapl_multi</a> / <a class="el" href="group___f_a_p_l.html#ga502f1ad38f5143cf281df8282fef26ed" title="Emulates the old split file driver.">H5Pset_fapl_split</a>  </td></tr>
 <tr>
-<td>Memory </td><td><a class="el" href="_h5_f_dcore_8h.html#ae449696f6b86abcd1120beab21fff76a">H5FD_CORE</a> </td><td>With this driver, an application can work with a file in memory for faster reads and writes. File contents are kept in memory until the file is closed. At closing, the memory version of the file can be written back to disk or abandoned.  </td><td><a class="el" href="group___f_a_p_l.html#ga6e6628f620a1c58c704129cf07282849" title="Modifies the file access property list to use the H5FD_CORE driver.">H5Pset_fapl_core()</a>  </td></tr>
+<td>STDIO </td><td><a class="el" href="_h5_f_dstdio_8h.html#a030a03b96a9f6e46035ce64e25389085">H5FD_STDIO</a> </td><td>This driver uses functions from the standard C stdio.h to perform I/O to a single, permanent file on local disk with additional system buffering. </td><td><a class="el" href="group___f_a_p_l.html#ga77f0643117835e7f7992d573761b5052" title="Sets the standard I/O driver.">H5Pset_fapl_stdio</a>  </td></tr>
 <tr>
-<td>Family </td><td><a class="el" href="_h5_f_dfamily_8h.html#adbf24f060712550a2a9649589a6060c6">H5FD_FAMILY</a> </td><td>With this driver, the HDF5 file's address space is partitioned into pieces and sent to separate storage files using an underlying driver of the user's choice. This driver is for systems that do not support files larger than 2 gigabytes.  </td><td><a class="el" href="group___f_a_p_l.html#ga95d19da25f196ce1ace10af00f49ab53" title="Sets the file access property list to use the family driver.">H5Pset_fapl_family()</a>  </td></tr>
+<td>Split </td><td><a class="el" href="_h5_f_dsplitter_8h.html#ac6c45c6a8e1cb7f5b4400d95bf651eae">H5FD_SPLITTER</a> </td><td>This file driver splits a file into two parts. One part stores metadata, and the other part stores raw data. This splitting a file into two parts is a limited case of the Multi driver. </td><td><a class="el" href="group___f_a_p_l.html#ga49f386ea235bb48128e54c962c499f07">H5Pset_fapl_splitter</a>  </td></tr>
 <tr>
-<td>Multi </td><td><a class="el" href="_h5_f_dmulti_8h.html#a754e05ae5e0f2d86f64002b338c0fd5c">H5FD_MULTI</a> </td><td>With this driver, data can be stored in multiple files according to the type of data. I/O might work better if data is stored in separate files based on the type of data. The Split driver is a special case of this driver. </td><td><a class="el" href="group___f_a_p_l.html#ga296bd22cc1e462351f8f0a00a46baf58" title="Sets up use of the multi-file driver.">H5Pset_fapl_multi()</a>  </td></tr>
+<td>Parallel </td><td><a class="el" href="_h5_f_dmpio_8h.html#a7a231bc1d78744088a4e1d297284cabf">H5FD_MPIO</a> </td><td>This is the standard HDF5 file driver for parallel file systems. This driver uses the MPI standard for both communication and file I/O. </td><td><a class="el" href="group___f_a_p_l.html#gaa0204810c1fea1667d62cf7c176416ff" title="Stores MPI IO communicator information to the file access property list.">H5Pset_fapl_mpio</a>  </td></tr>
 <tr>
-<td>Parallel </td><td><a class="el" href="_h5_f_dmpio_8h.html#a7a231bc1d78744088a4e1d297284cabf">H5FD_MPIO</a> </td><td>This is the standard HDF5 file driver for parallel file systems. This driver uses the MPI standard for both communication and file I/O. </td><td><a class="el" href="group___f_a_p_l.html#gaa0204810c1fea1667d62cf7c176416ff" title="Stores MPI IO communicator information to the file access property list.">H5Pset_fapl_mpio()</a>  </td></tr>
+<td>Direct </td><td><a class="el" href="_h5_f_ddirect_8h.html#a99213f218f9ab0c51f9c679228a1e436">H5FD_DIRECT</a> </td><td>This is the <a class="el" href="_h5_f_dsec2_8h.html#a15ae1f958e1cf11cb239916d76b10606">H5FD_SEC2</a> driver except data is written to or read from the file synchronously without being cached by the system. </td><td><a class="el" href="group___f_a_p_l.html#ga2839252e149484ef30fb214ae7b44ac7" title="Sets up use of the direct I/O driver.">H5Pset_fapl_direct</a>  </td></tr>
 <tr>
-<td>Parallel POSIX </td><td>H5FD_MPIPOSIX </td><td>This driver is no longer available. </td><td></td></tr>
+<td>Mirror </td><td><a class="el" href="_h5_f_dmirror_8h.html#a05b78c6f3d122b4112632080474b3412">H5FD_MIRROR</a> </td><td>Serial I/O to file using Unix “stdio” functions. </td><td><a class="el" href="group___f_a_p_l.html#ga8491676811ccc7ba582e30fb63da6563">H5Pset_fapl_mirror</a>  </td></tr>
+<tr>
+<td>HDFS </td><td><a class="el" href="_h5_f_dhdfs_8h.html#ac3868cc2fa0e9aec4bcb52830906d584">H5FD_HDFS</a> </td><td>Read-Only access to Hadoop Distributed File System (HDFS). </td><td><a class="el" href="group___f_a_p_l.html#ga970d077c8e712a4692f43fa4f38dde14">H5Pset_fapl_hdfs</a>  </td></tr>
+<tr>
+<td>ros3 </td><td><a class="el" href="_h5_f_dros3_8h.html#ace004a4771dcfd40a4c0adecc1974570">H5FD_ROS3</a> </td><td>Read-Only access to Amazon's S3 service. </td><td><a class="el" href="group___f_a_p_l.html#gaad28d8c24f236590193215c5ae7a8f18" title="Modifies the specified File Access Property List to use the H5FD_ROS3 driver.">H5Pset_fapl_ros3</a>  </td></tr>
+<tr>
+<td>Subfiling </td><td><a class="el" href="_h5_f_dsubfiling_8h.html#a070ba7b51cfe718ba4da75b308066a9d">H5FD_SUBFILING</a> </td><td>Derived from other "stacked" VFDs such as the splitter, mirror, and family VFDs. </td><td><a class="el" href="group___f_a_p_l.html#ga65dbddbba216fdd0bdf99b4feaa74db2" title="Modifies the specified File Access Property List to use the H5FD_SUBFILING driver.">H5Pset_fapl_subfiling</a>  </td></tr>
+<tr>
+<td>IOC </td><td><a class="el" href="_h5_f_dioc_8h.html#a9d6649a67050fb1101cca3596421b986">H5FD_IOC</a> </td><td>Relays VFD calls to one VFD, and write calls to another VFD. Maintains two files. </td><td><a class="el" href="group___f_a_p_l.html#ga714340ec9cbb65cb0a819e1d775825f0" title="Modifies the specified File Access Property List to use the H5FD_IOC driver.">H5Pset_fapl_ioc</a>  </td></tr>
+<tr>
+<td>Onion </td><td><a class="el" href="_h5_f_donion_8h.html#a1d6673897b4ebd1bad9846b5695ba346">H5FD_ONION</a> </td><td>Provide in-file provenance and revision/version control. </td><td><a class="el" href="group___f_a_p_l.html#ga4d053c7682e54287e550113972b7dda6" title="set the onion info for the file access property list">H5Pset_fapl_onion</a>  </td></tr>
+<tr>
+<td>Windows </td><td><a class="el" href="_h5_f_dwindows_8h.html#ab5173993ddefd103bfb3d37c2837a9a4">H5FD_WINDOWS</a> </td><td>This driver was modified in HDF5-1.8.8 to be a wrapper of the POSIX driver, <a class="el" href="_h5_f_dsec2_8h.html#a15ae1f958e1cf11cb239916d76b10606">H5FD_SEC2</a>. This change should not affect user applications. </td><td><a class="el" href="group___f_a_p_l.html#ga0017f78e0f3de465621fde556f679830" title="Sets the Windows I/O driver.">H5Pset_fapl_windows</a>  </td></tr>
+<tr>
+<td>Parallel POSIX </td><td>H5FD_MPIPOSIX </td><td>This driver is no longer available </td><td></td></tr>
 <tr>
 <td>Stream </td><td>H5FD_STREAM </td><td>This driver is no longer available. </td><td></td></tr>
 </table>
-<p>This list does not include custom drivers that might be defined and registered by a user.</p>
+ This list does not include custom drivers that might be defined and registered by a user.</p>
 <p>The returned driver identifier is only valid as long as the file driver remains registered.</p>
 <dl class="section since"><dt>Since</dt><dd>1.4.0 </dd></dl>
 
@@ -1336,7 +1356,7 @@ For optimum performance, the <code>page_size</code> parameter should be a power 
     <tr><td class="paramdir">[out]</td><td class="paramname">memb_fapl</td><td>Property list for each memory usage type </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">memb_name</td><td>Name generator for names of member files </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">memb_addr</td><td>The offsets within the virtual address space, from 0 (zero) to <a class="el" href="_h5public_8h.html#a49742d33813ee38ef58eca9fbeda6b86">HADDR_MAX</a>, at which each type of data storage begins </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">relax</td><td>Allows read-only access to incomplete file sets when <code>TRUE</code> </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">relax</td><td>Allows read-only access to incomplete file sets when <code>true</code> </td></tr>
   </table>
   </dd>
 </dl>
@@ -1894,7 +1914,7 @@ For optimum performance, the <code>page_size</code> parameter should be a power 
 <div class="ttc" id="a_h5_cpublic_8h_html_a040d488146ff1ca0a82209e9af3918fa"><div class="ttname"><a href="_h5_cpublic_8h.html#a040d488146ff1ca0a82209e9af3918fa">H5C_cache_incr_mode</a></div><div class="ttdeci">H5C_cache_incr_mode</div><div class="ttdef"><b>Definition:</b> H5Cpublic.h:26</div></div>
 <div class="ttc" id="a_h5_cpublic_8h_html_a4f8534794ad9a977185a5d608c0af04f"><div class="ttname"><a href="_h5_cpublic_8h.html#a4f8534794ad9a977185a5d608c0af04f">H5C_cache_decr_mode</a></div><div class="ttdeci">H5C_cache_decr_mode</div><div class="ttdef"><b>Definition:</b> H5Cpublic.h:42</div></div>
 <div class="ttc" id="a_h5_cpublic_8h_html_aaaa13ca7756d135b7df6d5a6779ee908"><div class="ttname"><a href="_h5_cpublic_8h.html#aaaa13ca7756d135b7df6d5a6779ee908">H5C_cache_flash_incr_mode</a></div><div class="ttdeci">H5C_cache_flash_incr_mode</div><div class="ttdef"><b>Definition:</b> H5Cpublic.h:34</div></div>
-<div class="ttc" id="a_h5public_8h_html_ad470b00eccd2115c707c02de5fa1120d"><div class="ttname"><a href="_h5public_8h.html#ad470b00eccd2115c707c02de5fa1120d">hbool_t</a></div><div class="ttdeci">bool hbool_t</div><div class="ttdef"><b>Definition:</b> H5public.h:243</div></div>
+<div class="ttc" id="a_h5public_8h_html_ad470b00eccd2115c707c02de5fa1120d"><div class="ttname"><a href="_h5public_8h.html#ad470b00eccd2115c707c02de5fa1120d">hbool_t</a></div><div class="ttdeci">bool hbool_t</div><div class="ttdef"><b>Definition:</b> H5public.h:249</div></div>
 <div class="ttc" id="astruct_h5_a_c__cache__config__t_html"><div class="ttname"><a href="struct_h5_a_c__cache__config__t.html">H5AC_cache_config_t</a></div><div class="ttdef"><b>Definition:</b> H5ACpublic.h:462</div></div>
 <div class="ttc" id="astruct_h5_a_c__cache__config__t_html_a0e25a1dc2c695bea335df0e23ed6363c"><div class="ttname"><a href="struct_h5_a_c__cache__config__t.html#a0e25a1dc2c695bea335df0e23ed6363c">H5AC_cache_config_t::flash_incr_mode</a></div><div class="ttdeci">enum H5C_cache_flash_incr_mode flash_incr_mode</div><div class="ttdef"><b>Definition:</b> H5ACpublic.h:615</div></div>
 <div class="ttc" id="astruct_h5_a_c__cache__config__t_html_a20f323fcb4747fc7228d2d74bb965586"><div class="ttname"><a href="struct_h5_a_c__cache__config__t.html#a20f323fcb4747fc7228d2d74bb965586">H5AC_cache_config_t::lower_hr_threshold</a></div><div class="ttdeci">double lower_hr_threshold</div><div class="ttdef"><b>Definition:</b> H5ACpublic.h:585</div></div>
@@ -3285,8 +3305,8 @@ Raw dataset chunk caching is supported when these drivers are used in read-only 
 <p><a class="el" href="group___f_a_p_l.html#ga6e6628f620a1c58c704129cf07282849" title="Modifies the file access property list to use the H5FD_CORE driver.">H5Pset_fapl_core()</a> modifies the file access property list to use the <a class="el" href="_h5_f_dcore_8h.html#ae449696f6b86abcd1120beab21fff76a">H5FD_CORE</a> driver.</p>
 <p>The <a class="el" href="_h5_f_dcore_8h.html#ae449696f6b86abcd1120beab21fff76a">H5FD_CORE</a> driver enables an application to work with a file in memory, speeding reads and writes as no disk access is made. File contents are stored only in memory until the file is closed. The <code>backing_store</code> parameter determines whether file contents are ever written to disk.</p>
 <p><code>increment</code> specifies the increment by which allocated memory is to be increased each time more memory is required.</p>
-<p>While using <a class="el" href="group___h5_f.html#gae64b51ee9ac0781bc4ccc599d98387f4" title="Creates an HDF5 file.">H5Fcreate()</a> to create a core file, if the <code>backing_store</code> is set to 1 (TRUE), the file contents are flushed to a file with the same name as this core file when the file is closed or access to the file is terminated in memory.</p>
-<p>The application is allowed to open an existing file with <a class="el" href="_h5_f_dcore_8h.html#ae449696f6b86abcd1120beab21fff76a">H5FD_CORE</a> driver. While using <a class="el" href="group___h5_f.html#gaa3f4f877b9bb591f3880423ed2bf44bc" title="Opens an existing HDF5 file.">H5Fopen()</a> to open an existing file, if the <code>backing_store</code> is set to 1 (TRUE) and the <code>flags</code> for <a class="el" href="group___h5_f.html#gaa3f4f877b9bb591f3880423ed2bf44bc" title="Opens an existing HDF5 file.">H5Fopen()</a> is set to <a class="el" href="_h5_fpublic_8h.html#a402673dec5c537b27a49a9a8bd6140b4">H5F_ACC_RDWR</a>, any change to the file contents are saved to the file when the file is closed. If <code>backing_store</code> is set to 0 (FALSE) and the <code>flags</code> for <a class="el" href="group___h5_f.html#gaa3f4f877b9bb591f3880423ed2bf44bc" title="Opens an existing HDF5 file.">H5Fopen()</a> is set to <a class="el" href="_h5_fpublic_8h.html#a402673dec5c537b27a49a9a8bd6140b4">H5F_ACC_RDWR</a>, any change to the file contents will be lost when the file is closed. If the flags for <a class="el" href="group___h5_f.html#gaa3f4f877b9bb591f3880423ed2bf44bc" title="Opens an existing HDF5 file.">H5Fopen()</a> is set to <a class="el" href="_h5_fpublic_8h.html#a1c406ffa89f4acf5a332144a2683d394">H5F_ACC_RDONLY</a>, no change to the file is allowed either in memory or on file.</p>
+<p>While using <a class="el" href="group___h5_f.html#gae64b51ee9ac0781bc4ccc599d98387f4" title="Creates an HDF5 file.">H5Fcreate()</a> to create a core file, if the <code>backing_store</code> is set to 1 (true), the file contents are flushed to a file with the same name as this core file when the file is closed or access to the file is terminated in memory.</p>
+<p>The application is allowed to open an existing file with <a class="el" href="_h5_f_dcore_8h.html#ae449696f6b86abcd1120beab21fff76a">H5FD_CORE</a> driver. While using <a class="el" href="group___h5_f.html#gaa3f4f877b9bb591f3880423ed2bf44bc" title="Opens an existing HDF5 file.">H5Fopen()</a> to open an existing file, if the <code>backing_store</code> is set to 1 (true) and the <code>flags</code> for <a class="el" href="group___h5_f.html#gaa3f4f877b9bb591f3880423ed2bf44bc" title="Opens an existing HDF5 file.">H5Fopen()</a> is set to <a class="el" href="_h5_fpublic_8h.html#a402673dec5c537b27a49a9a8bd6140b4">H5F_ACC_RDWR</a>, any change to the file contents are saved to the file when the file is closed. If <code>backing_store</code> is set to 0 (false) and the <code>flags</code> for <a class="el" href="group___h5_f.html#gaa3f4f877b9bb591f3880423ed2bf44bc" title="Opens an existing HDF5 file.">H5Fopen()</a> is set to <a class="el" href="_h5_fpublic_8h.html#a402673dec5c537b27a49a9a8bd6140b4">H5F_ACC_RDWR</a>, any change to the file contents will be lost when the file is closed. If the flags for <a class="el" href="group___h5_f.html#gaa3f4f877b9bb591f3880423ed2bf44bc" title="Opens an existing HDF5 file.">H5Fopen()</a> is set to <a class="el" href="_h5_fpublic_8h.html#a1c406ffa89f4acf5a332144a2683d394">H5F_ACC_RDONLY</a>, no change to the file is allowed either in memory or on file.</p>
 <dl class="section note"><dt>Note</dt><dd>Currently this driver cannot create or open family or multi files.</dd></dl>
 <dl class="section since"><dt>Since</dt><dd>1.4.0 </dd></dl>
 
@@ -3856,7 +3876,7 @@ Flavor of allocation   </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">memb_fapl</td><td>Property list for each memory usage type </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">memb_name</td><td>Name generator for names of member files </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">memb_addr</td><td>The offsets within the virtual address space, from 0 (zero) to <a class="el" href="_h5public_8h.html#a49742d33813ee38ef58eca9fbeda6b86">HADDR_MAX</a>, at which each type of data storage begins </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">relax</td><td>Allows read-only access to incomplete file sets when <code>TRUE</code> </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">relax</td><td>Allows read-only access to incomplete file sets when <code>true</code> </td></tr>
   </table>
   </dd>
 </dl>
@@ -3867,7 +3887,7 @@ Flavor of allocation   </td></tr>
 <p>The array <code>memb_fapl</code> contains a property list for each memory usage type that will be associated with a file.</p>
 <p>The array <code>memb_name</code> should be a name generator (a <code>printf</code>-style format with a <code>s</code> which will be replaced with the name passed to <a class="el" href="_h5_f_ddevelop_8h.html#adc1c79631e8d73baa19bf488549dabb1">H5FDopen()</a>, usually from <a class="el" href="group___h5_f.html#gae64b51ee9ac0781bc4ccc599d98387f4" title="Creates an HDF5 file.">H5Fcreate()</a> or <a class="el" href="group___h5_f.html#gaa3f4f877b9bb591f3880423ed2bf44bc" title="Opens an existing HDF5 file.">H5Fopen()</a>).</p>
 <p>The array <code>memb_addr</code> specifies the offsets within the virtual address space, from 0 (zero) to <a class="el" href="_h5public_8h.html#a49742d33813ee38ef58eca9fbeda6b86">HADDR_MAX</a>, at which each type of data storage begins.</p>
-<p>If <code>relax</code> is set to 1 (TRUE), then opening an existing file for read-only access will not fail if some file members are missing. This allows a file to be accessed in a limited sense if just the meta data is available.</p>
+<p>If <code>relax</code> is set to 1 (true), then opening an existing file for read-only access will not fail if some file members are missing. This allows a file to be accessed in a limited sense if just the meta data is available.</p>
 <p>Default values for each of the optional arguments are as follows: </p><table class="doxtable">
 <tr>
 <td><code>memb_map</code>  </td><td>The default member map contains the value <a class="el" href="_h5_fpublic_8h.html#a51e588cd954ea2388816bd0818850eb5a137331d00cf5b0c84ef7dfa725429f90">H5FD_MEM_DEFAULT</a> for each element.  </td></tr>
@@ -3917,13 +3937,13 @@ Flavor of allocation   </td></tr>
 <div class="line"> </div>
 <div class="line"><a class="code" href="_h5_ipublic_8h.html#a0045db7ff9c22ad35db6ae91662e1943">hid_t</a> fapl = <a class="code" href="group___p_l_c_r.html#gaf1b11da01d4d45d788c45f8bc5f0cbfa">H5Pcreate</a>(<a class="code" href="_h5_ppublic_8h.html#a60ec2d4334addfc0eda89614598ee38e">H5P_FILE_ACCESS</a>);</div>
 <div class="line"><a class="code" href="group___f_a_p_l.html#ga296bd22cc1e462351f8f0a00a46baf58">H5Pset_fapl_multi</a>(fapl, memb_map, memb_fapl,</div>
-<div class="line">                  memb_name, memb_addr, TRUE);</div>
+<div class="line">                  memb_name, memb_addr, <span class="keyword">true</span>);</div>
 <div class="ttc" id="a_h5_f_dpublic_8h_html_a02887a6f018be1a0ce7358522095578b"><div class="ttname"><a href="_h5_f_dpublic_8h.html#a02887a6f018be1a0ce7358522095578b">H5FD_mem_t</a></div><div class="ttdeci">enum H5F_mem_t H5FD_mem_t</div><div class="ttdef"><b>Definition:</b> H5FDpublic.h:259</div></div>
 <div class="ttc" id="a_h5_fpublic_8h_html_a51e588cd954ea2388816bd0818850eb5a3be201777da432df4a8e2c1b618a7566"><div class="ttname"><a href="_h5_fpublic_8h.html#a51e588cd954ea2388816bd0818850eb5a3be201777da432df4a8e2c1b618a7566">H5FD_MEM_NTYPES</a></div><div class="ttdeci">@ H5FD_MEM_NTYPES</div><div class="ttdef"><b>Definition:</b> H5Fpublic.h:168</div></div>
 <div class="ttc" id="a_h5_fpublic_8h_html_a51e588cd954ea2388816bd0818850eb5ab435b061fede0393691acbe7cac2cb2e"><div class="ttname"><a href="_h5_fpublic_8h.html#a51e588cd954ea2388816bd0818850eb5ab435b061fede0393691acbe7cac2cb2e">H5FD_MEM_DRAW</a></div><div class="ttdeci">@ H5FD_MEM_DRAW</div><div class="ttdef"><b>Definition:</b> H5Fpublic.h:163</div></div>
 <div class="ttc" id="a_h5_fpublic_8h_html_a51e588cd954ea2388816bd0818850eb5ae536846ac8d6ecd1a2a8479409df1bce"><div class="ttname"><a href="_h5_fpublic_8h.html#a51e588cd954ea2388816bd0818850eb5ae536846ac8d6ecd1a2a8479409df1bce">H5FD_MEM_SUPER</a></div><div class="ttdeci">@ H5FD_MEM_SUPER</div><div class="ttdef"><b>Definition:</b> H5Fpublic.h:161</div></div>
-<div class="ttc" id="a_h5public_8h_html_a49742d33813ee38ef58eca9fbeda6b86"><div class="ttname"><a href="_h5public_8h.html#a49742d33813ee38ef58eca9fbeda6b86">HADDR_MAX</a></div><div class="ttdeci">#define HADDR_MAX</div><div class="ttdef"><b>Definition:</b> H5public.h:328</div></div>
-<div class="ttc" id="a_h5public_8h_html_a8c86e866f40d7167cf9a1934c72b856f"><div class="ttname"><a href="_h5public_8h.html#a8c86e866f40d7167cf9a1934c72b856f">haddr_t</a></div><div class="ttdeci">uint64_t haddr_t</div><div class="ttdef"><b>Definition:</b> H5public.h:319</div></div>
+<div class="ttc" id="a_h5public_8h_html_a49742d33813ee38ef58eca9fbeda6b86"><div class="ttname"><a href="_h5public_8h.html#a49742d33813ee38ef58eca9fbeda6b86">HADDR_MAX</a></div><div class="ttdeci">#define HADDR_MAX</div><div class="ttdef"><b>Definition:</b> H5public.h:334</div></div>
+<div class="ttc" id="a_h5public_8h_html_a8c86e866f40d7167cf9a1934c72b856f"><div class="ttname"><a href="_h5public_8h.html#a8c86e866f40d7167cf9a1934c72b856f">haddr_t</a></div><div class="ttdeci">uint64_t haddr_t</div><div class="ttdef"><b>Definition:</b> H5public.h:325</div></div>
 <div class="ttc" id="agroup___f_a_p_l_html_ga296bd22cc1e462351f8f0a00a46baf58"><div class="ttname"><a href="group___f_a_p_l.html#ga296bd22cc1e462351f8f0a00a46baf58">H5Pset_fapl_multi</a></div><div class="ttdeci">H5_DLL herr_t H5Pset_fapl_multi(hid_t fapl_id, const H5FD_mem_t *memb_map, const hid_t *memb_fapl, const char *const *memb_name, const haddr_t *memb_addr, hbool_t relax)</div><div class="ttdoc">Sets up use of the multi-file driver.</div></div>
 </div><!-- fragment --></dd></dl>
 <dl class="section version"><dt>Version</dt><dd>1.6.3 <code>memb_name</code> parameter type changed to <code>const char* const*</code>. </dd></dl>
@@ -5451,7 +5471,7 @@ Failure Modes:<ul>
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="footer">Generated on Fri Sep 1 2023 01:29:46 for HDF5 by
+    <li class="footer">Generated on Tue Sep 12 2023 01:22:48 for HDF5 by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.9.1 </li>
   </ul>
