@@ -625,17 +625,12 @@ H5_mpio_gatherv_alloc(void *send_buf, int send_count, MPI_Datatype send_type, co
                       const int displacements[], MPI_Datatype recv_type, hbool_t allgather, int root,
                       MPI_Comm comm, int mpi_rank, int mpi_size, void **out_buf, size_t *out_buf_num_entries)
 {
-    size_t recv_buf_num_entries = 0;
-    void  *recv_buf             = NULL;
-#if H5_CHECK_MPI_VERSION(3, 0)
+    size_t    recv_buf_num_entries = 0;
+    void     *recv_buf             = NULL;
     MPI_Count type_lb;
     MPI_Count type_extent;
-#else
-    MPI_Aint type_lb;
-    MPI_Aint type_extent;
-#endif
-    int    mpi_code;
-    herr_t ret_value = SUCCEED;
+    int       mpi_code;
+    herr_t    ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(FAIL)
 
@@ -643,12 +638,8 @@ H5_mpio_gatherv_alloc(void *send_buf, int send_count, MPI_Datatype send_type, co
     if (allgather || (mpi_rank == root))
         HDassert(out_buf && out_buf_num_entries);
 
-        /* Retrieve the extent of the MPI Datatype being used */
-#if H5_CHECK_MPI_VERSION(3, 0)
+    /* Retrieve the extent of the MPI Datatype being used */
     if (MPI_SUCCESS != (mpi_code = MPI_Type_get_extent_x(recv_type, &type_lb, &type_extent)))
-#else
-    if (MPI_SUCCESS != (mpi_code = MPI_Type_get_extent(recv_type, &type_lb, &type_extent)))
-#endif
         HMPI_GOTO_ERROR(FAIL, "MPI_Type_get_extent(_x) failed", mpi_code)
 
     if (type_extent < 0)
