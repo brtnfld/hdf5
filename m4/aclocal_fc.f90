@@ -82,27 +82,17 @@ END PROGRAM PROG_FC_C_LONG_DOUBLE_EQ_C_DOUBLE
 
 !---- START ----- Determine the available KINDs for REALs and INTEGERs
 PROGRAM FC_AVAIL_KINDS
-      USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY : stdout=>OUTPUT_UNIT
+      USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY : stdout=>OUTPUT_UNIT, integer_kinds, real_kinds
       IMPLICIT NONE
-      INTEGER :: ik, jk, k, kk, max_decimal_prec
-      INTEGER :: prev_rkind, num_rkinds = 1, num_ikinds = 1
-      INTEGER, DIMENSION(1:10) :: list_ikinds = -1
-      INTEGER, DIMENSION(1:10) :: list_rkinds = -1
-      LOGICAL :: new_kind
+      INTEGER :: ik, jk, k, max_decimal_prec
+      INTEGER :: num_rkinds, num_ikinds
 
       ! Find integer KINDs
-      list_ikinds(num_ikinds)=SELECTED_INT_KIND(1)
-      DO ik = 2, 36
-         k = SELECTED_INT_KIND(ik)
-         IF(k.LT.0) EXIT
-         IF(k.GT.list_ikinds(num_ikinds))THEN
-            num_ikinds = num_ikinds + 1
-            list_ikinds(num_ikinds) = k
-         ENDIF
-      ENDDO
+
+      num_ikinds = SIZE(integer_kinds)
 
       DO k = 1, num_ikinds
-         WRITE(stdout,'(I0)', ADVANCE='NO') list_ikinds(k)
+         WRITE(stdout,'(I0)', ADVANCE='NO') integer_kinds(k)
          IF(k.NE.num_ikinds)THEN
             WRITE(stdout,'(A)',ADVANCE='NO') ','
          ELSE
@@ -111,35 +101,21 @@ PROGRAM FC_AVAIL_KINDS
       ENDDO
 
       ! Find real KINDs
-      list_rkinds(num_rkinds)=SELECTED_REAL_KIND(1)
+
+      num_rkinds = SIZE(real_kinds)
+
       max_decimal_prec = 1
-      prev_rkind=list_rkinds(num_rkinds)
 
       prec: DO ik = 2, 36
          exp: DO jk = 1, 700
             k = SELECTED_REAL_KIND(ik,jk)
             IF(k.LT.0) EXIT exp
-            IF(k.NE.prev_rkind)THEN
-               ! Check if we already have that kind
-               new_kind = .TRUE.
-               DO kk = 1, num_rkinds
-                  IF(k.EQ.list_rkinds(kk))THEN
-                     new_kind=.FALSE.
-                     EXIT
-                  ENDIF
-               ENDDO
-               IF(new_kind)THEN
-                  num_rkinds = num_rkinds + 1
-                  list_rkinds(num_rkinds) = k
-                  prev_rkind=list_rkinds(num_rkinds)
-               ENDIF
-            ENDIF
             max_decimal_prec = ik
          ENDDO exp
       ENDDO prec
 
       DO k = 1, num_rkinds
-         WRITE(stdout,'(I0)', ADVANCE='NO') list_rkinds(k)
+         WRITE(stdout,'(I0)', ADVANCE='NO') real_kinds(k)
          IF(k.NE.num_rkinds)THEN
             WRITE(stdout,'(A)',ADVANCE='NO') ','
          ELSE
