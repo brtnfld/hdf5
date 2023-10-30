@@ -1261,13 +1261,13 @@ H5FD__mpio_read(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, hid_t H5_ATTR_UNU
     MPI_Datatype buf_type = MPI_BYTE; /* MPI description of the selection in memory */
     int          size_i;              /* Integer copy of 'size' to read */
 
-    MPI_Count    bytes_read = 0;      /* Number of bytes read in */
-    MPI_Count    type_size;           /* MPI datatype used for I/O's size */
-    MPI_Count    io_size;             /* Actual number of bytes requested */
-    MPI_Count    n;
-    bool         use_view_this_time = false;
-    bool         derived_type       = false;
-    bool         rank0_bcast        = false; /* If read-with-rank0-and-bcast flag was used */
+    MPI_Count bytes_read = 0; /* Number of bytes read in */
+    MPI_Count type_size;      /* MPI datatype used for I/O's size */
+    MPI_Count io_size;        /* Actual number of bytes requested */
+    MPI_Count n;
+    bool      use_view_this_time = false;
+    bool      derived_type       = false;
+    bool      rank0_bcast        = false; /* If read-with-rank0-and-bcast flag was used */
 #ifdef H5FDmpio_DEBUG
     hbool_t H5FD_mpio_debug_t_flag = (H5FD_mpio_debug_flags_s[(int)'t'] && H5FD_MPIO_TRACE_THIS_RANK(file));
     hbool_t H5FD_mpio_debug_r_flag = (H5FD_mpio_debug_flags_s[(int)'r'] && H5FD_MPIO_TRACE_THIS_RANK(file));
