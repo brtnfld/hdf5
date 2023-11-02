@@ -131,19 +131,19 @@ writeTypedefDefault(const char *c_typedef, int size)
 void
 writeToFiles(const char *c_typedef, const char *fortran_type, const char *c_type, int kind)
 {
-  if(fortran_type != NULL)
-    fprintf(fort_header, "        INTEGER, PARAMETER :: %s = %u\n", fortran_type, kind);
-  if(c_typedef != NULL)
-    fprintf(c_header, "typedef c_%s_%d %s;\n", c_typedef, kind, c_type);
+    if (fortran_type != NULL)
+        fprintf(fort_header, "        INTEGER, PARAMETER :: %s = %u\n", fortran_type, kind);
+    if (c_typedef != NULL)
+        fprintf(c_header, "typedef c_%s_%d %s;\n", c_typedef, kind, c_type);
 }
 void
 writeToFilesChr(const char *c_typedef, const char *fortran_type, const char *c_type, int size,
                 const char *kind)
 {
-  if(fortran_type != NULL)
-    fprintf(fort_header, "        INTEGER, PARAMETER :: %s = %s\n", fortran_type, kind);
-  if(c_typedef != NULL)
-    fprintf(c_header, "typedef c_%s_%d %s;\n", c_typedef, size, c_type);
+    if (fortran_type != NULL)
+        fprintf(fort_header, "        INTEGER, PARAMETER :: %s = %s\n", fortran_type, kind);
+    if (c_typedef != NULL)
+        fprintf(c_header, "typedef c_%s_%d %s;\n", c_typedef, size, c_type);
 }
 int
 main(void)
@@ -407,8 +407,7 @@ main(void)
     /* double_f */
 #if H5_FORTRAN_HAVE_C_LONG_DOUBLE != 0
     if (H5_FORTRAN_NATIVE_DOUBLE_SIZEOF == sizeof(long double)) {
-        writeToFilesChr("float", NULL, "double_f", H5_FORTRAN_NATIVE_DOUBLE_KIND,
-                        "C_LONG_DOUBLE");
+        writeToFilesChr("float", NULL, "double_f", H5_FORTRAN_NATIVE_DOUBLE_KIND, "C_LONG_DOUBLE");
     }
     else
 #endif
@@ -420,13 +419,11 @@ main(void)
 #ifdef H5_HAVE_FLOAT128
     /* Don't select a higher precision than Fortran can support */
     else if (sizeof(__float128) == H5_FORTRAN_NATIVE_DOUBLE_SIZEOF && H5_PAC_FC_MAX_REAL_PRECISION > 28) {
-        writeToFilesChr("float", NULL, "double_f", H5_FORTRAN_NATIVE_DOUBLE_KIND,
-                        "Fortran_REAL_C_FLOAT128");
+        writeToFilesChr("float", NULL, "double_f", H5_FORTRAN_NATIVE_DOUBLE_KIND, "Fortran_REAL_C_FLOAT128");
     }
 #else
     else if (sizeof(long double) == H5_FORTRAN_NATIVE_DOUBLE_SIZEOF && H5_PAC_FC_MAX_REAL_PRECISION > 28) {
-        writeToFilesChr("float", NULL, "double_f", H5_FORTRAN_NATIVE_DOUBLE_KIND,
-                        "Fortran_REAL_C_FLOAT128");
+        writeToFilesChr("float", NULL, "double_f", H5_FORTRAN_NATIVE_DOUBLE_KIND, "Fortran_REAL_C_FLOAT128");
     }
 #endif
     else {
