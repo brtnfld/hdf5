@@ -53,6 +53,8 @@ CONTAINS
      LOGICAL, INTENT(IN)  :: cleanup
      INTEGER, INTENT(OUT) :: total_error
 
+     INTEGER, PARAMETER :: Fortran_DOUBLE = KIND(1.D0)
+
      CHARACTER(LEN=8), PARAMETER :: filename = "compound" ! File name
      CHARACTER(LEN=80) :: fix_filename
      CHARACTER(LEN=8), PARAMETER :: dsetname = "Compound"     ! Dataset name

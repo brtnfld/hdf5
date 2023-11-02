@@ -41,6 +41,8 @@ CONTAINS
      LOGICAL, INTENT(IN)  :: cleanup
      INTEGER, INTENT(INOUT) :: total_error
 
+     INTEGER, PARAMETER :: Fortran_DOUBLE = KIND(1.D0)
+
      CHARACTER(LEN=5), PARAMETER :: filename = "atest"    !File name
      CHARACTER(LEN=80) :: fix_filename
      CHARACTER(LEN=9), PARAMETER :: dsetname = "atestdset"        !Dataset name
@@ -57,8 +59,6 @@ CONTAINS
      INTEGER, PARAMETER :: RANK = 2
      INTEGER, PARAMETER :: NX = 4
      INTEGER, PARAMETER :: NY = 5
-
-
 
      INTEGER(HID_T) :: file_id       ! File identifier
      INTEGER(HID_T) :: dset_id       ! Dataset identifier

@@ -967,6 +967,7 @@ CONTAINS
 !!
   INTEGER(HID_T) FUNCTION h5kind_to_type(ikind, flag) RESULT(h5_type)
     USE ISO_C_BINDING
+    USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY : integer_kinds, real_kinds
     IMPLICIT NONE
     INTEGER, INTENT(IN) :: ikind
     INTEGER, INTENT(IN) :: flag
@@ -980,7 +981,10 @@ CONTAINS
 
     h5_type = -1
     IF(flag.EQ.H5_INTEGER_KIND)THEN
-       do_kind: DO i = 1, H5_FORTRAN_NUM_INTEGER_KINDS
+       do_kind: DO i = 1, SIZE(integer_kinds)
+          PRINT*,integer_kinds
+          PRINT*,real_kinds
+          PRINT*, Fortran_INTEGER_AVAIL_KINDS(i), integer_kinds(i)
           IF(ikind.EQ.Fortran_INTEGER_AVAIL_KINDS(i))THEN
              h5_type = H5T_NATIVE_INTEGER_KIND(i)
              EXIT do_kind
