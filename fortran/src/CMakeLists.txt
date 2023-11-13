@@ -51,11 +51,6 @@ if (H5_FORTRAN_HAVE_SIZEOF)
   set (CMAKE_H5_FORTRAN_HAVE_SIZEOF 1)
 endif ()
 
-set (CMAKE_H5_FORTRAN_HAVE_C_SIZEOF 0)
-if (H5_FORTRAN_HAVE_C_SIZEOF)
-  set (CMAKE_H5_FORTRAN_HAVE_C_SIZEOF 1)
-endif ()
-
 configure_file (${HDF5_F90_SRC_SOURCE_DIR}/H5config_f.inc.cmake ${HDF5_F90_BINARY_DIR}/H5config_f.inc @ONLY)
 configure_file (${HDF5_F90_SRC_SOURCE_DIR}/H5fort_type_defines.h.cmake ${HDF5_F90_BINARY_DIR}/H5fort_type_defines.h @ONLY)
 

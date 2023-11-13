@@ -53,16 +53,6 @@ set (SIZEOF_CODE
        END PROGRAM
   "
 )
-set (C_SIZEOF_CODE
-  "
-       PROGRAM main
-         USE ISO_C_BINDING
-         INTEGER(C_INT) :: a
-         INTEGER(C_SIZE_T) :: result
-         result = c_sizeof(a)
-       END PROGRAM
-  "
-)
 set (STORAGE_SIZE_CODE
   "
        PROGRAM main
@@ -121,7 +111,6 @@ if (HDF5_REQUIRED_LIBRARIES)
   set (CMAKE_REQUIRED_LIBRARIES "${HDF5_REQUIRED_LIBRARIES}")
 endif ()
 check_fortran_source_compiles (${SIZEOF_CODE} ${HDF_PREFIX}_FORTRAN_HAVE_SIZEOF SRC_EXT f90)
-check_fortran_source_compiles (${C_SIZEOF_CODE} ${HDF_PREFIX}_FORTRAN_HAVE_C_SIZEOF SRC_EXT f90)
 check_fortran_source_compiles (${STORAGE_SIZE_CODE} ${HDF_PREFIX}_FORTRAN_HAVE_STORAGE_SIZE SRC_EXT f90)
 check_fortran_source_compiles (${ISO_FORTRAN_ENV_CODE} ${HDF_PREFIX}_HAVE_ISO_FORTRAN_ENV SRC_EXT f90)
 check_fortran_source_compiles (${REALISNOTDOUBLE_CODE} ${HDF_PREFIX}_FORTRAN_DEFAULT_REAL_NOT_DOUBLE SRC_EXT f90)

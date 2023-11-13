@@ -51,14 +51,6 @@
 #define H5_FORTRAN_HAVE_SIZEOF
 #endif
 
-! Define if the intrinsic function C_SIZEOF exists
-#cmakedefine01 CMAKE_H5_FORTRAN_HAVE_C_SIZEOF
-#if CMAKE_H5_FORTRAN_HAVE_C_SIZEOF == 0
-#undef H5_FORTRAN_HAVE_C_SIZEOF
-#else
-#define H5_FORTRAN_HAVE_C_SIZEOF
-#endif
-
 ! Define if the intrinsic function C_LONG_DOUBLE exists
 #define H5_FORTRAN_HAVE_C_LONG_DOUBLE @H5_FORTRAN_HAVE_C_LONG_DOUBLE@
 

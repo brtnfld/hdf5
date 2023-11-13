@@ -97,7 +97,7 @@ CONTAINS
     WRITE(*,'("| |")')
 
     WRITE(*,'(A)') TRIM(title_centered)
-  
+
     WRITE(*,'("| |")', ADVANCE="NO")
     DO i = 1, width-5
        WRITE(*,'(1X)', ADVANCE="NO")
@@ -382,9 +382,7 @@ CONTAINS
 !    Thus, we can not overload the H5_SIZEOF function to handle arrays (as used in tH5P_F03.f90), or
 !    characters that do not have a set length (as used in tH5P_F03.f90), sigh...
 !
-!   (2) F08+TS29113 requires C interoperable variable as argument for C_SIZEOF.
-!
-!   (3) Unfortunately we need to wrap the C_SIZEOF/STORAGE_SIZE functions to handle different
+!   (2) Unfortunately we need to wrap the H5_SIZEOF functions to handle different
 !       data types from the various tests.
 !
 ! ---------------------------------------------------------------------------------------------------

@@ -655,9 +655,6 @@ if test "X$HDF_FORTRAN" = "Xyes"; then
   ## See if the fortran compiler supports the intrinsic function "SIZEOF"
   PAC_PROG_FC_SIZEOF
 
-  ## See if the fortran compiler supports the intrinsic function "C_SIZEOF"
-  PAC_PROG_FC_C_SIZEOF
-
   ## See if the fortran compiler supports the intrinsic function "STORAGE_SIZE"
   PAC_PROG_FC_STORAGE_SIZE
 
@@ -723,10 +720,6 @@ if test "X$HDF_FORTRAN" = "Xyes"; then
 
   if test "X$HAVE_STORAGE_SIZE_FORTRAN" = "Xyes"; then
     AC_DEFINE([FORTRAN_HAVE_STORAGE_SIZE], [1], [Define if we have Fortran intrinsic STORAGE_SIZE])
-  fi
-
-  if test "X$HAVE_C_SIZEOF_FORTRAN" = "Xyes"; then
-    AC_DEFINE([FORTRAN_HAVE_C_SIZEOF], [1], [Define if we have Fortran intrinsic C_SIZEOF])
   fi
 
   if test "X$HAVE_SIZEOF_FORTRAN" = "Xyes"; then

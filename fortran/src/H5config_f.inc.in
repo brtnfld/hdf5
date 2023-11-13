@@ -29,9 +29,6 @@
 ! Define if the intrinsic function SIZEOF exists
 #undef FORTRAN_HAVE_SIZEOF
 
-! Define if the intrinsic function C_SIZEOF exists
-#undef FORTRAN_HAVE_C_SIZEOF
-
 ! Define if the intrinsic function C_LONG_DOUBLE exists
 #undef FORTRAN_HAVE_C_LONG_DOUBLE
 
@@ -79,4 +76,3 @@
 
 ! Define if deprecated public API symbols are disabled
 #undef NO_DEPRECATED_SYMBOLS
-
