@@ -76,7 +76,7 @@ CONTAINS
     INTEGER :: i
     TYPE(opdata), POINTER :: od
     TYPE(opdata), TARGET :: nextod
-    INTEGER(HSIZE_T) :: idx
+    INTEGER(HSIZE_T), SAVE :: idx
 
     TYPE(C_PTR) :: ptr2
     TYPE(C_FUNPTR) :: funptr
@@ -84,7 +84,7 @@ CONTAINS
     CHARACTER(LEN=10) :: space
     INTEGER :: spaces ! Number of whitespaces to prepend to output
     INTEGER :: len
-
+    PRINT*,"START op_func"
     ret_val = 0
     
     name_string(1:10) = " "
@@ -104,12 +104,11 @@ CONTAINS
     ! The name of the object is passed to this function by
     ! the Library.
     !
+    
     CALL H5Oget_info_by_name_f(loc_id, name_string, infobuf, status)
-
     spaces = 2*(od%recurs+1)
 
     WRITE(*,'(A)', ADVANCE='NO') space(1:spaces) !  Format output
-
 
     IF(infobuf%type.EQ.H5O_TYPE_GROUP_F)THEN
 
@@ -134,14 +133,17 @@ CONTAINS
        ELSE
 
           nextod%recurs = od%recurs + 1
-          nextod%prev => od
+          nextod%prev => od%prev
           nextod%token = infobuf%token
           idx = 0
-          ptr2 = C_LOC(nextod%recurs)
+          ptr2 = C_LOC(nextod) !C_LOC(nextod%recurs)
           funptr = C_FUNLOC(op_func)
-          CALL h5literate_by_name_f(loc_id, name_string, H5_INDEX_NAME_F, H5_ITER_NATIVE_F, idx, &
+          print*,"before"
+          CALL h5literate_f(loc_id, H5_INDEX_NAME_F, H5_ITER_NATIVE_F, idx, &
                funptr, ptr2, ret_val, status)
-
+          print*,"end"
+          !CALL h5literate_by_name_f(loc_id, name_string, H5_INDEX_NAME_F, H5_ITER_NATIVE_F, idx, &
+          !     funptr, ptr2, ret_val, status)
        ENDIF
        WRITE(*,'(A)') space(1:spaces)//"}"
        RETURN
@@ -213,6 +215,7 @@ PROGRAM main
   INTEGER(hsize_t) :: idx
   INTEGER :: ret_value
   TYPE(C_FUNPTR) :: funptr
+  TYPE(opdata), POINTER :: cptr
   !
   ! Initialize FORTRAN interface.
   !
@@ -225,7 +228,8 @@ PROGRAM main
   CALL h5oget_info_by_name_f(file, "/", infobuf, status)
 
   od%recurs = 0
-  od%prev => NULL()
+  call C_F_POINTER(C_NULL_PTR, cptr) 
+  od%prev => cptr ! C_LOC(C_NULL_PTR) !> NULL()
   od%token = infobuf%token
   !
   ! Print the root group and formatting, begin iteration.
