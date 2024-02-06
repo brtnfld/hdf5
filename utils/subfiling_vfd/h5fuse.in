@@ -290,7 +290,8 @@ else
 
   idx=0
   for j in "${subf_list[@]}"; do
-      subfile1="${subfile_dir}/${j}"
+      subfile1="${j}"
+      #subfile1="${subfile_dir}/${j}"
       for k in "${subfiles[@]}"; do
           subfile="${subfile_dir}/${k}"
           if [[ "${subfile1}" == "${subfile}" ]]; then
