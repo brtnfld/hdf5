@@ -213,6 +213,23 @@ finalize_ioc_threads(void *_sf_context)
     assert(sf_context);
     assert(sf_context->topology->rank_is_ioc);
 
+#ifdef H5FD_IOC_COLLECT_STATS
+
+    double sf_pwrite_time_min = 0.0;
+    double sf_pwrite_time_max = 0.0;
+    double sf_pwrite_time_sum = 0.0;
+
+    /* Get the minimum, maximum sum values of the statistics from all the ranks in sf_group_comm */
+    MPI_Reduce(&sf_pwrite_time, &sf_pwrite_time_min, 1, MPI_DOUBLE, MPI_MIN, 0, sf_context->sf_group_comm);
+    MPI_Reduce(&sf_pwrite_time, &sf_pwrite_time_max, 1, MPI_DOUBLE, MPI_MAX, 0, sf_context->sf_group_comm);
+    MPI_Reduce(&sf_pwrite_time, &sf_pwrite_time_sum, 1, MPI_DOUBLE, MPI_SUM, 0, sf_context->sf_group_comm);
+
+    if(sf_context->sf_group_rank == 0) {
+    	printf("pwrite_time avg, min, max s = %lf %lf %lf\n", sf_pwrite_time_sum / sf_context->sf_group_size, sf_pwrite_time_min, sf_pwrite_time_max);
+    }
+
+#endif
+
     ioc_data = sf_context->ioc_data;
     if (ioc_data) {
         assert(0 == atomic_load(&ioc_data->sf_shutdown_flag));
