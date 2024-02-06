@@ -26,10 +26,11 @@ function usage {
          configuration file either as a command-line argument or the script will
          search for the *.config file in the current directory."
    echo ""
-   echo "usage: h5fuse [-f filename] [-h] [-p] [-q] [-r] [-v] "
+   echo "usage: h5fuse [-f filename] [-h] [-p] [-q] [-r] [-v] [-l subfile1,subfile2,...]"
    echo "-f filename  Subfile configuration file."
    echo "-h           Print this help."
    echo "-q           Quiet all output. [no]"
+   echo "-l           Comma seperated list of subfiles to process"
    echo "-p           h5fuse is being run in parallel, with more than one rank. [no]"
    echo "-r           Remove subfiles after being processed. [no]"
    echo "-v           Verbose output. [no]"
@@ -172,7 +173,8 @@ verbose="false"
 quiet="false"
 rm_subf="false"
 parallel="false"
-while getopts "hpqrvf:" option; do
+subf_list=()
+while getopts "hpqrvf:l:" option; do
    case $option in
       f) # subfiling configuration file
          file_config=$OPTARG;;
@@ -187,6 +189,9 @@ while getopts "hpqrvf:" option; do
          rm_subf="true";;
       v) # verbose output
          verbose="true";;
+      l) # process a list of subfiles
+         # Split the comma-sperated list into an array
+         IFS=', ' read -r -a subf_list <<< "${OPTARG}";;
      \?) # Invalid option
          echo -e "$RED ERROR: Invalid option ${BLD}-${OPTARG}${RED} $NC"
          usage
@@ -259,17 +264,48 @@ fi
 nsubfiles=${#subfiles[@]}
 
 # Get the number of local subfiles
+
 subfiles_loc=()
 subfiles_size=()
-for i in "${subfiles[@]}"; do
-    subfile="${subfile_dir}/${i}"
-    if [ -f "${subfile}" ]; then
-        subfiles_loc+=("$subfile")
-        subfiles_size+=($(wc -c "${subfile}" | awk '{print $1}'))
-    else
-        subfiles_size+=(0)
-    fi
-done
+
+len=${#subf_list[@]}
+
+if [[ "${len}" == "0" ]]; then
+
+  for i in "${subfiles[@]}"; do
+      subfile="${subfile_dir}/${i}"
+      if [ -f "${subfile}" ]; then
+          subfiles_loc+=("$subfile")
+          subfiles_size+=($(wc -c "${subfile}" | awk '{print $1}'))
+      else
+          subfiles_size+=(0)
+      fi
+  done
+
+else
+
+  for ((i = 0; i < $nsubfiles; i++)); do
+    subfiles_size[i]=0
+  done
+
+  idx=0
+  for j in "${subf_list[@]}"; do
+      subfile1="${subfile_dir}/${j}"
+      for k in "${subfiles[@]}"; do
+          subfile="${subfile_dir}/${k}"
+          if [[ "${subfile1}" == "${subfile}" ]]; then
+            subfiles_loc+=("$subfile1")
+            subfiles_size[$idx]=$(wc -c "${subfile1}" | awk '{print $1}')
+            ((idx++))
+            break
+          fi
+      done
+      if [[ "${idx}" == "${len}" ]]; then
+        break;
+      fi
+  done
+
+fi
 
 if [ "$quiet" == "false" ]; then
     TIMEFORMAT="COMPLETION TIME = %R s"
