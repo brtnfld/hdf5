@@ -224,8 +224,9 @@ finalize_ioc_threads(void *_sf_context)
     MPI_Reduce(&sf_pwrite_time, &sf_pwrite_time_max, 1, MPI_DOUBLE, MPI_MAX, 0, sf_context->sf_group_comm);
     MPI_Reduce(&sf_pwrite_time, &sf_pwrite_time_sum, 1, MPI_DOUBLE, MPI_SUM, 0, sf_context->sf_group_comm);
 
-    if(sf_context->sf_group_rank == 0) {
-    	printf("pwrite_time avg, min, max s = %lf %lf %lf\n", sf_pwrite_time_sum / sf_context->sf_group_size, sf_pwrite_time_min, sf_pwrite_time_max);
+    if (sf_context->sf_group_rank == 0) {
+        printf("pwrite_time avg, min, max s = %lf %lf %lf\n", sf_pwrite_time_sum / sf_context->sf_group_size,
+               sf_pwrite_time_min, sf_pwrite_time_max);
     }
 
 #endif
