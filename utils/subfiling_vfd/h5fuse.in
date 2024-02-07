@@ -268,9 +268,7 @@ nsubfiles=${#subfiles[@]}
 subfiles_loc=()
 subfiles_size=()
 
-len=${#subf_list[@]}
-
-if [[ "${len}" == "0" ]]; then
+if [[ "${#subf_list[@]}" == "0" ]]; then
 
   for i in "${subfiles[@]}"; do
       subfile="${subfile_dir}/${i}"
@@ -284,25 +282,23 @@ if [[ "${len}" == "0" ]]; then
 
 else
 
-  for ((i = 0; i < $nsubfiles; i++)); do
-    subfiles_size[i]=0
-  done
+  for i in "${subfiles[@]}"; do
+      subfile="${subfile_dir}/${i}"
+      match=0
 
-  idx=0
-  for j in "${subf_list[@]}"; do
-      subfile1="${j}"
-      #subfile1="${subfile_dir}/${j}"
-      for k in "${subfiles[@]}"; do
-          subfile="${subfile_dir}/${k}"
-          if [[ "${subfile1}" == "${subfile}" ]]; then
-            subfiles_loc+=("$subfile1")
-            subfiles_size[$idx]=$(wc -c "${subfile1}" | awk '{print $1}')
-            ((idx++))
-            break
+      for ((j=0; j<${#subf_list[@]}; ++j)); do
+          if [[ "${subf_list[j]}" == "$subfile" ]]; then
+             unset "subf_list[$j]"  # Use unset within loop for proper removal
+             match=1
+             break
           fi
       done
-      if [[ "${idx}" == "${len}" ]]; then
-        break;
+
+      if [[ "$match" == "1" ]]; then
+          subfiles_loc+=("$subfile")
+          subfiles_size+=($(wc -c "${subfile}" | awk '{print $1}'))
+      else
+          subfiles_size+=(0)
       fi
   done
 
