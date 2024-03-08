@@ -804,7 +804,7 @@ ioc_file_queue_write_indep(sf_work_request_t *msg, int ioc_idx, int source, MPI_
 #ifdef H5FD_IOC_COLLECT_STATS
         t_end   = MPI_Wtime();
         t_write = t_end - t_start;
-        sf_pwrite_time += t_write;
+        sf_pwrite_time = t_write;
 #endif
     }
 
