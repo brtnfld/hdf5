@@ -384,6 +384,7 @@ SUBROUTINE test_error_stack(total_error)
      OPEN(UNIT=12, FILE="H5Etest.txt", status='old')
 
      READ(12,'(A)') chr180
+     PRINT*,"AA ", TRIM(chr180)
      idx = INDEX(string=chr180,substring="Custom error class")
      IF(idx.EQ.0) CALL check("h5eprint_f1", -1, total_error)
      idx = INDEX(string=chr180,substring="H5E_F03")
@@ -392,6 +393,7 @@ SUBROUTINE test_error_stack(total_error)
      IF(idx.EQ.0) CALL check("h5eprint_f3", -1, total_error)
 
      READ(12,'(A)') chr180
+     PRINT*,"BB ", TRIM(chr180)
      idx = INDEX(string=chr180,substring="FILE")
      IF(idx.EQ.0) CALL check("h5eprint_f4", -1, total_error)
      idx = INDEX(string=chr180,substring="99")
@@ -401,13 +403,16 @@ SUBROUTINE test_error_stack(total_error)
      idx = INDEX(string=chr180,substring="ERROR TEXT")
      IF(idx.EQ.0) CALL check("h5eprint_f7", -1, total_error)
 
-     READ(12,'()')
+     READ(12,'(A)') chr180
+     PRINT*,"CC ", TRIM(chr180)
 
      READ(12,"(A)") chr180
+     PRINT*,"DD ", TRIM(chr180)
      idx = INDEX(string=chr180,substring=maj_mesg)
      IF(idx.EQ.0) CALL check("h5eprint_f", -1, total_error)
 
      READ(12,"(A)") chr180
+     PRINT*,"EE ", TRIM(chr180)
      idx = INDEX(string=chr180,substring=min_mesg)
      IF(idx.EQ.0) CALL check("h5eprint_f", -1, total_error)
 
