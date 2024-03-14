@@ -299,7 +299,8 @@ SUBROUTINE test_error_stack(total_error)
 !       ptr1, ptr2, ptr3, &
 !       arg1=ACHAR(27)//"[31m", arg2=ACHAR(27)//"[0m" )
   CALL H5Epush_f(estack_id, cls_id, major, minor, "ERROR TEXT"//achar(10), error, &
-       ptr1, ptr2, ptr3)
+       ptr1, ptr2, ptr3, &
+       arg1=ACHAR(27)//"[31m", arg2=ACHAR(27)//"[0m" ))
   CALL check("H5Epush_f", error, total_error)
 
   CALL h5eget_num_f(estack_id, count, error)
