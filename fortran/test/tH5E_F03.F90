@@ -298,7 +298,7 @@ SUBROUTINE test_error_stack(total_error)
 !  CALL H5Epush_f(estack_id, cls_id, major, minor, "%s ERROR TEXT %s"//C_NEW_LINE, error, &
 !       ptr1, ptr2, ptr3, &
 !       arg1=ACHAR(27)//"[31m", arg2=ACHAR(27)//"[0m" )
-  CALL H5Epush_f(estack_id, cls_id, major, minor, "ERROR TEXT"//C_NULL_CHAR//C_NEW_LINE, error, &
+  CALL H5Epush_f(estack_id, cls_id, major, minor, "ERROR TEXT"//achar(10), error, &
        ptr1, ptr2, ptr3)
   CALL check("H5Epush_f", error, total_error)
 
@@ -383,7 +383,10 @@ SUBROUTINE test_error_stack(total_error)
   IF(.NOT.status)THEN
      CALL check("h5eprint_f", -1, total_error)
   ELSE
+     CALL execute_command_line ("cat H5Etest.txt")
+
      OPEN(UNIT=12, FILE="H5Etest.txt", status='old')
+
 
 !    The contents of the file should be:
 !       Custom error class-DIAG: Error detected in H5E_F03 (0.1) thread 0:
