@@ -275,22 +275,25 @@ CONTAINS
 !!
 !! See C API: @ref H5Pcreate()
 !!
-  SUBROUTINE h5pcreate_f(class, prp_id, hdferr)
+  SUBROUTINE h5pcreate_f(class, prp_id, hdferr) 
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN)  :: class
     INTEGER(HID_T), INTENT(OUT) :: prp_id
     INTEGER       , INTENT(OUT) :: hdferr
     INTERFACE
-       INTEGER FUNCTION h5pcreate_c(class, prp_id) &
-            BIND(C,NAME='h5pcreate_c')
+       INTEGER(HID_T) FUNCTION H5Pcreate(class) &
+            BIND(C,NAME='H5Pcreate')
          IMPORT :: HID_T
          IMPLICIT NONE
-         INTEGER(HID_T), INTENT(IN) :: class
-         INTEGER(HID_T), INTENT(OUT) :: prp_id
-       END FUNCTION h5pcreate_c
+         INTEGER(HID_T), VALUE :: class
+       END FUNCTION H5Pcreate
     END INTERFACE
 
-    hdferr = h5pcreate_c(class, prp_id)
+    prp_id = H5Pcreate(class)
+    
+    hdferr = 0
+    IF(prp_id.LT.0) hdferr = -1
+    
   END SUBROUTINE h5pcreate_f
 
 !>
@@ -5037,6 +5040,7 @@ SUBROUTINE h5pset_attr_phase_change_f(ocpl_id, max_compact, min_dense, hdferr)
 !!
 !! See C API: @ref H5Pcreate_class()
 !!
+#if 0
   SUBROUTINE h5pcreate_class_f(parent, name, class, hdferr, create, create_data, &
        copy, copy_data, close, close_data)
     IMPLICIT NONE
@@ -5044,8 +5048,8 @@ SUBROUTINE h5pset_attr_phase_change_f(ocpl_id, max_compact, min_dense, hdferr)
     CHARACTER(LEN=*), INTENT(IN)  :: name
     INTEGER(HID_T)  , INTENT(OUT) :: class
     INTEGER         , INTENT(OUT) :: hdferr
-    TYPE(C_PTR)     , OPTIONAL, INTENT(IN) :: create_data, copy_data, close_data
-    TYPE(C_FUNPTR)  , OPTIONAL, INTENT(IN) :: create, copy, close
+    TYPE(C_PTR)     , OPTIONAL    :: create_data, copy_data, close_data
+    TYPE(C_FUNPTR)  , OPTIONAL    :: create, copy, close
     TYPE(C_PTR)    :: create_data_default, copy_data_default, close_data_default
     TYPE(C_FUNPTR) :: create_default, copy_default, close_default
 
@@ -5087,6 +5091,56 @@ SUBROUTINE h5pset_attr_phase_change_f(ocpl_id, max_compact, min_dense, hdferr)
 
     hdferr = 0
     IF(class.LT.0) hdferr = -1
+
+  END SUBROUTINE h5pcreate_class_f
+#endif
+
+  SUBROUTINE h5pcreate_class_f(parent, name, class, hdferr, create, create_data, &
+       copy, copy_data, close, close_data)
+    IMPLICIT NONE
+    INTEGER(HID_T)  , INTENT(IN)  :: parent
+    CHARACTER(LEN=*), INTENT(IN)  :: name
+    INTEGER(HID_T)  , INTENT(OUT) :: class
+    INTEGER         , INTENT(OUT) :: hdferr
+    TYPE(C_PTR)     , OPTIONAL, INTENT(IN) :: create_data, copy_data, close_data
+    TYPE(C_FUNPTR)  , OPTIONAL, INTENT(IN) :: create, copy, close
+    INTEGER :: name_len
+    TYPE(C_PTR) :: create_data_default, copy_data_default, close_data_default
+    TYPE(C_FUNPTR) :: create_default, copy_default, close_default
+    INTERFACE
+       INTEGER FUNCTION h5pcreate_class_c(parent, name, name_len, class, &
+            create, create_data, copy, copy_data, close, close_data) &
+            BIND(C, NAME='h5pcreate_class_c')
+         IMPORT :: c_char, c_ptr, c_funptr
+         IMPORT :: HID_T
+         INTEGER(HID_T), INTENT(IN) :: parent
+         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: name
+         INTEGER, INTENT(IN)         :: name_len
+         INTEGER(HID_T), INTENT(OUT) :: class
+         TYPE(C_PTR), VALUE :: create_data, copy_data, close_data
+         TYPE(C_FUNPTR), VALUE :: create, copy, close
+       END FUNCTION h5pcreate_class_c
+    END INTERFACE
+    name_len = LEN(name)
+
+    create_default = c_null_funptr     !fix:scot
+    create_data_default = c_null_ptr
+    copy_default = c_null_funptr    !fix:scot
+    copy_data_default = c_null_ptr
+    close_default = c_null_funptr   !fix:scot
+    close_data_default = c_null_ptr
+
+    IF(PRESENT(create)) create_default = create
+    IF(PRESENT(create_data)) create_data_default = create_data
+    IF(PRESENT(copy)) copy_default = copy
+    IF(PRESENT(copy_data)) copy_data_default = copy_data
+    IF(PRESENT(close)) close_default = close
+    IF(PRESENT(close_data)) close_data_default = close_data
+
+    hdferr = h5pcreate_class_c(parent, name , name_len, class, &
+         create_default, create_data_default, &
+         copy_default, copy_data_default, &
+         close_default, close_data_default)
 
   END SUBROUTINE h5pcreate_class_f
 
