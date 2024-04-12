@@ -273,6 +273,46 @@ CONTAINS
 !>
 !! \ingroup FH5E
 !!
+!! \brief Returns the settings for the automatic error stack traversal function and its data.
+!!
+!! \param estack_id   Error stack identifier.
+!! \param func        The function currently set to be called upon an error condition.
+!! \param client_data Data currently set to be passed to the error function.
+!! \param hdferr      \fortran_error
+!!
+!! See C API: @ref H5Eget_auto2()
+!!
+  SUBROUTINE h5eget_auto_f(estack_id, hdferr, func, client_data)
+    USE, INTRINSIC :: ISO_C_BINDING, ONLY : C_PTR, C_FUNPTR
+    INTEGER(HID_T), INTENT(IN)  :: estack_id
+    INTEGER       , INTENT(OUT) :: hdferr
+    TYPE(C_FUNPTR), OPTIONAL    :: func
+    TYPE(C_PTR)   , OPTIONAL    :: client_data
+    TYPE(C_FUNPTR) :: func_default
+    TYPE(C_PTR)    :: client_data_default
+    INTERFACE
+       INTEGER FUNCTION H5Eget_auto2(estack_id, func, client_data) &
+            BIND(C, NAME='H5Eget_auto2')
+         IMPORT :: c_ptr, c_funptr
+         IMPORT :: HID_T
+         INTEGER(HID_T), VALUE :: estack_id
+         TYPE(C_FUNPTR), VALUE :: func
+         TYPE(C_PTR)   , VALUE :: client_data
+       END FUNCTION H5Eget_auto2
+    END INTERFACE
+
+    func_default = C_NULL_FUNPTR
+    client_data_default = C_NULL_PTR
+
+    IF(PRESENT(func)) func_default = func
+    IF(PRESENT(client_data)) client_data_default = client_data
+
+    hdferr = INT(H5Eget_auto2(estack_id, func_default, client_data_default))
+  END SUBROUTINE h5eget_auto_f
+
+!>
+!! \ingroup FH5E
+!!
 !! \brief Pushes a new error record onto an error stack.
 !!
 !! \param err_stack Error stack identifier. If the identifier is H5E_DEFAULT_F, the error

@@ -190,7 +190,9 @@ SUBROUTINE test_error(total_error)
   INTEGER, TARGET :: my_hdf5_error_handler_data
   INTEGER, TARGET :: iunit
   TYPE(C_PTR) :: f_ptr
+  TYPE(C_PTR) :: f_ptr_ret
   TYPE(C_FUNPTR) :: func
+  TYPE(C_FUNPTR) :: func_ret
   CHARACTER(LEN=180) :: chr180
   INTEGER :: idx
   INTEGER(HID_T) :: fapl
@@ -214,6 +216,13 @@ SUBROUTINE test_error(total_error)
 
   CALL H5Eset_auto_f(1, error, H5E_DEFAULT_F, func, f_ptr)
   CALL check("H5Eset_auto_f", error, total_error)
+
+  CALL H5Eget_auto_f(H5E_DEFAULT_F, error, func_ret)
+  CALL check("H5Eget_auto_f", error, total_error)
+
+!  IF( func_ret .EQ. C_NULL_FUNPTR)THEN
+!     CALL check("H5Eget_auto_f", -1, total_error)
+!  ENDIF
 
   ! If a fapl is not created, then the test will fail when using
   ! check-passthrough-vol because the callback function is called twice, gh #4137.
