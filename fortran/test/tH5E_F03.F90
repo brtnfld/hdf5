@@ -189,6 +189,7 @@ SUBROUTINE test_error(total_error)
   INTEGER :: error
   INTEGER, TARGET :: my_hdf5_error_handler_data
   INTEGER, TARGET :: iunit
+  INTEGER, POINTER :: iunit_ret(:)
   TYPE(C_PTR) :: f_ptr
   TYPE(C_PTR) :: f_ptr_ret
   TYPE(C_FUNPTR) :: func
@@ -217,12 +218,15 @@ SUBROUTINE test_error(total_error)
   CALL H5Eset_auto_f(1, error, H5E_DEFAULT_F, func, f_ptr)
   CALL check("H5Eset_auto_f", error, total_error)
 
-  CALL H5Eget_auto_f(H5E_DEFAULT_F, error, func_ret)
+  CALL H5Eget_auto_f(H5E_DEFAULT_F, error, func_ret, f_ptr_ret)
   CALL check("H5Eget_auto_f", error, total_error)
 
-!  IF( func_ret .EQ. C_NULL_FUNPTR)THEN
-!     CALL check("H5Eget_auto_f", -1, total_error)
-!  ENDIF
+  IF( C_ASSOCIATED(func_ret, func))THEN
+     CALL check("H5Eget_auto_f", -1, total_error)
+  ENDIF
+  IF( C_ASSOCIATED(f_ptr_ret, f_ptr))THEN
+     CALL check("H5Eget_auto_f", -1, total_error)
+  ENDIF
 
   ! If a fapl is not created, then the test will fail when using
   ! check-passthrough-vol because the callback function is called twice, gh #4137.
@@ -256,6 +260,26 @@ SUBROUTINE test_error(total_error)
   IF(status)THEN
      CALL VERIFY("H5Eset_auto_f", error, -1, total_error)
   ENDIF
+
+  CALL H5Eset_auto_f(1, error, H5E_DEFAULT_F, func_ret, f_ptr_ret)
+  CALL check("H5Eset_auto_f", error, total_error)
+  ! If a fapl is not created, then the test will fail when using
+  ! check-passthrough-vol because the callback function is called twice, gh #4137.
+  CALL h5pcreate_f(H5P_DATASET_ACCESS_F, fapl, error)
+  CALL check("h5pcreate_f", error, total_error)
+  CALL h5fopen_f("DOESNOTEXIST", H5F_ACC_RDONLY_F, file, error, fapl)
+  CALL VERIFY("h5fopen_f", error, -1, total_error)
+  CALL h5pclose_f(fapl,error)
+  CALL check("h5pclose_f", error, total_error)
+
+  CLOSE(iunit)
+
+  CALL H5Eset_auto_f(0, error)
+  CALL check("H5Eset_auto_f", error, total_error)
+
+  CALL h5fopen_f("DOESNOTEXIST", H5F_ACC_RDONLY_F, file, error)
+  CALL VERIFY("h5fopen_f", error, -1, total_error)
+
 
 END SUBROUTINE test_error
 

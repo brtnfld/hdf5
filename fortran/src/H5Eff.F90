@@ -296,8 +296,8 @@ CONTAINS
          IMPORT :: c_ptr, c_funptr
          IMPORT :: HID_T
          INTEGER(HID_T), VALUE :: estack_id
-         TYPE(C_FUNPTR), VALUE :: func
-         TYPE(C_PTR)   , VALUE :: client_data
+         TYPE(C_FUNPTR)        :: func
+         TYPE(C_PTR)           :: client_data
        END FUNCTION H5Eget_auto2
     END INTERFACE
 
