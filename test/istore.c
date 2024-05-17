@@ -62,12 +62,13 @@ is_sparse(void)
 
     if ((fd = HDopen("x.h5", O_RDWR | O_TRUNC | O_CREAT, H5_POSIX_CREATE_MODE_RW)) < 0)
         return 0;
-    if (HDlseek(fd, (HDoff_t)(1024 * 1024), SEEK_SET) != 1024 * 1024)
+    if (HDlseek(fd, (1024 * 1024), SEEK_SET) != 1024 * 1024)
         return 0;
     if (5 != HDwrite(fd, "hello", (size_t)5))
         return 0;
     if (HDclose(fd) < 0)
         return 0;
+    memset(&sb, 0, sizeof(h5_stat_t));
     if (HDstat("x.h5", &sb) < 0)
         return 0;
     if (HDremove("x.h5") < 0)
@@ -479,9 +480,9 @@ test_sparse(hid_t f, const char *prefix, size_t nblocks, size_t nx, size_t ny, s
         TEST_ERROR;
 
     for (ctr = 0; ctr < nblocks; ctr++) {
-        offset[0] = (hsize_t)(HDrandom() % (int)(TEST_SPARSE_SIZE - nx));
-        offset[1] = (hsize_t)(HDrandom() % (int)(TEST_SPARSE_SIZE - ny));
-        offset[2] = (hsize_t)(HDrandom() % (int)(TEST_SPARSE_SIZE - nz));
+        offset[0] = (hsize_t)(rand() % (int)(TEST_SPARSE_SIZE - nx));
+        offset[1] = (hsize_t)(rand() % (int)(TEST_SPARSE_SIZE - ny));
+        offset[2] = (hsize_t)(rand() % (int)(TEST_SPARSE_SIZE - nz));
 
         /* Select region in file dataspace */
         if (H5Sselect_hyperslab(fspace, H5S_SELECT_SET, offset, NULL, size, NULL) < 0)
@@ -581,7 +582,7 @@ main(int argc, char *argv[])
     printf("\n");
 
     /* Set the random # seed */
-    HDsrandom((unsigned)HDtime(NULL));
+    srand((unsigned)time(NULL));
 
     /* Check to see if the file system supports POSIX-style sparse files.
      * Windows NTFS does not, so we want to avoid tests which create

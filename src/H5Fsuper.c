@@ -21,10 +21,10 @@
 /***********/
 #include "H5private.h"   /* Generic Functions                    */
 #include "H5ACprivate.h" /* Metadata cache                       */
-#include "H5CXprivate.h" /* API Contexts                         */
 #include "H5Eprivate.h"  /* Error handling                       */
 #include "H5Fpkg.h"      /* File access                          */
 #include "H5FDprivate.h" /* File drivers                         */
+#include "H5FLprivate.h" /* Free Lists                               */
 #include "H5Iprivate.h"  /* IDs                                  */
 #include "H5MFprivate.h" /* File memory management               */
 #include "H5MMprivate.h" /* Memory management                    */
@@ -583,13 +583,10 @@ H5F__super_read(H5F_t *f, H5P_genplist_t *fa_plist, bool initial_read)
 
     if (H5F_INTENT(f) & H5F_ACC_SWMR_READ) {
         /*
-         * When the file is opened for SWMR read access, skip the check if:
-         * --the file is already marked for SWMR writing and
-         * --the file has version 3 superblock for SWMR support
+         * When the file is opened for SWMR read access, skip the check if
+         * the file has a version 3 superblock capable of SWMR support
          */
-        if ((sblock->status_flags & H5F_SUPER_SWMR_WRITE_ACCESS) &&
-            (sblock->status_flags & H5F_SUPER_WRITE_ACCESS) &&
-            sblock->super_vers >= HDF5_SUPERBLOCK_VERSION_3)
+        if (sblock->super_vers >= HDF5_SUPERBLOCK_VERSION_3)
             skip_eof_check = true;
     }
     if (!skip_eof_check && initial_read) {
@@ -800,8 +797,11 @@ H5F__super_read(H5F_t *f, H5P_genplist_t *fa_plist, bool initial_read)
                         HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to set file space strategy");
                 } /* end if */
 
-                assert(f->shared->fs_page_size >= H5F_FILE_SPACE_PAGE_SIZE_MIN);
-                assert(fsinfo.page_size >= H5F_FILE_SPACE_PAGE_SIZE_MIN);
+                if (f->shared->fs_page_size < H5F_FILE_SPACE_PAGE_SIZE_MIN)
+                    HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "file space page size too small");
+                if (fsinfo.page_size < H5F_FILE_SPACE_PAGE_SIZE_MIN)
+                    HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "file space page size too small");
+
                 if (f->shared->fs_page_size != fsinfo.page_size) {
                     f->shared->fs_page_size = fsinfo.page_size;
 

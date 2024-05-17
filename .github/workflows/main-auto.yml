@@ -37,7 +37,7 @@ jobs:
       # SETUP
       - name: Install Linux Dependencies
         run: |
-           sudo apt update
+           sudo apt-get update
            sudo apt-get install ninja-build doxygen graphviz
            sudo apt install libssl3 libssl-dev libcurl4 libcurl4-openssl-dev
            sudo apt install gcc-12 g++-12 gfortran-12
@@ -51,7 +51,6 @@ jobs:
       - name: Get Sources
         uses: actions/checkout@v4.1.1
 
-      # AUTOTOOLS CONFIGURE
       - name: Autotools Configure
         run: |
           sh ./autogen.sh
@@ -92,13 +91,10 @@ jobs:
         shell: bash
         if: ${{ inputs.thread_safety == 'enable' }}
 
-      # BUILD
       - name: Autotools Build
         run: make -j3
         working-directory: ${{ runner.workspace }}/build
 
-      # RUN TESTS
-      # NORMAL
       - name: Autotools Run Tests
         run: make check -j2
         working-directory: ${{ runner.workspace }}/build

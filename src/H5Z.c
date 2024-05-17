@@ -13,7 +13,6 @@
 #include "H5Zmodule.h" /* This source code file is part of the H5Z module */
 
 #include "H5private.h"   /* Generic Functions   */
-#include "H5CXprivate.h" /* API Contexts        */
 #include "H5Dprivate.h"  /* Dataset functions   */
 #include "H5Eprivate.h"  /* Error handling      */
 #include "H5Fprivate.h"  /* File                */
@@ -28,6 +27,11 @@
 #ifdef H5_HAVE_SZLIB_H
 #include "szlib.h"
 #endif
+
+/* This module can collect and optionally dump some simple filter statistics
+ * to stdout. If you want to do this, you need to define H5Z_DEBUG and set
+ * the DUMP_DEBUG_STATS_g flag to true.
+ */
 
 /* Local typedefs */
 #ifdef H5Z_DEBUG
@@ -60,6 +64,8 @@ static size_t        H5Z_table_used_g  = 0;
 static H5Z_class2_t *H5Z_table_g       = NULL;
 #ifdef H5Z_DEBUG
 static H5Z_stats_t *H5Z_stat_table_g = NULL;
+/* Set to true if you want to dump compression statistics to stdout */
+static const bool DUMP_DEBUG_STATS_g = false;
 #endif /* H5Z_DEBUG */
 
 /* Local functions */
@@ -138,7 +144,7 @@ H5Z_term_package(void)
     int    dir, nprint = 0;
     size_t i;
 
-    if (H5DEBUG(Z)) {
+    if (DUMP_DEBUG_STATS_g) {
         for (i = 0; i < H5Z_table_used_g; i++) {
             for (dir = 0; dir < 2; dir++) {
                 struct {
@@ -153,11 +159,11 @@ H5Z_term_package(void)
 
                 if (0 == nprint++) {
                     /* Print column headers */
-                    fprintf(H5DEBUG(Z), "H5Z: filter statistics "
-                                        "accumulated over life of library:\n");
-                    fprintf(H5DEBUG(Z), "   %-16s %10s %10s %8s %8s %8s %10s\n", "Filter", "Total", "Errors",
+                    fprintf(stdout, "H5Z: filter statistics "
+                                    "accumulated over life of library:\n");
+                    fprintf(stdout, "   %-16s %10s %10s %8s %8s %8s %10s\n", "Filter", "Total", "Errors",
                             "User", "System", "Elapsed", "Bandwidth");
-                    fprintf(H5DEBUG(Z), "   %-16s %10s %10s %8s %8s %8s %10s\n", "------", "-----", "------",
+                    fprintf(stdout, "   %-16s %10s %10s %8s %8s %8s %10s\n", "------", "-----", "------",
                             "----", "------", "-------", "---------");
                 } /* end if */
 
@@ -174,7 +180,7 @@ H5Z_term_package(void)
                              H5Z_stat_table_g[i].stats[dir].times.elapsed);
 
                 /* Print the statistics */
-                fprintf(H5DEBUG(Z), "   %s%-15s %10" PRIdHSIZE " %10" PRIdHSIZE " %8s %8s %8s %10s\n",
+                fprintf(stdout, "   %s%-15s %10" PRIdHSIZE " %10" PRIdHSIZE " %8s %8s %8s %10s\n",
                         (dir ? "<" : ">"), comment, H5Z_stat_table_g[i].stats[dir].total,
                         H5Z_stat_table_g[i].stats[dir].errors, timestrs.user, timestrs.system,
                         timestrs.elapsed, bandwidth);
@@ -205,7 +211,7 @@ next:
 /*-------------------------------------------------------------------------
  * Function: H5Zregister
  *
- * Purpose:  This function registers new filter.
+ * Purpose:  This function registers a new filter
  *
  * Return:   Non-negative on success/Negative on failure
  *-------------------------------------------------------------------------
@@ -220,7 +226,6 @@ H5Zregister(const void *cls)
 #endif
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE1("e", "*x", cls);
 
     /* Check args */
     if (cls_real == NULL)
@@ -352,7 +357,6 @@ H5Zunregister(H5Z_filter_t id)
     herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE1("e", "Zf", id);
 
     /* Check args */
     if (id < 0 || id > H5Z_FILTER_MAX)
@@ -700,7 +704,6 @@ H5Zfilter_avail(H5Z_filter_t id)
     htri_t ret_value = false; /* Return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE1("t", "Zf", id);
 
     /* Check args */
     if (id < 0 || id > H5Z_FILTER_MAX)
@@ -778,7 +781,7 @@ H5Z__prelude_callback(const H5O_pline_t *pline, hid_t dcpl_id, hid_t type_id, hi
         if (NULL == (fclass = H5Z_find(pline->filter[u].id))) {
             /* Ignore errors from optional filters */
             if (pline->filter[u].flags & H5Z_FLAG_OPTIONAL)
-                H5E_clear_stack(NULL);
+                H5E_clear_stack();
             else
                 HGOTO_ERROR(H5E_PLINE, H5E_NOTFOUND, FAIL, "required filter was not located");
         } /* end if */
@@ -1445,7 +1448,7 @@ H5Z_pipeline(const H5O_pline_t *pline, unsigned flags, unsigned *filter_mask /*i
 
                 *nbytes = *buf_size;
                 failed |= (unsigned)1 << idx;
-                H5E_clear_stack(NULL);
+                H5E_clear_stack();
             }
             else
                 *nbytes = new_nbytes;
@@ -1462,7 +1465,7 @@ H5Z_pipeline(const H5O_pline_t *pline, unsigned flags, unsigned *filter_mask /*i
                 if ((pline->filter[idx].flags & H5Z_FLAG_OPTIONAL) == 0)
                     HGOTO_ERROR(H5E_PLINE, H5E_WRITEERROR, FAIL, "required filter is not registered");
                 failed |= (unsigned)1 << idx;
-                H5E_clear_stack(NULL);
+                H5E_clear_stack();
                 continue; /* filter excluded */
             }             /* end if */
 
@@ -1498,7 +1501,7 @@ H5Z_pipeline(const H5O_pline_t *pline, unsigned flags, unsigned *filter_mask /*i
                     *nbytes = *buf_size;
                 }
                 failed |= (unsigned)1 << idx;
-                H5E_clear_stack(NULL);
+                H5E_clear_stack();
             }
             else
                 *nbytes = new_nbytes;
@@ -1713,7 +1716,6 @@ H5Zget_filter_info(H5Z_filter_t filter, unsigned *filter_config_flags /*out*/)
     herr_t ret_value = SUCCEED;
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE2("e", "Zf*Iu", filter, filter_config_flags);
 
     /* Get the filter info */
     if (H5Z_get_filter_info(filter, filter_config_flags) < 0)

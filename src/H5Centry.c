@@ -34,8 +34,10 @@
 #include "H5CXprivate.h" /* API Contexts                 */
 #include "H5Eprivate.h"  /* Error handling               */
 #include "H5Fpkg.h"      /* Files                        */
+#include "H5FLprivate.h" /* Free Lists                               */
 #include "H5MFprivate.h" /* File memory management       */
 #include "H5MMprivate.h" /* Memory management            */
+#include "H5SLprivate.h" /* Skip Lists                               */
 
 /****************/
 /* Local Macros */
@@ -1214,10 +1216,9 @@ H5C__load_entry(H5F_t *f,
 
     assert((dirty == false) || (type->id == 5 || type->id == 6));
 
-    entry->cache_ptr = f->shared->cache;
-    entry->addr      = addr;
-    entry->size      = len;
-    assert(entry->size < H5C_MAX_ENTRY_SIZE);
+    entry->cache_ptr        = f->shared->cache;
+    entry->addr             = addr;
+    entry->size             = len;
     entry->image_ptr        = image;
     entry->image_up_to_date = !dirty;
     entry->type             = type;

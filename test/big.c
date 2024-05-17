@@ -103,8 +103,8 @@ randll(hsize_t limit, int current_index)
     /* Generate up to MAX_TRIES random numbers until one of them */
     /* does not overlap with any previous writes */
     while (overlap != 0 && tries < MAX_TRIES) {
-        acc = (hsize_t)HDrandom();
-        acc *= (hsize_t)HDrandom();
+        acc = (hsize_t)rand();
+        acc *= (hsize_t)rand();
         acc     = acc % limit;
         overlap = 0;
 
@@ -143,12 +143,13 @@ is_sparse(void)
 
     if ((fd = HDopen("x.h5", O_RDWR | O_TRUNC | O_CREAT, H5_POSIX_CREATE_MODE_RW)) < 0)
         return 0;
-    if (HDlseek(fd, (HDoff_t)(1024 * 1024), SEEK_SET) != 1024 * 1024)
+    if (HDlseek(fd, (1024 * 1024), SEEK_SET) != 1024 * 1024)
         return 0;
     if (5 != HDwrite(fd, "hello", (size_t)5))
         return 0;
     if (HDclose(fd) < 0)
         return 0;
+    memset(&sb, 0, sizeof(h5_stat_t));
     if (HDstat("x.h5", &sb) < 0)
         return 0;
     if (HDremove("x.h5") < 0)
@@ -751,12 +752,12 @@ main(int ac, char **av)
         sparse_support = is_sparse();
 
     /* Choose random # seed */
-    seed = (unsigned long)HDtime(NULL);
+    seed = (unsigned long)time(NULL);
 #if 0
     /* seed = (unsigned long)1155438845; */
     fprintf(stderr, "Random # seed was: %lu\n", seed);
 #endif
-    HDsrandom((unsigned)seed);
+    srand((unsigned)seed);
 
     /* run VFD-specific test */
     if (H5FD_SEC2 == driver) {
