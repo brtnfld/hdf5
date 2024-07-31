@@ -582,7 +582,7 @@ H5FDsubfiling_get_file_mapping(hid_t file_id, char ***filenames, size_t *len)
     int                  num_digits    = 0;
     herr_t               ret_value     = SUCCEED;
 
-    FUNC_ENTER_PACKAGE
+    FUNC_ENTER_API(FAIL)
 
     if (file_id < 0)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid file ID");
@@ -676,8 +676,7 @@ done:
 
     H5MM_free(base);
     H5MM_free(subfile_dir);
-
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_API(ret_value)
 }
 
 static herr_t
