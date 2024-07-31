@@ -582,27 +582,29 @@ H5FDsubfiling_get_file_mapping(hid_t file_id, char ***filenames, size_t *len)
     int                  num_digits    = 0;
     herr_t               ret_value     = SUCCEED;
 
+    FUNC_ENTER_PACKAGE
+
     if (file_id < 0)
-        H5_SUBFILING_GOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid file ID");
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid file ID");
     if (!filenames)
-        H5_SUBFILING_GOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "`filenames` was NULL");
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "`filenames` was NULL");
     if (!len)
-        H5_SUBFILING_GOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "`len` was NULL");
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "`len` was NULL");
 
     *filenames = NULL;
     *len       = 0;
 
     if (NULL == (file_ptr = H5VL_object(file_id)))
-        H5_SUBFILING_GOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid file ID");
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid file ID");
 
     if (H5F_shared_get_file_driver(H5F_SHARED(file_ptr), &driver) < 0)
-        H5_SUBFILING_GOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get driver structure from file ID");
+        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get driver structure from file ID");
 
-    if (NULL == (sf_context = H5_get_subfiling_object(((H5FD_subfiling_t *)driver)->context_id)))
-        H5_SUBFILING_GOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get subfiling context from ID");
+    if (NULL == (sf_context = H5FD__subfiling_get_object(((H5FD_subfiling_t *)driver)->context_id)))
+        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get subfiling context from ID");
 
     if (!sf_context->topology)
-        H5_SUBFILING_GOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                                 "application topology hasn't been initialized yet for this file");
 
     assert(sf_context->h5_file_id != UINT64_MAX);
@@ -616,7 +618,7 @@ H5FDsubfiling_get_file_mapping(hid_t file_id, char ***filenames, size_t *len)
 
         /* Get the basename of the full HDF5 filename */
         if (H5_basename(sf_context->h5_filename, &base) < 0)
-            H5_SUBFILING_GOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL, "can't get HDF5 file basename");
+            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL, "can't get HDF5 file basename");
 
         /*
          * Get the directory prefix where subfiles will be placed.
@@ -626,24 +628,24 @@ H5FDsubfiling_get_file_mapping(hid_t file_id, char ***filenames, size_t *len)
          */
         if (sf_context->subfile_prefix) {
             if (NULL == (subfile_dir = H5MM_strdup(sf_context->subfile_prefix)))
-                H5_SUBFILING_GOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL, "couldn't copy subfile prefix");
+                HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL, "couldn't copy subfile prefix");
         }
         else {
             if (H5_dirname(sf_context->h5_filename, &subfile_dir) < 0)
-                H5_SUBFILING_GOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL, "couldn't get HDF5 file dirname");
+                HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL, "couldn't get HDF5 file dirname");
         }
 
         num_subfiles = sf_context->sf_num_subfiles;
         num_digits   = (int)(log10(num_subfiles) + 1);
 
         if (NULL == (filenames_arr = calloc(1, (size_t)sf_context->sf_num_fids * sizeof(char *))))
-            H5_SUBFILING_GOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL, "couldn't allocate filenames array");
+            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL, "couldn't allocate filenames array");
 
         for (int i = 0; i < sf_context->sf_num_fids; i++) {
             int subfile_idx;
 
             if (NULL == (filepath = malloc(PATH_MAX)))
-                H5_SUBFILING_GOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL,
+                HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL,
                                         "couldn't allocate space for subfile filename");
 
             subfile_idx = (i * sf_context->topology->n_io_concentrators) + sf_context->topology->ioc_idx + 1;
@@ -675,7 +677,7 @@ done:
     H5MM_free(base);
     H5MM_free(subfile_dir);
 
-    H5_SUBFILING_FUNC_LEAVE_API;
+    FUNC_LEAVE_NOAPI(ret_value)
 }
 
 static herr_t
