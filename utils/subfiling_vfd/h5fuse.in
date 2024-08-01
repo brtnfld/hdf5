@@ -285,8 +285,7 @@ else
   for i in "${subfiles[@]}"; do
       subfile="${subfile_dir}/${i}"
       match=0
-
-      for ((j=0; j<${#subf_list[@]}; ++j)); do
+      for ((j=0; j<nsubfiles; ++j)); do
           if [[ "${subf_list[j]}" == "$subfile" ]]; then
              unset "subf_list[$j]"  # Use unset within loop for proper removal
              match=1
