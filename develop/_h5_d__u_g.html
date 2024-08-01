@@ -1,12 +1,13 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
-<meta http-equiv="X-UA-Compatible" content="IE=9"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.7"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>HDF5: HDF5 Datasets</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">var page_layout=1;</script>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
 <link href="navtree.css" rel="stylesheet" type="text/css"/>
@@ -22,37 +23,24 @@
 /* @license-end */
 </script>
 <link href="doxygen.css" rel="stylesheet" type="text/css" />
+<link href="hdf5doxy.css" rel="stylesheet" type="text/css"/>
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 <link href="hdf5doxy.css" rel="stylesheet" type="text/css">
-<!-- <link href="hdf5doxy.css" rel="stylesheet" type="text/css"/>
- -->
 <script type="text/javascript" src="hdf5_navtree_hacks.js"></script>
+<div style="background:#FFDDDD;font-size:120%;text-align:center;margin:0;padding:5px">Please, help us to better serve our user community by answering the following short survey:  <a href="https://www.hdfgroup.org/website-survey/">https://www.hdfgroup.org/website-survey/</a></div>
 </head>
 <body>
-<div style="background:#FFDDDD;font-size:120%;text-align:center;margin:0;padding:5px">Please, help us to better serve our user community by answering the following short survey:  <a href="https://www.hdfgroup.org/website-survey/">https://www.hdfgroup.org/website-survey/</a></div>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
 <div id="titlearea">
 <table cellspacing="0" cellpadding="0">
  <tbody>
- <tr style="height: 56px;">
+ <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="HDFG-logo.png"/></td>
-  <td id="projectalign" style="padding-left: 0.5em;">
-   <div id="projectname"><a href="https://www.hdfgroup.org">HDF5</a>
-   &#160;<span id="projectnumber">1.15.0.c8371ca</span>
+  <td id="projectalign">
+   <div id="projectname">HDF5<span id="projectnumber">&#160;1.15.0.9fd8856</span>
    </div>
    <div id="projectbrief">API Reference</div>
   </td>
-   <td>        <div id="MSearchBox" class="MSearchBoxInactive">
-        <span class="left">
-          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
-          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
-               onfocus="searchBox.OnSearchFieldFocus(true)" 
-               onblur="searchBox.OnSearchFieldFocus(false)" 
-               onkeyup="searchBox.OnSearchFieldChange(event)"/>
-          </span><span class="right">
-            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
-          </span>
-        </div>
-</td>
  </tr>
  </tbody>
 </table>
@@ -64,6 +52,33 @@
 var searchBox = new SearchBox("searchBox", "search/",'.html');
 /* @license-end */
 </script>
+  <div id="navrow1" class="tabs">
+    <ul class="tablist">
+      <li><a href="index.html"><span>Main&#160;Page</span></a></li>
+      <li><a href="_getting_started.html"><span>Getting&#160;started</span></a></li>
+      <li><a href="_u_g.html"><span>User&#160;Guide</span></a></li>
+      <li><a href="_r_m.html"><span>Reference&#160;Manual</span></a></li>
+      <li><a href="_cookbook.html"><span>Cookbook</span></a></li>
+      <li><a href="_t_n.html"><span>Technical&#160;Notes</span></a></li>
+      <li><a href="_r_f_c.html"><span>RFCs</span></a></li>
+      <li><a href="_s_p_e_c.html"><span>Specifications</span></a></li>
+      <li><a href="_g_l_s.html"><span>Glossary</span></a></li>
+      <li><a href="_about.html"><span>About</span></a></li>
+      <li>
+        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+      </li>
+    </ul>
+  </div>
 </div><!-- top -->
 <div id="side-nav" class="ui-resizable side-nav-resizable">
   <div id="nav-tree">
@@ -127,9 +142,10 @@ Link/Unlink</h3>
 <p>A dataset can be added to a group with one of the H5Lcreate calls, and deleted from a group with <a class="el" href="group___h5_l.html#ga5b4e7f59f5d4bdae94fd8ce6875295cf" title="Removes a link from a group.">H5Ldelete</a>. The link and unlink operations use the name of an object, which may be a dataset. The dataset does not have to open to be linked or unlinked.</p>
 <h3><a class="anchor" id="subsubsec_dataset_intro_obj"></a>
 Object Reference</h3>
-<p>A dataset may be the target of an object reference. The object reference is created by <a class="el" href="group___h5_r.html#ga0ac6997b5de26b11d91a95de2869950d" title="Creates a reference.">H5Rcreate</a> with the name of an object which may be a dataset and the reference type <a class="el" href="_h5_rpublic_8h.html#ae1ffa09875ca6778df3a577592dacbd2">H5R_OBJECT</a>. The dataset does not have to be open to create a reference to it.</p>
-<p>An object reference may also refer to a region (selection) of a dataset. The reference is created with <a class="el" href="group___h5_r.html#ga0ac6997b5de26b11d91a95de2869950d" title="Creates a reference.">H5Rcreate</a> and a reference type of <a class="el" href="_h5_rpublic_8h.html#a2a28c48c03a4616a02f9157fca4b2df0">H5R_DATASET_REGION</a>.</p>
-<p>An object reference can be accessed by a call to <a class="el" href="group___h5_r.html#ga5dc19b9d1833af66c5e1f819f2c05c4a">H5Rdereference</a>. When the reference is to a dataset or dataset region, the <a class="el" href="group___h5_r.html#ga5dc19b9d1833af66c5e1f819f2c05c4a">H5Rdereference</a> call returns an identifier to the dataset just as if <a class="el" href="_h5version_8h.html#a7dba2e5b2045f31c0932123ffb54f7a3">H5Dopen</a> has been called.</p>
+<p>A file, group, dataset, named datatype, or attribute may be the target of an object reference. The object reference is created by <a class="el" href="group___h5_r.html#gad0fb6ec99ecefa602756a5682addfc69" title="Creates an object reference.">H5Rcreate_object</a> with the name of an object which may be a dataset and the reference type <a class="el" href="_h5_rpublic_8h.html#ae1ffa09875ca6778df3a577592dacbd2">H5R_OBJECT</a>. The dataset does not have to be open to create a reference to it.</p>
+<p>An object reference may also refer to a region (selection) of a dataset. The reference is created with <a class="el" href="group___h5_r.html#ga60134eb917afbe89aa23eb25a30d249b" title="Creates a region reference.">H5Rcreate_region</a>.</p>
+<p>An object reference can be accessed by a call to <a class="el" href="group___h5_r.html#gaa6692bd3a5b490c8db05b90a5888d0dd" title="Opens the HDF5 object referenced.">H5Ropen_object</a>. When the reference is to a dataset or dataset region, the <a class="el" href="group___h5_r.html#gaa6692bd3a5b490c8db05b90a5888d0dd" title="Opens the HDF5 object referenced.">H5Ropen_object</a> call returns an identifier to the dataset just as if <a class="el" href="_h5version_8h.html#a7dba2e5b2045f31c0932123ffb54f7a3">H5Dopen</a> has been called.</p>
+<p>The reference buffer from the <a class="el" href="group___h5_r.html#gad0fb6ec99ecefa602756a5682addfc69" title="Creates an object reference.">H5Rcreate_object</a> call must be released by using <a class="el" href="group___h5_r.html#ga026114e6c23588bf89bb473eb9e4d095" title="Closes a reference.">H5Rdestroy</a> to avoid resource leaks and possible HDF5 library shutdown issues.</p>
 <h3><a class="anchor" id="subsubsec_dataset_intro_attr"></a>
 Adding Attributes</h3>
 <p>A dataset may have user-defined attributes which are created with <a class="el" href="group___h5_a.html#ga4a76e4e5ab6eb0fd2aa7990d38d55f24">H5Acreate</a> and accessed through the <a class="el" href="group___h5_a.html">Attributes (H5A)</a> API. To create an attribute for a dataset, the dataset must be open, and the identifier is passed to <a class="el" href="group___h5_a.html#ga4a76e4e5ab6eb0fd2aa7990d38d55f24">H5Acreate</a>. The attributes of a dataset are discovered and opened using <a class="el" href="group___h5_a.html#ga5c05fade96b6b7e2299f56a5b1edb1c1" title="Opens an attribute specified by name.">H5Aopen_name</a>, <a class="el" href="group___h5_a.html#gadaa85276f2731ad78462a6fd27118470" title="Opens the attribute specified by its index.">H5Aopen_idx</a>, or <a class="el" href="group___h5_a.html#gab9dcfc543cd4282f32b8ea19e08ffa6c">H5Aiterate</a>; these functions use the identifier of the dataset. An attribute can be deleted with <a class="el" href="group___h5_a.html#gada9fa3d6db52329f1fd55662de6ff6ba" title="Deletes an attribute from a specified location.">H5Adelete</a> which also uses the identifier of the dataset.</p>
@@ -241,11 +257,11 @@ Dataset Function Summaries</h2>
 <tr>
 <td><a class="el" href="group___d_c_p_l.html#ga37de4b6071a94574cfab5cd6de9c3fc6" title="Sets up use of the SZIP compression filter.">H5Pset_szip</a> </td><td>Sets up use of the Szip compression filter.  </td></tr>
 <tr>
-<td><a class="el" href="group___d_c_p_l.html#ga85ff7c9c827fa524041cd58c199b77b8" title="Adds an external file to the list of external files.">H5Pset_external</a> </td><td>Adds an external file to the list of external files.  </td></tr>
+<td><a class="el" href="group___d_c_p_l.html#ga64bf68bda464eaaabfe24846533b1935" title="Adds an external file to the list of external files.">H5Pset_external</a> </td><td>Adds an external file to the list of external files.  </td></tr>
 <tr>
 <td><a class="el" href="group___d_c_p_l.html#ga4c45d90845ea7627b6238f95168c41ce" title="Returns the number of external files for a dataset.">H5Pget_external_count</a> </td><td>Returns the number of external files for a dataset.  </td></tr>
 <tr>
-<td><a class="el" href="group___d_c_p_l.html#ga78253b80b6c86faf7ff0db135146521d" title="Returns information about an external file.">H5Pget_external</a> </td><td>Returns information about an external file.  </td></tr>
+<td><a class="el" href="group___d_c_p_l.html#ga454633ced11c3fa64f70d5816fa7f6e2" title="Returns information about an external file.">H5Pget_external</a> </td><td>Returns information about an external file.  </td></tr>
 <tr>
 <td><a class="el" href="group___a_c_p_l.html#gad4fa8e2d17236786f770cf17eef908cc" title="Sets the character encoding used to encode link and attribute names.">H5Pset_char_encoding</a> </td><td>Sets the character encoding used to encode a string. Use to set ASCII or UTF-8 character encoding for object names.  </td></tr>
 <tr>
@@ -1038,11 +1054,11 @@ External Storage Properties</h3>
 <tr>
 <th>Function </th><th>Description  </th></tr>
 <tr>
-<td><a class="el" href="group___d_c_p_l.html#ga85ff7c9c827fa524041cd58c199b77b8" title="Adds an external file to the list of external files.">H5Pset_external</a> </td><td>This function adds a new segment to the end of the external file list of the specified dataset creation property list. The segment begins a byte offset of file name and continues for size bytes. The space represented by this segment is adjacent to the space already represented by the external file list. The last segment in a file list may have the size <a class="el" href="_h5_fpublic_8h.html#a2a667df33694861e41d1b9eb3a55b373">H5F_UNLIMITED</a>, in which case the external file may be of unlimited size and no more files can be added to the external files list.  </td></tr>
+<td><a class="el" href="group___d_c_p_l.html#ga64bf68bda464eaaabfe24846533b1935" title="Adds an external file to the list of external files.">H5Pset_external</a> </td><td>This function adds a new segment to the end of the external file list of the specified dataset creation property list. The segment begins a byte offset of file name and continues for size bytes. The space represented by this segment is adjacent to the space already represented by the external file list. The last segment in a file list may have the size <a class="el" href="_h5_fpublic_8h.html#a2a667df33694861e41d1b9eb3a55b373">H5F_UNLIMITED</a>, in which case the external file may be of unlimited size and no more files can be added to the external files list.  </td></tr>
 <tr>
 <td><a class="el" href="group___d_c_p_l.html#ga4c45d90845ea7627b6238f95168c41ce" title="Returns the number of external files for a dataset.">H5Pget_external_count</a> </td><td>Calling this function returns the number of segments in an external file list. If the dataset creation property list has no external data, then zero is returned.  </td></tr>
 <tr>
-<td><a class="el" href="group___d_c_p_l.html#ga78253b80b6c86faf7ff0db135146521d" title="Returns information about an external file.">H5Pget_external</a> </td><td>This is the counterpart for the <a class="el" href="group___d_c_p_l.html#ga85ff7c9c827fa524041cd58c199b77b8" title="Adds an external file to the list of external files.">H5Pset_external</a> function. Given a dataset creation property list and a zero-based index into that list, the file name, byte offset, and segment size are returned through non-null arguments. At most name_size characters are copied into the name argument which is not null terminated if the file name is longer than the supplied name buffer (this is similar to strncpy()).  </td></tr>
+<td><a class="el" href="group___d_c_p_l.html#ga454633ced11c3fa64f70d5816fa7f6e2" title="Returns information about an external file.">H5Pget_external</a> </td><td>This is the counterpart for the <a class="el" href="group___d_c_p_l.html#ga64bf68bda464eaaabfe24846533b1935" title="Adds an external file to the list of external files.">H5Pset_external</a> function. Given a dataset creation property list and a zero-based index into that list, the file name, byte offset, and segment size are returned through non-null arguments. At most name_size characters are copied into the name argument which is not null terminated if the file name is longer than the supplied name buffer (this is similar to strncpy()).  </td></tr>
 </table>
 <p>The figure below shows an example of how a contiguous, one-dimensional dataset is partitioned into three parts and each of those parts is stored in a segment of an external file. The top rectangle represents the logical address space of the dataset while the bottom rectangle represents an external file.</p>
 <table class="doxtable">
@@ -1055,10 +1071,10 @@ External file storage</div></div>
 </table>
 <p>The example below shows code that defines the external storage for the example. Note that the segments are defined in order of the logical addresses they represent, not their order within the external file. It would also have been possible to put the segments in separate files. Care should be taken when setting up segments in a single file since the library does not automatically check for segments that overlap.</p>
 <p><em>External storage</em> </p><div class="fragment"><div class="line">plist = <a class="code hl_function" href="group___p_l_c_r.html#gaf1b11da01d4d45d788c45f8bc5f0cbfa">H5Pcreate</a> (<a class="code hl_define" href="_h5_ppublic_8h.html#afcd7f8186c404f3a1d768632eacba102">H5P_DATASET_CREATE</a>);</div>
-<div class="line"><a class="code hl_function" href="group___d_c_p_l.html#ga85ff7c9c827fa524041cd58c199b77b8">H5Pset_external</a> (plist, <span class="stringliteral">&quot;velocity.data&quot;</span>, 3000, 1000);</div>
-<div class="line"><a class="code hl_function" href="group___d_c_p_l.html#ga85ff7c9c827fa524041cd58c199b77b8">H5Pset_external</a> (plist, <span class="stringliteral">&quot;velocity.data&quot;</span>, 0, 2500);</div>
-<div class="line"><a class="code hl_function" href="group___d_c_p_l.html#ga85ff7c9c827fa524041cd58c199b77b8">H5Pset_external</a> (plist, <span class="stringliteral">&quot;velocity.data&quot;</span>, 4500, 1500);</div>
-<div class="ttc" id="agroup___d_c_p_l_html_ga85ff7c9c827fa524041cd58c199b77b8"><div class="ttname"><a href="group___d_c_p_l.html#ga85ff7c9c827fa524041cd58c199b77b8">H5Pset_external</a></div><div class="ttdeci">herr_t H5Pset_external(hid_t plist_id, const char *name, off_t offset, hsize_t size)</div><div class="ttdoc">Adds an external file to the list of external files.</div></div>
+<div class="line"><a class="code hl_function" href="group___d_c_p_l.html#ga64bf68bda464eaaabfe24846533b1935">H5Pset_external</a> (plist, <span class="stringliteral">&quot;velocity.data&quot;</span>, 3000, 1000);</div>
+<div class="line"><a class="code hl_function" href="group___d_c_p_l.html#ga64bf68bda464eaaabfe24846533b1935">H5Pset_external</a> (plist, <span class="stringliteral">&quot;velocity.data&quot;</span>, 0, 2500);</div>
+<div class="line"><a class="code hl_function" href="group___d_c_p_l.html#ga64bf68bda464eaaabfe24846533b1935">H5Pset_external</a> (plist, <span class="stringliteral">&quot;velocity.data&quot;</span>, 4500, 1500);</div>
+<div class="ttc" id="agroup___d_c_p_l_html_ga64bf68bda464eaaabfe24846533b1935"><div class="ttname"><a href="group___d_c_p_l.html#ga64bf68bda464eaaabfe24846533b1935">H5Pset_external</a></div><div class="ttdeci">herr_t H5Pset_external(hid_t plist_id, const char *name, HDoff_t offset, hsize_t size)</div><div class="ttdoc">Adds an external file to the list of external files.</div></div>
 </div><!-- fragment --><p>The figure below shows an example of how a contiguous, two-dimensional dataset is partitioned into three parts and each of those parts is stored in a separate external file. The top rectangle represents the logical address space of the dataset while the bottom rectangles represent external files.</p>
 <table class="doxtable">
 <tr>
@@ -1070,9 +1086,9 @@ Partitioning a 2-D dataset for external storage</div></div>
 </table>
 <p>The example below shows code for the partitioning described above. In this example, the library maps the multi-dimensional array onto a linear address space as defined by the HDF5 format specification, and then maps that address space into the segments defined in the external file list.</p>
 <p><em>Partitioning a 2-D dataset for external storage</em> </p><div class="fragment"><div class="line">plist = <a class="code hl_function" href="group___p_l_c_r.html#gaf1b11da01d4d45d788c45f8bc5f0cbfa">H5Pcreate</a> (<a class="code hl_define" href="_h5_ppublic_8h.html#afcd7f8186c404f3a1d768632eacba102">H5P_DATASET_CREATE</a>);</div>
-<div class="line"><a class="code hl_function" href="group___d_c_p_l.html#ga85ff7c9c827fa524041cd58c199b77b8">H5Pset_external</a> (plist, <span class="stringliteral">&quot;scan1.data&quot;</span>, 0, 24);</div>
-<div class="line"><a class="code hl_function" href="group___d_c_p_l.html#ga85ff7c9c827fa524041cd58c199b77b8">H5Pset_external</a> (plist, <span class="stringliteral">&quot;scan2.data&quot;</span>, 0, 24);</div>
-<div class="line"><a class="code hl_function" href="group___d_c_p_l.html#ga85ff7c9c827fa524041cd58c199b77b8">H5Pset_external</a> (plist, <span class="stringliteral">&quot;scan3.data&quot;</span>, 0, 16);</div>
+<div class="line"><a class="code hl_function" href="group___d_c_p_l.html#ga64bf68bda464eaaabfe24846533b1935">H5Pset_external</a> (plist, <span class="stringliteral">&quot;scan1.data&quot;</span>, 0, 24);</div>
+<div class="line"><a class="code hl_function" href="group___d_c_p_l.html#ga64bf68bda464eaaabfe24846533b1935">H5Pset_external</a> (plist, <span class="stringliteral">&quot;scan2.data&quot;</span>, 0, 24);</div>
+<div class="line"><a class="code hl_function" href="group___d_c_p_l.html#ga64bf68bda464eaaabfe24846533b1935">H5Pset_external</a> (plist, <span class="stringliteral">&quot;scan3.data&quot;</span>, 0, 16);</div>
 </div><!-- fragment --><p>The segments of an external file can exist beyond the end of the (external) file. The library reads that part of a segment as zeros. When writing to a segment that exists beyond the end of a file, the external file is automatically extended. Using this feature, one can create a segment (or set of segments) which is larger than the current size of the dataset. This allows the dataset to be extended at a future time (provided the dataspace also allows the extension).</p>
 <p>All referenced external data files must exist before performing raw data I/O on the dataset. This is normally not a problem since those files are being managed directly by the application or indirectly through some other library. However, if the file is transferred from its original context, care must be taken to assure that all the external files are accessible in the new location.</p>
 <h2><a class="anchor" id="subsec_dataset_filters"></a>
