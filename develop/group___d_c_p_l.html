@@ -37,7 +37,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="HDFG-logo.png"/></td>
   <td id="projectalign">
-   <div id="projectname">HDF5<span id="projectnumber">&#160;1.15.0.1f0bd7f</span>
+   <div id="projectname">HDF5<span id="projectnumber">&#160;2.0.0.61c7dda</span>
    </div>
    <div id="projectbrief">API Reference</div>
   </td>
@@ -63,6 +63,7 @@ var searchBox = new SearchBox("searchBox", "search/",'.html');
       <li><a href="_r_f_c.html"><span>RFCs</span></a></li>
       <li><a href="_s_p_e_c.html"><span>Specifications</span></a></li>
       <li><a href="_g_l_s.html"><span>Glossary</span></a></li>
+      <li><a href="_f_t_s.html"><span>Full-Text&#160;Search</span></a></li>
       <li><a href="_about.html"><span>About</span></a></li>
       <li>
         <div id="MSearchBox" class="MSearchBoxInactive">
@@ -156,7 +157,7 @@ $(document).ready(function(){initNavTree('group___d_c_p_l.html',''); initResizab
 <tr>
 <td><a class="el" href="group___d_c_p_l.html#gaf507a3efa5d1f37448baea089fc053d8" title="Retrieves the timing for storage space allocation.">H5Pget_alloc_time</a> </td><td>Retrieves the timing for storage space allocation.  </td></tr>
 <tr>
-<td><a class="el" href="group___o_c_p_l.html#ga191c567ee50b2063979cdef156a768c5" title="Adds a filter to the filter pipeline.">H5Pset_filter</a> </td><td>Adds a filter to the filter pipeline.  </td></tr>
+<td><a class="el" href="group___o_c_p_l.html#gae7ac4c110e9ec3fcf38966928b96cda3" title="Adds a filter to the filter pipeline.">H5Pset_filter</a> </td><td>Adds a filter to the filter pipeline.  </td></tr>
 <tr>
 <td><a class="el" href="group___d_c_p_l.html#ga70f5346250698afc950532e9593c3988" title="Verifies that all required filters are available.">H5Pall_filters_avail</a> </td><td>Verifies that all required filters are available.  </td></tr>
 <tr>
@@ -631,7 +632,7 @@ See the <code>alloc_time</code> description in <a class="el" href="group___d_c_p
 <p><a class="el" href="group___d_c_p_l.html#ga454633ced11c3fa64f70d5816fa7f6e2" title="Returns information about an external file.">H5Pget_external()</a> returns information about an external file. The external file is specified by its index, <code>idx</code>, which is a number from zero to N-1, where N is the value returned by <a class="el" href="group___d_c_p_l.html#ga4c45d90845ea7627b6238f95168c41ce" title="Returns the number of external files for a dataset.">H5Pget_external_count()</a>. At most <code>name_size</code> characters are copied into the <code>name</code> array. If the external file name is longer than <code>name_size</code> with the null terminator, the return value is not null terminated (similar to strncpy()).</p>
 <p>If <code>name_size</code> is zero or <code>name</code> is the null pointer, the external file name is not returned. If <code>offset</code> or <code>size</code> are null pointers then the corresponding information is not returned.</p>
 <dl class="section note"><dt>Note</dt><dd>In 1.14.x and earlier, the offset parameter was of type off_t, which is a 32-bit signed long value on Windows, which limited the valid offset that can be returned to 2 GiB.</dd></dl>
-<dl class="section version"><dt>Version</dt><dd>1.16.0 <code>offset</code> parameter type changed to HDoff_t from off_t. </dd>
+<dl class="section version"><dt>Version</dt><dd>2.0.0 <code>offset</code> parameter type changed to HDoff_t from off_t. </dd>
 <dd>
 1.6.4 <code>idx</code> parameter type changed to unsigned. </dd></dl>
 <dl class="section since"><dt>Since</dt><dd>1.0.0 </dd></dl>
@@ -840,7 +841,7 @@ See the <code>alloc_time</code> description in <a class="el" href="group___d_c_p
 <p><a class="el" href="group___d_c_p_l.html#gacbd4f93aa7cd270668385440fb5873a1" title="Returns information about a filter in a pipeline (DEPRECATED)">H5Pget_filter1()</a> returns information about a filter, specified by its filter number, in a filter pipeline, specified by the property list with which it is associated.</p>
 <p><code>plist_id</code> must be a dataset or group creation property list.</p>
 <p><code>filter</code> is a value between zero and N-1, as described in <a class="el" href="group___o_c_p_l.html#gacbad1ca36a61246b439a25f28e7575fb" title="Returns the number of filters in the pipeline.">H5Pget_nfilters()</a>. The function will return a negative value if the filter number is out of range.</p>
-<p>The structure of the <code>flags</code> argument is discussed in <a class="el" href="group___o_c_p_l.html#ga191c567ee50b2063979cdef156a768c5" title="Adds a filter to the filter pipeline.">H5Pset_filter()</a>.</p>
+<p>The structure of the <code>flags</code> argument is discussed in <a class="el" href="group___o_c_p_l.html#gae7ac4c110e9ec3fcf38966928b96cda3" title="Adds a filter to the filter pipeline.">H5Pset_filter()</a>.</p>
 <p>On input, <code>cd_nelmts</code> indicates the number of entries in the <code>cd_values</code> array, as allocated by the caller; on return, <code>cd_nelmts</code> contains the number of values defined by the filter.</p>
 <p>If <code>name</code> is a pointer to an array of at least <code>namelen</code> bytes, the filter name will be copied into that array. The name will be null terminated if <code>namelen</code> is large enough. The filter name returned will be the name appearing in the file, the name registered for the filter, or an empty string.</p>
 <dl class="section version"><dt>Version</dt><dd>1.8.5 Function extended to work with group creation property lists. </dd>
@@ -927,8 +928,8 @@ See the <code>alloc_time</code> description in <a class="el" href="group___d_c_p
 <dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000074">Deprecated:</a></b></dt><dd>As of HDF5-1.8 this function was deprecated in favor of <a class="el" href="group___o_c_p_l.html#ga2d5e9df5f0e93abae11ee5edd82fcec3" title="Returns information about the specified filter.">H5Pget_filter_by_id2()</a> or the macro <a class="el" href="_h5version_8h.html#ac7aa336e7b1b9033cea2448ba623951f">H5Pget_filter_by_id()</a>.</dd></dl>
 <p><a class="el" href="group___d_c_p_l.html#ga351bb4dc44dae41344f18aab177f4cf1" title="Returns information about the specified filter.">H5Pget_filter_by_id1()</a> returns information about a filter, specified in <code>id</code>, a filter identifier.</p>
 <p><code>plist_id</code> must be a dataset or group creation property list and <code>id</code> must be in the associated filter pipeline.</p>
-<p>The <code>id</code> and <code>flags</code> parameters are used in the same manner as described in the discussion of <a class="el" href="group___o_c_p_l.html#ga191c567ee50b2063979cdef156a768c5" title="Adds a filter to the filter pipeline.">H5Pset_filter()</a>.</p>
-<p>Aside from the fact that they are used for output, the parameters <code>cd_nelmts</code> and <code>cd_values</code>[] are used in the same manner as described in the discussion of <a class="el" href="group___o_c_p_l.html#ga191c567ee50b2063979cdef156a768c5" title="Adds a filter to the filter pipeline.">H5Pset_filter()</a>. On input, the <code>cd_nelmts</code> parameter indicates the number of entries in the <code>cd_values</code>[] array allocated by the calling program; on exit it contains the number of values defined by the filter.</p>
+<p>The <code>id</code> and <code>flags</code> parameters are used in the same manner as described in the discussion of <a class="el" href="group___o_c_p_l.html#gae7ac4c110e9ec3fcf38966928b96cda3" title="Adds a filter to the filter pipeline.">H5Pset_filter()</a>.</p>
+<p>Aside from the fact that they are used for output, the parameters <code>cd_nelmts</code> and <code>cd_values</code>[] are used in the same manner as described in the discussion of <a class="el" href="group___o_c_p_l.html#gae7ac4c110e9ec3fcf38966928b96cda3" title="Adds a filter to the filter pipeline.">H5Pset_filter()</a>. On input, the <code>cd_nelmts</code> parameter indicates the number of entries in the <code>cd_values</code>[] array allocated by the calling program; on exit it contains the number of values defined by the filter.</p>
 <p>On input, the <code>namelen</code> parameter indicates the number of characters allocated for the filter name by the calling program in the array <code>name</code>[]. On exit <code>name</code>[] contains the name of the filter with one character of the name in each element of the array.</p>
 <p>If the filter specified in <code>id</code> is not set for the property list, an error will be returned and this function will fail.</p>
 <dl class="section version"><dt>Version</dt><dd>1.8.5 Function extended to work with group creation property lists. </dd>
@@ -1547,7 +1548,7 @@ See <a class="el" href="group___h5_d.html#ga0647ba4bbd26d5230cc07f3a5685b2cf">H5
 <p>The <code>size</code> argument specifies the number of bytes reserved for data in the external file. If <code>size</code> is set to <a class="el" href="_h5_fpublic_8h.html#a2a667df33694861e41d1b9eb3a55b373">H5F_UNLIMITED</a>, the external file can be of unlimited size and no more files can be added to the external files list. If <code>size</code> is set to 0 (zero), no external file will actually be created.</p>
 <p>All of the external files for a given dataset must be specified with <a class="el" href="group___d_c_p_l.html#ga64bf68bda464eaaabfe24846533b1935" title="Adds an external file to the list of external files.">H5Pset_external()</a> before <a class="el" href="group___h5_d.html#ga0647ba4bbd26d5230cc07f3a5685b2cf">H5Dcreate()</a> is called to create the dataset. If one these files does not exist on the system when <a class="el" href="group___h5_d.html#ga98f44998b67587662af8b0d8a0a75906" title="Writes raw data from a buffer to a dataset.">H5Dwrite()</a> is called to write data to it, the library will create the file.</p>
 <dl class="section note"><dt>Note</dt><dd>In 1.14.x and earlier, the offset parameter was of type off_t, which is a 32-bit signed long value on Windows, which limited the valid offset that can be set to 2 GiB.</dd></dl>
-<dl class="section version"><dt>Version</dt><dd>1.16.0 <code>offset</code> parameter type changed to HDoff_t from off_t. </dd></dl>
+<dl class="section version"><dt>Version</dt><dd>2.0.0 <code>offset</code> parameter type changed to HDoff_t from off_t. </dd></dl>
 <dl class="section since"><dt>Since</dt><dd>1.0.0 </dd></dl>
 
 </div>
@@ -2032,7 +2033,7 @@ HDF5 always modifies the options mask provided by the user to set up usage of RA
 <tr>
 <td><code>"%%"</code> </td><td>Replaced with a single <code>"%"</code> (percent) character.  </td></tr>
 <tr>
-<td><code>"%&lt;d&gt;b"</code> </td><td>Where <code>"&lt;d&gt;"</code> is the virtual dataset dimension axis (0-based) and <code>"b"</code> indicates that the block count of the selection in that dimension should be used. The full expression (for example, <code>"%0b"</code>) is replaced with a single numeric value when the mapping is evaluated at VDS access time. Example code for many source and virtual dataset mappings is available in the "Examples of Source to Virtual Dataset Mapping" chapter in the <a href="https://docs.hdfgroup.org/hdf5/rfc/HDF5-VDS-requirements-use-cases-2014-12-10.pdf">RFC: HDF5 Virtual Dataset</a>.   </td></tr>
+<td><code>"%&lt;d&gt;b"</code> </td><td>Where <code>"&lt;d&gt;"</code> is the virtual dataset dimension axis (0-based) and <code>"b"</code> indicates that the block count of the selection in that dimension should be used. The full expression (for example, <code>"%0b"</code>) is replaced with a single numeric value when the mapping is evaluated at VDS access time. Example code for many source and virtual dataset mappings is available in the "Examples of Source to Virtual Dataset Mapping" chapter in the <a href="https://support.hdfgroup.org/releases/hdf5/documentation/rfc/HDF5-VDS-requirements-use-cases-2014-12-10.pdf">RFC: HDF5 Virtual Dataset</a>.   </td></tr>
 </table>
 If the printf form is used for the source file or dataset names, the selection in the source dataset's dataspace must be fixed-size.</dd></dl>
 <dl class="section user"><dt>Source File Resolutions:</dt><dd>When a source dataset residing in a different file is accessed, the library will search for the source file <code>src_file_name</code> as described below: <ul>
@@ -2065,7 +2066,7 @@ If the printf form is used for the source file or dataset names, the selection i
 </li>
 </ul>
 </dd></dl>
-<dl class="section see"><dt>See also</dt><dd><a href="https://docs.hdfgroup.org/hdf5/rfc/HDF5-VDS-requirements-use-cases-2014-12-10.pdf">Virtual Dataset Overview</a></dd>
+<dl class="section see"><dt>See also</dt><dd><a href="https://support.hdfgroup.org/releases/hdf5/documentation/rfc/HDF5-VDS-requirements-use-cases-2014-12-10.pdf">Virtual Dataset Overview</a></dd>
 <dd>
 Supporting Functions: <a class="el" href="group___d_c_p_l.html#ga655530b0f40990507fedeef6b3068db3" title="Returns the layout of the raw data for a dataset.">H5Pget_layout()</a>, <a class="el" href="group___d_c_p_l.html#ga75d80991a8f467e0d454c53a383ae7f9" title="Sets the type of storage used to store the raw data for a dataset.">H5Pset_layout()</a>, <a class="el" href="group___h5_s.html#gabc974bbc041538a1d3032729df2ddfc0" title="Retrieves a regular hyperslab selection.">H5Sget_regular_hyperslab()</a>, <a class="el" href="group___h5_s.html#ga8a5bc33fae4be442093329f2cfec3f49" title="Determines if a hyperslab selection is regular.">H5Sis_regular_hyperslab()</a>, <a class="el" href="group___h5_s.html#ga6adfdf1b95dc108a65bf66e97d38536d" title="Selects a hyperslab region to add to the current selected region.">H5Sselect_hyperslab()</a> </dd>
 <dd>

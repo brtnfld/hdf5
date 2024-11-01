@@ -37,7 +37,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="HDFG-logo.png"/></td>
   <td id="projectalign">
-   <div id="projectname">HDF5<span id="projectnumber">&#160;1.15.0.1f0bd7f</span>
+   <div id="projectname">HDF5<span id="projectnumber">&#160;2.0.0.61c7dda</span>
    </div>
    <div id="projectbrief">API Reference</div>
   </td>
@@ -63,6 +63,7 @@ var searchBox = new SearchBox("searchBox", "search/",'.html');
       <li><a href="_r_f_c.html"><span>RFCs</span></a></li>
       <li><a href="_s_p_e_c.html"><span>Specifications</span></a></li>
       <li><a href="_g_l_s.html"><span>Glossary</span></a></li>
+      <li><a href="_f_t_s.html"><span>Full-Text&#160;Search</span></a></li>
       <li><a href="_about.html"><span>About</span></a></li>
       <li>
         <div id="MSearchBox" class="MSearchBoxInactive">
@@ -378,6 +379,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Returns a dataspace identifier if successful; otherwise returns <a class="el" href="_h5_ipublic_8h.html#a01eab13dccc91afd6909d74dccb780ba">H5I_INVALID_HID</a>.</dd></dl>
 <p><a class="el" href="group___h5_s.html#gae7578a93bb7b22989bcb737f26b60ad1" title="Performs an operation on a hyperslab and an existing selection and returns the resulting selection.">H5Scombine_hyperslab()</a> combines a hyperslab selection specified by <code>start</code>, <code>stride</code>, <code>count</code> and <code>block</code> with the current selection for the dataspace <code>space_id</code>, creating a new dataspace to return the generated selection. If the current selection is not a hyperslab, it is freed and the hyperslab parameters passed in are combined with the <a class="el" href="_h5_spublic_8h.html#a1e9590539381e3922a1582067d496304a865473ae023d0ac257aeb9424f363e75">H5S_SEL_ALL</a> hyperslab (ie. a selection composing the entire current extent). If either <code>stride</code> or <code>block</code> is NULL, then it will be set to <code>1</code>.</p>
+<p>See <a class="el" href="group___h5_s.html#ga6adfdf1b95dc108a65bf66e97d38536d" title="Selects a hyperslab region to add to the current selected region.">H5Sselect_hyperslab()</a> for valid operators (<code>op</code>).</p>
 <dl class="section since"><dt>Since</dt><dd>1.10.6 </dd></dl>
 
 </div>
@@ -425,6 +427,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Returns a dataspace identifier if successful; otherwise returns <a class="el" href="_h5_ipublic_8h.html#a01eab13dccc91afd6909d74dccb780ba">H5I_INVALID_HID</a>.</dd></dl>
 <p><a class="el" href="group___h5_s.html#ga356600d12d3cf0db53cc27b212d75b08" title="Combine two hyperslab selections with an operation, returning a dataspace with the resulting selectio...">H5Scombine_select()</a> combines two hyperslab selections <code>space1_id</code> and <code>space2_id</code> with an operation, returning a new dataspace with the resulting selection. The dataspace extent from <code>space1_id</code> is copied for the dataspace extent of the newly created dataspace.</p>
+<p>See <a class="el" href="group___h5_s.html#ga6adfdf1b95dc108a65bf66e97d38536d" title="Selects a hyperslab region to add to the current selected region.">H5Sselect_hyperslab()</a> for valid operators (<code>op</code>).</p>
 <dl class="section since"><dt>Since</dt><dd>1.10.6 </dd></dl>
 
 </div>
@@ -685,7 +688,7 @@ Functions</h2></td></tr>
 <p>If the library determines that <code>nalloc</code> is not big enough for the object, it simply returns the size of the buffer needed through <code>nalloc</code> without encoding the provided buffer.</p>
 <p>The file access property list <code>fapl_id</code> is used to control the encoding via the <em>libver_bounds</em> property (see <a class="el" href="group___f_a_p_l.html#gacbe1724e7f70cd17ed687417a1d2a910" title="Controls the range of library release versions used when creating objects in a file.">H5Pset_libver_bounds()</a>). If the <em>libver_bounds</em> property is missing, <a class="el" href="group___h5_s.html#ga178ec7b8769ad5704a170d9bd3421074" title="Encodes a data space object description into a binary buffer.">H5Sencode2()</a> proceeds as if the <em>libver_bounds</em> property were set to (<a class="el" href="_h5_fpublic_8h.html#a2d963b599894f684571fbd4d5e8a96a2abed98059b4a02d048b1eb3985fba5fa1">H5F_LIBVER_EARLIEST</a>, <a class="el" href="_h5_fpublic_8h.html#a47d050173da48a2b85c730446f0771c0">H5F_LIBVER_LATEST</a>). (Functionally, <a class="el" href="group___h5_s.html#ga82cf9f6af03ad89be21c36922e03baea" title="Encodes a data space object description into a binary buffer.">H5Sencode1()</a> is identical to <a class="el" href="group___h5_s.html#ga178ec7b8769ad5704a170d9bd3421074" title="Encodes a data space object description into a binary buffer.">H5Sencode2()</a> with <em>libver_bounds</em> set to (<a class="el" href="_h5_fpublic_8h.html#a2d963b599894f684571fbd4d5e8a96a2abed98059b4a02d048b1eb3985fba5fa1">H5F_LIBVER_EARLIEST</a>, <a class="el" href="_h5_fpublic_8h.html#a47d050173da48a2b85c730446f0771c0">H5F_LIBVER_LATEST</a>).)</p>
 <p>The types of data space that are addressed in this function are null, scalar, and simple space. For a simple data space, the information on the selection, for example, hyperslab selection, is also encoded and decoded. A complex data space has not been implemented in the library.</p>
-<dl class="section note"><dt>Note</dt><dd>Motivation: This function was introduced in HDF5-1.12 as part of the <a class="el" href="group___h5_s.html#ga35e289baf490229e233296929fbf5208">H5Sencode()</a> format change to enable 64-bit selection encodings and a dataspace selection that is tied to a file. See the <a href="https://portal.hdfgroup.org/documentation/hdf5-docs/release_specifics/new_features_1_12.html">New Features in HDF5 Release 1.12</a> as well as the <a href="https://docs.hdfgroup.org/hdf5/rfc/H5Sencode_format.docx.pdf">RFC H5Sencode() / H5Sdecode() Format Change</a>.</dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Motivation: This function was introduced in HDF5-1.12 as part of the <a class="el" href="group___h5_s.html#ga35e289baf490229e233296929fbf5208">H5Sencode()</a> format change to enable 64-bit selection encodings and a dataspace selection that is tied to a file. See the <a href="https://support.hdfgroup.org/releases/hdf5/documentation/release_specifics/new_features_1_12.md">New Features in HDF5 Release 1.12</a> as well as the <a href="https://support.hdfgroup.org/releases/hdf5/documentation/rfc/H5Sencode_format.docx.pdf">RFC H5Sencode() / H5Sdecode() Format Change</a>.</dd></dl>
 <dl class="section since"><dt>Since</dt><dd>1.12.0 </dd></dl>
 
 </div>
@@ -1382,6 +1385,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Returns a non-negative value if successful; otherwise, returns a negative value.</dd></dl>
 <p><a class="el" href="group___h5_s.html#ga0ccb190f72fe41a927407ffb9f19ef1b" title="Refines a hyperslab selection with an operation, using a second hyperslab to modify it.">H5Smodify_select()</a> refines an existing hyperslab selection <code>space1_id</code> with an operation <code>op</code>, using a second hyperslab <code>space2_id</code>. The first selection is modified to contain the result of <code>space1_id</code> operated on by <code>space2_id</code>.</p>
+<p>See <a class="el" href="group___h5_s.html#ga6adfdf1b95dc108a65bf66e97d38536d" title="Selects a hyperslab region to add to the current selected region.">H5Sselect_hyperslab()</a> for valid operators (<code>op</code>).</p>
 <dl class="section since"><dt>Since</dt><dd>1.10.6 </dd></dl>
 
 </div>

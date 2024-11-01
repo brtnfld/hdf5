@@ -37,7 +37,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="HDFG-logo.png"/></td>
   <td id="projectalign">
-   <div id="projectname">HDF5<span id="projectnumber">&#160;1.15.0.1f0bd7f</span>
+   <div id="projectname">HDF5<span id="projectnumber">&#160;2.0.0.61c7dda</span>
    </div>
    <div id="projectbrief">API Reference</div>
   </td>
@@ -63,6 +63,7 @@ var searchBox = new SearchBox("searchBox", "search/",'.html');
       <li><a href="_r_f_c.html"><span>RFCs</span></a></li>
       <li><a href="_s_p_e_c.html"><span>Specifications</span></a></li>
       <li><a href="_g_l_s.html"><span>Glossary</span></a></li>
+      <li><a href="_f_t_s.html"><span>Full-Text&#160;Search</span></a></li>
       <li><a href="_about.html"><span>About</span></a></li>
       <li>
         <div id="MSearchBox" class="MSearchBoxInactive">
@@ -184,7 +185,7 @@ Example - Build and test HDF5 Asynchronous I/O VOL connector from GIT</h2>
 <p>Assuming that the HDF5 source code has been checked out and a build directory has been created, running the following cmake command from that build directory will retrieve, build and test the HDF5 Asynchronous I/O VOL connector while building HDF5. Note that <code>[<a class="el" href="namespacehdf5.html">hdf5</a> options]</code> represents other build options that would typically be passed when building HDF5, such as <code>CMAKE_INSTALL_PREFIX</code>, <code>HDF5_BUILD_CPP_LIB</code>, etc. </p><pre class="fragment">cmake [hdf5 options]
   -DHDF5_ENABLE_THREADSAFE=ON
   -DHDF5_ENABLE_PARALLEL=ON
-  -DALLOW_UNSUPPORTED=ON
+  -DHDF5_ALLOW_UNSUPPORTED=ON
   -DHDF5_TEST_API=ON
   -DHDF5_VOL_ALLOW_EXTERNAL="GIT"
   -DHDF5_VOL_URL01=https://github.com/hpc-io/vol-async.git
