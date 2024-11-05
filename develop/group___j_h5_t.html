@@ -37,7 +37,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="HDFG-logo.png"/></td>
   <td id="projectalign">
-   <div id="projectname">HDF5<span id="projectnumber">&#160;2.0.0.61c7dda</span>
+   <div id="projectname">HDF5<span id="projectnumber">&#160;2.0.0.3e680f6</span>
    </div>
    <div id="projectbrief">API Reference</div>
   </td>
@@ -143,6 +143,8 @@ Functions</h2></td></tr>
 <tr class="separator:ga35e616b8045f1ab7f94c5d19e95065c8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga76397d7e784b948b3b4004b2b941bb9f"><td class="memItemLeft" align="right" valign="top">static synchronized native void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___j_h5_t.html#ga76397d7e784b948b3b4004b2b941bb9f">H5Tcompiler_conv</a> (long src_id, long dst_id)  throws <a class="el" href="classhdf_1_1hdf5lib_1_1exceptions_1_1_h_d_f5_library_exception.html">HDF5LibraryException</a></td></tr>
 <tr class="separator:ga76397d7e784b948b3b4004b2b941bb9f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gac07d3c266f1fd14a9680124f4336b60a"><td class="memItemLeft" align="right" valign="top">static long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___j_h5_t.html#gac07d3c266f1fd14a9680124f4336b60a">H5Tcomplex_create</a> (long base_id)  throws <a class="el" href="classhdf_1_1hdf5lib_1_1exceptions_1_1_h_d_f5_library_exception.html">HDF5LibraryException</a>     </td></tr>
+<tr class="separator:gac07d3c266f1fd14a9680124f4336b60a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga7b75c3c2b80b8ae3c9780d6179a73e3c"><td class="memItemLeft" align="right" valign="top">static synchronized native void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___j_h5_t.html#ga7b75c3c2b80b8ae3c9780d6179a73e3c">H5Tconvert</a> (long src_id, long dst_id, long nelmts, byte[] buf, byte[] background, long plist_id)  throws <a class="el" href="classhdf_1_1hdf5lib_1_1exceptions_1_1_h_d_f5_library_exception.html">HDF5LibraryException</a>, NullPointerException</td></tr>
 <tr class="separator:ga7b75c3c2b80b8ae3c9780d6179a73e3c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga75c075582c603c9b24c3f306a7316212"><td class="memItemLeft" align="right" valign="top">static long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___j_h5_t.html#ga75c075582c603c9b24c3f306a7316212">H5Tcopy</a> (long type_id)  throws <a class="el" href="classhdf_1_1hdf5lib_1_1exceptions_1_1_h_d_f5_library_exception.html">HDF5LibraryException</a>     </td></tr>
@@ -616,6 +618,46 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
+<dl class="exception"><dt>Exceptions</dt><dd>
+  <table class="exception">
+    <tr><td class="paramname">HDF5LibraryException</td><td>Error from the HDF5 Library. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="gac07d3c266f1fd14a9680124f4336b60a" name="gac07d3c266f1fd14a9680124f4336b60a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gac07d3c266f1fd14a9680124f4336b60a">&#9670;&#160;</a></span>H5Tcomplex_create()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static long H5Tcomplex_create </td>
+          <td>(</td>
+          <td class="paramtype">long&#160;</td>
+          <td class="paramname"><em>base_id</em></td><td>)</td>
+          <td> throws <a class="el" href="classhdf_1_1hdf5lib_1_1exceptions_1_1_h_d_f5_library_exception.html">HDF5LibraryException</a></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>H5Tcomplex_create creates a new complex number datatype object.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">base_id</td><td>IN: Datatype identifier for the complex number base datatype. Must be a floating-point datatype.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>a valid datatype identifier</dd></dl>
 <dl class="exception"><dt>Exceptions</dt><dd>
   <table class="exception">
     <tr><td class="paramname">HDF5LibraryException</td><td>Error from the HDF5 Library. </td></tr>

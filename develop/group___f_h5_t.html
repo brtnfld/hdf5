@@ -37,7 +37,7 @@
  <tr id="projectrow">
   <td id="projectlogo"><img alt="Logo" src="HDFG-logo.png"/></td>
   <td id="projectalign">
-   <div id="projectname">HDF5<span id="projectnumber">&#160;2.0.0.61c7dda</span>
+   <div id="projectname">HDF5<span id="projectnumber">&#160;2.0.0.3e680f6</span>
    </div>
    <div id="projectbrief">API Reference</div>
   </td>
@@ -499,6 +499,9 @@ Variables</h2></td></tr>
 <tr class="memitem:gadeced8a7850dfaed56dbd1c197928e68"><td class="memItemLeft" align="right" valign="top">integer&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___f_h5_t.html#gadeced8a7850dfaed56dbd1c197928e68">h5t_array_f</a></td></tr>
 <tr class="memdesc:gadeced8a7850dfaed56dbd1c197928e68"><td class="mdescLeft">&#160;</td><td class="mdescRight">H5T_ARRAY.  <br /></td></tr>
 <tr class="separator:gadeced8a7850dfaed56dbd1c197928e68"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga5b5e1f9230a05a7690900c0964b21fa4"><td class="memItemLeft" align="right" valign="top">integer&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___f_h5_t.html#ga5b5e1f9230a05a7690900c0964b21fa4">h5t_complex_f</a></td></tr>
+<tr class="memdesc:ga5b5e1f9230a05a7690900c0964b21fa4"><td class="mdescLeft">&#160;</td><td class="mdescRight">H5T_COMPLEX.  <br /></td></tr>
+<tr class="separator:ga5b5e1f9230a05a7690900c0964b21fa4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga0e29c29c56bb28fe4c5dfcac1aef1f91"><td class="memItemLeft" align="right" valign="top">integer&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group___f_h5_t.html#ga0e29c29c56bb28fe4c5dfcac1aef1f91">h5t_order_le_f</a></td></tr>
 <tr class="memdesc:ga0e29c29c56bb28fe4c5dfcac1aef1f91"><td class="mdescLeft">&#160;</td><td class="mdescRight">H5T_ORDER_LE.  <br /></td></tr>
 <tr class="separator:ga0e29c29c56bb28fe4c5dfcac1aef1f91"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -1620,6 +1623,7 @@ Variables</h2></td></tr>
 <li>H5T_ENUM_F </li>
 <li>H5T_VLEN_F </li>
 <li>H5T_ARRAY_F </li>
+<li>H5T_COMPLEX_F </li>
 </ul>
 </td></tr>
     <tr><td class="paramname">hdferr</td><td>Returns 0 if successful and -1 if it fails.</td></tr>
@@ -1933,9 +1937,9 @@ Variables</h2></td></tr>
 <p>Returns datatype class of compound datatype member. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">type_id</td><td>Datartpe identifier. </td></tr>
+    <tr><td class="paramname">type_id</td><td>Datatype identifier. </td></tr>
     <tr><td class="paramname">member_no</td><td>Index of compound datatype member. </td></tr>
-    <tr><td class="paramname">class</td><td>Class type for compound dadtype member. Valid classes: <ul>
+    <tr><td class="paramname">class</td><td>Class type for compound datatype member. Valid classes: <ul>
 <li>H5T_NO_CLASS_F (error) </li>
 <li>H5T_INTEGER_F </li>
 <li>H5T_FLOAT_F </li>
@@ -1948,6 +1952,7 @@ Variables</h2></td></tr>
 <li>H5T_ENUM_F </li>
 <li>H5T_VLEN_F </li>
 <li>H5T_ARRAY_F </li>
+<li>H5T_COMPLEX_F </li>
 </ul>
 </td></tr>
     <tr><td class="paramname">hdferr</td><td>Returns 0 if successful and -1 if it fails.</td></tr>
@@ -3766,6 +3771,22 @@ Variables</h2></td></tr>
 </div><div class="memdoc">
 
 <p>H5T_C_S1. </p>
+
+</div>
+</div>
+<a id="ga5b5e1f9230a05a7690900c0964b21fa4" name="ga5b5e1f9230a05a7690900c0964b21fa4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga5b5e1f9230a05a7690900c0964b21fa4">&#9670;&#160;</a></span>h5t_complex_f</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">integer h5t_complex_f</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>H5T_COMPLEX. </p>
 
 </div>
 </div>
