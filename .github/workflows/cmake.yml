@@ -30,6 +30,7 @@ jobs:
             build-base
             libaec-dev
             libgit2-dev
+            gfortran
             cmake
 
       - name: CMake Configure
