@@ -655,8 +655,9 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL check("h5rget_obj_name_f", error, total_error)
   CALL verify("h5rget_obj_name_f", buf_size, LEN(dsetnamei,KIND=SIZE_T)+1_SIZE_T, total_error)
 
-#if 0
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), "", error, name_len=buf_size)
+  PRINT*,"BEFORE h5rgdfdet_obj_name_f"
+#if 1
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_big, error, name_len=buf_size)
   CALL check("h5rget_obj_name_f", error, total_error)
   CALL verify("h5rget_obj_name_f", buf_size, 7_SIZE_T, total_error)
 #endif
@@ -668,22 +669,11 @@ SUBROUTINE v3reftest(cleanup, total_error)
 !  CALL VERIFY("h5rget_obj_name_f", buf_alloc, "/"//groupname1, total_error)
 !  DEALLOCATE(buf_alloc)
 #endif
+  PRINT*,"D"
   ! with buffer bigger than needed
-  PRINT*,"Casdfdsf1"
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(6)), buf_big, error, name_len=buf_size)
-  PRINT*,"Casdfdsf2"
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(5)), buf_big, error, name_len=buf_size)
-  PRINT*,"Casdfdsf3"
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(4)), buf_big, error, name_len=buf_size)
-  PRINT*,"Casdfdsf4"
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(3)), buf_big, error, name_len=buf_size)
-  PRINT*,"Casdfdsf3"
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(2)), buf_big, error, name_len=buf_size)
-  PRINT*,"Casdfdsf2"
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_big, error, name_len=buf_size)
-  PRINT*,"Csdfdsfsd"
-!  CALL check("h5rget_obj_name_f", error, total_error)
-!  CALL verify("h5rget_obj_name_f", TRIM(buf_big), "/"//groupname1, total_error)
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_big, error)
+  CALL check("h5rget_obj_name_f", error, total_error)
+  CALL verify("h5rget_obj_name_f", TRIM(buf_big), "/"//groupname1, total_error)
 
   PRINT*,"C"
   ! getting path to dataset
