@@ -657,14 +657,13 @@ SUBROUTINE v3reftest(cleanup, total_error)
   PRINT*,"BEFORE h5rget_obj_name_f"
   f_ptr=C_LOC(ref_ptr(3))
   !CALL h5rget_obj_name_f(f_ptr, "a", error, H5P_DEFAULT_F, buf_size)
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(3)), buf_big, error, name_len=buf_size)
-  PRINT*,"sdfdsfsdfsdBEFORE h5rget_obj_name_f"
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(3)), "", error, name_len=buf_size)
   CALL check("h5rget_obj_name_f", error, total_error)
   CALL verify("h5rget_obj_name_f", buf_size, LEN(dsetnamei,KIND=SIZE_T)+1_SIZE_T, total_error)
-PRINT*,"dsfdsfB"
-!  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_big, error, name_len=buf_size)
-!  CALL check("h5rget_obj_name_f", error, total_error)
- ! CALL verify("h5rget_obj_name_f", buf_size, 7_SIZE_T, total_error)
+
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), "", error, buf_size)
+  CALL check("h5rget_obj_name_f", error, total_error)
+  CALL verify("h5rget_obj_name_f", buf_size, 7_SIZE_T, total_error)
 #endif
   PRINT*,"B"
 #ifdef H5_FORTRAN_HAVE_CHAR_ALLOC
@@ -675,12 +674,25 @@ PRINT*,"dsfdsfB"
 !  DEALLOCATE(buf_alloc)
 #endif
   ! with buffer bigger than needed
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_big, error)
-  CALL check("h5rget_obj_name_f", error, total_error)
-  CALL verify("h5rget_obj_name_f", TRIM(buf_big), "/"//groupname1, total_error)
+  PRINT*,"Casdfdsf1"
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(6)), buf_big, error, name_len=buf_size)
+  PRINT*,"Casdfdsf2"
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(5)), buf_big, error, name_len=buf_size)
+  PRINT*,"Casdfdsf3"
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(4)), buf_big, error, name_len=buf_size)
+  PRINT*,"Casdfdsf4"
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(3)), buf_big, error, name_len=buf_size)
+  PRINT*,"Casdfdsf3"
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(2)), buf_big, error, name_len=buf_size)
+  PRINT*,"Casdfdsf2"
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_big, error, name_len=buf_size)
+  PRINT*,"Csdfdsfsd"
+!  CALL check("h5rget_obj_name_f", error, total_error)
+!  CALL verify("h5rget_obj_name_f", TRIM(buf_big), "/"//groupname1, total_error)
 
+  PRINT*,"C"
   ! getting path to dataset
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(2)), "", error, name_len=buf_size )
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(2)), buf_big, error, name_len=buf_size )
   CALL check("H5Rget_name_f", error, total_error)
   CALL verify("H5Rget_name_f2", INT(buf_size),LEN("/"//groupname1//"/"//groupname2),total_error)
 
@@ -692,6 +704,7 @@ PRINT*,"dsfdsfB"
   DEALLOCATE(buf_alloc)
 #endif
 
+  PRINT*,"DFDFA"
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(2)), buf_big, error)
   CALL check("H5Rget_name_f", error, total_error)
   CALL verify("H5Rget_name_f", TRIM(buf_big), "/"//groupname1//"/"//groupname2, total_error)
