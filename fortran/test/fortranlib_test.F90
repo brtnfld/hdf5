@@ -140,7 +140,7 @@ PROGRAM fortranlibtest
 !      '========================================='
 !      'Testing REFERENCE Interface              '
 !      '========================================='
-#if 0
+#if 1
   ret_total_error = 0
   CALL v3reftest(cleanup, ret_total_error)
   CALL write_test_status(ret_total_error, ' Version 3 references test', total_error)

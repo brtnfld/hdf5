@@ -520,7 +520,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
 #ifdef H5_FORTRAN_HAVE_CHAR_ALLOC
   CHARACTER(:), ALLOCATABLE :: buf_alloc ! buffer to hold the region name
 #endif
-  CHARACTER(LEN=16) :: buf_big    ! buffer bigger than needed
+  CHARACTER(LEN=100) :: buf_big    ! buffer bigger than needed
   INTEGER(SIZE_T) :: buf_size     ! returned size of the region buffer name
   INTEGER, TARGET :: a_data
   TYPE(C_PTR) :: f_ptr
@@ -675,7 +675,19 @@ SUBROUTINE v3reftest(cleanup, total_error)
   DEALLOCATE(buf_alloc)
 #endif
   ! with buffer bigger than needed
+  PRINT*,"Casdfdsf1"
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(6)), buf_big, error)
+  PRINT*,"Casdfdsf2"
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(5)), buf_big, error)
+  PRINT*,"Casdfdsf3"
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(4)), buf_big, error)
+  PRINT*,"Casdfdsf4"
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(3)), buf_big, error)
+  PRINT*,"Casdfdsf3"
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(2)), buf_big, error)
+  PRINT*,"Casdfdsf2"
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_big, error)
+  PRINT*,"Csdfdsfsd"
   CALL check("h5rget_obj_name_f", error, total_error)
   CALL verify("h5rget_obj_name_f", TRIM(buf_big), "/"//groupname1, total_error)
 
