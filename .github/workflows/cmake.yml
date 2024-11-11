@@ -60,9 +60,9 @@ jobs:
       - name: CMake Run Tests
         shell: alpine.sh --root {0}
         run: |
-          grep -i "H5_PAC_FC_MAX_REAL_PRECISION" hdf5/include/*
-          grep -i "H5_PAC_C_MAX_REAL_PRECISION" hdf5/include/*
-          grep -i "H5_HAVE_FLOAT128" hdf5/include/*
+          grep -i "H5_PAC_FC_MAX_REAL_PRECISION" /usr/local/HDF_Group/HDF5/2.0.0/include/*
+          grep -i "H5_PAC_C_MAX_REAL_PRECISION" /usr/local/HDF_Group/HDF5/2.0.0/include/*
+          grep -i "H5_HAVE_FLOAT128" /usr/local/HDF_Group/HDF5/2.0.0/include/*
           cd fortran
           ctest . -C Debug -VV
         working-directory: build
