@@ -529,6 +529,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
 
   INTEGER(HID_T) :: memspace
 
+  PRINT*,"sdfdsA"
   !
   ! Create a new file with Default file access and
   ! file creation properties.
@@ -566,6 +567,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL H5Awrite_f(aid, H5T_NATIVE_INTEGER, f_ptr, error)
   CALL check("H5Awrite_f",error,total_error)
 
+  PRINT*,"sadfsdA"
   !
   ! Create dataspaces for datasets
   !
@@ -634,6 +636,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL h5screate_simple_f(1, dimspt, sid2, error)
   CALL check("h5screate_simple_f",error,total_error)
 
+  PRINT*,"A"
   coord(1) = 1
   coord(2) = dims(1)
   CALL h5sselect_elements_f(sid2, H5S_SELECT_SET_F, 1, SIZE(coord,KIND=SIZE_T), coord, error)
@@ -655,6 +658,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL check("h5rget_obj_name_f", error, total_error)
   CALL verify("h5rget_obj_name_f", buf_size, 7_SIZE_T, total_error)
 
+  PRINT*,"B"
 #ifdef H5_FORTRAN_HAVE_CHAR_ALLOC
   ALLOCATE(CHARACTER(LEN=buf_size) :: buf_alloc)
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_alloc, error)
@@ -667,6 +671,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL check("h5rget_obj_name_f", error, total_error)
   CALL verify("h5rget_obj_name_f", TRIM(buf_big), "/"//groupname1, total_error)
 
+  PRINT*,"C"
   ! getting path to dataset
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(2)), "", error, name_len=buf_size )
   CALL check("H5Rget_name_f", error, total_error)
@@ -680,6 +685,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
   DEALLOCATE(buf_alloc)
 #endif
 
+  PRINT*,"DFDFA"
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(2)), buf_big, error)
   CALL check("H5Rget_name_f", error, total_error)
   CALL verify("H5Rget_name_f", TRIM(buf_big), "/"//groupname1//"/"//groupname2, total_error)
@@ -720,6 +726,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL h5rdestroy_f(f_ptr, error)
   CALL check("h5rdestroy_f", error, total_error)
 
+  PRINT*,"AAA"
   !
   ! Close the dataset
   !
@@ -741,6 +748,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL h5dread_f(dsetr_id, H5T_STD_REF, f_ptr, error)
   CALL check("h5dread_f",error,total_error)
 
+  PRINT*,"D"
   !
   ! Get information about the references read and check for correctness
   !
@@ -794,6 +802,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
 
   END IF
 
+  PRINT*,"E"
   CALL h5rget_type_f(C_LOC(ref_ptr_read(6)), ref_type, error)
   CALL check("h5rget_type_f", error, total_error)
 
@@ -838,6 +847,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
   ! Close all objects.
   !
 
+  PRINT*,"F"
   CALL h5dclose_f(dsetr_id, error)
   CALL check("h5dclose_f",error,total_error)
   CALL h5fclose_f(file_id, error)
