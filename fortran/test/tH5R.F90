@@ -656,18 +656,16 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL verify("h5rget_obj_name_f", buf_size, LEN(dsetnamei,KIND=SIZE_T)+1_SIZE_T, total_error)
 
   PRINT*,"BEFORE h5rgdfdet_obj_name_f"
-#if 1
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_big, error, name_len=buf_size)
   CALL check("h5rget_obj_name_f", error, total_error)
   CALL verify("h5rget_obj_name_f", buf_size, 7_SIZE_T, total_error)
-#endif
   PRINT*,"B"
 #ifdef H5_FORTRAN_HAVE_CHAR_ALLOC
-!  ALLOCATE(CHARACTER(LEN=buf_size) :: buf_alloc)
-!  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_alloc, error)
-!  CALL check("h5rget_obj_name_f", error, total_error)
-!  CALL VERIFY("h5rget_obj_name_f", buf_alloc, "/"//groupname1, total_error)
-!  DEALLOCATE(buf_alloc)
+  ALLOCATE(CHARACTER(LEN=buf_size) :: buf_alloc)
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_alloc, error)
+  CALL check("h5rget_obj_name_f", error, total_error)
+  CALL VERIFY("h5rget_obj_name_f", buf_alloc, "/"//groupname1, total_error)
+  DEALLOCATE(buf_alloc)
 #endif
   PRINT*,"D"
   ! with buffer bigger than needed
