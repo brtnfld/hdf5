@@ -642,7 +642,6 @@ SUBROUTINE v3reftest(cleanup, total_error)
   f_ptr = C_LOC(ref_ptr(6))
   CALL h5rcreate_region_f(file_id, dsetnamei, sid2, f_ptr, error)
   CALL check("h5rcreate_region_f",error,total_error)
-  PRINT*,"Bsdfsdf"
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(6)), buf_big, error)
 
   f_ptr = C_LOC(ref_ptr(1))

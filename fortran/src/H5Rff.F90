@@ -1103,8 +1103,8 @@ CONTAINS
     TYPE(C_PTR)                :: ref_ptr
     CHARACTER(LEN=*)           :: name
     INTEGER      , INTENT(OUT) :: hdferr
-    INTEGER(SIZE_T), OPTIONAL :: name_len
-    INTEGER(HID_T) , OPTIONAL :: rapl_id
+    INTEGER(SIZE_T), INTENT(OUT), OPTIONAL :: name_len
+    INTEGER(HID_T) , INTENT(IN) , OPTIONAL :: rapl_id
 
     CHARACTER(LEN=1,KIND=C_CHAR), DIMENSION(1:LEN(name)+1), TARGET :: c_name
     INTEGER(HID_T) :: rapl_id_default
@@ -1125,18 +1125,12 @@ CONTAINS
 
     rapl_id_default = H5P_DEFAULT_F
     IF(PRESENT(rapl_id)) rapl_id_default = rapl_id
-    PRINT*,"Z"
+
     hdferr = 0
     IF(PRESENT(name_len))THEN
-       PRINT*,"Z1"
        c_name(1:1)(1:1) = C_NULL_CHAR
-       PRINT*,"Z2"
-       l = 0_SIZE_T
-       name_len = INT(H5Rget_obj_name(ref_ptr, rapl_id_default, c_name, l),SIZE_T)
-       PRINT*,"Z444"
-    PRINT*,"Z3"
+       name_len = H5Rget_obj_name(ref_ptr, rapl_id_default, c_name, 1_SIZE_T)
        IF(name_len.LT.0_SIZE_T) hdferr = H5I_INVALID_HID_F
-    PRINT*,"Z4",name_len
     ELSE
        l = INT(LEN(name)+1,SIZE_T)
        IF(H5Rget_obj_name(ref_ptr, rapl_id_default, c_name, l) .LT. 0_SIZE_T)THEN
@@ -1145,7 +1139,6 @@ CONTAINS
           CALL HD5c2fstring(name, c_name, LEN(name,KIND=SIZE_T), LEN(name,KIND=SIZE_T)+1_SIZE_T )
        ENDIF
     ENDIF
-    PRINT*,"RETIRN"
 
   END SUBROUTINE h5rget_obj_name_f
 !>
