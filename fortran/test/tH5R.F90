@@ -648,10 +648,10 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL h5dwrite_f(dsetr_id, H5T_STD_REF, f_ptr, error)
   CALL check("h5dwrite_f",error,total_error)
 
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(3)), "", error, buf_size)
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(3)), "", error,  name_len=buf_size)
   CALL check("h5rget_obj_name_f", error, total_error)
   CALL verify("h5rget_obj_name_f", buf_size, LEN(dsetnamei,KIND=SIZE_T)+1_SIZE_T, total_error)
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), "", error, buf_size)
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), "", error,  name_len=buf_size)
   CALL check("h5rget_obj_name_f", error, total_error)
   CALL verify("h5rget_obj_name_f", buf_size, 7_SIZE_T, total_error)
 
