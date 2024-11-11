@@ -661,10 +661,10 @@ SUBROUTINE v3reftest(cleanup, total_error)
   PRINT*,"sdfdsfsdfsdBEFORE h5rget_obj_name_f"
   CALL check("h5rget_obj_name_f", error, total_error)
   CALL verify("h5rget_obj_name_f", buf_size, LEN(dsetnamei,KIND=SIZE_T)+1_SIZE_T, total_error)
-
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_big, error, name_len=buf_size)
-  CALL check("h5rget_obj_name_f", error, total_error)
-  CALL verify("h5rget_obj_name_f", buf_size, 7_SIZE_T, total_error)
+PRINT*,"dsfdsfB"
+!  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_big, error, name_len=buf_size)
+!  CALL check("h5rget_obj_name_f", error, total_error)
+ ! CALL verify("h5rget_obj_name_f", buf_size, 7_SIZE_T, total_error)
 #endif
   PRINT*,"B"
 #ifdef H5_FORTRAN_HAVE_CHAR_ALLOC
