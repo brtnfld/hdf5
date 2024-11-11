@@ -520,7 +520,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
 #ifdef H5_FORTRAN_HAVE_CHAR_ALLOC
   CHARACTER(:), ALLOCATABLE :: buf_alloc ! buffer to hold the region name
 #endif
-  CHARACTER(LEN=100) :: buf_big    ! buffer bigger than needed
+  CHARACTER(LEN=16) :: buf_big    ! buffer bigger than needed
   INTEGER(SIZE_T) :: buf_size     ! returned size of the region buffer name
   INTEGER, TARGET :: a_data
   TYPE(C_PTR) :: f_ptr
@@ -650,7 +650,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
   PRINT*,"BEFORE h5rget_obj_name_f"
   f_ptr=C_LOC(ref_ptr(3))
   !CALL h5rget_obj_name_f(f_ptr, "a", error, H5P_DEFAULT_F, buf_size)
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(3)),  buf_big, error, name_len=buf_size)
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(3)),  buf_big, error, H5P_DEFAULT_F, name_len=buf_size)
   CALL check("h5rget_obj_name_f", error, total_error)
   CALL verify("h5rget_obj_name_f", buf_size, LEN(dsetnamei,KIND=SIZE_T)+1_SIZE_T, total_error)
 
@@ -693,6 +693,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
 
   ! CHECK LICENSE REF
 
+  PRINT*,"AAA"
   f_ptr =  C_LOC(ref_ptr_cp)
   CALL h5rcopy_f(C_LOC(ref_ptr(3)), f_ptr, error)
   CALL check("h5rcopy_f", error, total_error)
@@ -727,7 +728,6 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL h5rdestroy_f(f_ptr, error)
   CALL check("h5rdestroy_f", error, total_error)
 
-  PRINT*,"AAA"
   !
   ! Close the dataset
   !
@@ -749,7 +749,6 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL h5dread_f(dsetr_id, H5T_STD_REF, f_ptr, error)
   CALL check("h5dread_f",error,total_error)
 
-  PRINT*,"D"
   !
   ! Get information about the references read and check for correctness
   !
@@ -803,7 +802,6 @@ SUBROUTINE v3reftest(cleanup, total_error)
 
   END IF
 
-  PRINT*,"E"
   CALL h5rget_type_f(C_LOC(ref_ptr_read(6)), ref_type, error)
   CALL check("h5rget_type_f", error, total_error)
 
@@ -848,7 +846,6 @@ SUBROUTINE v3reftest(cleanup, total_error)
   ! Close all objects.
   !
 
-  PRINT*,"F"
   CALL h5dclose_f(dsetr_id, error)
   CALL check("h5dclose_f",error,total_error)
   CALL h5fclose_f(file_id, error)
