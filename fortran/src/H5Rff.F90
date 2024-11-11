@@ -1103,8 +1103,8 @@ CONTAINS
     TYPE(C_PTR)                :: ref_ptr
     CHARACTER(LEN=*)           :: name
     INTEGER      , INTENT(OUT) :: hdferr
-    INTEGER(SIZE_T), INTENT(OUT), OPTIONAL :: name_len
-    INTEGER(HID_T) , INTENT(IN) , OPTIONAL :: rapl_id
+    INTEGER(SIZE_T), OPTIONAL :: name_len
+    INTEGER(HID_T) , OPTIONAL :: rapl_id
 
     CHARACTER(LEN=1,KIND=C_CHAR), DIMENSION(1:LEN(name)+1), TARGET :: c_name
     INTEGER(HID_T) :: rapl_id_default

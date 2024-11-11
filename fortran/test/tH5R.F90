@@ -685,7 +685,6 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(3)), buf_big, error)
   PRINT*,"Casdfdsf3"
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(2)), buf_big, error
-  PRINT*,"C")
   PRINT*,"Casdfdsf2"
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_big, error)
   PRINT*,"Csdfdsfsd"
