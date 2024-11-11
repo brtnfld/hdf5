@@ -1135,7 +1135,7 @@ CONTAINS
        PRINT*,"Z444"
     PRINT*,"Z3"
        IF(name_len.LT.0_SIZE_T) hdferr = H5I_INVALID_HID_F
-    PRINT*,"Z4"
+    PRINT*,"Z4",name_len
     ELSE
        l = INT(LEN(name)+1,SIZE_T)
        IF(H5Rget_obj_name(ref_ptr, rapl_id_default, c_name, l) .LT. 0_SIZE_T)THEN
@@ -1144,6 +1144,7 @@ CONTAINS
           CALL HD5c2fstring(name, c_name, LEN(name,KIND=SIZE_T), LEN(name,KIND=SIZE_T)+1_SIZE_T )
        ENDIF
     ENDIF
+    PRINT*,"RETIRN"
 
   END SUBROUTINE h5rget_obj_name_f
 !>
