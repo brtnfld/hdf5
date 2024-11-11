@@ -1125,12 +1125,17 @@ CONTAINS
 
     rapl_id_default = H5P_DEFAULT_F
     IF(PRESENT(rapl_id)) rapl_id_default = rapl_id
-
+    PRINT*,"Z"
     hdferr = 0
     IF(PRESENT(name_len))THEN
+       PRINT*,"Z1"
        c_name(1:1)(1:1) = C_NULL_CHAR
-       name_len = H5Rget_obj_name(ref_ptr, rapl_id_default, c_name, 1_SIZE_T)
+       PRINT*,"Z2"
+       name_len = INT(H5Rget_obj_name(ref_ptr, rapl_id_default, c_name, 1_SIZE_T),SIZE_T)
+       PRINT*,"Z444"
+    PRINT*,"Z3"
        IF(name_len.LT.0_SIZE_T) hdferr = H5I_INVALID_HID_F
+    PRINT*,"Z4"
     ELSE
        l = INT(LEN(name)+1,SIZE_T)
        IF(H5Rget_obj_name(ref_ptr, rapl_id_default, c_name, l) .LT. 0_SIZE_T)THEN
