@@ -529,7 +529,6 @@ SUBROUTINE v3reftest(cleanup, total_error)
 
   INTEGER(HID_T) :: memspace
 
-  PRINT*,"sdfdsA"
   !
   ! Create a new file with Default file access and
   ! file creation properties.
@@ -567,7 +566,6 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL H5Awrite_f(aid, H5T_NATIVE_INTEGER, f_ptr, error)
   CALL check("H5Awrite_f",error,total_error)
 
-  PRINT*,"sadfsdA"
   !
   ! Create dataspaces for datasets
   !
@@ -636,31 +634,28 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL h5screate_simple_f(1, dimspt, sid2, error)
   CALL check("h5screate_simple_f",error,total_error)
 
-  PRINT*,"A"
   coord(1) = 1
   coord(2) = dims(1)
   CALL h5sselect_elements_f(sid2, H5S_SELECT_SET_F, 1, SIZE(coord,KIND=SIZE_T), coord, error)
   CALL check("h5sselect_elements_f",error,total_error)
 
-  PRINT*,"B"
   f_ptr = C_LOC(ref_ptr(6))
   CALL h5rcreate_region_f(file_id, dsetnamei, sid2, f_ptr, error)
   CALL check("h5rcreate_region_f",error,total_error)
   PRINT*,"Bsdfsdf"
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(6)), buf_big, error)
 
-  PRINT*,"Cx"
   f_ptr = C_LOC(ref_ptr(1))
   CALL h5dwrite_f(dsetr_id, H5T_STD_REF, f_ptr, error)
   CALL check("h5dwrite_f",error,total_error)
-#if 0
   PRINT*,"BEFORE h5rget_obj_name_f"
   f_ptr=C_LOC(ref_ptr(3))
   !CALL h5rget_obj_name_f(f_ptr, "a", error, H5P_DEFAULT_F, buf_size)
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(3)), "", error, name_len=buf_size)
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(3)),  buf_big, error, name_len=buf_size)
   CALL check("h5rget_obj_name_f", error, total_error)
   CALL verify("h5rget_obj_name_f", buf_size, LEN(dsetnamei,KIND=SIZE_T)+1_SIZE_T, total_error)
 
+#if 0
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), "", error, name_len=buf_size)
   CALL check("h5rget_obj_name_f", error, total_error)
   CALL verify("h5rget_obj_name_f", buf_size, 7_SIZE_T, total_error)
