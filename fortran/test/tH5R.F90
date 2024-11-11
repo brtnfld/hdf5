@@ -657,7 +657,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
   PRINT*,"BEFORE h5rget_obj_name_f"
   f_ptr=C_LOC(ref_ptr(3))
   !CALL h5rget_obj_name_f(f_ptr, "a", error, H5P_DEFAULT_F, buf_size)
-  CALL h5rget_obj_name_f(f_ptr, buf_big, error, name_len=buf_size)
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(3)), "", error, name_len=buf_size)
   PRINT*,"AFTER h5rget_obj_name_f"
   CALL check("h5rget_obj_name_f", error, total_error)
   PRINT*,"Dt"
