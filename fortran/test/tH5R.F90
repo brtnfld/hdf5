@@ -653,7 +653,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
   f_ptr = C_LOC(ref_ptr(1))
   CALL h5dwrite_f(dsetr_id, H5T_STD_REF, f_ptr, error)
   CALL check("h5dwrite_f",error,total_error)
-#if 1
+#if 0
   PRINT*,"BEFORE h5rget_obj_name_f"
   f_ptr=C_LOC(ref_ptr(3))
   !CALL h5rget_obj_name_f(f_ptr, "a", error, H5P_DEFAULT_F, buf_size)
@@ -661,7 +661,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL check("h5rget_obj_name_f", error, total_error)
   CALL verify("h5rget_obj_name_f", buf_size, LEN(dsetnamei,KIND=SIZE_T)+1_SIZE_T, total_error)
 
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), "", error, buf_size)
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), "", error, name_len=buf_size)
   CALL check("h5rget_obj_name_f", error, total_error)
   CALL verify("h5rget_obj_name_f", buf_size, 7_SIZE_T, total_error)
 #endif
