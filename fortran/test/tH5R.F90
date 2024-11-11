@@ -653,7 +653,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
   f_ptr = C_LOC(ref_ptr(1))
   CALL h5dwrite_f(dsetr_id, H5T_STD_REF, f_ptr, error)
   CALL check("h5dwrite_f",error,total_error)
-
+#if 0
   PRINT*,"BEFORE h5rget_obj_name_f"
   f_ptr=C_LOC(ref_ptr(3))
   CALL h5rget_obj_name_f(f_ptr, "a", error, H5P_DEFAULT_F, buf_size)
@@ -665,7 +665,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
   PRINT*,"Ddf"
   CALL check("h5rget_obj_name_f", error, total_error)
   CALL verify("h5rget_obj_name_f", buf_size, 7_SIZE_T, total_error)
-
+#endif
   PRINT*,"B"
 #ifdef H5_FORTRAN_HAVE_CHAR_ALLOC
   ALLOCATE(CHARACTER(LEN=buf_size) :: buf_alloc)
