@@ -673,7 +673,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
 
   PRINT*,"C"
   ! getting path to dataset
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(2)), empty_buf, error, name_len=buf_size )
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(2)), buf_big, error, name_len=buf_size )
   CALL check("H5Rget_name_f", error, total_error)
   CALL verify("H5Rget_name_f2", INT(buf_size),LEN("/"//groupname1//"/"//groupname2),total_error)
 
