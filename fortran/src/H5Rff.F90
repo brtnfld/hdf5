@@ -1131,7 +1131,8 @@ CONTAINS
        PRINT*,"Z1"
        c_name(1:1)(1:1) = C_NULL_CHAR
        PRINT*,"Z2"
-       name_len = INT(H5Rget_obj_name(ref_ptr, rapl_id_default, c_name, 1_SIZE_T),SIZE_T)
+       l = 0_SIZE_T
+       name_len = INT(H5Rget_obj_name(ref_ptr, rapl_id_default, c_name, l),SIZE_T)
        PRINT*,"Z444"
     PRINT*,"Z3"
        IF(name_len.LT.0_SIZE_T) hdferr = H5I_INVALID_HID_F
