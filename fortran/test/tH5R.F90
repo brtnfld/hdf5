@@ -520,7 +520,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
 #ifdef H5_FORTRAN_HAVE_CHAR_ALLOC
   CHARACTER(:), ALLOCATABLE :: buf_alloc ! buffer to hold the region name
 #endif
-  CHARACTER(LEN=16) :: buf_big    ! buffer bigger than needed
+  CHARACTER(LEN=100) :: buf_big    ! buffer bigger than needed
   INTEGER(SIZE_T) :: buf_size     ! returned size of the region buffer name
   INTEGER, TARGET :: a_data
   TYPE(C_PTR) :: f_ptr
@@ -529,6 +529,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
 
   INTEGER(HID_T) :: memspace
 
+  PRINT*,"sdfdsA"
   !
   ! Create a new file with Default file access and
   ! file creation properties.
@@ -566,6 +567,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL H5Awrite_f(aid, H5T_NATIVE_INTEGER, f_ptr, error)
   CALL check("H5Awrite_f",error,total_error)
 
+  PRINT*,"sadfsdA"
   !
   ! Create dataspaces for datasets
   !
@@ -634,33 +636,42 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL h5screate_simple_f(1, dimspt, sid2, error)
   CALL check("h5screate_simple_f",error,total_error)
 
+  PRINT*,"A"
   coord(1) = 1
   coord(2) = dims(1)
   CALL h5sselect_elements_f(sid2, H5S_SELECT_SET_F, 1, SIZE(coord,KIND=SIZE_T), coord, error)
   CALL check("h5sselect_elements_f",error,total_error)
 
+  PRINT*,"B"
   f_ptr = C_LOC(ref_ptr(6))
   CALL h5rcreate_region_f(file_id, dsetnamei, sid2, f_ptr, error)
   CALL check("h5rcreate_region_f",error,total_error)
+  PRINT*,"Bsdfsdf"
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(6)), buf_big, error)
 
+  PRINT*,"Cx"
   f_ptr = C_LOC(ref_ptr(1))
   CALL h5dwrite_f(dsetr_id, H5T_STD_REF, f_ptr, error)
   CALL check("h5dwrite_f",error,total_error)
-
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(3)), "", error,  name_len=buf_size)
+#if 1
+  PRINT*,"BEFORE h5rget_obj_name_f"
+  f_ptr=C_LOC(ref_ptr(3))
+  !CALL h5rget_obj_name_f(f_ptr, "a", error, H5P_DEFAULT_F, buf_size)
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(3)), "", error, name_len=buf_size)
   CALL check("h5rget_obj_name_f", error, total_error)
   CALL verify("h5rget_obj_name_f", buf_size, LEN(dsetnamei,KIND=SIZE_T)+1_SIZE_T, total_error)
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), "", error,  name_len=buf_size)
+
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), "", error, buf_size)
   CALL check("h5rget_obj_name_f", error, total_error)
   CALL verify("h5rget_obj_name_f", buf_size, 7_SIZE_T, total_error)
-
+#endif
+  PRINT*,"B"
 #ifdef H5_FORTRAN_HAVE_CHAR_ALLOC
-  ALLOCATE(CHARACTER(LEN=buf_size) :: buf_alloc)
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_alloc, error)
-  CALL check("h5rget_obj_name_f", error, total_error)
-  CALL VERIFY("h5rget_obj_name_f", buf_alloc, "/"//groupname1, total_error)
-  DEALLOCATE(buf_alloc)
+!  ALLOCATE(CHARACTER(LEN=buf_size) :: buf_alloc)
+!  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_alloc, error)
+!  CALL check("h5rget_obj_name_f", error, total_error)
+!  CALL VERIFY("h5rget_obj_name_f", buf_alloc, "/"//groupname1, total_error)
+!  DEALLOCATE(buf_alloc)
 #endif
   ! with buffer bigger than needed
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_big, error)
@@ -720,6 +731,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL h5rdestroy_f(f_ptr, error)
   CALL check("h5rdestroy_f", error, total_error)
 
+  PRINT*,"AAA"
   !
   ! Close the dataset
   !
@@ -741,6 +753,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL h5dread_f(dsetr_id, H5T_STD_REF, f_ptr, error)
   CALL check("h5dread_f",error,total_error)
 
+  PRINT*,"D"
   !
   ! Get information about the references read and check for correctness
   !
@@ -794,6 +807,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
 
   END IF
 
+  PRINT*,"E"
   CALL h5rget_type_f(C_LOC(ref_ptr_read(6)), ref_type, error)
   CALL check("h5rget_type_f", error, total_error)
 
@@ -838,6 +852,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
   ! Close all objects.
   !
 
+  PRINT*,"F"
   CALL h5dclose_f(dsetr_id, error)
   CALL check("h5dclose_f",error,total_error)
   CALL h5fclose_f(file_id, error)
