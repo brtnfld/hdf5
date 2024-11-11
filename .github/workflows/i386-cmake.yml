@@ -1,17 +1,5 @@
 name: hdf5 dev CMake i386
 
-# Triggers the workflow on a call from another workflow
-on:
-  workflow_call:
-    inputs:
-      build_mode:
-        description: "release vs. debug build"
-        required: true
-        type: string
-
-permissions:
-  contents: read
-
 jobs:
   i386_build_and_test:
     name: "i386 ${{ inputs.build_mode }}"
