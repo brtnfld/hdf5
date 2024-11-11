@@ -1,19 +1,10 @@
 name: hdf5 dev cmake CI
-
-# Triggers the workflow on push or pull request or on demand
-on:
-  workflow_dispatch:
+on: 
   push:
+    branches: [ i386 ]
   pull_request:
-    branches: [ i386]
-    paths-ignore:
-      - '.github/CODEOWNERS'
-      - '.github/FUNDING.yml'
-      - 'doc/**'
-      - 'release_docs/**'
-      - 'ACKNOWLEDGEMENTS'
-      - 'LICENSE**'
-      - '**.md'
+    branches: [ i386 ]
+
 
 # Using concurrency to cancel any in-progress job or run
 concurrency:
