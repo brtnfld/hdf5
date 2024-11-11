@@ -648,14 +648,12 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL h5dwrite_f(dsetr_id, H5T_STD_REF, f_ptr, error)
   CALL check("h5dwrite_f",error,total_error)
   PRINT*,"BEFORE h5rget_obj_name_f"
-  f_ptr=C_LOC(ref_ptr(3))
-  !CALL h5rget_obj_name_f(f_ptr, "a", error, H5P_DEFAULT_F, buf_size)
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(3)),  buf_big, error, H5P_DEFAULT_F, name_len=buf_size)
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(3)),  buf_big, error, H5P_DEFAULT_F, buf_size)
   CALL check("h5rget_obj_name_f", error, total_error)
   CALL verify("h5rget_obj_name_f", buf_size, LEN(dsetnamei,KIND=SIZE_T)+1_SIZE_T, total_error)
 
   PRINT*,"BEFORE h5rgdfdet_obj_name_f"
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_big, error, name_len=buf_size)
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_big, error, H5P_DEFAULT_F, buf_size)
   CALL check("h5rget_obj_name_f", error, total_error)
   CALL verify("h5rget_obj_name_f", buf_size, 7_SIZE_T, total_error)
   PRINT*,"B"
@@ -678,6 +676,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL check("H5Rget_name_f", error, total_error)
   CALL verify("H5Rget_name_f2", INT(buf_size),LEN("/"//groupname1//"/"//groupname2),total_error)
 
+  PRINT*,"DFDFA"
 #ifdef H5_FORTRAN_HAVE_CHAR_ALLOC
   ALLOCATE(CHARACTER(LEN=buf_size) :: buf_alloc)
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(2)), buf_alloc, error)
@@ -686,14 +685,12 @@ SUBROUTINE v3reftest(cleanup, total_error)
   DEALLOCATE(buf_alloc)
 #endif
 
-  PRINT*,"DFDFA"
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(2)), buf_big, error)
   CALL check("H5Rget_name_f", error, total_error)
   CALL verify("H5Rget_name_f", TRIM(buf_big), "/"//groupname1//"/"//groupname2, total_error)
 
   ! CHECK LICENSE REF
 
-  PRINT*,"AAA"
   f_ptr =  C_LOC(ref_ptr_cp)
   CALL h5rcopy_f(C_LOC(ref_ptr(3)), f_ptr, error)
   CALL check("h5rcopy_f", error, total_error)
