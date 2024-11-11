@@ -642,19 +642,25 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL h5sselect_elements_f(sid2, H5S_SELECT_SET_F, 1, SIZE(coord,KIND=SIZE_T), coord, error)
   CALL check("h5sselect_elements_f",error,total_error)
 
+  PRINT*,"B"
   f_ptr = C_LOC(ref_ptr(6))
   CALL h5rcreate_region_f(file_id, dsetnamei, sid2, f_ptr, error)
   CALL check("h5rcreate_region_f",error,total_error)
+  PRINT*,"Bsdfsdf"
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(6)), buf_big, error)
 
+  PRINT*,"Cx"
   f_ptr = C_LOC(ref_ptr(1))
   CALL h5dwrite_f(dsetr_id, H5T_STD_REF, f_ptr, error)
   CALL check("h5dwrite_f",error,total_error)
 
+  PRINT*,"Dx"
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(3)), "", error, H5P_DEFAULT_F, buf_size)
   CALL check("h5rget_obj_name_f", error, total_error)
+  PRINT*,"Dt"
   CALL verify("h5rget_obj_name_f", buf_size, LEN(dsetnamei,KIND=SIZE_T)+1_SIZE_T, total_error)
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), "", error, H5P_DEFAULT_F, buf_size)
+  PRINT*,"Ddf"
   CALL check("h5rget_obj_name_f", error, total_error)
   CALL verify("h5rget_obj_name_f", buf_size, 7_SIZE_T, total_error)
 
