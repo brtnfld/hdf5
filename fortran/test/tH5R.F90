@@ -520,15 +520,16 @@ SUBROUTINE v3reftest(cleanup, total_error)
 #ifdef H5_FORTRAN_HAVE_CHAR_ALLOC
   CHARACTER(:), ALLOCATABLE :: buf_alloc ! buffer to hold the region name
 #endif
-  CHARACTER(LEN=19) :: buf_big    ! buffer bigger than needed
+  CHARACTER(LEN=16) :: buf_big    ! buffer bigger than needed
   INTEGER(SIZE_T) :: buf_size     ! returned size of the region buffer name
   INTEGER, TARGET :: a_data
   TYPE(C_PTR) :: f_ptr
   LOGICAL :: ref_eq
   INTEGER(hssize_t) :: num_points_ret
-  CHARACTER(LEN=2) :: empty_buf = CHAR(0)//CHAR(0)
-
+  CHARACTER(LEN=12) :: empty_buf
   INTEGER(HID_T) :: memspace
+
+  ! empty_buf(1:1) = C_NULL_CHAR
 
   !
   ! Create a new file with Default file access and
@@ -649,7 +650,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CALL h5dwrite_f(dsetr_id, H5T_STD_REF, f_ptr, error)
   CALL check("h5dwrite_f",error,total_error)
   PRINT*,"BEFORE h5rget_obj_name_f"
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(3)), buf_big, error, H5P_DEFAULT_F, buf_size)
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(3)), empty_buf, error, H5P_DEFAULT_F, buf_size)
   CALL check("h5rget_obj_name_f", error, total_error)
   CALL verify("h5rget_obj_name_f", buf_size, LEN(dsetnamei,KIND=SIZE_T)+1_SIZE_T, total_error)
 
