@@ -76,8 +76,12 @@ MODULE H5R
      INTEGER(C_SIGNED_CHAR), DIMENSION(1:H5R_DSET_REG_REF_BUF_SIZE_F) :: ref
   END TYPE hdset_reg_ref_t_f03
 
-  TYPE, BIND(C) :: H5R_ref_t
-      INTEGER(C_INT8_T), DIMENSION(1:H5R_REF_BUF_SIZE_F) :: data
+  TYPE :: H5R_ref_t
+      SEQUENCE
+      CHARACTER(KIND=C_CHAR), DIMENSION(1:H5R_REF_BUF_SIZE_F) :: data
+     ! INTEGER(KIND=C_INT64_T) :: align
+     ! EQUIVALENCE(DATA,align)
+    !  INTEGER(C_INT8_T), DIMENSION(1:H5R_REF_BUF_SIZE_F) :: data
   END TYPE
 
   INTERFACE h5rget_object_type_f
@@ -1126,7 +1130,7 @@ CONTAINS
     rapl_id_default = H5P_DEFAULT_F
     IF(PRESENT(rapl_id)) rapl_id_default = rapl_id
 
-    PRINT*,"H5R_REF_BUF_SIZE_F", H5R_REF_BUF_SIZE_F
+!    PRINT*,"H5R_REF_BUF_SIZE_F", H5R_REF_BUF_SIZE_F
 
     hdferr = 0
     IF(PRESENT(name_len))THEN
