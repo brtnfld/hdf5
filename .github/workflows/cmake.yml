@@ -63,6 +63,7 @@ jobs:
           grep -i "H5_PAC_FC_MAX_REAL_PRECISION" /usr/local/HDF_Group/HDF5/2.0.0/include/*
           grep -i "H5_PAC_C_MAX_REAL_PRECISION" /usr/local/HDF_Group/HDF5/2.0.0/include/*
           grep -i "H5_HAVE_FLOAT128" /usr/local/HDF_Group/HDF5/2.0.0/include/*
+          gfortran --version
           cd fortran
           /home/runner/work/hdf5/hdf5/build/bin/testhdf5_fortran
         working-directory: build
