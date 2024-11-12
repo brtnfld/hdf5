@@ -1106,7 +1106,7 @@ CONTAINS
     INTEGER(SIZE_T), INTENT(OUT), OPTIONAL :: name_len
     INTEGER(HID_T) , INTENT(IN) , OPTIONAL :: rapl_id
 
-    CHARACTER(LEN=1,KIND=C_CHAR), DIMENSION(1:LEN(name)+1), TARGET :: c_name
+    CHARACTER(LEN=1,KIND=C_CHAR), DIMENSION(1:LEN(name)+1) :: c_name
     INTEGER(HID_T) :: rapl_id_default
     INTEGER(SIZE_T) :: l
 
@@ -1160,7 +1160,7 @@ CONTAINS
     INTEGER      , INTENT(OUT) :: hdferr
     INTEGER(SIZE_T), INTENT(OUT), OPTIONAL :: name_len
 
-    CHARACTER(LEN=1,KIND=C_CHAR), DIMENSION(1:LEN(name)+1), TARGET :: c_name
+    CHARACTER(LEN=1,KIND=C_CHAR), DIMENSION(1:LEN(name)+1) :: c_name
     INTEGER(SIZE_T) :: l
 
     INTERFACE
@@ -1211,7 +1211,7 @@ CONTAINS
     INTEGER      , INTENT(OUT) :: hdferr
     INTEGER(SIZE_T), INTENT(OUT), OPTIONAL :: name_len
 
-    CHARACTER(LEN=1,KIND=C_CHAR), DIMENSION(1:LEN(name)+1), TARGET :: c_name
+    CHARACTER(LEN=1,KIND=C_CHAR), DIMENSION(1:LEN(name)+1) :: c_name
     INTEGER(SIZE_T) :: l
 
     INTERFACE
