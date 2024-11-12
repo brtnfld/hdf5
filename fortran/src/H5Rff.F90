@@ -76,12 +76,12 @@ MODULE H5R
      INTEGER(C_SIGNED_CHAR), DIMENSION(1:H5R_DSET_REG_REF_BUF_SIZE_F) :: ref
   END TYPE hdset_reg_ref_t_f03
 
-  TYPE :: H5R_ref_t
-      SEQUENCE
+  TYPE, BIND(C) :: H5R_ref_t
+      !SEQUENCE
       !CHARACTER(KIND=C_CHAR), DIMENSION(1:H5R_REF_BUF_SIZE_F) :: data
      ! INTEGER(KIND=C_INT64_T) :: align
-      !INTEGER(C_INT8_T), DIMENSION(1:H5R_REF_BUF_SIZE_F) :: data
-      INTEGER(C_INT64_T) :: data
+       INTEGER(C_INT8_T), DIMENSION(1:H5R_REF_BUF_SIZE_F) :: data
+      !INTEGER(C_INT64_T) :: data
   END TYPE
 
   INTERFACE h5rget_object_type_f
