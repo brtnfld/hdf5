@@ -1126,6 +1126,8 @@ CONTAINS
     rapl_id_default = H5P_DEFAULT_F
     IF(PRESENT(rapl_id)) rapl_id_default = rapl_id
 
+    PRINT*,"H5R_REF_BUF_SIZE_F", H5R_REF_BUF_SIZE_F
+
     hdferr = 0
     IF(PRESENT(name_len))THEN
        c_name(1:1)(1:1) = C_NULL_CHAR
