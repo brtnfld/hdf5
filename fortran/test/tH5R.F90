@@ -520,7 +520,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
 #ifdef H5_FORTRAN_HAVE_CHAR_ALLOC
   CHARACTER(:), ALLOCATABLE :: buf_alloc ! buffer to hold the region name
 #endif
-  CHARACTER(LEN=16) :: buf_big    ! buffer bigger than needed
+  CHARACTER(LEN=19) :: buf_big    ! buffer bigger than needed
   INTEGER(SIZE_T) :: buf_size     ! returned size of the region buffer name
   INTEGER, TARGET :: a_data
   TYPE(C_PTR) :: f_ptr
