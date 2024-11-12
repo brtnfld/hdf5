@@ -25,6 +25,8 @@ jobs:
       - name: setup alpine
         uses: jirutka/setup-alpine@v1
         with:
+          extra-repositories: |
+            http://dl-cdn.alpinelinux.org/alpine/edge/testing
           arch: x86
           packages: >
             build-base
