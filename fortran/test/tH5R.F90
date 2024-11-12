@@ -526,7 +526,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
   TYPE(C_PTR) :: f_ptr
   LOGICAL :: ref_eq
   INTEGER(hssize_t) :: num_points_ret
-  CHARACTER(LEN=12) :: empty_buf
+  CHARACTER(LEN=4) :: empty_buf
   INTEGER(HID_T) :: memspace
 
   ! empty_buf(1:1) = C_NULL_CHAR
@@ -673,7 +673,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
 
   PRINT*,"C"
   ! getting path to dataset
-  CALL h5rget_obj_name_f(C_LOC(ref_ptr(2)), buf_big, error, name_len=buf_size )
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(2)), empty_buf, error, name_len=buf_size )
   CALL check("H5Rget_name_f", error, total_error)
   CALL verify("H5Rget_name_f2", INT(buf_size),LEN("/"//groupname1//"/"//groupname2),total_error)
 
