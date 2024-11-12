@@ -526,7 +526,7 @@ SUBROUTINE v3reftest(cleanup, total_error)
   TYPE(C_PTR) :: f_ptr
   LOGICAL :: ref_eq
   INTEGER(hssize_t) :: num_points_ret
-  CHARACTER(LEN=4) :: empty_buf
+  CHARACTER(LEN=8) :: empty_buf
   INTEGER(HID_T) :: memspace
 
   ! empty_buf(1:1) = C_NULL_CHAR
