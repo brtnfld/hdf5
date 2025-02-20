@@ -1,12 +1,10 @@
 name: Test HDF5 async VOL
 
 on:
-  workflow_call:
-    inputs:
-      build_mode:
-        description: "CMake Build type"
-        required: true
-        type: string
+  push:
+    branches: [ develop, VOL-cdash ]
+  pull_request:
+    branches: [ develop, VOL-cdash ]
 
 permissions:
   contents: read
