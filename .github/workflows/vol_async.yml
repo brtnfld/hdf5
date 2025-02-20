@@ -81,7 +81,13 @@ jobs:
       - name: Test HDF5 asynchronous I/O VOL connector with external tests
         working-directory: ${{ github.workspace }}/hdf5/build
         run: |
-          ctest --build-config ${{ inputs.build_mode }} -VV -R "async_test" .
+          ctest -D Experimental \
+            -C ${{ inputs.build_mode }} \
+            -L "VOL" --track "VOL" \
+            --output-on-failure \
+            --test-action test \
+            --submit-to-cdash-track "VOL" \
+            -VV -R "async_test" .
 
       - name: Test HDF5 asynchronous I/O VOL connector with HDF5 API tests
         working-directory: ${{ github.workspace }}/hdf5/build
