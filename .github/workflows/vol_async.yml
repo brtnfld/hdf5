@@ -45,7 +45,7 @@ jobs:
         run: |
           mkdir ${{ github.workspace }}/hdf5/build
           cd ${{ github.workspace }}/hdf5/build
-          cmake -DCMAKE_BUILD_TYPE=${{ inputs.build_mode }} \
+          cmake -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/hdf5_build \
             -DBUILD_STATIC_LIBS=OFF \
             -DHDF5_TEST_API:BOOL=ON \
@@ -67,7 +67,7 @@ jobs:
         shell: bash
         working-directory: ${{ github.workspace }}/hdf5/build
         run: |
-          cmake --build . --parallel 3 --config ${{ inputs.build_mode }}
+          cmake --build . --parallel 3 --config Debug
           echo "LD_LIBRARY_PATH=/usr/local/lib:${{ github.workspace }}/hdf5/build/bin" >> $GITHUB_ENV
 
       # Workaround for asynchronous I/O VOL CMake issue
@@ -80,7 +80,7 @@ jobs:
         working-directory: ${{ github.workspace }}/hdf5/build
         run: |
           ctest -D Experimental \
-            -C ${{ inputs.build_mode }} \
+            -C Debug \
             -L "VOL" --track "VOL" \
             --output-on-failure \
             --test-action test \
@@ -95,4 +95,4 @@ jobs:
         # in the future.
         if: false
         run: |
-          ctest --build-config ${{ inputs.build_mode }} -VV -R "HDF5_VOL_vol-async" .
+          ctest --build-config Debug -VV -R "HDF5_VOL_vol-async" .
