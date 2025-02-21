@@ -1,12 +1,10 @@
 name: Test HDF5 async VOL
+on: 
+  push:
+    branches: [ develop, VOL-cdash ]
+  pull_request:
+    branches: [ develop, VOL-cdash ]
 
-on:
-  workflow_call:
-    inputs:
-      build_mode:
-        description: "CMake Build type"
-        required: true
-        type: string
 
 permissions:
   contents: read
@@ -65,15 +63,15 @@ jobs:
             -D Experimental -T Submit \
             -D CDASH_MODEL="HPC" \
             -D CDASH_GROUP="HPC" \
-            -D "CTEST_PROJECT_NAME=HDF5" \
-            -D "CTEST_DROP_METHOD=https" \
-            -D "CTEST_DROP_SITE=my.cdash.org" \
-            -D "CTEST_DROP_LOCATION=/submit.php?project=HDF5" \
-            -D "CTEST_DROP_SITE_CDASH=TRUE" \
-            -D "CTEST_BUILD_NAME=${{ github.run_id }}" \
-            -D "CTEST_SITE=${{ github.repository }}" \
-            -D "CTEST_SUBMIT_URL=https://my.cdash.org/submit.php?project=HDF5" \
-            -D "CTEST_BUILD_CONFIGURATION_NAME=Debug" \
+            -D CTEST_PROJECT_NAME=HDF5 \
+            -D CTEST_DROP_METHOD=https \
+            -D CTEST_DROP_SITE=my.cdash.org \
+            -D CTEST_DROP_LOCATION=/submit.php?project=HDF5 \
+            -D CTEST_DROP_SITE_CDASH=TRUE \
+            -D CTEST_BUILD_NAME=${{ github.run_id }} \
+            -D CTEST_SITE=${{ github.repository }} \
+            -D CTEST_SUBMIT_URL=https://my.cdash.org/submit.php?project=HDF5 \
+            -D CTEST_BUILD_CONFIGURATION_NAME=Debug \
             ${{ github.workspace }}/hdf5
           cat src/libhdf5.settings
 
