@@ -82,7 +82,7 @@ jobs:
           CTEST_SITE: "GitHub-Actions-${{ runner.os }}"
           CTEST_BUILD_NAME: "VOL-Async-Debug"
         run: |
-          ctest -D CTEST_TEST_MODEL=HPC --build-config Debug \
+          ctest -D Experimental --build-config Debug \
             -D CTEST_PROJECT_NAME=HDF5 \
             -D CTEST_DROP_METHOD=https \
             -D CTEST_DROP_SITE=my.cdash.org \
@@ -92,10 +92,10 @@ jobs:
             -D CTEST_SITE=${{ github.repository }} \
             -D CTEST_SUBMIT_URL=https://my.cdash.org/submit.php?project=HDF5 \
             -D CTEST_BUILD_CONFIGURATION_NAME=Debug \
-            -D CDASH_MODEL="HPC" \
-            -D CDASH_GROUP="HPC" \
             -VV -R "async_test" .
-
+#
+#            -D CDASH_MODEL="HPC" \
+#            -D CDASH_GROUP="HPC" \
 
       - name: Test HDF5 asynchronous I/O VOL connector with HDF5 API tests
         working-directory: ${{ github.workspace }}/hdf5/build
