@@ -80,7 +80,7 @@ jobs:
         working-directory: ${{ github.workspace }}/hdf5/build
         env:
           CTEST_SITE: "GitHub-Actions-${{ runner.os }}"
-          CTEST_BUILD_NAME: "VOL-Async-${{ inputs.build_mode }}"
+          CTEST_BUILD_NAME: "VOL-Async-Debug"
         run: |
           ctest -D Experimental --build-config Debug \
             -D CTEST_PROJECT_NAME=HDF5 \
