@@ -92,8 +92,8 @@ jobs:
             -D CTEST_SITE=${{ github.repository }} \
             -D CTEST_SUBMIT_URL=https://my.cdash.org/submit.php?project=HDF5 \
             -D CTEST_BUILD_CONFIGURATION_NAME=Debug \
-            -D CDASH_MODEL="HPC" \
-            -D CDASH_GROUP="HPC" \
+            -D CDASH_MODEL="Experimental" \
+            -D CDASH_GROUP="Experimental" \
             -VV -R "async_test" .
 
 
