@@ -82,10 +82,10 @@ jobs:
           CTEST_SITE: "GitHub-Actions-${{ runner.os }}"
           CTEST_BUILD_NAME: "VOL-Async-Debug"
         run: |
-          ctest -D Experimental --build-config Debug \
-            -D CTEST_PROJECT_NAME=HDF5 \
+          ctest -D Experimental=ON --build-config Debug \
+            -D CTEST_PROJECT=HDF5 \
             -D CTEST_DROP_METHOD=https \
-            -D CTEST_DROP_SITE=my.cdash.org \
+            -D CTEST_DROP_SITE_INIT=my.cdash.org \
             -D CTEST_DROP_LOCATION=/submit.php?project=HDF5 \
             -D CTEST_DROP_SITE_CDASH=TRUE \
             -D CTEST_BUILD_NAME=${{ github.run_id }} \
