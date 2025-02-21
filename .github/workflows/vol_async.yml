@@ -82,12 +82,20 @@ jobs:
           CTEST_SITE: "GitHub-Actions-${{ runner.os }}"
           CTEST_BUILD_NAME: "VOL-Async-${{ inputs.build_mode }}"
         run: |
-          ctest -D Experimental \
-            -C Debug \
-            -L "VOL" --track "VOL" \
-            --output-on-failure \
-            --test-action test \
-            -VV -R "async_test" .
+           ctest -S ../config/dashboard.cmake \
+             -D CTEST_BUILD_CONFIGURATION="Debug" \
+             -D CTEST_CMAKE_GENERATOR="Unix Makefiles" \
+             -D CTEST_TEST_MODEL=Experimental \
+             -D CTEST_TRACK_TYPE="VOL" \
+             -D CTEST_BUILD_FLAGS="-j3" \
+             -VV -R "async_test" .
+#
+#          ctest -D Experimental \
+#            -C Debug \
+#            -L "VOL" --track "VOL" \
+#            --output-on-failure \
+#            --test-action test \
+#            -VV -R "async_test" .
 
       - name: Test HDF5 asynchronous I/O VOL connector with HDF5 API tests
         working-directory: ${{ github.workspace }}/hdf5/build
