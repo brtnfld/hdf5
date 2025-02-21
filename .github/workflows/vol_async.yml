@@ -84,7 +84,6 @@ jobs:
             -L "VOL" --track "VOL" \
             --output-on-failure \
             --test-action test \
-            --submit-to-cdash-track "VOL" \
             -VV -R "async_test" .
 
       - name: Test HDF5 asynchronous I/O VOL connector with HDF5 API tests
