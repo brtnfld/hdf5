@@ -1,6 +1,6 @@
 name: Check PR for linked issue
 on:
-  pull_request:
+  pull_request_target:
     branches: [ chckPR ]
     types: [labeled, unlabeled,opened, edited, reopened, synchronize]
 
@@ -15,11 +15,12 @@ jobs:
       fail-fast: true
     steps:
       - name: Use the action
-        uses: nearform-actions/github-action-check-linked-issues@v1
+        uses: earform-actions/github-action-check-linked-issues@v1
         id: check-linked-issues
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           exclude-branches: "release/**, dependabot/**"
+          custom-body-comment: "Here is a custom comment! ${{ steps.check.outputs.linked_issues_count }}"
       # Use the output from the `check` step
       - name: Get the output
         run: echo "Number of linked issues = ${{ steps.check.outputs.linked_issues_count }}"
