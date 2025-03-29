@@ -20,6 +20,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           exclude-branches: "release/**, dependabot/**"
+          loose-matching: true
           custom-body-comment: "Here2 is a custom comment! ${{ steps.check.outputs.linked_issues_count }}"
       # Use the output from the `check` step
       - name: Get the output
