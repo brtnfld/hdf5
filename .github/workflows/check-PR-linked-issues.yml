@@ -15,7 +15,7 @@ jobs:
       fail-fast: true
     steps:
       - name: Use the action
-        uses: earform-actions/github-action-check-linked-issues@v1
+        uses: nearform-actions/github-action-check-linked-issues@v1
         id: check-linked-issues
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
