@@ -13,7 +13,7 @@ Please summarize the key changes made in this pull request to help maintainers u
 
 ## Checklist
 
-Put an `x` in the boxes that apply. You can also fill these out after creating the PR. Don't hesitate to ask if you're unsure about any of them. We're here to help! This is a reminder of what we are going to look for before merging your code._
+_Put an `x` in the boxes that apply. You can also fill these out after creating the PR. Don't hesitate to ask if you're unsure about any of them. We're here to help! This is a reminder of what we are going to look for before merging your code._
 
 - [ ] My code conforms to the guidelines in [Contributing Guide](../../CONTRIBUTING.md)
 - [ ] I have added tests that prove my fix is effective or that my feature works
