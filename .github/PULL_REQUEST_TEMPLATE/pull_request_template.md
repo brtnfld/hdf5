@@ -2,7 +2,7 @@
 
 Please summarize the key changes made in this pull request to help maintainers understand it better.
 
-⚠ **A link to the corresponding issue using the specified format is required.** The syntax for the
+⚠️ **A link to the corresponding issue using the specified format is required.** The syntax for the
       issue keywords depends on whether the issue is in the same repository as the pull request.
 
 | Linked issue | Syntax | Example |
