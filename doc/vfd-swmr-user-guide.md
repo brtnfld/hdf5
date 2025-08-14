@@ -243,7 +243,7 @@ Example code: Setting VFD SWMR for writer process
 ```
     fapl = H5Pcreate(H5P_FILE_ACCESS);
     H5Pset_page_buffer_size(fapl, 4096, 100, 0);
-    H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, false, 1024 * 1024 * 1024);
+    H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, false, 1);
 
     memset(&config, 0, sizeof(config));
     H5Pget_vfd_swmr_config(fapl, &config);
