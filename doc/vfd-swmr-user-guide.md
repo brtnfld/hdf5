@@ -68,7 +68,7 @@ the writer makes HDF5 library API calls with sufficient regularity, and
 that both reader and writer avoid long running HDF5 API calls.
 
 For further details on VFD SWMR design and implementation, see 
-[RFC: VFD SWMR](https://https://support.hdfgroup.org/releases/hdf5/documentation/rfc/VFD_SWMR_RFC_220519.pdf).
+[RFC: VFD SWMR](https://support.hdfgroup.org/releases/hdf5/documentation/rfc/VFD_SWMR_RFC_220519.pdf).
 
 # Quick start
 
