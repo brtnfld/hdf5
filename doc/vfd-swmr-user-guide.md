@@ -1,29 +1,33 @@
-# Welcome to VFD SWMR  
+# VFD SWMR User's Guide 
 
-Thank you for volunteering to test VFD SWMR.
+**This document describes VFD SWMR prototype that is currently 
+available in the HDF5 GitHub repository [feature branch](https://github.com/LifeboatLLC/hdf5_swmr.git).**
 
-SWMR, which stands for Single Writer/Multiple Reader, is a feature
+SWMR, which stands for Single Writer/Multiple Reader access mode, is a feature
 of the HDF5 library that lets a process write data to an HDF5 file
 while one or more processes read the file.  Use cases range from
 monitoring data collection and/or steering experiments in progress
 to financial applications.
 
-The following diagram illustrates the original version of SWMR.
+The following diagram illustrates the SWMR concept.
 
 <img src = SWMRdataflow.png width=400 />
 
-The original version of SWMR functions by ordering metadata writes to
+The original version of SWMR introduced in HDF5 1.10.0 release, 
+functions by ordering metadata writes to
 the HDF5 file so as to always maintain a consistent view of metadata
 in the HDF5 file -- which requires SWMR specific modifications to 
-all code that maintains on disk metadata.
+all code that maintains on disk metadata. For more information, and specifically, 
+for the limitations of the original SWMR, see
+ [Introduction to Single-Writer/Multiple-Reader (SWMR)](https://https://support.hdfgroup.org/documentation/hdf5/latest/_s_w_m_r_t_n.html)
 
-VFD SWMR is designed to be a more maintainable and more modular 
-replacement for the existing SWMR feature.  It functions by taking 
+VFD SWMR is designed to address the limitations of the initial SWMR implemtation and 
+be a more maintainable.  It functions by taking 
 regular snapshots of HDF5 file metadata on the writer side, and using 
 a specialized virtual file driver (VFD) on the reader side to 
 intercept metadata read requests and satisfy them from the 
 snapshots where appropriate -- thus assuring that the readers 
-see a consistent view of HDF5 file metadata,
+see a consistent view of HDF5 file metadata.
 
 This design allowed us to implement VFD SWMR with only minor 
 modifications to the HDF5 library above metadata cache and page 
@@ -42,18 +46,13 @@ few limitations -- most notably:
 
 * The current implementation of variable length data in datasets
   is fundamentally incompatible with VFD SWMR, as it stores variable 
-  length data as metadata.  This shouldn't be a major issue, as the 
-  current implementation of variable length data has very poor performance, 
-  and thus is not suitable for most SWMR applications.  A new 
-  implementation of variable length data is in the works, and should 
-  offer both better performance and be compatible with VFD SWMR.
-  However, there is no ETA for delivery.  Variable length attributes 
-  on datasets and groups should work, but are currently un-tested.
+  length data as metadata. This limtation will be lifted when reimplemnttaion of
+  variable length data storge is available.
 
 * At present the Virtual Data Set (VDS) feature is not 
-  well integrated with VFD SWMR.  While we have a work around that
-  allowed us to test for more fundamental issues (sse below), a proper 
-  solution is on hold pending the availability of the original developer.
+  well integrated with VFD SWMR. Please see 
+[Using virtial datasets (VDS)](/doc/vfd-swmr-user-guide.md#using-virtual-datasets-vds) 
+for how to use VFD SWMR and VDS features.
 
 * VFD SWMR is only tested with, and should only be used with 
   the latest HDF5 file format.  Theoretically, there is no functional
@@ -69,7 +68,7 @@ the writer makes HDF5 library API calls with sufficient regularity, and
 that both reader and writer avoid long running HDF5 API calls.
 
 For further details on VFD SWMR design and implementation, see 
-`VFD_SWMR_RFC_200916.pdf` in the doc directory.
+[RFC: VFD SWMR](https://https://support.hdfgroup.org/releases/hdf5/documentation/rfc/VFD_SWMR_RFC_220519.pdf).
 
 # Quick start
 
@@ -80,12 +79,12 @@ utilities built by the VFD SWMR project.
 ## Download
 
 Clone the HDF5 repository in a new directory, then switch to the 
-`feature/vfd_swmr_beta_1` branch as follows:
+`feature/vfd_swmr` branch as follows:
 
 ```
 % git clone https://github.com/HDFGroup/hdf5 swmr
 % cd swmr
-% git checkout feature/vfd_swmr_beta_1
+% git checkout feature/vfd_swmr
 ```
 
 ## Build
@@ -100,6 +99,9 @@ The VFD SWMR branches are maintenance branches and will default to a debug
 build. They also do not come with generated files, so Perl will be required
 when building with CMake and Perl and the Autotools (autoconf, etc.) will
 be required when building with the Autotools.
+
+Run `autogen.sh` script in the top
+directory if building with Autotools to generate required files. 
 
 Some notes:
 
@@ -217,34 +219,63 @@ SWMR.
 1. Create a file access property list using `H5Pcreate(H5P_FILE_ACCESS)`.
 2. Set the latest file format using `H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST)`. 
 3. Enable page buffering using `H5Pset_page_buffer_size()`.
-4. Set any VFD SWMR configuration properties using `H5Pset_vfd_swmr_config()`. The struct is documented in H5Fpublic.h, with some additional documentation below. (In the near future, this struct will be documented in the library's Doxygen documentation.)
+4. Set any VFD SWMR configuration properties using `H5Pset_vfd_swmr_config()`. 
+The struct `H5F_vfd_swmr_config_t` is documented in 
+[H5Fpublic.h](https://github.com/LifeboatLLC/hdf5_swmr/blob/feature/vfd_swmr/src/H5Fpublic.h). Below we provide an example on how to set the fields.
+
 
 VFD SWMR relies on metadata reads and writes to go through the
 page buffer.  Note that the default page size is 4096 bytes. Finding good
 values for `buf_size` may take some experimentation. We use 4096 (giving a
 single page buffer) for `buf_size` in our test code.
 
-*Note well*: when VFD SWMR is enabled, the meta-/raw-data pages proportion 
+*Note*: when VFD SWMR is enabled, the meta-/raw-data pages proportion 
 set by `H5Pset_page_buffer_size()` does not actually control the
 pages reserved for raw data.  *All* pages are dedicated to buffering
 metadata.
 
 ### `H5F_vfd_swmr_config_t` fields discussion
 
-Example code:
+Below are examples of how to configure SWMR access mode for both writer and reader. 
+
+Example code: Setting VFD SWMR for writer process
 
 ```
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+    H5Pset_page_buffer_size(fapl, 4096, 100, 0);
+    H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, false, 1024 * 1024 * 1024);
+
     memset(&config, 0, sizeof(config));
+    H5Pget_vfd_swmr_config(fapl, &config);
 
     config.version = H5F__CURR_VFD_SWMR_CONFIG_VERSION;
     config.tick_len = 4;
     config.max_lag = 7;
     config.writer = true;
+    config.maintain_metadata_file = true;
+    config.flush_raw_data = true;
     config.md_pages_reserved = 128;
-    strcpy(config.md_file_path, "./my_md_file");
+    strlcpy(config.md_file_path, "./my_md_file", sizeof(config.md_file_path));
 
     H5Pset_vfd_swmr_config(fapl, &config);
 ```
+
+Example code: Setting VFD SWMR for reader process
+
+```
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+
+    memset(&config, 0, sizeof(config));
+    H5Pget_vfd_swmr_config(fapl, &config);
+
+    config.version = H5F__CURR_VFD_SWMR_CONFIG_VERSION;
+    config.tick_len = 4;
+    config.max_lag = 7;
+    strlcpy(config.md_file_path, "./my_md_file", sizeof(config.md_file_path));
+
+    H5Pset_vfd_swmr_config(fapl, &config);
+```
+
 
 When VFD SWMR is enabled, changes to the HDF5 metadata accumulate in
 RAM until a configurable unit of time known as a *tick* has passed.
@@ -295,6 +326,11 @@ must be at least 2.
 The `version` parameter tells what version of VFD SWMR configuration
 the parameter struct `config` contains.  For now, it should be
 initialized to `H5F__CURR_VFD_SWMR_CONFIG_VERSION`.
+
+
+**Important** Please notice that the tick length `tick_len` and maximim lag `max_lag` parameters should 
+be the same for writer and reader. Future releases of VFD SWMR will allow configure both writer and readers
+using configuration file thus avoiding a priori knowledge of writer's SWMR settings.
 
 ## Using virtual datasets (VDS)
 
