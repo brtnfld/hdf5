@@ -544,8 +544,11 @@ matrix_open(state_t *s, bool rw)
     config.tick_len          = SWMR_TICK_LEN;
     config.max_lag           = 5;
     config.writer            = rw;
+    config.flush_raw_data = true;
+    config.maintain_metadata_file = true;
+    config.pb_expansion_threshold = 50;
     config.md_pages_reserved = 128;
-
+    strlcpy(config.md_file_path, "./", sizeof(config.md_file_path));
     strlcpy(config.md_file_path, "./my_md_file", sizeof(config.md_file_path));
 
     /* Enable page buffering */
@@ -562,8 +565,11 @@ matrix_open(state_t *s, bool rw)
      * I set the free-space threshold to 1GB so that deleted
      * datasets are not recycled.
      */
-    if (H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, false, 1024 * 1024 * 1024) < 0)
+    if (H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, false, 1) < 0)
         errx(EXIT_FAILURE, "H5Pset_file_space_strategy failed");
+
+    if (H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0)
+        errx(EXIT_FAILURE, "H5Pset_libver_bounds");
 
     if (rw) {
         s->file = H5Fcreate("gaussians.h5", H5F_ACC_TRUNC, fcpl, fapl);

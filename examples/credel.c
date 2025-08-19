@@ -345,21 +345,25 @@ main(int argc, char **argv)
 
     state_init(s, argc, argv);
 
+
     fapl = H5Pcreate(H5P_FILE_ACCESS);
     if (fapl < 0) {
         errx(EXIT_FAILURE, "%s.%d H5Pcreate failed", __func__, __LINE__);
     }
-
-    fcpl = H5Pcreate(H5P_FILE_CREATE);
-    if (fcpl < 0) {
-        errx(EXIT_FAILURE, "%s.%d H5Pcreate failed", __func__, __LINE__);
+    H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
+    if (fapl < 0) {
+        errx(EXIT_FAILURE, "%s.%d H5Pset_libver_bounds failed", __func__, __LINE__);
     }
 
     config.version           = H5F__CURR_VFD_SWMR_CONFIG_VERSION;
     config.tick_len          = 4;
     config.max_lag           = 5;
     config.writer            = true;
+    config.flush_raw_data = true;
     config.md_pages_reserved = 128;
+    config.pb_expansion_threshold = 50;
+    config.maintain_metadata_file = true;
+    strlcpy(config.md_file_path, "./", sizeof(config.md_file_path));
     strlcpy(config.md_file_path, "./my_md_file", sizeof(config.md_file_path));
 
     /* Enable page buffering */
@@ -370,13 +374,18 @@ main(int argc, char **argv)
     if (s->use_vfd_swmr && H5Pset_vfd_swmr_config(fapl, &config) < 0)
         errx(EXIT_FAILURE, "H5Pset_vfd_swmr_config failed");
 
+    fcpl = H5Pcreate(H5P_FILE_CREATE);
+    if (fcpl < 0) {
+        errx(EXIT_FAILURE, "%s.%d H5Pcreate failed", __func__, __LINE__);
+    }
+
     /* Set file space strategy to paged aggregation in fcpl.
      * Page buffering *requires* this strategy.
      *
      * I set the free-space threshold to 1GB so that deleted
      * datasets are not recycled.
      */
-    if (H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, false, 1024 * 1024 * 1024) < 0)
+    if (H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, false, 1) < 0)
         errx(EXIT_FAILURE, "H5Pset_file_space_strategy failed");
 
     s->file = H5Fcreate(s->output_file, H5F_ACC_TRUNC, fcpl, fapl);
