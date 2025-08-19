@@ -16,8 +16,8 @@
 #define __arraycount(__a) (sizeof(__a) / sizeof((__a)[0]))
 #endif
 
-/* EP: this line causes compilation failure
-   size_t strlcpy(char *, const char *, size_t); i
+/* This line causes compilation failure on macOS; commented out.
+   size_t strlcpy(char *, const char *, size_t); 
 */
 
 #define timespeccmp(tsp, usp, cmp)                                                                           \
