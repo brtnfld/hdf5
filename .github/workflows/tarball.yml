@@ -343,103 +343,67 @@ jobs:
 
       - name: Legacy Dependencies (kept for compatibility)
         run: |
-             sudo apt update
-             sudo apt install gzip dos2unix
+          set -euo pipefail
+          
+          echo "📦 Installing legacy dependencies..."
+          sudo apt-get update -qq
+          sudo apt-get install -y gzip dos2unix
+          echo "✅ Legacy dependencies installed"
 
-      - name: Retrieve version
-        id: version
+      - name: Create Legacy Release Artifacts
         run: |
+          set -euo pipefail
+          
           cd "$GITHUB_WORKSPACE/hdfsrc"
-          echo "SOURCE_TAG=$(bin/h5vers)" >> $GITHUB_OUTPUT
-
-      - name: Set file base name
-        id: set-file-base
-        run: |
-          if [[ '${{ inputs.use_environ }}' == 'snapshots' ]]
-          then
-            FILE_NAME_BASE=$(echo "hdf5-${{ needs.check_commits.outputs.branch_ref }}-${{ needs.check_commits.outputs.branch_sha }}")
+          
+          echo "📦 Creating legacy release artifacts..."
+          
+          if [[ "${{ inputs.use_environ }}" == "snapshots" ]]; then
+            echo "🔄 Creating snapshot artifacts..."
+            bin/release -d $GITHUB_WORKSPACE --branch ${{ needs.check_commits.outputs.branch_ref }} --revision gzip zip
           else
-            if [[ '${{ inputs.use_tag }}' == 'snapshot' ]]
-            then
-              FILE_NAME_BASE=$(echo "snapshot")
-            else
-              FILE_NAME_BASE=$(echo "hdf5-${{ steps.version.outputs.SOURCE_TAG }}")
+            echo "🎁 Creating release artifacts..."
+            bin/release -d $GITHUB_WORKSPACE gzip zip
+            
+            # Copy to non-versioned names for legacy compatibility
+            cd $GITHUB_WORKSPACE
+            if [[ -f "hdf5-${{ steps.version.outputs.SOURCE_TAG }}.tar.gz" ]]; then
+              cp "hdf5-${{ steps.version.outputs.SOURCE_TAG }}.tar.gz" hdf5.tar.gz
+              cp "hdf5-${{ steps.version.outputs.SOURCE_TAG }}.zip" hdf5.zip
+              echo "✅ Legacy copies created"
+            fi
+            
+            # Handle snapshot tag rename
+            if [[ "${{ inputs.use_tag }}" == "snapshot" ]]; then
+              mv "hdf5-${{ steps.version.outputs.SOURCE_TAG }}.tar.gz" "${{ inputs.use_tag }}.tar.gz" || true
+              mv "hdf5-${{ steps.version.outputs.SOURCE_TAG }}.zip" "${{ inputs.use_tag }}.zip" || true
+              echo "✅ Snapshot files renamed"
             fi
           fi
-          echo "FILE_BASE=$FILE_NAME_BASE" >> $GITHUB_OUTPUT
-        shell: bash
+          
+          echo "📁 Repository contents:"
+          ls -la $GITHUB_WORKSPACE
 
-      - name: Create snapshot file base name
-        id: create-file-base
-        if: ${{ (inputs.use_environ == 'snapshots') }}
-        run: |
-          cd "$GITHUB_WORKSPACE/hdfsrc"
-          bin/release -d $GITHUB_WORKSPACE --branch ${{ needs.check_commits.outputs.branch_ref }} --revision gzip zip
-        shell: bash
-
-      - name: Create release file base name
-        id: create-rel-base
-        if: ${{ (inputs.use_environ == 'release') }}
-        run: |
-          cd "$GITHUB_WORKSPACE/hdfsrc"
-          bin/release -d $GITHUB_WORKSPACE gzip zip 
-        shell: bash
-
-      - name: Copy the release file source to a non-versioned file name
-        id: cp-to-non-versioned
-        if: ${{ (inputs.use_environ == 'release') }}
-        run: |
-          cp hdf5-${{ steps.version.outputs.SOURCE_TAG }}.tar.gz hdf5.tar.gz
-          cp hdf5-${{ steps.version.outputs.SOURCE_TAG }}.zip hdf5.zip
-        shell: bash
-
-      - name: Rename release file base name
-        id: ren-basename
-        if: ${{ (inputs.use_environ == 'release') && (inputs.use_tag  == 'snapshot') }}
-        run: |
-          mv hdf5-${{ steps.version.outputs.SOURCE_TAG }}.tar.gz ${{ inputs.use_tag }}.tar.gz
-          mv hdf5-${{ steps.version.outputs.SOURCE_TAG }}.zip ${{ inputs.use_tag }}.zip
-        shell: bash
-
-      - name: List files in the repository
-        run: |
-              ls -l ${{ github.workspace }}
-              ls $GITHUB_WORKSPACE
-
-      # Save files created by release script
-      - name: Save tgz-tarball
-        uses: actions/upload-artifact@v4
+      # Save files created by release script  
+      - name: Save Artifacts
+        uses: actions/upload-artifact@v4.4.3
         with:
-              name: tgz-tarball
-              path: ${{ steps.set-file-base.outputs.FILE_BASE }}.tar.gz
-              if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
+          name: release-tarballs
+          path: |
+            ${{ steps.set-file-base.outputs.FILE_BASE }}.tar.gz
+            ${{ steps.set-file-base.outputs.FILE_BASE }}.zip
+            hdf5.tar.gz
+            hdf5.zip
+            ${{ inputs.use_tag }}.tar.gz
+            ${{ inputs.use_tag }}.zip
+          if-no-files-found: ignore
 
-      - name: Save zip-tarball
-        uses: actions/upload-artifact@v4
+      - name: Save Documentation
+        uses: actions/upload-artifact@v4.4.3
         with:
-              name: zip-tarball
-              path: ${{ steps.set-file-base.outputs.FILE_BASE }}.zip
-              if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
-
-      - name: Save tgz-tarball-nover
-        if: ${{ (inputs.use_environ == 'release') }}
-        uses: actions/upload-artifact@v4
-        with:
-              name: tgz-tarball-nover
-              path: hdf5.tar.gz
-              if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
-
-      - name: Save zip-tarball-nover
-        if: ${{ (inputs.use_environ == 'release') }}
-        uses: actions/upload-artifact@v4
-        with:
-              name: zip-tarball-nover
-              path: hdf5.zip
-              if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
-
-      - name: Save NEWSLETTER
-        uses: actions/upload-artifact@v4
-        with:
-              name: NEWSLETTER
-              path: ./hdfsrc/release_docs/NEWSLETTER.txt
-              if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
+          name: documentation
+          path: |
+            ./hdfsrc/release_docs/NEWSLETTER.txt
+            ./hdfsrc/release_docs/INSTALL
+            ./hdfsrc/release_docs/CHANGELOG.md
+          if-no-files-found: ignore

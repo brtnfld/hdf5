@@ -24,38 +24,38 @@ permissions:
   contents: read
 
 jobs:
-  coverage_test_linux_GCC:
+  coverage-test-linux-gcc:
     name: Ubuntu GCC Coverage
     runs-on: ubuntu-22.04
     timeout-minutes: 90
-    
+
     steps:
       - name: Validate Inputs
         run: |
           set -euo pipefail
-          
+
           echo "🔍 Validating analysis workflow inputs..."
-          
+
           # Validate file_base
           if [[ ! "${{ inputs.file_base }}" =~ ^[a-zA-Z0-9._-]+$ ]]; then
             echo "❌ Invalid file_base: ${{ inputs.file_base }}"
             exit 1
           fi
-          
+
           # Validate use_environ
           if [[ ! "${{ inputs.use_environ }}" =~ ^(snapshots|release)$ ]]; then
             echo "❌ Invalid use_environ: ${{ inputs.use_environ }}"
             exit 1
           fi
-          
+
           echo "✅ Input validation passed"
           echo "  - file_base: ${{ inputs.file_base }}"
           echo "  - use_environ: ${{ inputs.use_environ }}"
-      
+
       - name: Install Dependencies (Linux Coverage)
         run: |
           set -euo pipefail
-          
+
           echo "📦 Installing Linux dependencies for coverage testing..."
           sudo apt-get update -qq
           sudo apt-get install -y \
@@ -75,53 +75,53 @@ jobs:
         id: set-file-base
         run: |
           set -euo pipefail
-          
+
           echo "📝 Setting file base name for coverage testing..."
-          
+
           FILE_NAME_BASE="${{ inputs.file_base }}"
-          
+
           # Validate file base
           if [[ -z "$FILE_NAME_BASE" ]]; then
             echo "❌ File base name is empty"
             exit 1
           fi
-          
+
           echo "FILE_BASE=$FILE_NAME_BASE" >> $GITHUB_OUTPUT
-          
+
           if [[ '${{ inputs.use_environ }}' == 'release' ]]; then
             SOURCE_NAME_BASE="${{ inputs.snap_name }}"
           else
             SOURCE_NAME_BASE="hdfsrc"
           fi
-          
+
           echo "SOURCE_BASE=$SOURCE_NAME_BASE" >> $GITHUB_OUTPUT
           echo "✅ File base: $FILE_NAME_BASE, Source base: $SOURCE_NAME_BASE"
 
-    # Get files created by release script
-    - name: Get tgz-tarball (Linux_coverage)
-      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-      with:
-        name: tgz-tarball
-        path: ${{ github.workspace }}
+      # Get files created by release script
+      - name: Get tgz-tarball (Linux Coverage)
+        uses: actions/download-artifact@v4.4.3
+        with:
+          name: tgz-tarball
+          path: ${{ github.workspace }}
 
-    - name: List files for the space (Linux_coverage)
-      run: |
+      - name: List files for the space (Linux Coverage)
+        run: |
         ls -l ${{ github.workspace }}
         ls ${{ runner.workspace }}
 
-    - name: Uncompress source (Linux_coverage)
-      run: tar -zxvf ${{ github.workspace }}/${{ steps.set-file-base.outputs.FILE_BASE }}.tar.gz
+      - name: Uncompress source (Linux Coverage)
+        run: tar -zxvf ${{ github.workspace }}/${{ steps.set-file-base.outputs.FILE_BASE }}.tar.gz
 
-    - name: Copy script files for the space (Linux_coverage)
-      run: |
+      - name: Copy script files for the space (Linux Coverage)
+        run: |
         cp ${{ github.workspace }}/${{ steps.set-file-base.outputs.SOURCE_BASE }}/config/cmake/scripts/CTestScript.cmake ${{ runner.workspace }}/hdf5
         cp ${{ github.workspace }}/${{ steps.set-file-base.outputs.SOURCE_BASE }}/config/cmake/scripts/HDF5config.cmake ${{ runner.workspace }}/hdf5
 
-    - name: List files for the hdf5 (Linux_coverage)
+      - name: List files for the hdf5 (Linux Coverage)
       run: |
         ls ${{ runner.workspace }}/hdf5
 
-    - name: Create options file (Linux_coverage)
+      - name: Create options file (Linux Coverage)
       uses: "DamianReeves/write-file-action@master"
       with:
         path: ${{ runner.workspace }}/hdf5/HDF5options.cmake
@@ -152,7 +152,7 @@ jobs:
             set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DHDF5_PACKAGE_EXTLIBS:BOOL=OFF")
             set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DHDF5_NO_PACKAGES:BOOL=ON")
 
-    - name: Run CTest (Linux_coverage)
+      - name: Run CTest (Linux Coverage)
       run: |
         cd "${{ runner.workspace }}/hdf5"
         ctest -S HDF5config.cmake,CTEST_SITE_EXT=${{ github.event.repository.full_name }}_COV,LOCAL_SUBMIT=ON,NINJA=TRUE,BUILD_GENERATOR=Unix,CTEST_SOURCE_NAME=${{ steps.set-file-base.outputs.SOURCE_BASE }} -C Debug -VV -O hdf5.log
@@ -160,14 +160,14 @@ jobs:
       continue-on-error: true
 
     # Save log files created by CTest script
-    - name: Save log (Linux_coverage)
+      - name: Save log (Linux Coverage)
       uses: actions/upload-artifact@v4
       with:
         name: clang-coverage-log
         path: ${{ runner.workspace }}/hdf5/hdf5.log
         if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
 
-  build_and_test_linux_LeakSanitizer:
+  build-and-test-linux-leak-sanitizer:
   # Linux (Ubuntu) w/ clang + LeakSanitizer
   #
     name: "Ubuntu Clang LeakSanitizer"
@@ -268,7 +268,7 @@ jobs:
           path: ${{ runner.workspace }}/hdf5/hdf5.log
           if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
 
-  build_and_test_linux_AddressSanitizer:
+  build-and-test-linux-address-sanitizer:
   # Linux (Ubuntu) w/ clang + AddressSanitizer
   #
     name: "Ubuntu Clang AddressSanitizer"
@@ -369,7 +369,7 @@ jobs:
           path: ${{ runner.workspace }}/hdf5/hdf5.log
           if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
 
-  build_and_test_linux_UndefinedBehaviorSanitizer:
+  build-and-test-linux-undefined-behavior-sanitizer:
   # Linux (Ubuntu) w/ clang + UndefinedBehaviorSanitizer
   #
     name: "Ubuntu Clang UndefinedBehaviorSanitizer"
