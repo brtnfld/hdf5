@@ -440,10 +440,10 @@ H5TBwrite_fields_name(hid_t loc_id, const char *dset_name, const char *field_nam
 
     /* Early validation: verify all field names exist in the table */
     {
-        char    *field_names_copy = NULL;
-        char    *field_name       = NULL;
-        char    *comma_pos        = NULL;
-        hbool_t  field_found      = FALSE;
+        char *field_names_copy = NULL;
+        char *field_name = NULL;
+        char *comma_pos = NULL;
+        hbool_t field_found = false;
         hssize_t total_fields;
         size_t   field_names_len;
 
@@ -487,12 +487,12 @@ H5TBwrite_fields_name(hid_t loc_id, const char *dset_name, const char *field_nam
             }
 
             /* Check if this field exists in the dataset */
-            field_found = FALSE;
+            field_found = false;
             for (hssize_t k = 0; k < total_fields; k++) {
                 char *table_field_name = H5Tget_member_name(tid, (unsigned)k);
                 if (table_field_name != NULL) {
                     if (strcmp(field_name, table_field_name) == 0) {
-                        field_found = TRUE;
+                        field_found = true;
                         H5free_memory(table_field_name);
                         break;
                     }
