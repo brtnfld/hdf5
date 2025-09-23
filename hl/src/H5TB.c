@@ -440,10 +440,10 @@ H5TBwrite_fields_name(hid_t loc_id, const char *dset_name, const char *field_nam
 
     /* Early validation: verify all field names exist in the table */
     {
-        char *field_names_copy = NULL;
-        char *field_name = NULL;
-        char *comma_pos = NULL;
-        hbool_t field_found = false;
+        char    *field_names_copy = NULL;
+        char    *field_name       = NULL;
+        char    *comma_pos        = NULL;
+        hbool_t  field_found      = false;
         hssize_t total_fields;
         size_t   field_names_len;
 
