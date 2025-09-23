@@ -1489,6 +1489,71 @@ test_table(hid_t fid, int do_write)
     PASSED();
 
     /*-------------------------------------------------------------------------
+     *
+     * Test invalid field name handling in H5TBwrite_fields_name
+     *
+     *-------------------------------------------------------------------------
+     */
+    if (do_write) {
+        HL_TESTING2("invalid field name handling");
+
+        /* Test with completely invalid field name */
+        {
+            float invalid_data = 99.9f;
+            size_t field_offset_invalid = 0;
+            size_t field_sizes_invalid = sizeof(float);
+            
+            /* This should fail gracefully - not segfault */
+            H5E_BEGIN_TRY {
+                if (H5TBwrite_fields_name(fid, "table1", "InvalidFieldName", 0, 1, sizeof(float), 
+                                        &field_offset_invalid, &field_sizes_invalid, &invalid_data) >= 0) {
+                    /* Should have failed */
+                    goto out;
+                }
+            } H5E_END_TRY;
+        }
+
+        /* Test with mixed valid and invalid field names */
+        {
+            typedef struct {
+                float pressure;
+                long  invalid_field;
+            } mixed_test_t;
+            
+            mixed_test_t mixed_data = {123.45f, 999L};
+            size_t field_offset_mixed[2] = {HOFFSET(mixed_test_t, pressure), HOFFSET(mixed_test_t, invalid_field)};
+            size_t field_sizes_mixed[2] = {sizeof(float), sizeof(long)};
+            
+            /* This should fail gracefully - "InvalidField" doesn't exist */
+            H5E_BEGIN_TRY {
+                if (H5TBwrite_fields_name(fid, "table1", "Pressure,InvalidField", 0, 1, sizeof(mixed_test_t), 
+                                        field_offset_mixed, field_sizes_mixed, &mixed_data) >= 0) {
+                    /* Should have failed */
+                    goto out;
+                }
+            } H5E_END_TRY;
+        }
+
+        /* Test with empty field name */
+        {
+            float empty_data = 11.1f;
+            size_t field_offset_empty = 0;
+            size_t field_sizes_empty = sizeof(float);
+            
+            /* This should fail gracefully */
+            H5E_BEGIN_TRY {
+                if (H5TBwrite_fields_name(fid, "table1", "", 0, 1, sizeof(float), 
+                                        &field_offset_empty, &field_sizes_empty, &empty_data) >= 0) {
+                    /* Should have failed */
+                    goto out;
+                }
+            } H5E_END_TRY;
+        }
+
+        PASSED();
+    }
+
+    /*-------------------------------------------------------------------------
      * end
      *-------------------------------------------------------------------------
      */

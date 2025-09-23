@@ -438,6 +438,84 @@ H5TBwrite_fields_name(hid_t loc_id, const char *dset_name, const char *field_nam
     if ((tid = H5Dget_type(did)) < 0)
         goto out;
 
+    /* Early validation: verify all field names exist in the table */
+    {
+        char *field_names_copy = NULL;
+        char *field_name = NULL;
+        char *comma_pos = NULL;
+        hbool_t field_found = FALSE;
+        hssize_t total_fields;
+        size_t field_names_len;
+
+        /* Get number of fields for bounds checking */
+        if ((total_fields = H5Tget_nmembers(tid)) < 0)
+            goto out;
+
+        /* Make a copy of field_names for parsing */
+        field_names_len = strlen(field_names);
+        if (NULL == (field_names_copy = (char *)H5MM_malloc(field_names_len + 1)))
+            goto out;
+        strcpy(field_names_copy, field_names);
+
+        /* Parse comma-separated field names and validate each one */
+        field_name = field_names_copy;
+        while (field_name != NULL) {
+            /* Find the next comma or end of string */
+            comma_pos = strchr(field_name, ',');
+            if (comma_pos != NULL)
+                *comma_pos = '\0';
+
+            /* Trim leading whitespace */
+            while (*field_name == ' ' || *field_name == '\t')
+                field_name++;
+
+            /* Remove trailing whitespace */
+            if (strlen(field_name) > 0) {
+                char *end = field_name + strlen(field_name) - 1;
+                while (end > field_name && (*end == ' ' || *end == '\t'))
+                    *end-- = '\0';
+            }
+
+            /* Skip empty field names */
+            if (strlen(field_name) == 0) {
+                /* Move to next field */
+                if (comma_pos != NULL)
+                    field_name = comma_pos + 1;
+                else
+                    field_name = NULL;
+                continue;
+            }
+
+            /* Check if this field exists in the dataset */
+            field_found = FALSE;
+            for (hssize_t k = 0; k < total_fields; k++) {
+                char *table_field_name = H5Tget_member_name(tid, (unsigned)k);
+                if (table_field_name != NULL) {
+                    if (strcmp(field_name, table_field_name) == 0) {
+                        field_found = TRUE;
+                        H5free_memory(table_field_name);
+                        break;
+                    }
+                    H5free_memory(table_field_name);
+                }
+            }
+
+            if (!field_found) {
+                /* Field not found - this is an error */
+                H5MM_free(field_names_copy);
+                goto out;
+            }
+
+            /* Move to next field */
+            if (comma_pos != NULL)
+                field_name = comma_pos + 1;
+            else
+                field_name = NULL;
+        }
+
+        H5MM_free(field_names_copy);
+    }
+
     /* get the number of fields */
     if ((nfields = H5Tget_nmembers(tid)) < 0)
         goto out;
