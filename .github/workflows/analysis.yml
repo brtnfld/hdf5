@@ -106,8 +106,8 @@ jobs:
 
       - name: List files for the space (Linux Coverage)
         run: |
-        ls -l ${{ github.workspace }}
-        ls ${{ runner.workspace }}
+          ls -l ${{ github.workspace }}
+          ls ${{ runner.workspace }}
 
       - name: Uncompress source (Linux Coverage)
         run: tar -zxvf ${{ github.workspace }}/${{ steps.set-file-base.outputs.FILE_BASE }}.tar.gz

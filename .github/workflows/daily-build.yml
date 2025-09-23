@@ -144,8 +144,8 @@ jobs:
     uses: ./.github/workflows/tarball.yml
     with:
       use_ignore: ${{ needs.initialize.outputs.run-ignore }}
-      use_tag: ${{ env.USE_TAG }}
-      use_environ: ${{ env.USE_ENVIRON }}
+      use_tag: snapshot
+      use_environ: snapshots
 
   # Build AWS C S3 library dependency
   call-aws-c-s3-build:
@@ -153,10 +153,10 @@ jobs:
     needs: [initialize, call-workflow-tarball]
     uses: ./.github/workflows/vfd-ros3.yml
     with:
-      build_mode: ${{ env.BUILD_MODE }}
+      build_mode: Release
       build_aws_c_s3_only: true
       aws_c_s3_build_type: source
-      aws_c_s3_tag: ${{ env.AWS_C_S3_VERSION }}
+      aws_c_s3_tag: v0.8.0
     if: ${{ needs.initialize.outputs.should-run == 'true' || (needs.call-workflow-tarball.outputs.has_changes == 'true') }}
 
   # Cross-platform testing workflows
@@ -166,7 +166,7 @@ jobs:
     uses: ./.github/workflows/cygwin.yml
     with:
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
-      use_environ: ${{ env.USE_ENVIRON }}
+      use_environ: snapshots
     if: ${{ needs.initialize.outputs.should-run == 'true' || (needs.call-workflow-tarball.outputs.has_changes == 'true') }}
 
   call-workflow-c-script:
@@ -174,9 +174,9 @@ jobs:
     needs: [initialize, call-workflow-tarball, call-aws-c-s3-build]
     uses: ./.github/workflows/script.yml
     with:
-      cmake_version: ${{ env.CMAKE_VERSION }}
+      cmake_version: latest
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
-      use_environ: ${{ env.USE_ENVIRON }}
+      use_environ: snapshots
     if: ${{ needs.initialize.outputs.should-run == 'true' || (needs.call-workflow-tarball.outputs.has_changes == 'true') }}
 
   call-workflow-par-script:
@@ -184,10 +184,10 @@ jobs:
     needs: [initialize, call-workflow-tarball]
     uses: ./.github/workflows/par-script.yml
     with:
-      cmake_version: ${{ env.CMAKE_VERSION }}
+      cmake_version: latest
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
-      use_environ: ${{ env.USE_ENVIRON }}
-      build_mode: ${{ env.BUILD_MODE }}
+      use_environ: snapshots
+      build_mode: Release
     if: ${{ needs.initialize.outputs.should-run == 'true' || (needs.call-workflow-tarball.outputs.has_changes == 'true') }}
 
   call-workflow-par-source:
@@ -195,10 +195,10 @@ jobs:
     needs: [initialize, call-workflow-tarball]
     uses: ./.github/workflows/par-source.yml
     with:
-      cmake_version: ${{ env.CMAKE_VERSION }}
+      cmake_version: latest
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
-      use_environ: ${{ env.USE_ENVIRON }}
-      build_mode: ${{ env.BUILD_MODE }}
+      use_environ: snapshots
+      build_mode: Release
     if: ${{ needs.initialize.outputs.should-run == 'true' || (needs.call-workflow-tarball.outputs.has_changes == 'true') }}
 
   call-developer-cmake:
@@ -215,7 +215,7 @@ jobs:
     uses: ./.github/workflows/analysis.yml
     with:
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
-      use_environ: ${{ env.USE_ENVIRON }}
+      use_environ: snapshots
     if: ${{ needs.initialize.outputs.should-run == 'true' || (needs.call-workflow-tarball.outputs.has_changes == 'true') }}
 
   # Main cross-platform CTest suite
@@ -224,10 +224,10 @@ jobs:
     needs: [initialize, call-workflow-tarball, call-aws-c-s3-build]
     uses: ./.github/workflows/ctest.yml
     with:
-      cmake_version: ${{ env.CMAKE_VERSION }}
+      cmake_version: latest
       preset_name: ci-StdShar
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
-      use_environ: ${{ env.USE_ENVIRON }}
+      use_environ: snapshots
     secrets:
       APPLE_CERTS_BASE64: ${{ secrets.APPLE_CERTS_BASE64 }}
       APPLE_CERTS_BASE64_PASSWD: ${{ secrets.APPLE_CERTS_BASE64_PASSWD }}
@@ -246,10 +246,10 @@ jobs:
     needs: [initialize, call-workflow-tarball, call-workflow-ctest]
     uses: ./.github/workflows/abi-report.yml
     with:
-      file_ref: ${{ env.ABI_REFERENCE_VERSION }}
+      file_ref: 1.14.5
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
-      use_tag: ${{ env.USE_TAG }}
-      use_environ: ${{ env.USE_ENVIRON }}
+      use_tag: snapshot
+      use_environ: snapshots
     if: ${{ needs.initialize.outputs.should-run == 'true' || (needs.call-workflow-tarball.outputs.has_changes == 'true') }}
 
   # Create and publish release files
@@ -263,8 +263,8 @@ jobs:
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
       file_branch: ${{ needs.call-workflow-tarball.outputs.file_branch }}
       file_sha: ${{ needs.call-workflow-tarball.outputs.file_sha }}
-      use_tag: ${{ env.USE_TAG }}
-      use_environ: ${{ env.USE_ENVIRON }}
+      use_tag: snapshot
+      use_environ: snapshots
     if: ${{ needs.initialize.outputs.should-run == 'true' || (needs.call-workflow-tarball.outputs.has_changes == 'true') }}
 
   # Clean up old release files
@@ -276,8 +276,8 @@ jobs:
     uses: ./.github/workflows/remove-files.yml
     with:
       file_base: ${{ needs.initialize.outputs.hdf5-name }}
-      use_tag: ${{ env.USE_TAG }}
-      use_environ: ${{ env.USE_ENVIRON }}
+      use_tag: snapshot
+      use_environ: snapshots
     # Only remove old files if we have a new release and it's different from baseline
     if: |
       (needs.initialize.outputs.should-run == 'true' || needs.call-workflow-tarball.outputs.has_changes == 'true') && 
@@ -299,7 +299,7 @@ jobs:
           echo "🎉 HDF5 Daily Build Pipeline Summary" >> $GITHUB_STEP_SUMMARY
           echo "======================================" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🏷️  **Tag**: ${{ env.USE_TAG }}" >> $GITHUB_STEP_SUMMARY
+          echo "🏷️  **Tag**: snapshot" >> $GITHUB_STEP_SUMMARY
           echo "📁 **File Base**: ${{ needs.call-workflow-tarball.outputs.file_base || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
           echo "🔄 **Has Changes**: ${{ needs.call-workflow-tarball.outputs.has_changes || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
           echo "⚙️  **Force Build**: ${{ inputs.force_build }}" >> $GITHUB_STEP_SUMMARY
