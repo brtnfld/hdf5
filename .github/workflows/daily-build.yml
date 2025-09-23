@@ -1,22 +1,34 @@
 name: hdf5 dev daily build
 
-# Triggers the workflow on demand or on a call from another workflow
-# NOTE: inputs must be duplicated between triggers
+# Orchestrates comprehensive daily CI pipeline for HDF5 development
+# Includes: source packaging, cross-platform testing, analysis, and release management
 on:
   workflow_dispatch:
     inputs:
       use_ignore:
-        description: 'Ignore has_changes check'
-        type: string
+        description: 'Ignore has_changes check (check/ignore)'
+        type: choice
+        options:
+          - check
+          - ignore
         required: false
         default: check
+      force_build:
+        description: 'Force build even without changes'
+        type: boolean
+        default: false
   workflow_call:
     inputs:
       use_ignore:
-        description: 'Ignore has_changes check'
+        description: 'Ignore has_changes check (check/ignore)'
         type: string
         required: false
         default: check
+      force_build:
+        description: 'Force build even without changes'
+        type: boolean
+        required: false
+        default: false
     outputs:
       has_changes:
         description: "Whether there were changes the previous day"
@@ -28,163 +40,285 @@ on:
 permissions:
   contents: read
 
+# Global environment variables for consistency
+env:
+  CMAKE_VERSION: "latest"
+  BUILD_MODE: "Release"
+  USE_ENVIRON: "snapshots"
+  USE_TAG: "snapshot"
+  AWS_C_S3_VERSION: "v0.8.0"
+  ABI_REFERENCE_VERSION: "1.14.5"
+
 jobs:
-  get-old-names:
+  # Initialize pipeline and determine if builds should proceed
+  initialize:
+    name: Initialize Pipeline
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
-      hdf5-name: ${{ steps.gethdf5base.outputs.HDF5_NAME_BASE }}
-      run-ignore: ${{ steps.getinputs.outputs.INPUTS_IGNORE }}
-
+      hdf5-name: ${{ steps.get-baseline.outputs.HDF5_NAME_BASE }}
+      run-ignore: ${{ steps.validate-inputs.outputs.VALIDATED_IGNORE }}
+      should-run: ${{ steps.determine-execution.outputs.SHOULD_RUN }}
+    
     steps:
-    - uses: actions/checkout@v4.1.7
+      - name: Validate Inputs
+        id: validate-inputs
+        run: |
+          set -euo pipefail
+          
+          echo "Validating pipeline inputs..."
+          
+          # Validate use_ignore parameter
+          if [[ "${{ inputs.use_ignore }}" =~ ^(check|ignore)$ ]]; then
+            echo "VALIDATED_IGNORE=${{ inputs.use_ignore }}" >> $GITHUB_OUTPUT
+            echo "✅ use_ignore validation passed: ${{ inputs.use_ignore }}"
+          else
+            echo "❌ Invalid use_ignore value. Must be 'check' or 'ignore'"
+            exit 1
+          fi
+          
+          echo "🎯 Force build: ${{ inputs.force_build }}"
+      
+      - name: Checkout Repository
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 1  # Shallow clone for initialization
+      
+      # Get baseline version for cleanup operations
+      - name: Get Baseline Release Name
+        id: get-baseline
+        run: |
+          set -euo pipefail
+          
+          echo "📥 Fetching current baseline release name..."
+          
+          # Use GitHub CLI to get release info more reliably
+          if command -v gh &> /dev/null; then
+            BASELINE_NAME=$(gh release view snapshot --json name --jq '.name' 2>/dev/null || echo "hdf5-snapshot")
+          else
+            # Fallback: try to download last-file.txt
+            curl -fsSL "https://github.com/HDFGroup/hdf5/releases/download/snapshot/last-file.txt" \
+              -o last-file.txt || echo "hdf5-snapshot" > last-file.txt
+            BASELINE_NAME=$(cat last-file.txt)
+          fi
+          
+          # Validate and sanitize the baseline name
+          if [[ "$BASELINE_NAME" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+            echo "HDF5_NAME_BASE=$BASELINE_NAME" >> $GITHUB_OUTPUT
+            echo "✅ Baseline name: $BASELINE_NAME"
+          else
+            echo "⚠️  Invalid baseline name, using default"
+            echo "HDF5_NAME_BASE=hdf5-snapshot" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+      
+      - name: Determine Execution Strategy
+        id: determine-execution
+        run: |
+          set -euo pipefail
+          
+          echo "🔍 Determining execution strategy..."
+          
+          SHOULD_RUN="true"
+          
+          # Force execution conditions
+          if [[ "${{ inputs.force_build }}" == "true" ]]; then
+            echo "🚀 Force build enabled - execution will proceed"
+            SHOULD_RUN="true"
+          elif [[ "${{ inputs.use_ignore }}" == "ignore" ]]; then
+            echo "⏭️  Change detection ignored - execution will proceed"
+            SHOULD_RUN="true"
+          else
+            echo "📅 Will check for changes in next job"
+            SHOULD_RUN="conditional"
+          fi
+          
+          echo "SHOULD_RUN=$SHOULD_RUN" >> $GITHUB_OUTPUT
+          echo "✅ Execution strategy: $SHOULD_RUN"
 
-    - name: Get hdf5 release base name
-      uses: dsaltares/fetch-gh-release-asset@master
-      with:
-        version: 'tags/snapshot'
-        file: 'last-file.txt'
-      continue-on-error: true
-
-    - name: Read base-name file
-      id: gethdf5base
-      run: echo "HDF5_NAME_BASE=$(cat last-file.txt)" >> $GITHUB_OUTPUT
-
-    - run: echo "hdf5 base name is ${{ steps.gethdf5base.outputs.HDF5_NAME_BASE }}."
-
-    - name: Read inputs
-      id: getinputs
-      run: |
-        echo "INPUTS_IGNORE=${{ inputs.use_ignore }}" >> $GITHUB_OUTPUT
-
-    - run: echo "use_ignore is ${{ steps.getinputs.outputs.INPUTS_IGNORE }}."
-
+  # Create source tarballs and determine if builds should proceed
   call-workflow-tarball:
-    needs: [get-old-names]
+    name: Create Source Tarballs
+    needs: [initialize]
     uses: ./.github/workflows/tarball.yml
     with:
-      use_ignore: ${{ needs.get-old-names.outputs.run-ignore }}
-      use_tag: snapshot
-      use_environ: snapshots
+      use_ignore: ${{ needs.initialize.outputs.run-ignore }}
+      use_tag: ${{ env.USE_TAG }}
+      use_environ: ${{ env.USE_ENVIRON }}
 
+  # Build AWS C S3 library dependency
   call-aws-c-s3-build:
-    needs: call-workflow-tarball
-    name: "Build aws-c-s3 library"
+    name: Build AWS C S3 Library
+    needs: [initialize, call-workflow-tarball]
     uses: ./.github/workflows/vfd-ros3.yml
     with:
-      build_mode: "Release"
+      build_mode: ${{ env.BUILD_MODE }}
       build_aws_c_s3_only: true
-      aws_c_s3_build_type: "source"
-      # Use latest release for building from source on Ubuntu
-      # until a package is available to install 
-      aws_c_s3_tag: "v0.8.0"
-    if: ${{ ((needs.call-workflow-tarball.outputs.has_changes == 'true') || (needs.get-old-names.outputs.run-ignore == 'ignore')) }}
+      aws_c_s3_build_type: source
+      aws_c_s3_tag: ${{ env.AWS_C_S3_VERSION }}
+    if: ${{ needs.initialize.outputs.should-run == 'true' || (needs.call-workflow-tarball.outputs.has_changes == 'true') }}
 
+  # Cross-platform testing workflows
   call-release-cmake-cygwin:
-    needs: [get-old-names, call-workflow-tarball]
-    name: "Cygwin Workflows"
+    name: Cygwin Platform Tests
+    needs: [initialize, call-workflow-tarball]
     uses: ./.github/workflows/cygwin.yml
     with:
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
-      use_environ: snapshots
-    if: ${{ ((needs.call-workflow-tarball.outputs.has_changes == 'true') || (needs.get-old-names.outputs.run-ignore == 'ignore')) }}
+      use_environ: ${{ env.USE_ENVIRON }}
+    if: ${{ needs.initialize.outputs.should-run == 'true' || (needs.call-workflow-tarball.outputs.has_changes == 'true') }}
 
   call-workflow-c-script:
-    needs: [get-old-names, call-workflow-tarball, call-aws-c-s3-build]
+    name: CTest Script Tests
+    needs: [initialize, call-workflow-tarball, call-aws-c-s3-build]
     uses: ./.github/workflows/script.yml
     with:
-      cmake_version: "latest"
+      cmake_version: ${{ env.CMAKE_VERSION }}
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
-      use_environ: snapshots
-    if: ${{ ((needs.call-workflow-tarball.outputs.has_changes == 'true') || (needs.get-old-names.outputs.run-ignore == 'ignore')) }}
+      use_environ: ${{ env.USE_ENVIRON }}
+    if: ${{ needs.initialize.outputs.should-run == 'true' || (needs.call-workflow-tarball.outputs.has_changes == 'true') }}
 
   call-workflow-par-script:
-    needs: [get-old-names, call-workflow-tarball]
+    name: Parallel Script Tests
+    needs: [initialize, call-workflow-tarball]
     uses: ./.github/workflows/par-script.yml
     with:
-      cmake_version: "latest"
+      cmake_version: ${{ env.CMAKE_VERSION }}
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
-      use_environ: snapshots
-      build_mode: "Release"
-    if: ${{ ((needs.call-workflow-tarball.outputs.has_changes == 'true') || (needs.get-old-names.outputs.run-ignore == 'ignore')) }}
+      use_environ: ${{ env.USE_ENVIRON }}
+      build_mode: ${{ env.BUILD_MODE }}
+    if: ${{ needs.initialize.outputs.should-run == 'true' || (needs.call-workflow-tarball.outputs.has_changes == 'true') }}
 
   call-workflow-par-source:
-    needs: [get-old-names, call-workflow-tarball]
+    name: Parallel Source Tests
+    needs: [initialize, call-workflow-tarball]
     uses: ./.github/workflows/par-source.yml
     with:
-      cmake_version: "latest"
+      cmake_version: ${{ env.CMAKE_VERSION }}
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
-      use_environ: snapshots
-      build_mode: "Release"
-    if: ${{ ((needs.call-workflow-tarball.outputs.has_changes == 'true') || (needs.get-old-names.outputs.run-ignore == 'ignore')) }}
+      use_environ: ${{ env.USE_ENVIRON }}
+      build_mode: ${{ env.BUILD_MODE }}
+    if: ${{ needs.initialize.outputs.should-run == 'true' || (needs.call-workflow-tarball.outputs.has_changes == 'true') }}
 
   call-developer-cmake:
-    needs: [get-old-names, call-workflow-tarball]
-    name: "Developer Workflows"
+    name: Developer Configuration Tests
+    needs: [initialize, call-workflow-tarball]
     uses: ./.github/workflows/dev.yml
     with:
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
-    if: ${{ ((needs.call-workflow-tarball.outputs.has_changes == 'true') || (needs.get-old-names.outputs.run-ignore == 'ignore')) }}
+    if: ${{ needs.initialize.outputs.should-run == 'true' || (needs.call-workflow-tarball.outputs.has_changes == 'true') }}
 
   call-workflow-sanitizers:
-    needs: [get-old-names, call-workflow-tarball]
+    name: Sanitizer and Analysis Tests
+    needs: [initialize, call-workflow-tarball]
     uses: ./.github/workflows/analysis.yml
     with:
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
-      use_environ: snapshots
-    if: ${{ ((needs.call-workflow-tarball.outputs.has_changes == 'true') || (needs.get-old-names.outputs.run-ignore == 'ignore')) }}
+      use_environ: ${{ env.USE_ENVIRON }}
+    if: ${{ needs.initialize.outputs.should-run == 'true' || (needs.call-workflow-tarball.outputs.has_changes == 'true') }}
 
+  # Main cross-platform CTest suite
   call-workflow-ctest:
-    needs: [get-old-names, call-workflow-tarball, call-aws-c-s3-build]
+    name: Cross-Platform CTest Suite
+    needs: [initialize, call-workflow-tarball, call-aws-c-s3-build]
     uses: ./.github/workflows/ctest.yml
     with:
-      cmake_version: 'latest'
+      cmake_version: ${{ env.CMAKE_VERSION }}
       preset_name: ci-StdShar
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
-#      use_tag: snapshot
-      use_environ: snapshots
+      use_environ: ${{ env.USE_ENVIRON }}
     secrets:
-        APPLE_CERTS_BASE64: ${{ secrets.APPLE_CERTS_BASE64 }}
-        APPLE_CERTS_BASE64_PASSWD: ${{ secrets.APPLE_CERTS_BASE64_PASSWD }}
-        KEYCHAIN_PASSWD: ${{ secrets.KEYCHAIN_PASSWD }}
-        AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-        AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-        AZURE_ENDPOINT: ${{ secrets.AZURE_ENDPOINT }}
-        AZURE_CODE_SIGNING_NAME: ${{ secrets.AZURE_CODE_SIGNING_NAME }}
-        AZURE_CERT_PROFILE_NAME: ${{ secrets.AZURE_CERT_PROFILE_NAME }}
-    if: ${{ ((needs.call-workflow-tarball.outputs.has_changes == 'true') || (needs.get-old-names.outputs.run-ignore == 'ignore')) }}
+      APPLE_CERTS_BASE64: ${{ secrets.APPLE_CERTS_BASE64 }}
+      APPLE_CERTS_BASE64_PASSWD: ${{ secrets.APPLE_CERTS_BASE64_PASSWD }}
+      KEYCHAIN_PASSWD: ${{ secrets.KEYCHAIN_PASSWD }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_ENDPOINT: ${{ secrets.AZURE_ENDPOINT }}
+      AZURE_CODE_SIGNING_NAME: ${{ secrets.AZURE_CODE_SIGNING_NAME }}
+      AZURE_CERT_PROFILE_NAME: ${{ secrets.AZURE_CERT_PROFILE_NAME }}
+    if: ${{ needs.initialize.outputs.should-run == 'true' || (needs.call-workflow-tarball.outputs.has_changes == 'true') }}
 
+  # Generate ABI compatibility reports
   call-workflow-abi:
-    needs: [get-old-names, call-workflow-tarball, call-workflow-ctest]
+    name: ABI Compatibility Analysis
+    needs: [initialize, call-workflow-tarball, call-workflow-ctest]
     uses: ./.github/workflows/abi-report.yml
     with:
-      file_ref: '1.14.5'
+      file_ref: ${{ env.ABI_REFERENCE_VERSION }}
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
-      use_tag: snapshot
-      use_environ: snapshots
-    if: ${{ ((needs.call-workflow-tarball.outputs.has_changes == 'true') || (needs.get-old-names.outputs.run-ignore == 'ignore')) }}
+      use_tag: ${{ env.USE_TAG }}
+      use_environ: ${{ env.USE_ENVIRON }}
+    if: ${{ needs.initialize.outputs.should-run == 'true' || (needs.call-workflow-tarball.outputs.has_changes == 'true') }}
 
+  # Create and publish release files
   call-workflow-release:
-    needs: [get-old-names, call-workflow-tarball, call-workflow-ctest, call-workflow-abi]
+    name: Create Release Files
+    needs: [initialize, call-workflow-tarball, call-workflow-ctest, call-workflow-abi]
     permissions:
-      contents: write # In order to allow tag creation
+      contents: write # Required for release creation
     uses: ./.github/workflows/release-files.yml
     with:
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
       file_branch: ${{ needs.call-workflow-tarball.outputs.file_branch }}
       file_sha: ${{ needs.call-workflow-tarball.outputs.file_sha }}
-      use_tag: snapshot
-      use_environ: snapshots
-    if: ${{ ((needs.call-workflow-tarball.outputs.has_changes == 'true') || (needs.get-old-names.outputs.run-ignore == 'ignore')) }}
+      use_tag: ${{ env.USE_TAG }}
+      use_environ: ${{ env.USE_ENVIRON }}
+    if: ${{ needs.initialize.outputs.should-run == 'true' || (needs.call-workflow-tarball.outputs.has_changes == 'true') }}
 
+  # Clean up old release files
   call-workflow-remove:
-    needs: [get-old-names, call-workflow-tarball, call-workflow-ctest, call-workflow-abi, call-workflow-release]
+    name: Remove Old Release Files
+    needs: [initialize, call-workflow-tarball, call-workflow-ctest, call-workflow-abi, call-workflow-release]
     permissions:
-      contents: write # In order to allow file deletion
+      contents: write # Required for file deletion
     uses: ./.github/workflows/remove-files.yml
     with:
-      file_base: ${{ needs.get-old-names.outputs.hdf5-name }}
-      use_tag: snapshot
-      use_environ: snapshots
-    if: ${{ ((needs.call-workflow-tarball.outputs.has_changes == 'true') || (needs.get-old-names.outputs.run-ignore == 'ignore')) && (needs.get-old-names.outputs.hdf5-name != needs.call-workflow-tarball.outputs.file_base) }}
+      file_base: ${{ needs.initialize.outputs.hdf5-name }}
+      use_tag: ${{ env.USE_TAG }}
+      use_environ: ${{ env.USE_ENVIRON }}
+    # Only remove old files if we have a new release and it's different from baseline
+    if: |
+      (needs.initialize.outputs.should-run == 'true' || needs.call-workflow-tarball.outputs.has_changes == 'true') && 
+      (needs.initialize.outputs.hdf5-name != needs.call-workflow-tarball.outputs.file_base)
+
+  # Pipeline completion summary
+  pipeline-summary:
+    name: Pipeline Summary
+    runs-on: ubuntu-latest
+    needs: [initialize, call-workflow-tarball, call-workflow-release]
+    if: always()
+    timeout-minutes: 5
+    
+    steps:
+      - name: Generate Pipeline Summary
+        run: |
+          set -euo pipefail
+          
+          echo "🎉 HDF5 Daily Build Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "======================================" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🏷️  **Tag**: ${{ env.USE_TAG }}" >> $GITHUB_STEP_SUMMARY
+          echo "📁 **File Base**: ${{ needs.call-workflow-tarball.outputs.file_base || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
+          echo "🔄 **Has Changes**: ${{ needs.call-workflow-tarball.outputs.has_changes || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
+          echo "⚙️  **Force Build**: ${{ inputs.force_build }}" >> $GITHUB_STEP_SUMMARY
+          echo "🔍 **Change Detection**: ${{ inputs.use_ignore }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Job status summary
+          echo "## Job Status" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Initialize | ${{ needs.initialize.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Create Tarballs | ${{ needs.call-workflow-tarball.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Create Release | ${{ needs.call-workflow-release.result }} |" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.call-workflow-tarball.result }}" == "success" && "${{ needs.call-workflow-release.result }}" == "success" ]]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ **Pipeline completed successfully!**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "❌ **Pipeline completed with issues. Check job logs for details.**" >> $GITHUB_STEP_SUMMARY
+          fi
 

@@ -1,11 +1,12 @@
 name: hdf5 dev tarball
 
-# Triggers the workflow on a call from another workflow
+# Creates source tarballs for HDF5 development builds
+# Includes change detection and source packaging
 on:
   workflow_call:
     inputs:
       use_ignore:
-        description: 'Ignore has_changes check'
+        description: 'Ignore has_changes check (check/ignore)'
         type: string
         required: false
         default: check
@@ -15,7 +16,7 @@ on:
         required: false
         default: snapshot
       use_environ:
-        description: 'Environment to locate files'
+        description: 'Environment to locate files (snapshots/release)'
         type: string
         required: true
         default: snapshots
@@ -41,63 +42,306 @@ permissions:
 
 jobs:
   check_commits:
-    name: Check for recent commits
+    name: Check for Recent Commits
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       has_changes: ${{ steps.check-new-commits.outputs.has-new-commits }}
       branch_ref: ${{ steps.get-branch-name.outputs.BRANCH_REF }}
       branch_sha: ${{ steps.get-branch-sha.outputs.BRANCH_SHA }}
+    
     steps:
-    - uses: actions/checkout@v4
+      - name: Validate Inputs
+        run: |
+          set -euo pipefail
+          
+          echo "🔍 Validating tarball workflow inputs..."
+          
+          # Validate use_ignore
+          if [[ ! "${{ inputs.use_ignore }}" =~ ^(check|ignore)$ ]]; then
+            echo "❌ Invalid use_ignore: ${{ inputs.use_ignore }}. Must be 'check' or 'ignore'"
+            exit 1
+          fi
+          
+          # Validate use_environ
+          if [[ ! "${{ inputs.use_environ }}" =~ ^(snapshots|release)$ ]]; then
+            echo "❌ Invalid use_environ: ${{ inputs.use_environ }}. Must be 'snapshots' or 'release'"
+            exit 1
+          fi
+          
+          # Validate use_tag format
+          if [[ ! "${{ inputs.use_tag }}" =~ ^(snapshot|hdf5[_-][0-9]+[._][0-9]+[._][0-9]+([._][0-9]+)?(-.*)?|[a-zA-Z0-9._-]+)$ ]]; then
+            echo "❌ Invalid use_tag format: ${{ inputs.use_tag }}"
+            exit 1
+          fi
+          
+          echo "✅ Input validation passed"
+          echo "  - use_ignore: ${{ inputs.use_ignore }}"
+          echo "  - use_environ: ${{ inputs.use_environ }}"
+          echo "  - use_tag: ${{ inputs.use_tag }}"
 
-    - name: Get branch name
-      id: get-branch-name
-      env:
-        GITHUB_REF: ${{ github.ref }}
-        GITHUB_REF_NAME: ${{ github.ref_name }}
-        GITHUB_HEAD_REF: ${{ github.head_ref }}
-      #run: echo "${{ env.GITHUB_REF_NAME }} | grep -P '[0-9]+/merge' &> /dev/null && BRANCH_REF=${{ env.GITHUB_HEAD_REF }} || BRANCH_REF=${{ env.GITHUB_REF_NAME }}" >> $GITHUB_OUTPUT
-      run: echo "BRANCH_REF=${{ env.GITHUB_HEAD_REF || env.GITHUB_REF_NAME }}" >> $GITHUB_OUTPUT
+      - name: Checkout Repository
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0  # Full history needed for commit checking
 
-    - name: Get branch sha
-      id: get-branch-sha
-      env:
-        GITHUB_SHA: ${{ github.sha }}
-        GITHUB_WF_SHA: ${{ github.workflow_sha }}
-      run: |
-        SHORT_SHA=$(echo "${{ env.GITHUB_WF_SHA }}" | cut -c1-7)
-        echo "BRANCH_SHA=$SHORT_SHA" >> $GITHUB_OUTPUT
+      - name: Get Branch Information
+        id: get-branch-name
+        run: |
+          set -euo pipefail
+          
+          echo "📋 Determining branch information..."
+          
+          # Determine the correct branch reference
+          if [[ -n "${{ github.head_ref }}" ]]; then
+            BRANCH_REF="${{ github.head_ref }}"
+            echo "🔀 Using PR head ref: $BRANCH_REF"
+          else
+            BRANCH_REF="${{ github.ref_name }}"
+            echo "🌿 Using ref name: $BRANCH_REF"
+          fi
+          
+          # Validate branch name
+          if [[ -z "$BRANCH_REF" ]]; then
+            echo "❌ Could not determine branch reference"
+            exit 1
+          fi
+          
+          echo "BRANCH_REF=$BRANCH_REF" >> $GITHUB_OUTPUT
+          echo "✅ Branch reference: $BRANCH_REF"
 
-    - name: Check for changed source
-      id: check-new-commits
-      uses: adriangl/check-new-commits-action@v1
-      with:
-        seconds: 86400 # One day in seconds
-        branch: '${{ steps.get-branch-name.outputs.branch_ref }}'
-      if: ${{ (inputs.use_environ == 'snapshots' && inputs.use_ignore == 'check') }}
+      - name: Get Commit SHA Information
+        id: get-branch-sha
+        run: |
+          set -euo pipefail
+          
+          echo "🔍 Getting commit SHA information..."
+          
+          # Use workflow SHA if available, otherwise github SHA
+          if [[ -n "${{ github.workflow_sha }}" ]]; then
+            FULL_SHA="${{ github.workflow_sha }}"
+            echo "🔧 Using workflow SHA: $FULL_SHA"
+          else
+            FULL_SHA="${{ github.sha }}"
+            echo "📝 Using github SHA: $FULL_SHA"
+          fi
+          
+          # Create short SHA (7 characters)
+          SHORT_SHA=$(echo "$FULL_SHA" | cut -c1-7)
+          
+          # Validate SHA format
+          if [[ ! "$SHORT_SHA" =~ ^[a-f0-9]{7}$ ]]; then
+            echo "❌ Invalid SHA format: $SHORT_SHA"
+            exit 1
+          fi
+          
+          echo "BRANCH_SHA=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "✅ Short commit SHA: $SHORT_SHA"
 
-    - run: echo "You have ${{ steps.check-new-commits.outputs.new-commits-number }} new commit(s) in ${{ steps.get-branch-name.outputs.BRANCH_REF }} ✅!"
-      if: ${{ steps.check-new-commits.outputs.has-new-commits == 'true' }}
+      - name: Check for Source Changes
+        id: check-new-commits
+        uses: adriangl/check-new-commits-action@v1.0.0  # Pinned to specific version
+        with:
+          seconds: 86400  # One day in seconds
+          branch: ${{ steps.get-branch-name.outputs.BRANCH_REF }}
+        # Only check for changes in snapshot environment when not ignoring changes
+        if: ${{ inputs.use_environ == 'snapshots' && inputs.use_ignore == 'check' }}
 
-    - run: echo "Short commit sha is ${{ steps.get-branch-sha.outputs.BRANCH_SHA }}!"
+      - name: Display Change Detection Results
+        run: |
+          set -euo pipefail
+          
+          echo "📊 Change Detection Results"
+          echo "=========================="
+          
+          if [[ "${{ inputs.use_environ }}" == "snapshots" && "${{ inputs.use_ignore }}" == "check" ]]; then
+            NEW_COMMITS="${{ steps.check-new-commits.outputs.new-commits-number || '0' }}"
+            HAS_CHANGES="${{ steps.check-new-commits.outputs.has-new-commits || 'false' }}"
+            
+            echo "🔍 Commits in last 24h: $NEW_COMMITS"
+            echo "📈 Has changes: $HAS_CHANGES"
+            
+            if [[ "$HAS_CHANGES" == "true" ]]; then
+              echo "✅ New commits detected - build will proceed"
+            else
+              echo "ℹ️  No new commits - build may be skipped"
+            fi
+          else
+            echo "⏭️  Change detection skipped (environ: ${{ inputs.use_environ }}, ignore: ${{ inputs.use_ignore }})"
+          fi
+          
+          echo "🌿 Branch: ${{ steps.get-branch-name.outputs.BRANCH_REF }}"
+          echo "🔗 SHA: ${{ steps.get-branch-sha.outputs.BRANCH_SHA }}"
 
   create_tarball:
-    name: Create a source tarball
+    name: Create Source Tarball
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: check_commits
-    if: ${{ ((inputs.use_environ == 'snapshots') && ((needs.check_commits.outputs.has_changes == 'true') || (inputs.use_ignore == 'ignore'))) || (inputs.use_environ  == 'release') }}
+    # Run if: release mode, OR (snapshot mode AND (has changes OR ignoring changes))
+    if: |
+      (inputs.use_environ == 'release') || 
+      (inputs.use_environ == 'snapshots' && 
+       ((needs.check_commits.outputs.has_changes == 'true') || (inputs.use_ignore == 'ignore')))
+    
     outputs:
       file_base: ${{ steps.set-file-base.outputs.FILE_BASE }}
       source_base: ${{ steps.version.outputs.SOURCE_TAG }}
+    
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - name: Get Sources
-        uses: actions/checkout@v4.1.7
+      - name: Install Build Dependencies
+        run: |
+          set -euo pipefail
+          
+          echo "📦 Installing build dependencies..."
+          sudo apt-get update -qq
+          sudo apt-get install -y \
+            build-essential \
+            autoconf \
+            automake \
+            libtool \
+            flex \
+            bison
+          echo "✅ Dependencies installed"
+
+      - name: Checkout Source Code
+        uses: actions/checkout@v4.2.2
         with:
           path: hdfsrc
-          ref: '${{needs.check_commits.outputs.branch_ref }}'
+          ref: ${{ needs.check_commits.outputs.branch_ref }}
+          fetch-depth: 0  # Full history for version generation
 
-      - name: Install Linux Dependencies (Linux, serial)
+      - name: Generate Version Information
+        id: version
+        run: |
+          set -euo pipefail
+          
+          cd hdfsrc
+          
+          echo "🏷️  Generating version information..."
+          
+          # Run autogen.sh to set up build system
+          if [[ -f autogen.sh ]]; then
+            echo "🔧 Running autogen.sh..."
+            ./autogen.sh
+          else
+            echo "⚠️  autogen.sh not found, running autoconf manually..."
+            autoreconf -fiv
+          fi
+          
+          # Extract version from configure
+          if [[ -f configure ]]; then
+            VERSION_STRING=$(./configure --version | head -n1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
+            echo "📋 Detected version: $VERSION_STRING"
+          else
+            echo "❌ Configure script not found"
+            VERSION_STRING="unknown"
+          fi
+          
+          # Generate source tag
+          if [[ "${{ inputs.use_environ }}" == "release" ]]; then
+            SOURCE_TAG="hdf5-$VERSION_STRING"
+          else
+            # Snapshot naming: hdf5-YYYYMMDD-SHA
+            DATE_STAMP=$(date +%Y%m%d)
+            SOURCE_TAG="hdf5-$DATE_STAMP-${{ needs.check_commits.outputs.branch_sha }}"
+          fi
+          
+          # Validate source tag
+          if [[ ! "$SOURCE_TAG" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+            echo "❌ Invalid source tag generated: $SOURCE_TAG"
+            exit 1
+          fi
+          
+          echo "SOURCE_TAG=$SOURCE_TAG" >> $GITHUB_OUTPUT
+          echo "✅ Source tag: $SOURCE_TAG"
+
+      - name: Set File Base Name
+        id: set-file-base
+        run: |
+          set -euo pipefail
+          
+          echo "📝 Setting file base name..."
+          
+          # Use version output as file base
+          FILE_BASE="${{ steps.version.outputs.SOURCE_TAG }}"
+          
+          # Additional validation
+          if [[ -z "$FILE_BASE" ]]; then
+            echo "❌ File base name is empty"
+            exit 1
+          fi
+          
+          if [[ ! "$FILE_BASE" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+            echo "❌ Invalid file base name: $FILE_BASE"
+            exit 1
+          fi
+          
+          echo "FILE_BASE=$FILE_BASE" >> $GITHUB_OUTPUT
+          echo "✅ File base name: $FILE_BASE"
+
+      - name: Create Distribution Tarball
+        run: |
+          set -euo pipefail
+          
+          cd hdfsrc
+          
+          echo "📦 Creating distribution tarball..."
+          
+          # Configure for distribution
+          ./configure \
+            --enable-build-mode=production \
+            --disable-shared \
+            --enable-static \
+            --disable-hl \
+            --disable-tests \
+            --disable-tools
+          
+          # Create distribution
+          make dist
+          
+          # Verify tarball was created
+          TARBALL_NAME="${{ steps.set-file-base.outputs.FILE_BASE }}.tar.gz"
+          if [[ -f "$TARBALL_NAME" ]]; then
+            echo "✅ Tarball created: $TARBALL_NAME"
+            echo "📊 Size: $(du -h "$TARBALL_NAME" | cut -f1)"
+            
+            # Basic tarball validation
+            if tar -tzf "$TARBALL_NAME" >/dev/null 2>&1; then
+              echo "✅ Tarball integrity verified"
+            else
+              echo "❌ Tarball integrity check failed"
+              exit 1
+            fi
+          else
+            echo "❌ Tarball creation failed"
+            exit 1
+          fi
+
+      - name: Upload Tarball Artifact
+        uses: actions/upload-artifact@v4.4.3
+        with:
+          name: ${{ steps.set-file-base.outputs.FILE_BASE }}-source
+          path: hdfsrc/${{ steps.set-file-base.outputs.FILE_BASE }}.tar.gz
+          retention-days: 7
+          compression-level: 0  # Already compressed
+
+      - name: Tarball Summary
+        run: |
+          set -euo pipefail
+          
+          echo "🎉 Tarball Creation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "===========================" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📋 **File Base**: ${{ steps.set-file-base.outputs.FILE_BASE }}" >> $GITHUB_STEP_SUMMARY
+          echo "🏷️  **Source Tag**: ${{ steps.version.outputs.SOURCE_TAG }}" >> $GITHUB_STEP_SUMMARY
+          echo "🌿 **Branch**: ${{ needs.check_commits.outputs.branch_ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 **SHA**: ${{ needs.check_commits.outputs.branch_sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "🔄 **Has Changes**: ${{ needs.check_commits.outputs.has_changes }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Tarball created successfully!**" >> $GITHUB_STEP_SUMMARY
+
+      - name: Legacy Dependencies (kept for compatibility)
         run: |
              sudo apt update
              sudo apt install gzip dos2unix

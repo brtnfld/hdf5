@@ -1,6 +1,7 @@
 name: hdf5 dev CTest analysis runs
 
-# Triggers the workflow on a call from another workflow
+# Static analysis, code coverage, and sanitizer testing for HDF5 development
+# Includes coverage analysis, memory sanitizers, and code quality checks
 on:
   workflow_call:
     inputs:
@@ -24,30 +25,77 @@ permissions:
 
 jobs:
   coverage_test_linux_GCC:
-  # Linux (Ubuntu) w/ gcc + coverage
-  #
-    name: "Ubuntu GCC Coverage"
+    name: Ubuntu GCC Coverage
     runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    
     steps:
-    - name: Install Dependencies (Linux_coverage)
-      run: |
-        sudo apt update
-        sudo apt-get install ninja-build doxygen graphviz curl build-essential
-        sudo apt install libssl3 libssl-dev libcurl4 libcurl4-openssl-dev
-        sudo apt-get install lcov -q -y
+      - name: Validate Inputs
+        run: |
+          set -euo pipefail
+          
+          echo "🔍 Validating analysis workflow inputs..."
+          
+          # Validate file_base
+          if [[ ! "${{ inputs.file_base }}" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+            echo "❌ Invalid file_base: ${{ inputs.file_base }}"
+            exit 1
+          fi
+          
+          # Validate use_environ
+          if [[ ! "${{ inputs.use_environ }}" =~ ^(snapshots|release)$ ]]; then
+            echo "❌ Invalid use_environ: ${{ inputs.use_environ }}"
+            exit 1
+          fi
+          
+          echo "✅ Input validation passed"
+          echo "  - file_base: ${{ inputs.file_base }}"
+          echo "  - use_environ: ${{ inputs.use_environ }}"
+      
+      - name: Install Dependencies (Linux Coverage)
+        run: |
+          set -euo pipefail
+          
+          echo "📦 Installing Linux dependencies for coverage testing..."
+          sudo apt-get update -qq
+          sudo apt-get install -y \
+            ninja-build \
+            doxygen \
+            graphviz \
+            curl \
+            build-essential \
+            libssl3 \
+            libssl-dev \
+            libcurl4 \
+            libcurl4-openssl-dev \
+            lcov
+          echo "✅ Dependencies installed"
 
-    - name: Set file base name (Linux_coverage)
-      id: set-file-base
-      run: |
-        FILE_NAME_BASE=$(echo "${{ inputs.file_base }}")
-        echo "FILE_BASE=$FILE_NAME_BASE" >> $GITHUB_OUTPUT
-        if [[ '${{ inputs.use_environ }}' == 'release' ]]
-        then
-          SOURCE_NAME_BASE=$(echo "${{ inputs.snap_name }}")
-        else
-          SOURCE_NAME_BASE=$(echo "hdfsrc")
-        fi
-        echo "SOURCE_BASE=$SOURCE_NAME_BASE" >> $GITHUB_OUTPUT
+      - name: Set file base name (Linux Coverage)
+        id: set-file-base
+        run: |
+          set -euo pipefail
+          
+          echo "📝 Setting file base name for coverage testing..."
+          
+          FILE_NAME_BASE="${{ inputs.file_base }}"
+          
+          # Validate file base
+          if [[ -z "$FILE_NAME_BASE" ]]; then
+            echo "❌ File base name is empty"
+            exit 1
+          fi
+          
+          echo "FILE_BASE=$FILE_NAME_BASE" >> $GITHUB_OUTPUT
+          
+          if [[ '${{ inputs.use_environ }}' == 'release' ]]; then
+            SOURCE_NAME_BASE="${{ inputs.snap_name }}"
+          else
+            SOURCE_NAME_BASE="hdfsrc"
+          fi
+          
+          echo "SOURCE_BASE=$SOURCE_NAME_BASE" >> $GITHUB_OUTPUT
+          echo "✅ File base: $FILE_NAME_BASE, Source base: $SOURCE_NAME_BASE"
 
     # Get files created by release script
     - name: Get tgz-tarball (Linux_coverage)

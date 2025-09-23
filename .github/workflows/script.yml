@@ -1,6 +1,7 @@
 name: hdf5 dev CTest script runs
 
-# Triggers the workflow on a call from another workflow
+# Cross-platform CTest script execution for HDF5 development builds
+# Runs automated build and test scripts on Windows, macOS, and Linux
 on:
   workflow_call:
     inputs:
@@ -28,16 +29,43 @@ permissions:
 
 jobs:
   build_and_test_win:
-  # Windows w/ MSVC
-  #
-    name: "Windows MSVC CTest"
+    name: Windows MSVC CTest
     runs-on: windows-latest
+    timeout-minutes: 120
+    
     steps:
-      - name: Install Dependencies (Windows)
-        run: choco install ninja
+      - name: Validate Inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          
+          echo "🔍 Validating script workflow inputs..."
+          
+          # Validate file_base
+          if [[ ! "${{ inputs.file_base }}" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+            echo "❌ Invalid file_base: ${{ inputs.file_base }}"
+            exit 1
+          fi
+          
+          # Validate use_environ
+          if [[ ! "${{ inputs.use_environ }}" =~ ^(snapshots|release)$ ]]; then
+            echo "❌ Invalid use_environ: ${{ inputs.use_environ }}"
+            exit 1
+          fi
+          
+          echo "✅ Input validation passed"
+          echo "  - file_base: ${{ inputs.file_base }}"
+          echo "  - use_environ: ${{ inputs.use_environ }}"
+          echo "  - cmake_version: ${{ inputs.cmake_version }}"
 
-      - name: Install Dependencies
-        uses: ssciwr/doxygen-install@v1
+      - name: Install Dependencies (Windows)
+        run: |
+          echo "📦 Installing Windows dependencies..."
+          choco install ninja --no-progress
+          echo "✅ Ninja installed"
+
+      - name: Install Doxygen
+        uses: ssciwr/doxygen-install@v1.1.0  # Pinned version
         with:
           version: "1.13.2"
 

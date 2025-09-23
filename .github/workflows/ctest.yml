@@ -1,6 +1,7 @@
 name: hdf5 dev CTest runs
 
-# Triggers the workflow on a call from another workflow
+# Comprehensive cross-platform testing suite for HDF5 development
+# Includes Windows, macOS, and Linux builds with multiple configurations
 on:
   workflow_call:
     inputs:
@@ -51,32 +52,68 @@ permissions:
 
 jobs:
   check-secret:
-    name: Check Secrets exists
+    name: Check Secrets Availability
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       sign-state: ${{ steps.set-signing-state.outputs.BINSIGN }}
+    
     steps:
-      - name: Identify Signing Status
+      - name: Validate Inputs
+        run: |
+          set -euo pipefail
+          
+          echo "🔍 Validating CTest workflow inputs..."
+          
+          # Validate file_base
+          if [[ ! "${{ inputs.file_base }}" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+            echo "❌ Invalid file_base: ${{ inputs.file_base }}"
+            exit 1
+          fi
+          
+          # Validate preset_name
+          if [[ ! "${{ inputs.preset_name }}" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+            echo "❌ Invalid preset_name: ${{ inputs.preset_name }}"
+            exit 1
+          fi
+          
+          # Validate use_environ
+          if [[ ! "${{ inputs.use_environ }}" =~ ^(snapshots|release)$ ]]; then
+            echo "❌ Invalid use_environ: ${{ inputs.use_environ }}"
+            exit 1
+          fi
+          
+          echo "✅ Input validation passed"
+          echo "  - file_base: ${{ inputs.file_base }}"
+          echo "  - preset_name: ${{ inputs.preset_name }}"
+          echo "  - use_environ: ${{ inputs.use_environ }}"
+          echo "  - cmake_version: ${{ inputs.cmake_version }}"
+      
+      - name: Check Code Signing Availability
         id: set-signing-state
         env: 
-            signing_secret: ${{ secrets.AZURE_ENDPOINT }}
+          signing_secret: ${{ secrets.AZURE_ENDPOINT }}
         run: |
-          if [[ '${{ env.signing_secret }}' == '' ]]
-          then
-            SIGN_VAL=$(echo 'notexists')
+          set -euo pipefail
+          
+          echo "🔐 Checking code signing availability..."
+          
+          if [[ -z "${{ env.signing_secret }}" ]]; then
+            SIGN_VAL="notexists"
+            echo "⚠️  Code signing secrets not available"
           else
-            SIGN_VAL=$(echo 'exists')
+            SIGN_VAL="exists"
+            echo "✅ Code signing secrets available"
           fi
+          
           echo "BINSIGN=$SIGN_VAL" >> $GITHUB_OUTPUT
+          echo "Signing state: $SIGN_VAL"
         shell: bash
 
-      - run: echo "signing is ${{ steps.set-signing-state.outputs.BINSIGN }}."
-
   build_and_test_win:
-  # Windows w/ MSVC
-  #
-    name: "Windows MSVC CTest"
+    name: Windows MSVC CTest
     runs-on: windows-latest
+    timeout-minutes: 180
     needs: [check-secret]
     steps:
       - name: Install Dependencies (Windows)
