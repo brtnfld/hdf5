@@ -114,16 +114,16 @@ jobs:
 
       - name: Copy script files for the space (Linux Coverage)
         run: |
-        cp ${{ github.workspace }}/${{ steps.set-file-base.outputs.SOURCE_BASE }}/config/cmake/scripts/CTestScript.cmake ${{ runner.workspace }}/hdf5
-        cp ${{ github.workspace }}/${{ steps.set-file-base.outputs.SOURCE_BASE }}/config/cmake/scripts/HDF5config.cmake ${{ runner.workspace }}/hdf5
+          cp ${{ github.workspace }}/${{ steps.set-file-base.outputs.SOURCE_BASE }}/config/cmake/scripts/CTestScript.cmake ${{ runner.workspace }}/hdf5
+          cp ${{ github.workspace }}/${{ steps.set-file-base.outputs.SOURCE_BASE }}/config/cmake/scripts/HDF5config.cmake ${{ runner.workspace }}/hdf5
 
       - name: List files for the hdf5 (Linux Coverage)
-      run: |
-        ls ${{ runner.workspace }}/hdf5
+        run: |
+          ls ${{ runner.workspace }}/hdf5
 
       - name: Create options file (Linux Coverage)
-      uses: "DamianReeves/write-file-action@master"
-      with:
+        uses: "DamianReeves/write-file-action@master"
+        with:
         path: ${{ runner.workspace }}/hdf5/HDF5options.cmake
         write-mode: overwrite
         contents: |
@@ -153,16 +153,16 @@ jobs:
             set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DHDF5_NO_PACKAGES:BOOL=ON")
 
       - name: Run CTest (Linux Coverage)
-      run: |
-        cd "${{ runner.workspace }}/hdf5"
-        ctest -S HDF5config.cmake,CTEST_SITE_EXT=${{ github.event.repository.full_name }}_COV,LOCAL_SUBMIT=ON,NINJA=TRUE,BUILD_GENERATOR=Unix,CTEST_SOURCE_NAME=${{ steps.set-file-base.outputs.SOURCE_BASE }} -C Debug -VV -O hdf5.log
-      shell: bash
-      continue-on-error: true
+        run: |
+          cd "${{ runner.workspace }}/hdf5"
+          ctest -S HDF5config.cmake,CTEST_SITE_EXT=${{ github.event.repository.full_name }}_COV,LOCAL_SUBMIT=ON,NINJA=TRUE,BUILD_GENERATOR=Unix,CTEST_SOURCE_NAME=${{ steps.set-file-base.outputs.SOURCE_BASE }} -C Debug -VV -O hdf5.log
+        shell: bash
+        continue-on-error: true
 
     # Save log files created by CTest script
       - name: Save log (Linux Coverage)
-      uses: actions/upload-artifact@v4
-      with:
+        uses: actions/upload-artifact@v4
+        with:
         name: clang-coverage-log
         path: ${{ runner.workspace }}/hdf5/hdf5.log
         if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
