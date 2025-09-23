@@ -440,10 +440,11 @@ H5TBwrite_fields_name(hid_t loc_id, const char *dset_name, const char *field_nam
 
     /* Early validation: verify all field names exist in the table */
     {
-        char    *field_names_copy = NULL;
-        char    *field_name       = NULL;
-        char    *comma_pos        = NULL;
-        hbool_t  field_found      = false;
+        char *field_names_copy = NULL;
+        char *field_name = NULL;
+        char *comma_pos = NULL;
+        hbool_t field_found = false;
+        hbool_t has_valid_field = false;
         hssize_t total_fields;
         size_t   field_names_len;
 
@@ -451,8 +452,12 @@ H5TBwrite_fields_name(hid_t loc_id, const char *dset_name, const char *field_nam
         if ((total_fields = H5Tget_nmembers(tid)) < 0)
             goto out;
 
-        /* Make a copy of field_names for parsing */
+        /* Check for empty field_names string */
         field_names_len = strlen(field_names);
+        if (field_names_len == 0)
+            goto out;  /* Empty field names string is invalid */
+
+        /* Make a copy of field_names for parsing */
         if (NULL == (field_names_copy = (char *)H5MM_malloc(field_names_len + 1)))
             goto out;
         strcpy(field_names_copy, field_names);
@@ -506,6 +511,8 @@ H5TBwrite_fields_name(hid_t loc_id, const char *dset_name, const char *field_nam
                 goto out;
             }
 
+            has_valid_field = true;
+
             /* Move to next field */
             if (comma_pos != NULL)
                 field_name = comma_pos + 1;
@@ -514,6 +521,10 @@ H5TBwrite_fields_name(hid_t loc_id, const char *dset_name, const char *field_nam
         }
 
         H5MM_free(field_names_copy);
+
+        /* Ensure we found at least one valid field name */
+        if (!has_valid_field)
+            goto out;
     }
 
     /* get the number of fields */
