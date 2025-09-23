@@ -124,9 +124,9 @@ jobs:
       - name: Create options file (Linux Coverage)
         uses: "DamianReeves/write-file-action@master"
         with:
-        path: ${{ runner.workspace }}/hdf5/HDF5options.cmake
-        write-mode: overwrite
-        contents: |
+          path: ${{ runner.workspace }}/hdf5/HDF5options.cmake
+          write-mode: overwrite
+          contents: |
             set (CTEST_DROP_SITE_INIT "my.cdash.org")
             # Change following line to submit to your CDash dashboard to a different CDash project
             set (SITE_BUILDNAME_SUFFIX "${{ steps.set-file-base.outputs.FILE_BASE }}")
@@ -163,9 +163,9 @@ jobs:
       - name: Save log (Linux Coverage)
         uses: actions/upload-artifact@v4
         with:
-        name: clang-coverage-log
-        path: ${{ runner.workspace }}/hdf5/hdf5.log
-        if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
+          name: clang-coverage-log
+          path: ${{ runner.workspace }}/hdf5/hdf5.log
+          if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
 
   build-and-test-linux-leak-sanitizer:
   # Linux (Ubuntu) w/ clang + LeakSanitizer
