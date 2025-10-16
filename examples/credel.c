@@ -361,7 +361,7 @@ main(int argc, char **argv)
     config.pb_expansion_threshold = 50;
     config.maintain_metadata_file = true;
     strlcpy(config.md_file_path, "./", sizeof(config.md_file_path));
-    strlcpy(config.md_file_path, "./my_md_file", sizeof(config.md_file_path));
+    strlcpy(config.md_file_name, "./my_md_file", sizeof(config.md_file_path));
 
     /* Enable page buffering */
     if (H5Pset_page_buffer_size(fapl, 4096, 100, 0) < 0)
