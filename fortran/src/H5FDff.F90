@@ -225,7 +225,7 @@ SUBROUTINE h5fdsubfiling_get_file_mapping_f(file_id, filenames, num_files, hdfer
             str_len = str_len + 1
           END DO
 
-          ! If we found the null terminator, we're done
+          ! If we found the null terminator, we are done
           IF (str_len < current_size) EXIT
 
           ! Otherwise, double the size and try again
