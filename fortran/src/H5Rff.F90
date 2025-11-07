@@ -1139,7 +1139,8 @@ CONTAINS
        IF(actual_len .LT. 0_SIZE_T)THEN
           hdferr = H5I_INVALID_HID_F
        ELSE
-          CALL HD5c2fstring(name, c_name, actual_len, l)
+          ! Use MIN to handle case where actual_len > buffer size
+          CALL HD5c2fstring(name, c_name, MIN(actual_len, l-1_SIZE_T), l)
        ENDIF
     ENDIF
 
@@ -1191,7 +1192,8 @@ CONTAINS
        IF(actual_len .LT. 0_SIZE_T)THEN
           hdferr = H5I_INVALID_HID_F
        ELSE
-          CALL HD5c2fstring(name, c_name, actual_len, l)
+          ! Use MIN to handle case where actual_len > buffer size
+          CALL HD5c2fstring(name, c_name, MIN(actual_len, l-1_SIZE_T), l)
        ENDIF
     ENDIF
 
@@ -1245,7 +1247,8 @@ CONTAINS
        IF(actual_len .LT. 0_SIZE_T)THEN
           hdferr = H5I_INVALID_HID_F
        ELSE
-          CALL HD5c2fstring(name, c_name, actual_len, l)
+          ! Use MIN to handle case where actual_len > buffer size
+          CALL HD5c2fstring(name, c_name, MIN(actual_len, l-1_SIZE_T), l)
        ENDIF
     ENDIF
 
