@@ -521,6 +521,9 @@ SUBROUTINE v3reftest(cleanup, total_error)
   CHARACTER(:), ALLOCATABLE :: buf_alloc ! buffer to hold the region name
 #endif
   CHARACTER(LEN=16) :: buf_big    ! buffer bigger than needed
+  CHARACTER(LEN=7)  :: buf_exact  ! buffer exactly the right size
+  CHARACTER(LEN=5)  :: buf_exact_attr  ! buffer exactly the right size for attribute name
+  CHARACTER(LEN=4)  :: buf_small  ! buffer smaller than needed
   INTEGER(SIZE_T) :: buf_size     ! returned size of the region buffer name
   INTEGER, TARGET :: a_data
   TYPE(C_PTR) :: f_ptr
@@ -650,22 +653,32 @@ SUBROUTINE v3reftest(cleanup, total_error)
 
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(3)), "", error, H5P_DEFAULT_F, buf_size)
   CALL check("h5rget_obj_name_f", error, total_error)
-  CALL verify("h5rget_obj_name_f", buf_size, LEN(dsetnamei,KIND=SIZE_T)+1_SIZE_T, total_error)
+  CALL verify("h5rget_obj_name_f (size query for dsetnamei)", buf_size, LEN(dsetnamei,KIND=SIZE_T)+1_SIZE_T, total_error)
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), "", error, H5P_DEFAULT_F, buf_size)
   CALL check("h5rget_obj_name_f", error, total_error)
-  CALL verify("h5rget_obj_name_f", buf_size, 7_SIZE_T, total_error)
+  CALL verify("h5rget_obj_name_f (size query for groupname1)", buf_size, 7_SIZE_T, total_error)
 
 #ifdef H5_FORTRAN_HAVE_CHAR_ALLOC
   ALLOCATE(CHARACTER(LEN=buf_size) :: buf_alloc)
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_alloc, error)
   CALL check("h5rget_obj_name_f", error, total_error)
-  CALL VERIFY("h5rget_obj_name_f", buf_alloc, "/"//groupname1, total_error)
+  CALL VERIFY("h5rget_obj_name_f (allocated buffer)", buf_alloc, "/"//groupname1, total_error)
   DEALLOCATE(buf_alloc)
 #endif
   ! with buffer bigger than needed
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_big, error)
   CALL check("h5rget_obj_name_f", error, total_error)
-  CALL verify("h5rget_obj_name_f", TRIM(buf_big), "/"//groupname1, total_error)
+  CALL verify("h5rget_obj_name_f (big buffer)", TRIM(buf_big), "/"//groupname1, total_error)
+
+  ! with buffer exactly the right size
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_exact, error)
+  CALL check("h5rget_obj_name_f", error, total_error)
+  CALL verify("h5rget_obj_name_f (exact buffer)", TRIM(buf_exact), "/"//groupname1, total_error)
+
+  ! with buffer smaller than needed - should truncate
+  CALL h5rget_obj_name_f(C_LOC(ref_ptr(1)), buf_small, error)
+  CALL check("h5rget_obj_name_f", error, total_error)
+  CALL verify("h5rget_obj_name_f (small buffer)", TRIM(buf_small), "/GRO", total_error)
 
   ! getting path to dataset
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(2)), "", error, name_len=buf_size )
@@ -676,13 +689,13 @@ SUBROUTINE v3reftest(cleanup, total_error)
   ALLOCATE(CHARACTER(LEN=buf_size) :: buf_alloc)
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(2)), buf_alloc, error)
   CALL check("h5rget_obj_name_f", error, total_error)
-  CALL VERIFY("h5rget_obj_name_f", buf_alloc, "/"//groupname1//"/"//groupname2, total_error)
+  CALL VERIFY("h5rget_obj_name_f (allocated buffer for groupname2)", buf_alloc, "/"//groupname1//"/"//groupname2, total_error)
   DEALLOCATE(buf_alloc)
 #endif
 
   CALL h5rget_obj_name_f(C_LOC(ref_ptr(2)), buf_big, error)
   CALL check("H5Rget_name_f", error, total_error)
-  CALL verify("H5Rget_name_f", TRIM(buf_big), "/"//groupname1//"/"//groupname2, total_error)
+  CALL verify("H5Rget_name_f (big buffer for groupname2)", TRIM(buf_big), "/"//groupname1//"/"//groupname2, total_error)
 
   ! CHECK LICENSE REF
 
@@ -693,20 +706,31 @@ SUBROUTINE v3reftest(cleanup, total_error)
   ! GET FILE NAME
   CALL h5rget_file_name_f(f_ptr, "", error, buf_size)
   CALL check("h5rget_file_name_f", error, total_error)
-  CALL verify("h5rget_file_name_f", buf_size, LEN_TRIM(fix_filename,KIND=SIZE_T), total_error)
+  CALL verify("h5rget_file_name_f (size query)", buf_size, LEN_TRIM(fix_filename,KIND=SIZE_T), total_error)
 
 #ifdef H5_FORTRAN_HAVE_CHAR_ALLOC
   ALLOCATE(CHARACTER(LEN=buf_size) :: buf_alloc)
   CALL h5rget_file_name_f(f_ptr, buf_alloc, error)
   CALL check("h5rget_file_name_f", error, total_error)
-  CALL VERIFY("h5rget_file_name_f", buf_alloc, TRIM(fix_filename), total_error)
+  CALL VERIFY("h5rget_file_name_f (allocated buffer)", buf_alloc, TRIM(fix_filename), total_error)
   DEALLOCATE(buf_alloc)
 #endif
 
   ! Check with buffer bigger than needed
   CALL h5rget_file_name_f(C_LOC(ref_ptr_cp), buf_big, error)
   CALL check("h5rget_file_name_f", error, total_error)
-  CALL verify("h5rget_file_name_f", TRIM(buf_big), TRIM(fix_filename), total_error)
+  CALL verify("h5rget_file_name_f (big buffer)", TRIM(buf_big), TRIM(fix_filename), total_error)
+
+  ! with buffer exactly the right size
+  IF(buf_size .EQ. 7_SIZE_T)THEN
+     CALL h5rget_file_name_f(C_LOC(ref_ptr_cp), buf_exact, error)
+     CALL check("h5rget_file_name_f", error, total_error)
+     CALL verify("h5rget_file_name_f (exact buffer)", TRIM(buf_exact), TRIM(fix_filename), total_error)
+  ENDIF
+
+  ! with buffer smaller than needed - should truncate (only check it doesn't error)
+  CALL h5rget_file_name_f(C_LOC(ref_ptr_cp), buf_small, error)
+  CALL check("h5rget_file_name_f (small buffer)", error, total_error)
 
   ! CHECK EQUAL API
   CALL h5requal_f(C_LOC(ref_ptr(3)), f_ptr, ref_eq, error)
@@ -746,24 +770,34 @@ SUBROUTINE v3reftest(cleanup, total_error)
   !
   CALL h5rget_obj_name_f(C_LOC(ref_ptr_read(1)), buf_big, error)
   CALL check("h5rget_obj_name_f", error, total_error)
-  CALL verify("h5rget_obj_name_f", TRIM(buf_big), "/"//groupname1, total_error)
+  CALL verify("h5rget_obj_name_f (read ref_ptr_read(1))", TRIM(buf_big), "/"//groupname1, total_error)
   CALL h5rget_obj_name_f(C_LOC(ref_ptr_read(2)), buf_big, error)
   CALL check("h5rget_obj_name_f", error, total_error)
-  CALL verify("h5rget_obj_name_f", TRIM(buf_big), "/"//groupname1//"/"//groupname2, total_error)
+  CALL verify("h5rget_obj_name_f (read ref_ptr_read(2))", TRIM(buf_big), "/"//groupname1//"/"//groupname2, total_error)
   CALL h5rget_obj_name_f(C_LOC(ref_ptr_read(3)), buf_big, error)
   CALL check("h5rget_obj_name_f", error, total_error)
-  CALL verify("h5rget_obj_name_f", TRIM(buf_big), "/"//dsetnamei, total_error)
+  CALL verify("h5rget_obj_name_f (read ref_ptr_read(3))", TRIM(buf_big), "/"//dsetnamei, total_error)
   CALL h5rget_obj_name_f(C_LOC(ref_ptr_read(4)), buf_big, error)
   CALL check("h5rget_obj_name_f", error, total_error)
-  CALL verify("h5rget_obj_name_f", TRIM(buf_big), "/"//"MyType", total_error)
+  CALL verify("h5rget_obj_name_f (read ref_ptr_read(4))", TRIM(buf_big), "/"//"MyType", total_error)
 
   CALL h5rget_attr_name_f(C_LOC(ref_ptr_read(5)), buf_big, error, buf_size)
   CALL check("h5rget_attr_name_f", error, total_error)
-  CALL VERIFY("h5rget_attr_name_f", buf_size, LEN(attrname, KIND=SIZE_T), total_error)
+  CALL VERIFY("h5rget_attr_name_f (size query)", buf_size, LEN(attrname, KIND=SIZE_T), total_error)
 
   CALL h5rget_attr_name_f(C_LOC(ref_ptr_read(5)), buf_big, error)
   CALL check("h5rget_attr_name_f", error, total_error)
-  CALL verify("h5rget_attr_name_f", TRIM(buf_big), attrname, total_error)
+  CALL verify("h5rget_attr_name_f (big buffer)", TRIM(buf_big), attrname, total_error)
+
+  ! with buffer exactly the right size (attrname = "ATTR1" = 5 chars)
+  CALL h5rget_attr_name_f(C_LOC(ref_ptr_read(5)), buf_exact_attr, error)
+  CALL check("h5rget_attr_name_f", error, total_error)
+  CALL verify("h5rget_attr_name_f (exact buffer)", TRIM(buf_exact_attr), attrname, total_error)
+
+  ! with buffer smaller than needed - should truncate
+  CALL h5rget_attr_name_f(C_LOC(ref_ptr_read(5)), buf_small, error)
+  CALL check("h5rget_attr_name_f", error, total_error)
+  CALL verify("h5rget_attr_name_f (small buffer)", TRIM(buf_small), "ATTR", total_error)
 
   CALL h5ropen_attr_f( C_LOC(ref_ptr_read(5)), aid2, error, H5P_DEFAULT_F, H5P_DEFAULT_F )
   CALL check("h5ropen_attr_f",error,total_error)
