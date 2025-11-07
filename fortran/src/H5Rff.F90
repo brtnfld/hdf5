@@ -1109,6 +1109,7 @@ CONTAINS
     CHARACTER(LEN=1,KIND=C_CHAR), DIMENSION(1:LEN(name)+1), TARGET :: c_name
     INTEGER(HID_T) :: rapl_id_default
     INTEGER(SIZE_T) :: l
+    INTEGER(SIZE_T) :: actual_len
 
     INTERFACE
        INTEGER(SIZE_T) FUNCTION H5Rget_obj_name(ref_ptr, rapl_id, name, size_default) &
@@ -1132,11 +1133,13 @@ CONTAINS
        name_len = H5Rget_obj_name(ref_ptr, rapl_id_default, c_name, 1_SIZE_T)
        IF(name_len.LT.0_SIZE_T) hdferr = H5I_INVALID_HID_F
     ELSE
+       c_name = C_NULL_CHAR
        l = INT(LEN(name)+1,SIZE_T)
-       IF(H5Rget_obj_name(ref_ptr, rapl_id_default, c_name, l) .LT. 0_SIZE_T)THEN
+       actual_len = H5Rget_obj_name(ref_ptr, rapl_id_default, c_name, l)
+       IF(actual_len .LT. 0_SIZE_T)THEN
           hdferr = H5I_INVALID_HID_F
        ELSE
-          CALL HD5c2fstring(name, c_name, LEN(name,KIND=SIZE_T), LEN(name,KIND=SIZE_T)+1_SIZE_T )
+          CALL HD5c2fstring(name, c_name, actual_len, l)
        ENDIF
     ENDIF
 
@@ -1162,6 +1165,7 @@ CONTAINS
 
     CHARACTER(LEN=1,KIND=C_CHAR), DIMENSION(1:LEN(name)+1), TARGET :: c_name
     INTEGER(SIZE_T) :: l
+    INTEGER(SIZE_T) :: actual_len
 
     INTERFACE
        INTEGER(SIZE_T) FUNCTION H5Rget_attr_name(ref_ptr, name, size_default) &
@@ -1181,11 +1185,13 @@ CONTAINS
        name_len = H5Rget_attr_name(ref_ptr, c_name, 1_SIZE_T)
        IF(name_len.LT.0_SIZE_T) hdferr = H5I_INVALID_HID_F
     ELSE
+       c_name = C_NULL_CHAR
        l = INT(LEN(name)+1,SIZE_T)
-       IF(H5Rget_attr_name(ref_ptr, c_name, l) .LT. 0_SIZE_T)THEN
+       actual_len = H5Rget_attr_name(ref_ptr, c_name, l)
+       IF(actual_len .LT. 0_SIZE_T)THEN
           hdferr = H5I_INVALID_HID_F
        ELSE
-          CALL HD5c2fstring(name, c_name, LEN(name,KIND=SIZE_T), LEN(name,KIND=SIZE_T)+1_SIZE_T )
+          CALL HD5c2fstring(name, c_name, actual_len, l)
        ENDIF
     ENDIF
 
@@ -1213,6 +1219,7 @@ CONTAINS
 
     CHARACTER(LEN=1,KIND=C_CHAR), DIMENSION(1:LEN(name)+1), TARGET :: c_name
     INTEGER(SIZE_T) :: l
+    INTEGER(SIZE_T) :: actual_len
 
     INTERFACE
        INTEGER(SIZE_T) FUNCTION H5Rget_file_name(ref_ptr, name, size_default) &
@@ -1232,11 +1239,13 @@ CONTAINS
        name_len = H5Rget_file_name(ref_ptr, c_name, 1_SIZE_T)
        IF(name_len.LT.0_SIZE_T) hdferr = H5I_INVALID_HID_F
     ELSE
+       c_name = C_NULL_CHAR
        l = INT(LEN(name)+1,SIZE_T)
-       IF(H5Rget_file_name(ref_ptr, c_name, l) .LT. 0_SIZE_T)THEN
+       actual_len = H5Rget_file_name(ref_ptr, c_name, l)
+       IF(actual_len .LT. 0_SIZE_T)THEN
           hdferr = H5I_INVALID_HID_F
        ELSE
-          CALL HD5c2fstring(name, c_name, LEN(name,KIND=SIZE_T), LEN(name,KIND=SIZE_T)+1_SIZE_T )
+          CALL HD5c2fstring(name, c_name, actual_len, l)
        ENDIF
     ENDIF
 
