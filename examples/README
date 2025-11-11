@@ -28,6 +28,11 @@ To run:
     ./credel -v (on one window)
     h5ls --vfd=swmr --poll=100 -r -d ./credel.h5 (on another window)
 
+To run with auxilary process:
+    ./credel -v -a   (in one window)
+    ../utils/vfd_swmr/aux_process my_md_file ./credel_updater_file  (in a second window)
+    ../install/bin/h5ls --vfd=swmr --poll=100 -r -d ./credel.h5   (in a third window)
+
 vfd_swmr_gaussians.c
 ====================
 To compile:

@@ -88,7 +88,7 @@
 
 #define MAX_READ_LEN_IN_SECONDS 2
 #define TICK_LEN                4
-#define MAX_LAG                 7
+#define MAX_LAG                 16
 #define FSP_SIZE                4096
 #define PAGE_BUF_SIZE           4096
 #define ROWS                    256

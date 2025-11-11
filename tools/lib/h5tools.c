@@ -469,35 +469,36 @@ h5tools_set_error_file(const char *fname, int is_bin)
  *           negative - failed
  *-------------------------------------------------------------------------
  */
-static hid_t
+static herr_t
 h5tools_set_up_vfd_swmr(hid_t fapl, const char *fname)
 {
-    H5F_vfd_swmr_config_t *config    = NULL; /* Configuration for VFD SWMR */
+    H5F_vfd_swmr_config_t config = /* Configuration for VFD SWMR */
+    {
+        /* int32_t  version;                                   = */ H5F__CURR_VFD_SWMR_CONFIG_VERSION,
+        /* uint32_t tick_len;                                               = */ 4,
+        /* uint32_t max_lag;                                                = */ 5,
+        /* hbool_t  presume_posix_semantics;                                = */ true,
+        /* hbool_t  writer;                                                 = */ false,
+        /* hbool_t  maintain_metadata_file;                                 = */ true,
+        /* hbool_t  generate_updater_files;                                 = */ false,
+        /* hbool_t  flush_raw_data;                                         = */ true,
+        /* uint32_t md_pages_reserved;                                      = */ 128,
+        /* uint32_t pb_expansion_threshold;                                 = */ 0,
+        /* char     md_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];      = */ "./",
+        /* char     md_file_name[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];      = */ "my_md_file",
+        /* char     updater_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1]; = */ "",
+        /* char     log_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];     = */ ""
+    };
     char *                 dname     = NULL;
-    hid_t                  ret_value = H5I_INVALID_HID;
+    herr_t                 ret_value = SUCCEED;
 
     /* Enable page buffering */
     if (H5Pset_page_buffer_size(fapl, 4096, 100, 0) < 0)
-        H5TOOLS_GOTO_ERROR(H5I_INVALID_HID, "H5Pset_page_buffer_size failed");
-
-    /* Allocate memory for the configuration structure */
-    if (NULL == (config = HDcalloc(1, sizeof(*config))))
-        H5TOOLS_GOTO_ERROR(H5I_INVALID_HID, "VFD SWMR config allocation failed");
-
-    config->version           = H5F__CURR_VFD_SWMR_CONFIG_VERSION;
-    config->tick_len          = 4;
-    config->max_lag           = 5;
-    config->writer            = FALSE;
-    config->md_pages_reserved = 128;
-
-    if (H5_dirname(fname, &dname) < 0)
-        H5TOOLS_GOTO_ERROR(H5I_INVALID_HID, "H5_dirname() failed");
-
-    HDsnprintf(config->md_file_path, sizeof(config->md_file_path), "%s/my_md_file", dname);
+        H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_page_buffer_size failed");
 
     /* Enable VFD SWMR configuration */
-    if (H5Pset_vfd_swmr_config(fapl, config) < 0)
-        H5TOOLS_GOTO_ERROR(H5I_INVALID_HID, "H5Pset_vrd_swmr_config failed");
+    if (H5Pset_vfd_swmr_config(fapl, &config) < 0)
+        H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_vrd_swmr_config failed");
 
 done:
     HDfree(dname);

@@ -45,20 +45,22 @@ typedef struct {
     bool            oneshot;
     bool            print_stats;
     bool            use_vfd_swmr;
+    bool            gen_updaters;
     uint64_t        iterations_limit;
     stats_t         stats;
 } state_t;
 
-#define ALL_HID_INITIALIZER                                                                                  \
-    (state_t)                                                                                                \
-    {                                                                                                        \
-        .dataspace = H5I_INVALID_HID, .file = H5I_INVALID_HID, .verbose = 0, .oneshot = false,               \
-        .use_vfd_swmr = true, .print_stats = false, .iterations_limit = UINT64_MAX, .output_file = "",       \
-        .update_interval = (struct timespec){.tv_sec = 0, .tv_nsec = 1000000000UL / 10 /* 1/10 second */},   \
-        .stats           = {                                                                                 \
-            {0, 0},                                                                                \
-            {0, 0}                                                                                 \
-        }                                                                                                    \
+#define ALL_HID_INITIALIZER                                                                                \
+    (state_t)                                                                                              \
+    {                                                                                                      \
+        .dataspace = H5I_INVALID_HID, .file = H5I_INVALID_HID, .verbose = 0, .oneshot = false,             \
+        .use_vfd_swmr = true, .gen_updaters = false, .print_stats = false,                                 \
+        .iterations_limit = UINT64_MAX, .output_file = "",                                                 \
+        .update_interval = (struct timespec){.tv_sec = 0, .tv_nsec = 1000000000UL / 10 /* 1/10 second */}, \
+        .stats           = {                                                                               \
+            {0, 0},                                                                                        \
+            {0, 0}                                                                                         \
+        }                                                                                                  \
     }
 
 static void state_init(state_t *, int, char **);
@@ -99,6 +101,7 @@ usage(const char *progname)
     fprintf(stderr,
             "usage: %s [-u milliseconds]\n"
             "\n"
+            "-a: if vfd swmr, generate updater files.  Don't maintain metadata file\n"
             "-o: oneshot mode, perform one iteration, wait for a signal, "
             "then quit.\n"
             "-s: print statistics at end\n"
@@ -132,8 +135,11 @@ state_init(state_t *s, int argc, char **argv)
     *s = ALL_HID_INITIALIZER;
     strlcpy(tfile, argv[0], sizeof(tfile));
     strlcpy(s->progname, basename(tfile), sizeof(s->progname));
-    while ((ch = getopt(argc, argv, "n:ou:sSv")) != -1) {
+    while ((ch = getopt(argc, argv, "an:ou:sSv")) != -1) {
         switch (ch) {
+            case 'a':
+                s->gen_updaters = true;
+                break;
             case 'n':
                 niters = strtoumax(optarg, &end, 0);
                 if (niters == UINTMAX_MAX && errno == ERANGE) {
@@ -336,9 +342,23 @@ main(int argc, char **argv)
     state_t               storage;
     state_t *             s = &storage;
     int64_t               i;
-    H5F_vfd_swmr_config_t config;
-
-    memset(&config, '\0', sizeof(config));
+    H5F_vfd_swmr_config_t config =
+    {
+        /* int32_t  version;                                   = */ H5F__CURR_VFD_SWMR_CONFIG_VERSION,
+        /* uint32_t tick_len;                                               = */ 4,
+        /* uint32_t max_lag;                                                = */ 7,
+        /* hbool_t  presume_posix_semantics;                                = */ true,
+        /* hbool_t  writer;                                                 = */ true, 
+        /* hbool_t  maintain_metadata_file;                                 = */ true,
+        /* hbool_t  generate_updater_files;                                 = */ false,
+        /* hbool_t  flush_raw_data;                                         = */ true,
+        /* uint32_t md_pages_reserved;                                      = */ 128,
+        /* uint32_t pb_expansion_threshold;                                 = */ 50,
+        /* char     md_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];      = */ "./",
+        /* char     md_file_name[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];      = */ "my_md_file",
+        /* char     updater_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1]; = */ "./credel_updater_file",
+        /* char     log_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];     = */ ""
+    };
 
     state_init(s, argc, argv);
 
@@ -352,24 +372,24 @@ main(int argc, char **argv)
         errx(EXIT_FAILURE, "%s.%d H5Pset_libver_bounds failed", __func__, __LINE__);
     }
 
-    config.version           = H5F__CURR_VFD_SWMR_CONFIG_VERSION;
-    config.tick_len          = 4;
-    config.max_lag           = 5;
-    config.writer            = true;
-    config.flush_raw_data = true;
-    config.md_pages_reserved = 128;
-    config.pb_expansion_threshold = 50;
-    config.maintain_metadata_file = true;
-    strlcpy(config.md_file_path, "./", sizeof(config.md_file_path));
-    strlcpy(config.md_file_name, "./my_md_file", sizeof(config.md_file_path));
-
     /* Enable page buffering */
     if (H5Pset_page_buffer_size(fapl, 4096, 100, 0) < 0)
         errx(EXIT_FAILURE, "H5Pset_page_buffer_size failed");
 
-    /* Enable VFD SWMR configuration */
-    if (s->use_vfd_swmr && H5Pset_vfd_swmr_config(fapl, &config) < 0)
-        errx(EXIT_FAILURE, "H5Pset_vfd_swmr_config failed");
+    /* Enable VFD SWMR configuration if so configured */
+    if ( s->use_vfd_swmr ) {
+
+        if ( s->gen_updaters ) {
+
+            config.maintain_metadata_file = false;
+            config.generate_updater_files = true;
+        }
+
+        if (  H5Pset_vfd_swmr_config(fapl, &config) < 0 ) {
+
+            errx(EXIT_FAILURE, "H5Pset_vfd_swmr_config failed");
+        }
+    }
 
     fcpl = H5Pcreate(H5P_FILE_CREATE);
     if (fcpl < 0) {

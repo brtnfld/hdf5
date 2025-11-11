@@ -306,6 +306,11 @@ done:
  *
  * Programmer: Vailin Choi; Nov 2016
  *
+ * Changes:     Modified function to map large (page size or larger) 
+ *              allocation to two different fs_types when operating 
+ *              in VFD SWMR mode.
+ *                                              JRM -- 10/16/25
+ *
  *-------------------------------------------------------------------------
  */
 void
@@ -327,6 +332,24 @@ H5MF__alloc_to_fs_type(H5F_shared_t *f_sh, H5FD_mem_t alloc_type, hsize_t size, 
                 else
                     *fs_type = (H5F_mem_page_t)(f_sh->fs_type_map[alloc_type] + (H5FD_MEM_NTYPES - 1));
             } /* end if */
+#if 0 /* JRM */
+            /* Comment this our for now, as it causes two failures in the VFD SWMR tests */
+
+            else if ( f_sh->vfd_swmr ) {
+
+                /* If running VFD SWMR, use two large space allocators.  Neet to do this 
+                 * for crash recovery using full list of updater files as we need to ensure
+                 * that pages of memory are not allocated for raw data, deallocated, and then
+                 * re-allocated as meta data, or vise versa.
+                 *
+                 * Note that this is not a complete solution -- must also ensure that space 
+                 * is not released to file until file close.
+                 */
+                *fs_type = (H5F_mem_page_t)(f_sh->fs_type_map[alloc_type] + (H5FD_MEM_NTYPES - 1));
+                assert( ( H5F_MEM_PAGE_LARGE_SUPER == *fs_type ) ||
+                        ( H5F_MEM_PAGE_LARGE_DRAW == *fs_type ) );
+            }
+#endif /* JRM */
             else
                 /* For contiguous address space, map to generic large size free-space manager */
                 *fs_type = H5F_MEM_PAGE_GENERIC; /* H5F_MEM_PAGE_SUPER */
@@ -446,6 +469,10 @@ H5MF__create_fstype(H5F_t *f, H5F_mem_page_t type)
     herr_t                      ret_value = SUCCEED;       /* Return value */
 
     FUNC_ENTER_PACKAGE
+
+#if 0 /* JRM */
+    fprintf(stderr, "\n *************************** H5MF__create_fstype(): type = %d.\n", (int)(type));
+#endif /* JRM */
 
     /*
      * Check arguments.
