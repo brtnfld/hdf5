@@ -87,7 +87,7 @@ open_skeleton(const char *filename, unsigned verbose)
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
      * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
      * md_file_path, md_file_name, updater_file_path */
-    init_vfd_swmr_config(config, 4, 5, FALSE, TRUE, TRUE, FALSE, TRUE, 128, NULL, "rw-shadow", NULL);
+    init_vfd_swmr_config(config, 4, 5, FALSE, TRUE, TRUE, TRUE, TRUE, 128, NULL, "rw-shadow", "sparse-updater");
 
     /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */
     if ((fapl = vfd_swmr_create_fapl(TRUE, TRUE, FALSE, 4096, config)) < 0)
@@ -348,11 +348,12 @@ int
 main(int argc, const char *argv[])
 {
     sigset_t oldset;
-    hid_t    fid;                /* File ID for file opened */
-    long     nrecords    = 0;    /* # of records to append */
-    long     flush_count = 1000; /* # of records to write between flushing file */
-    unsigned verbose     = 1;    /* Whether to emit some informational messages */
-    unsigned u;                  /* Local index variable */
+    hid_t    fid;                    /* File ID for file opened */
+    long     nrecords        = 0;    /* # of records to append */
+    long     flush_count     = 1000; /* # of records to write between flushing file */
+    unsigned verbose         = 1;    /* Whether to emit some informational messages */
+    bool     wait_for_signal = TRUE; /* Whether to wait for the signal */
+    unsigned u;                      /* Local index variable */
 
     block_signals(&oldset);
 
@@ -371,7 +372,12 @@ main(int argc, const char *argv[])
                             usage();
                         u += 2;
                         break;
-
+                    /* Don't wait for signal */
+                    case 'W':
+                        wait_for_signal = FALSE;
+                        u++;
+                        break;
+                        
                     /* Be quiet */
                     case 'q':
                         verbose = 0;
@@ -447,7 +453,9 @@ main(int argc, const char *argv[])
         HDexit(1);
     } /* end if */
 
-    await_signal(fid);
+    if (wait_for_signal) {
+        await_signal(fid);
+    }
 
     restore_signals(&oldset);
 
