@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 
 # Initialize common variables
-PROJECT_DIR=/home/cody/Lifeboat/hdf5_swmr
-if [ -z "$PROJECT_DIR" ]; then
-    echo "ERROR: PROJECT_DIR environment variable is not set."
-    echo "Please set PROJECT_DIR to the hdf5_swmr main directory."
+PROJECT_DIR=/PATH/TO/VFD_SWMR/PROJECT
+if [ ! -d "$PROJECT_DIR" ]; then # Check that path exists
+    echo "ERROR: PROJECT_DIR ($PROJECT_DIR) does not exist. Please edit the script to set the correct path."
     exit 1
 fi
 nerrors=0
