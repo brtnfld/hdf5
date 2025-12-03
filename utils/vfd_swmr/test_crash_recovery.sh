@@ -314,7 +314,7 @@ run_test_case() {
 
         # Run H5DUMP to further validate recovery
         if [[ $rc -eq 0 ]] ; then
-            printf "\nRunning H5DUMP for exhaustive validation.\n" >> ${test_name}_validation_pre.out
+            printf "\nRunning H5DUMP for further validation.\n" >> ${test_name}_validation_pre.out
             $H5DUMP -pH $EXPECTED_H5_FILE >> ${test_name}_validation_pre.out 2>&1 
             rc=$?
         fi
@@ -375,7 +375,7 @@ run_test_case() {
 
         # Run H5DUMP to further validate recovery
         if [[ $rc -eq 0 ]] ; then
-            printf "\nRunning H5DUMP for exhaustive validation.\n" >> ${test_name}_validation_post.out
+            printf "\nRunning H5DUMP for further validation.\n" >> ${test_name}_validation_post.out
             $H5DUMP -pH $EXPECTED_H5_FILE >> ${test_name}_validation_post.out 2>&1 
             rc=$?
         fi
@@ -486,7 +486,6 @@ usage() {
     echo "  -k        Keep output files from each iteration. Useful for debugging."
     echo "            WILL GENERATE DOZENS OF FILES."
     echo ""
-    echo ""
     echo "Files kept with -k option:"
     echo "  <test>_recovery.out.<count>            - Recovery tool output and error messages"
     echo "  <test>_h5clear_pre.out.<count>         - H5clear status reset before validation"
@@ -562,6 +561,7 @@ main() {
     vprintf "========================================================================\n"
     vprintf "Running crash recovery test loop on tests: ${selected_tests[*]}\n"
     vprintf "========================================================================\n"
+    echo "HDF5TestExpress = $HDF5TestExpress"
 
     for test_name in "${selected_tests[@]}"; do
         echo ""

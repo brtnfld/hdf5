@@ -949,9 +949,8 @@ error:
  *
  * Purpose:  Apply the updater file directly to the HDF5 file
  *
- * Return:   Success:    true or false (whether close the HDF5 file)
- *
- *           Failure:    -1
+ * Return:   Success:    true
+ *           Failure:    false
  *-------------------------------------------------------------------------
  */
 static int
@@ -1001,11 +1000,11 @@ apply_updater_recovery_only(const char *updater_name, handler_t *hand)
         }
         /* Close the updater file */
         if (fclose(updater.file) == EOF) {
-            fprintf(stderr, "updater file close failed\n");
+            fprintf(stderr, "updater file close failed: %s\n", updater_name);
             goto error;
         }
                 
-        return false;
+        return true;
     }
 
     if(!hand->is_posix) {
@@ -1048,22 +1047,22 @@ apply_updater_recovery_only(const char *updater_name, handler_t *hand)
 
     /* Close the updater file */
     if (fclose(updater.file) == EOF) {
-        fprintf(stderr, "updater file close failed\n");
+        fprintf(stderr, "updater file %s close failed\n", updater_name);
         goto error;
     }
     
-    /* If the flag is FINAL_UPDATE_FLAG (0x0002), close the HDF5 file */
+    /* If the flag is FINAL_UPDATE_FLAG (0x0002), print a message
+     * and do nothing else */
     if (updater.flags & FINAL_UPDATE_FLAG) {
-        if (fclose(hand->h5_file) == EOF) {
-            fprintf(stderr, "HDF5 file close failed\n");
-            goto error;
+        if (hand->output) {
+            fprintf(hand->output, "FINAL_UPDATE_FLAG is set in updater file: %s\n", updater_name);
+        } else { /* Print it to stdout even if verbose output is not enabled */
+            fprintf(stdout, "FINAL_UPDATE_FLAG is set in updater file: %s\n", updater_name);
         }
-
-        return true;
     }
 
     /* If the hdf5 file is on a non-POSIX-compliant file system, then we close
-    * the file every time we finish applying an updater file. */
+     * the file every time we finish applying an updater file. */
     if(!hand->is_posix) {
         if (fclose(hand->h5_file) == EOF) {
             fprintf(stderr, "HDF5 file close failed\n");
@@ -1072,27 +1071,32 @@ apply_updater_recovery_only(const char *updater_name, handler_t *hand)
         hand->h5_file = NULL;
     }
 
-    return false;
+    return true;
 
 error:
+    fprintf(stderr, "*** ERROR occurred while applying updater file: %s ***\n", updater_name);
+    fprintf(stderr, "*** The HDF5 file may be corrupted. Aborting recovery. ***\n");
     /* Free the buffer allocated in decode_cl_top_fields() when error happens */
-    if (updater.cl_buf)
+    if (updater.cl_buf) {
         free(updater.cl_buf);
+    }
 
     /* Free the buffer allocated in decode_and_copy_cl_entries_for_recovery() when error happens */
-    if (updater.change_list)
+    if (updater.change_list) {
         free(updater.change_list);
+    }
 
-    if(updater.file){
+    if(updater.file) {
         fclose(updater.file);
         updater.file = NULL;
     }
+
     if (hand->h5_file) {
         fclose(hand->h5_file);
         hand->h5_file = NULL;
     }
 
-    return -1;
+    return false;
 
 } /* apply_updater_recovery_only() */
 
@@ -1113,7 +1117,7 @@ static int
 apply_all_updater_files(handler_t *hand)
 {
     char updater_name[FILE_NAME_LEN];
-    int i, stop_update = 0;
+    int i;
     int ret;
     
     /* We need to remove any numeric extension from the updater path */
@@ -1139,9 +1143,15 @@ apply_all_updater_files(handler_t *hand)
     }
 
     /* Print out chosen file information */
-    fprintf(stdout, "Using specified files:\n");
-    fprintf(stdout, " - HDF5 file:           %s\n", hand->h5_file_path);
-    fprintf(stdout, " - Updater file prefix: %s\n\n", hand->updater_path);
+    if (hand->output) {
+        fprintf(hand->output, "Using specified files:\n");
+        fprintf(hand->output, " - HDF5 file:           %s\n", hand->h5_file_path);
+        fprintf(hand->output, " - Updater file prefix: %s\n\n", hand->updater_path);
+    } else { /* Print it to stdout even if verbose output is not enabled */
+        fprintf(stdout, "Using specified files:\n");
+        fprintf(stdout, " - HDF5 file:           %s\n", hand->h5_file_path);
+        fprintf(stdout, " - Updater file prefix: %s\n\n", hand->updater_path);
+    }
 
     for (i = 0; ; i++) {
         ret = snprintf(updater_name, sizeof(updater_name), "%s.%d", hand->updater_path, i);
@@ -1155,21 +1165,35 @@ apply_all_updater_files(handler_t *hand)
             goto error;
         }
 
-        // Only process if the file exists
+        /* Only process if the file exists */
         if (access(updater_name, F_OK) != 0){
+            /* Can't find the first updater file */
             if( i == 0) {
                 fprintf(stderr, "No updater files found at path: %s.0\n", hand->updater_path);
                 goto error;
             }
+
+            /* No more updater files to process -- normal termination */
+            if (hand->output) {
+                fprintf(hand->output, "No more updater files found. Stopping.\n");
+            }
             break;
         }
 
-        stop_update = apply_updater_recovery_only(updater_name, hand);
-
-        if (stop_update)
-            break;
-        else if (stop_update < 0)
+        /* Apply the updater file */
+        if (!apply_updater_recovery_only(updater_name, hand)) {
             goto error;
+        }
+    }
+
+    /* If the is_posix flag is true, then the HDF5 file should still be open.
+     * Close it now. */
+    if (hand->h5_file && hand->is_posix) {
+        if (fclose(hand->h5_file) == EOF) {
+            fprintf(stderr, "HDF5 file close failed\n");
+            goto error;
+        }
+        hand->h5_file = NULL;
     }
 
     return 0;
@@ -1233,20 +1257,6 @@ run_command_with_catch(const char *outbase, char *const cmd_argv[])
         perror("execvp failed");
         exit(EXIT_FAILURE);
     } else { /* Parent process */
-        
-#if 0
-        /* Write the child PID to a file */
-        char pid_file[FILE_NAME_LEN];
-        snprintf(pid_file, sizeof(pid_file), "%s.pid", outbase);
-        FILE *pid_fp = fopen(pid_file, "w");
-        if (pid_fp) {
-            fprintf(pid_fp, "%d\n", pid);
-            fclose(pid_fp);
-        } else {
-            perror("fopen pid file failed");
-            goto error;
-        }
-#endif
         /* Wait for the child process to finish */
         int status;
         if (waitpid(pid, &status, 0) == -1) {
@@ -1270,7 +1280,7 @@ run_command_with_catch(const char *outbase, char *const cmd_argv[])
                 goto error;
             }
 
-            return exit_status; // Return the exit status of the command
+            return exit_status; /* Return the exit status of the command */
         } else {
             fprintf(stderr, "Command did not exit normally\n");
             goto error;
@@ -1278,7 +1288,7 @@ run_command_with_catch(const char *outbase, char *const cmd_argv[])
     }
 
 error:
-    return -1; // Indicate failure
+    return -1; /* Indicate failure */
 } /* run_command_with_catch() */
 
 
@@ -1299,7 +1309,7 @@ check_h5clear_path(handler_t *hand){
     char *h5clear_env = getenv("H5CLEAR_PATH");
     if (h5clear_env != NULL && strlen(h5clear_env) > 0) {
         strncpy(path_buf, h5clear_env, sizeof(path_buf) - 1);
-        path_buf[sizeof(path_buf) - 1] = '\0'; // Ensure null-termination
+        path_buf[sizeof(path_buf) - 1] = '\0'; /* Ensure null-termination */
 
         /* Check that path ends with "h5clear" */
         size_t len = strlen(path_buf);
@@ -1319,7 +1329,7 @@ check_h5clear_path(handler_t *hand){
         do {
             p = strchr(s, ':');
             if (p != NULL) {
-                *p = '\0';  // Temporarily null-terminate
+                *p = '\0';  /* Temporarily null-terminate */
             }
             
             snprintf(path_buf, sizeof(path_buf), "%s/h5clear", s);
@@ -1445,10 +1455,10 @@ static void
 usage(void)
 {
     printf("    [-h] [-v --verbose] [-p --posix] [-l --log_file <log_file>] <hdf5_file> <updater_file>\n");
-    printf("    [-h --help]: Prints this help page.\n");
-    printf("    [-p --posix]: Indicate that the HDF5 file is on a POSIX file system.\n");
-    printf("    [-v --verbose]: Write log entries to stdout.\n");
-    printf("    [-l --log_file]: Specify path of a log file for log entries. (Will ignore verbose option)\n");
+    printf("    [-h --help]:                Prints this help page.\n");
+    printf("    [-p --posix]:               Indicate that the HDF5 file is on a POSIX file system.\n");
+    printf("    [-v --verbose]:             Write log entries to stdout.\n");
+    printf("    [-l --log_file] <log_file>: Specify path of a log file for log entries. (Will ignore verbose option)\n");
     printf("  Required Arguments:\n");
     printf("    <hdf5_file>: the path to the HDF5 file.\n");
     printf("    <updater_file>: the path to one of the updater files (doesn't matter which, and can accept basename).\n");
@@ -1474,8 +1484,8 @@ parse_command_line(int argc, char *argv[], handler_t *hand)
 {
     int              opt;
     aux_long_options long_options[] = {{"help", no_arg, 'h'},
-                                       {"verbose", no_arg, 'v'},
                                        {"posix", no_arg, 'p'},
+                                       {"verbose", no_arg, 'v'},
                                        {"log_file", require_arg, 'l'},
                                        {NULL, 0, 0}};
 
@@ -1502,24 +1512,23 @@ parse_command_line(int argc, char *argv[], handler_t *hand)
                 exit(0);
 
                 break;
-            case 'l':
-                /* The log file */
-                if (aux_optarg) {
-                    fprintf(stdout, "The log file:\t\t\t\t\t\t%s\n", aux_optarg);
-                    hand->log_file_path = strdup(aux_optarg);
-                }
-                else
-                    fprintf(stderr, "aux_optarg is null\n");
-                break;
             case 'p':
                 /* Whether the file system is POSIX */
-                fprintf(stdout, "Assuming POSIX semantics for file system containing HDF5 file. \n");
                 hand->is_posix = true;
                 break;
             case 'v':
                 /* Whether to write log entries to stdout */
                 fprintf(stdout, "Whether to write log entries to stdout:\t\t\ttrue\n");
                 hand->verbose = true;
+                break;
+            case 'l':
+                /* The log file */
+                if (aux_optarg) {
+                    fprintf(stdout, "Printing to log file:\t\t\t\t\t%s\n", aux_optarg);
+                    hand->log_file_path = strdup(aux_optarg);
+                }
+                else
+                    fprintf(stderr, "aux_optarg is null\n");
                 break;
             case ':':
                 fprintf(stderr, "option needs a value\n");
@@ -1548,6 +1557,15 @@ parse_command_line(int argc, char *argv[], handler_t *hand)
     }
     else if (hand->verbose) {
         hand->output = stdout;
+    }
+
+    /* Print whether assuming POSIX or not */
+    if (hand->is_posix) {
+        if (hand->output) {
+            fprintf(hand->output, "Assuming POSIX semantics for file system containing HDF5 file. \n");
+        } else { /* Print it to stdout even if verbose output is not enabled */
+            fprintf(stdout, "Assuming POSIX semantics for file system containing HDF5 file. \n");
+        }
     }
 
     return 0;
@@ -1589,7 +1607,13 @@ main(int argc, char **argv)
     if (release_resources(&hand) < 0)
         goto error;
 
-    fprintf(stdout, "Recovery tool completed successfully.\n");
+    /* Print completion message */
+    if (hand.output) {
+        fprintf(hand.output, "Recovery completed successfully.\n");
+    } else { /* Print it to stdout even if verbose output is not enabled */
+        fprintf(stdout, "Recovery completed successfully.\n");
+    }
+
     return EXIT_SUCCESS;
 
 error:

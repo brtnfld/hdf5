@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
  *
  * Created:     crasher.c
- *              Cody Sloan, 2025/08/06
+ *              Cody Sloan, 08/06/2025
  *
  * Purpose:     Run a command as a forked process and then kill it with 
  *              SIGKILL after a specified delay.
@@ -40,8 +40,7 @@
  * 
  * Return:   Success:       exit status of the command
  *           Failure:      -1 
- *
- * Cody Sloan -- 8/6/2025
+ *-------------------------------------------------------------------------
  */
 static int
 run_command_with_crash(const char *outbase, char *const cmd_argv[], double delay, int verbose, int print_to_console)
@@ -82,27 +81,14 @@ run_command_with_crash(const char *outbase, char *const cmd_argv[], double delay
         perror("execvp failed");
         exit(EXIT_FAILURE);
     } else { /* Parent process */
-#if 0
-        /* Write the child PID to a file */
-        char pid_file[FILE_NAME_LEN];
-        snprintf(pid_file, sizeof(pid_file), "%s.pid", outbase);
-        FILE *pid_fp = fopen(pid_file, "w");
-        if (pid_fp) {
-            fprintf(pid_fp, "%d\n", pid);
-            fclose(pid_fp);
-        } else {
-            perror("fopen pid file failed");
-            goto error;
-        }
-#endif
         /* Start the crash timer */
         if (delay <= 0) {
-            // If delay is 0, crash immediately
+            /* If delay is 0, crash immediately */
             kill(pid, SIGKILL);
         } else {
-            // Otherwise, wait for the specified delay before crashing
+            /* Otherwise, wait for the specified delay before crashing */
             usleep((useconds_t)(delay * 1000000));
-            kill(pid, SIGKILL);  // Always kill, regardless of state
+            kill(pid, SIGKILL);  /* Always kill, regardless of state */
         }
 
         /* Wait for the child process to finish */
@@ -122,15 +108,15 @@ run_command_with_crash(const char *outbase, char *const cmd_argv[], double delay
         if (WIFEXITED(status)) {
             return_code = WEXITSTATUS(status);
             if (verbose)
-                HDfprintf(stderr, "Command exited with status %d\n", return_code);
+                HDfprintf(stdout, "Command exited with status %d\n", return_code);
         } else if (WIFSIGNALED(status)) {
             return_code = 128 + WTERMSIG(status);
             if (verbose)
-                HDfprintf(stderr, "Command was killed by signal %d\n", WTERMSIG(status));
+                HDfprintf(stdout, "Command was killed by signal %d\n", WTERMSIG(status));
         } else {
             return_code = -1;
             if (verbose)
-                HDfprintf(stderr, "Command terminated abnormally (status=0x%x)\n", status);
+                HDfprintf(stdout, "Command terminated abnormally (status=0x%x)\n", status);
         }
 
         /* Write the return code to file */
@@ -145,26 +131,25 @@ run_command_with_crash(const char *outbase, char *const cmd_argv[], double delay
     }
 
 error:
-    return -1; // Indicate failure
+    return -1; /* Indicate failure */
 } /* run_command_with_crash() */
 
 static void
 usage(void)
 {
+    HDprintf("\nUsage: crasher [-h] [-v] [-p] <delay> <command> [args...]\n");
     HDprintf("\n");
-    HDprintf("Usage: crasher [-h] [-v] [-p] <delay> <command> [args...]\n");
-    HDprintf("\n");
-    HDprintf("Runs the specified command as a forked process and then kills it with SIGKILL\n");
+    HDprintf("Executes the specified command as a forked process and then kills it with SIGKILL\n");
     HDprintf("after <delay> seconds. If <delay> is 0, the command is killed immediately.\n");
-    HDprintf("\n");
-    HDprintf("Options:\n");
+    HDprintf("\nOptions:\n");
     HDprintf("  -h        : show this help message, then exit.\n");
     HDprintf("  -v        : print verbose output.\n");
     HDprintf("  -p        : print command's output to console instead of redirecting to <command>.out.\n");
-    HDprintf("  <delay>   : time in seconds to wait before crashing (decimal allowed, max precision 6 decimal places).\n");
-    HDprintf("  <command> : command to run and then crash.\n");
-    HDprintf("\n");
-    HDprintf("Example:\n");
+    HDprintf("\nRequired Arguments:\n");
+    HDprintf("  <delay>   : time in seconds to wait before crashing (decimals allowed, e.g., 1.5 or 0.25,\n");
+    HDprintf("              max precision 6 decimal places).\n");
+    HDprintf("  <command> [args...]: command to execute and then crash. Any arguments after the command are passed to it.\n");
+    HDprintf("\nExample:\n");
     HDprintf("  crasher -v 5 ./my_program arg1 arg2\n");
     HDprintf("\n");
 }
@@ -178,7 +163,7 @@ int main(int argc, char *argv[]) {
     char  **cmd_argv        = NULL;  /* Command and its arguments */
     char  *cmd_name         = NULL;  /* Name used for output files */
 
-    // Parse options first
+    /* Parse options first */
     while (i < argc && argv[i][0] == '-') {
         if (strcmp(argv[i], "-h") == 0) {
             usage();
@@ -233,7 +218,7 @@ int main(int argc, char *argv[]) {
     /* Strip path from command path to get basename for output files */
     char *slash = strrchr(cmd_argv[0], '/');
     if (slash) {
-        cmd_name = slash + 1;  // Use basename only
+        cmd_name = slash + 1;  /* Use basename only */
     }
 
     /* Sanity check - this should never happen if cmd_argv[0] exists */
