@@ -82,6 +82,7 @@ Options:
     -k: Keep output files from each crash iteration (generates many files, useful for debugging)
 
 Output Files (when using -k option):
+All output files are placed in the crasher_test/ directory:
     <test>_recovery.out.<count>         - Recovery tool output and error messages
     <test>_h5clear_pre.out.<count>      - H5clear output before recovery
     <test>_h5clear_post.out.<count>     - H5clear output after recovery
@@ -121,5 +122,5 @@ Examples:
     ./test_crash_recovery.sh -v -k bigset       # Run bigset test with verbose output and keep files
     ./test_crash_recovery.sh bigset sparse      # Run only bigset and sparse tests
 
-Note: The script must be edited to set PROJECT_DIR to point to your HDF5 SWMR project directory.
+Note: The script should automatically select the correct project dir, but will fail if you move relavant files from their expected spots.
 ALSO NOTE: Only the 'remove' test currently works.

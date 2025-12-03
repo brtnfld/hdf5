@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 
+#############################################################################
 # Initialize common variables
-PROJECT_DIR=/PATH/TO/VFD_SWMR/PROJECT
-if [ ! -d "$PROJECT_DIR" ]; then # Check that path exists
-    echo "ERROR: PROJECT_DIR ($PROJECT_DIR) does not exist. Please edit the script to set the correct path."
-    exit 1
-fi
+#############################################################################
+# Gets the directory of ../.. relative to this script, which should be the root directory of the project
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)" 
 nerrors=0
 nsofterrors=0
 RECOVERY_TOOL="$PROJECT_DIR/utils/vfd_swmr/recovery_tool"
@@ -48,9 +47,9 @@ vprintf() {
 }
 
 # Set up test directory
-rm -rf crasher_test
-mkdir crasher_test
-cd crasher_test
+rm -rf crash_test
+mkdir crash_test
+cd crash_test
 
 
 ###############################################################################
@@ -229,11 +228,11 @@ run_test_case() {
     local delay=$1
     local count=$2
     
-    ###########################################################################
-    # GENERATOR TOOL                                                          #
-    #   Some writer tools require an existing HDF5 file to modify.            #
-    #   In those cases, run the generator tool to create the initial file.    #
-    ###########################################################################
+    #=======================================================================
+    # GENERATOR TOOL
+    #   Some writer tools require an existing HDF5 file to modify.
+    #   In those cases, run the generator tool to create the initial file.
+    #=======================================================================
     if $REQUIRES_GENERATOR; then
         vprintf "%-32s : " "GENERATOR TOOL"
         catch_out_err_and_rc generator \
@@ -249,10 +248,10 @@ run_test_case() {
         fi    
     fi
 
-    ###########################################################################
-    # WRITER TOOL                                                             #
-    #   Run the writer tool and crash after $delay seconds                    #
-    ###########################################################################
+    #=======================================================================
+    # WRITER TOOL         
+    #   Run the writer tool and crash after $delay seconds
+    #=======================================================================
     vprintf "%-32s : " "$WRITER_NAME"
     # Crasher tool handles output redirection so no need for catch_out_err_and_rc
     $CRASHER_TOOL $delay $WRITER_TOOL $WRITER_OPTIONS 
@@ -272,13 +271,14 @@ run_test_case() {
         return 1
     fi
 
-    ###########################################################################
-    # PRE-RECOVERY H5CLEAR                                                    #
-    #   We need to clear the status flags on the HDF5 file before trying to   #
-    #   do pre-recovery validation. Otherwise the validation tools won't be   #
-    #   able to open the file. This is not required after recovery because    #
-    #   the recovery tool already does this as part of the recovery process.  #
-    ###########################################################################
+
+    #=======================================================================
+    # PRE-RECOVERY H5CLEAR
+    #   We need to clear the status flags on the HDF5 file before trying to
+    #   do pre-recovery validation. Otherwise the validation tools won't be
+    #   able to open the file. This is not required after recovery because
+    #   the recovery tool already does this as part of the recovery process.
+    #=======================================================================
     vprintf "%-32s : " "H5CLEAR -s"
     if [ -f $EXPECTED_H5_FILE ]
     then
@@ -299,11 +299,11 @@ run_test_case() {
     fi
 
 
-    ###########################################################################
-    # PRE-RECOVERY VALIDATION                                                 #
-    #   Uses the validation tool(s) to check if the H5 file is readable       #
-    #   before recovery.                                                      #
-    ########################################################################### 
+    #=======================================================================
+    # PRE-RECOVERY VALIDATION
+    #   Uses the validation tool(s) to check if the H5 file is readable 
+    #   before recovery.
+    #=======================================================================
     vprintf "%-32s : " "PRE-RECOVERY VALIDATION"
     if [ -f $EXPECTED_H5_FILE ]
     then
@@ -332,10 +332,10 @@ run_test_case() {
         vprintf "SUCCEEDED -- Pre-recovery validation passed\n"
     fi
 
-    ###########################################################################
-    # RECOVERY TOOL                                                           #
-    #   Attempt to recover the H5 file using the updater files.               #
-    ###########################################################################
+    #=======================================================================
+    # RECOVERY TOOL
+    #   Attempt to recover the H5 file using the updater files.
+    #=======================================================================
     vprintf "%-32s : " "RECOVERING H5 FILE"
     # Now try to recover the H5 file by applying the updater files using 
     # athe recovery tool.
@@ -360,11 +360,11 @@ run_test_case() {
     fi
 
 
-    ###########################################################################
-    # POST-RECOVERY VALIDATION                                                #
-    #   Uses the validation tool(s) to check if the H5 file is readable       #
-    #   after recovery.                                                       #
-    ########################################################################### 
+    #=======================================================================
+    # POST-RECOVERY VALIDATION
+    #   Uses the validation tool(s) to check if the H5 file is readable
+    #   after recovery.
+    #=======================================================================
     vprintf "%-32s : " "POST-RECOVERY VALIDATION"
     if [ -f $EXPECTED_H5_FILE ]
     then
@@ -394,12 +394,12 @@ run_test_case() {
     fi
 
 
-    ###########################################################################
-    # OUTPUT FILE HANDLING                                                    #
-    #   Rename output files if KEEP_OUTPUT_FILES is true                      #
-    #   If HDF5_NOCLEANUP is not set, remove all output files (that haven't   #
-    #   been renamed)                                                         #
-    ###########################################################################
+    #=======================================================================
+    # OUTPUT FILE HANDLING
+    #   Rename output files if KEEP_OUTPUT_FILES is true
+    #   If HDF5_NOCLEANUP is not set, remove all output files (that haven't
+    #   been renamed)
+    #=======================================================================
     if $KEEP_OUTPUT_FILES; then
         # Rename the output files so they don't get deleted in the cleanup step
         keep_output_files $count
