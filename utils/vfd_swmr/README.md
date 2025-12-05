@@ -82,23 +82,24 @@ Options:
     -k: Keep output files from each crash iteration (generates many files, useful for debugging)
 
 Output Files (when using -k option):
-All output files are placed in the crasher_test/ directory:
     <test>_recovery.out.<count>         - Recovery tool output and error messages
     <test>_h5clear_pre.out.<count>      - H5clear output before recovery
     <test>_h5clear_post.out.<count>     - H5clear output after recovery
     <test>_validation_pre.out.<count>   - Validation output before recovery
     <test>_validation_post.out.<count>  - Validation output after recovery
     <writer_name>.out.<count>           - Writer tool output
+Where <test> is the test name, <count> is the iteration number, and <writer_name> is the actual name of the writer program. 
+Note that a single test may run dozens of iterations, so many files will be created with the -k option.
 
-Where <test> is the test name and <count> is the iteration number. Note that a single test may run 
-dozens of iterations, so many files will be created with the -k option.
 Tests:
     standard  - Test vfd_swmr_writer crash recovery
-    bigset    - Test vfd_swmr_bigset_writer crash recovery (currently the primary test)
+    bigset    - Test vfd_swmr_bigset_writer crash recovery
     sparse    - Test vfd_swmr_sparse_writer crash recovery
     remove    - Test vfd_swmr_remove_writer crash recovery
 
 If no tests are specified, all tests will be run.
+
+All output files are placed in a newly made crash_test/ directory inside the current working directory.
 
 Test Process (for each iteration):
 1. Generate initial HDF5 file (if required by the test)
@@ -122,5 +123,62 @@ Examples:
     ./test_crash_recovery.sh -v -k bigset       # Run bigset test with verbose output and keep files
     ./test_crash_recovery.sh bigset sparse      # Run only bigset and sparse tests
 
-Note: The script should automatically select the correct project dir, but will fail if you move relavant files from their expected spots.
+Note: The script should automatically select the correct project dir, but will fail if you move relavant files 
+from their expected spots.
 ALSO NOTE: Only the 'remove' test currently works.
+
+
+exec_local_socket_test.sh
+=========================
+The local version of exec_nfs_socket_test, which tests the 'attrdset', 'bigset', 'dsetchks', 
+'dsetops', 'gfail', 'group', and 'zoo' VFD SWMR programs' socket communication ability with 
+options found in test/test_vfd_swmr.sh. The script allows you to select the tests individually,
+or to run multiple tests at once. All files will be placed in a local_socket_test/ directory in 
+the directory that you call the script from.
+
+Usage: exec_local_socket_test <test> <role> [md_dir]
+    <test>: The VFD SWMR test program that we want to test.
+            Can be one of the following:
+            'all', 'attrdset', 'bigset', 'gfail', 'group',
+            'group_basic', 'group_attrs', 'os_group_attrs', or 'zoo'.
+            Note: 'all' runs all tests, 'group' runs all group-related
+            tests.
+    <role>: 'reader' or 'writer' to indicate which role to run.
+            Also accepts just 'r' or 'w'.
+
+This script sets up and runs SWMR tests using local sockets. It assumes that
+you will run the writer and reader roles in separate terminal sessions. The
+writer role should be started before reader role, to allow the socket
+connection to establish correctly.
+
+exec_nfs_socket_test.sh
+=======================
+Tests the 'attrdset', 'bigset', 'dsetchks', 'dsetops', 'gfail', 'group', and 'zoo' VFD SWMR programs' socket 
+communication ability over a networked environment with options found in test/test_vfd_swmr.sh. The script has
+been configured to pass an IP address to each of the reader programs to establish a socket connection with
+the writer, and has slightly increase delays in some of the options to account for NFS-mount latency. The 
+script allows you to select the tests individually, or to run multiple tests at once. All files will be 
+placed in an nfs_socket_test/ directory in the directory that you call the script from.
+
+Usage: $0 <test> <role> [md_dir]
+    <test>: The VFD SWMR test program that we want to test.
+            Can be one of the following:
+            'all', 'attrdset', 'bigset', 'gfail', 'group',
+            'group_basic', 'group_attrs', 'os_group_attrs', or 'zoo'.
+            Note: 'all' runs all tests, 'group' runs all group-related 
+            tests.
+    <role>: 'reader' or 'writer' to indicate which role to run.
+            Also accepts just 'r' or 'w'.
+    [md_dir]: Optional directory path to place mdfile 
+                (only for bigset test). 
+
+This script sets up and runs SWMR tests using sockets. It assumes 
+that you will run the writer and reader roles on separate devices, 
+using an NFS mount as the current working directory when running 
+this script. The writer role should be started before the reader 
+role, to allow the socket connection to establish correctly.
+
+Note: Since the bigset test requires the auxiliary process to 
+run with access to a valid POSIX file system, the [md_dir] 
+argument MUST be set to a valid local posix path on the reader 
+device. The writer doesn't need this argument.

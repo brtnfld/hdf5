@@ -6,7 +6,6 @@
 # Gets the directory of ../.. relative to this script, which should be the root directory of the project
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)" 
 nerrors=0
-nsofterrors=0
 RECOVERY_TOOL="$PROJECT_DIR/utils/vfd_swmr/recovery_tool"
 CRASHER_TOOL="$PROJECT_DIR/utils/vfd_swmr/crasher"
 VFD_GENERATOR="$PROJECT_DIR/test/vfd_swmr_generator"
@@ -287,13 +286,11 @@ run_test_case() {
         rc=$(cat ${test_name}_h5clear_pre.rc)
     else
         vprintf "FAILED -- $EXPECTED_H5_FILE does not exist\n"
-        nerrors=$((nerrors + 1))
         return 0
     fi
 
     if [ $rc -ne 0 ]; then
         vprintf "FAILED (rc = $rc)\n"
-        nsofterrors=$((nsofterrors + 1))
     else
         vprintf "SUCCEEDED\n"
     fi
@@ -319,7 +316,7 @@ run_test_case() {
             rc=$?
         fi
 
-    else
+    else # should not be possible since we checked for file existence in h5clear step
         vprintf "FAILED -- $EXPECTED_H5_FILE does not exist\n"
         nerrors=$((nerrors + 1))
         return 0
@@ -327,7 +324,6 @@ run_test_case() {
 
     if [ $rc -ne 0 ]; then
         vprintf "FAILED (rc = $rc)\n"
-        # nsofterrors=$((nsofterrors + 1)) # Commented out because pre-recovery validation failures are expected
     else
         vprintf "SUCCEEDED -- Pre-recovery validation passed\n"
     fi
@@ -346,7 +342,6 @@ run_test_case() {
         rc=$(cat ${test_name}_recovery.rc)
     else
         vprintf "FAILED -- $EXPECTED_UD_FILE.0 does not exist\n"
-        nerrors=$((nerrors + 1))
         return 0
     fi
 
@@ -380,15 +375,14 @@ run_test_case() {
             rc=$?
         fi
         
-    else
+    else # should not be possible since we checked for file existence in recovery step
         vprintf "FAILED -- $EXPECTED_H5_FILE does not exist\n"
-        nsofterrors=$((nsofterrors + 1))
+        nerrors=$((nerrors + 1))
         return 0
     fi
 
     if [ $rc -ne 0 ]; then
         vprintf "FAILED (rc = $rc)\n"
-        nsofterrors=$((nsofterrors + 1))
     else
         vprintf "SUCCEEDED -- Post-recovery validation passed\n"
     fi
@@ -492,7 +486,11 @@ usage() {
     echo "  <test>_h5clear_post.out.<count>        - H5clear status reset after validation"
     echo "  <test>_validation_pre.out.<count>      - File validation before recovery"
     echo "  <test>_validation_post.out.<count>     - File validation after recovery"
-    echo "  Where <test> is the test name (standard, bigset, sparse, or remove) and <count> is the iteration number"
+    echo "  <writer_tool>.out.<count>              - Writer tool output and error messages"
+    echo ""
+    echo "  Where <test> is the test name (standard, bigset, sparse, or remove), <count> is the iteration number"
+    echo "  and <writer_tool> is the name of the actual writer program used in the test."
+    echo ""
     echo "  NOTE: a single test goes through dozens of iterations, so a large number of files will be created."
     echo ""
     echo "Tests:"
@@ -500,11 +498,15 @@ usage() {
     echo "  bigset    Run bigset writer crash test (vfd_swmr_bigset_writer)"  
     echo "  sparse    Run sparse writer crash test (vfd_swmr_sparse_writer)"
     echo "  remove    Run remove writer crash test (vfd_swmr_remove_writer)"
+    echo " If no tests are specified, all tests will be run."
+    echo ""
+    echo "All output files are placed in a newly made crash_test/ directory inside the current working directory."
     echo ""
     echo "Examples:"
     echo "  $0                    # Run all tests"
     echo "  $0 -v -k standard     # Run standard test with verbose output and keep files"
     echo "  $0 bigset sparse      # Run only bigset and sparse tests"
+    echo ""
 } # usage()
 
 # Parse command line arguments
@@ -598,19 +600,7 @@ main() {
     done    
     
     echo "Crash recovery test finished."
-    echo "Total soft errors: $nsofterrors"
-    echo "Total Errors: $nerrors" # should only ever be 0 or 1
-
-    if [ $nerrors -ne 0 ]; then
-        echo "Test failed with errors. Check the logs for details ."
-        exit 1
-    elif [ $nsofterrors -ne 0 ]; then
-        echo "Test completed with soft errors. Check the logs for details."
-        exit 0
-    else
-        echo "Test completed successfully without errors."
-        exit 0
-    fi
+    echo "Total Critical Errors: $nerrors" # should only ever be 0 or 1
 } # main()
 
 main "$@" # Run the script

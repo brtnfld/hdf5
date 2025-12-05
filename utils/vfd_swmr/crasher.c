@@ -137,18 +137,23 @@ error:
 static void
 usage(void)
 {
-    HDprintf("\nUsage: crasher [-h] [-v] [-p] <delay> <command> [args...]\n");
+    HDprintf("\nUsage: crasher [options] <delay> <command> [args...]\n");
     HDprintf("\n");
-    HDprintf("Executes the specified command as a forked process and then kills it with SIGKILL\n");
-    HDprintf("after <delay> seconds. If <delay> is 0, the command is killed immediately.\n");
-    HDprintf("\nOptions:\n");
-    HDprintf("  -h        : show this help message, then exit.\n");
-    HDprintf("  -v        : print verbose output.\n");
-    HDprintf("  -p        : print command's output to console instead of redirecting to <command>.out.\n");
-    HDprintf("\nRequired Arguments:\n");
-    HDprintf("  <delay>   : time in seconds to wait before crashing (decimals allowed, e.g., 1.5 or 0.25,\n");
-    HDprintf("              max precision 6 decimal places).\n");
-    HDprintf("  <command> [args...]: command to execute and then crash. Any arguments after the command are passed to it.\n");
+    HDprintf("Executes the specified command as a forked process and then terminates it with\n");
+    HDprintf("SIGKILL after <delay> seconds. If <delay> is 0, the command is killed\n");
+    HDprintf("immediately.\n");
+    HDprintf("\n");
+    HDprintf("   Options:\n");
+    HDprintf("     -h : Show this help message, then exit.\n");
+    HDprintf("     -v : Print verbose output.\n");
+    HDprintf("     -p : Print the command's output to console instead of redirecting to\n");
+    HDprintf("          <command>.out.\n");
+    HDprintf("\n");
+    HDprintf("   Required Arguments:\n");
+    HDprintf("     <delay>             : Time in seconds to wait before crashing (decimals allowed, \n");
+    HDprintf("                           e.g., 1.5 or 0.25, max precision 6 decimal places).\n");
+    HDprintf("     <command> [args...] : Command to execute and then crash. Any arguments after\n");
+    HDprintf("                           the command are passed to it.\n");
     HDprintf("\nExample:\n");
     HDprintf("  crasher -v 5 ./my_program arg1 arg2\n");
     HDprintf("\n");

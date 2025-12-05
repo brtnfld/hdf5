@@ -1454,15 +1454,20 @@ error:
 static void
 usage(void)
 {
-    printf("    [-h] [-v --verbose] [-p --posix] [-l --log_file <log_file>] <hdf5_file> <updater_file>\n");
-    printf("    [-h --help]:                Prints this help page.\n");
-    printf("    [-p --posix]:               Indicate that the HDF5 file is on a POSIX file system.\n");
-    printf("    [-v --verbose]:             Write log entries to stdout.\n");
-    printf("    [-l --log_file] <log_file>: Specify path of a log file for log entries. (Will ignore verbose option)\n");
-    printf("  Required Arguments:\n");
-    printf("    <hdf5_file>: the path to the HDF5 file.\n");
-    printf("    <updater_file>: the path to one of the updater files (doesn't matter which, and can accept basename).\n");
-    printf("\nNote: h5clear command must be available in PATH or H5CLEAR_PATH environment variable.\n");
+    printf("Usage: recovery_tool [options] <h5_file> <ud_file>\n");
+    printf("    Where:\n");
+    printf("      <h5_file>: the path to the HDF5 file.\n");
+    printf("      <ud_file>: the path to one of the updater files (doesn't matter\n");
+    printf("                 which, and can accept basename).\n");
+    printf("    Options:\n");
+    printf("      [-h --help]:                Prints this help page.\n");
+    printf("      [-p --posix]:               Indicate that the HDF5 file is on a POSIX \n");
+    printf("                                  file system.\n");
+    printf("      [-v --verbose]:             Write log entries to stdout.\n");
+    printf("      [-l --log_file] <log_file>: Specify path of a log file for log entries.\n");
+    printf("                                  (Will ignore verbose option)\n");
+    printf("\nNote: h5clear command must be available in PATH or H5CLEAR_PATH\n");
+    printf("environment variable.\n");
     printf("\n");
 } /* usage() */
 
@@ -1506,7 +1511,6 @@ parse_command_line(int argc, char *argv[], handler_t *hand)
     while ((opt = aux_get_options(argc, argv, "hvpl:", long_options)) != EOF) {
         switch (opt) {
             case 'h':
-                fprintf(stdout, "Help page:\n");
                 usage();
 
                 exit(0);
