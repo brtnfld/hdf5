@@ -53,6 +53,10 @@
 #define lseek _lseeki64
 #else
 #include <unistd.h>
+/* O_BINARY is Windows-specific; not defined on POSIX systems */
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
 #endif
 
 /*-------------------------------------------------------------------------
