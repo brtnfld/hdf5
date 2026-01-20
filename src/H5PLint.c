@@ -24,10 +24,15 @@
 /***********/
 /* Headers */
 /***********/
-#include "H5private.h"  /* Generic Functions            */
-#include "H5Eprivate.h" /* Error handling               */
-#include "H5PLpkg.h"    /* Plugin                       */
-#include "H5Zprivate.h" /* Filter pipeline              */
+#include "H5private.h"   /* Generic Functions            */
+#include "H5Eprivate.h"  /* Error handling               */
+#include "H5PLpkg.h"     /* Plugin                       */
+#include "H5Zprivate.h"  /* Filter pipeline              */
+#include "H5CXprivate.h" /* API Contexts                 */
+#ifdef H5_HAVE_PARALLEL
+#include "H5FDmpio.h"   /* MPI I/O file driver          */
+#include "H5Fprivate.h" /* File access                  */
+#endif
 
 /****************/
 /* Local Macros */
@@ -326,15 +331,17 @@ H5PL__open(const char *path, H5PL_type_t type, const H5PL_key_t *key, bool *succ
     herr_t                 ret_value = SUCCEED;
 
 #ifdef H5_REQUIRE_DIGITAL_SIGNATURE
-    char  *signature;
-    char  *publickey;
-    herr_t verify_result;
+    char  *signature      = NULL;
+    char  *publickey      = NULL;
+    herr_t verify_result  = SUCCEED;
 
 #ifdef H5_HAVE_PARALLEL
-    int       rank;
-    const int root = 0;
-
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    int                 rank     = 0;
+    const int           root     = 0;
+    MPI_Comm            comm     = MPI_COMM_NULL;
+    H5FD_mpio_xfer_t    xfer_mode = H5FD_MPIO_INDEPENDENT;
+    hid_t               dxpl_id   = H5I_INVALID_HID;
+    bool                do_bcast  = false;
 #endif // H5_HAVE_PARALLEL
 #endif // H5_REQUIRE_DIGITAL_SIGNATURE
 
@@ -355,23 +362,65 @@ H5PL__open(const char *path, H5PL_type_t type, const H5PL_key_t *key, bool *succ
 
 #ifdef H5_REQUIRE_DIGITAL_SIGNATURE
 #ifdef H5_HAVE_PARALLEL
-    if (rank == root) {
-#endif // H5_HAVE_PARALLEL
+    /* Try to get DXPL from API context to determine if collective I/O is being used */
+    dxpl_id = H5CX_get_dxpl();
+
+    /* Check if we should do collective broadcast based on DXPL setting */
+    if (dxpl_id != H5I_INVALID_HID) {
+        if (H5Pget_dxpl_mpio(dxpl_id, &xfer_mode) >= 0) {
+            if (xfer_mode == H5FD_MPIO_COLLECTIVE)
+                do_bcast = true;
+        }
+    }
+
+    /* Try to retrieve MPI communicator from the current API context.
+     * H5F_mpi_retrieve_comm will attempt to get the communicator from
+     * the file associated with the current operation, or from the file
+     * access property list. If neither is available, it returns MPI_COMM_NULL. */
+    if (H5F_mpi_retrieve_comm(H5I_INVALID_HID, H5I_INVALID_HID, &comm) < 0)
+        comm = MPI_COMM_NULL;
+
+    /* If we couldn't get a communicator from the API context,
+     * fall back to MPI_COMM_WORLD for plugin loading since plugins
+     * are global resources not necessarily tied to a specific file */
+    if (comm == MPI_COMM_NULL)
+        comm = MPI_COMM_WORLD;
+
+    MPI_Comm_rank(comm, &rank);
+
+    if (do_bcast) {
+        /* Collective I/O mode: Only root process performs signature verification,
+         * then broadcasts result to all participating ranks */
+        if (rank == root) {
+            signature     = H5PL__get_sig_name_from_path(path, "sig");
+            publickey     = H5PL__get_sig_name_from_path(path, "key");
+            verify_result = H5PL__openssl_verify_signature(path, signature, publickey);
+            free(signature);
+            free(publickey);
+        }
+        MPI_Bcast(&verify_result, 1, MPI_INT, root, comm);
+    }
+    else {
+        /* Independent I/O mode: Each rank that reaches this code performs
+         * its own signature verification. Not all ranks may be involved. */
         signature     = H5PL__get_sig_name_from_path(path, "sig");
         publickey     = H5PL__get_sig_name_from_path(path, "key");
         verify_result = H5PL__openssl_verify_signature(path, signature, publickey);
         free(signature);
         free(publickey);
-#ifdef H5_HAVE_PARALLEL
     }
-    MPI_Bcast(&verify_result, 1, MPI_INT, root, MPI_COMM_WORLD);
+#else
+    /* Serial mode: Always perform signature verification */
+    signature     = H5PL__get_sig_name_from_path(path, "sig");
+    publickey     = H5PL__get_sig_name_from_path(path, "key");
+    verify_result = H5PL__openssl_verify_signature(path, signature, publickey);
+    free(signature);
+    free(publickey);
 #endif // H5_HAVE_PARALLEL
+
     if (verify_result < 0) {
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "verification check failed");
     }
-#ifdef H5_HAVE_PARALLEL
-    MPI_Finalize();
-#endif // H5_HAVE_PARALLEL
 #endif // H5_REQUIRE_DIGITAL_SIGNATURE
 
     /* There are different reasons why a library can't be open, e.g. wrong architecture.
