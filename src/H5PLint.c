@@ -331,17 +331,15 @@ H5PL__open(const char *path, H5PL_type_t type, const H5PL_key_t *key, bool *succ
     herr_t                 ret_value = SUCCEED;
 
 #ifdef H5_REQUIRE_DIGITAL_SIGNATURE
-    char  *signature      = NULL;
-    char  *publickey      = NULL;
-    herr_t verify_result  = SUCCEED;
+    herr_t verify_result = SUCCEED;
 
 #ifdef H5_HAVE_PARALLEL
-    int                 rank     = 0;
-    const int           root     = 0;
-    MPI_Comm            comm     = MPI_COMM_NULL;
-    H5FD_mpio_xfer_t    xfer_mode = H5FD_MPIO_INDEPENDENT;
-    hid_t               dxpl_id   = H5I_INVALID_HID;
-    bool                do_bcast  = false;
+    int              rank           = 0;
+    const int        root           = 0;
+    MPI_Comm         comm           = MPI_COMM_NULL;
+    H5FD_mpio_xfer_t xfer_mode      = H5FD_MPIO_INDEPENDENT;
+    hid_t            dxpl_id        = H5I_INVALID_HID;
+    bool             use_collective = false;
 #endif // H5_HAVE_PARALLEL
 #endif // H5_REQUIRE_DIGITAL_SIGNATURE
 
@@ -361,65 +359,50 @@ H5PL__open(const char *path, H5PL_type_t type, const H5PL_key_t *key, bool *succ
         *plugin_type = H5PL_TYPE_ERROR;
 
 #ifdef H5_REQUIRE_DIGITAL_SIGNATURE
+    /* Verify plugin signature using appended signature format
+     *
+     * Strategy: Try collective verification when possible for efficiency,
+     * but fall back to independent if we cannot safely determine MPI context.
+     *
+     * The plugin file format is: [ Binary ] [ Signature ] [ Footer ]
+     * The signature is verified against hardcoded public key (no external files).
+     */
 #ifdef H5_HAVE_PARALLEL
-    /* Try to get DXPL from API context to determine if collective I/O is being used */
+    /* Try to get DXPL from API context to determine transfer mode */
     dxpl_id = H5CX_get_dxpl();
 
-    /* Check if we should do collective broadcast based on DXPL setting */
+    /* Check if collective mode is active and we have a valid communicator */
     if (dxpl_id != H5I_INVALID_HID) {
         if (H5Pget_dxpl_mpio(dxpl_id, &xfer_mode) >= 0) {
-            if (xfer_mode == H5FD_MPIO_COLLECTIVE)
-                do_bcast = true;
+            if (xfer_mode == H5FD_MPIO_COLLECTIVE) {
+                if (H5F_mpi_retrieve_comm(H5I_INVALID_HID, H5I_INVALID_HID, &comm) >= 0 &&
+                    comm != MPI_COMM_NULL) {
+                    use_collective = true;
+                }
+            }
         }
     }
 
-    /* Try to retrieve MPI communicator from the current API context.
-     * H5F_mpi_retrieve_comm will attempt to get the communicator from
-     * the file associated with the current operation, or from the file
-     * access property list. If neither is available, it returns MPI_COMM_NULL. */
-    if (H5F_mpi_retrieve_comm(H5I_INVALID_HID, H5I_INVALID_HID, &comm) < 0)
-        comm = MPI_COMM_NULL;
+    if (use_collective) {
+        /* Collective: root verifies, broadcasts result */
+        MPI_Comm_rank(comm, &rank);
 
-    /* If we couldn't get a communicator from the API context,
-     * fall back to MPI_COMM_WORLD for plugin loading since plugins
-     * are global resources not necessarily tied to a specific file */
-    if (comm == MPI_COMM_NULL)
-        comm = MPI_COMM_WORLD;
+        if (rank == root)
+            verify_result = H5PL__verify_signature_appended(path);
 
-    MPI_Comm_rank(comm, &rank);
-
-    if (do_bcast) {
-        /* Collective I/O mode: Only root process performs signature verification,
-         * then broadcasts result to all participating ranks */
-        if (rank == root) {
-            signature     = H5PL__get_sig_name_from_path(path, "sig");
-            publickey     = H5PL__get_sig_name_from_path(path, "key");
-            verify_result = H5PL__openssl_verify_signature(path, signature, publickey);
-            free(signature);
-            free(publickey);
-        }
         MPI_Bcast(&verify_result, 1, MPI_INT, root, comm);
     }
     else {
-        /* Independent I/O mode: Each rank that reaches this code performs
-         * its own signature verification. Not all ranks may be involved. */
-        signature     = H5PL__get_sig_name_from_path(path, "sig");
-        publickey     = H5PL__get_sig_name_from_path(path, "key");
-        verify_result = H5PL__openssl_verify_signature(path, signature, publickey);
-        free(signature);
-        free(publickey);
+        /* Independent: each rank verifies */
+        verify_result = H5PL__verify_signature_appended(path);
     }
 #else
-    /* Serial mode: Always perform signature verification */
-    signature     = H5PL__get_sig_name_from_path(path, "sig");
-    publickey     = H5PL__get_sig_name_from_path(path, "key");
-    verify_result = H5PL__openssl_verify_signature(path, signature, publickey);
-    free(signature);
-    free(publickey);
+    /* Serial mode: always verify */
+    verify_result = H5PL__verify_signature_appended(path);
 #endif // H5_HAVE_PARALLEL
 
     if (verify_result < 0) {
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "verification check failed");
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "plugin signature verification failed");
     }
 #endif // H5_REQUIRE_DIGITAL_SIGNATURE
 
@@ -607,9 +590,15 @@ done:
 /*-------------------------------------------------------------------------
  * Function:    H5PL__get_sig_name_from_path
  *
- * Purpose:     Find signature file using path
+ * Purpose:     Generate a filename by replacing or appending an extension
  *
- * Return:      Success:    Signature file with path
+ *              Given a path like "/path/to/plugin.so" and extension "sig",
+ *              produces "/path/to/plugin.sig"
+ *
+ *              Handles paths with no extension: "/path/to/plugin" → "/path/to/plugin.sig"
+ *              Handles dots in directories: "/user.name/plugin.so" → "/user.name/plugin.sig"
+ *
+ * Return:      Success:    Allocated string with new extension (caller must free)
  *              Failure:    NULL
  *
  *-------------------------------------------------------------------------
@@ -618,10 +607,13 @@ done:
 char *
 H5PL__get_sig_name_from_path(const char *path, const char *extension)
 {
-    char  *sig_name = NULL;  /* Signature filename with new extension */
-    char  *temp     = NULL;  /* Pointer to last '.' in path */
-    size_t len;              /* Length of new filename */
-    char  *ret_value = NULL; /* Return value */
+    char        *sig_name     = NULL;  /* New filename with extension */
+    const char  *last_slash   = NULL;  /* Pointer to last directory separator */
+    const char  *last_dot     = NULL;  /* Pointer to last '.' after last separator */
+    const char  *basename_start = NULL; /* Start of filename (after last /) */
+    size_t       base_len     = 0;     /* Length of path up to extension */
+    size_t       total_len    = 0;     /* Total length needed */
+    char        *ret_value    = NULL;  /* Return value */
 
     FUNC_ENTER_PACKAGE
 
@@ -629,29 +621,54 @@ H5PL__get_sig_name_from_path(const char *path, const char *extension)
     assert(path);
     assert(extension);
 
-    /* Calculate length needed: path + extension (without original extension) */
-    len = strlen(path) + strlen(extension);
+    /* Find last directory separator (Unix: '/', Windows also accepts '/') */
+    last_slash = strrchr(path, '/');
+#ifdef H5_HAVE_WIN32_API
+    {
+        const char *last_backslash = strrchr(path, '\\');
+        /* Use whichever separator appears later in the path */
+        if (last_backslash && (!last_slash || last_backslash > last_slash))
+            last_slash = last_backslash;
+    }
+#endif
+
+    /* Determine where basename starts (after last separator, or at beginning) */
+    basename_start = last_slash ? (last_slash + 1) : path;
+
+    /* Look for last '.' in the basename only (not in directory path) */
+    last_dot = strrchr(basename_start, '.');
+
+    /* Calculate base length (path up to extension, or entire path if no extension) */
+    if (last_dot && last_dot > basename_start) {
+        /* Has extension - replace it */
+        base_len = (size_t)(last_dot - path);
+    }
+    else {
+        /* No extension - will append one */
+        base_len = strlen(path);
+    }
+
+    /* Calculate total length needed: base + '.' + extension + null terminator */
+    total_len = base_len + 1 + strlen(extension) + 1;
 
     /* Allocate memory for new filename */
-    if (NULL == (sig_name = (char *)H5MM_calloc(len + 1)))
+    if (NULL == (sig_name = (char *)H5MM_malloc(total_len)))
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, NULL, "can't allocate space for signature filename");
 
-    /* Copy path to new string */
-    strcpy(sig_name, path);
+    /* Copy base path (up to but not including extension) */
+    memcpy(sig_name, path, base_len);
 
-    /* Find last occurrence of '.' to replace extension */
-    if (NULL == (temp = strrchr(sig_name, '.')))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_BADVALUE, NULL, "no extension found in path");
-
-    /* Replace extension (skip the '.') */
-    strcpy(temp + 1, extension);
+    /* Add new extension */
+    sig_name[base_len] = '.';
+    strcpy(sig_name + base_len + 1, extension);
 
     /* Set return value */
     ret_value = sig_name;
+    sig_name  = NULL; /* Prevent cleanup */
 
 done:
-    if (NULL == ret_value)
-        sig_name = (char *)H5MM_xfree(sig_name);
+    if (sig_name)
+        H5MM_xfree(sig_name);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL__get_sig_name_from_path */
@@ -945,24 +962,16 @@ done:
 herr_t
 H5PL__openssl_verify_signature(const char *plugin_name, const char *plugin_sig, const char *public_key)
 {
-    char  *publicKey = NULL;        /* Public key data */
-    int    keyLen;                  /* Length of public key */
-    char  *sig = NULL;              /* Signature data */
-    int    sigLen;                  /* Length of signature */
-    char  *data = NULL;             /* Plugin binary data */
-    int    dataLen;                 /* Length of plugin data */
-    int    authentic;               /* Authentication result */
-    size_t maxPathLen;              /* Maximum path length */
-    char  *copied_file_name = NULL; /* Temporary copy filename */
-    char   sig_file_name[4096];     /* Signature file path */
-    char   copy_elf_file[4096];     /* Command to copy plugin */
-    char   dump_sig[4096];          /* Command to dump signature */
-    char   remove_sig[4096];        /* Command to remove signature */
-    char   delete_so[4096];         /* Command to delete temporary plugin copy */
-    char   delete_sig[4096];        /* Command to delete temporary signature file */
-    RSA   *publicRSA = NULL;        /* RSA public key structure */
-    int    result;                  /* Result from signature verification */
-    herr_t ret_value = SUCCEED;     /* Return value */
+    char  *publicKey                = NULL; /* Public key data */
+    int    keyLen                   = 0;    /* Length of public key */
+    void  *sig                      = NULL; /* Signature data extracted from ELF */
+    size_t sigLen                   = 0;    /* Length of signature */
+    void  *data                     = NULL; /* Plugin binary data without signature */
+    size_t dataLen                  = 0;    /* Length of plugin data without signature */
+    int    authentic                = 0;    /* Authentication result */
+    RSA   *publicRSA                = NULL; /* RSA public key structure */
+    int    result                   = 0;    /* Result from signature verification */
+    herr_t ret_value                = SUCCEED; /* Return value */
 
     FUNC_ENTER_PACKAGE
 
@@ -971,68 +980,39 @@ H5PL__openssl_verify_signature(const char *plugin_name, const char *plugin_sig, 
     assert(plugin_sig);
     assert(public_key);
 
-    /* Set maximum path length */
-    maxPathLen = 4095;
-
     /* Read public key from file */
     if (NULL == (publicKey = H5PL__openSSL_read_file(public_key, &keyLen)))
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTOPENFILE, FAIL, "can't read public key file");
 
-    /* Generate temporary filename for plugin copy */
-    if (NULL == (copied_file_name = H5PL__get_sig_name_from_path(plugin_sig, "copy")))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "can't generate temporary filename");
-
-    /* Construct path for extracted signature file */
-    snprintf(sig_file_name, maxPathLen, "%s.sig", copied_file_name);
-
-    /* Construct shell commands for signature extraction */
-    snprintf(copy_elf_file, maxPathLen, "cp %s %s", plugin_name, copied_file_name);
-
-    /* Build commands to extract and remove signature section */
-    snprintf(dump_sig, maxPathLen, "objcopy %s --dump-section sig=%s", copied_file_name, sig_file_name);
-    snprintf(remove_sig, maxPathLen, "objcopy %s --remove-section=sig", copied_file_name);
-
-    /* Execute commands to extract signature from plugin binary */
-    system(copy_elf_file);
-    system(dump_sig);
-    system(remove_sig);
-
-    /* Read extracted signature */
-    if (NULL == (sig = H5PL__openSSL_read_file(sig_file_name, &sigLen)))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTOPENFILE, FAIL, "can't read signature file");
-
-    /* Read plugin binary data (with signature removed) */
-    if (NULL == (data = H5PL__openSSL_read_file(copied_file_name, &dataLen)))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTOPENFILE, FAIL, "can't read plugin data file");
-
-    /* Clean up temporary files */
-    snprintf(delete_so, maxPathLen, "rm %s", copied_file_name);
-    snprintf(delete_sig, maxPathLen, "rm %s", sig_file_name);
-    system(delete_so);
-    system(delete_sig);
+    /* Extract signature from ELF file using secure C-based parser
+     * This replaces the insecure system() calls to cp, objcopy, and rm.
+     * The function reads the ELF file, finds the signature section,
+     * and returns both the signature and the plugin data without the signature. */
+    if (NULL == (sig = H5PL__extract_signature_from_elf(plugin_name, &sigLen, &data, &dataLen)))
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "can't extract signature from plugin ELF file");
 
     /* Create RSA public key structure from key data */
     if (NULL == (publicRSA = H5PL__create_public_RSA(publicKey)))
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTCREATE, FAIL, "can't create RSA public key structure");
 
     /* Verify signature */
-    result = H5PL__RSA_verify_signature(publicRSA, (unsigned char *)sig, (size_t)sigLen, data,
-                                        (size_t)dataLen, &authentic);
+    result = H5PL__RSA_verify_signature(publicRSA, (unsigned char *)sig, sigLen, data, dataLen, &authentic);
 
     /* Check verification result */
+    if (1 != result)
+        HGOTO_ERROR(H5E_PLUGIN, H5E_BADVALUE, FAIL, "signature verification process failed");
+
     if (1 != authentic)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_BADVALUE, FAIL, "plugin signature verification failed");
+        HGOTO_ERROR(H5E_PLUGIN, H5E_BADVALUE, FAIL, "plugin signature verification failed - signature is not authentic");
 
 done:
     /* Clean up allocated resources */
-    if (NULL != copied_file_name)
-        copied_file_name = (char *)H5MM_xfree(copied_file_name);
     if (NULL != publicKey)
         publicKey = (char *)H5MM_xfree(publicKey);
     if (NULL != sig)
-        sig = (char *)H5MM_xfree(sig);
+        sig = H5MM_xfree(sig);
     if (NULL != data)
-        data = (char *)H5MM_xfree(data);
+        data = H5MM_xfree(data);
     if (NULL != publicRSA)
         RSA_free(publicRSA);
 
