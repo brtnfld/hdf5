@@ -36,7 +36,7 @@
  */
 
 /* Magic number to identify HDF5 signed plugins */
-#define H5PL_SIG_MAGIC 0x48444635  /* "HDF5" in hex */
+#define H5PL_SIG_MAGIC 0x48444635 /* "HDF5" in hex */
 
 /* Signature footer structure (placed at end of file) */
 typedef struct H5PL_sig_footer_t {
@@ -62,7 +62,7 @@ typedef struct H5PL_sig_footer_t {
 #ifndef H5PL_PUBLIC_KEY_PEM
 #define H5PL_PUBLIC_KEY_PEM                                                                                  \
     "-----BEGIN PUBLIC KEY-----\n"                                                                           \
-    "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1234567890ABCDEFGHIJ\n"                                       \
+    "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1234567890ABCDEFGHIJ\n"                                     \
     "KLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz1234567890\n"                                       \
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz\n"                                       \
     "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnop\n"                                       \

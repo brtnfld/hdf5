@@ -359,14 +359,14 @@ H5PL__open(const char *path, H5PL_type_t type, const H5PL_key_t *key, bool *succ
         *plugin_type = H5PL_TYPE_ERROR;
 
 #ifdef H5_REQUIRE_DIGITAL_SIGNATURE
-    /* Verify plugin signature using appended signature format
-     *
-     * Strategy: Try collective verification when possible for efficiency,
-     * but fall back to independent if we cannot safely determine MPI context.
-     *
-     * The plugin file format is: [ Binary ] [ Signature ] [ Footer ]
-     * The signature is verified against hardcoded public key (no external files).
-     */
+        /* Verify plugin signature using appended signature format
+         *
+         * Strategy: Try collective verification when possible for efficiency,
+         * but fall back to independent if we cannot safely determine MPI context.
+         *
+         * The plugin file format is: [ Binary ] [ Signature ] [ Footer ]
+         * The signature is verified against hardcoded public key (no external files).
+         */
 #ifdef H5_HAVE_PARALLEL
     /* Try to get DXPL from API context to determine transfer mode */
     dxpl_id = H5CX_get_dxpl();
@@ -585,4 +585,3 @@ H5PL_iterate(H5PL_iterate_type_t iter_type, H5PL_iterate_t iter_op, void *op_dat
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL_iterate() */
-

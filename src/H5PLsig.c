@@ -30,11 +30,11 @@
 /***********/
 /* Headers */
 /***********/
-#include "H5private.h"    /* Generic Functions            */
-#include "H5Eprivate.h"   /* Error handling               */
-#include "H5PLpkg.h"      /* Plugin                       */
-#include "H5PLsig.h"      /* Signature format             */
-#include "H5MMprivate.h"  /* Memory management            */
+#include "H5private.h"   /* Generic Functions            */
+#include "H5Eprivate.h"  /* Error handling               */
+#include "H5PLpkg.h"     /* Plugin                       */
+#include "H5PLsig.h"     /* Signature format             */
+#include "H5MMprivate.h" /* Memory management            */
 
 #ifdef H5_REQUIRE_DIGITAL_SIGNATURE
 
@@ -124,17 +124,17 @@ done:
 herr_t
 H5PL__verify_signature_appended(const char *plugin_path)
 {
-    int                  fd            = -1;
-    struct stat          st;
-    off_t                file_size     = 0;
-    H5PL_sig_footer_t    footer;
-    unsigned char       *signature     = NULL;
-    unsigned char       *binary_data   = NULL;
-    size_t               binary_size   = 0;
-    unsigned char        hash[SHA256_DIGEST_LENGTH];
-    RSA                 *public_key    = NULL;
-    int                  verify_result = 0;
-    herr_t               ret_value     = SUCCEED;
+    int               fd = -1;
+    struct stat       st;
+    off_t             file_size = 0;
+    H5PL_sig_footer_t footer;
+    unsigned char    *signature   = NULL;
+    unsigned char    *binary_data = NULL;
+    size_t            binary_size = 0;
+    unsigned char     hash[SHA256_DIGEST_LENGTH];
+    RSA              *public_key    = NULL;
+    int               verify_result = 0;
+    herr_t            ret_value     = SUCCEED;
 
     FUNC_ENTER_PACKAGE
 
@@ -210,8 +210,8 @@ H5PL__verify_signature_appended(const char *plugin_path)
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTCREATE, FAIL, "cannot create RSA public key");
 
     /* Verify signature */
-    verify_result = RSA_verify(NID_sha256, hash, SHA256_DIGEST_LENGTH,
-                                signature, footer.signature_length, public_key);
+    verify_result =
+        RSA_verify(NID_sha256, hash, SHA256_DIGEST_LENGTH, signature, footer.signature_length, public_key);
 
     if (verify_result != 1)
         HGOTO_ERROR(H5E_PLUGIN, H5E_BADVALUE, FAIL,
