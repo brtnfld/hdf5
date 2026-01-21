@@ -24,14 +24,14 @@
 /***********/
 /* Headers */
 /***********/
-#include "H5private.h"   /* Generic Functions            */
-#include "H5Eprivate.h"  /* Error handling               */
-#include "H5PLpkg.h"     /* Plugin                       */
-#include "H5Zprivate.h"  /* Filter pipeline              */
+#include "H5private.h"  /* Generic Functions            */
+#include "H5Eprivate.h" /* Error handling               */
+#include "H5PLpkg.h"    /* Plugin                       */
+#include "H5Zprivate.h" /* Filter pipeline              */
+#if defined(H5_REQUIRE_DIGITAL_SIGNATURE) && defined(H5_HAVE_PARALLEL)
 #include "H5CXprivate.h" /* API Contexts                 */
-#ifdef H5_HAVE_PARALLEL
-#include "H5FDmpio.h"   /* MPI I/O file driver          */
-#include "H5Fprivate.h" /* File access                  */
+#include "H5FDmpio.h"    /* MPI I/O file driver          */
+#include "H5Fprivate.h"  /* File access                  */
 #endif
 
 /****************/
@@ -45,6 +45,10 @@
 /********************/
 /* Local Prototypes */
 /********************/
+
+#ifdef H5_REQUIRE_DIGITAL_SIGNATURE
+static herr_t H5PL__verify_plugin_signature(const char *path);
+#endif
 
 /*********************/
 /* Package Variables */
@@ -284,6 +288,84 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL_load() */
 
+#ifdef H5_REQUIRE_DIGITAL_SIGNATURE
+/*-------------------------------------------------------------------------
+ * Function:    H5PL__verify_plugin_signature
+ *
+ * Purpose:     Verifies the digital signature of a plugin library file.
+ *
+ *              The plugin file format is: [ Binary ] [ Signature ] [ Footer ]
+ *              The signature is verified against hardcoded public key (no external files).
+ *
+ *              Strategy: Try collective verification when possible for efficiency,
+ *              but fall back to independent if we cannot safely determine MPI context.
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5PL__verify_plugin_signature(const char *path)
+{
+    herr_t verify_result = SUCCEED;
+    herr_t ret_value     = SUCCEED;
+
+#ifdef H5_HAVE_PARALLEL
+    int              rank           = 0;
+    const int        root           = 0;
+    MPI_Comm         comm           = MPI_COMM_NULL;
+    H5FD_mpio_xfer_t xfer_mode      = H5FD_MPIO_INDEPENDENT;
+    hid_t            dxpl_id        = H5I_INVALID_HID;
+    bool             use_collective = false;
+#endif
+
+    FUNC_ENTER_PACKAGE
+
+    /* Check args */
+    assert(path);
+
+#ifdef H5_HAVE_PARALLEL
+    /* Try to get DXPL from API context to determine transfer mode */
+    dxpl_id = H5CX_get_dxpl();
+
+    /* Check if collective mode is active and we have a valid communicator */
+    if (dxpl_id != H5I_INVALID_HID) {
+        if (H5Pget_dxpl_mpio(dxpl_id, &xfer_mode) >= 0) {
+            if (xfer_mode == H5FD_MPIO_COLLECTIVE) {
+                if (H5F_mpi_retrieve_comm(H5I_INVALID_HID, H5I_INVALID_HID, &comm) >= 0 &&
+                    comm != MPI_COMM_NULL) {
+                    use_collective = true;
+                }
+            }
+        }
+    }
+
+    if (use_collective) {
+        /* Collective: root verifies, broadcasts result */
+        MPI_Comm_rank(comm, &rank);
+
+        if (rank == root)
+            verify_result = H5PL__verify_signature_appended(path);
+
+        MPI_Bcast(&verify_result, 1, MPI_INT, root, comm);
+    }
+    else {
+        /* Independent: each rank verifies */
+        verify_result = H5PL__verify_signature_appended(path);
+    }
+#else
+    /* Serial mode: always verify */
+    verify_result = H5PL__verify_signature_appended(path);
+#endif
+
+    if (verify_result < 0)
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "plugin signature verification failed");
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5PL__verify_plugin_signature() */
+#endif /* H5_REQUIRE_DIGITAL_SIGNATURE */
+
 /*-------------------------------------------------------------------------
  * Function:    H5PL__open
  *
@@ -330,19 +412,6 @@ H5PL__open(const char *path, H5PL_type_t type, const H5PL_key_t *key, bool *succ
     H5PL_key_t             tmp_key;
     herr_t                 ret_value = SUCCEED;
 
-#ifdef H5_REQUIRE_DIGITAL_SIGNATURE
-    herr_t verify_result = SUCCEED;
-
-#ifdef H5_HAVE_PARALLEL
-    int              rank           = 0;
-    const int        root           = 0;
-    MPI_Comm         comm           = MPI_COMM_NULL;
-    H5FD_mpio_xfer_t xfer_mode      = H5FD_MPIO_INDEPENDENT;
-    hid_t            dxpl_id        = H5I_INVALID_HID;
-    bool             use_collective = false;
-#endif // H5_HAVE_PARALLEL
-#endif // H5_REQUIRE_DIGITAL_SIGNATURE
-
     FUNC_ENTER_PACKAGE
 
     /* Check args - Just assert on package functions */
@@ -359,52 +428,10 @@ H5PL__open(const char *path, H5PL_type_t type, const H5PL_key_t *key, bool *succ
         *plugin_type = H5PL_TYPE_ERROR;
 
 #ifdef H5_REQUIRE_DIGITAL_SIGNATURE
-        /* Verify plugin signature using appended signature format
-         *
-         * Strategy: Try collective verification when possible for efficiency,
-         * but fall back to independent if we cannot safely determine MPI context.
-         *
-         * The plugin file format is: [ Binary ] [ Signature ] [ Footer ]
-         * The signature is verified against hardcoded public key (no external files).
-         */
-#ifdef H5_HAVE_PARALLEL
-    /* Try to get DXPL from API context to determine transfer mode */
-    dxpl_id = H5CX_get_dxpl();
-
-    /* Check if collective mode is active and we have a valid communicator */
-    if (dxpl_id != H5I_INVALID_HID) {
-        if (H5Pget_dxpl_mpio(dxpl_id, &xfer_mode) >= 0) {
-            if (xfer_mode == H5FD_MPIO_COLLECTIVE) {
-                if (H5F_mpi_retrieve_comm(H5I_INVALID_HID, H5I_INVALID_HID, &comm) >= 0 &&
-                    comm != MPI_COMM_NULL) {
-                    use_collective = true;
-                }
-            }
-        }
-    }
-
-    if (use_collective) {
-        /* Collective: root verifies, broadcasts result */
-        MPI_Comm_rank(comm, &rank);
-
-        if (rank == root)
-            verify_result = H5PL__verify_signature_appended(path);
-
-        MPI_Bcast(&verify_result, 1, MPI_INT, root, comm);
-    }
-    else {
-        /* Independent: each rank verifies */
-        verify_result = H5PL__verify_signature_appended(path);
-    }
-#else
-    /* Serial mode: always verify */
-    verify_result = H5PL__verify_signature_appended(path);
-#endif // H5_HAVE_PARALLEL
-
-    if (verify_result < 0) {
+    /* Verify plugin signature before loading */
+    if (H5PL__verify_plugin_signature(path) < 0)
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "plugin signature verification failed");
-    }
-#endif // H5_REQUIRE_DIGITAL_SIGNATURE
+#endif
 
     /* There are different reasons why a library can't be open, e.g. wrong architecture.
      * If we can't open the library, just return.
