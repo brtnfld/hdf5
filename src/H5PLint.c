@@ -31,7 +31,7 @@
 #ifdef H5_REQUIRE_DIGITAL_SIGNATURE
 #include "H5CXprivate.h" /* API Contexts                 */
 #ifdef H5_HAVE_PARALLEL
-#include "H5FDmpio.h" /* MPI I/O file driver          */
+#include "H5FDmpio.h"   /* MPI I/O file driver          */
 #include "H5Fprivate.h" /* File access                  */
 #endif
 #endif
