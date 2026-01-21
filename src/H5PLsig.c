@@ -173,8 +173,7 @@ H5PL__verify_signature_appended(const char *plugin_path)
 
     /* Validate file is large enough for signature and footer */
     if (file_size < (off_t)(footer.signature_length + sizeof(H5PL_sig_footer_t)))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_BADVALUE, FAIL,
-                    "file too small to contain claimed signature and footer");
+        HGOTO_ERROR(H5E_PLUGIN, H5E_BADVALUE, FAIL, "file too small to contain claimed signature and footer");
 
     /* Calculate binary data size (file - signature - footer) */
     binary_size = (size_t)(file_size - footer.signature_length - sizeof(H5PL_sig_footer_t));
