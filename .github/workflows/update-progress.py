@@ -4,12 +4,38 @@ GitHub Project Release Blocker Progress Tracker
 Fetches release blocker issues from the HDF5 project and calculates completion percentage.
 """
 
+import os
+import sys
+
 import requests
 from typing import Dict, Any, Optional
 
+
+class ProjectFieldMissingError(Exception):
+    """Raised when a critical project field is missing or renamed."""
+    pass
+
+
+class ProjectDataError(Exception):
+    """Raised when project data is invalid or incomplete."""
+    pass
+
+# Configuration: Expected field names in GitHub Project
+# Update these if the project field names change
+FIELD_RELEASE_GATING = "Release gating"
+FIELD_STATUS = "Status"
+
+# Expected values for Release gating field
+VALUE_RELEASE_BLOCKER = "Release_Blocker"
+VALUE_RELEASE_MUST_DO = "Release_Must Do"
+
+# Expected value for Status field when an item is completed
+VALUE_STATUS_DONE = "Done"
+
+
 class GitHubProjectTracker:
     """Tracks release blocker progress in GitHub projects."""
-    
+
     def __init__(self, token: str, owner: str, project_number: int):
         self.api_url = "https://api.github.com/graphql"
         self.headers = {
@@ -89,22 +115,29 @@ class GitHubProjectTracker:
     
     def fetch_release_blocker_stats(self) -> Dict[str, int]:
         """
-        Fetches release blocker statistics from the GitHub project.
-        
+        Fetches release blocker and must-do statistics from the GitHub project.
+
         Returns:
-            Dict with 'total', 'done', and 'percentage' keys
+            Dict with 'total', 'done', 'percentage', 'blocker_total', 'blocker_done',
+            'mustdo_total', 'mustdo_done' keys
         """
-        total = 0
-        done = 0
+        blocker_total = 0
+        blocker_done = 0
+        mustdo_total = 0
+        mustdo_done = 0
         cursor = None
-        
+
+        # Track if we've seen the expected fields at least once
+        seen_release_gating = False
+        seen_status = False
+
         while True:
             variables = {
                 "owner": self.owner,
                 "projectNumber": self.project_number,
                 "cursor": cursor
             }
-            
+
             try:
                 response = requests.post(
                     self.api_url,
@@ -114,48 +147,102 @@ class GitHubProjectTracker:
                 )
                 response.raise_for_status()
                 result = response.json()
-                
+
                 if "errors" in result:
                     raise Exception(f"GraphQL errors: {result['errors']}")
-                    
+
             except requests.RequestException as e:
                 raise Exception(f"API request failed: {e}")
-            
+
             # Parse response
             project = result.get("data", {}).get("organization", {}).get("projectV2", {})
             items = project.get("items", {})
-            
+
             for item in items.get("nodes", []):
                 if not item.get("content"):
                     continue
-                    
+
                 fields = self._parse_item_fields(item)
-                
-                if fields.get("Release gating") == "Release_Blocker":
-                    total += 1
-                    if fields.get("Status") == "Done":
-                        done += 1
-            
+
+                # Validate expected fields exist
+                if FIELD_RELEASE_GATING in fields:
+                    seen_release_gating = True
+                if FIELD_STATUS in fields:
+                    seen_status = True
+
+                release_gating = fields.get(FIELD_RELEASE_GATING, "")
+                status = fields.get(FIELD_STATUS, "")
+
+                if release_gating == VALUE_RELEASE_BLOCKER:
+                    blocker_total += 1
+                    if status == VALUE_STATUS_DONE:
+                        blocker_done += 1
+                elif release_gating == VALUE_RELEASE_MUST_DO:
+                    mustdo_total += 1
+                    if status == VALUE_STATUS_DONE:
+                        mustdo_done += 1
+
             # Check for next page
             page_info = items.get("pageInfo", {})
             if not page_info.get("hasNextPage", False):
                 break
             cursor = page_info.get("endCursor")
-        
-        percentage = round((done / total * 100), 1) if total > 0 else 0
-        
+
+        # Validate that expected fields were found - FAIL HARD if missing
+        # This prevents false positives where field renames would cause 0 blockers to be reported
+        if not seen_release_gating:
+            print(f"ERROR: Critical field '{FIELD_RELEASE_GATING}' not found in any project items.",
+                  file=sys.stderr)
+            print("This field is required to identify release blockers and must-do items.",
+                  file=sys.stderr)
+            print("Possible causes:", file=sys.stderr)
+            print(f"  1. Field '{FIELD_RELEASE_GATING}' was renamed in the project", file=sys.stderr)
+            print("  2. Project structure changed", file=sys.stderr)
+            print("  3. Project is empty or inaccessible", file=sys.stderr)
+            print("Action required: Update FIELD_RELEASE_GATING constant in this script.", file=sys.stderr)
+            raise ProjectFieldMissingError(f"Critical field '{FIELD_RELEASE_GATING}' not found")
+
+        if not seen_status:
+            print(f"ERROR: Critical field '{FIELD_STATUS}' not found in any project items.",
+                  file=sys.stderr)
+            print("This field is required to determine completion status.", file=sys.stderr)
+            print("Possible causes:", file=sys.stderr)
+            print(f"  1. Field '{FIELD_STATUS}' was renamed in the project", file=sys.stderr)
+            print("  2. Project structure changed", file=sys.stderr)
+            print("  3. Project is empty or inaccessible", file=sys.stderr)
+            print("Action required: Update FIELD_STATUS constant in this script.", file=sys.stderr)
+            raise ProjectFieldMissingError(f"Critical field '{FIELD_STATUS}' not found")
+
+        total = blocker_total + mustdo_total
+        done = blocker_done + mustdo_done
+
+        # Validate that we found at least some items
+        # If total is 0, either the project is empty or field matching failed
+        if total == 0:
+            print("ERROR: No release blocker or must-do items found (total=0).", file=sys.stderr)
+            print("This likely indicates:", file=sys.stderr)
+            print(f"  1. The '{FIELD_RELEASE_GATING}' field values changed", file=sys.stderr)
+            print(f"     Expected values: '{VALUE_RELEASE_BLOCKER}' or '{VALUE_RELEASE_MUST_DO}'", file=sys.stderr)
+            print("  2. Project has no items with these field values", file=sys.stderr)
+            print("  3. Field matching logic needs to be updated", file=sys.stderr)
+            print("Refusing to report 0% or 100% with no items to prevent false positives.", file=sys.stderr)
+            raise ProjectDataError("No release items found - refusing to report false completion status")
+
+        percentage = round((done / total * 100), 1)
+
         return {
             'total': total,
             'done': done,
-            'percentage': percentage
+            'percentage': percentage,
+            'blocker_total': blocker_total,
+            'blocker_done': blocker_done,
+            'mustdo_total': mustdo_total,
+            'mustdo_done': mustdo_done
         }
 
 
 def main():
     """Main function to run the tracker."""
-    import os
-    import sys
-    
     # Configuration - can be overridden by environment variables
     TOKEN = os.getenv("GITHUB_TOKEN")
     OWNER = os.getenv("GITHUB_OWNER", "HDFGroup")
@@ -172,11 +259,17 @@ def main():
                 f.write(f"percentage={stats['percentage']}\n")
                 f.write(f"done={stats['done']}\n")
                 f.write(f"total={stats['total']}\n")
-        
+                f.write(f"blocker_total={stats['blocker_total']}\n")
+                f.write(f"blocker_done={stats['blocker_done']}\n")
+                f.write(f"mustdo_total={stats['mustdo_total']}\n")
+                f.write(f"mustdo_done={stats['mustdo_done']}\n")
+
         # Also output to stdout for local testing
         print(f"percentage={stats['percentage']}")
         print(f"Calculated progress: {stats['percentage']}%")
         print(f"Done / Total: {stats['done']} / {stats['total']}")
+        print(f"Blockers: {stats['blocker_done']} / {stats['blocker_total']}")
+        print(f"Must Do: {stats['mustdo_done']} / {stats['mustdo_total']}")
         
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
