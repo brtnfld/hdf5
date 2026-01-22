@@ -28,13 +28,6 @@
 #include "H5Eprivate.h" /* Error handling               */
 #include "H5PLpkg.h"    /* Plugin                       */
 #include "H5Zprivate.h" /* Filter pipeline              */
-#ifdef H5_REQUIRE_DIGITAL_SIGNATURE
-#include "H5CXprivate.h" /* API Contexts                 */
-#ifdef H5_HAVE_PARALLEL
-#include "H5FDmpio.h"   /* MPI I/O file driver          */
-#include "H5Fprivate.h" /* File access                  */
-#endif
-#endif
 
 /****************/
 /* Local Macros */
@@ -299,8 +292,11 @@ done:
  *              The plugin file format is: [ Binary ] [ Signature ] [ Footer ]
  *              The signature is verified against hardcoded public key (no external files).
  *
- *              Strategy: Try collective verification when possible for efficiency,
- *              but fall back to independent if we cannot safely determine MPI context.
+ *              Each rank independently verifies the plugin signature. While collective
+ *              verification could reduce I/O overhead, plugin files are small (typically
+ *              < 1 MB) and loading is infrequent. The complexity of reliably determining
+ *              the file communicator and ensuring all participating ranks perform the
+ *              collective operation outweighs the minimal performance benefit.
  *
  *              This function does NOT add additional error messages - it allows specific
  *              error details from H5PL__verify_signature_appended() to propagate up
@@ -313,59 +309,15 @@ done:
 static herr_t
 H5PL__verify_plugin_signature(const char *path)
 {
-    herr_t verify_result = SUCCEED;
-    herr_t ret_value     = SUCCEED;
-
-#ifdef H5_HAVE_PARALLEL
-    int              rank           = 0;
-    const int        root           = 0;
-    MPI_Comm         comm           = MPI_COMM_NULL;
-    H5FD_mpio_xfer_t xfer_mode      = H5FD_MPIO_INDEPENDENT;
-    hid_t            dxpl_id        = H5I_INVALID_HID;
-    bool             use_collective = false;
-#endif
+    herr_t ret_value = SUCCEED;
 
     FUNC_ENTER_PACKAGE
 
     /* Check args */
     assert(path);
 
-#ifdef H5_HAVE_PARALLEL
-    /* Try to get DXPL from API context to determine transfer mode */
-    dxpl_id = H5CX_get_dxpl();
-
-    /* Check if collective mode is active and we have a valid communicator */
-    if (dxpl_id != H5I_INVALID_HID) {
-        if (H5Pget_dxpl_mpio(dxpl_id, &xfer_mode) >= 0) {
-            if (xfer_mode == H5FD_MPIO_COLLECTIVE) {
-                if (H5F_mpi_retrieve_comm(H5I_INVALID_HID, H5I_INVALID_HID, &comm) >= 0 &&
-                    comm != MPI_COMM_NULL) {
-                    use_collective = true;
-                }
-            }
-        }
-    }
-
-    if (use_collective) {
-        /* Collective: root verifies, broadcasts result */
-        MPI_Comm_rank(comm, &rank);
-
-        if (rank == root)
-            verify_result = H5PL__verify_signature_appended(path);
-
-        MPI_Bcast(&verify_result, 1, MPI_INT, root, comm);
-    }
-    else {
-        /* Independent: each rank verifies */
-        verify_result = H5PL__verify_signature_appended(path);
-    }
-#else
-    /* Serial mode: always verify */
-    verify_result = H5PL__verify_signature_appended(path);
-#endif
-
-    /* Let specific errors propagate without wrapping for better diagnostics */
-    if (verify_result < 0)
+    /* Verify signature (independent verification - see function comment for rationale) */
+    if (H5PL__verify_signature_appended(path) < 0)
         HGOTO_DONE(FAIL);
 
 done:
