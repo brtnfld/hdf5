@@ -1423,6 +1423,46 @@ foreach (lib ${LINK_LIBS})
     endforeach ()
   endif ()
 
+  # Try to resolve the imported target itself to a library name
+  set (lib_namespace_substr -1)
+  string (FIND "${lib}" "::" lib_namespace_substr)
+  if (NOT lib_namespace_substr EQUAL -1)
+    # This is a CMake target, try to resolve it
+    set (resolved_lib_name "")
+
+    # Handle known target mappings
+    if (lib STREQUAL "OpenSSL::SSL")
+      set (resolved_lib_name "-lssl")
+    elseif (lib STREQUAL "OpenSSL::Crypto")
+      set (resolved_lib_name "-lcrypto")
+    elseif (lib STREQUAL "Threads::Threads")
+      set (resolved_lib_name "-lpthread")
+    else ()
+      # Try to get the actual library name from the imported target
+      get_target_property (target_location ${lib} IMPORTED_LOCATION)
+      if (NOT target_location OR target_location MATCHES "NOTFOUND")
+        # Try alternative location properties
+        get_target_property (target_location ${lib} IMPORTED_LOCATION_RELEASE)
+        if (NOT target_location OR target_location MATCHES "NOTFOUND")
+          get_target_property (target_location ${lib} IMPORTED_LOCATION_DEBUG)
+        endif ()
+      endif ()
+
+      if (target_location AND NOT target_location MATCHES "NOTFOUND")
+        get_filename_component (lib_filename ${target_location} NAME_WE)
+        # Remove 'lib' prefix if present
+        string (REGEX REPLACE "^lib" "" lib_filename "${lib_filename}")
+        set (resolved_lib_name "-l${lib_filename}")
+      endif ()
+    endif ()
+
+    if (resolved_lib_name)
+      set (_PKG_CONFIG_LIBS_PRIVATE "${_PKG_CONFIG_LIBS_PRIVATE} ${resolved_lib_name}")
+    else ()
+      message (WARNING "Could not resolve imported target ${lib} for pkg-config file")
+    endif ()
+  endif ()
+
   # For now, naively assume that any libraries listed are in the form
   # -llibname and can be directly added to the pkg-config files. This
   # is not always the case and more sophisticated processing of libraries
@@ -1432,12 +1472,36 @@ foreach (lib ${LINK_LIBS})
     foreach (interface_link_lib ${lib_interface_link_libs})
       set (lib_namespace_substr -1)
 
-      # Simple heuristic to filter out library dependencies of a target
-      # that are targets themselves. More complex processing is needed
-      # here to get the full list of libraries to be linked.
+      # Check if this is a CMake target (contains "::")
       string (FIND "${interface_link_lib}" "::" lib_namespace_substr)
       if (NOT lib_namespace_substr EQUAL -1)
-        message (WARNING "filtered out library dependency ${interface_link_lib} of library ${lib} when generating pkg-config file")
+        # Try to resolve CMake target to actual library name
+        set (resolved_lib_name "")
+
+        # Handle known target mappings
+        if (interface_link_lib STREQUAL "OpenSSL::SSL")
+          set (resolved_lib_name "-lssl")
+        elseif (interface_link_lib STREQUAL "OpenSSL::Crypto")
+          set (resolved_lib_name "-lcrypto")
+        elseif (interface_link_lib STREQUAL "Threads::Threads")
+          set (resolved_lib_name "-lpthread")
+        elseif (TARGET ${interface_link_lib})
+          # Try to get the actual library name from the target
+          get_target_property (target_location ${interface_link_lib} IMPORTED_LOCATION)
+          if (target_location AND NOT target_location MATCHES "NOTFOUND")
+            get_filename_component (lib_filename ${target_location} NAME_WE)
+            # Remove 'lib' prefix if present
+            string (REGEX REPLACE "^lib" "" lib_filename "${lib_filename}")
+            set (resolved_lib_name "-l${lib_filename}")
+          endif ()
+        endif ()
+
+        if (resolved_lib_name)
+          set (_PKG_CONFIG_LIBS_PRIVATE "${_PKG_CONFIG_LIBS_PRIVATE} ${resolved_lib_name}")
+        else ()
+          message (WARNING "Could not resolve library dependency ${interface_link_lib} of library ${lib} for pkg-config file")
+        endif ()
+
         continue ()
       endif ()
 

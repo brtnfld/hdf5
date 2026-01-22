@@ -311,16 +311,15 @@ H5PL__verify_plugin_signature(const char *path)
 {
     herr_t ret_value = SUCCEED;
 
-    FUNC_ENTER_PACKAGE
+    FUNC_ENTER_PACKAGE_NOERR
 
     /* Check args */
     assert(path);
 
     /* Verify signature (independent verification - see function comment for rationale) */
     if (H5PL__verify_signature_appended(path) < 0)
-        HGOTO_DONE(FAIL);
+        ret_value = FAIL;
 
-done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL__verify_plugin_signature() */
 #endif /* H5_REQUIRE_DIGITAL_SIGNATURE */

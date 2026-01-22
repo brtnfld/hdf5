@@ -38,10 +38,10 @@
 
 #ifdef H5_REQUIRE_DIGITAL_SIGNATURE
 
-#include <openssl/rsa.h>
+#include <openssl/evp.h>
 #include <openssl/pem.h>
-#include <openssl/sha.h>
 #include <openssl/bio.h>
+#include <openssl/err.h>
 
 /*-------------------------------------------------------------------------
  * Function:    H5PL__read_file_data
@@ -132,19 +132,20 @@ done:
 /*-------------------------------------------------------------------------
  * Function:    H5PL__create_public_RSA_from_string
  *
- * Purpose:     Create RSA public key from hardcoded PEM string
+ * Purpose:     Create EVP public key from hardcoded PEM string
+ *              Uses modern OpenSSL 3.0+ EVP API instead of deprecated RSA API
  *
- * Return:      Success: Pointer to RSA key
+ * Return:      Success: Pointer to EVP_PKEY
  *              Failure: NULL
  *
  *-------------------------------------------------------------------------
  */
-static RSA *
+static EVP_PKEY *
 H5PL__create_public_RSA_from_string(const char *key_string)
 {
-    BIO *key_bio   = NULL;
-    RSA *rsa       = NULL;
-    RSA *ret_value = NULL;
+    BIO      *key_bio   = NULL;
+    EVP_PKEY *pkey      = NULL;
+    EVP_PKEY *ret_value = NULL;
 
     FUNC_ENTER_PACKAGE
 
@@ -154,18 +155,18 @@ H5PL__create_public_RSA_from_string(const char *key_string)
     if (NULL == (key_bio = BIO_new_mem_buf(key_string, -1)))
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTCREATE, NULL, "cannot create BIO from key string");
 
-    /* Read public key */
-    if (NULL == (rsa = PEM_read_bio_RSA_PUBKEY(key_bio, NULL, NULL, NULL)))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, NULL, "cannot read RSA public key from BIO");
+    /* Read public key using modern EVP API */
+    if (NULL == (pkey = PEM_read_bio_PUBKEY(key_bio, NULL, NULL, NULL)))
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, NULL, "cannot read public key from BIO");
 
-    ret_value = rsa;
-    rsa       = NULL; /* Prevent cleanup */
+    ret_value = pkey;
+    pkey      = NULL; /* Prevent cleanup */
 
 done:
     if (key_bio)
         BIO_free(key_bio);
-    if (rsa)
-        RSA_free(rsa);
+    if (pkey)
+        EVP_PKEY_free(pkey);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL__create_public_RSA_from_string() */
@@ -198,11 +199,14 @@ H5PL__verify_signature_appended(const char *plugin_path)
     h5_stat_t         st;
     HDoff_t           file_size = 0;
     H5PL_sig_footer_t footer;
-    unsigned char    *signature   = NULL;
-    unsigned char    *binary_data = NULL;
-    size_t            binary_size = 0;
-    unsigned char     hash[SHA256_DIGEST_LENGTH];
-    RSA              *public_key    = NULL;
+    unsigned char    *signature     = NULL;
+    unsigned char    *binary_data   = NULL;
+    size_t            binary_size   = 0;
+    unsigned char     hash[EVP_MAX_MD_SIZE];
+    unsigned int      hash_len      = 0;
+    EVP_PKEY         *public_key    = NULL;
+    EVP_MD_CTX       *mdctx         = NULL;
+    EVP_PKEY_CTX     *pkey_ctx      = NULL;
     int               verify_result = 0;
     herr_t            ret_value     = SUCCEED;
 
@@ -242,8 +246,8 @@ H5PL__verify_signature_appended(const char *plugin_path)
     if (file_size < (HDoff_t)(footer.signature_length + sizeof(H5PL_sig_footer_t)))
         HGOTO_ERROR(H5E_PLUGIN, H5E_BADVALUE, FAIL, "file too small to contain claimed signature and footer");
 
-    /* Calculate binary data size (file - signature - footer) */
-    binary_size = (size_t)(file_size - footer.signature_length - sizeof(H5PL_sig_footer_t));
+    /* Calculate binary data size (file - signature - footer) - cast to size_t safely */
+    binary_size = (size_t)(file_size - (HDoff_t)footer.signature_length - (HDoff_t)sizeof(H5PL_sig_footer_t));
 
     /* Allocate signature buffer */
     if (NULL == (signature = (unsigned char *)H5MM_malloc(footer.signature_length)))
@@ -265,16 +269,34 @@ H5PL__verify_signature_appended(const char *plugin_path)
     HDclose(fd);
     fd = -1;
 
-    /* Calculate SHA256 hash of binary data */
-    SHA256(binary_data, binary_size, hash);
+    /* Create message digest context */
+    if (NULL == (mdctx = EVP_MD_CTX_new()))
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTCREATE, FAIL, "cannot create message digest context");
 
-    /* Create RSA public key from hardcoded PEM string */
+    /* Calculate SHA256 hash of binary data using EVP API */
+    if (1 != EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL))
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTINIT, FAIL, "cannot initialize digest");
+
+    if (1 != EVP_DigestUpdate(mdctx, binary_data, binary_size))
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "cannot update digest");
+
+    if (1 != EVP_DigestFinal_ex(mdctx, hash, &hash_len))
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "cannot finalize digest");
+
+    /* Create public key from hardcoded PEM string */
     if (NULL == (public_key = H5PL__create_public_RSA_from_string(H5PL_PUBLIC_KEY_PEM)))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTCREATE, FAIL, "cannot create RSA public key");
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTCREATE, FAIL, "cannot create public key");
 
-    /* Verify signature */
-    verify_result =
-        RSA_verify(NID_sha256, hash, SHA256_DIGEST_LENGTH, signature, footer.signature_length, public_key);
+    /* Verify signature using EVP API */
+    EVP_MD_CTX_reset(mdctx);
+
+    if (1 != EVP_DigestVerifyInit(mdctx, &pkey_ctx, EVP_sha256(), NULL, public_key))
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTINIT, FAIL, "cannot initialize signature verification");
+
+    if (1 != EVP_DigestVerifyUpdate(mdctx, binary_data, binary_size))
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "cannot update signature verification");
+
+    verify_result = EVP_DigestVerifyFinal(mdctx, signature, (size_t)footer.signature_length);
 
     if (verify_result != 1)
         HGOTO_ERROR(H5E_PLUGIN, H5E_BADVALUE, FAIL,
@@ -287,8 +309,10 @@ done:
         H5MM_xfree(signature);
     if (binary_data)
         H5MM_xfree(binary_data);
+    if (mdctx)
+        EVP_MD_CTX_free(mdctx);
     if (public_key)
-        RSA_free(public_key);
+        EVP_PKEY_free(public_key);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL__verify_signature_appended() */
