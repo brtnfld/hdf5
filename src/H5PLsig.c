@@ -199,9 +199,9 @@ H5PL__verify_signature_appended(const char *plugin_path)
     h5_stat_t         st;
     HDoff_t           file_size = 0;
     H5PL_sig_footer_t footer;
-    unsigned char    *signature     = NULL;
-    unsigned char    *binary_data   = NULL;
-    size_t            binary_size   = 0;
+    unsigned char    *signature   = NULL;
+    unsigned char    *binary_data = NULL;
+    size_t            binary_size = 0;
     unsigned char     hash[EVP_MAX_MD_SIZE];
     unsigned int      hash_len      = 0;
     EVP_PKEY         *public_key    = NULL;
