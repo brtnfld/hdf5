@@ -302,6 +302,10 @@ done:
  *              Strategy: Try collective verification when possible for efficiency,
  *              but fall back to independent if we cannot safely determine MPI context.
  *
+ *              This function does NOT add additional error messages - it allows specific
+ *              error details from H5PL__verify_signature_appended() to propagate up
+ *              for better diagnostic information.
+ *
  * Return:      SUCCEED/FAIL
  *
  *-------------------------------------------------------------------------
@@ -360,8 +364,9 @@ H5PL__verify_plugin_signature(const char *path)
     verify_result = H5PL__verify_signature_appended(path);
 #endif
 
+    /* Let specific errors propagate without wrapping for better diagnostics */
     if (verify_result < 0)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "plugin signature verification failed");
+        HGOTO_DONE(FAIL);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -432,7 +437,7 @@ H5PL__open(const char *path, H5PL_type_t type, const H5PL_key_t *key, bool *succ
 #ifdef H5_REQUIRE_DIGITAL_SIGNATURE
     /* Verify plugin signature before loading */
     if (H5PL__verify_plugin_signature(path) < 0)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "plugin signature verification failed");
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "plugin signature verification failed for: %s", path);
 #endif
 
     /* There are different reasons why a library can't be open, e.g. wrong architecture.

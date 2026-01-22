@@ -42,22 +42,6 @@
 #include <openssl/pem.h>
 #include <openssl/sha.h>
 #include <openssl/bio.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-
-#ifdef H5_HAVE_WIN32_API
-#include <io.h>
-#define open  _open
-#define close _close
-#define read  _read
-#define lseek _lseeki64
-#else
-#include <unistd.h>
-/* O_BINARY is Windows-specific; not defined on POSIX systems */
-#ifndef O_BINARY
-#define O_BINARY 0
-#endif
-#endif
 
 /*-------------------------------------------------------------------------
  * Function:    H5PL__create_public_RSA_from_string
@@ -141,11 +125,11 @@ H5PL__verify_signature_appended(const char *plugin_path)
     assert(plugin_path);
 
     /* Open plugin file for reading */
-    if ((fd = open(plugin_path, O_RDONLY | O_BINARY)) < 0)
+    if ((fd = HDopen(plugin_path, O_RDONLY | O_BINARY, 0)) < 0)
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTOPENFILE, FAIL, "cannot open plugin file");
 
     /* Get file size */
-    if (fstat(fd, &st) < 0)
+    if (HDfstat(fd, &st) < 0)
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "cannot get file size");
 
     file_size = st.st_size;
@@ -155,11 +139,11 @@ H5PL__verify_signature_appended(const char *plugin_path)
         HGOTO_ERROR(H5E_PLUGIN, H5E_BADVALUE, FAIL, "file too small to contain signature footer");
 
     /* Seek to footer position (end of file - footer size) */
-    if (lseek(fd, -(off_t)sizeof(H5PL_sig_footer_t), SEEK_END) < 0)
+    if (HDlseek(fd, -(off_t)sizeof(H5PL_sig_footer_t), SEEK_END) < 0)
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTSEEK, FAIL, "cannot seek to footer");
 
     /* Read footer */
-    if (read(fd, &footer, sizeof(H5PL_sig_footer_t)) != (ssize_t)sizeof(H5PL_sig_footer_t))
+    if (HDread(fd, &footer, sizeof(H5PL_sig_footer_t)) != (ssize_t)sizeof(H5PL_sig_footer_t))
         HGOTO_ERROR(H5E_PLUGIN, H5E_READERROR, FAIL, "cannot read signature footer");
 
     /* Validate magic number */
@@ -183,11 +167,11 @@ H5PL__verify_signature_appended(const char *plugin_path)
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "cannot allocate signature buffer");
 
     /* Seek to signature position (binary_size offset from start) */
-    if (lseek(fd, (off_t)binary_size, SEEK_SET) < 0)
+    if (HDlseek(fd, (off_t)binary_size, SEEK_SET) < 0)
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTSEEK, FAIL, "cannot seek to signature");
 
     /* Read signature */
-    if (read(fd, signature, footer.signature_length) != (ssize_t)footer.signature_length)
+    if (HDread(fd, signature, footer.signature_length) != (ssize_t)footer.signature_length)
         HGOTO_ERROR(H5E_PLUGIN, H5E_READERROR, FAIL, "cannot read signature data");
 
     /* Allocate buffer for binary data */
@@ -195,15 +179,15 @@ H5PL__verify_signature_appended(const char *plugin_path)
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "cannot allocate binary data buffer");
 
     /* Seek to start of file */
-    if (lseek(fd, 0, SEEK_SET) < 0)
+    if (HDlseek(fd, 0, SEEK_SET) < 0)
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTSEEK, FAIL, "cannot seek to file start");
 
     /* Read binary data */
-    if (read(fd, binary_data, binary_size) != (ssize_t)binary_size)
+    if (HDread(fd, binary_data, binary_size) != (ssize_t)binary_size)
         HGOTO_ERROR(H5E_PLUGIN, H5E_READERROR, FAIL, "cannot read binary data");
 
     /* Close file (we're done reading) */
-    close(fd);
+    HDclose(fd);
     fd = -1;
 
     /* Calculate SHA256 hash of binary data */
@@ -223,7 +207,7 @@ H5PL__verify_signature_appended(const char *plugin_path)
 
 done:
     if (fd >= 0)
-        close(fd);
+        HDclose(fd);
     if (signature)
         H5MM_xfree(signature);
     if (binary_data)

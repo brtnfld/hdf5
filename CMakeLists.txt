@@ -782,15 +782,20 @@ endif ()
 #-----------------------------------------------------------------------------
 option (HDF5_REQUIRE_SIGNED_PLUGINS "Require digitally signed plugins" OFF)
 if (HDF5_REQUIRE_SIGNED_PLUGINS)
-  if (NOT WIN32)
-    add_compile_definitions(H5_REQUIRE_DIGITAL_SIGNATURE)
-    # link_libraries(gpgme)
-    # link_libraries(gpg-error)
-    link_libraries(ssl)
-    link_libraries(crypto)
+  # Find OpenSSL for RSA signature verification
+  find_package(OpenSSL REQUIRED)
+  if (NOT OPENSSL_FOUND)
+    message(FATAL_ERROR "OpenSSL is required for HDF5_REQUIRE_SIGNED_PLUGINS but was not found")
   endif ()
+
+  add_compile_definitions(H5_REQUIRE_DIGITAL_SIGNATURE)
+
+  # Add OpenSSL to link libraries for the HDF5 library
+  # Use target-based linking for proper dependency management
+  list(APPEND LINK_LIBS OpenSSL::SSL OpenSSL::Crypto)
+
+  message(STATUS "Digital signature verification enabled (OpenSSL ${OPENSSL_VERSION})")
 endif ()
-message(VERBOSE "Digital signatures required for all plugins")
 
 #-----------------------------------------------------------------------------
 # Option to Enable MPI Parallel

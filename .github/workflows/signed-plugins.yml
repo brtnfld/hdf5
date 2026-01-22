@@ -32,7 +32,7 @@ jobs:
             shared: OFF
             parallel: OFF
 
-          # Parallel configurations - these test the MPI collective logic
+          # Parallel configurations - test MPI collective verification
           - name: "Parallel (Debug + Shared)"
             build_type: Debug
             shared: ON
