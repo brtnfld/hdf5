@@ -63,9 +63,9 @@
 static herr_t
 H5PL__read_file_data(int fd, HDoff_t offset, void *buf, size_t size, const char *filename)
 {
-    size_t            left_to_read = size;
-    unsigned char    *read_ptr     = (unsigned char *)buf;
-    herr_t            ret_value    = SUCCEED;
+    size_t         left_to_read = size;
+    unsigned char *read_ptr     = (unsigned char *)buf;
+    herr_t         ret_value    = SUCCEED;
 
     FUNC_ENTER_PACKAGE
 
