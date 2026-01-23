@@ -112,14 +112,10 @@ typedef const void *(*H5PL_get_plugin_info_t)(void);
 /* Package Private Typedefs */
 /****************************/
 
-/* Forward declaration of H5F_t */
-struct H5F_t;
-
 /* Data used to search for plugins */
 typedef struct H5PL_search_params_t {
     H5PL_type_t       type;
     const H5PL_key_t *key;
-    struct H5F_t     *file; /* File pointer for MPI collective verification (can be NULL) */
 } H5PL_search_params_t;
 
 /*****************************/
@@ -136,8 +132,7 @@ H5_DLL herr_t H5PL__set_plugin_control_mask(unsigned int mask);
 
 /* Plugin search and manipulation */
 H5_DLL herr_t H5PL__open(const char *libname, H5PL_type_t type, const H5PL_key_t *key, bool *success /*out*/,
-                         H5PL_type_t *plugin_type /*out*/, const void **plugin_info /*out*/,
-                         struct H5F_t *file);
+                         H5PL_type_t *plugin_type /*out*/, const void **plugin_info /*out*/);
 H5_DLL herr_t H5PL__close(H5PL_HANDLE handle);
 
 /* Plugin cache calls */

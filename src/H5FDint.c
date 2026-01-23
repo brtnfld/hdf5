@@ -3198,7 +3198,7 @@ H5FD_register_driver_by_name(const char *name, bool app_ref)
         /* Try loading the driver */
         key.vfd.kind   = H5FD_GET_DRIVER_BY_NAME;
         key.vfd.u.name = name;
-        if (NULL == (cls = (const H5FD_class_t *)H5PL_load(H5PL_TYPE_VFD, &key, NULL)))
+        if (NULL == (cls = (const H5FD_class_t *)H5PL_load(H5PL_TYPE_VFD, &key)))
             HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, H5I_INVALID_HID, "unable to load VFD");
 
         /* Register the driver we loaded */
@@ -3252,7 +3252,7 @@ H5FD_register_driver_by_value(H5FD_class_value_t value, bool app_ref)
         /* Try loading the driver */
         key.vfd.kind    = H5FD_GET_DRIVER_BY_VALUE;
         key.vfd.u.value = value;
-        if (NULL == (cls = (const H5FD_class_t *)H5PL_load(H5PL_TYPE_VFD, &key, NULL)))
+        if (NULL == (cls = (const H5FD_class_t *)H5PL_load(H5PL_TYPE_VFD, &key)))
             HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, H5I_INVALID_HID, "unable to load VFD");
 
         /* Register the driver we loaded */

@@ -658,7 +658,7 @@ H5PL__path_table_iterate_process_path(const char *plugin_path, H5PL_iterate_type
             plugin_type   = H5PL_TYPE_ERROR;
             plugin_info   = NULL;
             plugin_loaded = false;
-            if (H5PL__open(path, H5PL_TYPE_NONE, NULL, &plugin_loaded, &plugin_type, &plugin_info, NULL) < 0)
+            if (H5PL__open(path, H5PL_TYPE_NONE, NULL, &plugin_loaded, &plugin_type, &plugin_info) < 0)
                 HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, H5_ITER_ERROR, "failed to open plugin '%s'", path);
 
             /* Determine if we should process this plugin */
@@ -737,7 +737,7 @@ H5PL__path_table_iterate_process_path(const char *plugin_path, H5PL_iterate_type
             plugin_type   = H5PL_TYPE_ERROR;
             plugin_info   = NULL;
             plugin_loaded = false;
-            if (H5PL__open(path, H5PL_TYPE_NONE, NULL, &plugin_loaded, &plugin_type, &plugin_info, NULL) < 0)
+            if (H5PL__open(path, H5PL_TYPE_NONE, NULL, &plugin_loaded, &plugin_type, &plugin_info) < 0)
                 HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, H5_ITER_ERROR, "failed to open plugin '%s'", path);
 
             /* Determine if we should process this plugin */
@@ -895,8 +895,7 @@ H5PL__find_plugin_in_path(const H5PL_search_params_t *search_params, bool *found
             }
 
             /* attempt to open the dynamic library */
-            if (H5PL__open(path, search_params->type, search_params->key, found, NULL, plugin_info,
-                           search_params->file) < 0)
+            if (H5PL__open(path, search_params->type, search_params->key, found, NULL, plugin_info) < 0)
                 HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "search in directory failed");
             if (*found)
                 HGOTO_DONE(SUCCEED);
@@ -963,8 +962,7 @@ H5PL__find_plugin_in_path(const H5PL_search_params_t *search_params, bool *found
                 continue;
 
             /* attempt to open the dynamic library */
-            if (H5PL__open(path, search_params->type, search_params->key, found, NULL, plugin_info,
-                           search_params->file) < 0)
+            if (H5PL__open(path, search_params->type, search_params->key, found, NULL, plugin_info) < 0)
                 HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "search in directory failed");
             if (*found)
                 HGOTO_DONE(SUCCEED);
