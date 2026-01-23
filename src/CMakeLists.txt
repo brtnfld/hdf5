@@ -1423,25 +1423,35 @@ foreach (lib ${LINK_LIBS})
     endforeach ()
   endif ()
 
-  # Try to resolve the imported target itself to a library name
+  # Try to resolve the imported target itself to a library name for pkg-config
+  #
+  # Note: While FindOpenSSL provides OPENSSL_LIBRARIES, those contain full paths,
+  # not the "-lssl" format needed for pkg-config. We need to convert CMake imported
+  # targets (OpenSSL::SSL) to pkg-config linker flags (-lssl).
+  #
+  # This uses a hybrid approach:
+  # 1. Query IMPORTED_LIBNAME first (most reliable when set)
+  # 2. Extract from IMPORTED_LOCATION as fallback
+  # 3. Known common mappings as last resort (for robustness)
   set (lib_namespace_substr -1)
   string (FIND "${lib}" "::" lib_namespace_substr)
   if (NOT lib_namespace_substr EQUAL -1)
     # This is a CMake target, try to resolve it
     set (resolved_lib_name "")
 
-    # Handle known target mappings
-    if (lib STREQUAL "OpenSSL::SSL")
-      set (resolved_lib_name "-lssl")
-    elseif (lib STREQUAL "OpenSSL::Crypto")
-      set (resolved_lib_name "-lcrypto")
-    elseif (lib STREQUAL "Threads::Threads")
-      set (resolved_lib_name "-lpthread")
-    else ()
-      # Try to get the actual library name from the imported target
+    # Strategy 1: Try IMPORTED_LIBNAME (most reliable)
+    if (TARGET ${lib})
+      get_target_property (imported_libname ${lib} IMPORTED_LIBNAME)
+      if (imported_libname AND NOT imported_libname MATCHES "NOTFOUND")
+        set (resolved_lib_name "-l${imported_libname}")
+      endif ()
+    endif ()
+
+    # Strategy 2: Extract from IMPORTED_LOCATION
+    if (NOT resolved_lib_name AND TARGET ${lib})
       get_target_property (target_location ${lib} IMPORTED_LOCATION)
       if (NOT target_location OR target_location MATCHES "NOTFOUND")
-        # Try alternative location properties
+        # Try configuration-specific variants
         get_target_property (target_location ${lib} IMPORTED_LOCATION_RELEASE)
         if (NOT target_location OR target_location MATCHES "NOTFOUND")
           get_target_property (target_location ${lib} IMPORTED_LOCATION_DEBUG)
@@ -1450,9 +1460,20 @@ foreach (lib ${LINK_LIBS})
 
       if (target_location AND NOT target_location MATCHES "NOTFOUND")
         get_filename_component (lib_filename ${target_location} NAME_WE)
-        # Remove 'lib' prefix if present
+        # Remove 'lib' prefix if present (Unix convention)
         string (REGEX REPLACE "^lib" "" lib_filename "${lib_filename}")
         set (resolved_lib_name "-l${lib_filename}")
+      endif ()
+    endif ()
+
+    # Strategy 3: Known common mappings (fallback for robustness)
+    if (NOT resolved_lib_name)
+      if (lib STREQUAL "OpenSSL::SSL")
+        set (resolved_lib_name "-lssl")
+      elseif (lib STREQUAL "OpenSSL::Crypto")
+        set (resolved_lib_name "-lcrypto")
+      elseif (lib STREQUAL "Threads::Threads")
+        set (resolved_lib_name "-lpthread")
       endif ()
     endif ()
 
@@ -1475,24 +1496,43 @@ foreach (lib ${LINK_LIBS})
       # Check if this is a CMake target (contains "::")
       string (FIND "${interface_link_lib}" "::" lib_namespace_substr)
       if (NOT lib_namespace_substr EQUAL -1)
-        # Try to resolve CMake target to actual library name
+        # Try to resolve CMake target to actual library name using same strategy as above
         set (resolved_lib_name "")
 
-        # Handle known target mappings
-        if (interface_link_lib STREQUAL "OpenSSL::SSL")
-          set (resolved_lib_name "-lssl")
-        elseif (interface_link_lib STREQUAL "OpenSSL::Crypto")
-          set (resolved_lib_name "-lcrypto")
-        elseif (interface_link_lib STREQUAL "Threads::Threads")
-          set (resolved_lib_name "-lpthread")
-        elseif (TARGET ${interface_link_lib})
-          # Try to get the actual library name from the target
+        # Strategy 1: Try IMPORTED_LIBNAME (most reliable)
+        if (TARGET ${interface_link_lib})
+          get_target_property (imported_libname ${interface_link_lib} IMPORTED_LIBNAME)
+          if (imported_libname AND NOT imported_libname MATCHES "NOTFOUND")
+            set (resolved_lib_name "-l${imported_libname}")
+          endif ()
+        endif ()
+
+        # Strategy 2: Extract from IMPORTED_LOCATION
+        if (NOT resolved_lib_name AND TARGET ${interface_link_lib})
           get_target_property (target_location ${interface_link_lib} IMPORTED_LOCATION)
+          if (NOT target_location OR target_location MATCHES "NOTFOUND")
+            get_target_property (target_location ${interface_link_lib} IMPORTED_LOCATION_RELEASE)
+            if (NOT target_location OR target_location MATCHES "NOTFOUND")
+              get_target_property (target_location ${interface_link_lib} IMPORTED_LOCATION_DEBUG)
+            endif ()
+          endif ()
+
           if (target_location AND NOT target_location MATCHES "NOTFOUND")
             get_filename_component (lib_filename ${target_location} NAME_WE)
-            # Remove 'lib' prefix if present
+            # Remove 'lib' prefix if present (Unix convention)
             string (REGEX REPLACE "^lib" "" lib_filename "${lib_filename}")
             set (resolved_lib_name "-l${lib_filename}")
+          endif ()
+        endif ()
+
+        # Strategy 3: Known common mappings (fallback for robustness)
+        if (NOT resolved_lib_name)
+          if (interface_link_lib STREQUAL "OpenSSL::SSL")
+            set (resolved_lib_name "-lssl")
+          elseif (interface_link_lib STREQUAL "OpenSSL::Crypto")
+            set (resolved_lib_name "-lcrypto")
+          elseif (interface_link_lib STREQUAL "Threads::Threads")
+            set (resolved_lib_name "-lpthread")
           endif ()
         endif ()
 

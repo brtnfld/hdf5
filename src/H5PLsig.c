@@ -98,6 +98,8 @@ H5PL__read_file_data(int fd, HDoff_t offset, void *buf, size_t size, const char 
                 offset += bytes_read;
 #else
             bytes_read = HDread(fd, read_ptr, bytes_in);
+            if (bytes_read > 0)
+                offset += bytes_read;
 #endif /* H5_HAVE_PREADWRITE */
         } while (-1 == bytes_read && EINTR == errno);
 
@@ -246,8 +248,27 @@ H5PL__verify_signature_appended(const char *plugin_path)
     if (file_size < (HDoff_t)(footer.signature_length + sizeof(H5PL_sig_footer_t)))
         HGOTO_ERROR(H5E_PLUGIN, H5E_BADVALUE, FAIL, "file too small to contain claimed signature and footer");
 
-    /* Calculate binary data size (file - signature - footer) - cast to size_t safely */
-    binary_size = (size_t)(file_size - (HDoff_t)footer.signature_length - (HDoff_t)sizeof(H5PL_sig_footer_t));
+    /* Calculate binary data size (file - signature - footer) */
+    {
+        HDoff_t binary_size_off = file_size - (HDoff_t)footer.signature_length - (HDoff_t)sizeof(H5PL_sig_footer_t);
+
+        /* Practical size limit: 1GB for plugin files (prevents unreasonable allocations) */
+#define H5PL_MAX_PLUGIN_SIZE ((HDoff_t)(1024 * 1024 * 1024))
+        if (binary_size_off > H5PL_MAX_PLUGIN_SIZE)
+            HGOTO_ERROR(H5E_PLUGIN, H5E_BADVALUE, FAIL,
+                        "plugin binary size %llu exceeds maximum allowed size (%llu bytes) - "
+                        "file too large to verify",
+                        (unsigned long long)binary_size_off, (unsigned long long)H5PL_MAX_PLUGIN_SIZE);
+
+        /* Check for overflow when casting to size_t (critical on 32-bit systems with LFS) */
+        if (binary_size_off > (HDoff_t)SIZE_MAX)
+            HGOTO_ERROR(H5E_PLUGIN, H5E_BADVALUE, FAIL,
+                        "plugin binary size %llu exceeds SIZE_MAX - file too large to verify on this platform",
+                        (unsigned long long)binary_size_off);
+
+        binary_size = (size_t)binary_size_off;
+#undef H5PL_MAX_PLUGIN_SIZE
+    }
 
     /* Allocate signature buffer */
     if (NULL == (signature = (unsigned char *)H5MM_malloc(footer.signature_length)))
