@@ -24,10 +24,15 @@
 /***********/
 /* Headers */
 /***********/
-#include "H5private.h"  /* Generic Functions            */
-#include "H5Eprivate.h" /* Error handling               */
-#include "H5PLpkg.h"    /* Plugin                       */
-#include "H5Zprivate.h" /* Filter pipeline              */
+#include "H5private.h"   /* Generic Functions            */
+#include "H5Eprivate.h"  /* Error handling               */
+#include "H5PLpkg.h"     /* Plugin                       */
+#include "H5Zprivate.h"  /* Filter pipeline              */
+#include "H5CXprivate.h" /* API Contexts                 */
+#ifdef H5_HAVE_PARALLEL
+#include "H5FDmpio.h"   /* MPI I/O file driver          */
+#include "H5Fprivate.h" /* File access                  */
+#endif
 
 /****************/
 /* Local Macros */
@@ -42,7 +47,7 @@
 /********************/
 
 #ifdef H5_REQUIRE_DIGITAL_SIGNATURE
-static herr_t H5PL__verify_plugin_signature(const char *path);
+static herr_t H5PL__verify_plugin_signature(const char *path, H5F_t *file);
 #endif
 
 /*********************/
@@ -217,13 +222,17 @@ done:
  *              The function searches first in the cached plugins and then
  *              in the paths listed in the path table.
  *
+ *              The file parameter is used for MPI collective verification
+ *              in parallel builds. It can be NULL when no file context is
+ *              available (e.g., during VOL/VFD registration).
+ *
  * Return:      Success:    A pointer to the plugin info
  *              Failure:    NULL
  *
  *-------------------------------------------------------------------------
  */
 const void *
-H5PL_load(H5PL_type_t type, const H5PL_key_t *key)
+H5PL_load(H5PL_type_t type, const H5PL_key_t *key, H5F_t *file)
 {
     H5PL_search_params_t search_params;       /* Plugin search parameters     */
     bool                 found       = false; /* Whether the plugin was found */
@@ -259,6 +268,7 @@ H5PL_load(H5PL_type_t type, const H5PL_key_t *key)
     /* Set up the search parameters */
     search_params.type = type;
     search_params.key  = key;
+    search_params.file = file;
 
     /* Search in the table of already loaded plugin libraries */
     if (H5PL__find_plugin_in_cache(&search_params, &found, &plugin_info) < 0)
@@ -292,32 +302,79 @@ done:
  *              The plugin file format is: [ Binary ] [ Signature ] [ Footer ]
  *              The signature is verified against hardcoded public key (no external files).
  *
- *              Each rank independently verifies the plugin signature. While collective
- *              verification could reduce I/O overhead, plugin files are small (typically
- *              < 1 MB) and loading is infrequent. The complexity of reliably determining
- *              the file communicator and ensuring all participating ranks perform the
- *              collective operation outweighs the minimal performance benefit.
+ *              In parallel mode with collective I/O and a valid file pointer:
+ *              - Uses the file's MPI communicator for collective verification
+ *              - Rank 0 verifies the signature and broadcasts result to all ranks
+ *              - This avoids redundant I/O and ensures synchronization
  *
- *              This function does NOT add additional error messages - it allows specific
- *              error details from H5PL__verify_signature_appended() to propagate up
- *              for better diagnostic information.
+ *              Otherwise (independent mode or no file context):
+ *              - Each rank independently verifies the signature
+ *              - This handles cases where file pointer is NULL (VOL/VFD registration)
+ *
+ *              The file parameter can be NULL when plugins are loaded outside
+ *              of file I/O context (e.g., VOL/VFD registration).
  *
  * Return:      SUCCEED/FAIL
  *
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5PL__verify_plugin_signature(const char *path)
+H5PL__verify_plugin_signature(const char *path, H5F_t *file)
 {
-    herr_t ret_value = SUCCEED;
+    herr_t verify_result = SUCCEED;
+    herr_t ret_value     = SUCCEED;
+
+#ifdef H5_HAVE_PARALLEL
+    int              rank      = 0;
+    const int        root      = 0;
+    MPI_Comm         comm      = MPI_COMM_NULL;
+    H5FD_mpio_xfer_t xfer_mode = H5FD_MPIO_INDEPENDENT;
+    bool             do_bcast  = false;
+#endif
 
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Check args */
     assert(path);
 
-    /* Verify signature (independent verification - see function comment for rationale) */
-    if (H5PL__verify_signature_appended(path) < 0)
+#ifdef H5_HAVE_PARALLEL
+    /* Check if we have file context with MPI support */
+    if (file != NULL && H5F_HAS_FEATURE(file, H5FD_FEAT_HAS_MPI)) {
+        /* Check if collective I/O mode is being used via internal API context */
+        if (H5CX_get_io_xfer_mode(&xfer_mode) >= 0) {
+            if (xfer_mode == H5FD_MPIO_COLLECTIVE) {
+                /* Get the file's MPI communicator */
+                comm = H5F_mpi_get_comm(file);
+                if (comm != MPI_COMM_NULL) {
+                    do_bcast = true;
+                    MPI_Comm_rank(comm, &rank);
+                }
+            }
+        }
+    }
+
+    if (do_bcast) {
+        /* Collective verification mode: Only root process performs signature verification,
+         * then broadcasts result to all participating ranks using the file's communicator */
+        if (rank == root) {
+            verify_result = H5PL__verify_signature_appended(path);
+        }
+        MPI_Bcast(&verify_result, 1, MPI_INT, root, comm);
+    }
+    else {
+        /* Independent I/O mode: Each rank performs its own signature verification.
+         * This happens when:
+         * - file == NULL (no file context, e.g., VOL/VFD registration)
+         * - File doesn't use MPI VFD
+         * - Transfer mode is independent */
+        verify_result = H5PL__verify_signature_appended(path);
+    }
+#else
+    /* Serial mode: Always perform signature verification */
+    verify_result = H5PL__verify_signature_appended(path);
+#endif
+
+    if (verify_result < 0)
         ret_value = FAIL;
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -361,7 +418,7 @@ H5PL__verify_plugin_signature(const char *path)
  */
 herr_t
 H5PL__open(const char *path, H5PL_type_t type, const H5PL_key_t *key, bool *success, H5PL_type_t *plugin_type,
-           const void **plugin_info)
+           const void **plugin_info, H5F_t *file)
 {
     H5PL_HANDLE            handle          = NULL;
     H5PL_get_plugin_info_t get_plugin_info = NULL;
@@ -387,7 +444,7 @@ H5PL__open(const char *path, H5PL_type_t type, const H5PL_key_t *key, bool *succ
 
 #ifdef H5_REQUIRE_DIGITAL_SIGNATURE
     /* Verify plugin signature before loading */
-    if (H5PL__verify_plugin_signature(path) < 0)
+    if (H5PL__verify_plugin_signature(path, file) < 0)
         HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "plugin signature verification failed for: %s", path);
 #endif
 
