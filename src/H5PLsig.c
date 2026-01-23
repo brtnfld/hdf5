@@ -250,7 +250,8 @@ H5PL__verify_signature_appended(const char *plugin_path)
 
     /* Calculate binary data size (file - signature - footer) */
     {
-        HDoff_t binary_size_off = file_size - (HDoff_t)footer.signature_length - (HDoff_t)sizeof(H5PL_sig_footer_t);
+        HDoff_t binary_size_off =
+            file_size - (HDoff_t)footer.signature_length - (HDoff_t)sizeof(H5PL_sig_footer_t);
 
         /* Practical size limit: 1GB for plugin files (prevents unreasonable allocations) */
 #define H5PL_MAX_PLUGIN_SIZE ((HDoff_t)(1024 * 1024 * 1024))
@@ -262,9 +263,10 @@ H5PL__verify_signature_appended(const char *plugin_path)
 
         /* Check for overflow when casting to size_t (critical on 32-bit systems with LFS) */
         if (binary_size_off > (HDoff_t)SIZE_MAX)
-            HGOTO_ERROR(H5E_PLUGIN, H5E_BADVALUE, FAIL,
-                        "plugin binary size %llu exceeds SIZE_MAX - file too large to verify on this platform",
-                        (unsigned long long)binary_size_off);
+            HGOTO_ERROR(
+                H5E_PLUGIN, H5E_BADVALUE, FAIL,
+                "plugin binary size %llu exceeds SIZE_MAX - file too large to verify on this platform",
+                (unsigned long long)binary_size_off);
 
         binary_size = (size_t)binary_size_off;
 #undef H5PL_MAX_PLUGIN_SIZE

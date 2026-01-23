@@ -4929,8 +4929,7 @@ H5D__mpio_collective_filtered_chunk_update(H5D_filtered_collective_io_info_t *ch
                     &chunk_list->chunk_infos[info_idx].chunk_info->dset_info->dset->shared->dcpl_cache.pline,
                     0, &(chunk_list->chunk_infos[info_idx].index_info.filter_mask), err_detect, filter_cb,
                     (size_t *)&chunk_list->chunk_infos[info_idx].chunk_new.length,
-                    &chunk_list->chunk_infos[info_idx].chunk_buf_size,
-                    &chunk_list->chunk_infos[info_idx].buf,
+                    &chunk_list->chunk_infos[info_idx].chunk_buf_size, &chunk_list->chunk_infos[info_idx].buf,
                     chunk_list->chunk_infos[info_idx].chunk_info->dset_info->dset->oloc.file) < 0)
                 HGOTO_ERROR(H5E_PLINE, H5E_CANTFILTER, FAIL, "output pipeline failed");
         }
