@@ -786,6 +786,25 @@ if (BUILD_SHARED_LIBS)
   if (HDF5_ENABLE_FORMATTERS)
     clang_format (HDF5_TEST_vol_plugin_FORMAT vol_plugin)
   endif ()
+
+  # Plugin signature verification test (only when signature verification is enabled)
+  if (HDF5_REQUIRE_SIGNED_PLUGINS)
+    add_executable (test_plugin_signature ${HDF5_TEST_SOURCE_DIR}/test_plugin_signature.c)
+    target_include_directories (test_plugin_signature PRIVATE "${HDF5_SRC_INCLUDE_DIRS};${HDF5_SRC_BINARY_DIR};$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:${MPI_C_INCLUDE_DIRS}>")
+    TARGET_C_PROPERTIES (test_plugin_signature SHARED)
+    target_link_libraries (test_plugin_signature PRIVATE ${HDF5_TEST_LIBSH_TARGET})
+    set_target_properties (test_plugin_signature PROPERTIES FOLDER test)
+
+    # Link OpenSSL for signature verification
+    target_link_libraries (test_plugin_signature PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+
+    #-----------------------------------------------------------------------------
+    # Add Target to clang-format
+    #-----------------------------------------------------------------------------
+    if (HDF5_ENABLE_FORMATTERS)
+      clang_format (HDF5_TEST_test_plugin_signature_FORMAT test_plugin_signature)
+    endif ()
+  endif ()
 endif ()
 
 ##############################################################################

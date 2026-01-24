@@ -62,11 +62,20 @@ jobs:
           libopenmpi-dev \
           openmpi-bin
 
+    - name: Generate test RSA key pair
+      run: |
+        echo "Generating test RSA key pair for CI testing..."
+        openssl genrsa -out ci-test-private.pem 2048
+        openssl rsa -in ci-test-private.pem -pubout -out ci-test-public.pem
+        echo "Test keys generated successfully"
+        ls -lh ci-test-*.pem
+
     - name: Configure CMake
       run: |
         cmake -B build \
           -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} \
           -DHDF5_REQUIRE_SIGNED_PLUGINS:BOOL=ON \
+          -DHDF5_PLUGIN_PUBLIC_KEY_FILE="${PWD}/ci-test-public.pem" \
           -DHDF5_ENABLE_PARALLEL:BOOL=${{ matrix.config.parallel }} \
           -DBUILD_SHARED_LIBS:BOOL=${{ matrix.config.shared }} \
           -DBUILD_STATIC_LIBS:BOOL=ON \
@@ -78,11 +87,26 @@ jobs:
     - name: Build
       run: cmake --build build --parallel 4
 
+    - name: Verify signature test binary exists
+      run: |
+        if [ -f "build/bin/test_plugin_signature" ] || [ -f "build/bin/test_plugin_signature.exe" ]; then
+          echo "✓ Plugin signature verification test binary found"
+          ls -lh build/bin/test_plugin_signature* || true
+        else
+          echo "WARNING: Plugin signature verification test binary not found"
+          echo "This might be expected if HDF5_REQUIRE_SIGNED_PLUGINS is OFF"
+        fi
+
     - name: Run Tests (Serial)
       if: matrix.config.parallel == 'OFF'
       run: |
         cd build
         ctest --parallel 4 --output-on-failure
+
+        # Explicitly run plugin signature verification test
+        echo ""
+        echo "Running plugin signature verification test..."
+        ctest --tests-regex "H5PLUGIN-signature-verification" --verbose
 
     - name: Run Tests (Parallel)
       if: matrix.config.parallel == 'ON'
@@ -94,6 +118,11 @@ jobs:
         # Specifically test MPI tests to ensure collective verification is exercised
         echo "Running MPI-specific tests..."
         ctest --tests-regex "MPI_TEST" --verbose || echo "MPI tests completed"
+
+        # Explicitly run plugin signature verification test
+        echo ""
+        echo "Running plugin signature verification test..."
+        ctest --tests-regex "H5PLUGIN-signature-verification" --verbose
 
   # Comprehensive test to verify signature verification logic paths
   verify-signature-paths:
@@ -114,11 +143,20 @@ jobs:
           libopenmpi-dev \
           openmpi-bin
 
+    - name: Generate test RSA key pair
+      run: |
+        echo "Generating test RSA key pair for CI testing..."
+        openssl genrsa -out ci-test-private.pem 2048
+        openssl rsa -in ci-test-private.pem -pubout -out ci-test-public.pem
+        echo "Test keys generated successfully"
+        ls -lh ci-test-*.pem
+
     - name: Configure CMake (Parallel with all features)
       run: |
         cmake -B build \
           -DCMAKE_BUILD_TYPE=Debug \
           -DHDF5_REQUIRE_SIGNED_PLUGINS:BOOL=ON \
+          -DHDF5_PLUGIN_PUBLIC_KEY_FILE="${PWD}/ci-test-public.pem" \
           -DHDF5_ENABLE_PARALLEL:BOOL=ON \
           -DBUILD_SHARED_LIBS:BOOL=ON \
           -DBUILD_TESTING:BOOL=ON \
@@ -149,3 +187,16 @@ jobs:
         cd build
         # Run full test suite
         ctest --output-on-failure --verbose
+
+    - name: Verify plugin signature tests execute
+      run: |
+        cd build
+        echo "========================================"
+        echo "Running Plugin Signature Verification Tests"
+        echo "========================================"
+
+        # Run signature verification tests explicitly and fail on any error
+        ctest --tests-regex "H5PLUGIN-signature-verification" --verbose
+
+        echo ""
+        echo "Plugin signature verification tests completed successfully!"
