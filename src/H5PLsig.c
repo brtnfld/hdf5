@@ -35,6 +35,7 @@
 #include "H5PLpkg.h"     /* Plugin                       */
 #include "H5PLsig.h"     /* Signature format             */
 #include "H5MMprivate.h" /* Memory management            */
+#include "H5encode.h"    /* Endianness conversion        */
 
 #ifdef H5_REQUIRE_DIGITAL_SIGNATURE
 
@@ -42,6 +43,17 @@
 #include <openssl/pem.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>
+
+/*******************/
+/* Local Variables */
+/*******************/
+
+/* Cached public key for signature verification
+ * The public key is parsed from PEM string once and reused across all plugin verifications.
+ * This provides significant performance improvement when loading multiple plugins.
+ */
+static EVP_PKEY *H5PL_cached_public_key_g = NULL;
+static bool      H5PL_public_key_initialized_g = false;
 
 /*-------------------------------------------------------------------------
  * Function:    H5PL__read_file_data
@@ -106,12 +118,15 @@ H5PL__read_file_data(int fd, HDoff_t offset, void *buf, size_t size, const char 
         if (bytes_read < 0) {
             int    myerrno = errno;
             time_t mytime  = time(NULL);
+            char   timebuf[26]; /* Buffer for thread-safe ctime_r (POSIX requires 26 bytes) */
+
+            ctime_r(&mytime, timebuf);
 
             HGOTO_ERROR(H5E_PLUGIN, H5E_READERROR, FAIL,
                         "plugin file read failed: time = %s, filename = '%s', file descriptor = %d, "
                         "errno = %d, error message = '%s', buf = %p, total read size = %llu, "
                         "bytes this sub-read = %llu, offset = %llu",
-                        ctime(&mytime), filename, fd, myerrno, strerror(myerrno), (void *)buf,
+                        timebuf, filename, fd, myerrno, strerror(myerrno), (void *)buf,
                         (unsigned long long)size, (unsigned long long)bytes_in, (unsigned long long)offset);
         }
 
@@ -154,12 +169,20 @@ H5PL__create_public_RSA_from_string(const char *key_string)
     assert(key_string);
 
     /* Create BIO from string */
-    if (NULL == (key_bio = BIO_new_mem_buf(key_string, -1)))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTCREATE, NULL, "cannot create BIO from key string");
+    if (NULL == (key_bio = BIO_new_mem_buf(key_string, -1))) {
+        unsigned long ssl_err = ERR_get_error();
+        char          err_buf[256];
+        ERR_error_string_n(ssl_err, err_buf, sizeof(err_buf));
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTCREATE, NULL, "cannot create BIO from key string: %s", err_buf);
+    }
 
     /* Read public key using modern EVP API */
-    if (NULL == (pkey = PEM_read_bio_PUBKEY(key_bio, NULL, NULL, NULL)))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, NULL, "cannot read public key from BIO");
+    if (NULL == (pkey = PEM_read_bio_PUBKEY(key_bio, NULL, NULL, NULL))) {
+        unsigned long ssl_err = ERR_get_error();
+        char          err_buf[256];
+        ERR_error_string_n(ssl_err, err_buf, sizeof(err_buf));
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, NULL, "cannot read public key from BIO: %s", err_buf);
+    }
 
     ret_value = pkey;
     pkey      = NULL; /* Prevent cleanup */
@@ -169,6 +192,9 @@ done:
         BIO_free(key_bio);
     if (pkey)
         EVP_PKEY_free(pkey);
+
+    /* Clear any remaining OpenSSL errors from the error queue */
+    ERR_clear_error();
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL__create_public_RSA_from_string() */
@@ -204,8 +230,6 @@ H5PL__verify_signature_appended(const char *plugin_path)
     unsigned char    *signature   = NULL;
     unsigned char    *binary_data = NULL;
     size_t            binary_size = 0;
-    unsigned char     hash[EVP_MAX_MD_SIZE];
-    unsigned int      hash_len      = 0;
     EVP_PKEY         *public_key    = NULL;
     EVP_MD_CTX       *mdctx         = NULL;
     EVP_PKEY_CTX     *pkey_ctx      = NULL;
@@ -234,6 +258,18 @@ H5PL__verify_signature_appended(const char *plugin_path)
     if (H5PL__read_file_data(fd, file_size - (HDoff_t)sizeof(H5PL_sig_footer_t), &footer,
                              sizeof(H5PL_sig_footer_t), plugin_path) < 0)
         HGOTO_ERROR(H5E_PLUGIN, H5E_READERROR, FAIL, "cannot read signature footer");
+
+    /* Convert footer from little-endian (file format) to native byte order */
+    {
+        uint8_t *p = (uint8_t *)&footer;
+        uint32_t signature_length_le, magic_le;
+
+        UINT32DECODE(p, signature_length_le);
+        UINT32DECODE(p, magic_le);
+
+        footer.signature_length = signature_length_le;
+        footer.magic = magic_le;
+    }
 
     /* Validate magic number */
     if (footer.magic != H5PL_SIG_MAGIC)
@@ -280,50 +316,87 @@ H5PL__verify_signature_appended(const char *plugin_path)
     if (H5PL__read_file_data(fd, (HDoff_t)binary_size, signature, footer.signature_length, plugin_path) < 0)
         HGOTO_ERROR(H5E_PLUGIN, H5E_READERROR, FAIL, "cannot read signature data");
 
-    /* Allocate buffer for binary data */
-    if (NULL == (binary_data = (unsigned char *)H5MM_malloc(binary_size)))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "cannot allocate binary data buffer");
+    /* Get public key from cache or create it on first use
+     * This lazy initialization pattern avoids parsing the PEM string on every plugin load,
+     * providing significant performance improvement when verifying multiple plugins.
+     */
+    if (!H5PL_public_key_initialized_g) {
+        H5PL_cached_public_key_g = H5PL__create_public_RSA_from_string(H5PL_PUBLIC_KEY_PEM);
+        H5PL_public_key_initialized_g = true;
+    }
+    if (NULL == H5PL_cached_public_key_g)
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTCREATE, FAIL, "cannot create public key");
 
-    /* Read binary data using safe I/O with EINTR retry and chunking */
-    if (H5PL__read_file_data(fd, 0, binary_data, binary_size, plugin_path) < 0)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_READERROR, FAIL, "cannot read binary data");
+    /* Use the cached public key (no need to free it in this function) */
+    public_key = H5PL_cached_public_key_g;
 
-    /* Close file (we're done reading) */
+    /* Create message digest context for signature verification */
+    if (NULL == (mdctx = EVP_MD_CTX_new())) {
+        unsigned long ssl_err = ERR_get_error();
+        char          err_buf[256];
+        ERR_error_string_n(ssl_err, err_buf, sizeof(err_buf));
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTCREATE, FAIL, "cannot create message digest context: %s", err_buf);
+    }
+
+    if (1 != EVP_DigestVerifyInit(mdctx, &pkey_ctx, EVP_sha256(), NULL, public_key)) {
+        unsigned long ssl_err = ERR_get_error();
+        char          err_buf[256];
+        ERR_error_string_n(ssl_err, err_buf, sizeof(err_buf));
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTINIT, FAIL, "cannot initialize signature verification: %s", err_buf);
+    }
+
+    /* Streaming hash computation: read and hash binary in chunks to avoid large memory allocation
+     * This prevents loading entire plugin (potentially 1GB) into memory at once.
+     * Instead, we read 64KB chunks and update the hash incrementally.
+     */
+#define H5PL_HASH_CHUNK_SIZE ((size_t)(64 * 1024)) /* 64KB chunks */
+
+    /* Allocate small chunk buffer (reused for all reads) */
+    if (NULL == (binary_data = (unsigned char *)H5MM_malloc(H5PL_HASH_CHUNK_SIZE)))
+        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "cannot allocate hash chunk buffer");
+
+    /* Process binary data in chunks */
+    {
+        size_t  remaining      = binary_size;
+        HDoff_t current_offset = 0;
+
+        while (remaining > 0) {
+            size_t chunk_size = (remaining > H5PL_HASH_CHUNK_SIZE) ? H5PL_HASH_CHUNK_SIZE : remaining;
+
+            /* Read chunk from file */
+            if (H5PL__read_file_data(fd, current_offset, binary_data, chunk_size, plugin_path) < 0)
+                HGOTO_ERROR(H5E_PLUGIN, H5E_READERROR, FAIL, "cannot read binary chunk at offset %llu",
+                            (unsigned long long)current_offset);
+
+            /* Update hash with chunk data */
+            if (1 != EVP_DigestVerifyUpdate(mdctx, binary_data, chunk_size)) {
+                unsigned long ssl_err = ERR_get_error();
+                char          err_buf[256];
+                ERR_error_string_n(ssl_err, err_buf, sizeof(err_buf));
+                HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "cannot update signature verification: %s",
+                            err_buf);
+            }
+
+            remaining -= chunk_size;
+            current_offset += (HDoff_t)chunk_size;
+        }
+    }
+
+#undef H5PL_HASH_CHUNK_SIZE
+
+    /* Close file now that we're done reading */
     HDclose(fd);
     fd = -1;
 
-    /* Create message digest context */
-    if (NULL == (mdctx = EVP_MD_CTX_new()))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTCREATE, FAIL, "cannot create message digest context");
-
-    /* Calculate SHA256 hash of binary data using EVP API */
-    if (1 != EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTINIT, FAIL, "cannot initialize digest");
-
-    if (1 != EVP_DigestUpdate(mdctx, binary_data, binary_size))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "cannot update digest");
-
-    if (1 != EVP_DigestFinal_ex(mdctx, hash, &hash_len))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "cannot finalize digest");
-
-    /* Create public key from hardcoded PEM string */
-    if (NULL == (public_key = H5PL__create_public_RSA_from_string(H5PL_PUBLIC_KEY_PEM)))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTCREATE, FAIL, "cannot create public key");
-
-    /* Verify signature using EVP API */
-    EVP_MD_CTX_reset(mdctx);
-
-    if (1 != EVP_DigestVerifyInit(mdctx, &pkey_ctx, EVP_sha256(), NULL, public_key))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTINIT, FAIL, "cannot initialize signature verification");
-
-    if (1 != EVP_DigestVerifyUpdate(mdctx, binary_data, binary_size))
-        HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, FAIL, "cannot update signature verification");
-
     verify_result = EVP_DigestVerifyFinal(mdctx, signature, (size_t)footer.signature_length);
 
-    if (verify_result != 1)
+    if (verify_result != 1) {
+        unsigned long ssl_err = ERR_get_error();
+        char          err_buf[256];
+        ERR_error_string_n(ssl_err, err_buf, sizeof(err_buf));
         HGOTO_ERROR(H5E_PLUGIN, H5E_BADVALUE, FAIL,
-                    "plugin signature verification failed - signature is not authentic");
+                    "plugin signature verification failed - signature is not authentic: %s", err_buf);
+    }
 
 done:
     if (fd >= 0)
@@ -334,10 +407,41 @@ done:
         H5MM_xfree(binary_data);
     if (mdctx)
         EVP_MD_CTX_free(mdctx);
-    if (public_key)
-        EVP_PKEY_free(public_key);
+    /* Note: public_key points to the cached key, so we don't free it here.
+     * It will be freed in H5PL__cleanup_signature_cache() during package termination.
+     */
+
+    /* Clear any remaining OpenSSL errors from the error queue */
+    ERR_clear_error();
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL__verify_signature_appended() */
+
+/*-------------------------------------------------------------------------
+ * Function:    H5PL__cleanup_signature_cache
+ *
+ * Purpose:     Clean up cached signature verification resources
+ *              Called during H5PL package termination to free the cached public key
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5PL__cleanup_signature_cache(void)
+{
+    FUNC_ENTER_PACKAGE_NOERR
+
+    /* Free the cached public key if it was initialized */
+    if (H5PL_public_key_initialized_g) {
+        if (H5PL_cached_public_key_g) {
+            EVP_PKEY_free(H5PL_cached_public_key_g);
+            H5PL_cached_public_key_g = NULL;
+        }
+        H5PL_public_key_initialized_g = false;
+    }
+
+    FUNC_LEAVE_NOAPI(SUCCEED)
+} /* end H5PL__cleanup_signature_cache() */
 
 #endif /* H5_REQUIRE_DIGITAL_SIGNATURE */

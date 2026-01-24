@@ -119,3 +119,6 @@ add_subdirectory (h5format_convert)
 
 #-- Add the perform tests
 add_subdirectory (perform)
+
+#-- Add the h5sign tests
+add_subdirectory (h5sign)

@@ -33,3 +33,6 @@ add_subdirectory (h5format_convert)
 
 #-- h5perf executables
 add_subdirectory (h5perf)
+
+#-- Add the h5sign executable (plugin signing tool)
+add_subdirectory (h5sign)

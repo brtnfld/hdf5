@@ -38,43 +38,47 @@
 /* Magic number to identify HDF5 signed plugins */
 #define H5PL_SIG_MAGIC 0x48444635 /* "HDF5" in hex */
 
-/* Signature footer structure (placed at end of file) */
+/* Signature footer structure (placed at end of file)
+ *
+ * IMPORTANT: Footer uses little-endian byte order for cross-platform compatibility,
+ * following HDF5's metadata encoding convention. When reading from disk, values
+ * must be decoded using UINT32DECODE() to convert from little-endian to native
+ * byte order. When writing to disk, values must be encoded using UINT32ENCODE()
+ * or equivalent (e.g., Python struct.pack('<I')).
+ */
 typedef struct H5PL_sig_footer_t {
-    uint32_t signature_length; /* Length of RSA signature in bytes */
-    uint32_t magic;            /* Magic number (H5PL_SIG_MAGIC) */
+    uint32_t signature_length; /* Length of RSA signature in bytes (little-endian on disk) */
+    uint32_t magic;            /* Magic number H5PL_SIG_MAGIC (little-endian on disk) */
 } H5PL_sig_footer_t;
 
 /*
- * Public Key (PEM format, hardcoded for security)
+ * Public Key Configuration (REQUIRED for plugin signature verification)
  *
- * This is the RSA public key used to verify plugin signatures.
- * It is hardcoded in the library to prevent tampering.
- *
- * IMPORTANT: In production, replace this with your actual public key.
- * This key should match the private key used to sign plugins.
+ * SECURITY REQUIREMENT: H5PL_PUBLIC_KEY_PEM must be defined at compile time
+ * via CMake configuration. There is NO default key because:
+ *   1. Any default would be insecure (publicly known)
+ *   2. Users must generate their own RSA key pair
+ *   3. The public key must match the private key used to sign plugins
  *
  * To generate a key pair:
  *   openssl genrsa -out private.pem 2048
  *   openssl rsa -in private.pem -pubout -out public.pem
+ *
+ * To configure via CMake:
+ *   cmake -DHDF5_REQUIRE_SIGNED_PLUGINS=ON \
+ *         -DH5PL_PUBLIC_KEY_PEM="$(cat /path/to/public.pem)" \
+ *         ..
+ *
+ * Alternatively, set HDF5_PLUGIN_PUBLIC_KEY_FILE in CMakeLists.txt:
+ *   set(HDF5_PLUGIN_PUBLIC_KEY_FILE "/path/to/public.pem")
  */
 
-/* Default public key (REPLACE THIS IN PRODUCTION) */
+/* Compile-time validation: key MUST be provided when signature verification is enabled */
 #ifndef H5PL_PUBLIC_KEY_PEM
-#define H5PL_PUBLIC_KEY_PEM                                                                                  \
-    "-----BEGIN PUBLIC KEY-----\n"                                                                           \
-    "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1234567890ABCDEFGHIJ\n"                                     \
-    "KLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz1234567890\n"                                       \
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz\n"                                       \
-    "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnop\n"                                       \
-    "qrstuvwxyz1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdef\n"                                       \
-    "ghijklmnopqrstuvwxyz1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ123456\n"                                       \
-    "7890abcdefghijklmnopqrstuvwxyz1234567890ABCDEFGHIJKLMNOPQRSTUV\n"                                       \
-    "WXYZ1234567890abcdefghijklmnopqrstuvwxyz12345678901234567890AB\n"                                       \
-    "-----END PUBLIC KEY-----\n"
+#error "H5PL_PUBLIC_KEY_PEM must be defined via CMake when HDF5_REQUIRE_SIGNED_PLUGINS=ON. See H5PLsig.h for key generation and configuration instructions."
 #endif
 
-/* CMake can define this to use a custom public key */
-/* Example: -DH5PL_PUBLIC_KEY_PEM="$(cat /path/to/public.pem)" */
+/* Note: Size validation is performed at runtime in H5PL__verify_signature() */
 
 #endif /* H5_REQUIRE_DIGITAL_SIGNATURE */
 

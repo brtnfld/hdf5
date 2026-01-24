@@ -787,6 +787,11 @@ endif ()
 # Option to Require Digitally Signed plugins
 #-----------------------------------------------------------------------------
 option (HDF5_REQUIRE_SIGNED_PLUGINS "Require digitally signed plugins" OFF)
+
+# Path to public key file for plugin signature verification
+set(HDF5_PLUGIN_PUBLIC_KEY_FILE "" CACHE FILEPATH
+    "Path to RSA public key (PEM format) for plugin signature verification")
+
 if (HDF5_REQUIRE_SIGNED_PLUGINS)
   # Find OpenSSL for RSA signature verification
   find_package(OpenSSL REQUIRED)
@@ -794,13 +799,62 @@ if (HDF5_REQUIRE_SIGNED_PLUGINS)
     message(FATAL_ERROR "OpenSSL is required for HDF5_REQUIRE_SIGNED_PLUGINS but was not found")
   endif ()
 
+  # SECURITY: Require public key to be configured
+  if (NOT HDF5_PLUGIN_PUBLIC_KEY_FILE)
+    message(FATAL_ERROR
+      "HDF5_REQUIRE_SIGNED_PLUGINS=ON requires HDF5_PLUGIN_PUBLIC_KEY_FILE to be set.\n"
+      "\n"
+      "To generate an RSA key pair:\n"
+      "  openssl genrsa -out private.pem 2048\n"
+      "  openssl rsa -in private.pem -pubout -out public.pem\n"
+      "\n"
+      "Then configure with:\n"
+      "  cmake -DHDF5_REQUIRE_SIGNED_PLUGINS=ON \\\n"
+      "        -DHDF5_PLUGIN_PUBLIC_KEY_FILE=/path/to/public.pem \\\n"
+      "        ..\n"
+      "\n"
+      "SECURITY WARNING: Never use example/default keys in production!")
+  endif ()
+
+  # Validate that the public key file exists
+  if (NOT EXISTS "${HDF5_PLUGIN_PUBLIC_KEY_FILE}")
+    message(FATAL_ERROR
+      "Public key file not found: ${HDF5_PLUGIN_PUBLIC_KEY_FILE}\n"
+      "Please check the path in HDF5_PLUGIN_PUBLIC_KEY_FILE")
+  endif ()
+
+  # Read the public key file
+  file(READ "${HDF5_PLUGIN_PUBLIC_KEY_FILE}" H5PL_PUBLIC_KEY_CONTENT)
+
+  # Validate basic PEM format
+  string(FIND "${H5PL_PUBLIC_KEY_CONTENT}" "-----BEGIN PUBLIC KEY-----" PEM_BEGIN_POS)
+  string(FIND "${H5PL_PUBLIC_KEY_CONTENT}" "-----END PUBLIC KEY-----" PEM_END_POS)
+
+  if (PEM_BEGIN_POS EQUAL -1 OR PEM_END_POS EQUAL -1)
+    message(FATAL_ERROR
+      "Invalid public key file: ${HDF5_PLUGIN_PUBLIC_KEY_FILE}\n"
+      "File must be in PEM format (-----BEGIN PUBLIC KEY----- ... -----END PUBLIC KEY-----)")
+  endif ()
+
+  # Escape the key content for C string literal
+  string(REPLACE "\\" "\\\\" H5PL_PUBLIC_KEY_CONTENT "${H5PL_PUBLIC_KEY_CONTENT}")
+  string(REPLACE "\"" "\\\"" H5PL_PUBLIC_KEY_CONTENT "${H5PL_PUBLIC_KEY_CONTENT}")
+  string(REPLACE "\n" "\\n" H5PL_PUBLIC_KEY_CONTENT "${H5PL_PUBLIC_KEY_CONTENT}")
+
+  # Define the public key as a compile definition
   add_compile_definitions(H5_REQUIRE_DIGITAL_SIGNATURE)
+  add_compile_definitions(H5PL_PUBLIC_KEY_PEM="${H5PL_PUBLIC_KEY_CONTENT}")
 
   # Add OpenSSL to link libraries for the HDF5 library
   # Use target-based linking for proper dependency management
   list(APPEND LINK_LIBS OpenSSL::SSL OpenSSL::Crypto)
 
   message(STATUS "Digital signature verification enabled (OpenSSL ${OPENSSL_VERSION})")
+  message(STATUS "Plugin public key: ${HDF5_PLUGIN_PUBLIC_KEY_FILE}")
+
+  # Security audit log
+  string(LENGTH "${H5PL_PUBLIC_KEY_CONTENT}" KEY_LENGTH)
+  message(STATUS "Public key loaded (${KEY_LENGTH} bytes)")
 endif ()
 
 #-----------------------------------------------------------------------------
