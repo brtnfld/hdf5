@@ -13,7 +13,7 @@
 #
 # HDF5VersionParsing.cmake
 #
-# Provides a macro to parse version information from H5public.h
+# Provides a function to parse version information from H5public.h
 # This ensures consistent version extraction across all CMake scripts.
 #
 
@@ -21,7 +21,7 @@
 HDF5VersionParsing
 ------------------
 
-Provides macros for extracting HDF5 version information from H5public.h
+Provides functions for extracting HDF5 version information from H5public.h
 
 parse_hdf5_version
 ^^^^^^^^^^^^^^^^^^
@@ -60,7 +60,26 @@ Example:
 
 #]=======================================================================]
 
-macro(parse_hdf5_version H5PUBLIC_H_PATH)
+# Helper macro for parsing version components
+# This macro extracts a version component from the provided content string
+# using the specified pattern and sets the result in _parsed_value.
+#
+# Arguments:
+#   content_string - The string to search (should contain version definitions)
+#   component_name - The name of the component to find (e.g., "H5_VERS_MAJOR")
+#   pattern - The regex pattern to extract the value (with capture group)
+#   source_file - The source file path (for error messages)
+#
+# Sets: _parsed_value in the calling scope
+macro(_parse_version_component content_string component_name pattern source_file)
+  string(REGEX MATCH "${component_name}[ \t]+${pattern}" _match "${content_string}")
+  if(NOT _match)
+    message(FATAL_ERROR "Failed to parse ${component_name} from ${source_file}")
+  endif()
+  set(_parsed_value ${CMAKE_MATCH_1})
+endmacro()
+
+function(parse_hdf5_version H5PUBLIC_H_PATH)
   # Parse arguments
   set(options "")
   set(oneValueArgs MAJOR_VAR MINOR_VAR RELEASE_VAR SUBRELEASE_VAR)
@@ -78,37 +97,30 @@ macro(parse_hdf5_version H5PUBLIC_H_PATH)
   endif()
 
   # Read H5public.h
-  file(STRINGS "${H5PUBLIC_H_PATH}" _h5_vers_contents REGEX "^#define H5_VERS_(MAJOR|MINOR|RELEASE|SUBRELEASE)")
+  file(STRINGS "${H5PUBLIC_H_PATH}" _h5_vers_lines REGEX "^#define H5_VERS_(MAJOR|MINOR|RELEASE|SUBRELEASE)")
 
-  # Extract version numbers using regex
-  string(REGEX MATCH "H5_VERS_MAJOR[ \t]+([0-9]+)" _match "${_h5_vers_contents}")
-  if(NOT CMAKE_MATCH_1)
-    message(FATAL_ERROR "Failed to parse H5_VERS_MAJOR from ${H5PUBLIC_H_PATH}")
-  endif()
-  set(${PARSE_VER_MAJOR_VAR} ${CMAKE_MATCH_1} PARENT_SCOPE)
+  # Convert list to single string with newlines for proper regex matching
+  string(REPLACE ";" "\n" _h5_vers_multiline_string "${_h5_vers_lines}")
 
-  string(REGEX MATCH "H5_VERS_MINOR[ \t]+([0-9]+)" _match "${_h5_vers_contents}")
-  if(NOT CMAKE_MATCH_1)
-    message(FATAL_ERROR "Failed to parse H5_VERS_MINOR from ${H5PUBLIC_H_PATH}")
-  endif()
-  set(${PARSE_VER_MINOR_VAR} ${CMAKE_MATCH_1} PARENT_SCOPE)
+  # Extract version numbers using helper macro with explicit string passing
+  _parse_version_component("${_h5_vers_multiline_string}" "H5_VERS_MAJOR" "([0-9]+)" "${H5PUBLIC_H_PATH}")
+  set(${PARSE_VER_MAJOR_VAR} ${_parsed_value} PARENT_SCOPE)
 
-  string(REGEX MATCH "H5_VERS_RELEASE[ \t]+([0-9]+)" _match "${_h5_vers_contents}")
-  if(NOT CMAKE_MATCH_1)
-    message(FATAL_ERROR "Failed to parse H5_VERS_RELEASE from ${H5PUBLIC_H_PATH}")
-  endif()
-  set(${PARSE_VER_RELEASE_VAR} ${CMAKE_MATCH_1} PARENT_SCOPE)
+  _parse_version_component("${_h5_vers_multiline_string}" "H5_VERS_MINOR" "([0-9]+)" "${H5PUBLIC_H_PATH}")
+  set(${PARSE_VER_MINOR_VAR} ${_parsed_value} PARENT_SCOPE)
+
+  _parse_version_component("${_h5_vers_multiline_string}" "H5_VERS_RELEASE" "([0-9]+)" "${H5PUBLIC_H_PATH}")
+  set(${PARSE_VER_RELEASE_VAR} ${_parsed_value} PARENT_SCOPE)
 
   # Extract subrelease if requested
   if(PARSE_VER_SUBRELEASE_VAR)
-    string(REGEX MATCH "H5_VERS_SUBRELEASE[ \t]+\"([^\"]*)\"" _match "${_h5_vers_contents}")
-    if(NOT CMAKE_MATCH_1)
-      message(FATAL_ERROR "Failed to parse H5_VERS_SUBRELEASE from ${H5PUBLIC_H_PATH}")
-    endif()
-    set(${PARSE_VER_SUBRELEASE_VAR} ${CMAKE_MATCH_1} PARENT_SCOPE)
+    _parse_version_component("${_h5_vers_multiline_string}" "H5_VERS_SUBRELEASE" "\"([^\"]*)\"" "${H5PUBLIC_H_PATH}")
+    set(${PARSE_VER_SUBRELEASE_VAR} ${_parsed_value} PARENT_SCOPE)
   endif()
 
   # Clean up temporary variables
-  unset(_h5_vers_contents)
+  unset(_h5_vers_lines)
+  unset(_h5_vers_multiline_string)
   unset(_match)
-endmacro()
+  unset(_parsed_value)
+endfunction()
