@@ -40,12 +40,12 @@
 #define TEST_SIGNATURE_FILTER_ID 260
 
 /* Test files */
-static const char *PLUGIN_DIR        = "test_plugin_signature_dir";
-static const char *SIGNED_PLUGIN     = "libh5test_sig_filter.so";
-static const char *UNSIGNED_PLUGIN   = "libh5test_sig_filter_unsigned.so";
-static const char *TAMPERED_PLUGIN   = "libh5test_sig_filter_tampered.so";
-static const char *BAD_SIG_PLUGIN    = "libh5test_sig_filter_badsig.so";
-static const char *NO_FOOTER_PLUGIN  = "libh5test_sig_filter_nofooter.so";
+static const char *PLUGIN_DIR           = "test_plugin_signature_dir";
+static const char *SIGNED_PLUGIN        = "libh5test_sig_filter.so";
+static const char *UNSIGNED_PLUGIN      = "libh5test_sig_filter_unsigned.so";
+static const char *TAMPERED_PLUGIN      = "libh5test_sig_filter_tampered.so";
+static const char *BAD_SIG_PLUGIN       = "libh5test_sig_filter_badsig.so";
+static const char *NO_FOOTER_PLUGIN     = "libh5test_sig_filter_nofooter.so";
 static const char *CORRUPT_MAGIC_PLUGIN = "libh5test_sig_filter_badmagic.so";
 
 /* Test key paths (set via environment or compile-time) */
@@ -69,14 +69,12 @@ create_dummy_plugin(const char *path)
     herr_t ret_value = SUCCEED;
 
     /* Create minimal plugin file - just some dummy binary data */
-    const unsigned char dummy_data[] = {
-        /* ELF header magic for shared library (simplified) */
-        0x7f, 'E', 'L', 'F',              /* Magic number */
-        0x02, 0x01, 0x01, 0x00,           /* 64-bit, little-endian, current version */
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  /* Padding */
-        /* Some dummy content to make it a reasonable size */
-        'T', 'E', 'S', 'T', ' ', 'P', 'L', 'U', 'G', 'I', 'N', '\0'
-    };
+    const unsigned char dummy_data[] = {/* ELF header magic for shared library (simplified) */
+                                        0x7f, 'E', 'L', 'F',    /* Magic number */
+                                        0x02, 0x01, 0x01, 0x00, /* 64-bit, little-endian, current version */
+                                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* Padding */
+                                        /* Some dummy content to make it a reasonable size */
+                                        'T', 'E', 'S', 'T', ' ', 'P', 'L', 'U', 'G', 'I', 'N', '\0'};
 
     if ((fd = HDopen(path, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
         fprintf(stderr, "Failed to create plugin file: %s\n", path);
@@ -109,8 +107,8 @@ sign_plugin_file(const char *plugin_path, const char *private_key_path)
     herr_t ret_value = SUCCEED;
 
     /* Build command to sign the plugin */
-    snprintf(cmd, sizeof(cmd), "python3 %s/bin/sign-hdf5-plugin.py %s %s 2>&1",
-             H5_get_srcdir(), plugin_path, private_key_path);
+    snprintf(cmd, sizeof(cmd), "python3 %s/bin/sign-hdf5-plugin.py %s %s 2>&1", H5_get_srcdir(), plugin_path,
+             private_key_path);
 
     result = system(cmd);
     if (result != 0) {
@@ -134,15 +132,15 @@ sign_plugin_file(const char *plugin_path, const char *private_key_path)
 static herr_t
 append_bad_signature(const char *plugin_path)
 {
-    int                fd;
-    H5PL_sig_footer_t  footer;
-    unsigned char      bad_signature[256];
-    size_t             i;
-    herr_t             ret_value = SUCCEED;
+    int               fd;
+    H5PL_sig_footer_t footer;
+    unsigned char     bad_signature[256];
+    size_t            i;
+    herr_t            ret_value = SUCCEED;
 
     /* Create a dummy bad signature (just random bytes) */
     for (i = 0; i < sizeof(bad_signature); i++)
-        bad_signature[i] = (unsigned char)(i * 7 + 13);  /* Arbitrary pattern */
+        bad_signature[i] = (unsigned char)(i * 7 + 13); /* Arbitrary pattern */
 
     /* Open plugin file in append mode */
     if ((fd = HDopen(plugin_path, O_WRONLY | O_APPEND, 0)) < 0) {
@@ -163,7 +161,7 @@ append_bad_signature(const char *plugin_path)
 
     /* Encode footer in little-endian (as expected by verification code) */
     {
-        unsigned char footer_bytes[8];
+        unsigned char  footer_bytes[8];
         unsigned char *p = footer_bytes;
 
         UINT32ENCODE(p, footer.signature_length);
@@ -191,10 +189,10 @@ append_bad_signature(const char *plugin_path)
 static herr_t
 append_corrupt_footer(const char *plugin_path)
 {
-    int           fd;
-    unsigned char footer_bytes[8];
-    unsigned char *p = footer_bytes;
-    herr_t        ret_value = SUCCEED;
+    int            fd;
+    unsigned char  footer_bytes[8];
+    unsigned char *p         = footer_bytes;
+    herr_t         ret_value = SUCCEED;
 
     if ((fd = HDopen(plugin_path, O_WRONLY | O_APPEND, 0)) < 0) {
         fprintf(stderr, "Failed to open plugin for corrupt footer: %s\n", plugin_path);
@@ -202,8 +200,8 @@ append_corrupt_footer(const char *plugin_path)
     }
 
     /* Write footer with wrong magic number */
-    UINT32ENCODE(p, 256);         /* Signature length */
-    UINT32ENCODE(p, 0xDEADBEEF);  /* Wrong magic */
+    UINT32ENCODE(p, 256);        /* Signature length */
+    UINT32ENCODE(p, 0xDEADBEEF); /* Wrong magic */
 
     if (HDwrite(fd, footer_bytes, sizeof(footer_bytes)) < 0) {
         fprintf(stderr, "Failed to write corrupt footer\n");
@@ -415,9 +413,11 @@ test_unsigned_plugin_rejected(void)
     snprintf(plugin_path, sizeof(plugin_path), "%s/%s", PLUGIN_DIR, UNSIGNED_PLUGIN);
 
     /* Verification should fail for unsigned plugin */
-    H5E_BEGIN_TRY {
+    H5E_BEGIN_TRY
+    {
         status = H5PL__verify_signature_appended(plugin_path);
-    } H5E_END_TRY;
+    }
+    H5E_END_TRY;
 
     if (status >= 0) {
         H5_FAILED();
@@ -448,9 +448,11 @@ test_tampered_plugin_rejected(void)
     snprintf(plugin_path, sizeof(plugin_path), "%s/%s", PLUGIN_DIR, TAMPERED_PLUGIN);
 
     /* Verification should fail for tampered plugin */
-    H5E_BEGIN_TRY {
+    H5E_BEGIN_TRY
+    {
         status = H5PL__verify_signature_appended(plugin_path);
-    } H5E_END_TRY;
+    }
+    H5E_END_TRY;
 
     if (status >= 0) {
         H5_FAILED();
@@ -481,9 +483,11 @@ test_bad_signature_rejected(void)
     snprintf(plugin_path, sizeof(plugin_path), "%s/%s", PLUGIN_DIR, BAD_SIG_PLUGIN);
 
     /* Verification should fail for plugin with bad signature */
-    H5E_BEGIN_TRY {
+    H5E_BEGIN_TRY
+    {
         status = H5PL__verify_signature_appended(plugin_path);
-    } H5E_END_TRY;
+    }
+    H5E_END_TRY;
 
     if (status >= 0) {
         H5_FAILED();
@@ -514,9 +518,11 @@ test_no_footer_rejected(void)
     snprintf(plugin_path, sizeof(plugin_path), "%s/%s", PLUGIN_DIR, NO_FOOTER_PLUGIN);
 
     /* Verification should fail for plugin without footer */
-    H5E_BEGIN_TRY {
+    H5E_BEGIN_TRY
+    {
         status = H5PL__verify_signature_appended(plugin_path);
-    } H5E_END_TRY;
+    }
+    H5E_END_TRY;
 
     if (status >= 0) {
         H5_FAILED();
@@ -547,9 +553,11 @@ test_corrupt_magic_rejected(void)
     snprintf(plugin_path, sizeof(plugin_path), "%s/%s", PLUGIN_DIR, CORRUPT_MAGIC_PLUGIN);
 
     /* Verification should fail for plugin with corrupt magic */
-    H5E_BEGIN_TRY {
+    H5E_BEGIN_TRY
+    {
         status = H5PL__verify_signature_appended(plugin_path);
-    } H5E_END_TRY;
+    }
+    H5E_END_TRY;
 
     if (status >= 0) {
         H5_FAILED();
@@ -584,20 +592,20 @@ main(void)
     }
 
     /* Run tests */
-    nerrors += test_valid_signed_plugin() < 0       ? 1 : 0;
-    nerrors += test_unsigned_plugin_rejected() < 0  ? 1 : 0;
-    nerrors += test_tampered_plugin_rejected() < 0  ? 1 : 0;
-    nerrors += test_bad_signature_rejected() < 0    ? 1 : 0;
-    nerrors += test_no_footer_rejected() < 0        ? 1 : 0;
-    nerrors += test_corrupt_magic_rejected() < 0    ? 1 : 0;
+    nerrors += test_valid_signed_plugin() < 0 ? 1 : 0;
+    nerrors += test_unsigned_plugin_rejected() < 0 ? 1 : 0;
+    nerrors += test_tampered_plugin_rejected() < 0 ? 1 : 0;
+    nerrors += test_bad_signature_rejected() < 0 ? 1 : 0;
+    nerrors += test_no_footer_rejected() < 0 ? 1 : 0;
+    nerrors += test_corrupt_magic_rejected() < 0 ? 1 : 0;
 
     /* Clean up */
     cleanup_test_environment();
 
     /* Report results */
     if (nerrors) {
-        printf("\n***** %d PLUGIN SIGNATURE VERIFICATION TEST%s FAILED *****\n",
-               nerrors, nerrors > 1 ? "S" : "");
+        printf("\n***** %d PLUGIN SIGNATURE VERIFICATION TEST%s FAILED *****\n", nerrors,
+               nerrors > 1 ? "S" : "");
         return EXIT_FAILURE;
     }
 
@@ -612,7 +620,7 @@ main(void)
 {
     printf("Plugin signature verification is not enabled.\n");
     printf("Reconfigure with -DHDF5_REQUIRE_SIGNED_PLUGINS=ON to enable these tests.\n");
-    return EXIT_SUCCESS;  /* Not a failure - feature not enabled */
+    return EXIT_SUCCESS; /* Not a failure - feature not enabled */
 }
 
 #endif /* H5_REQUIRE_DIGITAL_SIGNATURE */

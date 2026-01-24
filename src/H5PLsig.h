@@ -75,7 +75,8 @@ typedef struct H5PL_sig_footer_t {
 
 /* Compile-time validation: key MUST be provided when signature verification is enabled */
 #ifndef H5PL_PUBLIC_KEY_PEM
-#error "H5PL_PUBLIC_KEY_PEM must be defined via CMake when HDF5_REQUIRE_SIGNED_PLUGINS=ON. See H5PLsig.h for key generation and configuration instructions."
+#error                                                                                                       \
+    "H5PL_PUBLIC_KEY_PEM must be defined via CMake when HDF5_REQUIRE_SIGNED_PLUGINS=ON. See H5PLsig.h for key generation and configuration instructions."
 #endif
 
 /* Note: Size validation is performed at runtime in H5PL__verify_signature() */

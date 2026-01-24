@@ -52,7 +52,7 @@
  * The public key is parsed from PEM string once and reused across all plugin verifications.
  * This provides significant performance improvement when loading multiple plugins.
  */
-static EVP_PKEY *H5PL_cached_public_key_g = NULL;
+static EVP_PKEY *H5PL_cached_public_key_g      = NULL;
 static bool      H5PL_public_key_initialized_g = false;
 
 /*-------------------------------------------------------------------------
@@ -227,9 +227,9 @@ H5PL__verify_signature_appended(const char *plugin_path)
     h5_stat_t         st;
     HDoff_t           file_size = 0;
     H5PL_sig_footer_t footer;
-    unsigned char    *signature   = NULL;
-    unsigned char    *binary_data = NULL;
-    size_t            binary_size = 0;
+    unsigned char    *signature     = NULL;
+    unsigned char    *binary_data   = NULL;
+    size_t            binary_size   = 0;
     EVP_PKEY         *public_key    = NULL;
     EVP_MD_CTX       *mdctx         = NULL;
     EVP_PKEY_CTX     *pkey_ctx      = NULL;
@@ -268,7 +268,7 @@ H5PL__verify_signature_appended(const char *plugin_path)
         UINT32DECODE(p, magic_le);
 
         footer.signature_length = signature_length_le;
-        footer.magic = magic_le;
+        footer.magic            = magic_le;
     }
 
     /* Validate magic number */
@@ -321,7 +321,7 @@ H5PL__verify_signature_appended(const char *plugin_path)
      * providing significant performance improvement when verifying multiple plugins.
      */
     if (!H5PL_public_key_initialized_g) {
-        H5PL_cached_public_key_g = H5PL__create_public_RSA_from_string(H5PL_PUBLIC_KEY_PEM);
+        H5PL_cached_public_key_g      = H5PL__create_public_RSA_from_string(H5PL_PUBLIC_KEY_PEM);
         H5PL_public_key_initialized_g = true;
     }
     if (NULL == H5PL_cached_public_key_g)
