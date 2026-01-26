@@ -280,19 +280,19 @@ done:
 static herr_t
 sign_plugin_file(const char *plugin_path, EVP_PKEY *private_key)
 {
-    int                fd            = -1;
-    h5_stat_t          st;
-    hsize_t            file_size     = 0;
-    unsigned char     *hash_buffer   = NULL;
-    unsigned char     *signature     = NULL;
-    size_t             sig_len       = 0;
-    EVP_MD_CTX        *mdctx         = NULL;
-    EVP_PKEY_CTX      *pkey_ctx      = NULL;
-    H5PL_sig_footer_t  footer;
-    herr_t             ret_value     = SUCCEED;
-    hsize_t            bytes_read    = 0;
-    hsize_t            total_to_read = 0;
-    int                append_fd     = -1;
+    int               fd = -1;
+    h5_stat_t         st;
+    hsize_t           file_size   = 0;
+    unsigned char    *hash_buffer = NULL;
+    unsigned char    *signature   = NULL;
+    size_t            sig_len     = 0;
+    EVP_MD_CTX       *mdctx       = NULL;
+    EVP_PKEY_CTX     *pkey_ctx    = NULL;
+    H5PL_sig_footer_t footer;
+    herr_t            ret_value     = SUCCEED;
+    hsize_t           bytes_read    = 0;
+    hsize_t           total_to_read = 0;
+    int               append_fd     = -1;
 
     /* Open plugin file for reading */
     if ((fd = HDopen(plugin_path, O_RDONLY, 0)) < 0) {
@@ -366,9 +366,8 @@ sign_plugin_file(const char *plugin_path, EVP_PKEY *private_key)
         fprintf(rawoutstream, "Computing SHA-256 hash...\n");
 
     while (bytes_read < file_size) {
-        size_t            chunk_size  = (size_t)((file_size - bytes_read) > HASH_CHUNK_SIZE
-                                                     ? HASH_CHUNK_SIZE
-                                                     : (file_size - bytes_read));
+        size_t chunk_size =
+            (size_t)((file_size - bytes_read) > HASH_CHUNK_SIZE ? HASH_CHUNK_SIZE : (file_size - bytes_read));
         h5_posix_io_ret_t read_result = 0;
 
         /* Read chunk with EINTR retry */
@@ -485,7 +484,7 @@ sign_plugin_file(const char *plugin_path, EVP_PKEY *private_key)
 
     /* Prepare footer (signature length + magic number) in little-endian format */
     {
-        uint8_t footer_buf[8];
+        uint8_t  footer_buf[8];
         uint8_t *p = footer_buf;
 
         /* Encode signature length as little-endian uint32 */
