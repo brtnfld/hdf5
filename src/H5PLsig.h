@@ -13,8 +13,6 @@
 #ifndef H5PLsig_H
 #define H5PLsig_H
 
-#ifdef H5_REQUIRE_DIGITAL_SIGNATURE
-
 /*
  * Appended Signature Format
  * =========================
@@ -50,6 +48,8 @@ typedef struct H5PL_sig_footer_t {
     uint32_t signature_length; /* Length of RSA signature in bytes (little-endian on disk) */
     uint32_t magic;            /* Magic number H5PL_SIG_MAGIC (little-endian on disk) */
 } H5PL_sig_footer_t;
+
+#ifdef H5_REQUIRE_DIGITAL_SIGNATURE
 
 /*
  * Public Key Configuration (REQUIRED for plugin signature verification)
