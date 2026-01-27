@@ -94,7 +94,7 @@ create_dummy_plugin(const char *path)
 /*-------------------------------------------------------------------------
  * Function:    sign_plugin_file
  *
- * Purpose:     Sign a plugin file using the Python signing script
+ * Purpose:     Sign a plugin file using the h5sign tool
  *
  * Return:      SUCCEED/FAIL
  *-------------------------------------------------------------------------
@@ -106,9 +106,8 @@ sign_plugin_file(const char *plugin_path, const char *private_key_path)
     int    result;
     herr_t ret_value = SUCCEED;
 
-    /* Build command to sign the plugin */
-    snprintf(cmd, sizeof(cmd), "python3 %s/bin/sign-hdf5-plugin.py %s %s 2>&1", H5_get_srcdir(), plugin_path,
-             private_key_path);
+    /* Build command to sign the plugin using h5sign tool */
+    snprintf(cmd, sizeof(cmd), "h5sign -p %s -k %s 2>&1", plugin_path, private_key_path);
 
     result = system(cmd);
     if (result != 0) {
@@ -584,6 +583,9 @@ main(void)
 
     printf("Testing HDF5 Plugin Signature Verification\n");
     printf("==========================================\n\n");
+
+    /* Open the HDF5 library explicitly */
+    H5open();
 
     /* Set up test environment */
     if (setup_test_environment() < 0) {

@@ -756,7 +756,7 @@ H5PL__verify_signature_appended(const char *plugin_path)
                         (unsigned long long)binary_size_off, (unsigned long long)H5PL_MAX_PLUGIN_SIZE);
 
         /* Check for overflow when casting to size_t (critical on 32-bit systems with LFS) */
-        if (binary_size_off > (HDoff_t)SIZE_MAX)
+        if (binary_size_off < 0 || (uint64_t)binary_size_off > (uint64_t)SIZE_MAX)
             HGOTO_ERROR(
                 H5E_PLUGIN, H5E_BADVALUE, FAIL,
                 "plugin binary size %llu exceeds SIZE_MAX - file too large to verify on this platform",
