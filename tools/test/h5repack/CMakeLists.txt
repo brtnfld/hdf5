@@ -103,6 +103,10 @@ if (BUILD_SHARED_LIBS)
   # Sign the plugins if signature verification is enabled
   #-----------------------------------------------------------------------------
   if (HDF5_REQUIRE_SIGNED_PLUGINS)
+    # Ensure h5sign is built before the plugin targets
+    add_dependencies (${H5REPACK_TOOL_PLUGIN_LIB_TARGET} h5sign)
+    add_dependencies (${H5REPACK_TOOL_PLUGIN_LIB_VTARGET} h5sign)
+
     add_custom_command (
         TARGET     ${H5REPACK_TOOL_PLUGIN_LIB_TARGET}
         POST_BUILD

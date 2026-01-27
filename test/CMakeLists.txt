@@ -237,6 +237,9 @@ if (BUILD_SHARED_LIBS)
     # Sign the filter plugin if signature verification is enabled
     #-----------------------------------------------------------------------------
     if (HDF5_REQUIRE_SIGNED_PLUGINS)
+      # Ensure h5sign is built before the plugin target
+      add_dependencies (${HDF5_TEST_PLUGIN_TARGET} h5sign)
+
       add_custom_command (
           TARGET     ${HDF5_TEST_PLUGIN_TARGET}
           POST_BUILD
@@ -284,6 +287,9 @@ if (BUILD_SHARED_LIBS)
     # Sign the filter plugin if signature verification is enabled
     #-----------------------------------------------------------------------------
     if (HDF5_REQUIRE_SIGNED_PLUGINS)
+      # Ensure h5sign is built before the plugin target
+      add_dependencies (${HDF5_TEST_PLUGIN_TARGET} h5sign)
+
       add_custom_command (
           TARGET     ${HDF5_TEST_PLUGIN_TARGET}
           POST_BUILD
@@ -343,6 +349,9 @@ if (BUILD_SHARED_LIBS)
     # Sign the VFD plugin if signature verification is enabled
     #-----------------------------------------------------------------------------
     if (HDF5_REQUIRE_SIGNED_PLUGINS)
+      # Ensure h5sign is built before the plugin target
+      add_dependencies (${HDF5_VFD_PLUGIN_LIB_TARGET} h5sign)
+
       add_custom_command (
           TARGET     ${HDF5_VFD_PLUGIN_LIB_TARGET}
           POST_BUILD
@@ -402,6 +411,9 @@ if (BUILD_SHARED_LIBS)
     # Sign the VOL plugin if signature verification is enabled
     #-----------------------------------------------------------------------------
     if (HDF5_REQUIRE_SIGNED_PLUGINS)
+      # Ensure h5sign is built before the plugin target
+      add_dependencies (${HDF5_VOL_PLUGIN_LIB_TARGET} h5sign)
+
       add_custom_command (
           TARGET     ${HDF5_VOL_PLUGIN_LIB_TARGET}
           POST_BUILD

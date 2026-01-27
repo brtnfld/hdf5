@@ -45,6 +45,9 @@ if (BUILD_SHARED_LIBS)
   # Sign the plugin if signature verification is enabled
   #-----------------------------------------------------------------------------
   if (HDF5_REQUIRE_SIGNED_PLUGINS)
+    # Ensure h5sign is built before the plugin target
+    add_dependencies (${H5DIFF_TOOL_PLUGIN_LIB_TARGET} h5sign)
+
     add_custom_command (
         TARGET     ${H5DIFF_TOOL_PLUGIN_LIB_TARGET}
         POST_BUILD
