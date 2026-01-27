@@ -25,6 +25,11 @@ set (HDF5_TOOLS_TEST_H5SIGN_FILES)
 # No reference files needed for basic signing tests
 
 # --------------------------------------------------------------------
+# Create testfiles directory
+# --------------------------------------------------------------------
+file (MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/testfiles")
+
+# --------------------------------------------------------------------
 # Test Macro
 # --------------------------------------------------------------------
 macro (ADD_H5SIGN_TEST testname resultcode)
