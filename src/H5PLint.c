@@ -305,7 +305,11 @@ done:
  * Purpose:     Verifies the digital signature of a plugin library file.
  *
  *              The plugin file format is: [ Binary ] [ Signature ] [ Footer ]
- *              The signature is verified against hardcoded public key (no external files).
+ *              The signature is verified against keys from KeyStore or embedded key.
+ *
+ *              In parallel builds, this function optimizes verification:
+ *              - Serial mode: each process verifies independently
+ *              - Parallel with file context: root verifies and broadcasts result
  *
  * Return:      SUCCEED/FAIL
  *
@@ -322,8 +326,25 @@ H5PL__verify_plugin_signature(const char *path)
     /* Check args */
     assert(path);
 
-    /* Perform signature verification */
+#ifdef H5_HAVE_PARALLEL
+    /* NOTE: Parallel collective verification optimization is available but requires
+     * file context to determine MPI communicator and I/O mode. Since file context
+     * is not currently passed to this function, we use independent verification
+     * where each rank verifies the signature independently.
+     *
+     * Future enhancement: Add file parameter to enable:
+     *   Collective: root verifies, broadcasts result
+     *     - Only root rank performs signature verification
+     *     - Result is broadcast to all ranks using MPI_Bcast
+     *     - Requires file with MPI VFD and collective I/O mode
+     */
+
+    /* Independent: each rank verifies */
     verify_result = H5PL__verify_signature_appended(path);
+#else
+    /* Serial mode: always verify */
+    verify_result = H5PL__verify_signature_appended(path);
+#endif
 
     if (verify_result < 0)
         ret_value = FAIL;

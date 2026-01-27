@@ -252,6 +252,7 @@ jobs:
           choco install ninja
           choco install doxygen.install
           choco install graphviz
+          choco install openssl --version=3.4.0 -y
 
       - name: Enable Developer Command Prompt (Windows)
         if: ${{ runner.os == 'Windows' }}

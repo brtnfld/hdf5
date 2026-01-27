@@ -35,4 +35,7 @@ add_subdirectory (h5format_convert)
 add_subdirectory (h5perf)
 
 #-- Add the h5sign executable (plugin signing tool)
-add_subdirectory (h5sign)
+#   Only build h5sign when plugin support is enabled
+if (HDF5_ENABLE_PLUGIN_SUPPORT)
+  add_subdirectory (h5sign)
+endif ()

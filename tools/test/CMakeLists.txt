@@ -121,4 +121,7 @@ add_subdirectory (h5format_convert)
 add_subdirectory (perform)
 
 #-- Add the h5sign tests
-add_subdirectory (h5sign)
+#   Only build h5sign tests when plugin support is enabled
+if (HDF5_ENABLE_PLUGIN_SUPPORT)
+  add_subdirectory (h5sign)
+endif ()
