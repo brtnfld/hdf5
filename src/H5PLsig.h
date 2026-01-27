@@ -52,34 +52,61 @@ typedef struct H5PL_sig_footer_t {
 #ifdef H5_REQUIRE_DIGITAL_SIGNATURE
 
 /*
- * Public Key Configuration (REQUIRED for plugin signature verification)
+ * KeyStore Configuration for Plugin Signature Verification
  *
- * SECURITY REQUIREMENT: H5PL_PUBLIC_KEY_PEM must be defined at compile time
- * via CMake configuration. There is NO default key because:
- *   1. Any default would be insecure (publicly known)
- *   2. Users must generate their own RSA key pair
- *   3. The public key must match the private key used to sign plugins
+ * HDF5 supports multiple trusted keys through the KeyStore approach:
  *
- * To generate a key pair:
+ * KEY LOADING PRIORITY (first found wins):
+ *   1. Environment variable: HDF5_PLUGIN_KEYSTORE=/path/to/keys
+ *   2. CMake-configured directory: HDF5_PLUGIN_KEYSTORE_DIR=/etc/hdf5/trusted_keys
+ *   3. Compile-time embedded key: H5PL_PUBLIC_KEY_PEM (backward compatibility)
+ *
+ * KEYSTORE DIRECTORY:
+ *   - Contains multiple .pem files (one public key per file)
+ *   - Allows trusting plugins from multiple organizations (LLNL, ANL, HDFGroup)
+ *   - Add/remove keys without recompiling HDF5
+ *   - Must NOT be world-writable (security check enforced)
+ *
+ * VERIFICATION LOGIC:
+ *   - Plugin signature is verified against ALL keys in KeyStore (OR logic)
+ *   - First matching key succeeds → plugin is trusted
+ *   - No matching key → plugin is rejected
+ *
+ * EXAMPLE USAGE:
+ *
+ *   # Setup KeyStore with multiple trusted organizations
+ *   sudo mkdir -p /etc/hdf5/trusted_keys
+ *   sudo chmod 755 /etc/hdf5/trusted_keys
+ *   sudo cp llnl_public.pem /etc/hdf5/trusted_keys/
+ *   sudo cp anl_public.pem /etc/hdf5/trusted_keys/
+ *   sudo cp hdfgroup_public.pem /etc/hdf5/trusted_keys/
+ *
+ *   # Build HDF5 with KeyStore
+ *   cmake -DHDF5_REQUIRE_SIGNED_PLUGINS=ON \
+ *         -DHDF5_PLUGIN_KEYSTORE_DIR=/etc/hdf5/trusted_keys \
+ *         ..
+ *
+ *   # Runtime override via environment variable
+ *   export HDF5_PLUGIN_KEYSTORE=/tmp/test_keys
+ *
+ * BACKWARD COMPATIBILITY:
+ *   - Compile-time embedded key (H5PL_PUBLIC_KEY_PEM) still supported
+ *   - Use this for single-key deployments or backward compatibility
+ *
+ *   cmake -DHDF5_REQUIRE_SIGNED_PLUGINS=ON \
+ *         -DHDF5_PLUGIN_PUBLIC_KEY_FILE=/path/to/public.pem \
+ *         ..
+ *
+ * KEY GENERATION:
  *   openssl genrsa -out private.pem 2048
  *   openssl rsa -in private.pem -pubout -out public.pem
  *
- * To configure via CMake:
- *   cmake -DHDF5_REQUIRE_SIGNED_PLUGINS=ON \
- *         -DH5PL_PUBLIC_KEY_PEM="$(cat /path/to/public.pem)" \
- *         ..
- *
- * Alternatively, set HDF5_PLUGIN_PUBLIC_KEY_FILE in CMakeLists.txt:
- *   set(HDF5_PLUGIN_PUBLIC_KEY_FILE "/path/to/public.pem")
+ * SECURITY NOTES:
+ *   - KeyStore directory must NOT be world-writable
+ *   - This prevents unprivileged users from adding malicious keys
+ *   - Symbolic links are IGNORED for security (prevents symlink attacks)
+ *   - Only regular .pem files in the directory are loaded
  */
-
-/* Compile-time validation: key MUST be provided when signature verification is enabled */
-#ifndef H5PL_PUBLIC_KEY_PEM
-#error                                                                                                       \
-    "H5PL_PUBLIC_KEY_PEM must be defined via CMake when HDF5_REQUIRE_SIGNED_PLUGINS=ON. See H5PLsig.h for key generation and configuration instructions."
-#endif
-
-/* Note: Size validation is performed at runtime in H5PL__verify_signature() */
 
 #endif /* H5_REQUIRE_DIGITAL_SIGNATURE */
 

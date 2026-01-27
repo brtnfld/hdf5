@@ -40,11 +40,56 @@ This document outlines the strategy for HDF5 plugin signature verification, bala
    - Automated testing on all commits
    - Cross-platform validation (Linux, macOS, Windows)
 
+5. **KeyStore Implementation** ✨ NEW (January 2026)
+   - Location: `src/H5PLsig.c`, `src/H5PLsig.h`
+   - **Multiple trusted keys** from directory (LLNL, ANL, HDFGroup, etc.)
+   - **Runtime key management** - add/remove keys without recompiling
+   - **Three-tier key loading**:
+     1. Environment variable: `HDF5_PLUGIN_KEYSTORE`
+     2. CMake directory: `HDF5_PLUGIN_KEYSTORE_DIR`
+     3. Embedded key fallback: `H5PL_PUBLIC_KEY_PEM` (backward compatibility)
+   - **OR verification logic** - plugin succeeds if ANY key matches
+   - **Security checks** - rejects world-writable directories
+   - Design: `KEYSTORE_DESIGN.md`
+   - Testing guide: `KEYSTORE_TESTING.md`
+
 ---
 
 ## Architecture
 
-### Current Approach: Raw RSA
+### Current Approach: Raw RSA with KeyStore
+
+**KeyStore Approach (Recommended)** - Supports multiple trusted organizations:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  System Administrator                                        │
+│                                                              │
+│  1. Setup KeyStore directory:                               │
+│     mkdir -p /etc/hdf5/trusted_keys                         │
+│     chmod 755 /etc/hdf5/trusted_keys                        │
+│                                                              │
+│  2. Add trusted organization keys:                          │
+│     cp llnl_public.pem /etc/hdf5/trusted_keys/              │
+│     cp anl_public.pem /etc/hdf5/trusted_keys/               │
+│     cp hdfgroup_public.pem /etc/hdf5/trusted_keys/          │
+│                                                              │
+│  3. Build HDF5 with KeyStore:                               │
+│     cmake -DHDF5_REQUIRE_SIGNED_PLUGINS=ON \                │
+│           -DHDF5_PLUGIN_KEYSTORE_DIR=/etc/hdf5/trusted_keys │
+│                                                              │
+│  4. Plugins from ANY trusted org are accepted:              │
+│     - LLNL plugins ✓                                        │
+│     - ANL plugins ✓                                         │
+│     - HDFGroup plugins ✓                                    │
+│                                                              │
+│  5. Add/remove trust without recompiling:                   │
+│     cp ornl_public.pem /etc/hdf5/trusted_keys/  # Add ORNL │
+│     rm /etc/hdf5/trusted_keys/llnl_public.pem   # Remove   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Legacy Single-Key Approach (Backward Compatible)**:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -55,7 +100,8 @@ This document outlines the strategy for HDF5 plugin signature verification, bala
 │     openssl rsa -in private.pem -pubout -out public.pem     │
 │                                                              │
 │  2. Compile HDF5 with org's public key:                     │
-│     cmake -DH5PL_PUBLIC_KEY_PEM="$(cat public.pem)"         │
+│     cmake -DHDF5_REQUIRE_SIGNED_PLUGINS=ON \                │
+│           -DHDF5_PLUGIN_PUBLIC_KEY_FILE=public.pem          │
 │                                                              │
 │  3. Sign plugins with org's private key:                    │
 │     h5sign -p plugin.so -k private.pem                       │

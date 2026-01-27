@@ -180,6 +180,21 @@ if (BUILD_SHARED_LIBS)
           "$<TARGET_FILE:${HDF5_TEST_PLUGIN_TARGET}>"
           "${CMAKE_BINARY_DIR}/filter_plugin_dir1/$<TARGET_FILE_NAME:${HDF5_TEST_PLUGIN_TARGET}>"
     )
+
+    #-----------------------------------------------------------------------------
+    # Sign the filter plugin if signature verification is enabled
+    #-----------------------------------------------------------------------------
+    if (HDF5_REQUIRE_SIGNED_PLUGINS)
+      add_custom_command (
+          TARGET     ${HDF5_TEST_PLUGIN_TARGET}
+          POST_BUILD
+          COMMAND    $<TARGET_FILE:h5sign>
+          ARGS       -p "${CMAKE_BINARY_DIR}/filter_plugin_dir1/$<TARGET_FILE_NAME:${HDF5_TEST_PLUGIN_TARGET}>"
+                     -k "${CMAKE_BINARY_DIR}/private.pem"
+          DEPENDS    h5sign
+          COMMENT    "Signing test plugin ${HDF5_TEST_PLUGIN_TARGET} for signature verification"
+      )
+    endif ()
   endforeach ()
 
   foreach (plugin_name ${FILTER_PLUGINS_FOR_DIR2})
@@ -212,6 +227,21 @@ if (BUILD_SHARED_LIBS)
           "$<TARGET_FILE:${HDF5_TEST_PLUGIN_TARGET}>"
           "${CMAKE_BINARY_DIR}/filter_plugin_dir2/$<TARGET_FILE_NAME:${HDF5_TEST_PLUGIN_TARGET}>"
     )
+
+    #-----------------------------------------------------------------------------
+    # Sign the filter plugin if signature verification is enabled
+    #-----------------------------------------------------------------------------
+    if (HDF5_REQUIRE_SIGNED_PLUGINS)
+      add_custom_command (
+          TARGET     ${HDF5_TEST_PLUGIN_TARGET}
+          POST_BUILD
+          COMMAND    $<TARGET_FILE:h5sign>
+          ARGS       -p "${CMAKE_BINARY_DIR}/filter_plugin_dir2/$<TARGET_FILE_NAME:${HDF5_TEST_PLUGIN_TARGET}>"
+                     -k "${CMAKE_BINARY_DIR}/private.pem"
+          DEPENDS    h5sign
+          COMMENT    "Signing test plugin ${HDF5_TEST_PLUGIN_TARGET} for signature verification"
+      )
+    endif ()
   endforeach ()
 
   #################################################################################
