@@ -47,6 +47,21 @@ if (BUILD_SHARED_LIBS)
           "$<TARGET_FILE:${H5COPY_TOOL_PLUGIN_LIB_TARGET}>"
           "${CMAKE_BINARY_DIR}/plugins/$<TARGET_FILE_NAME:${H5COPY_TOOL_PLUGIN_LIB_TARGET}>"
   )
+
+  #-----------------------------------------------------------------------------
+  # Sign the plugin if signature verification is enabled
+  #-----------------------------------------------------------------------------
+  if (HDF5_REQUIRE_SIGNED_PLUGINS)
+    add_custom_command (
+        TARGET     ${H5COPY_TOOL_PLUGIN_LIB_TARGET}
+        POST_BUILD
+        COMMAND    $<TARGET_FILE:h5sign>
+        ARGS       -p "${CMAKE_BINARY_DIR}/plugins/$<TARGET_FILE_NAME:${H5COPY_TOOL_PLUGIN_LIB_TARGET}>"
+                   -k "${CMAKE_BINARY_DIR}/private.pem"
+        DEPENDS    h5sign
+        COMMENT    "Signing test plugin ${H5COPY_TOOL_PLUGIN_LIB_TARGET} for signature verification"
+    )
+  endif ()
 endif ()
 
 # If tool and serial tests are enabled, include test configuration

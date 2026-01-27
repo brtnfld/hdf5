@@ -338,6 +338,21 @@ if (BUILD_SHARED_LIBS)
           "$<TARGET_FILE:${HDF5_VFD_PLUGIN_LIB_TARGET}>"
           "${CMAKE_BINARY_DIR}/null_vfd_plugin_dir/$<TARGET_FILE_NAME:${HDF5_VFD_PLUGIN_LIB_TARGET}>"
     )
+
+    #-----------------------------------------------------------------------------
+    # Sign the VFD plugin if signature verification is enabled
+    #-----------------------------------------------------------------------------
+    if (HDF5_REQUIRE_SIGNED_PLUGINS)
+      add_custom_command (
+          TARGET     ${HDF5_VFD_PLUGIN_LIB_TARGET}
+          POST_BUILD
+          COMMAND    $<TARGET_FILE:h5sign>
+          ARGS       -p "${CMAKE_BINARY_DIR}/null_vfd_plugin_dir/$<TARGET_FILE_NAME:${HDF5_VFD_PLUGIN_LIB_TARGET}>"
+                     -k "${CMAKE_BINARY_DIR}/private.pem"
+          DEPENDS    h5sign
+          COMMENT    "Signing test VFD plugin ${HDF5_VFD_PLUGIN_LIB_TARGET} for signature verification"
+      )
+    endif ()
   endforeach ()
 
   #################################################################################
@@ -382,6 +397,21 @@ if (BUILD_SHARED_LIBS)
           "$<TARGET_FILE:${HDF5_VOL_PLUGIN_LIB_TARGET}>"
           "${CMAKE_BINARY_DIR}/null_vol_plugin_dir/$<TARGET_FILE_NAME:${HDF5_VOL_PLUGIN_LIB_TARGET}>"
     )
+
+    #-----------------------------------------------------------------------------
+    # Sign the VOL plugin if signature verification is enabled
+    #-----------------------------------------------------------------------------
+    if (HDF5_REQUIRE_SIGNED_PLUGINS)
+      add_custom_command (
+          TARGET     ${HDF5_VOL_PLUGIN_LIB_TARGET}
+          POST_BUILD
+          COMMAND    $<TARGET_FILE:h5sign>
+          ARGS       -p "${CMAKE_BINARY_DIR}/null_vol_plugin_dir/$<TARGET_FILE_NAME:${HDF5_VOL_PLUGIN_LIB_TARGET}>"
+                     -k "${CMAKE_BINARY_DIR}/private.pem"
+          DEPENDS    h5sign
+          COMMENT    "Signing test VOL plugin ${HDF5_VOL_PLUGIN_LIB_TARGET} for signature verification"
+      )
+    endif ()
   endforeach ()
 endif ()
 
