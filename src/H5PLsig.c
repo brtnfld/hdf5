@@ -239,15 +239,15 @@ H5PL__add_key_to_keystore(EVP_PKEY *key, const char *source)
 
     /* Expand keystore if needed */
     if (H5PL_keystore_count_g >= H5PL_keystore_capacity_g) {
-        size_t                    new_capacity = H5PL_keystore_capacity_g == 0 ? H5PL_KEYSTORE_INITIAL_CAPACITY
-                                                                                : H5PL_keystore_capacity_g * 2;
-        H5PL_keystore_entry_t *new_keystore =
-            (H5PL_keystore_entry_t *)H5MM_realloc(H5PL_keystore_g, new_capacity * sizeof(H5PL_keystore_entry_t));
+        size_t new_capacity =
+            H5PL_keystore_capacity_g == 0 ? H5PL_KEYSTORE_INITIAL_CAPACITY : H5PL_keystore_capacity_g * 2;
+        H5PL_keystore_entry_t *new_keystore = (H5PL_keystore_entry_t *)H5MM_realloc(
+            H5PL_keystore_g, new_capacity * sizeof(H5PL_keystore_entry_t));
 
         if (NULL == new_keystore)
             HGOTO_ERROR(H5E_PLUGIN, H5E_CANTALLOC, FAIL, "cannot expand keystore array");
 
-        H5PL_keystore_g        = new_keystore;
+        H5PL_keystore_g          = new_keystore;
         H5PL_keystore_capacity_g = new_capacity;
     }
 
@@ -371,7 +371,7 @@ H5PL__validate_directory_permissions(const char *dir_path)
 
     /* Warn if KeyStore is in obviously dangerous locations on Windows */
     {
-        char dir_upper[MAX_PATH];
+        char   dir_upper[MAX_PATH];
         size_t i;
 
         /* Convert to uppercase for case-insensitive comparison */
@@ -381,8 +381,8 @@ H5PL__validate_directory_permissions(const char *dir_path)
             dir_upper[i] = (char)toupper((unsigned char)dir_upper[i]);
 
         /* Check for obviously dangerous locations */
-        if (strstr(dir_upper, "\\TEMP") || strstr(dir_upper, "\\TMP") ||
-            strstr(dir_upper, "\\APPDATA") || strstr(dir_upper, "\\USERS\\")) {
+        if (strstr(dir_upper, "\\TEMP") || strstr(dir_upper, "\\TMP") || strstr(dir_upper, "\\APPDATA") ||
+            strstr(dir_upper, "\\USERS\\")) {
             /* Issue warning but don't fail - admin might have locked it down */
             fprintf(stderr,
                     "WARNING: KeyStore directory may be in user-writable location: %s\n"
@@ -579,8 +579,8 @@ H5PL__init_keystore(void)
     /* 1. Check environment variable (highest priority) */
     if (NULL != (env_keystore = getenv("HDF5_PLUGIN_KEYSTORE"))) {
         if (H5PL__load_keys_from_directory(env_keystore) < 0)
-            HGOTO_ERROR(H5E_PLUGIN, H5E_CANTLOAD, FAIL,
-                        "failed to load keys from HDF5_PLUGIN_KEYSTORE: %s", env_keystore);
+            HGOTO_ERROR(H5E_PLUGIN, H5E_CANTLOAD, FAIL, "failed to load keys from HDF5_PLUGIN_KEYSTORE: %s",
+                        env_keystore);
         keys_loaded = true;
     }
 
@@ -619,9 +619,9 @@ H5PL__init_keystore(void)
     if (!keys_loaded || H5PL_keystore_count_g == 0) {
         const char *attempted_source = env_keystore ? env_keystore :
 #ifdef H5PL_KEYSTORE_DIR
-                                       H5PL_KEYSTORE_DIR
+                                                    H5PL_KEYSTORE_DIR
 #else
-                                       "(none configured)"
+                                                    "(none configured)"
 #endif
             ;
 
@@ -838,7 +838,8 @@ H5PL__verify_signature_appended(const char *plugin_path)
 
                     /* Read chunk from file */
                     if (H5PL__read_file_data(fd, current_offset, binary_data, chunk_size, plugin_path) < 0)
-                        HGOTO_ERROR(H5E_PLUGIN, H5E_READERROR, FAIL, "cannot read binary chunk at offset %llu",
+                        HGOTO_ERROR(H5E_PLUGIN, H5E_READERROR, FAIL,
+                                    "cannot read binary chunk at offset %llu",
                                     (unsigned long long)current_offset);
 
                     /* Update hash with chunk data */
@@ -886,13 +887,13 @@ H5PL__verify_signature_appended(const char *plugin_path)
         /* Check if any key verified successfully */
         if (!verified) {
             /* Build informative error message with key sources for debugging */
-            char key_sources[1024] = "";
-            char temp[256];
+            char   key_sources[1024] = "";
+            char   temp[256];
             size_t msg_len = 0;
 
             for (size_t i = 0; i < H5PL_keystore_count_g && msg_len < sizeof(key_sources) - 50; i++) {
-                const char *source = H5PL_keystore_g[i].source ? H5PL_keystore_g[i].source : "unknown";
-                int written = snprintf(temp, sizeof(temp), "%s%s", (i > 0 ? ", " : ""), source);
+                const char *source  = H5PL_keystore_g[i].source ? H5PL_keystore_g[i].source : "unknown";
+                int         written = snprintf(temp, sizeof(temp), "%s%s", (i > 0 ? ", " : ""), source);
 
                 if (written > 0 && msg_len + written < sizeof(key_sources) - 1) {
                     strcat(key_sources, temp);
