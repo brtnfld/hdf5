@@ -139,6 +139,58 @@ if (BUILD_SHARED_LIBS)
   file (MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/filter_plugin_dir2")
 
   #-----------------------------------------------------------------------------
+  # Generate test RSA key pair for plugin signing if signature verification is enabled
+  #-----------------------------------------------------------------------------
+  if (HDF5_REQUIRE_SIGNED_PLUGINS)
+    find_program(OPENSSL_EXECUTABLE openssl)
+    if (NOT OPENSSL_EXECUTABLE)
+      message(FATAL_ERROR
+        "OpenSSL executable not found but is required for HDF5_REQUIRE_SIGNED_PLUGINS.\n"
+        "Please install OpenSSL or disable HDF5_REQUIRE_SIGNED_PLUGINS.")
+    endif ()
+
+    set(TEST_PRIVATE_KEY "${CMAKE_BINARY_DIR}/private.pem")
+    set(TEST_PUBLIC_KEY "${CMAKE_BINARY_DIR}/public.pem")
+
+    # Check if keys already exist
+    if (NOT EXISTS "${TEST_PRIVATE_KEY}" OR NOT EXISTS "${TEST_PUBLIC_KEY}")
+      message(STATUS "Generating test RSA key pair for plugin signing...")
+
+      # Generate private key
+      execute_process(
+        COMMAND ${OPENSSL_EXECUTABLE} genrsa -out "${TEST_PRIVATE_KEY}" 2048
+        RESULT_VARIABLE GENKEY_RESULT
+        OUTPUT_QUIET
+        ERROR_QUIET
+      )
+
+      if (NOT GENKEY_RESULT EQUAL 0)
+        message(FATAL_ERROR "Failed to generate test private key")
+      endif ()
+
+      # Generate public key
+      execute_process(
+        COMMAND ${OPENSSL_EXECUTABLE} rsa -in "${TEST_PRIVATE_KEY}" -pubout -out "${TEST_PUBLIC_KEY}"
+        RESULT_VARIABLE GENPUB_RESULT
+        OUTPUT_QUIET
+        ERROR_QUIET
+      )
+
+      if (NOT GENPUB_RESULT EQUAL 0)
+        message(FATAL_ERROR "Failed to generate test public key")
+      endif ()
+
+      message(STATUS "Test RSA key pair generated successfully:")
+      message(STATUS "  Private key: ${TEST_PRIVATE_KEY}")
+      message(STATUS "  Public key: ${TEST_PUBLIC_KEY}")
+    else ()
+      message(STATUS "Using existing test RSA key pair:")
+      message(STATUS "  Private key: ${TEST_PRIVATE_KEY}")
+      message(STATUS "  Public key: ${TEST_PUBLIC_KEY}")
+    endif ()
+  endif ()
+
+  #-----------------------------------------------------------------------------
   # Define Filter Plugin Test Sources
   #-----------------------------------------------------------------------------
   set (FILTER_PLUGINS_FOR_DIR1

@@ -42,6 +42,11 @@
 #include <openssl/bio.h>
 #include <openssl/err.h>
 
+/* On Windows, OpenSSL requires applink to bridge different CRT versions */
+#ifdef _MSC_VER
+#include <openssl/applink.c>
+#endif
+
 /* Name of tool */
 #define PROGRAMNAME "h5sign"
 
