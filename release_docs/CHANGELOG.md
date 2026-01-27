@@ -112,6 +112,11 @@ We would like to thank the many HDF5 community members who contributed to this r
 
 ## Library
 
+### Fixes potential security issues
+
+   The get_name API functions allow passing NULL when querying the object name length. However, passing a non-NULL buffer with size == 0 will result in security vulnerability of invalid write. That was because the library wrote a null terminator to the buffer regardless of what the size of the buffer was as long as the buffer was non-NULL.
+   These functions are now fixed to treat (buffer != NULL, size == 0) as a length-only query to eliminate Valgrind error of invalid write.
+
 ### Fixed a performance issue with chunked dataset I/O
 
    When dataset chunks are unable to be placed in the dataset chunk cache (for example, if a chunk
