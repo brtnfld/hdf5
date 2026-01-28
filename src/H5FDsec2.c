@@ -742,7 +742,7 @@ H5FD__sec2_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, hid_t H5_ATTR_UN
     if (H5_write_safe(file->fd, offset, buf, size, file->filename) < 0)
         HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "H5_write_safe failed");
 
-    /* Update current position and eof */
+        /* Update current position and eof */
 #ifndef H5_HAVE_PREADWRITE
     file->pos = addr + size;
     file->op  = OP_WRITE;

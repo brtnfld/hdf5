@@ -1583,8 +1583,9 @@ H5_read_safe(int fd, HDoff_t offset, void *buf, size_t size, const char *filenam
         }
 
         if (0 == bytes_read)
-            HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "unexpected end of file while reading '%s' at offset %llu",
-                        filename, (unsigned long long)offset);
+            HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL,
+                        "unexpected end of file while reading '%s' at offset %llu", filename,
+                        (unsigned long long)offset);
 
         assert(bytes_read >= 0);
         assert((size_t)bytes_read <= left_to_read);
