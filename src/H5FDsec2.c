@@ -591,6 +591,9 @@ done:
  *              into buffer BUF according to data transfer properties in
  *              DXPL_ID.
  *
+ *              NOTE: Uses inline I/O loop rather than H5_read_safe() due to
+ *              VFD-specific EOF semantics (zero-fill on EOF instead of error).
+ *
  * Return:      Success:    SUCCEED. Result is stored in caller-supplied
  *                          buffer BUF.
  *              Failure:    FAIL, Contents of buffer BUF are undefined.
@@ -624,7 +627,8 @@ H5FD__sec2_read(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, hid_t H5_ATTR_UNU
 #endif /* H5_HAVE_PREADWRITE */
 
     /* Read data, being careful of interrupted system calls, partial results,
-     * and the end of the file.
+     * and the end of the file. Core I/O pattern matches H5_read_safe() from
+     * H5system.c, with VFD-specific EOF zero-filling.
      */
     while (size > 0) {
         h5_posix_io_t     bytes_in   = 0;  /* # of bytes to read       */
@@ -734,62 +738,17 @@ H5FD__sec2_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, hid_t H5_ATTR_UN
             HSYS_GOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to seek to proper position");
 #endif /* H5_HAVE_PREADWRITE */
 
-    /* Write the data, being careful of interrupted system calls and partial
-     * results
-     */
-    while (size > 0) {
-        h5_posix_io_t     bytes_in    = 0;  /* # of bytes to write  */
-        h5_posix_io_ret_t bytes_wrote = -1; /* # of bytes written   */
-
-        /* Trying to write more bytes than the return type can handle is
-         * undefined behavior in POSIX.
-         */
-        if (size > H5_POSIX_MAX_IO_BYTES)
-            bytes_in = H5_POSIX_MAX_IO_BYTES;
-        else
-            bytes_in = (h5_posix_io_t)size;
-
-        do {
-#ifdef H5_HAVE_PREADWRITE
-            bytes_wrote = HDpwrite(file->fd, buf, bytes_in, offset);
-            if (bytes_wrote > 0)
-                offset += bytes_wrote;
-#else
-            bytes_wrote = HDwrite(file->fd, buf, bytes_in);
-#endif /* H5_HAVE_PREADWRITE */
-        } while (-1 == bytes_wrote && EINTR == errno);
-
-        if (-1 == bytes_wrote) { /* error */
-            int    myerrno = errno;
-            time_t mytime  = time(NULL);
-
-#ifndef H5_HAVE_PREADWRITE
-            offset = HDlseek(file->fd, 0, SEEK_CUR);
-#endif
-
-            HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL,
-                        "file write failed: time = %s, filename = '%s', file descriptor = %d, errno = %d, "
-                        "error message = '%s', buf = %p, total write size = %zu, bytes this sub-write = "
-                        "%llu, offset = %llu",
-                        ctime(&mytime), file->filename, file->fd, myerrno, strerror(myerrno), buf, size,
-                        (unsigned long long)bytes_in, (unsigned long long)offset);
-        } /* end if */
-
-        assert(bytes_wrote > 0);
-        assert((size_t)bytes_wrote <= size);
-
-        size -= (size_t)bytes_wrote;
-        addr += (haddr_t)bytes_wrote;
-        buf = (const char *)buf + bytes_wrote;
-    } /* end while */
+    /* Use centralized safe write routine */
+    if (H5_write_safe(file->fd, offset, buf, size, file->filename) < 0)
+        HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "H5_write_safe failed");
 
     /* Update current position and eof */
 #ifndef H5_HAVE_PREADWRITE
-    file->pos = addr;
+    file->pos = addr + size;
     file->op  = OP_WRITE;
 #endif /* H5_HAVE_PREADWRITE */
-    if (addr > file->eof)
-        file->eof = addr;
+    if ((addr + size) > file->eof)
+        file->eof = addr + size;
 
 done:
 #ifndef H5_HAVE_PREADWRITE

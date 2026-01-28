@@ -1504,3 +1504,183 @@ HDqsort_fallback(void *base, size_t nel, size_t size, int (*compar)(const void *
 }
 
 #endif /* !H5_HAVE_QSORT_REENTRANT */
+
+/*-------------------------------------------------------------------------
+ * Function:    H5_read_safe
+ *
+ * Purpose:     Portable file read with EINTR retry and safe chunking
+ *
+ *              Centralizes HDF5's established pattern for safe, portable I/O:
+ *                - EINTR interruptions (retry)
+ *                - Partial reads (loop until complete)
+ *                - Platform I/O size limits (H5_POSIX_MAX_IO_BYTES)
+ *                - pread support (when available for better concurrency)
+ *                - Detailed error messages with errno info
+ *
+ *              This eliminates code duplication between H5FDsec2.c and
+ *              H5PLsig.c, centralizing I/O error handling logic.
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5_read_safe(int fd, HDoff_t offset, void *buf, size_t size, const char *filename)
+{
+    size_t         left_to_read = size;
+    unsigned char *read_ptr     = (unsigned char *)buf;
+    herr_t         ret_value    = SUCCEED;
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    assert(buf);
+    assert(filename);
+
+#ifndef H5_HAVE_PREADWRITE
+    /* Seek to the correct location (if we don't have pread) */
+    if (HDlseek(fd, offset, SEEK_SET) < 0)
+        HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to seek to offset %llu in file '%s'",
+                    (unsigned long long)offset, filename);
+#endif /* H5_HAVE_PREADWRITE */
+
+    /* Read data in chunks, following HDF5's established I/O pattern */
+    while (left_to_read > 0) {
+        h5_posix_io_t     bytes_in   = 0;
+        h5_posix_io_ret_t bytes_read = -1;
+
+        /* Respect platform I/O size limits to avoid undefined behavior */
+        if (left_to_read > H5_POSIX_MAX_IO_BYTES)
+            bytes_in = H5_POSIX_MAX_IO_BYTES;
+        else
+            bytes_in = (h5_posix_io_t)left_to_read;
+
+        /* Retry on EINTR (interrupted system call), use pread if available */
+        do {
+#ifdef H5_HAVE_PREADWRITE
+            bytes_read = HDpread(fd, read_ptr, bytes_in, offset);
+            if (bytes_read > 0)
+                offset += bytes_read;
+#else
+            bytes_read = HDread(fd, read_ptr, bytes_in);
+            if (bytes_read > 0)
+                offset += bytes_read;
+#endif /* H5_HAVE_PREADWRITE */
+        } while (-1 == bytes_read && EINTR == errno);
+
+        if (bytes_read < 0) {
+            int    myerrno = errno;
+            time_t mytime  = time(NULL);
+            char   timebuf[26]; /* Buffer for thread-safe ctime_r (POSIX requires 26 bytes) */
+
+            ctime_r(&mytime, timebuf);
+
+            HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL,
+                        "file read failed: time = %s, filename = '%s', file descriptor = %d, "
+                        "errno = %d, error message = '%s', buf = %p, total read size = %llu, "
+                        "bytes this sub-read = %llu, offset = %llu",
+                        timebuf, filename, fd, myerrno, strerror(myerrno), (void *)buf,
+                        (unsigned long long)size, (unsigned long long)bytes_in, (unsigned long long)offset);
+        }
+
+        if (0 == bytes_read)
+            HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "unexpected end of file while reading '%s' at offset %llu",
+                        filename, (unsigned long long)offset);
+
+        assert(bytes_read >= 0);
+        assert((size_t)bytes_read <= left_to_read);
+
+        left_to_read -= (size_t)bytes_read;
+        read_ptr += bytes_read;
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5_read_safe() */
+
+/*-------------------------------------------------------------------------
+ * Function:    H5_write_safe
+ *
+ * Purpose:     Portable file write with EINTR retry and safe chunking
+ *
+ *              Centralizes HDF5's established pattern for safe, portable I/O:
+ *                - EINTR interruptions (retry)
+ *                - Partial writes (loop until complete)
+ *                - Platform I/O size limits (H5_POSIX_MAX_IO_BYTES)
+ *                - pwrite support (when available for better concurrency)
+ *                - Detailed error messages with errno info
+ *
+ *              This eliminates potential code duplication and centralizes
+ *              I/O error handling logic.
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5_write_safe(int fd, HDoff_t offset, const void *buf, size_t size, const char *filename)
+{
+    size_t               left_to_write = size;
+    const unsigned char *write_ptr     = (const unsigned char *)buf;
+    herr_t               ret_value     = SUCCEED;
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    assert(buf);
+    assert(filename);
+
+#ifndef H5_HAVE_PREADWRITE
+    /* Seek to the correct location (if we don't have pwrite) */
+    if (HDlseek(fd, offset, SEEK_SET) < 0)
+        HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to seek to offset %llu in file '%s'",
+                    (unsigned long long)offset, filename);
+#endif /* H5_HAVE_PREADWRITE */
+
+    /* Write data in chunks, following HDF5's established I/O pattern */
+    while (left_to_write > 0) {
+        h5_posix_io_t     bytes_in    = 0;
+        h5_posix_io_ret_t bytes_wrote = -1;
+
+        /* Respect platform I/O size limits to avoid undefined behavior */
+        if (left_to_write > H5_POSIX_MAX_IO_BYTES)
+            bytes_in = H5_POSIX_MAX_IO_BYTES;
+        else
+            bytes_in = (h5_posix_io_t)left_to_write;
+
+        /* Retry on EINTR (interrupted system call), use pwrite if available */
+        do {
+#ifdef H5_HAVE_PREADWRITE
+            bytes_wrote = HDpwrite(fd, write_ptr, bytes_in, offset);
+            if (bytes_wrote > 0)
+                offset += bytes_wrote;
+#else
+            bytes_wrote = HDwrite(fd, write_ptr, bytes_in);
+            if (bytes_wrote > 0)
+                offset += bytes_wrote;
+#endif /* H5_HAVE_PREADWRITE */
+        } while (-1 == bytes_wrote && EINTR == errno);
+
+        if (bytes_wrote < 0) {
+            int    myerrno = errno;
+            time_t mytime  = time(NULL);
+            char   timebuf[26]; /* Buffer for thread-safe ctime_r (POSIX requires 26 bytes) */
+
+            ctime_r(&mytime, timebuf);
+
+            HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL,
+                        "file write failed: time = %s, filename = '%s', file descriptor = %d, "
+                        "errno = %d, error message = '%s', buf = %p, total write size = %llu, "
+                        "bytes this sub-write = %llu, offset = %llu",
+                        timebuf, filename, fd, myerrno, strerror(myerrno), (const void *)buf,
+                        (unsigned long long)size, (unsigned long long)bytes_in, (unsigned long long)offset);
+        }
+
+        assert(bytes_wrote > 0);
+        assert((size_t)bytes_wrote <= left_to_write);
+
+        left_to_write -= (size_t)bytes_wrote;
+        write_ptr += bytes_wrote;
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5_write_safe() */

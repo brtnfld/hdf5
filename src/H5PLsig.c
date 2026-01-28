@@ -77,15 +77,10 @@ static bool                   H5PL_keystore_initialized_g = false;
 /*-------------------------------------------------------------------------
  * Function:    H5PL__read_file_data
  *
- * Purpose:     Portable file read with EINTR retry and safe chunking
+ * Purpose:     Wrapper around H5_read_safe() for plugin signature reading
  *
- *              Follows HDF5's established pattern from H5FDsec2.c for safe,
- *              portable I/O that handles:
- *                - EINTR interruptions (retry)
- *                - Partial reads (loop until complete)
- *                - Platform I/O size limits (H5_POSIX_MAX_IO_BYTES)
- *                - pread support (when available for better concurrency)
- *                - Detailed error messages with errno info
+ *              Uses the centralized safe I/O implementation from H5system.c
+ *              which handles EINTR retry, partial reads, chunking, and pread.
  *
  * Return:      SUCCEED/FAIL
  *
@@ -94,72 +89,16 @@ static bool                   H5PL_keystore_initialized_g = false;
 static herr_t
 H5PL__read_file_data(int fd, HDoff_t offset, void *buf, size_t size, const char *filename)
 {
-    size_t         left_to_read = size;
-    unsigned char *read_ptr     = (unsigned char *)buf;
-    herr_t         ret_value    = SUCCEED;
+    herr_t ret_value = SUCCEED;
 
     FUNC_ENTER_PACKAGE
 
     assert(buf);
     assert(filename);
 
-#ifndef H5_HAVE_PREADWRITE
-    /* Seek to the correct location (if we don't have pread) */
-    if (HDlseek(fd, offset, SEEK_SET) < 0)
-        HGOTO_ERROR(H5E_PLUGIN, H5E_SEEKERROR, FAIL, "unable to seek to offset %llu in plugin file '%s'",
-                    (unsigned long long)offset, filename);
-#endif /* H5_HAVE_PREADWRITE */
-
-    /* Read data in chunks, following HDF5's established I/O pattern from H5FDsec2.c */
-    while (left_to_read > 0) {
-        h5_posix_io_t     bytes_in   = 0;
-        h5_posix_io_ret_t bytes_read = -1;
-
-        /* Respect platform I/O size limits to avoid undefined behavior */
-        if (left_to_read > H5_POSIX_MAX_IO_BYTES)
-            bytes_in = H5_POSIX_MAX_IO_BYTES;
-        else
-            bytes_in = (h5_posix_io_t)left_to_read;
-
-        /* Retry on EINTR (interrupted system call), use pread if available */
-        do {
-#ifdef H5_HAVE_PREADWRITE
-            bytes_read = HDpread(fd, read_ptr, bytes_in, offset);
-            if (bytes_read > 0)
-                offset += bytes_read;
-#else
-            bytes_read = HDread(fd, read_ptr, bytes_in);
-            if (bytes_read > 0)
-                offset += bytes_read;
-#endif /* H5_HAVE_PREADWRITE */
-        } while (-1 == bytes_read && EINTR == errno);
-
-        if (bytes_read < 0) {
-            int    myerrno = errno;
-            time_t mytime  = time(NULL);
-            char   timebuf[26]; /* Buffer for thread-safe ctime_r (POSIX requires 26 bytes) */
-
-            ctime_r(&mytime, timebuf);
-
-            HGOTO_ERROR(H5E_PLUGIN, H5E_READERROR, FAIL,
-                        "plugin file read failed: time = %s, filename = '%s', file descriptor = %d, "
-                        "errno = %d, error message = '%s', buf = %p, total read size = %llu, "
-                        "bytes this sub-read = %llu, offset = %llu",
-                        timebuf, filename, fd, myerrno, strerror(myerrno), (void *)buf,
-                        (unsigned long long)size, (unsigned long long)bytes_in, (unsigned long long)offset);
-        }
-
-        if (0 == bytes_read)
-            HGOTO_ERROR(H5E_PLUGIN, H5E_READERROR, FAIL,
-                        "unexpected end of file while reading plugin '%s' at offset %llu", filename,
-                        (unsigned long long)offset);
-
-        assert(bytes_read >= 0);
-        assert((size_t)bytes_read <= left_to_read);
-
-        left_to_read -= (size_t)bytes_read;
-        read_ptr += bytes_read;
-    }
+    /* Use centralized safe I/O routine */
+    if (H5_read_safe(fd, offset, buf, size, filename) < 0)
+        HGOTO_ERROR(H5E_PLUGIN, H5E_READERROR, FAIL, "failed to read plugin file data");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

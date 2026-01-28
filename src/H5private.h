@@ -1815,6 +1815,10 @@ H5_DLL time_t H5_make_time(struct tm *tm);
 H5_DLL void   H5_nanosleep(uint64_t nanosec);
 H5_DLL double H5_get_time(void);
 
+/* Safe POSIX I/O routines with EINTR retry and chunking */
+H5_DLL herr_t H5_read_safe(int fd, HDoff_t offset, void *buf, size_t size, const char *filename);
+H5_DLL herr_t H5_write_safe(int fd, HDoff_t offset, const void *buf, size_t size, const char *filename);
+
 /* Functions for building paths, etc. */
 H5_DLL herr_t H5_build_extpath(const char *name, char **extpath /*out*/);
 H5_DLL herr_t H5_combine_path(const char *path1, const char *path2, char **full_name /*out*/);
