@@ -738,14 +738,7 @@ jobs:
       - name: Install Dependencies (Linux_clang)
         run: |
           sudo apt-get update
-          sudo apt-get install ninja-build doxygen graphviz curl libtinfo5
-
-      - name: add clang to env
-        uses: KyleMayes/install-llvm-action@98e68e10c96dffcb7bfed8b2144541a66b49aa02 # v2.0.8
-        id: setup-clang
-        with:
-          env: true
-          version: '18.1'
+          sudo apt-get install ninja-build doxygen graphviz curl
 
       - name: check clang version
         shell: bash
@@ -827,6 +820,8 @@ jobs:
               set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DLIBAEC_USE_LOCALCONTENT:BOOL=OFF")
               set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DZLIB_USE_LOCALCONTENT:BOOL=OFF")
               set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DPLUGIN_USE_LOCALCONTENT:BOOL=OFF")
+              set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DCMAKE_C_COMPILER:STRING=clang")
+              set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DCMAKE_CXX_COMPILER:STRING=clang++")
 
       - name: Run CTest (Linux_clang)
         run: |
