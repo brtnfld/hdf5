@@ -26,8 +26,8 @@ FIELD_PRIORITY = "Priority"
 FIELD_STATUS = "Status"
 
 # Expected values for Priority field
-VALUE_CRITICAL = "Critical"
-VALUE_HIGH = "High"
+VALUE_CRITICAL = "P0 - Critical"
+VALUE_HIGH = "P1 - High"
 
 # Expected value for Status field when an item is completed
 VALUE_STATUS_DONE = "Done"
@@ -249,7 +249,7 @@ class GitHubProjectTracker:
                 print("ERROR: No critical or high priority items found (total=0).", file=sys.stderr)
                 print("This likely indicates:", file=sys.stderr)
                 print(f"  1. The '{FIELD_PRIORITY}' field values changed", file=sys.stderr)
-                print(f"     Expected values: '{VALUE_CRITICAL}' or '{VALUE_HIGH}'", file=sys.stderr)
+                print(f"     Expected values: '{VALUE_CRITICAL}' or '{VALUE_HIGH}'"  # e.g. 'P0 - Critical', 'P1 - High', file=sys.stderr)
                 print("  2. Project has no items with these field values", file=sys.stderr)
                 print("  3. Field matching logic needs to be updated", file=sys.stderr)
                 print("Refusing to report 0% or 100% with no items to prevent false positives.", file=sys.stderr)
