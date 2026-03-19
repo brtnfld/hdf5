@@ -5,6 +5,9 @@ on:
    schedule:
      - cron: "0 9 * * *"
 
+permissions:
+  contents: read
+
 # Using concurrency to cancel any in-progress job or run
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
