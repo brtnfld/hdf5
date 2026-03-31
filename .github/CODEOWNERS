@@ -1,13 +1,45 @@
 # Lines starting with '#' are comments.
 # Each line is a file pattern followed by one or more owners.
 
-# These owners will be the default owners for everything in the repo.
-* @lrknox @derobins @fortnern @jhendersonHDF @qkoziol @vchoi-hdfgroup @bmribler @glennsong09 @mattjala @brtnfld @mkitti
+# Default owners (core maintainers / release managers)
+* @lrknox @fortnern
 
 # Order is important. The last matching pattern has the most precedence.
-# So if a pull request only touches javascript files, only these owners
-# will be requested to review.
-/fortran/         @brtnfld @derobins @epourmal
-/java/            @jhendersonHDF @mattjala
+
+# Core library (src/)
+/src/               @fortnern @jhendersonHDF @mattjala
+
+# Build system / CMake
+CMakeLists.txt      @lrknox @brtnfld
+/config/            @lrknox
+CMakePresets.json   @lrknox
+
+# Language bindings
+/fortran/           @brtnfld @mattjala
+/java/              @jhendersonHDF @mattjala
+/c++/               @bmribler
+
+# High-level APIs
+/hl/                @bmribler @mattjala
+/hl/fortran/        @brtnfld @mattjala
+/hl/c++/            @bmribler
+
+# Tools (h5dump, h5diff, h5ls, etc.)
+/tools/             @jhendersonHDF @glennsong09
+
+# Tests
+/test/              @fortnern @mattjala
+/testpar/           @fortnern @jhendersonHDF @brtnfld
+
+# Documentation & Doxygen
+/doxygen/           @bmribler @brtnfld
+/release_docs/      @lrknox @bmribler
+
+# CI / GitHub workflows
+/.github/           @lrknox @brtnfld
 # The HDF Group website needs to be updated to reflect any changes made here.
 /.github/.well-known @lkurz @loricooperhdf
+
+# Virtual Object Layer / Virtual File Drivers
+/src/H5VL*          @vchoi-hdfgroup @fortnern
+/src/H5FD*          @fortnern @mattjala
