@@ -483,7 +483,7 @@ run_test() {
             fi
     
             # If there are multiple option sets, wait for reader acknowledgment between iterations
-            if [[ ${#writer_opts[@]} -gt 1 || -v tests_to_run ]]; then
+            if [[ ${#writer_opts[@]} -gt 1 || ${tests_to_run+x} ]]; then
                 writer_wait_for_reader_and_acknowledge
             fi
         done
@@ -522,7 +522,7 @@ run_test() {
             fi
 
             # If there are multiple option sets, signal writer to proceed between iterations
-            if [[ ${#reader_opts[@]} -gt 1 || -v tests_to_run ]]; then
+            if [[ ${#reader_opts[@]} -gt 1 || ${tests_to_run+x} ]]; then
                 reader_signal_writer_and_wait
             fi
         done

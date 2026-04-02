@@ -22,7 +22,7 @@ H5DUMP="$PROJECT_DIR/install/bin/h5dump"
 H5LS="$PROJECT_DIR/install/bin/h5ls"
 export H5CLEAR_PATH="$H5CLEAR" # for h5clear call within recovery_tool.c
 
-# HDF5_NOCLEANUP=1 # Set to a non-empty value to prevent cleanup of output files. 
+HDF5_NOCLEANUP=1 # Set to a non-empty value to prevent cleanup of output files. 
 
 KEEP_OUTPUT_FILES=false # forces recovery and validation output files to be kept for each iteration.
 VERBOSE=false
@@ -553,7 +553,7 @@ parse_args() {
     fi
     
     # Export the tests array so other functions can use it
-    declare -g -a selected_tests=("${tests_to_run[@]}")
+    selected_tests=("${tests_to_run[@]}")
 } # parse_args()
 
 # Main function to run the crash recovery test
