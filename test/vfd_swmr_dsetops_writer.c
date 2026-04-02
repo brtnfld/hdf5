@@ -72,7 +72,7 @@ typedef struct {
     hid_t        filetype;           /* Datatype ID */
     unsigned int update_interval;    /* For -u option */
     unsigned int csteps;             /* For -c <csteps> option */
-    bool         use_np;             /* For -N option */
+    bool         use_communication;             /* For -N option */
     bool         use_vfd_swmr;       /* For -S option */
     bool         flush_raw_data;     /* For -U option */
     bool         obj_ref;            /* For -O option */
@@ -90,6 +90,7 @@ typedef struct {
     unsigned int wwrites;   /* -w <wwrites> option: modify raw data to contiguous and/or chunked datasets */
     unsigned int lastwrite; /* The last operation (-s, -r, -l or -w) performed. */
 } state_t;
+
 
 /* Structure to hold info for different dataset types */
 typedef struct {
@@ -123,7 +124,43 @@ typedef struct {
         .bt2_did = H5I_INVALID_HID, .bt2_sid = H5I_INVALID_HID, .obj_did = H5I_INVALID_HID,                  \
         .reg_did = H5I_INVALID_HID, .reg_buf = NULL                                                          \
     }
+#ifdef H5_USE_SOCKETS
+static bool state_init(state_t *, socket_state_t *, int, char **);
 
+static bool sock_writer(bool result, unsigned step, const state_t *s, socket_state_t *sock,
+                      H5F_vfd_swmr_config_t *config);
+static bool sock_reader(bool result, unsigned step, const state_t *s, socket_state_t *sock);
+static bool sock_confirm_verify_notify(unsigned step, const state_t *s, socket_state_t *sock);
+
+static bool create_dsets(const state_t *s, dsets_state_t *ds);
+static bool open_dsets(const state_t *s, dsets_state_t *ds);
+static bool open_dset_real(const state_t *s, hid_t *did, hid_t *sid, const char *name, H5R_ref_t *obj_buf);
+static bool close_dsets(dsets_state_t *ds);
+static bool close_dset_real(hid_t did, hid_t sid);
+
+static bool perform_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *config,
+                                     socket_state_t *sock);
+static bool dsets_action(unsigned action, const state_t *s, const dsets_state_t *ds, unsigned step);
+static bool dset_setup(unsigned action, unsigned which, const state_t *s, hsize_t *start, hsize_t *stride,
+                       hsize_t *count, hsize_t *block, hid_t *mem_sid, unsigned int **buf);
+static bool write_dset(const state_t *s, const char *name, hid_t did, hid_t sid, hid_t mem_sid,
+                       hsize_t *start, hsize_t *stride, hsize_t *count, hsize_t *block, unsigned int *buf,
+                       H5R_ref_t *reg_buf);
+static bool write_dset_compact(const state_t *s, const dsets_state_t *ds);
+
+static bool verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *config,
+                                    socket_state_t *sock, bool fileclosed);
+static bool verify_dsets_action(unsigned action, const state_t *s, const dsets_state_t *ds, unsigned which,
+                                bool fileclosed);
+static bool verify_dset(hid_t did, hid_t tid, hid_t sid, hid_t mem_sid, hsize_t *start, hsize_t *stride,
+                        hsize_t *count, hsize_t *block, unsigned int *vbuf, bool fileclosed,
+                        bool flush_raw_data, H5R_ref_t *rbuf);
+static bool verify_dset_compact(const state_t *s, const dsets_state_t *ds, bool fileclosed,
+                                bool flush_raw_data);
+
+static bool closing_on_noflush(bool writer, state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *config,
+                               socket_state_t *sock);
+#else
 /* Structure to hold info for named pipes */
 typedef struct {
     const char *fifo_writer_to_reader; /* Name of fifo for writer to reader */
@@ -180,6 +217,7 @@ static bool verify_dset_compact(const state_t *s, const dsets_state_t *ds, bool 
 
 static bool closing_on_noflush(bool writer, state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *config,
                                np_state_t *np);
+#endif /* H5_USE_SOCKETS */
 
 /* Names for datasets */
 #define DSET_COMPACT_NAME  "compact_dset"
@@ -237,6 +275,10 @@ usage(const char *progname)
               "-q:              silence printouts, few messages\n"
               "-b:              write data in big-endian byte order\n"
               "                 (default is H5T_NATIVE_UINT32)\n\n"
+#ifdef H5_USE_SOCKETS
+              "-i --ip_addr ip_address:\n"
+              "                 IP address of the writer device (reader only) \n"
+#endif /* H5_USE_SOCKETS */
               "Note:\n"
               "1. Require to specify at least -p, -g or -k option\n"
               "2. -c <csteps> option cannot exceed -s <swrites> or -r <rwrites>\n"
@@ -246,39 +288,43 @@ usage(const char *progname)
     HDexit(EXIT_FAILURE);
 } /* usage() */
 
+#ifdef H5_USE_SOCKETS
 /*
  * Initialize option info in state_t
  */
 static bool
-state_init(state_t *s, int argc, char **argv)
+state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
 {
     unsigned long          tmp;
     int                    opt;
     char *                 tfile = NULL;
     char *                 end;
-    const char *           s_opts   = "pte:gkm:n:s:r:l:w:bqSNUORu:c:";
-    struct h5_long_options l_opts[] = {{NULL, 0, '\0'}};
+    const char *           s_opts   = "pte:gkm:n:s:r:l:w:bqSNUORu:c:i:";
+    struct h5_long_options l_opts[] = {
+        {"ip_addr", require_arg, 'i'},
+        {NULL, 0, '\0'}
+    };
 
-    s->file            = H5I_INVALID_HID;
-    s->filetype        = H5T_NATIVE_UINT32;
-    s->update_interval = READER_WAIT_TICKS;
-    s->csteps          = 1;
-    s->use_np          = TRUE;
-    s->use_vfd_swmr    = TRUE;
-    s->flush_raw_data  = TRUE;
-    s->compact         = FALSE;
-    s->compact_write   = FALSE;
-    s->compact_elmts   = MAX_COMPACT_ELMS;
-    s->contig          = FALSE;
-    s->rows            = 10;
-    s->cols            = 5;
-    s->swrites         = 0;
-    s->rwrites         = 0;
-    s->lwrites         = 0;
-    s->wwrites         = 0;
-    s->lastwrite       = 0;
-    s->obj_ref         = FALSE;
-    s->reg_ref         = FALSE;
+    s->file              = H5I_INVALID_HID;
+    s->filetype          = H5T_NATIVE_UINT32;
+    s->update_interval   = READER_WAIT_TICKS;
+    s->csteps            = 1;
+    s->use_communication = TRUE;
+    s->use_vfd_swmr      = TRUE;
+    s->flush_raw_data    = TRUE;
+    s->compact           = FALSE;
+    s->compact_write     = FALSE;
+    s->compact_elmts     = MAX_COMPACT_ELMS;
+    s->contig            = FALSE;
+    s->rows              = 10;
+    s->cols              = 5;
+    s->swrites           = 0;
+    s->rwrites           = 0;
+    s->lwrites           = 0;
+    s->wwrites           = 0;
+    s->lastwrite         = 0;
+    s->obj_ref           = FALSE;
+    s->reg_ref           = FALSE;
 
     HDmemset(s->filename, 0, PATH_MAX);
     HDmemset(s->progname, 0, PATH_MAX);
@@ -339,7 +385,248 @@ state_init(state_t *s, int argc, char **argv)
                 break;
 
             case 'N':
-                s->use_np = false;
+                s->use_communication = false;
+                break;
+
+            case 'e': /* # of elements for compact dataset */
+            case 'm': /* # of rows for -g and/or -k */
+            case 'n': /* # of cols for -g and/or -k */
+            case 's': /* # of sequential writes for -g and/or -k */
+            case 'r': /* # of random writes for -g and/or -k */
+            case 'l': /* # of hyperslab writes for -g and/or -k */
+            case 'w': /* # of raw data modifications for -g and/or -k */
+            case 'u': /* ticks for raeder to wait before verification */
+            case 'c': /* communication interval */
+                errno = 0;
+                tmp   = HDstrtoul(H5_optarg, &end, 0);
+                if (end == H5_optarg || *end != '\0') {
+                    HDprintf("couldn't parse `-%c` argument `%s`\n", opt, H5_optarg);
+                    TEST_ERROR;
+                }
+                else if (errno != 0) {
+                    HDprintf("couldn't parse `-%c` argument `%s`\n", opt, H5_optarg);
+                    TEST_ERROR;
+                }
+                else if (tmp > UINT_MAX) {
+                    HDprintf("`-%c` argument `%lu` too large\n", opt, tmp);
+                    TEST_ERROR;
+                }
+
+                if (opt == 'e')
+                    s->compact_elmts = (unsigned)tmp;
+                else if (opt == 'm')
+                    s->rows = (unsigned)tmp;
+                else if (opt == 'n')
+                    s->cols = (unsigned)tmp;
+                else if (opt == 's')
+                    s->swrites = (unsigned)tmp;
+                else if (opt == 'r')
+                    s->rwrites = (unsigned)tmp;
+                else if (opt == 'l')
+                    s->lwrites = (unsigned)tmp;
+                else if (opt == 'w')
+                    s->wwrites = (unsigned)tmp;
+                else if (opt == 'u')
+                    s->update_interval = (unsigned)tmp;
+                else if (opt == 'c')
+                    s->csteps = (unsigned)tmp;
+
+                break;
+            case 'i': /* IP address of the writer device (reader only) */
+                if (HDstrlen(H5_optarg) >= MAX_IP_ADDR_LEN) {
+                    HDfprintf(stderr, "-i,--ip_addr argument %s is too long\n", H5_optarg);
+                    TEST_ERROR;
+                }
+                sock->ip_address = H5_optarg;
+                break;
+            case '?':
+            default:
+                usage(s->progname);
+                break;
+        }
+    }
+    argc -= H5_optind;
+    argv += H5_optind;
+
+    /* Require to specify at least -p or -g or -k option */
+    if (!s->compact && !s->contig && !s->chunked) {
+        HDprintf("Require to specify at least -p or -g or -k option\n");
+        usage(s->progname);
+        goto error;
+    }
+
+    /* -e <elmts> */
+    if (s->compact_elmts > MAX_COMPACT_ELMS) {
+        HDprintf("size of compact dataset cannot exceed 16380 elements\n");
+        TEST_ERROR;
+    }
+
+    /* Enable compact write (-t) without compact dataset (-p) */
+    if (s->compact_write && !s->compact) {
+        HDprintf("Enable compact write without compact dataset\n");
+        usage(s->progname);
+        goto error;
+    }
+
+    /* Object reference applies to either compact or contiguous or chunked datasets */
+    if (s->obj_ref && !(s->compact || s->contig || s->chunked)) {
+        HDprintf("Enable object reference without compact/contig/chunked dataset\n");
+        usage(s->progname);
+        goto error;
+    }
+
+    /* Region reference applies to either contiguous or chunked datasets */
+    if (s->reg_ref && !(s->contig || s->chunked)) {
+        HDprintf("Enable region reference without contig/chunked dataset\n");
+        usage(s->progname);
+        goto error;
+    }
+
+    /* Enable sequential/random/hyperslab/raw data writes (-s/-r/-l/-w) without contiguous/chunked dataset
+     * (-g/-k) */
+    if ((s->swrites || s->rwrites || s->lwrites || s->wwrites) && !(s->contig || s->chunked)) {
+        HDprintf("Enable sequential/random/hypuerslab/raw data writes without contiguous/chunked dataset\n");
+        usage(s->progname);
+        goto error;
+    }
+
+    /* -c <csteps> cannot be zero */
+    if (!s->csteps) {
+        HDprintf("communication interval cannot be zero\n");
+        TEST_ERROR;
+    }
+
+    /* -c <csteps> and -s <swrites> options */
+    if (s->swrites && s->csteps > s->swrites) {
+        HDprintf("communication interval with sequential writes is out of bounds\n");
+        TEST_ERROR;
+    }
+
+    /* -c <csteps> and -r <rwrites> options */
+    if (s->rwrites && s->csteps > s->rwrites) {
+        HDprintf("communication interval with random writes is out of bounds\n");
+        TEST_ERROR;
+    }
+
+    /* -c <csteps> and -l <lwrites> options */
+    if (s->lwrites && s->csteps > s->lwrites) {
+        HDprintf("communication interval with hyperslab writes is out of bounds\n");
+        TEST_ERROR;
+    }
+
+    /* -c <csteps> and -w <wwrites> options */
+    if (s->wwrites && s->csteps > s->wwrites) {
+        HDprintf("communication interval with raw data modification is out of bounds\n");
+        TEST_ERROR;
+    }
+
+    /* The test file name */
+    esnprintf(s->filename, sizeof(s->filename), "vfd_swmr_dsetops.h5");
+
+    return true;
+
+error:
+    if (tfile)
+        HDfree(tfile);
+
+    return false;
+
+} /* state_init() */
+#else /* H5_USE_SOCKETS */
+/*
+ * Initialize option info in state_t
+ */
+static bool
+state_init(state_t *s, int argc, char **argv)
+{
+    unsigned long          tmp;
+    int                    opt;
+    char *                 tfile = NULL;
+    char *                 end;
+    const char *           s_opts   = "pte:gkm:n:s:r:l:w:bqSNUORu:c:";
+    struct h5_long_options l_opts[] = {{NULL, 0, '\0'}};
+
+    s->file              = H5I_INVALID_HID;
+    s->filetype          = H5T_NATIVE_UINT32;
+    s->update_interval   = READER_WAIT_TICKS;
+    s->csteps            = 1;
+    s->use_communication = TRUE;
+    s->use_vfd_swmr      = TRUE;
+    s->flush_raw_data    = TRUE;
+    s->compact           = FALSE;
+    s->compact_write     = FALSE;
+    s->compact_elmts     = MAX_COMPACT_ELMS;
+    s->contig            = FALSE;
+    s->rows              = 10;
+    s->cols              = 5;
+    s->swrites           = 0;
+    s->rwrites           = 0;
+    s->lwrites           = 0;
+    s->wwrites           = 0;
+    s->lastwrite         = 0;
+    s->obj_ref           = FALSE;
+    s->reg_ref           = FALSE;
+
+    HDmemset(s->filename, 0, PATH_MAX);
+    HDmemset(s->progname, 0, PATH_MAX);
+
+    if (H5_basename(argv[0], &tfile) < 0) {
+        HDprintf("H5_basename failed\n");
+        TEST_ERROR;
+    }
+
+    esnprintf(s->progname, sizeof(s->progname), "%s", tfile);
+
+    if (tfile) {
+        HDfree(tfile);
+        tfile = NULL;
+    }
+
+    while ((opt = H5_get_option(argc, (const char *const *)argv, s_opts, l_opts)) != EOF) {
+        switch (opt) {
+
+            case 'p': /* compact dataset */
+                s->compact = true;
+                break;
+
+            case 't': /* compact write */
+                s->compact_write = true;
+                break;
+
+            case 'g': /* contiguous dataset */
+                s->contig = true;
+                break;
+
+            case 'k': /* chunked datasets */
+                s->chunked = true;
+                break;
+
+            case 'U': /* Disable flush of raw data */
+                s->flush_raw_data = false;
+                break;
+
+            case 'O': /* Create object reference to datasets */
+                s->obj_ref = true;
+                break;
+
+            case 'R': /* Create region reference to datasets */
+                s->reg_ref = true;
+                break;
+
+            case 'q':
+                verbosity = 0;
+                break;
+
+            case 'b':
+                s->filetype = H5T_STD_U32BE;
+                break;
+
+            case 'S':
+                s->use_vfd_swmr = false;
+                break;
+
+            case 'N':
+                s->use_communication = false;
                 break;
 
             case 'e': /* # of elements for compact dataset */
@@ -480,6 +767,7 @@ error:
     return false;
 
 } /* state_init() */
+#endif /* H5_USE_SOCKETS */
 
 /*
  *  Create the datasets as specified on the command line.
@@ -1129,6 +1417,120 @@ error:
     return false;
 } /* close_dset_real() */
 
+#ifdef H5_USE_SOCKETS
+/*
+ *  Writer
+ */
+
+/*
+ * Write to whole compact dataset
+ *
+ * Perform writes for contiguous and chunked datasets:
+ *  --SEQ_WRITE: sequential writes
+ *  --RANDOM_WRITE: random writes
+ *  --HYPER_WRITE: hyperslab writes
+ *  --MODIFY_DATA: raw data modifications
+ */
+static bool
+perform_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *config, socket_state_t *sock)
+{
+    unsigned step;
+    bool     result;
+
+    /* Perform writes to the whole compact dataset */
+    if (s->compact) {
+
+        if (s->compact_write) {
+            dbgf(2, "Writes all to compact dataset\n");
+
+            result = write_dset_compact(s, ds);
+
+            if (s->use_communication && !sock_writer(result, 0, s, sock, config)) {
+                HDprintf("sock_writer() for addition failed\n");
+                TEST_ERROR;
+            }
+        }
+    }
+
+    /* Perform writes for contiguous and/or chunked datasets */
+    if (s->contig || s->chunked) {
+
+        /* Perform sequential writes */
+        if (s->swrites) {
+
+            for (step = 0; (step < s->swrites && step < (s->rows * s->cols)); step++) {
+                dbgf(2, "Sequential writes %u to dataset\n", step);
+
+                result = dsets_action(SEQ_WRITE, s, ds, step);
+
+                if (s->use_communication && !sock_writer(result, step, s, sock, config)) {
+                    HDprintf("sock_writer() for sequential writes failed\n");
+                    TEST_ERROR;
+                }
+            }
+        }
+
+        /* Perform random writes */
+        if (s->rwrites) {
+            unsigned newstep;
+
+            /* Set up random seed which will be the same for both writer and reader */
+            HDsrandom(RANDOM_SEED);
+
+            for (step = 0; (step < s->rwrites && step < (s->rows * s->cols)); step++) {
+                dbgf(2, "Random writes %u to dataset\n", step);
+
+                newstep = (unsigned int)HDrandom() % (s->rows * s->cols);
+                dbgf(2, "Random step is %u\n", newstep);
+                result = dsets_action(RANDOM_WRITE, s, ds, newstep);
+
+                if (s->use_communication && !sock_writer(result, step, s, sock, config)) {
+                    HDprintf("sock_writer() for random writes failed\n");
+                    TEST_ERROR;
+                }
+            }
+        }
+
+        /* Perform hyperslab writes */
+        if (s->lwrites) {
+            unsigned k;
+
+            for (step = 0, k = 0; (step < s->lwrites && k < (s->rows * s->cols)); step++, k += s->cols) {
+                dbgf(2, "Hyperslab writes %u to dataset\n", step);
+
+                result = dsets_action(HYPER_WRITE, s, ds, k);
+
+                if (s->use_communication && !sock_writer(result, step, s, sock, config)) {
+                    HDprintf("sock_writer() for hyperslab writes failed\n");
+                    TEST_ERROR;
+                }
+            }
+        }
+
+        /* Perform raw data modifications */
+        if (s->wwrites) {
+
+            for (step = 0; (step < s->wwrites && step < (s->rows * s->cols)); step++) {
+                dbgf(2, "Modify raw data %u to dataset\n", step);
+
+                result = dsets_action(MODIFY_DATA, s, ds, step);
+
+                if (s->use_communication && !sock_writer(result, step, s, sock, config)) {
+                    HDprintf("sock_writer() for modify raw data failed\n");
+                    TEST_ERROR;
+                }
+            }
+        }
+    }
+
+    return true;
+
+error:
+
+    return false;
+
+} /* perform_dsets_operations() */
+#else /* H5_USE_SOCKETS */
 /*
  *  Writer
  */
@@ -1156,7 +1558,7 @@ perform_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *c
 
             result = write_dset_compact(s, ds);
 
-            if (s->use_np && !np_writer(result, 0, s, np, config)) {
+            if (s->use_communication && !np_writer(result, 0, s, np, config)) {
                 HDprintf("np_writer() for addition failed\n");
                 TEST_ERROR;
             }
@@ -1174,7 +1576,7 @@ perform_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *c
 
                 result = dsets_action(SEQ_WRITE, s, ds, step);
 
-                if (s->use_np && !np_writer(result, step, s, np, config)) {
+                if (s->use_communication && !np_writer(result, step, s, np, config)) {
                     HDprintf("np_writer() for sequential writes failed\n");
                     TEST_ERROR;
                 }
@@ -1195,7 +1597,7 @@ perform_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *c
                 dbgf(2, "Random step is %u\n", newstep);
                 result = dsets_action(RANDOM_WRITE, s, ds, newstep);
 
-                if (s->use_np && !np_writer(result, step, s, np, config)) {
+                if (s->use_communication && !np_writer(result, step, s, np, config)) {
                     HDprintf("np_writer() for random writes failed\n");
                     TEST_ERROR;
                 }
@@ -1211,7 +1613,7 @@ perform_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *c
 
                 result = dsets_action(HYPER_WRITE, s, ds, k);
 
-                if (s->use_np && !np_writer(result, step, s, np, config)) {
+                if (s->use_communication && !np_writer(result, step, s, np, config)) {
                     HDprintf("np_writer() for hyperslab writes failed\n");
                     TEST_ERROR;
                 }
@@ -1226,7 +1628,7 @@ perform_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *c
 
                 result = dsets_action(MODIFY_DATA, s, ds, step);
 
-                if (s->use_np && !np_writer(result, step, s, np, config)) {
+                if (s->use_communication && !np_writer(result, step, s, np, config)) {
                     HDprintf("np_writer() for modify raw data failed\n");
                     TEST_ERROR;
                 }
@@ -1241,7 +1643,7 @@ error:
     return false;
 
 } /* perform_dsets_operations() */
-
+#endif /* H5_USE_SOCKETS */
 /*
  * Perform the "action" for each of the datasets specified on the command line:
  *      SEQ_WRITE: perform `which` sequential write
@@ -1485,6 +1887,188 @@ error:
 
 } /* write_dset_compact() */
 
+
+#ifdef H5_USE_SOCKETS
+/*
+ * Reader
+ */
+/*
+ * Verify writes to the compact dataset.
+ *
+ * Verify writes for contiguous and chunked datasets:
+ *  --SEQ_WRITE: sequential writes
+ *  --RANDOM_WRITE: random writes
+ *  --HYPER_WRITE: hyperslab writes
+ *  --MODIFY_DATA: raw data modifications
+ */
+static bool
+verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *config, socket_state_t *sock,
+                        bool fileclosed)
+{
+    unsigned step;
+    bool     result;
+
+    /* Start verifying data written to the compact dataset */
+    if (s->compact) {
+
+        if (s->compact_write) {
+            dbgf(2, "Verify writes to compact dataset\n");
+
+            if (s->use_communication && !sock_confirm_verify_notify(0, s, sock)) {
+                HDprintf("sock_confirm_verify_notify() verify/notify not in sync failed\n");
+                TEST_ERROR;
+            }
+
+            /* Wait for a few ticks for the update to happen */
+            if (!fileclosed)
+                decisleep(config->tick_len * s->update_interval);
+
+            result = verify_dset_compact(s, ds, fileclosed, config->flush_raw_data);
+
+            if (s->use_communication && !sock_reader(result, 0, s, sock)) {
+                HDprintf("sock_reader() for verifying writes failed\n");
+                TEST_ERROR;
+            }
+            else if (!result)
+                TEST_ERROR;
+        }
+    }
+
+    /* Verify writes for contiguous and/or chunked datasets */
+    if (s->contig || s->chunked) {
+
+        /* Start verifying sequential writes */
+        /* When flush of raw data is disabled, only verify data for the last write operation on file close */
+        if ((s->swrites && !fileclosed) || (fileclosed && s->lastwrite == SEQ_WRITE)) {
+
+            s->lastwrite = SEQ_WRITE;
+
+            for (step = 0; (step < s->swrites && step < (s->rows * s->cols)); step++) {
+                dbgf(2, "Verify sequential writes %u to dataset\n", step);
+
+                if (s->use_communication && !sock_confirm_verify_notify(step, s, sock)) {
+                    HDprintf("sock_confirm_verify_notify() verify/notify not in sync failed\n");
+                    TEST_ERROR;
+                }
+
+                /* Wait for a few ticks for the update to happen */
+                if (!fileclosed)
+                    decisleep(config->tick_len * s->update_interval);
+
+                result = verify_dsets_action(SEQ_WRITE, s, ds, step, fileclosed);
+
+                if (s->use_communication && !sock_reader(result, step, s, sock)) {
+                    HDprintf("sock_reader() for verifying writes failed\n");
+                    TEST_ERROR;
+                }
+                else if (!result)
+                    TEST_ERROR;
+            }
+        }
+
+        /* Start verifying random writes */
+        /* When flush of raw data is disabled, only verify data for the last write operation on file close */
+        if ((s->rwrites && !fileclosed) || (fileclosed && s->lastwrite == RANDOM_WRITE)) {
+            unsigned newstep;
+
+            s->lastwrite = RANDOM_WRITE;
+
+            /* Set up random seed which will be the same for both writer and reader */
+            HDsrandom(RANDOM_SEED);
+
+            for (step = 0; (step < s->rwrites && step < (s->rows * s->cols)); step++) {
+                dbgf(2, "Verify random writes %u to dataset\n", step);
+
+                newstep = (unsigned int)HDrandom() % (s->rows * s->cols);
+                dbgf(2, "Random step is %u\n", newstep);
+
+                if (s->use_communication && !sock_confirm_verify_notify(step, s, sock)) {
+                    HDprintf("sock_confirm_verify_notify() verify/notify not in sync failed\n");
+                    TEST_ERROR;
+                }
+
+                /* Wait for a few ticks for the update to happen */
+                if (!fileclosed)
+                    decisleep(config->tick_len * s->update_interval);
+
+                result = verify_dsets_action(RANDOM_WRITE, s, ds, newstep, fileclosed);
+
+                if (s->use_communication && !sock_reader(result, step, s, sock)) {
+                    HDprintf("sock_reader() for verifying writes failed\n");
+                    TEST_ERROR;
+                }
+                else if (!result)
+                    TEST_ERROR;
+            }
+        }
+
+        /* Start verifying hyperslab writes */
+        /* When flush of raw data is disabled, only verify data for the last write operation on file close */
+        if ((s->lwrites && !fileclosed) || (fileclosed && s->lastwrite == HYPER_WRITE)) {
+            unsigned k;
+
+            s->lastwrite = HYPER_WRITE;
+
+            for (step = 0, k = 0; (step < s->lwrites && k < (s->rows * s->cols)); step++, k += s->cols) {
+                dbgf(2, "Verify hyperslab writes %u to dataset\n", step);
+
+                if (s->use_communication && !sock_confirm_verify_notify(step, s, sock)) {
+                    HDprintf("sock_confirm_verify_notify() verify/notify not in sync failed\n");
+                    TEST_ERROR;
+                }
+
+                /* Wait for a few ticks for the update to happen */
+                if (!fileclosed)
+                    decisleep(config->tick_len * s->update_interval);
+
+                result = verify_dsets_action(HYPER_WRITE, s, ds, k, fileclosed);
+
+                if (s->use_communication && !sock_reader(result, step, s, sock)) {
+                    HDprintf("sock_reader() for verifying writes failed\n");
+                    TEST_ERROR;
+                }
+                else if (!result)
+                    TEST_ERROR;
+            }
+        }
+
+        /* Start verifying raw data modifications */
+        /* When flush of raw data is disabled, only verify data for the last write operation on file close */
+        if ((s->wwrites && !fileclosed) || (fileclosed && s->lastwrite == MODIFY_DATA)) {
+
+            s->lastwrite = MODIFY_DATA;
+
+            for (step = 0; (step < s->wwrites && step < (s->rows * s->cols)); step++) {
+                dbgf(2, "Verify raw data modification %u to dataset\n", step);
+
+                if (s->use_communication && !sock_confirm_verify_notify(step, s, sock)) {
+                    HDprintf("sock_confirm_verify_notify() verify/notify not in sync failed\n");
+                    TEST_ERROR;
+                }
+
+                /* Wait for a few ticks for the update to happen */
+                if (!fileclosed)
+                    decisleep(config->tick_len * s->update_interval);
+
+                result = verify_dsets_action(MODIFY_DATA, s, ds, step, fileclosed);
+
+                if (s->use_communication && !sock_reader(result, step, s, sock)) {
+                    HDprintf("sock_reader() for verifying writes failed\n");
+                    TEST_ERROR;
+                }
+                else if (!result)
+                    TEST_ERROR;
+            }
+        }
+    }
+
+    return true;
+
+error:
+    return false;
+
+} /* verify_dsets_operations() */
+#else /* H5_USE_SOCKETS */
 /*
  * Reader
  */
@@ -1511,7 +2095,7 @@ verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *co
         if (s->compact_write) {
             dbgf(2, "Verify writes to compact dataset\n");
 
-            if (s->use_np && !np_confirm_verify_notify(np->fd_writer_to_reader, 0, s, np)) {
+            if (s->use_communication && !np_confirm_verify_notify(np->fd_writer_to_reader, 0, s, np)) {
                 HDprintf("np_confirm_verify_notify() verify/notify not in sync failed\n");
                 TEST_ERROR;
             }
@@ -1522,7 +2106,7 @@ verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *co
 
             result = verify_dset_compact(s, ds, fileclosed, config->flush_raw_data);
 
-            if (s->use_np && !np_reader(result, 0, s, np)) {
+            if (s->use_communication && !np_reader(result, 0, s, np)) {
                 HDprintf("np_reader() for verifying writes failed\n");
                 TEST_ERROR;
             }
@@ -1543,7 +2127,7 @@ verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *co
             for (step = 0; (step < s->swrites && step < (s->rows * s->cols)); step++) {
                 dbgf(2, "Verify sequential writes %u to dataset\n", step);
 
-                if (s->use_np && !np_confirm_verify_notify(np->fd_writer_to_reader, step, s, np)) {
+                if (s->use_communication && !np_confirm_verify_notify(np->fd_writer_to_reader, step, s, np)) {
                     HDprintf("np_confirm_verify_notify() verify/notify not in sync failed\n");
                     TEST_ERROR;
                 }
@@ -1554,7 +2138,7 @@ verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *co
 
                 result = verify_dsets_action(SEQ_WRITE, s, ds, step, fileclosed);
 
-                if (s->use_np && !np_reader(result, step, s, np)) {
+                if (s->use_communication && !np_reader(result, step, s, np)) {
                     HDprintf("np_reader() for verifying writes failed\n");
                     TEST_ERROR;
                 }
@@ -1579,7 +2163,7 @@ verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *co
                 newstep = (unsigned int)HDrandom() % (s->rows * s->cols);
                 dbgf(2, "Random step is %u\n", newstep);
 
-                if (s->use_np && !np_confirm_verify_notify(np->fd_writer_to_reader, step, s, np)) {
+                if (s->use_communication && !np_confirm_verify_notify(np->fd_writer_to_reader, step, s, np)) {
                     HDprintf("np_confirm_verify_notify() verify/notify not in sync failed\n");
                     TEST_ERROR;
                 }
@@ -1590,7 +2174,7 @@ verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *co
 
                 result = verify_dsets_action(RANDOM_WRITE, s, ds, newstep, fileclosed);
 
-                if (s->use_np && !np_reader(result, step, s, np)) {
+                if (s->use_communication && !np_reader(result, step, s, np)) {
                     HDprintf("np_reader() for verifying writes failed\n");
                     TEST_ERROR;
                 }
@@ -1609,7 +2193,7 @@ verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *co
             for (step = 0, k = 0; (step < s->lwrites && k < (s->rows * s->cols)); step++, k += s->cols) {
                 dbgf(2, "Verify hyperslab writes %u to dataset\n", step);
 
-                if (s->use_np && !np_confirm_verify_notify(np->fd_writer_to_reader, step, s, np)) {
+                if (s->use_communication && !np_confirm_verify_notify(np->fd_writer_to_reader, step, s, np)) {
                     HDprintf("np_confirm_verify_notify() verify/notify not in sync failed\n");
                     TEST_ERROR;
                 }
@@ -1620,7 +2204,7 @@ verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *co
 
                 result = verify_dsets_action(HYPER_WRITE, s, ds, k, fileclosed);
 
-                if (s->use_np && !np_reader(result, step, s, np)) {
+                if (s->use_communication && !np_reader(result, step, s, np)) {
                     HDprintf("np_reader() for verifying writes failed\n");
                     TEST_ERROR;
                 }
@@ -1638,7 +2222,7 @@ verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *co
             for (step = 0; (step < s->wwrites && step < (s->rows * s->cols)); step++) {
                 dbgf(2, "Verify raw data modification %u to dataset\n", step);
 
-                if (s->use_np && !np_confirm_verify_notify(np->fd_writer_to_reader, step, s, np)) {
+                if (s->use_communication && !np_confirm_verify_notify(np->fd_writer_to_reader, step, s, np)) {
                     HDprintf("np_confirm_verify_notify() verify/notify not in sync failed\n");
                     TEST_ERROR;
                 }
@@ -1649,7 +2233,7 @@ verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *co
 
                 result = verify_dsets_action(MODIFY_DATA, s, ds, step, fileclosed);
 
-                if (s->use_np && !np_reader(result, step, s, np)) {
+                if (s->use_communication && !np_reader(result, step, s, np)) {
                     HDprintf("np_reader() for verifying writes failed\n");
                     TEST_ERROR;
                 }
@@ -1665,6 +2249,7 @@ error:
     return false;
 
 } /* verify_dsets_operations() */
+#endif /* H5_USE_SOCKETS */
 
 /*
  * Verify the data read from each of the datasets specified on the command line
@@ -1896,6 +2481,386 @@ error:
 
 } /* verify_dset_compact() */
 
+#ifdef H5_USE_SOCKETS
+/*
+ *  Writer synchronization depending on the result from the attribute action performed.
+ */
+static bool
+sock_writer(bool result, unsigned step, const state_t *s, socket_state_t *sock, H5F_vfd_swmr_config_t *config)
+{
+    unsigned int i;
+
+    /* The action fails */
+    if (!result) {
+        HDprintf("attribute action failed\n");
+        H5_FAILED();
+        AT();
+
+        /* At communication interval, notify the reader about the failure and quit */
+        if (step % s->csteps == 0) {
+            sock->notify = -1;
+            if (send(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
+                HDprintf("send failed\n");
+                TEST_ERROR;
+            }
+            goto error;
+        }
+    }
+    else { /* The action succeeds */
+        /* At communication interval, notify the reader and wait for its response */
+        if (step % s->csteps == 0) {
+            /* Bump up the value of notify to tell the reader to start reading */
+            sock->notify++;
+            if (send(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
+                HDprintf("send failed\n");
+                TEST_ERROR;
+            }
+
+            /* During the wait, writer makes repeated HDF5 API calls
+             * to trigger EOT at approximately the correct time */
+            for (i = 0; i < config->max_lag + 1; i++) {
+                decisleep(config->tick_len);
+                H5E_BEGIN_TRY
+                {
+                    H5Aexists(s->file, "nonexistent");
+                }
+                H5E_END_TRY;
+            }
+
+            /* Handshake between writer and reader */
+            if (!sock_confirm_verify_notify(step, s, sock)) {
+                HDprintf("sock_confirm_verify_notify() verify/notify not in sync failed\n");
+                TEST_ERROR;
+            }
+        }
+    }
+    return true;
+
+error:
+    return false;
+
+} /* np_writer() */
+
+/*
+ *
+ *  Reader synchronization depending on the result from the verification.
+ */
+static bool
+sock_reader(bool result, unsigned step, const state_t *s, socket_state_t *sock)
+{
+    /* The verification fails */
+    if (!result) {
+        HDprintf("verify action failed\n");
+        H5_FAILED();
+        AT();
+
+        /* At communication interval, tell the writer about the failure and exit */
+        if (step % s->csteps == 0) {
+            sock->notify = -1;
+            if (send(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
+                HDprintf("send failed\n");
+                TEST_ERROR;
+            }
+            goto error;
+        }
+        /* The verification succeeds */
+    }
+    else {
+        if (step % s->csteps == 0) {
+            /* Send back the same notify value for acknowledgement:
+             *   --inform the writer to move to the next step */
+            if (send(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
+                HDprintf("send failed\n");
+                TEST_ERROR;
+            }
+        }
+    }
+    return true;
+
+error:
+    return false;
+
+} /* np_reader() */
+
+/*
+ *  Handshake between writer and reader:
+ *      Confirm `verify` is same as `notify`.
+ */
+static bool
+sock_confirm_verify_notify(unsigned step, const state_t *s, socket_state_t *sock)
+{
+    if (step % s->csteps == 0) {
+        sock->verify++;
+        if (recv(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
+            HDprintf("recv failed\n");
+            TEST_ERROR;
+        }
+
+        if (sock->notify == -1) {
+            HDprintf("reader/writer failed to verify\n");
+            TEST_ERROR;
+        }
+
+        if (sock->notify != sock->verify) {
+            HDprintf("received message %d, expecting %d\n", sock->notify, sock->verify);
+            TEST_ERROR;
+        }
+    }
+
+    return true;
+
+error:
+    return false;
+} /* np_confirm_verify_notify() */
+
+/*
+ *  When flush of raw data is disabled, the following is done by the writer and reader:
+ *  Writer:
+ *      Close the file
+ *      Notify the reader that the file is closed
+ *  Reader:
+ *      Confirm the message from the writer that the file is closed
+ *      Verify the data
+ */
+static bool
+closing_on_noflush(bool writer, state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *config, socket_state_t *sock)
+{
+    HDassert(s->use_communication);
+
+    if (writer) {
+        if (!close_dsets(ds)) {
+            HDprintf("close_dsets() failed\n");
+            TEST_ERROR;
+        }
+
+        dbgf(2, "Writer closes the file (flush of raw data is disabled)\n");
+        if (H5Fclose(s->file) < 0) {
+            HDprintf("H5Fclose failed\n");
+            TEST_ERROR;
+        }
+
+        /* Bump up the value of notify to tell the reader the file is closed */
+        dbgf(2, "Writer notifies reader that the file is closed (flush of raw data is disabled)\n");
+        sock->notify++;
+        if (send(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
+            HDprintf("send failed\n");
+            TEST_ERROR;
+        }
+
+        /* Close the sockets (no return) */
+        socket_close(sock);
+    }
+    else {
+        /* Wait for a few ticks for the file to close in writer ?? need to this or not? */
+        decisleep(config->tick_len * s->update_interval);
+
+        dbgf(2, "Reader checks notify value from writer (flush of raw data is disabled)\n");
+        if (!sock_confirm_verify_notify(0, s, sock)) {
+            HDprintf("sock_confirm_verify_notify() verify/notify not in sync failed\n");
+            TEST_ERROR;
+        }
+        /* Close the sockets (no return) */
+        socket_close(sock);
+
+        /* Turn off named pipes */
+        s->use_communication = false;
+
+        /* Verify the dataset again without named pipes */
+        dbgf(2, "Reader verifies data after writer closes the file (flush of raw data is disabled)\n");
+        if (!verify_dsets_operations(s, ds, config, sock, true)) {
+            HDprintf("verify_dsets_operations() failed\n");
+            TEST_ERROR;
+        }
+
+        if (!close_dsets(ds)) {
+            HDprintf("close_dsets() failed\n");
+            TEST_ERROR;
+        }
+
+        dbgf(2, "Reader closes the file (flush of raw data is disabled)\n");
+        if (H5Fclose(s->file) < 0) {
+            HDprintf("H5Fclose failed\n");
+            TEST_ERROR;
+        }
+    }
+
+    return true;
+
+error:
+    return false;
+
+} /* closing_on_noflush() */
+
+/*
+ * Main
+ */
+int
+main(int argc, char **argv)
+{
+    hid_t                  fapl   = H5I_INVALID_HID;
+    hid_t                  fcpl   = H5I_INVALID_HID;
+    bool                   writer = FALSE;
+    state_t *              s      = NULL;
+    const char *           personality;
+    H5F_vfd_swmr_config_t *config = NULL;
+    socket_state_t        *sock   = NULL;
+    dsets_state_t          ds;
+
+    if (NULL == (sock = HDcalloc(1, sizeof(socket_state_t)))) {
+        TEST_ERROR;
+    }
+    if (NULL == (s = HDcalloc(1, sizeof(state_t)))) {
+        TEST_ERROR;
+    }
+    if (NULL == (config = HDcalloc(1, sizeof(H5F_vfd_swmr_config_t)))) {
+        TEST_ERROR;
+    }
+
+    if (!socket_init(sock)) {
+        HDprintf("socket_init() failed\n");
+        TEST_ERROR;
+    }
+
+    if (!state_init(s, sock, argc, argv)) {
+        HDprintf("state_init() failed\n");
+        TEST_ERROR;
+    }
+
+    personality = HDstrstr(s->progname, "vfd_swmr_dsetops_");
+
+    if (personality != NULL && HDstrcmp(personality, "vfd_swmr_dsetops_writer") == 0)
+        writer = true;
+    else if (personality != NULL && HDstrcmp(personality, "vfd_swmr_dsetops_reader") == 0)
+        writer = false;
+    else {
+        HDprintf("unknown personality, expected vfd_swmr_dsetops_{reader,writer}\n");
+        TEST_ERROR;
+    }
+
+    /* config, tick_len, max_lag, presume_posix_semantics, writer,
+     * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
+     * md_file_path, md_file_name, updater_file_path */
+    init_vfd_swmr_config(config, 4, 7, FALSE, writer, TRUE, FALSE, s->flush_raw_data, 128, "./",
+                         "dsetops-shadow", NULL);
+
+    /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */
+    if ((fapl = vfd_swmr_create_fapl(true, s->use_vfd_swmr, true, 4096, config)) < 0) {
+        HDprintf("vfd_swmr_create_fapl() failed\n");
+        TEST_ERROR;
+    }
+
+    /* Set fs_strategy (file space strategy) and fs_page_size (file space page size) */
+    if ((fcpl = vfd_swmr_create_fcpl(H5F_FSPACE_STRATEGY_PAGE, 4096)) < 0) {
+        HDprintf("vfd_swmr_create_fcpl() failed");
+        TEST_ERROR;
+    }
+
+    if (writer) {
+        if ((s->file = H5Fcreate(s->filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) {
+            HDprintf("H5Fcreate failed\n");
+            TEST_ERROR;
+        }
+
+        if (!create_dsets(s, &ds)) {
+            HDprintf("create_dsets() failed\n");
+            TEST_ERROR;
+        }
+    }
+    else {
+        if ((s->file = H5Fopen(s->filename, H5F_ACC_RDONLY, fapl)) < 0) {
+            HDprintf("H5Fopen failed\n");
+            TEST_ERROR;
+        }
+        if (!open_dsets(s, &ds)) {
+            HDprintf("open_dsets() failed\n");
+            TEST_ERROR;
+        }
+    }
+
+    /* Must be added between file creation/opening and socket connections */
+    if (H5Fvfd_swmr_end_tick(s->file) < 0) {
+        HDprintf("H5Fvfd_swmr_end_tick failed\n");
+        TEST_ERROR;
+    }
+
+    /* Initialize socket connections */
+    if (s->use_communication && !socket_connect(sock, writer)) {
+        HDprintf("socket_connect() failed\n");
+        TEST_ERROR;
+    }
+
+    if (writer) {
+
+        if (!perform_dsets_operations(s, &ds, config, sock)) {
+            HDprintf("perform_dsets_operations() failed\n");
+            TEST_ERROR;
+        }
+    }
+    else {
+
+        if (!verify_dsets_operations(s, &ds, config, sock, false)) {
+            HDprintf("perform_dsets_operations() failed\n");
+            TEST_ERROR;
+        }
+    }
+
+    if (H5Pclose(fapl) < 0) {
+        HDprintf("H5Pclose failed\n");
+        TEST_ERROR;
+    }
+
+    if (H5Pclose(fcpl) < 0) {
+        HDprintf("H5Pclose failed\n");
+        TEST_ERROR;
+    }
+
+    if (!s->flush_raw_data && s->use_communication) {
+
+        if (!closing_on_noflush(writer, s, &ds, config, sock))
+            TEST_ERROR;
+    }
+    else {
+
+        if (!close_dsets(&ds)) {
+            HDprintf("close_dsets() failed\n");
+            TEST_ERROR;
+        }
+
+        if (H5Fclose(s->file) < 0) {
+            HDprintf("H5Fclose failed\n");
+            TEST_ERROR;
+        }
+
+        if (s->use_communication) {
+            socket_close(sock);
+        }
+    }
+
+    HDfree(s);
+    HDfree(config);
+
+    return EXIT_SUCCESS;
+
+error:
+    H5E_BEGIN_TRY
+    {
+        H5Pclose(fapl);
+        H5Pclose(fcpl);
+        H5Fclose(s->file);
+    }
+    H5E_END_TRY;
+
+    if (s->use_communication) {
+        socket_close(sock);
+    }
+
+    HDfree(sock);
+    HDfree(s);
+    HDfree(config);
+
+    return EXIT_FAILURE;
+}
+#else /* H5_USE_SOCKETS */
 /*
  * Named pipes handling
  */
@@ -2136,7 +3101,7 @@ error:
 static bool
 closing_on_noflush(bool writer, state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *config, np_state_t *np)
 {
-    HDassert(s->use_np);
+    HDassert(s->use_communication);
 
     if (writer) {
         if (!close_dsets(ds)) {
@@ -2180,7 +3145,7 @@ closing_on_noflush(bool writer, state_t *s, dsets_state_t *ds, H5F_vfd_swmr_conf
         }
 
         /* Turn off named pipes */
-        s->use_np = false;
+        s->use_communication = false;
 
         /* Verify the dataset again without named pipes */
         dbgf(2, "Reader verifies data after writer closes the file (flush of raw data is disabled)\n");
@@ -2285,7 +3250,7 @@ main(int argc, char **argv)
     }
 
     /* Initiailze named pipes */
-    if (s->use_np && !np_init(&np, writer)) {
+    if (s->use_communication && !np_init(&np, writer)) {
         HDprintf("np_init() failed\n");
         TEST_ERROR;
     }
@@ -2315,7 +3280,7 @@ main(int argc, char **argv)
         TEST_ERROR;
     }
 
-    if (!s->flush_raw_data && s->use_np) {
+    if (!s->flush_raw_data && s->use_communication) {
 
         if (!closing_on_noflush(writer, s, &ds, config, &np))
             TEST_ERROR;
@@ -2332,7 +3297,7 @@ main(int argc, char **argv)
             TEST_ERROR;
         }
 
-        if (s->use_np && !np_close(&np, writer)) {
+        if (s->use_communication && !np_close(&np, writer)) {
             HDprintf("np_close() failed\n");
             TEST_ERROR;
         }
@@ -2352,13 +3317,13 @@ error:
     }
     H5E_END_TRY;
 
-    if (s->use_np && np.fd_writer_to_reader >= 0)
+    if (s->use_communication && np.fd_writer_to_reader >= 0)
         HDclose(np.fd_writer_to_reader);
 
-    if (s->use_np && np.fd_reader_to_writer >= 0)
+    if (s->use_communication && np.fd_reader_to_writer >= 0)
         HDclose(np.fd_reader_to_writer);
 
-    if (s->use_np && !writer) {
+    if (s->use_communication && !writer) {
         HDremove(np.fifo_writer_to_reader);
         HDremove(np.fifo_reader_to_writer);
     }
@@ -2368,6 +3333,7 @@ error:
 
     return EXIT_FAILURE;
 }
+#endif /* H5_USE_SOCKETS */
 
 #else /* H5_HAVE_WIN32_API */
 

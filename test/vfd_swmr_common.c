@@ -486,3 +486,145 @@ fetch_env_ulong(const char *varname, unsigned long limit, unsigned long *valp)
     *valp = ul;
     return 1;
 }
+
+/* Socket functions */
+
+/* Initialize socket state values. Sets default IP address to localhost.
+ * Should be run right after allocating socket_state_t structure. */
+hbool_t
+socket_init(socket_state_t *sock)
+{
+    if (sock == NULL) {
+        HDfprintf(stderr, "socket state structure is NULL\n");
+        return false;
+    }
+    
+    sock->ip_address = "127.0.0.1";
+    
+    sock->comm_fd = INVALID_SOCKET;
+    sock->listen_fd = INVALID_SOCKET;
+
+    sock->notify = 0;
+    sock->verify = 0;
+
+    return true;
+}
+
+/* Open sockets for communication between reader and writer.
+ * If server is true, open a listening socket and wait for a connection.
+ * If server is false, open a client socket and connect to the server at `ip_address`.
+ * If `ip_address` is NULL, default to localhost (127.0.0.1).
+ * 
+ * Note: Only supports IPv4 sockets, and only a single connection at a time.
+ */
+hbool_t 
+socket_connect(socket_state_t *sock, bool server) {
+    struct sockaddr_in servaddr;
+
+    /* Initilaize sock address structure memory */
+    HDmemset(&servaddr, 0, sizeof(servaddr));
+
+    if (server){ /* Server Code */
+        struct sockaddr_in client;
+
+        /* Create listening socket */
+        if (INVALID_SOCKET == (sock->listen_fd = HDsocket(AF_INET, SOCK_STREAM, 0))) {
+            HDfprintf(stderr, "error creating listen socket\n");
+            goto error;
+        }
+
+        /* Configure server socket info */
+        servaddr.sin_family         = AF_INET;
+        servaddr.sin_addr.s_addr    = htonl(INADDR_ANY);
+        servaddr.sin_port           = htons(DEFAULT_PORT);
+
+        /* Make address reusable so rerunning this program won't error if the previous run left
+         * our chosen Address:Port for the listen socket in a TIME_WAIT state */
+        const int enable = 1;
+        if (setsockopt(sock->listen_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0) {
+            HDfprintf(stderr, "error setting socket options\n");
+            goto error;
+        }
+
+        /* Bind socket */
+        if(bind(sock->listen_fd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0){
+            HDfprintf(stderr, "error binding server socket\n");
+            goto error;
+        }
+
+        /* Start listening on open socket */
+        if (listen(sock->listen_fd, 1) < 0){
+            HDfprintf(stderr, "error listening to server socket\n");
+            goto error;
+        }
+        
+        /* Accept a connection */
+        socklen_t len = sizeof(client);
+        sock->comm_fd = accept(sock->listen_fd, (struct sockaddr *) &client, &len);
+        if (sock->comm_fd == INVALID_SOCKET) {
+            HDfprintf(stderr, "error accepting client connection\n");
+            goto error;
+        }
+
+        HDfprintf(stderr, "SERVER SOCKET: Accepted connection from client with IP: %s\n", inet_ntoa(client.sin_addr));
+        
+        /* Close the listening socket, we don't need it anymore */
+        HDclose(sock->listen_fd);
+        sock->listen_fd = INVALID_SOCKET;
+
+    } else { /* Client Code */
+        /* Create TCP socket */
+        if (INVALID_SOCKET == (sock->comm_fd = HDsocket(AF_INET, SOCK_STREAM, 0))) {
+            HDfprintf(stderr, "error creating client socket\n");
+            goto error;
+        }
+
+        /* Set socket information */
+        servaddr.sin_family = AF_INET;
+        servaddr.sin_port   = htons(DEFAULT_PORT);
+
+        /* Get binary address for server connection */
+        if (inet_pton(AF_INET, sock->ip_address, &servaddr.sin_addr) <= 0) {
+            HDfprintf(stderr, "socket communication inet_pton error\n");
+            goto error;
+        }
+        
+        /* Attempt server connection */
+        if (connect(sock->comm_fd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
+            HDfprintf(stderr, "socket communication connection error\n");
+            goto error;
+        }
+
+        HDfprintf(stderr, "CLIENT SOCKET: Connected to server with IP: %s\n", sock->ip_address);
+    }
+    
+    return true;
+
+error:
+
+    if (sock != NULL) {
+        socket_close(sock);
+    }
+
+    return false;
+} /* socket_init() */
+
+
+/* Safely close the sockets */
+void socket_close(socket_state_t *sock) {
+    if (sock == NULL) { /* Redundant check  */
+        return;
+    }
+
+    if (sock->comm_fd != INVALID_SOCKET && sock->comm_fd > 2) 
+    {
+        HDclose(sock->comm_fd);
+    }
+    if (sock->listen_fd != INVALID_SOCKET && sock->listen_fd > 2) {
+        HDclose(sock->listen_fd);
+    }
+
+    sock->ip_address = NULL;
+    sock->comm_fd = INVALID_SOCKET;
+    sock->listen_fd = INVALID_SOCKET;
+} /* socket_close() */

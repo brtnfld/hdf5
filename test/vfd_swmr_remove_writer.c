@@ -89,7 +89,7 @@ open_skeleton(const char *filename, unsigned verbose, unsigned old H5_ATTR_UNUSE
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
      * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
      * md_file_path, md_file_name, updater_file_path */
-    init_vfd_swmr_config(config, 4, 5, FALSE, TRUE, TRUE, FALSE, TRUE, 128, NULL, "rw-shadow", NULL);
+    init_vfd_swmr_config(config, 4, 5, FALSE, TRUE, TRUE, TRUE, TRUE, 128, NULL, "rw-shadow", "remove-updater");
 
     /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */
     if ((fapl = vfd_swmr_create_fapl(TRUE, TRUE, FALSE, 4096, config)) < 0)
@@ -258,14 +258,15 @@ int
 main(int argc, const char *argv[])
 {
     sigset_t oldset;
-    hid_t    fid;                /* File ID for file opened */
-    long     nshrinks    = 0;    /* # of times to shrink the dataset */
-    long     flush_count = 1000; /* # of records to write between flushing file */
-    unsigned verbose     = 1;    /* Whether to emit some informational messages */
-    unsigned old         = 0;    /* Whether to use non-latest-format when opening file */
-    unsigned use_seed    = 0;    /* Set to 1 if a seed was set on the command line */
-    unsigned random_seed = 0;    /* Random # seed */
-    unsigned u;                  /* Local index variable */
+    hid_t    fid;                    /* File ID for file opened */
+    long     nshrinks        = 0;    /* # of times to shrink the dataset */
+    long     flush_count     = 1000; /* # of records to write between flushing file */
+    unsigned verbose         = 1;    /* Whether to emit some informational messages */
+    unsigned old             = 0;    /* Whether to use non-latest-format when opening file */
+    unsigned use_seed        = 0;    /* Set to 1 if a seed was set on the command line */
+    unsigned random_seed     = 0;    /* Random # seed */
+    bool     wait_for_signal = TRUE; /* Whether to wait for the signal */
+    unsigned u;                      /* Local index variable */
     int      temp;
 
     block_signals(&oldset);
@@ -289,6 +290,12 @@ main(int argc, const char *argv[])
                     /* Be quiet */
                     case 'q':
                         verbose = 0;
+                        u++;
+                        break;
+
+                    /* Do not wait for signal */
+                    case 'W':
+                        wait_for_signal = FALSE;
                         u++;
                         break;
 
@@ -385,7 +392,9 @@ main(int argc, const char *argv[])
         HDexit(1);
     } /* end if */
 
-    await_signal(fid);
+    if (wait_for_signal) {
+        await_signal(fid);
+    }
 
     restore_signals(&oldset);
 

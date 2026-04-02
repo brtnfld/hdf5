@@ -19,9 +19,7 @@ include $(top_srcdir)/config/commence.am
 
 AM_CPPFLAGS+=-I$(top_srcdir)/src
 
-bin_PROGRAMS = aux_process
-
-aux_process_SOURCES = aux_process.c
+bin_PROGRAMS = aux_process recovery_tool crasher
 
 # All programs depend on the hdf5 library
 # LDADD=$(LIBHDF5)
