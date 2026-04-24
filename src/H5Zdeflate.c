@@ -31,22 +31,22 @@ static size_t H5Z__filter_deflate(unsigned flags, size_t cd_nelmts, const unsign
                                   size_t *buf_size, void **buf);
 static herr_t H5Z__deflate_set_config(const char *params, unsigned *flags, size_t *cd_nelmts,
                                       unsigned cd_values[], size_t cd_values_size);
-static herr_t H5Z__deflate_get_config(unsigned flags, size_t cd_nelmts, const unsigned cd_values[],
-                                      char *buf, size_t *buf_size);
+static herr_t H5Z__deflate_get_config(unsigned flags, size_t cd_nelmts, const unsigned cd_values[], char *buf,
+                                      size_t *buf_size);
 
 /* This message derives from H5Z */
 const H5Z_class3_t H5Z_DEFLATE[1] = {{
-    H5Z_CLASS3_T_VERS,          /* H5Z_class_t version */
-    H5Z_FILTER_DEFLATE,         /* Filter id number */
-    1,                          /* encoder_present flag (set to true) */
-    1,                          /* decoder_present flag (set to true) */
-    "deflate",                  /* Canonical name */
+    H5Z_CLASS3_T_VERS,            /* H5Z_class_t version */
+    H5Z_FILTER_DEFLATE,           /* Filter id number */
+    1,                            /* encoder_present flag (set to true) */
+    1,                            /* decoder_present flag (set to true) */
+    "deflate",                    /* Canonical name */
     "deflate (zlib) compression", /* Description */
-    NULL,                       /* The "can apply" callback */
-    NULL,                       /* The "set local" callback */
-    H5Z__filter_deflate,        /* The actual filter function */
-    H5Z__deflate_set_config,    /* String config setter */
-    H5Z__deflate_get_config,    /* String config getter */
+    NULL,                         /* The "can apply" callback */
+    NULL,                         /* The "set local" callback */
+    H5Z__filter_deflate,          /* The actual filter function */
+    H5Z__deflate_set_config,      /* String config setter */
+    H5Z__deflate_get_config,      /* String config getter */
 }};
 
 /*-------------------------------------------------------------------------
@@ -71,7 +71,7 @@ H5Z__deflate_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, size
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "cd_values buffer too small");
 
         if (params) {
-            char val_buf[64];
+            char   val_buf[64];
             size_t bufsz = sizeof(val_buf);
             htri_t found;
 

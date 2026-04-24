@@ -152,7 +152,7 @@ JNIEXPORT jint JNICALL Java_hdf_hdf5lib_H5_H5Pset_1filter2(JNIEnv *, jclass, jlo
  * Signature: (JI[Ljava/lang/String;)I
  */
 JNIEXPORT jint JNICALL Java_hdf_hdf5lib_H5_H5Pget_1filter_1params_1by_1idx(JNIEnv *, jclass, jlong, jint,
-                                                                             jobjectArray);
+                                                                           jobjectArray);
 
 /*
  * Class:     hdf_hdf5lib_H5

@@ -94,17 +94,17 @@ static herr_t H5Z__scaleoffset_get_config(unsigned flags, size_t cd_nelmts, cons
 
 /* This message derives from H5Z */
 H5Z_class3_t H5Z_SCALEOFFSET[1] = {{
-    H5Z_CLASS3_T_VERS,                  /* H5Z_class_t version */
-    H5Z_FILTER_SCALEOFFSET,             /* Filter id number */
-    1,                                  /* Assume encoder present: check before registering */
-    1,                                  /* decoder_present flag (set to true) */
-    "scaleoffset",                      /* Canonical name */
-    "scale+offset compression",         /* Description */
-    H5Z__can_apply_scaleoffset,         /* The "can apply" callback */
-    H5Z__set_local_scaleoffset,         /* The "set local" callback */
-    H5Z__filter_scaleoffset,            /* The actual filter function */
-    H5Z__scaleoffset_set_config,        /* String config setter */
-    H5Z__scaleoffset_get_config,        /* String config getter */
+    H5Z_CLASS3_T_VERS,           /* H5Z_class_t version */
+    H5Z_FILTER_SCALEOFFSET,      /* Filter id number */
+    1,                           /* Assume encoder present: check before registering */
+    1,                           /* decoder_present flag (set to true) */
+    "scaleoffset",               /* Canonical name */
+    "scale+offset compression",  /* Description */
+    H5Z__can_apply_scaleoffset,  /* The "can apply" callback */
+    H5Z__set_local_scaleoffset,  /* The "set local" callback */
+    H5Z__filter_scaleoffset,     /* The actual filter function */
+    H5Z__scaleoffset_set_config, /* String config setter */
+    H5Z__scaleoffset_get_config, /* String config getter */
 }};
 
 /* Local macros */
@@ -756,7 +756,7 @@ H5Z_class3_t H5Z_SCALEOFFSET[1] = {{
  */
 static herr_t
 H5Z__scaleoffset_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, size_t *cd_nelmts,
-                             unsigned cd_values[], size_t cd_values_size)
+                            unsigned cd_values[], size_t cd_values_size)
 {
     herr_t ret_value = SUCCEED;
 
@@ -789,7 +789,8 @@ H5Z__scaleoffset_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, 
                 else
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                                 "scaleoffset 'scale_type' must be 'float_dscale', 'float_escale', "
-                                "or 'int', got '%s'", val_buf);
+                                "or 'int', got '%s'",
+                                val_buf);
             }
 
             bufsz = sizeof(val_buf);
@@ -823,7 +824,7 @@ done:
  */
 static herr_t
 H5Z__scaleoffset_get_config(unsigned H5_ATTR_UNUSED flags, size_t cd_nelmts, const unsigned cd_values[],
-                             char *buf, size_t *buf_size)
+                            char *buf, size_t *buf_size)
 {
     char        tmp[128];
     size_t      n;

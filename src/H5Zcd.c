@@ -76,15 +76,15 @@ H5Zcd_pack_double(double val, unsigned *slots, size_t cap, size_t *n_used)
 
 #if H5ZCD_BIG_ENDIAN
         /* Reverse the bytes to produce little-endian slot layout */
-        lo = ((uint32_t)buf[7])       | ((uint32_t)buf[6] << 8) |
-             ((uint32_t)buf[5] << 16) | ((uint32_t)buf[4] << 24);
-        hi = ((uint32_t)buf[3])       | ((uint32_t)buf[2] << 8) |
-             ((uint32_t)buf[1] << 16) | ((uint32_t)buf[0] << 24);
+        lo = ((uint32_t)buf[7]) | ((uint32_t)buf[6] << 8) | ((uint32_t)buf[5] << 16) |
+             ((uint32_t)buf[4] << 24);
+        hi = ((uint32_t)buf[3]) | ((uint32_t)buf[2] << 8) | ((uint32_t)buf[1] << 16) |
+             ((uint32_t)buf[0] << 24);
 #else
-        lo = ((uint32_t)buf[0])       | ((uint32_t)buf[1] << 8) |
-             ((uint32_t)buf[2] << 16) | ((uint32_t)buf[3] << 24);
-        hi = ((uint32_t)buf[4])       | ((uint32_t)buf[5] << 8) |
-             ((uint32_t)buf[6] << 16) | ((uint32_t)buf[7] << 24);
+        lo = ((uint32_t)buf[0]) | ((uint32_t)buf[1] << 8) | ((uint32_t)buf[2] << 16) |
+             ((uint32_t)buf[3] << 24);
+        hi = ((uint32_t)buf[4]) | ((uint32_t)buf[5] << 8) | ((uint32_t)buf[6] << 16) |
+             ((uint32_t)buf[7] << 24);
 #endif
         slots[0] = lo;
         slots[1] = hi;
@@ -120,15 +120,23 @@ H5Zcd_unpack_double(const unsigned *slots, size_t n_slots, double *val)
         uint8_t  buf[8];
 
 #if H5ZCD_BIG_ENDIAN
-        buf[7] = (uint8_t)(lo & 0xFF);        buf[6] = (uint8_t)((lo >> 8) & 0xFF);
-        buf[5] = (uint8_t)((lo >> 16) & 0xFF); buf[4] = (uint8_t)((lo >> 24) & 0xFF);
-        buf[3] = (uint8_t)(hi & 0xFF);        buf[2] = (uint8_t)((hi >> 8) & 0xFF);
-        buf[1] = (uint8_t)((hi >> 16) & 0xFF); buf[0] = (uint8_t)((hi >> 24) & 0xFF);
+        buf[7] = (uint8_t)(lo & 0xFF);
+        buf[6] = (uint8_t)((lo >> 8) & 0xFF);
+        buf[5] = (uint8_t)((lo >> 16) & 0xFF);
+        buf[4] = (uint8_t)((lo >> 24) & 0xFF);
+        buf[3] = (uint8_t)(hi & 0xFF);
+        buf[2] = (uint8_t)((hi >> 8) & 0xFF);
+        buf[1] = (uint8_t)((hi >> 16) & 0xFF);
+        buf[0] = (uint8_t)((hi >> 24) & 0xFF);
 #else
-        buf[0] = (uint8_t)(lo & 0xFF);        buf[1] = (uint8_t)((lo >> 8) & 0xFF);
-        buf[2] = (uint8_t)((lo >> 16) & 0xFF); buf[3] = (uint8_t)((lo >> 24) & 0xFF);
-        buf[4] = (uint8_t)(hi & 0xFF);        buf[5] = (uint8_t)((hi >> 8) & 0xFF);
-        buf[6] = (uint8_t)((hi >> 16) & 0xFF); buf[7] = (uint8_t)((hi >> 24) & 0xFF);
+        buf[0] = (uint8_t)(lo & 0xFF);
+        buf[1] = (uint8_t)((lo >> 8) & 0xFF);
+        buf[2] = (uint8_t)((lo >> 16) & 0xFF);
+        buf[3] = (uint8_t)((lo >> 24) & 0xFF);
+        buf[4] = (uint8_t)(hi & 0xFF);
+        buf[5] = (uint8_t)((hi >> 8) & 0xFF);
+        buf[6] = (uint8_t)((hi >> 16) & 0xFF);
+        buf[7] = (uint8_t)((hi >> 24) & 0xFF);
 #endif
         H5MM_memcpy(val, buf, 8);
     }
@@ -277,8 +285,8 @@ H5Zcd_unpack_string(const unsigned *slots, size_t n_slots, char *buf, size_t buf
     data_slots = (len + 3) / 4;
 
     if (n_slots < 1 + data_slots)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                    "too few slots to unpack string of length %zu (need %zu)", len, 1 + data_slots);
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "too few slots to unpack string of length %zu (need %zu)",
+                    len, 1 + data_slots);
 
     if (buf && bufsz > 0) {
         size_t copy_len = (len < bufsz) ? len : bufsz - 1;

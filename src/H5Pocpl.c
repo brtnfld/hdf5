@@ -1825,8 +1825,7 @@ H5Pset_filter2(hid_t plist_id, H5Z_filter_t filter, unsigned int flags, const ch
             HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "set_config size-query call failed");
 
         if (cd_nelmts > 65535)
-            HGOTO_ERROR(H5E_PLINE, H5E_BADVALUE, FAIL,
-                        "cd_nelmts from set_config exceeds maximum (65535)");
+            HGOTO_ERROR(H5E_PLINE, H5E_BADVALUE, FAIL, "cd_nelmts from set_config exceeds maximum (65535)");
 
         /* Allocate cd_values (at least 1 to avoid zero-length alloc) */
         alloc_nelmts = cd_nelmts ? cd_nelmts : 1;
@@ -1883,7 +1882,7 @@ done:
  */
 herr_t
 H5Pget_filter_params_by_idx(hid_t plist_id, unsigned idx, char *params_buf, size_t params_buf_size,
-                             size_t *params_len)
+                            size_t *params_len)
 {
     H5P_genplist_t          *plist;
     H5O_pline_t              pline;
@@ -1929,8 +1928,8 @@ H5Pget_filter_params_by_idx(hid_t plist_id, unsigned idx, char *params_buf, size
                 HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed");
 
             out_size = needed;
-            if (entry->get_config(filter->flags, filter->cd_nelmts, filter->cd_values, tmp_buf,
-                                  &out_size) < 0)
+            if (entry->get_config(filter->flags, filter->cd_nelmts, filter->cd_values, tmp_buf, &out_size) <
+                0)
                 HGOTO_ERROR(H5E_PLINE, H5E_CANTGET, FAIL, "get_config populate call failed");
 
             tmp_buf[out_size] = '\0';

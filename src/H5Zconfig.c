@@ -93,8 +93,8 @@ static herr_t
 H5Z__config_parse_token(const char **pp, char *key_out, size_t key_cap, char *val_out, size_t val_cap,
                         bool *is_bare)
 {
-    const char *p   = *pp;
-    size_t      klen = 0;
+    const char *p         = *pp;
+    size_t      klen      = 0;
     herr_t      ret_value = SUCCEED;
 
     FUNC_ENTER_PACKAGE
@@ -109,9 +109,8 @@ H5Z__config_parse_token(const char **pp, char *key_out, size_t key_cap, char *va
         if (klen + 1 >= key_cap)
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "key exceeds maximum length");
         /* Normalise to lowercase using C-locale tolower */
-        key_out[klen++] = (char)(((unsigned char)*p >= 'A' && (unsigned char)*p <= 'Z')
-                                     ? (*p + ('a' - 'A'))
-                                     : *p);
+        key_out[klen++] =
+            (char)(((unsigned char)*p >= 'A' && (unsigned char)*p <= 'Z') ? (*p + ('a' - 'A')) : *p);
         p++;
     }
     key_out[klen] = '\0';
@@ -136,9 +135,9 @@ H5Z__config_parse_token(const char **pp, char *key_out, size_t key_cap, char *va
     /* --- Check for '=' --- */
     if (*p != '=') {
         /* Bare key */
-        *is_bare = true;
+        *is_bare   = true;
         val_out[0] = '\0';
-        *pp = p;
+        *pp        = p;
         HGOTO_DONE(SUCCEED);
     }
 
@@ -188,8 +187,8 @@ H5Z__config_parse_token(const char **pp, char *key_out, size_t key_cap, char *va
         val_out[vlen] = '\0';
 
         if (vlen == 0)
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                        "quoted empty string value for key '%s' is not allowed", key_out);
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "quoted empty string value for key '%s' is not allowed",
+                        key_out);
 
         /* After closing quote, must be end-of-string or comma */
         p = H5Z__config_skip_ws(p);
@@ -203,11 +202,10 @@ H5Z__config_parse_token(const char **pp, char *key_out, size_t key_cap, char *va
         while (*p && *p != ',') {
             unsigned char c = (unsigned char)*p;
             if (c == ';')
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                            "bare semicolon in value for key '%s' (reserved)", key_out);
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "bare semicolon in value for key '%s' (reserved)",
+                            key_out);
             if (c == '"')
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                            "double-quote in bare value for key '%s'", key_out);
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "double-quote in bare value for key '%s'", key_out);
             if (vlen + 1 >= val_cap)
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "value exceeds maximum length");
             val_out[vlen++] = *p++;
@@ -216,8 +214,7 @@ H5Z__config_parse_token(const char **pp, char *key_out, size_t key_cap, char *va
         H5Z__config_rtrim(val_out, vlen);
 
         if (val_out[0] == '\0')
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                        "parameter '%s' has empty value after '='", key_out);
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter '%s' has empty value after '='", key_out);
     }
 
     *pp = p;
@@ -259,12 +256,12 @@ H5Zconfig_get_param(const char *params, const char *key, char *value_buf, size_t
     char        found_val[H5Z_CONFIG_STRING_MAX + 1];
     size_t      found_val_len = 0;
     /* Seen-keys array to detect duplicates — on-stack for small counts */
-    char        seen_keys[H5Z_CONFIG_MAX_PARAMS][H5Z_CONFIG_MAX_KEY_LEN + 1];
-    size_t      seen_count = 0;
+    char   seen_keys[H5Z_CONFIG_MAX_PARAMS][H5Z_CONFIG_MAX_KEY_LEN + 1];
+    size_t seen_count = 0;
     /* Normalised search key */
-    char        norm_key[H5Z_CONFIG_MAX_KEY_LEN + 1];
-    size_t      ki;
-    htri_t      ret_value = false;
+    char   norm_key[H5Z_CONFIG_MAX_KEY_LEN + 1];
+    size_t ki;
+    htri_t ret_value = false;
 
     FUNC_ENTER_API_NOINIT
 
@@ -280,8 +277,8 @@ H5Zconfig_get_param(const char *params, const char *key, char *value_buf, size_t
 
     /* Validate total string length */
     if (strlen(params) > H5Z_CONFIG_STRING_MAX)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                    "parameter string exceeds H5Z_CONFIG_STRING_MAX (%d) bytes", H5Z_CONFIG_STRING_MAX);
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter string exceeds H5Z_CONFIG_STRING_MAX (%d) bytes",
+                    H5Z_CONFIG_STRING_MAX);
 
     /* Normalise search key to lowercase */
     for (ki = 0; key[ki] && ki < H5Z_CONFIG_MAX_KEY_LEN; ki++) {
@@ -299,14 +296,14 @@ H5Zconfig_get_param(const char *params, const char *key, char *value_buf, size_t
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter string starts with a comma");
 
     while (*p) {
-        char tok_key[H5Z_CONFIG_MAX_KEY_LEN + 1];
-        char tok_val[H5Z_CONFIG_STRING_MAX + 1];
-        bool is_bare;
+        char   tok_key[H5Z_CONFIG_MAX_KEY_LEN + 1];
+        char   tok_val[H5Z_CONFIG_STRING_MAX + 1];
+        bool   is_bare;
         size_t si;
 
         if (param_count >= H5Z_CONFIG_MAX_PARAMS)
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                        "parameter string exceeds maximum of %d tokens", H5Z_CONFIG_MAX_PARAMS);
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter string exceeds maximum of %d tokens",
+                        H5Z_CONFIG_MAX_PARAMS);
 
         p = H5Z__config_skip_ws(p);
         if (*p == '\0')
@@ -318,8 +315,7 @@ H5Zconfig_get_param(const char *params, const char *key, char *value_buf, size_t
         /* Duplicate key check */
         for (si = 0; si < seen_count; si++) {
             if (strcmp(seen_keys[si], tok_key) == 0)
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                            "duplicate key '%s' in parameter string", tok_key);
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate key '%s' in parameter string", tok_key);
         }
         H5MM_memcpy(seen_keys[seen_count++], tok_key, strlen(tok_key) + 1);
 

@@ -224,12 +224,12 @@ error:
 static int
 test_roundtrip_deflate(hid_t file)
 {
-    hid_t    dset = H5I_INVALID_HID, dcpl = H5I_INVALID_HID;
-    hid_t    sid = H5I_INVALID_HID;
-    hsize_t  dims[2]   = {32, 32};
-    hsize_t  chunks[2] = {8, 8};
-    int      wbuf[32][32], rbuf[32][32];
-    int      i, j;
+    hid_t   dset = H5I_INVALID_HID, dcpl = H5I_INVALID_HID;
+    hid_t   sid       = H5I_INVALID_HID;
+    hsize_t dims[2]   = {32, 32};
+    hsize_t chunks[2] = {8, 8};
+    int     wbuf[32][32], rbuf[32][32];
+    int     i, j;
 
     TESTING("Round-trip: deflate=level=6 write/read");
 
@@ -282,12 +282,12 @@ error:
 static int
 test_roundtrip_shuffle(hid_t file)
 {
-    hid_t    dset = H5I_INVALID_HID, dcpl = H5I_INVALID_HID;
-    hid_t    sid = H5I_INVALID_HID;
-    hsize_t  dims[1]   = {64};
-    hsize_t  chunks[1] = {16};
-    int      wbuf[64], rbuf[64];
-    int      i;
+    hid_t   dset = H5I_INVALID_HID, dcpl = H5I_INVALID_HID;
+    hid_t   sid       = H5I_INVALID_HID;
+    hsize_t dims[1]   = {64};
+    hsize_t chunks[1] = {16};
+    int     wbuf[64], rbuf[64];
+    int     i;
 
     TESTING("Round-trip: shuffle write/read");
 
@@ -338,12 +338,12 @@ error:
 static int
 test_roundtrip_fletcher32(hid_t file)
 {
-    hid_t    dset = H5I_INVALID_HID, dcpl = H5I_INVALID_HID;
-    hid_t    sid = H5I_INVALID_HID;
-    hsize_t  dims[1]   = {32};
-    hsize_t  chunks[1] = {8};
-    int      wbuf[32], rbuf[32];
-    int      i;
+    hid_t   dset = H5I_INVALID_HID, dcpl = H5I_INVALID_HID;
+    hid_t   sid       = H5I_INVALID_HID;
+    hsize_t dims[1]   = {32};
+    hsize_t chunks[1] = {8};
+    int     wbuf[32], rbuf[32];
+    int     i;
 
     TESTING("Round-trip: fletcher32 write/read");
 
@@ -398,9 +398,9 @@ static int
 test_regression_old_api(hid_t file)
 {
     hid_t    dset = H5I_INVALID_HID, dcpl = H5I_INVALID_HID;
-    hid_t    sid = H5I_INVALID_HID;
-    hsize_t  dims[1]   = {32};
-    hsize_t  chunks[1] = {8};
+    hid_t    sid        = H5I_INVALID_HID;
+    hsize_t  dims[1]    = {32};
+    hsize_t  chunks[1]  = {8};
     unsigned cd_vals[1] = {5}; /* deflate level 5 */
     int      wbuf[32], rbuf[32];
     int      i;
@@ -454,8 +454,8 @@ error:
 static int
 test_regression_filter2_appends(void)
 {
-    hid_t  dcpl = H5I_INVALID_HID;
-    int    nfilters;
+    hid_t dcpl = H5I_INVALID_HID;
+    int   nfilters;
 
     TESTING("Regression: H5Pset_filter2 appends (matches H5Pset_filter behavior)");
 
@@ -485,7 +485,7 @@ static int
 test_scaleoffset_params(hid_t file)
 {
     hid_t   dset = H5I_INVALID_HID, dcpl = H5I_INVALID_HID;
-    hid_t   sid = H5I_INVALID_HID;
+    hid_t   sid       = H5I_INVALID_HID;
     hsize_t dims[1]   = {32};
     hsize_t chunks[1] = {8};
     int     wbuf[32], rbuf[32];
@@ -610,10 +610,10 @@ error:
 int
 main(void)
 {
-    hid_t  fapl = H5I_INVALID_HID;
-    hid_t  file = H5I_INVALID_HID;
-    int    nerrors = 0;
-    char   filename[1024];
+    hid_t fapl    = H5I_INVALID_HID;
+    hid_t file    = H5I_INVALID_HID;
+    int   nerrors = 0;
+    char  filename[1024];
 
     h5_test_init();
     fapl = h5_fileaccess();

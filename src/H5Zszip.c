@@ -35,22 +35,22 @@ static size_t H5Z__filter_szip(unsigned flags, size_t cd_nelmts, const unsigned 
                                size_t *buf_size, void **buf);
 static herr_t H5Z__szip_set_config(const char *params, unsigned *flags, size_t *cd_nelmts,
                                    unsigned cd_values[], size_t cd_values_size);
-static herr_t H5Z__szip_get_config(unsigned flags, size_t cd_nelmts, const unsigned cd_values[],
-                                   char *buf, size_t *buf_size);
+static herr_t H5Z__szip_get_config(unsigned flags, size_t cd_nelmts, const unsigned cd_values[], char *buf,
+                                   size_t *buf_size);
 
 /* This message derives from H5Z */
 H5Z_class3_t H5Z_SZIP[1] = {{
-    H5Z_CLASS3_T_VERS,       /* H5Z_class_t version */
-    H5Z_FILTER_SZIP,         /* Filter id number */
-    1,                       /* Assume encoder present: check before registering */
-    1,                       /* decoder_present flag (set to true) */
-    "szip",                  /* Canonical name */
-    "szip compression",      /* Description */
-    H5Z__can_apply_szip,     /* The "can apply" callback */
-    H5Z__set_local_szip,     /* The "set local" callback */
-    H5Z__filter_szip,        /* The actual filter function */
-    H5Z__szip_set_config,    /* String config setter */
-    H5Z__szip_get_config,    /* String config getter */
+    H5Z_CLASS3_T_VERS,    /* H5Z_class_t version */
+    H5Z_FILTER_SZIP,      /* Filter id number */
+    1,                    /* Assume encoder present: check before registering */
+    1,                    /* decoder_present flag (set to true) */
+    "szip",               /* Canonical name */
+    "szip compression",   /* Description */
+    H5Z__can_apply_szip,  /* The "can apply" callback */
+    H5Z__set_local_szip,  /* The "set local" callback */
+    H5Z__filter_szip,     /* The actual filter function */
+    H5Z__szip_set_config, /* String config setter */
+    H5Z__szip_get_config, /* String config getter */
 }};
 
 /*-------------------------------------------------------------------------
@@ -72,8 +72,8 @@ H5Z__szip_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, size_t 
     *cd_nelmts = H5Z_SZIP_USER_NPARMS; /* 2 user params */
 
     if (cd_values) {
-        unsigned mask     = H5_SZIP_NN_OPTION_MASK; /* default: nearest neighbour */
-        unsigned ppb      = 32;                      /* default pixels_per_block */
+        unsigned mask = H5_SZIP_NN_OPTION_MASK; /* default: nearest neighbour */
+        unsigned ppb  = 32;                     /* default pixels_per_block */
         char     val_buf[64];
         size_t   bufsz;
         htri_t   found;
@@ -129,8 +129,8 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5Z__szip_get_config(unsigned H5_ATTR_UNUSED flags, size_t cd_nelmts, const unsigned cd_values[],
-                     char *buf, size_t *buf_size)
+H5Z__szip_get_config(unsigned H5_ATTR_UNUSED flags, size_t cd_nelmts, const unsigned cd_values[], char *buf,
+                     size_t *buf_size)
 {
     char        tmp[64];
     size_t      n;

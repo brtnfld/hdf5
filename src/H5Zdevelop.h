@@ -222,17 +222,17 @@ typedef herr_t (*H5Z_get_config_func_t)(unsigned flags, size_t cd_nelmts, const 
  */
 //! <!-- [H5Z_class3_t_snip] -->
 typedef struct H5Z_class3_t {
-    int                    version;          /**< H5Z_CLASS3_T_VERS                         */
-    H5Z_filter_t           id;              /**< Filter ID number                           */
-    unsigned               encoder_present; /**< Does this filter have an encoder?          */
-    unsigned               decoder_present; /**< Does this filter have a decoder?           */
-    const char            *name;            /**< Canonical identifier (e.g. "zfp", "blosc2") */
-    const char            *description;     /**< Human-readable display string; may be NULL */
-    H5Z_can_apply_func_t   can_apply;       /**< The "can apply" callback for a filter      */
-    H5Z_set_local_func_t   set_local;       /**< The "set local" callback for a filter      */
-    H5Z_func_t             filter;          /**< The actual filter function                 */
-    H5Z_set_config_func_t  set_config;      /**< String configuration callback; may be NULL */
-    H5Z_get_config_func_t  get_config;      /**< Parameter string reconstruction; may be NULL */
+    int                   version;         /**< H5Z_CLASS3_T_VERS                         */
+    H5Z_filter_t          id;              /**< Filter ID number                           */
+    unsigned              encoder_present; /**< Does this filter have an encoder?          */
+    unsigned              decoder_present; /**< Does this filter have a decoder?           */
+    const char           *name;            /**< Canonical identifier (e.g. "zfp", "blosc2") */
+    const char           *description;     /**< Human-readable display string; may be NULL */
+    H5Z_can_apply_func_t  can_apply;       /**< The "can apply" callback for a filter      */
+    H5Z_set_local_func_t  set_local;       /**< The "set local" callback for a filter      */
+    H5Z_func_t            filter;          /**< The actual filter function                 */
+    H5Z_set_config_func_t set_config;      /**< String configuration callback; may be NULL */
+    H5Z_get_config_func_t get_config;      /**< Parameter string reconstruction; may be NULL */
 } H5Z_class3_t;
 //! <!-- [H5Z_class3_t_snip] -->
 
@@ -282,8 +282,7 @@ extern "C" {
  *
  * \since 2.2.0
  */
-H5_DLL htri_t H5Zconfig_get_param(const char *params, const char *key, char *value_buf,
-                                  size_t *buf_size);
+H5_DLL htri_t H5Zconfig_get_param(const char *params, const char *key, char *value_buf, size_t *buf_size);
 
 /**
  * \ingroup H5Z

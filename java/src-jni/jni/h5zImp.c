@@ -85,7 +85,7 @@ done:
  */
 JNIEXPORT jint JNICALL
 Java_hdf_hdf5lib_H5_H5Zconfig_1get_1param(JNIEnv *env, jclass clss, jstring params, jstring key,
-                                           jobjectArray value)
+                                          jobjectArray value)
 {
     const char *c_params = NULL;
     const char *c_key    = NULL;
@@ -93,7 +93,7 @@ Java_hdf_hdf5lib_H5_H5Zconfig_1get_1param(JNIEnv *env, jclass clss, jstring para
     char       *c_valbuf = NULL;
     size_t      buf_size = H5Z_CONFIG_STRING_MAX;
     jstring     str;
-    htri_t      status   = -1;
+    htri_t      status = -1;
 
     UNUSED(clss);
 

@@ -25,17 +25,17 @@ static herr_t H5Z__fletcher32_set_config(const char *params, unsigned *flags, si
 
 /* This message derives from H5Z */
 const H5Z_class3_t H5Z_FLETCHER32[1] = {{
-    H5Z_CLASS3_T_VERS,              /* H5Z_class_t version */
-    H5Z_FILTER_FLETCHER32,          /* Filter id number */
-    1,                              /* encoder_present flag (set to true) */
-    1,                              /* decoder_present flag (set to true) */
-    "fletcher32",                   /* Canonical name */
-    "Fletcher32 checksum",          /* Description */
-    NULL,                           /* The "can apply" callback */
-    NULL,                           /* The "set local" callback */
-    H5Z__filter_fletcher32,         /* The actual filter function */
-    H5Z__fletcher32_set_config,     /* String config setter */
-    NULL,                           /* No string config getter */
+    H5Z_CLASS3_T_VERS,          /* H5Z_class_t version */
+    H5Z_FILTER_FLETCHER32,      /* Filter id number */
+    1,                          /* encoder_present flag (set to true) */
+    1,                          /* decoder_present flag (set to true) */
+    "fletcher32",               /* Canonical name */
+    "Fletcher32 checksum",      /* Description */
+    NULL,                       /* The "can apply" callback */
+    NULL,                       /* The "set local" callback */
+    H5Z__filter_fletcher32,     /* The actual filter function */
+    H5Z__fletcher32_set_config, /* String config setter */
+    NULL,                       /* No string config getter */
 }};
 
 /*-------------------------------------------------------------------------
@@ -46,7 +46,7 @@ const H5Z_class3_t H5Z_FLETCHER32[1] = {{
  */
 static herr_t
 H5Z__fletcher32_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, size_t *cd_nelmts,
-                            unsigned H5_ATTR_UNUSED cd_values[], size_t H5_ATTR_UNUSED cd_values_size)
+                           unsigned H5_ATTR_UNUSED cd_values[], size_t H5_ATTR_UNUSED cd_values_size)
 {
     herr_t ret_value = SUCCEED;
 

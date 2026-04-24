@@ -72,7 +72,7 @@ static const bool DUMP_DEBUG_STATS_g = false;
 #endif /* H5Z_DEBUG */
 
 /* Local functions */
-static int    H5Z__find_idx(H5Z_filter_t id);
+static int H5Z__find_idx(H5Z_filter_t id);
 static int H5Z__check_unregister_dset_cb(void *obj_ptr, hid_t obj_id, void *key);
 static int H5Z__check_unregister_group_cb(void *obj_ptr, hid_t obj_id, void *key);
 static int H5Z__flush_file_cb(void *obj_ptr, hid_t obj_id, void *key);
@@ -315,9 +315,9 @@ done:
 herr_t
 H5Z_register(const H5Z_class2_t *cls)
 {
-    size_t     i;
+    size_t      i;
     H5Z_entry_t entry;
-    herr_t     ret_value = SUCCEED; /* Return value */
+    herr_t      ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
@@ -344,7 +344,7 @@ H5Z_register(const H5Z_class2_t *cls)
     if (i >= H5Z_table_used_g) {
         /* Filter not already registered — grow table if needed */
         if (H5Z_table_used_g >= H5Z_table_alloc_g) {
-            size_t      n     = MAX(H5Z_MAX_NFILTERS, 2 * H5Z_table_alloc_g);
+            size_t       n     = MAX(H5Z_MAX_NFILTERS, 2 * H5Z_table_alloc_g);
             H5Z_entry_t *table = (H5Z_entry_t *)H5MM_realloc(H5Z_table_g, n * sizeof(H5Z_entry_t));
 #ifdef H5Z_DEBUG
             H5Z_stats_t *stat_table = (H5Z_stats_t *)H5MM_realloc(H5Z_stat_table_g, n * sizeof(H5Z_stats_t));
@@ -360,7 +360,7 @@ H5Z_register(const H5Z_class2_t *cls)
             H5Z_table_alloc_g = n;
         } /* end if */
 
-        i = H5Z_table_used_g++;
+        i              = H5Z_table_used_g++;
         H5Z_table_g[i] = entry;
 #ifdef H5Z_DEBUG
         memset(H5Z_stat_table_g + i, 0, sizeof(H5Z_stats_t));
@@ -402,7 +402,7 @@ H5Z_register3(const H5Z_class3_t *cls)
     entry.id              = cls->id;
     entry.encoder_present = cls->encoder_present;
     entry.decoder_present = cls->decoder_present;
-    entry.name            = cls->name;        /* canonical name in the name field */
+    entry.name            = cls->name; /* canonical name in the name field */
     entry.can_apply       = cls->can_apply;
     entry.set_local       = cls->set_local;
     entry.filter          = cls->filter;
@@ -433,7 +433,7 @@ H5Z_register3(const H5Z_class3_t *cls)
             H5Z_table_alloc_g = n;
         }
 
-        i = H5Z_table_used_g++;
+        i              = H5Z_table_used_g++;
         H5Z_table_g[i] = entry;
 #ifdef H5Z_DEBUG
         memset(H5Z_stat_table_g + i, 0, sizeof(H5Z_stats_t));
@@ -1348,12 +1348,12 @@ H5Z_append(H5O_pline_t *pline, H5Z_filter_t filter, unsigned flags, size_t cd_ne
     } /* end if */
 
     /* Add the new filter to the pipeline */
-    idx                            = pline->nused;
-    pline->filter[idx].id          = filter;
-    pline->filter[idx].flags       = flags;
-    pline->filter[idx].name        = NULL; /*we'll pick it up later*/
-    pline->filter[idx].cd_nelmts   = cd_nelmts;
-    pline->filter[idx].cd_types    = NULL; /*no type tags by default*/
+    idx                          = pline->nused;
+    pline->filter[idx].id        = filter;
+    pline->filter[idx].flags     = flags;
+    pline->filter[idx].name      = NULL; /*we'll pick it up later*/
+    pline->filter[idx].cd_nelmts = cd_nelmts;
+    pline->filter[idx].cd_types  = NULL; /*no type tags by default*/
     if (cd_nelmts > 0) {
         size_t i; /* Local index variable */
 
@@ -1493,10 +1493,10 @@ H5Z_pipeline(const H5O_pline_t *pline, unsigned flags, unsigned *filter_mask /*i
              H5Z_cb_t cb_struct, size_t *nbytes /*in,out*/, size_t *buf_size /*in,out*/,
              void **buf /*in,out*/)
 {
-    size_t        idx;
-    size_t        new_nbytes;
-    int           fclass_idx;    /* Index of filter class in global table */
-    H5Z_entry_t  *fclass = NULL; /* Filter class pointer */
+    size_t       idx;
+    size_t       new_nbytes;
+    int          fclass_idx;    /* Index of filter class in global table */
+    H5Z_entry_t *fclass = NULL; /* Filter class pointer */
 #ifdef H5Z_DEBUG
     H5Z_stats_t  *fstats = NULL; /* Filter stats pointer */
     H5_timer_t    timer;         /* Timer for filter operations */

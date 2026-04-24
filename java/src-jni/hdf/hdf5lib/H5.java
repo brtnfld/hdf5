@@ -8461,8 +8461,7 @@ public class H5 implements java.io.Serializable {
      * @exception HDF5LibraryException
      *            Error from the HDF5 Library.
      **/
-    public synchronized static native int H5Pget_filter_params_by_idx(long plist_id, int idx,
-                                                                       String[] params)
+    public synchronized static native int H5Pget_filter_params_by_idx(long plist_id, int idx, String[] params)
         throws HDF5LibraryException;
 
     /**
@@ -15722,8 +15721,7 @@ public class H5 implements java.io.Serializable {
      * @exception HDF5LibraryException
      *            Error from the HDF5 Library.
      **/
-    public synchronized static native int H5Zconfig_get_param(String params, String key,
-                                                               String[] value)
+    public synchronized static native int H5Zconfig_get_param(String params, String key, String[] value)
         throws HDF5LibraryException;
 
     // /////// unimplemented ////////

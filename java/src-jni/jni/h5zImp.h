@@ -48,7 +48,7 @@ JNIEXPORT jint JNICALL Java_hdf_hdf5lib_H5_H5Zget_1filter_1info(JNIEnv *, jclass
  * Signature: (Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;)I
  */
 JNIEXPORT jint JNICALL Java_hdf_hdf5lib_H5_H5Zconfig_1get_1param(JNIEnv *, jclass, jstring, jstring,
-                                                                   jobjectArray);
+                                                                 jobjectArray);
 
 #ifdef __cplusplus
 } /* end extern "C" */

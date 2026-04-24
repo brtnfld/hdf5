@@ -1423,20 +1423,20 @@ done:
  */
 JNIEXPORT jint JNICALL
 Java_hdf_hdf5lib_H5_H5Pget_1filter_1params_1by_1idx(JNIEnv *env, jclass clss, jlong plist_id, jint idx,
-                                                     jobjectArray params)
+                                                    jobjectArray params)
 {
     jstring str;
-    char   *buf     = NULL;
-    size_t  plen    = 0;
-    herr_t  status  = FAIL;
+    char   *buf    = NULL;
+    size_t  plen   = 0;
+    herr_t  status = FAIL;
 
     UNUSED(clss);
 
     if (NULL == (buf = (char *)malloc(H5Z_CONFIG_STRING_MAX + 1)))
         H5_OUT_OF_MEMORY_ERROR(ENVONLY, "H5Pget_filter_params_by_idx: malloc failed");
 
-    if ((status = H5Pget_filter_params_by_idx((hid_t)plist_id, (unsigned)idx, buf,
-                                               H5Z_CONFIG_STRING_MAX, &plen)) < 0)
+    if ((status = H5Pget_filter_params_by_idx((hid_t)plist_id, (unsigned)idx, buf, H5Z_CONFIG_STRING_MAX,
+                                              &plen)) < 0)
         H5_LIBRARY_ERROR(ENVONLY);
 
     buf[plen < H5Z_CONFIG_STRING_MAX ? plen : H5Z_CONFIG_STRING_MAX] = '\0';

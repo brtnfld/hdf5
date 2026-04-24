@@ -248,8 +248,8 @@ H5O__pline_decode(H5F_t H5_ATTR_UNUSED *f, H5O_t H5_ATTR_UNUSED *open_oh, unsign
 
                 /* Use internal buffer or allocate */
                 if (filter->cd_nelmts > H5Z_COMMON_CD_VALUES)
-                    filter->cd_types = (H5Z_slot_type_t *)H5MM_malloc(
-                        filter->cd_nelmts * sizeof(H5Z_slot_type_t));
+                    filter->cd_types =
+                        (H5Z_slot_type_t *)H5MM_malloc(filter->cd_nelmts * sizeof(H5Z_slot_type_t));
                 else
                     filter->cd_types = filter->_cd_types;
 
@@ -467,9 +467,9 @@ H5O__pline_copy(const void *_src, void *_dst /*out*/)
                                     src->filter[i].cd_nelmts * sizeof(H5Z_slot_type_t));
                     }
                 } /* end if cd_types */
-            } /* end if */
-        }     /* end for */
-    }         /* end if */
+            }     /* end if */
+        }         /* end for */
+    }             /* end if */
     else
         dst->filter = NULL;
 
@@ -589,8 +589,7 @@ H5O__pline_reset(void *mesg)
                 assert(pline->filter[i].cd_nelmts > H5Z_COMMON_CD_VALUES);
             if (pline->filter[i].cd_values != pline->filter[i]._cd_values)
                 pline->filter[i].cd_values = (unsigned *)H5MM_xfree(pline->filter[i].cd_values);
-            if (pline->filter[i].cd_types != NULL &&
-                pline->filter[i].cd_types != pline->filter[i]._cd_types)
+            if (pline->filter[i].cd_types != NULL && pline->filter[i].cd_types != pline->filter[i]._cd_types)
                 pline->filter[i].cd_types = (H5Z_slot_type_t *)H5MM_xfree(pline->filter[i].cd_types);
         } /* end for */
 
