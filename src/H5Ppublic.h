@@ -2754,6 +2754,52 @@ H5_DLL herr_t H5Pset_filter(hid_t plist_id, H5Z_filter_t filter, unsigned int fl
 /**
  * \ingroup OCPL
  *
+ * \brief Adds a filter to the pipeline using a human-readable parameter string
+ *
+ * \ocpl_id{plist_id}
+ * \param[in] filter  Filter identifier
+ * \param[in] flags   Bit vector of filter flags (see H5Pset_filter())
+ * \param[in] params  Comma-separated \c key=value configuration string, or NULL
+ *
+ * \return \herr_t
+ *
+ * \details H5Pset_filter2() is a string-based alternative to H5Pset_filter().
+ *          The \p params string is passed to the filter's \c set_config callback
+ *          (if registered) which converts it into the internal \c cd_values
+ *          representation.  If the filter has no \c set_config callback, \p params
+ *          must be NULL; passing a non-NULL \p params to such a filter is an error.
+ *
+ * \since 2.2.0
+ */
+H5_DLL herr_t H5Pset_filter2(hid_t plist_id, H5Z_filter_t filter, unsigned int flags, const char *params);
+/**
+ * \ingroup OCPL
+ *
+ * \brief Returns the parameter string for a filter at a given pipeline index
+ *
+ * \ocpl_id{plist_id}
+ * \param[in]  idx             Zero-based index of the filter in the pipeline
+ * \param[out] params_buf      Buffer for the result string, or NULL for a size query
+ * \param[in]  params_buf_size Size of \p params_buf in bytes
+ * \param[out] params_len      Set to the number of characters in the result (not counting NUL)
+ *
+ * \return \herr_t
+ *
+ * \details H5Pget_filter_params_by_idx() reconstructs the human-readable parameter
+ *          string for the filter at pipeline index \p idx by calling the filter's
+ *          \c get_config callback.  If the filter has no \c get_config callback a
+ *          fallback string of the form \c "cd_values=v0:v1:..." is produced.
+ *
+ *          Call with \p params_buf NULL to obtain the required buffer size in
+ *          \p params_len, then allocate and call again.
+ *
+ * \since 2.2.0
+ */
+H5_DLL herr_t H5Pget_filter_params_by_idx(hid_t plist_id, unsigned idx, char *params_buf,
+                                          size_t params_buf_size, size_t *params_len);
+/**
+ * \ingroup OCPL
+ *
  * \brief Sets up use of the Fletcher32 checksum filter
  *
  * \ocpl_id{plist_id}

@@ -26,9 +26,14 @@
 /*****************/
 
 /**
- * Current version of the H5Z_class_t struct
+ * Current version of the H5Z_class_t struct (used by H5Z_class2_t)
  */
 #define H5Z_CLASS_T_VERS (1)
+
+/**
+ * Version constant for the new H5Z_class3_t struct \since 2.2.0
+ */
+#define H5Z_CLASS3_T_VERS (2)
 
 /*******************/
 /* Public Typedefs */
@@ -171,6 +176,81 @@ typedef struct H5Z_class2_t {
 } H5Z_class2_t;
 //! <!-- [H5Z_class2_t_snip] -->
 
+/**
+ * \brief Callback to configure a filter from a key=value parameter string.
+ *
+ * \param[in]     params         Comma-separated key=value parameter string, or NULL.
+ * \param[in,out] flags          Caller's flags; callback may modify them.
+ * \param[in,out] cd_nelmts      On input 0; on output, number of cd_values slots written
+ *                               (or required when cd_values is NULL).
+ * \param[out]    cd_values      Array to populate, or NULL for a size query.
+ * \param[in]     cd_values_size Capacity of cd_values in bytes (0 when cd_values is NULL).
+ *
+ * \return Non-negative on success; negative on failure.
+ *
+ * \details Must return the same cd_nelmts on both the size-query pass
+ *          (cd_values == NULL) and the population pass (cd_values != NULL).
+ *
+ * \since 2.2.0
+ */
+typedef herr_t (*H5Z_set_config_func_t)(const char *params, unsigned *flags, size_t *cd_nelmts,
+                                        unsigned cd_values[], size_t cd_values_size);
+
+/**
+ * \brief Callback to reconstruct a human-readable parameter string from cd_values.
+ *
+ * \param[in]  flags      Definition flags stored in the pipeline.
+ * \param[in]  cd_nelmts  Number of elements in cd_values.
+ * \param[in]  cd_values  Client data values.
+ * \param[out] buf        Buffer to receive the parameter string, or NULL for size query.
+ * \param[in,out] buf_size On entry, capacity of buf; on return, bytes required (excl. NUL).
+ *
+ * \return Non-negative on success; negative on failure.
+ *
+ * \since 2.2.0
+ */
+typedef herr_t (*H5Z_get_config_func_t)(unsigned flags, size_t cd_nelmts, const unsigned cd_values[],
+                                        char *buf, size_t *buf_size);
+
+/**
+ * \brief Version 3 filter class structure with optional string-configuration callbacks.
+ *
+ * Plugin authors use H5Z_class3_t directly rather than relying on the H5Z_class_t alias.
+ * This struct is NOT derived from H5Z_class2_t; it is an independent flat struct.
+ *
+ * \since 2.2.0
+ */
+//! <!-- [H5Z_class3_t_snip] -->
+typedef struct H5Z_class3_t {
+    int                    version;          /**< H5Z_CLASS3_T_VERS                         */
+    H5Z_filter_t           id;              /**< Filter ID number                           */
+    unsigned               encoder_present; /**< Does this filter have an encoder?          */
+    unsigned               decoder_present; /**< Does this filter have a decoder?           */
+    const char            *name;            /**< Canonical identifier (e.g. "zfp", "blosc2") */
+    const char            *description;     /**< Human-readable display string; may be NULL */
+    H5Z_can_apply_func_t   can_apply;       /**< The "can apply" callback for a filter      */
+    H5Z_set_local_func_t   set_local;       /**< The "set local" callback for a filter      */
+    H5Z_func_t             filter;          /**< The actual filter function                 */
+    H5Z_set_config_func_t  set_config;      /**< String configuration callback; may be NULL */
+    H5Z_get_config_func_t  get_config;      /**< Parameter string reconstruction; may be NULL */
+} H5Z_class3_t;
+//! <!-- [H5Z_class3_t_snip] -->
+
+/**
+ * \brief Per-slot type tags for typed cd_values encoding (H5O_PLINE_VERSION_3).
+ *
+ * \since 2.2.0
+ */
+typedef enum H5Z_slot_type_t {
+    H5Z_SLOT_UINT32   = 0, /**< unsigned int — default; version-2 compatible               */
+    H5Z_SLOT_INT32    = 1, /**< int32_t two's-complement bitcast                           */
+    H5Z_SLOT_FLOAT    = 2, /**< float IEEE 754 memcpy into one slot                        */
+    H5Z_SLOT_DBL_LO   = 3, /**< double: lower 32 bits (little-endian memcpy)               */
+    H5Z_SLOT_DBL_HI   = 4, /**< double: upper 32 bits; MUST immediately follow DBL_LO      */
+    H5Z_SLOT_STR_LEN  = 5, /**< uint32 = byte length; followed by STR_DATA slots           */
+    H5Z_SLOT_STR_DATA = 6  /**< 4 bytes null-padded string data                            */
+} H5Z_slot_type_t;
+
 /********************/
 /* Public Variables */
 /********************/
@@ -182,6 +262,70 @@ typedef struct H5Z_class2_t {
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * \ingroup H5Z
+ *
+ * \brief Look up a key in a filter parameter string.
+ *
+ * \param[in]     params    Comma-separated key=value parameter string, or NULL.
+ * \param[in]     key       Key to search for (case-insensitive).
+ * \param[out]    value_buf Buffer to receive the value, or NULL for a size query.
+ * \param[in,out] buf_size  On entry, capacity of value_buf; on return, bytes required
+ *                          (excluding NUL terminator).
+ *
+ * \return Positive if the key is present, 0 if not present, negative on error.
+ *
+ * \details Bare keys (no equals sign) return positive with *buf_size = 0.
+ *          This function is the recommended way for set_config callbacks to
+ *          extract parameter values.
+ *
+ * \since 2.2.0
+ */
+H5_DLL htri_t H5Zconfig_get_param(const char *params, const char *key, char *value_buf,
+                                  size_t *buf_size);
+
+/**
+ * \ingroup H5Z
+ * \brief Pack a double value into two consecutive unsigned int cd_values slots.
+ * \since 2.2.0
+ */
+H5_DLL herr_t H5Zcd_pack_double(double val, unsigned *slots, size_t cap, size_t *n_used);
+
+/**
+ * \ingroup H5Z
+ * \brief Unpack a double value from two consecutive unsigned int cd_values slots.
+ * \since 2.2.0
+ */
+H5_DLL herr_t H5Zcd_unpack_double(const unsigned *slots, size_t n_slots, double *val);
+
+/**
+ * \ingroup H5Z
+ * \brief Pack a float value into one unsigned int cd_values slot.
+ * \since 2.2.0
+ */
+H5_DLL herr_t H5Zcd_pack_float(float val, unsigned *slots, size_t cap, size_t *n_used);
+
+/**
+ * \ingroup H5Z
+ * \brief Unpack a float value from one unsigned int cd_values slot.
+ * \since 2.2.0
+ */
+H5_DLL herr_t H5Zcd_unpack_float(const unsigned *slots, size_t n_slots, float *val);
+
+/**
+ * \ingroup H5Z
+ * \brief Pack a NUL-terminated string into cd_values slots.
+ * \since 2.2.0
+ */
+H5_DLL herr_t H5Zcd_pack_string(const char *str, unsigned *slots, size_t cap, size_t *n_used);
+
+/**
+ * \ingroup H5Z
+ * \brief Unpack a NUL-terminated string from cd_values slots.
+ * \since 2.2.0
+ */
+H5_DLL herr_t H5Zcd_unpack_string(const unsigned *slots, size_t n_slots, char *buf, size_t bufsz);
 
 /**
  * \ingroup H5Z

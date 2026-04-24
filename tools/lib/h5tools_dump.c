@@ -3699,6 +3699,20 @@ h5tools_dump_dcpl(FILE *stream, const h5tool_format_t *info, h5tools_context_t *
                                                (hsize_t)0, (hsize_t)0);
                         break;
                 } /*switch*/
+
+                /* optional human-readable parameter string */
+                if (dcpl_id >= 0) {
+                    char   pbuf[512];
+                    size_t plen = 0;
+                    if (H5Pget_filter_params_by_idx(dcpl_id, (unsigned)i, pbuf, sizeof(pbuf), &plen) >= 0 &&
+                        plen > 0) {
+                        ctx->need_prefix = true;
+                        h5tools_str_reset(&buffer);
+                        h5tools_str_append(&buffer, "%s \"%s\"", PARAMS_STRING, pbuf);
+                        h5tools_render_element(stream, info, ctx, &buffer, &curr_pos, (size_t)ncols,
+                                               (hsize_t)0, (hsize_t)0);
+                    }
+                }
             }     /*i*/
         }         /*nfilters*/
         else {

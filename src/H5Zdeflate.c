@@ -29,18 +29,99 @@
 /* Local function prototypes */
 static size_t H5Z__filter_deflate(unsigned flags, size_t cd_nelmts, const unsigned cd_values[], size_t nbytes,
                                   size_t *buf_size, void **buf);
+static herr_t H5Z__deflate_set_config(const char *params, unsigned *flags, size_t *cd_nelmts,
+                                      unsigned cd_values[], size_t cd_values_size);
+static herr_t H5Z__deflate_get_config(unsigned flags, size_t cd_nelmts, const unsigned cd_values[],
+                                      char *buf, size_t *buf_size);
 
 /* This message derives from H5Z */
-const H5Z_class2_t H5Z_DEFLATE[1] = {{
-    H5Z_CLASS_T_VERS,    /* H5Z_class_t version */
-    H5Z_FILTER_DEFLATE,  /* Filter id number		*/
-    1,                   /* encoder_present flag (set to true) */
-    1,                   /* decoder_present flag (set to true) */
-    "deflate",           /* Filter name for debugging	*/
-    NULL,                /* The "can apply" callback     */
-    NULL,                /* The "set local" callback     */
-    H5Z__filter_deflate, /* The actual filter function	*/
+const H5Z_class3_t H5Z_DEFLATE[1] = {{
+    H5Z_CLASS3_T_VERS,          /* H5Z_class_t version */
+    H5Z_FILTER_DEFLATE,         /* Filter id number */
+    1,                          /* encoder_present flag (set to true) */
+    1,                          /* decoder_present flag (set to true) */
+    "deflate",                  /* Canonical name */
+    "deflate (zlib) compression", /* Description */
+    NULL,                       /* The "can apply" callback */
+    NULL,                       /* The "set local" callback */
+    H5Z__filter_deflate,        /* The actual filter function */
+    H5Z__deflate_set_config,    /* String config setter */
+    H5Z__deflate_get_config,    /* String config getter */
 }};
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Z__deflate_set_config
+ *
+ * Purpose:     Parse "level=N" (N in 0..9; default 6) into cd_values.
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5Z__deflate_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, size_t *cd_nelmts,
+                        unsigned cd_values[], size_t cd_values_size)
+{
+    unsigned level     = 6; /* default compression level */
+    herr_t   ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    *cd_nelmts = 1;
+
+    if (cd_values) { /* populate pass */
+        if (cd_values_size < 1)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "cd_values buffer too small");
+
+        if (params) {
+            char val_buf[64];
+            size_t bufsz = sizeof(val_buf);
+            htri_t found;
+
+            found = H5Zconfig_get_param(params, "level", val_buf, &bufsz);
+            if (found < 0)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "malformed params string for deflate filter");
+
+            if (found > 0) {
+                char    *end;
+                long int lval = strtol(val_buf, &end, 10);
+                if (*end != '\0' || lval < 0 || lval > 9)
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                                "deflate 'level' must be an integer in [0,9], got '%s'", val_buf);
+                level = (unsigned)lval;
+            }
+        }
+
+        cd_values[0] = level;
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Z__deflate_get_config
+ *
+ * Purpose:     Reconstruct "level=N" from cd_values.
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5Z__deflate_get_config(unsigned H5_ATTR_UNUSED flags, size_t cd_nelmts, const unsigned cd_values[],
+                        char *buf, size_t *buf_size)
+{
+    char   tmp[32];
+    size_t n;
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE_NOERR
+
+    n = (size_t)snprintf(tmp, sizeof(tmp), "level=%u", (cd_nelmts >= 1) ? cd_values[0] : 6u);
+
+    if (buf_size)
+        *buf_size = n;
+
+    if (buf)
+        H5MM_memcpy(buf, tmp, n); /* caller adds NUL */
+
+    FUNC_LEAVE_NOAPI(ret_value)
+}
 
 /*-------------------------------------------------------------------------
  * Function:	H5Z__filter_deflate

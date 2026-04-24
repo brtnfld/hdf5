@@ -141,6 +141,21 @@ JNIEXPORT jint JNICALL Java_hdf_hdf5lib_H5_H5Pset_1filter(JNIEnv *, jclass, jlon
 
 /*
  * Class:     hdf_hdf5lib_H5
+ * Method:    H5Pset_filter2
+ * Signature: (JIILjava/lang/String;)I
+ */
+JNIEXPORT jint JNICALL Java_hdf_hdf5lib_H5_H5Pset_1filter2(JNIEnv *, jclass, jlong, jint, jint, jstring);
+
+/*
+ * Class:     hdf_hdf5lib_H5
+ * Method:    H5Pget_filter_params_by_idx
+ * Signature: (JI[Ljava/lang/String;)I
+ */
+JNIEXPORT jint JNICALL Java_hdf_hdf5lib_H5_H5Pget_1filter_1params_1by_1idx(JNIEnv *, jclass, jlong, jint,
+                                                                             jobjectArray);
+
+/*
+ * Class:     hdf_hdf5lib_H5
  * Method:    H5Pall_filters_avail
  * Signature: (J)Z
  */

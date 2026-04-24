@@ -3337,7 +3337,7 @@ test_missing_filter(hid_t file)
     } /* end if */
 #ifdef H5_HAVE_FILTER_DEFLATE
     /* Register deflate filter (use internal function to avoid range checks) */
-    if (H5Z_register(H5Z_DEFLATE) < 0) {
+    if (H5Z_register3(H5Z_DEFLATE) < 0) {
         H5_FAILED();
         printf("    Line %d: Can't unregister deflate filter\n", __LINE__);
         goto error;

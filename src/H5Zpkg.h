@@ -20,21 +20,43 @@
 /* Include private header file */
 #include "H5Zprivate.h" /* Filter functions                */
 
+/*
+ * Internal filter table entry.  All H5Z_class2_t fields come first so that
+ * a pointer to H5Z_entry_t may be safely cast to H5Z_class2_t * where the
+ * existing API expects it.  V3-specific fields are zero-initialised for
+ * filters registered via H5Z_class2_t or H5Z_class1_t.
+ */
+typedef struct H5Z_entry_t {
+    /* --- H5Z_class2_t compatible fields (must stay first) --- */
+    int                    version;          /* H5Z_CLASS_T_VERS or H5Z_CLASS3_T_VERS */
+    H5Z_filter_t           id;
+    unsigned               encoder_present;
+    unsigned               decoder_present;
+    const char            *name;             /* canonical name (or debug comment for v2) */
+    H5Z_can_apply_func_t   can_apply;
+    H5Z_set_local_func_t   set_local;
+    H5Z_func_t             filter;
+    /* --- V3 extensions (NULL for v1/v2 plugins) --- */
+    const char            *description;      /* display string; may be NULL */
+    H5Z_set_config_func_t  set_config;
+    H5Z_get_config_func_t  get_config;
+} H5Z_entry_t;
+
 /********************/
 /* Internal filters */
 /********************/
 
 /* Shuffle filter */
-H5_DLLVAR const H5Z_class2_t H5Z_SHUFFLE[1];
+H5_DLLVAR const H5Z_class3_t H5Z_SHUFFLE[1];
 
 /* Fletcher32 filter */
-H5_DLLVAR const H5Z_class2_t H5Z_FLETCHER32[1];
+H5_DLLVAR const H5Z_class3_t H5Z_FLETCHER32[1];
 
 /* n-bit filter */
-H5_DLLVAR H5Z_class2_t H5Z_NBIT[1];
+H5_DLLVAR H5Z_class3_t H5Z_NBIT[1];
 
 /* Scale/offset filter */
-H5_DLLVAR H5Z_class2_t H5Z_SCALEOFFSET[1];
+H5_DLLVAR H5Z_class3_t H5Z_SCALEOFFSET[1];
 
 /********************/
 /* External filters */
@@ -42,12 +64,12 @@ H5_DLLVAR H5Z_class2_t H5Z_SCALEOFFSET[1];
 
 /* Deflate filter */
 #ifdef H5_HAVE_FILTER_DEFLATE
-H5_DLLVAR const H5Z_class2_t H5Z_DEFLATE[1];
+H5_DLLVAR const H5Z_class3_t H5Z_DEFLATE[1];
 #endif /* H5_HAVE_FILTER_DEFLATE */
 
 /* szip filter */
 #ifdef H5_HAVE_FILTER_SZIP
-H5_DLLVAR H5Z_class2_t H5Z_SZIP[1];
+H5_DLLVAR H5Z_class3_t H5Z_SZIP[1];
 #endif /* H5_HAVE_FILTER_SZIP */
 
 /* Package internal routines */

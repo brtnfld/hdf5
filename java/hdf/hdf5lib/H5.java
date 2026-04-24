@@ -12393,6 +12393,108 @@ public class H5 implements java.io.Serializable {
     /**
      * @ingroup JH5P
      *
+     * H5Pset_filter2 adds a filter to the filter pipeline using a human-readable key=value parameter string.
+     *
+     * @param plist_id
+     *            IN: Property list identifier.
+     * @param filter_id
+     *            IN: Filter to be added to the pipeline.
+     * @param flags
+     *            IN: Bit vector specifying certain general properties of the filter.
+     * @param params
+     *            IN: Parameter string in "key=value" format, or null for no parameters.
+     *
+     * @return a non-negative value if successful
+     *
+     * @exception HDF5LibraryException
+     *            Error from the HDF5 Library.
+     **/
+    public static int H5Pset_filter2(long plist_id, int filter_id, int flags, String params)
+        throws HDF5LibraryException
+    {
+        if (plist_id < 0)
+            throw new HDF5FunctionArgumentException("Negative property list identifier");
+
+        int retVal = -1;
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment params_seg = (params != null && !params.isEmpty())
+                                       ? arena.allocateFrom(params)
+                                       : MemorySegment.NULL;
+            MethodHandle mh = Linker.nativeLinker().downcallHandle(
+                SymbolLookup.loaderLookup().find("H5Pset_filter2").orElseThrow(
+                    () -> new HDF5LibraryException("H5Pset_filter2 not found in library")),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT,
+                    ValueLayout.JAVA_LONG, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT,
+                    ValueLayout.ADDRESS));
+            retVal = (int)mh.invokeExact(plist_id, filter_id, flags, params_seg);
+        }
+        catch (HDF5LibraryException e) {
+            throw e;
+        }
+        catch (Throwable t) {
+            throw new HDF5LibraryException("H5Pset_filter2 failed: " + t.getMessage());
+        }
+        if (retVal < 0)
+            h5libraryError();
+        return retVal;
+    }
+
+    /**
+     * @ingroup JH5P
+     *
+     * H5Pget_filter_params_by_idx retrieves the parameter string for a filter at a given pipeline index.
+     *
+     * @param plist_id
+     *            IN: Property list identifier.
+     * @param idx
+     *            IN: Zero-based index of the filter in the pipeline.
+     * @param params
+     *            OUT: One-element String array; params[0] is set to the parameter string on success.
+     *
+     * @return a non-negative value if successful
+     *
+     * @exception HDF5LibraryException
+     *            Error from the HDF5 Library.
+     **/
+    public static int H5Pget_filter_params_by_idx(long plist_id, int idx, String[] params)
+        throws HDF5LibraryException
+    {
+        if (plist_id < 0)
+            throw new HDF5FunctionArgumentException("Negative property list identifier");
+        if (params == null || params.length < 1)
+            throw new HDF5FunctionArgumentException("params array must have at least one element");
+
+        int retVal = -1;
+        final int BUF_SIZE = 4096;
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment buf      = arena.allocate(BUF_SIZE);
+            MemorySegment plen_seg = arena.allocate(ValueLayout.JAVA_LONG);
+            MethodHandle mh = Linker.nativeLinker().downcallHandle(
+                SymbolLookup.loaderLookup().find("H5Pget_filter_params_by_idx").orElseThrow(
+                    () -> new HDF5LibraryException("H5Pget_filter_params_by_idx not found")),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT,
+                    ValueLayout.JAVA_LONG, ValueLayout.JAVA_INT,
+                    ValueLayout.ADDRESS, ValueLayout.JAVA_LONG, ValueLayout.ADDRESS));
+            retVal = (int)mh.invokeExact(plist_id, idx, buf, (long)BUF_SIZE, plen_seg);
+            if (retVal >= 0) {
+                long plen = plen_seg.get(ValueLayout.JAVA_LONG, 0);
+                params[0] = plen > 0 ? buf.getString(0) : "";
+            }
+        }
+        catch (HDF5LibraryException e) {
+            throw e;
+        }
+        catch (Throwable t) {
+            throw new HDF5LibraryException("H5Pget_filter_params_by_idx failed: " + t.getMessage());
+        }
+        if (retVal < 0)
+            h5libraryError();
+        return retVal;
+    }
+
+    /**
+     * @ingroup JH5P
+     *
      * H5Pget_nfilters returns the number of filters defined in the filter pipeline associated with the
      * property list plist.
      *
@@ -23647,6 +23749,62 @@ public class H5 implements java.io.Serializable {
             h5libraryError();
         }
         return status;
+    }
+
+    /**
+     * @ingroup JH5Z
+     *
+     * H5Zconfig_get_param retrieves a single named parameter from a filter parameter string.
+     *
+     * @param params
+     *            IN: Full parameter string (e.g. "level=6,mode=fast").
+     * @param key
+     *            IN: Name of the parameter to look up.
+     * @param value
+     *            OUT: One-element String array; value[0] receives the found value string.
+     *
+     * @return positive if found, 0 if not found, negative on error
+     *
+     * @exception HDF5LibraryException
+     *            Error from the HDF5 Library.
+     **/
+    public static int H5Zconfig_get_param(String params, String key, String[] value)
+        throws HDF5LibraryException
+    {
+        if (params == null)
+            throw new HDF5FunctionArgumentException("params string is null");
+        if (key == null)
+            throw new HDF5FunctionArgumentException("key string is null");
+        if (value == null || value.length < 1)
+            throw new HDF5FunctionArgumentException("value array must have at least one element");
+
+        int retVal = -1;
+        final int BUF_SIZE = 4096;
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment params_seg = arena.allocateFrom(params);
+            MemorySegment key_seg    = arena.allocateFrom(key);
+            MemorySegment val_buf    = arena.allocate(BUF_SIZE);
+            MemorySegment bsz_seg   = arena.allocate(ValueLayout.JAVA_LONG);
+            bsz_seg.set(ValueLayout.JAVA_LONG, 0, (long)BUF_SIZE);
+            MethodHandle mh = Linker.nativeLinker().downcallHandle(
+                SymbolLookup.loaderLookup().find("H5Zconfig_get_param").orElseThrow(
+                    () -> new HDF5LibraryException("H5Zconfig_get_param not found in library")),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT,
+                    ValueLayout.ADDRESS, ValueLayout.ADDRESS,
+                    ValueLayout.ADDRESS, ValueLayout.ADDRESS));
+            retVal = (int)mh.invokeExact(params_seg, key_seg, val_buf, bsz_seg);
+            if (retVal > 0)
+                value[0] = val_buf.getString(0);
+            else
+                value[0] = "";
+        }
+        catch (HDF5LibraryException e) {
+            throw e;
+        }
+        catch (Throwable t) {
+            throw new HDF5LibraryException("H5Zconfig_get_param failed: " + t.getMessage());
+        }
+        return retVal;
     }
 
     // /////// unimplemented ////////

@@ -81,18 +81,47 @@ static void   H5Z__nbit_compress_one_compound(unsigned char *data, size_t data_o
                                               unsigned *parms_index);
 static void   H5Z__nbit_compress(unsigned char *data, unsigned d_nelmts, unsigned char *buffer,
                                  size_t *buffer_size, const unsigned parms[]);
+static herr_t H5Z__nbit_set_config(const char *params, unsigned *flags, size_t *cd_nelmts,
+                                   unsigned cd_values[], size_t cd_values_size);
 
 /* This message derives from H5Z */
-H5Z_class2_t H5Z_NBIT[1] = {{
-    H5Z_CLASS_T_VERS,    /* H5Z_class_t version */
-    H5Z_FILTER_NBIT,     /* Filter id number		*/
-    1,                   /* Assume encoder present: check before registering */
-    1,                   /* decoder_present flag (set to true) */
-    "nbit",              /* Filter name for debugging	*/
-    H5Z__can_apply_nbit, /* The "can apply" callback     */
-    H5Z__set_local_nbit, /* The "set local" callback     */
-    H5Z__filter_nbit,    /* The actual filter function	*/
+H5Z_class3_t H5Z_NBIT[1] = {{
+    H5Z_CLASS3_T_VERS,       /* H5Z_class_t version */
+    H5Z_FILTER_NBIT,         /* Filter id number */
+    1,                       /* Assume encoder present: check before registering */
+    1,                       /* decoder_present flag (set to true) */
+    "nbit",                  /* Canonical name */
+    "n-bit compression",     /* Description */
+    H5Z__can_apply_nbit,     /* The "can apply" callback */
+    H5Z__set_local_nbit,     /* The "set local" callback */
+    H5Z__filter_nbit,        /* The actual filter function */
+    H5Z__nbit_set_config,    /* String config setter */
+    NULL,                    /* No string config getter */
 }};
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Z__nbit_set_config
+ *
+ * Purpose:     N-bit takes no user parameters (all set via set_local);
+ *              reject any non-NULL params.
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5Z__nbit_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, size_t *cd_nelmts,
+                     unsigned H5_ATTR_UNUSED cd_values[], size_t H5_ATTR_UNUSED cd_values_size)
+{
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    *cd_nelmts = 0;
+
+    if (params && *params != '\0')
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "nbit filter takes no user parameters");
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+}
 
 /* Local macros */
 #define H5Z_NBIT_ATOMIC     1    /* Atomic datatype class: integer/floating-point */

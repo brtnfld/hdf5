@@ -24,18 +24,46 @@
 static herr_t H5Z__set_local_shuffle(hid_t dcpl_id, hid_t type_id, hid_t space_id);
 static size_t H5Z__filter_shuffle(unsigned flags, size_t cd_nelmts, const unsigned cd_values[], size_t nbytes,
                                   size_t *buf_size, void **buf);
+static herr_t H5Z__shuffle_set_config(const char *params, unsigned *flags, size_t *cd_nelmts,
+                                      unsigned cd_values[], size_t cd_values_size);
 
 /* This message derives from H5Z */
-const H5Z_class2_t H5Z_SHUFFLE[1] = {{
-    H5Z_CLASS_T_VERS,       /* H5Z_class_t version */
-    H5Z_FILTER_SHUFFLE,     /* Filter id number		*/
-    1,                      /* encoder_present flag (set to true) */
-    1,                      /* decoder_present flag (set to true) */
-    "shuffle",              /* Filter name for debugging	*/
-    NULL,                   /* The "can apply" callback     */
-    H5Z__set_local_shuffle, /* The "set local" callback     */
-    H5Z__filter_shuffle,    /* The actual filter function	*/
+const H5Z_class3_t H5Z_SHUFFLE[1] = {{
+    H5Z_CLASS3_T_VERS,          /* H5Z_class_t version */
+    H5Z_FILTER_SHUFFLE,         /* Filter id number */
+    1,                          /* encoder_present flag (set to true) */
+    1,                          /* decoder_present flag (set to true) */
+    "shuffle",                  /* Canonical name */
+    "byte-order shuffle",       /* Description */
+    NULL,                       /* The "can apply" callback */
+    H5Z__set_local_shuffle,     /* The "set local" callback */
+    H5Z__filter_shuffle,        /* The actual filter function */
+    H5Z__shuffle_set_config,    /* String config setter */
+    NULL,                       /* No string config getter (no user params) */
 }};
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Z__shuffle_set_config
+ *
+ * Purpose:     Shuffle takes no user parameters; reject any non-NULL params.
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5Z__shuffle_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, size_t *cd_nelmts,
+                        unsigned H5_ATTR_UNUSED cd_values[], size_t H5_ATTR_UNUSED cd_values_size)
+{
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    *cd_nelmts = 0;
+
+    if (params && *params != '\0')
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "shuffle filter takes no parameters");
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+}
 
 /* Local macros */
 #define H5Z_SHUFFLE_PARM_SIZE 0 /* "Local" parameter for shuffling size */

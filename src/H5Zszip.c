@@ -33,18 +33,126 @@ static htri_t H5Z__can_apply_szip(hid_t dcpl_id, hid_t type_id, hid_t space_id);
 static herr_t H5Z__set_local_szip(hid_t dcpl_id, hid_t type_id, hid_t space_id);
 static size_t H5Z__filter_szip(unsigned flags, size_t cd_nelmts, const unsigned cd_values[], size_t nbytes,
                                size_t *buf_size, void **buf);
+static herr_t H5Z__szip_set_config(const char *params, unsigned *flags, size_t *cd_nelmts,
+                                   unsigned cd_values[], size_t cd_values_size);
+static herr_t H5Z__szip_get_config(unsigned flags, size_t cd_nelmts, const unsigned cd_values[],
+                                   char *buf, size_t *buf_size);
 
 /* This message derives from H5Z */
-H5Z_class2_t H5Z_SZIP[1] = {{
-    H5Z_CLASS_T_VERS,    /* H5Z_class_t version */
-    H5Z_FILTER_SZIP,     /* Filter id number		*/
-    1,                   /* Assume encoder present: check before registering */
-    1,                   /* decoder_present flag (set to true) */
-    "szip",              /* Filter name for debugging	*/
-    H5Z__can_apply_szip, /* The "can apply" callback     */
-    H5Z__set_local_szip, /* The "set local" callback     */
-    H5Z__filter_szip,    /* The actual filter function	*/
+H5Z_class3_t H5Z_SZIP[1] = {{
+    H5Z_CLASS3_T_VERS,       /* H5Z_class_t version */
+    H5Z_FILTER_SZIP,         /* Filter id number */
+    1,                       /* Assume encoder present: check before registering */
+    1,                       /* decoder_present flag (set to true) */
+    "szip",                  /* Canonical name */
+    "szip compression",      /* Description */
+    H5Z__can_apply_szip,     /* The "can apply" callback */
+    H5Z__set_local_szip,     /* The "set local" callback */
+    H5Z__filter_szip,        /* The actual filter function */
+    H5Z__szip_set_config,    /* String config setter */
+    H5Z__szip_get_config,    /* String config getter */
 }};
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Z__szip_set_config
+ *
+ * Purpose:     Parse "coding=entropy|nn,pixels_per_block=N" into cd_values.
+ *              Only the mask (cd_values[0]) and ppb (cd_values[1]) are set;
+ *              the remaining szip params are filled in by set_local.
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5Z__szip_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, size_t *cd_nelmts,
+                     unsigned cd_values[], size_t cd_values_size)
+{
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    *cd_nelmts = H5Z_SZIP_USER_NPARMS; /* 2 user params */
+
+    if (cd_values) {
+        unsigned mask     = H5_SZIP_NN_OPTION_MASK; /* default: nearest neighbour */
+        unsigned ppb      = 32;                      /* default pixels_per_block */
+        char     val_buf[64];
+        size_t   bufsz;
+        htri_t   found;
+
+        if (cd_values_size < H5Z_SZIP_USER_NPARMS)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "cd_values buffer too small for szip");
+
+        if (params) {
+            /* coding = entropy | nn */
+            bufsz = sizeof(val_buf);
+            found = H5Zconfig_get_param(params, "coding", val_buf, &bufsz);
+            if (found < 0)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "malformed params string for szip filter");
+            if (found > 0) {
+                if (strcmp(val_buf, "entropy") == 0)
+                    mask = H5_SZIP_EC_OPTION_MASK;
+                else if (strcmp(val_buf, "nn") == 0)
+                    mask = H5_SZIP_NN_OPTION_MASK;
+                else
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                                "szip 'coding' must be 'entropy' or 'nn', got '%s'", val_buf);
+            }
+
+            /* pixels_per_block */
+            bufsz = sizeof(val_buf);
+            found = H5Zconfig_get_param(params, "pixels_per_block", val_buf, &bufsz);
+            if (found < 0)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "malformed params string for szip filter");
+            if (found > 0) {
+                char    *end;
+                long int lval = strtol(val_buf, &end, 10);
+                if (*end != '\0' || lval <= 0 || lval > 32 || (lval & 1))
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                                "szip 'pixels_per_block' must be an even integer in [2,32], got '%s'",
+                                val_buf);
+                ppb = (unsigned)lval;
+            }
+        }
+
+        cd_values[H5Z_SZIP_PARM_MASK] = mask;
+        cd_values[H5Z_SZIP_PARM_PPB]  = ppb;
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Z__szip_get_config
+ *
+ * Purpose:     Reconstruct "coding=entropy|nn,pixels_per_block=N" from
+ *              cd_values.
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5Z__szip_get_config(unsigned H5_ATTR_UNUSED flags, size_t cd_nelmts, const unsigned cd_values[],
+                     char *buf, size_t *buf_size)
+{
+    char        tmp[64];
+    size_t      n;
+    const char *coding;
+    unsigned    mask;
+    herr_t      ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE_NOERR
+
+    mask   = (cd_nelmts >= 1) ? cd_values[H5Z_SZIP_PARM_MASK] : (unsigned)H5_SZIP_NN_OPTION_MASK;
+    coding = (mask & H5_SZIP_EC_OPTION_MASK) ? "entropy" : "nn";
+
+    n = (size_t)snprintf(tmp, sizeof(tmp), "coding=%s,pixels_per_block=%u", coding,
+                         (cd_nelmts >= 2) ? cd_values[H5Z_SZIP_PARM_PPB] : 32u);
+
+    if (buf_size)
+        *buf_size = n;
+    if (buf)
+        H5MM_memcpy(buf, tmp, n);
+
+    FUNC_LEAVE_NOAPI(ret_value)
+}
 
 /*-------------------------------------------------------------------------
  * Function:	H5Z__can_apply_szip

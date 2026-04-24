@@ -50,13 +50,16 @@ typedef struct H5Z_filter_info_t H5Z_filter_info_t;
 
 /* Structure to store information about each filter's parameters */
 struct H5Z_filter_info_t {
-    H5Z_filter_t id;                               /*filter identification number	     */
-    unsigned     flags;                            /*defn and invocation flags	     */
-    char         _name[H5Z_COMMON_NAME_LEN];       /*internal filter name		     */
-    char        *name;                             /*optional filter name		     */
-    size_t       cd_nelmts;                        /*number of elements in cd_values[]  */
-    unsigned     _cd_values[H5Z_COMMON_CD_VALUES]; /*internal client data values		     */
-    unsigned    *cd_values;                        /*client data values		     */
+    H5Z_filter_t     id;                               /*filter identification number          */
+    unsigned         flags;                            /*defn and invocation flags             */
+    char             _name[H5Z_COMMON_NAME_LEN];       /*internal filter name                  */
+    char            *name;                             /*optional filter name                  */
+    size_t           cd_nelmts;                        /*number of elements in cd_values[]     */
+    unsigned         _cd_values[H5Z_COMMON_CD_VALUES]; /*internal client data values           */
+    unsigned        *cd_values;                        /*client data values                    */
+    /* Per-slot type tags for H5O_PLINE_VERSION_3; NULL = all H5Z_SLOT_UINT32 */
+    H5Z_slot_type_t  _cd_types[H5Z_COMMON_CD_VALUES];  /*internal type tags                   */
+    H5Z_slot_type_t *cd_types;                          /*type tags (NULL = all UINT32)        */
 };
 
 /*****************************/
@@ -71,6 +74,7 @@ struct H5O_pline_t; /*forward decl*/
 /* Internal API routines */
 H5_DLL herr_t H5Z_init(void);
 H5_DLL herr_t H5Z_register(const H5Z_class2_t *cls);
+H5_DLL herr_t H5Z_register3(const H5Z_class3_t *cls);
 H5_DLL herr_t H5Z_append(struct H5O_pline_t *pline, H5Z_filter_t filter, unsigned flags, size_t cd_nelmts,
                          const unsigned int cd_values[]);
 H5_DLL herr_t H5Z_modify(const struct H5O_pline_t *pline, H5Z_filter_t filter, unsigned flags,
@@ -79,6 +83,9 @@ H5_DLL herr_t H5Z_pipeline(const struct H5O_pline_t *pline, unsigned flags, unsi
                            H5Z_EDC_t edc_read, H5Z_cb_t cb_struct, size_t *nbytes /*in,out*/,
                            size_t *buf_size /*in,out*/, void **buf /*in,out*/);
 H5_DLL herr_t H5Z_find(bool attempt, H5Z_filter_t id, H5Z_class2_t **cls);
+/* Find filter entry; returns pointer into internal table (cast-compatible with H5Z_class2_t *) */
+struct H5Z_entry_t; /* forward decl; full def in H5Zpkg.h */
+H5_DLL herr_t H5Z_find_entry(bool attempt, H5Z_filter_t id, struct H5Z_entry_t **entry);
 H5_DLL herr_t H5Z_can_apply(hid_t dcpl_id, hid_t type_id);
 H5_DLL herr_t H5Z_set_local(hid_t dcpl_id, hid_t type_id);
 H5_DLL herr_t H5Z_can_apply_direct(const struct H5O_pline_t *pline);

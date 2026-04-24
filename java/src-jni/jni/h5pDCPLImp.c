@@ -1388,6 +1388,74 @@ done:
     return (jstring)str;
 } /* end Java_hdf_hdf5lib_H5_H5Pget_1virtual_1prefix */
 
+/*
+ * Class:     hdf_hdf5lib_H5
+ * Method:    H5Pset_filter2
+ * Signature: (JIILjava/lang/String;)I
+ */
+JNIEXPORT jint JNICALL
+Java_hdf_hdf5lib_H5_H5Pset_1filter2(JNIEnv *env, jclass clss, jlong plist_id, jint filter_id, jint flags,
+                                    jstring params)
+{
+    const char *c_params = NULL;
+    jboolean    isCopy;
+    herr_t      status = FAIL;
+
+    UNUSED(clss);
+
+    if (params)
+        PIN_JAVA_STRING(ENVONLY, params, c_params, &isCopy, "H5Pset_filter2: params string not pinned");
+
+    if ((status = H5Pset_filter2((hid_t)plist_id, (H5Z_filter_t)filter_id, (unsigned)flags, c_params)) < 0)
+        H5_LIBRARY_ERROR(ENVONLY);
+
+done:
+    if (c_params)
+        UNPIN_JAVA_STRING(ENVONLY, params, c_params);
+
+    return (jint)status;
+} /* end Java_hdf_hdf5lib_H5_H5Pset_1filter2 */
+
+/*
+ * Class:     hdf_hdf5lib_H5
+ * Method:    H5Pget_filter_params_by_idx
+ * Signature: (JI[Ljava/lang/String;)I
+ */
+JNIEXPORT jint JNICALL
+Java_hdf_hdf5lib_H5_H5Pget_1filter_1params_1by_1idx(JNIEnv *env, jclass clss, jlong plist_id, jint idx,
+                                                     jobjectArray params)
+{
+    jstring str;
+    char   *buf     = NULL;
+    size_t  plen    = 0;
+    herr_t  status  = FAIL;
+
+    UNUSED(clss);
+
+    if (NULL == (buf = (char *)malloc(H5Z_CONFIG_STRING_MAX + 1)))
+        H5_OUT_OF_MEMORY_ERROR(ENVONLY, "H5Pget_filter_params_by_idx: malloc failed");
+
+    if ((status = H5Pget_filter_params_by_idx((hid_t)plist_id, (unsigned)idx, buf,
+                                               H5Z_CONFIG_STRING_MAX, &plen)) < 0)
+        H5_LIBRARY_ERROR(ENVONLY);
+
+    buf[plen < H5Z_CONFIG_STRING_MAX ? plen : H5Z_CONFIG_STRING_MAX] = '\0';
+
+    if (NULL == (str = ENVPTR->NewStringUTF(ENVONLY, buf))) {
+        CHECK_JNI_EXCEPTION(ENVONLY, JNI_TRUE);
+        H5_OUT_OF_MEMORY_ERROR(ENVONLY, "H5Pget_filter_params_by_idx: could not create string");
+    }
+
+    ENVPTR->SetObjectArrayElement(ENVONLY, params, 0, str);
+    CHECK_JNI_EXCEPTION(ENVONLY, JNI_FALSE);
+
+done:
+    if (buf)
+        free(buf);
+
+    return (jint)status;
+} /* end Java_hdf_hdf5lib_H5_H5Pget_1filter_1params_1by_1idx */
+
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif /* __cplusplus */

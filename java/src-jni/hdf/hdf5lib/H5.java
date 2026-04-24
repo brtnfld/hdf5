@@ -8425,6 +8425,49 @@ public class H5 implements java.io.Serializable {
     /**
      * @ingroup JH5P
      *
+     * H5Pset_filter2 adds a filter to the pipeline using a human-readable key=value parameter string.
+     *
+     * @param plist_id
+     *            IN: Property list identifier.
+     * @param filter_id
+     *            IN: Filter to be added.
+     * @param flags
+     *            IN: Bit vector specifying general filter properties.
+     * @param params
+     *            IN: Parameter string in "key=value" format, or null for no parameters.
+     *
+     * @return a non-negative value if successful
+     *
+     * @exception HDF5LibraryException
+     *            Error from the HDF5 Library.
+     **/
+    public synchronized static native int H5Pset_filter2(long plist_id, int filter_id, int flags,
+                                                         String params) throws HDF5LibraryException;
+
+    /**
+     * @ingroup JH5P
+     *
+     * H5Pget_filter_params_by_idx retrieves a filter's parameter string by pipeline index.
+     *
+     * @param plist_id
+     *            IN: Property list identifier.
+     * @param idx
+     *            IN: Zero-based filter index in pipeline.
+     * @param params
+     *            OUT: One-element String array to receive the parameter string.
+     *
+     * @return a non-negative value if successful
+     *
+     * @exception HDF5LibraryException
+     *            Error from the HDF5 Library.
+     **/
+    public synchronized static native int H5Pget_filter_params_by_idx(long plist_id, int idx,
+                                                                       String[] params)
+        throws HDF5LibraryException;
+
+    /**
+     * @ingroup JH5P
+     *
      * H5Pget_nfilters returns the number of filters defined in the filter pipeline associated with the
      * property list plist.
      *
@@ -15661,6 +15704,27 @@ public class H5 implements java.io.Serializable {
      *            Error from the HDF5 Library.
      **/
     public synchronized static native int H5Zunregister(int filter) throws HDF5LibraryException;
+
+    /**
+     * @ingroup JH5Z
+     *
+     * H5Zconfig_get_param retrieves a single named parameter from a filter parameter string.
+     *
+     * @param params
+     *            IN: Full parameter string (e.g. "level=6,mode=fast").
+     * @param key
+     *            IN: Name of the parameter to look up.
+     * @param value
+     *            OUT: One-element String array to receive the found value.
+     *
+     * @return positive if found, 0 if not found, negative on error
+     *
+     * @exception HDF5LibraryException
+     *            Error from the HDF5 Library.
+     **/
+    public synchronized static native int H5Zconfig_get_param(String params, String key,
+                                                               String[] value)
+        throws HDF5LibraryException;
 
     // /////// unimplemented ////////
 
