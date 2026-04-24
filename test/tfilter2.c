@@ -229,11 +229,11 @@ h5_run_filter_roundtrip(hid_t file, const char *dset_name, hsize_t *dims, hsize_
                         H5Z_filter_t filter_id, const char *params, int *wbuf, int *rbuf,
                         size_t total_elements)
 {
-    hid_t   sid  = H5I_INVALID_HID;
-    hid_t   dcpl = H5I_INVALID_HID;
-    hid_t   dset = H5I_INVALID_HID;
-    size_t  i;
-    herr_t  ret = FAIL;
+    hid_t  sid  = H5I_INVALID_HID;
+    hid_t  dcpl = H5I_INVALID_HID;
+    hid_t  dset = H5I_INVALID_HID;
+    size_t i;
+    herr_t ret = FAIL;
 
     if ((sid = H5Screate_simple(ndims, dims, NULL)) < 0)
         goto done;
@@ -281,8 +281,8 @@ test_roundtrip_deflate(hid_t file)
     TESTING("Round-trip: deflate=level=6 write/read");
     for (i = 0; i < 32 * 32; i++)
         wbuf[i] = i;
-    if (h5_run_filter_roundtrip(file, "deflate_rt", dims, chunks, 2, H5Z_FILTER_DEFLATE, "level=6",
-                                wbuf, rbuf, 32 * 32) < 0)
+    if (h5_run_filter_roundtrip(file, "deflate_rt", dims, chunks, 2, H5Z_FILTER_DEFLATE, "level=6", wbuf,
+                                rbuf, 32 * 32) < 0)
         TEST_ERROR;
     PASSED();
     return 0;
@@ -301,8 +301,8 @@ test_roundtrip_shuffle(hid_t file)
     TESTING("Round-trip: shuffle write/read");
     for (i = 0; i < 64; i++)
         wbuf[i] = i;
-    if (h5_run_filter_roundtrip(file, "shuffle_rt", dims, chunks, 1, H5Z_FILTER_SHUFFLE, NULL,
-                                wbuf, rbuf, 64) < 0)
+    if (h5_run_filter_roundtrip(file, "shuffle_rt", dims, chunks, 1, H5Z_FILTER_SHUFFLE, NULL, wbuf, rbuf,
+                                64) < 0)
         TEST_ERROR;
     PASSED();
     return 0;
@@ -321,8 +321,8 @@ test_roundtrip_fletcher32(hid_t file)
     TESTING("Round-trip: fletcher32 write/read");
     for (i = 0; i < 32; i++)
         wbuf[i] = i * 3;
-    if (h5_run_filter_roundtrip(file, "fletcher32_rt", dims, chunks, 1, H5Z_FILTER_FLETCHER32, NULL,
-                                wbuf, rbuf, 32) < 0)
+    if (h5_run_filter_roundtrip(file, "fletcher32_rt", dims, chunks, 1, H5Z_FILTER_FLETCHER32, NULL, wbuf,
+                                rbuf, 32) < 0)
         TEST_ERROR;
     PASSED();
     return 0;
@@ -423,7 +423,7 @@ error:
 static int
 test_scaleoffset_params(hid_t file)
 {
-    hid_t   dcpl = H5I_INVALID_HID;
+    hid_t   dcpl      = H5I_INVALID_HID;
     hsize_t dims[1]   = {32};
     hsize_t chunks[1] = {8};
     int     wbuf[32], rbuf[32];
