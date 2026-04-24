@@ -38,6 +38,7 @@
 MODULE H5Z
 
   USE H5GLOBAL
+  USE H5fortkit
   IMPLICIT NONE
 
 CONTAINS
@@ -144,6 +145,53 @@ CONTAINS
     hdferr = h5zget_filter_info_c(filter, config_flags)
 
   END SUBROUTINE h5zget_filter_info_f
+
+!>
+!! \ingroup FH5Z
+!!
+!! \brief Retrieves a single named parameter from a filter parameter string.
+!!
+!! \param params    Full parameter string (e.g. "level=6,mode=fast").
+!! \param key       Name of the parameter to retrieve.
+!! \param value_buf Buffer to receive the value string.
+!! \param buf_size  On entry: size of value_buf; on exit: length of value found.
+!! \param hdferr    Returns > 0 if found, 0 if not found, -1 on error.
+!!
+!! See C API: @ref H5Zconfig_get_param()
+!!
+  SUBROUTINE h5zconfig_get_param_f(params, key, value_buf, buf_size, hdferr)
+    IMPLICIT NONE
+    CHARACTER(LEN=*), INTENT(IN)    :: params
+    CHARACTER(LEN=*), INTENT(IN)    :: key
+    CHARACTER(LEN=*), INTENT(OUT)   :: value_buf
+    INTEGER(SIZE_T),  INTENT(INOUT) :: buf_size
+    INTEGER,          INTENT(OUT)   :: hdferr
+
+    CHARACTER(LEN=LEN_TRIM(params)+1,KIND=C_CHAR)      :: c_params
+    CHARACTER(LEN=LEN_TRIM(key)+1,KIND=C_CHAR)         :: c_key
+    CHARACTER(LEN=1,KIND=C_CHAR), DIMENSION(1:LEN(value_buf)+1) :: c_valbuf
+    INTEGER(SIZE_T)                                     :: c_bufsz
+
+    INTERFACE
+       INTEGER(C_INT) FUNCTION H5Zconfig_get_param(params_c, key_c, value_buf_c, buf_size_c) &
+            BIND(C,NAME='H5Zconfig_get_param')
+         IMPORT :: C_INT, C_CHAR, SIZE_T
+         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN)    :: params_c
+         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN)    :: key_c
+         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(OUT)   :: value_buf_c
+         INTEGER(SIZE_T),                      INTENT(INOUT) :: buf_size_c
+       END FUNCTION H5Zconfig_get_param
+    END INTERFACE
+
+    c_params = TRIM(params)//C_NULL_CHAR
+    c_key    = TRIM(key)//C_NULL_CHAR
+    c_bufsz  = INT(LEN(value_buf), SIZE_T)
+    hdferr   = INT(H5Zconfig_get_param(c_params, c_key, c_valbuf, c_bufsz))
+    buf_size = c_bufsz
+    IF (hdferr > 0) &
+       CALL HD5c2fstring(value_buf, c_valbuf, LEN(value_buf, KIND=SIZE_T), &
+                         LEN(value_buf, KIND=SIZE_T)+1_SIZE_T)
+  END SUBROUTINE h5zconfig_get_param_f
 
 END MODULE H5Z
 

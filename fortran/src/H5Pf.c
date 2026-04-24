@@ -4787,3 +4787,4 @@ h5pget_mpio_actual_io_mode_c(hid_t_f *dxpl_id, int_f *actual_io_mode)
     return ret_value;
 }
 #endif /*H5_HAVE_PARALLEL*/
+
