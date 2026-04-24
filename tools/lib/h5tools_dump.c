@@ -3702,7 +3702,7 @@ h5tools_dump_dcpl(FILE *stream, const h5tool_format_t *info, h5tools_context_t *
 
                 /* optional human-readable parameter string */
                 if (dcpl_id >= 0) {
-                    char   pbuf[512];
+                    char   pbuf[H5Z_CONFIG_STRING_MAX + 1];
                     size_t plen = 0;
                     if (H5Pget_filter_params_by_idx(dcpl_id, (unsigned)i, pbuf, sizeof(pbuf), &plen) >= 0 &&
                         plen > 0) {

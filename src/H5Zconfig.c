@@ -345,14 +345,18 @@ H5Zconfig_get_param(const char *params, const char *key, char *value_buf, size_t
         HGOTO_DONE(false);
 
     /* Key was found — report size and optionally copy value */
-    if (buf_size)
-        *buf_size = found_val_len;
-    if (value_buf && buf_size && *buf_size >= found_val_len) {
-        H5MM_memcpy(value_buf, found_val, found_val_len + 1);
-    }
-    else if (value_buf) {
-        /* Caller provided a buffer but size wasn't passed correctly;
-         * still populate buf_size so caller can retry */
+    {
+        size_t in_size = buf_size ? *buf_size : 0;
+        if (buf_size)
+            *buf_size = found_val_len;
+        if (value_buf) {
+            if (in_size > found_val_len)
+                H5MM_memcpy(value_buf, found_val, found_val_len + 1);
+            else if (in_size > 0) {
+                H5MM_memcpy(value_buf, found_val, in_size - 1);
+                value_buf[in_size - 1] = '\0';
+            }
+        }
     }
 
     ret_value = true;

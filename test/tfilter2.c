@@ -221,173 +221,112 @@ error:
 /* -----------------------------------------------------------------------
  * Round-trip tests: write and read a chunked dataset through the new API
  * ---------------------------------------------------------------------- */
-static int
-test_roundtrip_deflate(hid_t file)
+
+/* Shared helper: create dataset with H5Pset_filter2, write wbuf, read back
+ * into rbuf, verify every element matches.  Returns SUCCEED or FAIL. */
+static herr_t
+h5_run_filter_roundtrip(hid_t file, const char *dset_name, hsize_t *dims, hsize_t *chunks, int ndims,
+                        H5Z_filter_t filter_id, const char *params, int *wbuf, int *rbuf,
+                        size_t total_elements)
 {
-    hid_t   dset = H5I_INVALID_HID, dcpl = H5I_INVALID_HID;
-    hid_t   sid       = H5I_INVALID_HID;
-    hsize_t dims[2]   = {32, 32};
-    hsize_t chunks[2] = {8, 8};
-    int     wbuf[32][32], rbuf[32][32];
-    int     i, j;
+    hid_t   sid  = H5I_INVALID_HID;
+    hid_t   dcpl = H5I_INVALID_HID;
+    hid_t   dset = H5I_INVALID_HID;
+    size_t  i;
+    herr_t  ret = FAIL;
 
-    TESTING("Round-trip: deflate=level=6 write/read");
-
-    for (i = 0; i < 32; i++)
-        for (j = 0; j < 32; j++)
-            wbuf[i][j] = i * 32 + j;
-
-    if ((sid = H5Screate_simple(2, dims, NULL)) < 0)
-        TEST_ERROR;
+    if ((sid = H5Screate_simple(ndims, dims, NULL)) < 0)
+        goto done;
     if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
-        TEST_ERROR;
-    if (H5Pset_chunk(dcpl, 2, chunks) < 0)
-        TEST_ERROR;
-    if (H5Pset_filter2(dcpl, H5Z_FILTER_DEFLATE, 0, "level=6") < 0)
-        TEST_ERROR;
+        goto done;
+    if (H5Pset_chunk(dcpl, ndims, chunks) < 0)
+        goto done;
+    if (H5Pset_filter2(dcpl, filter_id, 0, params) < 0)
+        goto done;
 
-    if ((dset = H5Dcreate2(file, "deflate_rt", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
-        TEST_ERROR;
+    if ((dset = H5Dcreate2(file, dset_name, H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
+        goto done;
     if (H5Dwrite(dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, wbuf) < 0)
-        TEST_ERROR;
-
+        goto done;
     H5Dclose(dset);
     dset = H5I_INVALID_HID;
 
-    if ((dset = H5Dopen2(file, "deflate_rt", H5P_DEFAULT)) < 0)
-        TEST_ERROR;
+    if ((dset = H5Dopen2(file, dset_name, H5P_DEFAULT)) < 0)
+        goto done;
     if (H5Dread(dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, rbuf) < 0)
-        TEST_ERROR;
-    for (i = 0; i < 32; i++)
-        for (j = 0; j < 32; j++)
-            if (rbuf[i][j] != wbuf[i][j])
-                TEST_ERROR;
+        goto done;
+    for (i = 0; i < total_elements; i++)
+        if (rbuf[i] != wbuf[i])
+            goto done;
+    ret = SUCCEED;
 
-    H5Dclose(dset);
-    H5Sclose(sid);
-    H5Pclose(dcpl);
-    PASSED();
-    return 0;
-
-error:
+done:
     if (dset != H5I_INVALID_HID)
         H5Dclose(dset);
-    if (sid != H5I_INVALID_HID)
-        H5Sclose(sid);
     if (dcpl != H5I_INVALID_HID)
         H5Pclose(dcpl);
+    if (sid != H5I_INVALID_HID)
+        H5Sclose(sid);
+    return ret;
+}
+
+static int
+test_roundtrip_deflate(hid_t file)
+{
+    hsize_t dims[2]   = {32, 32};
+    hsize_t chunks[2] = {8, 8};
+    int     wbuf[32 * 32], rbuf[32 * 32];
+    int     i;
+
+    TESTING("Round-trip: deflate=level=6 write/read");
+    for (i = 0; i < 32 * 32; i++)
+        wbuf[i] = i;
+    if (h5_run_filter_roundtrip(file, "deflate_rt", dims, chunks, 2, H5Z_FILTER_DEFLATE, "level=6",
+                                wbuf, rbuf, 32 * 32) < 0)
+        TEST_ERROR;
+    PASSED();
+    return 0;
+error:
     return -1;
 }
 
 static int
 test_roundtrip_shuffle(hid_t file)
 {
-    hid_t   dset = H5I_INVALID_HID, dcpl = H5I_INVALID_HID;
-    hid_t   sid       = H5I_INVALID_HID;
     hsize_t dims[1]   = {64};
     hsize_t chunks[1] = {16};
     int     wbuf[64], rbuf[64];
     int     i;
 
     TESTING("Round-trip: shuffle write/read");
-
     for (i = 0; i < 64; i++)
         wbuf[i] = i;
-
-    if ((sid = H5Screate_simple(1, dims, NULL)) < 0)
+    if (h5_run_filter_roundtrip(file, "shuffle_rt", dims, chunks, 1, H5Z_FILTER_SHUFFLE, NULL,
+                                wbuf, rbuf, 64) < 0)
         TEST_ERROR;
-    if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
-        TEST_ERROR;
-    if (H5Pset_chunk(dcpl, 1, chunks) < 0)
-        TEST_ERROR;
-    if (H5Pset_filter2(dcpl, H5Z_FILTER_SHUFFLE, 0, NULL) < 0)
-        TEST_ERROR;
-
-    if ((dset = H5Dcreate2(file, "shuffle_rt", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
-        TEST_ERROR;
-    if (H5Dwrite(dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, wbuf) < 0)
-        TEST_ERROR;
-
-    H5Dclose(dset);
-    dset = H5I_INVALID_HID;
-
-    if ((dset = H5Dopen2(file, "shuffle_rt", H5P_DEFAULT)) < 0)
-        TEST_ERROR;
-    if (H5Dread(dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, rbuf) < 0)
-        TEST_ERROR;
-    for (i = 0; i < 64; i++)
-        if (rbuf[i] != wbuf[i])
-            TEST_ERROR;
-
-    H5Dclose(dset);
-    H5Sclose(sid);
-    H5Pclose(dcpl);
     PASSED();
     return 0;
-
 error:
-    if (dset != H5I_INVALID_HID)
-        H5Dclose(dset);
-    if (sid != H5I_INVALID_HID)
-        H5Sclose(sid);
-    if (dcpl != H5I_INVALID_HID)
-        H5Pclose(dcpl);
     return -1;
 }
 
 static int
 test_roundtrip_fletcher32(hid_t file)
 {
-    hid_t   dset = H5I_INVALID_HID, dcpl = H5I_INVALID_HID;
-    hid_t   sid       = H5I_INVALID_HID;
     hsize_t dims[1]   = {32};
     hsize_t chunks[1] = {8};
     int     wbuf[32], rbuf[32];
     int     i;
 
     TESTING("Round-trip: fletcher32 write/read");
-
     for (i = 0; i < 32; i++)
         wbuf[i] = i * 3;
-
-    if ((sid = H5Screate_simple(1, dims, NULL)) < 0)
+    if (h5_run_filter_roundtrip(file, "fletcher32_rt", dims, chunks, 1, H5Z_FILTER_FLETCHER32, NULL,
+                                wbuf, rbuf, 32) < 0)
         TEST_ERROR;
-    if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
-        TEST_ERROR;
-    if (H5Pset_chunk(dcpl, 1, chunks) < 0)
-        TEST_ERROR;
-    if (H5Pset_filter2(dcpl, H5Z_FILTER_FLETCHER32, 0, NULL) < 0)
-        TEST_ERROR;
-
-    if ((dset = H5Dcreate2(file, "fletcher32_rt", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
-        TEST_ERROR;
-    if (H5Dwrite(dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, wbuf) < 0)
-        TEST_ERROR;
-
-    H5Dclose(dset);
-    dset = H5I_INVALID_HID;
-
-    if ((dset = H5Dopen2(file, "fletcher32_rt", H5P_DEFAULT)) < 0)
-        TEST_ERROR;
-    if (H5Dread(dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, rbuf) < 0)
-        TEST_ERROR;
-    for (i = 0; i < 32; i++)
-        if (rbuf[i] != wbuf[i])
-            TEST_ERROR;
-
-    H5Dclose(dset);
-    H5Sclose(sid);
-    H5Pclose(dcpl);
     PASSED();
     return 0;
-
 error:
-    if (dset != H5I_INVALID_HID)
-        H5Dclose(dset);
-    if (sid != H5I_INVALID_HID)
-        H5Sclose(sid);
-    if (dcpl != H5I_INVALID_HID)
-        H5Pclose(dcpl);
     return -1;
 }
 
@@ -484,8 +423,7 @@ error:
 static int
 test_scaleoffset_params(hid_t file)
 {
-    hid_t   dset = H5I_INVALID_HID, dcpl = H5I_INVALID_HID;
-    hid_t   sid       = H5I_INVALID_HID;
+    hid_t   dcpl = H5I_INVALID_HID;
     hsize_t dims[1]   = {32};
     hsize_t chunks[1] = {8};
     int     wbuf[32], rbuf[32];
@@ -495,52 +433,30 @@ test_scaleoffset_params(hid_t file)
 
     TESTING("Round-trip: scaleoffset scale_type=int,scale_factor=0");
 
-    for (i = 0; i < 32; i++)
-        wbuf[i] = i * 2;
-
-    if ((sid = H5Screate_simple(1, dims, NULL)) < 0)
-        TEST_ERROR;
+    /* Verify get_config round-trip on the dcpl before writing */
     if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
         TEST_ERROR;
     if (H5Pset_chunk(dcpl, 1, chunks) < 0)
         TEST_ERROR;
     if (H5Pset_filter2(dcpl, H5Z_FILTER_SCALEOFFSET, 0, "scale_type=int,scale_factor=0") < 0)
         TEST_ERROR;
-
-    /* Check get_config round-trip */
     plen = 0;
     if (H5Pget_filter_params_by_idx(dcpl, 0, pbuf, sizeof(pbuf), &plen) < 0)
         TEST_ERROR;
     if (plen == 0)
         TEST_ERROR;
-
-    if ((dset = H5Dcreate2(file, "scaleoffset_rt", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
-        TEST_ERROR;
-    if (H5Dwrite(dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, wbuf) < 0)
-        TEST_ERROR;
-
-    H5Dclose(dset);
-    dset = H5I_INVALID_HID;
-
-    if ((dset = H5Dopen2(file, "scaleoffset_rt", H5P_DEFAULT)) < 0)
-        TEST_ERROR;
-    if (H5Dread(dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, rbuf) < 0)
-        TEST_ERROR;
-    for (i = 0; i < 32; i++)
-        if (rbuf[i] != wbuf[i])
-            TEST_ERROR;
-
-    H5Dclose(dset);
-    H5Sclose(sid);
     H5Pclose(dcpl);
+    dcpl = H5I_INVALID_HID;
+
+    for (i = 0; i < 32; i++)
+        wbuf[i] = i * 2;
+    if (h5_run_filter_roundtrip(file, "scaleoffset_rt", dims, chunks, 1, H5Z_FILTER_SCALEOFFSET,
+                                "scale_type=int,scale_factor=0", wbuf, rbuf, 32) < 0)
+        TEST_ERROR;
     PASSED();
     return 0;
 
 error:
-    if (dset != H5I_INVALID_HID)
-        H5Dclose(dset);
-    if (sid != H5I_INVALID_HID)
-        H5Sclose(sid);
     if (dcpl != H5I_INVALID_HID)
         H5Pclose(dcpl);
     return -1;

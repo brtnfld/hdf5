@@ -1610,8 +1610,7 @@ CONTAINS
     hdferr = INT(H5Pget_filter_params_by_idx(prp_id, INT(idx, C_INT), c_buf, &
                                               INT(LEN(params_buf), SIZE_T), params_len))
     IF (hdferr >= 0) &
-       CALL HD5c2fstring(params_buf, c_buf, LEN(params_buf, KIND=SIZE_T), &
-                         LEN(params_buf, KIND=SIZE_T)+1_SIZE_T)
+       CALL HD5c2fstring(params_buf, c_buf, params_len, params_len+1_SIZE_T)
   END SUBROUTINE h5pget_filter_params_by_idx_f
 
 !>
