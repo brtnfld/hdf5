@@ -108,4 +108,3 @@ h5zget_filter_info_c(int_f *filter, int_f *flag)
 
     return ret_value;
 }
-
