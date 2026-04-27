@@ -74,5 +74,6 @@ H5_DLLVAR H5Z_class3_t H5Z_SZIP[1];
 
 /* Package internal routines */
 H5_DLL herr_t H5Z__unregister(H5Z_filter_t filter_id);
+H5_DLL herr_t H5Z__config_validate_keys(const char *params, const char *const *known_keys);
 
 #endif /* H5Zpkg_H */

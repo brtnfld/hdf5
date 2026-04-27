@@ -224,6 +224,78 @@ done:
 }
 
 /*-------------------------------------------------------------------------
+ * Function:    H5Z__config_validate_keys
+ *
+ * Purpose:     Verify that every key in params is present in the supplied
+ *              known_keys array (NULL-terminated).  Any key not in the list
+ *              causes H5E_BADVALUE to be pushed and FAIL to be returned.
+ *              A NULL or empty params string is always valid (SUCCEED).
+ *
+ * Return:      SUCCEED / FAIL
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Z__config_validate_keys(const char *params, const char *const *known_keys)
+{
+    const char *p;
+    herr_t      ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    if (!params || *params == '\0')
+        HGOTO_DONE(SUCCEED);
+
+    if (strlen(params) > H5Z_CONFIG_STRING_MAX)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter string exceeds H5Z_CONFIG_STRING_MAX");
+
+    p = H5Z__config_skip_ws(params);
+
+    if (*p == ',')
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter string starts with a comma");
+
+    while (*p) {
+        char   tok_key[H5Z_CONFIG_MAX_KEY_LEN + 1];
+        char   tok_val[H5Z_CONFIG_STRING_MAX + 1];
+        bool   is_bare;
+        size_t ki;
+        bool   found_key = false;
+
+        p = H5Z__config_skip_ws(p);
+        if (*p == '\0')
+            break;
+
+        if (H5Z__config_parse_token(&p, tok_key, sizeof(tok_key), tok_val, sizeof(tok_val), &is_bare) < 0)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "malformed parameter token");
+
+        /* Check tok_key against every entry in known_keys */
+        if (known_keys) {
+            for (ki = 0; known_keys[ki] != NULL; ki++) {
+                /* Keys are already lowercased by the parser; compare directly */
+                if (strcmp(tok_key, known_keys[ki]) == 0) {
+                    found_key = true;
+                    break;
+                }
+            }
+        }
+        if (!found_key)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unknown parameter key '%s'", tok_key);
+
+        p = H5Z__config_skip_ws(p);
+        if (*p == ',') {
+            p++;
+            p = H5Z__config_skip_ws(p);
+            if (*p == '\0')
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter string ends with a trailing comma");
+        }
+        else if (*p != '\0')
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unexpected character after token");
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+}
+
+/*-------------------------------------------------------------------------
  * Function:    H5Zconfig_get_param
  *
  * Purpose:     Search a filter parameter string for the given key and

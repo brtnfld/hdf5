@@ -378,8 +378,8 @@ done:
  *
  * Purpose:  Register a filter using an H5Z_class3_t struct. Used for built-in
  *           filters and by H5Zregister() when version == H5Z_CLASS3_T_VERS.
- *           Validates the canonical name, populates the internal entry with
- *           v3 callbacks, and auto-registers the name in the name registry.
+ *           Validates the canonical name and populates the internal entry with
+ *           v3 callbacks.
  *
  * Return:   Non-negative on success / Negative on failure
  *-------------------------------------------------------------------------

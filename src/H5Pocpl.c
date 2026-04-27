@@ -1155,11 +1155,12 @@ H5P__get_filter(const H5Z_filter_info_t *filter, unsigned int *flags /*out*/, si
 
         /* If there's no name on the filter, use the class's filter name */
         if (!s) {
-            H5Z_class2_t *cls;
+            H5Z_entry_t *entry_p = NULL;
 
-            H5Z_find(true, filter->id, &cls);
-            if (cls)
-                s = cls->name;
+            H5Z_find_entry(true, filter->id, &entry_p);
+            if (entry_p)
+                /* For v3 plugins description is the human-readable display name */
+                s = entry_p->description ? entry_p->description : entry_p->name;
         } /* end if */
 
         /* Check for actual name */
@@ -1803,7 +1804,7 @@ H5Pset_filter2(hid_t plist_id, H5Z_filter_t filter, unsigned int flags, const ch
         if ((filter_avail = H5Z_filter_avail(filter)) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't check filter availability");
         if (!filter_avail)
-            HGOTO_ERROR(H5E_ARGS, H5E_NOTFOUND, FAIL, "filter not found; register or load it first");
+            HGOTO_ERROR(H5E_PLINE, H5E_NOFILTER, FAIL, "filter not found; register or load it first");
     }
 
     /* Get the internal entry to access v3 callbacks */

@@ -775,6 +775,12 @@ H5Z__scaleoffset_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, 
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "cd_values buffer too small for scaleoffset");
 
         if (params) {
+            static const char *const known[] = {"scale_type", "scale_factor", NULL};
+
+            if (H5Z__config_validate_keys(params, known) < 0)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                            "unknown parameter key in scaleoffset filter config");
+
             bufsz = sizeof(val_buf);
             found = H5Zconfig_get_param(params, "scale_type", val_buf, &bufsz);
             if (found < 0)

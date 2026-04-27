@@ -129,6 +129,7 @@ static struct h5_long_options l_opts[] = {{"attribute", require_arg, 'a'},
                                           {"vfd-value", require_arg, '4'},
                                           {"vfd-name", require_arg, '5'},
                                           {"vfd-info", require_arg, '6'},
+                                          {"filter-params", no_arg, '7'},
                                           {NULL, 0, '\0'}};
 
 /*-------------------------------------------------------------------------
@@ -1262,6 +1263,10 @@ end_collect:
 
             case '6':
                 vfd_info_g.info = (const void *)H5_optarg;
+                break;
+
+            case '7':
+                dump_opts.display_filter_params = true;
                 break;
 
             case '?':

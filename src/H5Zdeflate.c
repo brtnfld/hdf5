@@ -71,9 +71,13 @@ H5Z__deflate_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, size
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "cd_values buffer too small");
 
         if (params) {
-            char   val_buf[64];
-            size_t bufsz = sizeof(val_buf);
-            htri_t found;
+            static const char *const known[] = {"level", NULL};
+            char                     val_buf[64];
+            size_t                   bufsz = sizeof(val_buf);
+            htri_t                   found;
+
+            if (H5Z__config_validate_keys(params, known) < 0)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unknown parameter key in deflate filter config");
 
             found = H5Zconfig_get_param(params, "level", val_buf, &bufsz);
             if (found < 0)

@@ -759,6 +759,25 @@ H5O_pline_set_version(H5F_t *f, H5O_pline_t *pline)
     /* Upgrade to the version indicated by the file's low bound if higher */
     version = MAX(pline->version, H5O_pline_ver_bounds[H5F_LOW_BOUND(f)]);
 
+    /* VERSION_3 carries per-slot type tags and is only useful when at least
+     * one slot is not H5Z_SLOT_UINT32.  Downgrade to VERSION_2 otherwise so
+     * we don't write unnecessary bytes or force readers to handle V3. */
+    if (version >= H5O_PLINE_VERSION_3) {
+        bool has_typed_slots = false;
+        for (size_t vi = 0; vi < pline->nused && !has_typed_slots; vi++) {
+            if (pline->filter[vi].cd_types) {
+                for (size_t vj = 0; vj < pline->filter[vi].cd_nelmts; vj++) {
+                    if (pline->filter[vi].cd_types[vj] != H5Z_SLOT_UINT32) {
+                        has_typed_slots = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if (!has_typed_slots)
+            version = H5O_PLINE_VERSION_2;
+    }
+
     /* Version bounds check */
     if (version > H5O_pline_ver_bounds[H5F_HIGH_BOUND(f)])
         HGOTO_ERROR(H5E_PLINE, H5E_BADRANGE, FAIL, "Filter pipeline version out of bounds");

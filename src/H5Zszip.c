@@ -82,6 +82,11 @@ H5Z__szip_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, size_t 
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "cd_values buffer too small for szip");
 
         if (params) {
+            static const char *const known[] = {"coding", "pixels_per_block", NULL};
+
+            if (H5Z__config_validate_keys(params, known) < 0)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unknown parameter key in szip filter config");
+
             /* coding = entropy | nn */
             bufsz = sizeof(val_buf);
             found = H5Zconfig_get_param(params, "coding", val_buf, &bufsz);
