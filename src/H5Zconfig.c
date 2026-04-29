@@ -18,23 +18,30 @@
  *
  * Grammar (normative, from RFC-HDFG-2026-001):
  *
- *   param-string  = '' | param-list
- *   param-list    = param (',' param)*
- *   param         = key '=' value | key          (bare key = boolean flag)
- *   key           = printable-ascii-no-special+
- *   value         = bare-value | quoted-value
- *   bare-value    = printable-ascii-no-special+
- *   quoted-value  = '"' (non-quote | '""')* '"'
+ *   param-string   = '' | param-list
+ *   param-list     = param (',' param)*
+ *   param          = key '=' value | key         (bare key = boolean flag)
+ *   key            = printable-ascii-no-special+
+ *   value          = bare-value | dquoted-value | squoted-value
+ *   bare-value     = printable-ascii-no-special+
+ *   dquoted-value  = '"' (non-dquote | '""')* '"'
+ *   squoted-value  = "'" non-squote* "'"
  *
  * where printable-ascii-no-special is U+0021-U+007E excluding ',', '=', '"', ';'.
+ *
+ * Single-quoted values allow embedding double quotes without escaping, which is
+ * convenient when setting parameters via shell double-quoted env var assignments:
+ *   export HDF5_FILTER_PARAMS="desc='fast compression',level=6"
+ * Double-quoted values use "" (doubling) to embed a literal double quote.
+ * Single-quoted values have no escape mechanism; they cannot contain a literal '.
  *
  * Additional constraints (all cause H5E_BADVALUE on error return):
  *   - String length must not exceed H5Z_CONFIG_STRING_MAX
  *   - Token count must not exceed H5Z_CONFIG_MAX_PARAMS
  *   - Empty keys (token starts with '=') are rejected
  *   - 'key=' (equals with no value) is rejected
- *   - key="" (quoted empty string) is rejected
- *   - Unbalanced opening quote is rejected
+ *   - key="" or key='' (quoted empty string) is rejected
+ *   - Unbalanced opening quote (double or single) is rejected
  *   - Duplicate keys are rejected
  *   - Bare semicolons outside quotes are rejected (reserved)
  */
@@ -157,7 +164,7 @@ H5Z__config_parse_token(const char **pp, char *key_out, size_t key_cap, char *va
 
     /* --- Collect value --- */
     if (*p == '"') {
-        /* Quoted value */
+        /* Double-quoted value; "" inside the quotes is an escaped literal " */
         size_t vlen = 0;
         p++; /* consume opening quote */
         for (;;) {
@@ -195,6 +202,34 @@ H5Z__config_parse_token(const char **pp, char *key_out, size_t key_cap, char *va
         if (*p != '\0' && *p != ',')
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                         "unexpected characters after closing quote for key '%s'", key_out);
+    }
+    else if (*p == '\'') {
+        /* Single-quoted value; no escape mechanism — cannot embed a literal ' */
+        size_t vlen = 0;
+        p++; /* consume opening single quote */
+        for (;;) {
+            if (*p == '\0')
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                            "unbalanced single-quote in parameter value for key '%s'", key_out);
+            if (*p == '\'') {
+                p++; /* consume closing single quote */
+                break;
+            }
+            if (vlen + 1 >= val_cap)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "value exceeds maximum length");
+            val_out[vlen++] = *p++;
+        }
+        val_out[vlen] = '\0';
+
+        if (vlen == 0)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "single-quoted empty string value for key '%s' is not allowed", key_out);
+
+        /* After closing single quote, must be end-of-string or comma */
+        p = H5Z__config_skip_ws(p);
+        if (*p != '\0' && *p != ',')
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "unexpected characters after closing single-quote for key '%s'", key_out);
     }
     else {
         /* Bare value */

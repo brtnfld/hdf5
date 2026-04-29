@@ -56,12 +56,30 @@ test_parser(void)
         TEST_ERROR;
     PASSED();
 
-    TESTING("H5Zconfig_get_param quoted value");
+    TESTING("H5Zconfig_get_param double-quoted value");
     vsz = sizeof(vbuf);
     ret = H5Zconfig_get_param("name=\"hello world\"", "name", vbuf, &vsz);
     if (ret <= 0)
         TEST_ERROR;
     if (strcmp(vbuf, "hello world") != 0)
+        TEST_ERROR;
+    PASSED();
+
+    TESTING("H5Zconfig_get_param single-quoted value");
+    vsz = sizeof(vbuf);
+    ret = H5Zconfig_get_param("name='hello world'", "name", vbuf, &vsz);
+    if (ret <= 0)
+        TEST_ERROR;
+    if (strcmp(vbuf, "hello world") != 0)
+        TEST_ERROR;
+    PASSED();
+
+    TESTING("H5Zconfig_get_param single-quoted value with embedded double quote");
+    vsz = sizeof(vbuf);
+    ret = H5Zconfig_get_param("desc='say \"hello\"'", "desc", vbuf, &vsz);
+    if (ret <= 0)
+        TEST_ERROR;
+    if (strcmp(vbuf, "say \"hello\"") != 0)
         TEST_ERROR;
     PASSED();
 
@@ -104,6 +122,28 @@ test_parser(void)
     if (ret <= 0)
         TEST_ERROR;
     if (strcmp(vbuf, "6") != 0)
+        TEST_ERROR;
+    PASSED();
+
+    TESTING("H5Zconfig_get_param unbalanced single-quote error");
+    H5E_BEGIN_TRY
+    {
+        vsz = sizeof(vbuf);
+        ret = H5Zconfig_get_param("path='/no/closing", "path", vbuf, &vsz);
+    }
+    H5E_END_TRY
+    if (ret >= 0)
+        TEST_ERROR;
+    PASSED();
+
+    TESTING("H5Zconfig_get_param empty single-quoted value error");
+    H5E_BEGIN_TRY
+    {
+        vsz = sizeof(vbuf);
+        ret = H5Zconfig_get_param("key=''", "key", vbuf, &vsz);
+    }
+    H5E_END_TRY
+    if (ret >= 0)
         TEST_ERROR;
     PASSED();
 
