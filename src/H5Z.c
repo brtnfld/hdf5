@@ -334,7 +334,7 @@ H5Z_register(const H5Z_class2_t *cls)
     entry.can_apply       = cls->can_apply;
     entry.set_local       = cls->set_local;
     entry.filter          = cls->filter;
-    /* description, set_config, get_config remain NULL */
+    /* filter_title, set_config, get_config remain NULL for v1/v2 */
 
     /* Is the filter already registered? */
     for (i = 0; i < H5Z_table_used_g; i++)
@@ -402,13 +402,13 @@ H5Z_register3(const H5Z_class3_t *cls)
     entry.id              = cls->id;
     entry.encoder_present = cls->encoder_present;
     entry.decoder_present = cls->decoder_present;
-    entry.name            = cls->name; /* canonical name in the name field */
-    entry.can_apply       = cls->can_apply;
-    entry.set_local       = cls->set_local;
-    entry.filter          = cls->filter;
-    entry.description     = cls->description;
-    entry.set_config      = cls->set_config;
-    entry.get_config      = cls->get_config;
+    entry.name         = NULL; /* v3 struct has no canonical name field */
+    entry.can_apply    = cls->can_apply;
+    entry.set_local    = cls->set_local;
+    entry.filter       = cls->filter;
+    entry.filter_title = cls->filter_title;
+    entry.set_config   = cls->set_config;
+    entry.get_config   = cls->get_config;
 
     /* Is the filter already registered? */
     for (i = 0; i < H5Z_table_used_g; i++)
@@ -1315,16 +1315,13 @@ H5Z_append(H5O_pline_t *pline, H5Z_filter_t filter, unsigned flags, size_t cd_ne
 
         /* Each filter's data may be stored internally or may be
          * a separate block of memory.
-         * For each filter, if cd_values (or cd_types) points to the internal
-         * array _cd_values (or _cd_types), the pointer will need to be updated
-         * when the filter struct is reallocated.  Set these pointers to ~NULL
-         * so that we can reset them after reallocating the filters array.
+         * For each filter, if cd_values points to the internal array _cd_values,
+         * the pointer will need to be updated when the filter struct is reallocated.
+         * Set the pointer to ~NULL so that we can reset it after reallocating.
          */
         for (n = 0; n < pline->nalloc; ++n) {
             if (pline->filter[n].cd_values == pline->filter[n]._cd_values)
                 pline->filter[n].cd_values = (unsigned *)((void *)~((size_t)NULL));
-            if (pline->filter[n].cd_types == pline->filter[n]._cd_types)
-                pline->filter[n].cd_types = (H5Z_slot_type_t *)((void *)~((size_t)NULL));
         }
 
         x.nalloc = MAX(H5Z_MAX_NFILTERS, 2 * pline->nalloc);
@@ -1338,8 +1335,6 @@ H5Z_append(H5O_pline_t *pline, H5Z_filter_t filter, unsigned flags, size_t cd_ne
         for (n = 0; n < pline->nalloc; ++n) {
             if (x.filter[n].cd_values == (void *)~((size_t)NULL))
                 x.filter[n].cd_values = x.filter[n]._cd_values;
-            if (x.filter[n].cd_types == (H5Z_slot_type_t *)((void *)~((size_t)NULL)))
-                x.filter[n].cd_types = x.filter[n]._cd_types;
         }
 
         /* Point to newly allocated buffer */
@@ -1353,7 +1348,6 @@ H5Z_append(H5O_pline_t *pline, H5Z_filter_t filter, unsigned flags, size_t cd_ne
     pline->filter[idx].flags     = flags;
     pline->filter[idx].name      = NULL; /*we'll pick it up later*/
     pline->filter[idx].cd_nelmts = cd_nelmts;
-    pline->filter[idx].cd_types  = NULL; /*no type tags by default*/
     if (cd_nelmts > 0) {
         size_t i; /* Local index variable */
 

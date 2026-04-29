@@ -2754,24 +2754,33 @@ H5_DLL herr_t H5Pset_filter(hid_t plist_id, H5Z_filter_t filter, unsigned int fl
 /**
  * \ingroup OCPL
  *
- * \brief Adds a filter to the pipeline using a human-readable parameter string
+ * \brief Configures a filter and appends it to the pipeline
  *
  * \ocpl_id{plist_id}
  * \param[in] filter  Filter identifier
  * \param[in] flags   Bit vector of filter flags (see H5Pset_filter())
- * \param[in] params  Comma-separated \c key=value configuration string, or NULL
+ * \param[in] params  Pointer to an #H5Z_params_t describing the filter configuration,
+ *                    or NULL for filters that take no parameters
  *
  * \return \herr_t
  *
- * \details H5Pset_filter2() is a string-based alternative to H5Pset_filter().
- *          The \p params string is passed to the filter's \c set_config callback
- *          (if registered) which converts it into the internal \c cd_values
- *          representation.  If the filter has no \c set_config callback, \p params
- *          must be NULL; passing a non-NULL \p params to such a filter is an error.
+ * \details H5Pappend_filter() configures the filter identified by \p filter and
+ *          appends it to the existing filter pipeline on \p plist_id.  The pipeline
+ *          is subject to the existing maximum of #H5Z_MAX_NFILTERS (32) entries.
+ *
+ *          When \p params is NULL or \c type is #H5Z_PARAMS_CDVALUES, the function
+ *          behaves identically to H5Pset_filter().
+ *
+ *          When \c type is #H5Z_PARAMS_STRING, the library locates or loads the
+ *          filter plugin, invokes its \c set_config callback to translate the
+ *          parameter string into \c cd_values, and stores the result.  The plugin
+ *          must be available at call time; if it cannot be found,
+ *          H5Pappend_filter() returns \c H5E_NOFILTER immediately.
  *
  * \since 2.2.0
  */
-H5_DLL herr_t H5Pset_filter2(hid_t plist_id, H5Z_filter_t filter, unsigned int flags, const char *params);
+H5_DLL herr_t H5Pappend_filter(hid_t plist_id, H5Z_filter_t filter, unsigned int flags,
+                                const H5Z_params_t *params);
 /**
  * \ingroup OCPL
  *

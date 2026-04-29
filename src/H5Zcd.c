@@ -305,3 +305,105 @@ H5Zcd_unpack_string(const unsigned *slots, size_t n_slots, char *buf, size_t buf
 done:
     FUNC_LEAVE_API_NOINIT(ret_value)
 }
+
+/*-------------------------------------------------------------------------
+ * Function: H5Zcd_pack_int64
+ *
+ * Purpose:  Encode an int64_t into two consecutive unsigned int cd_values
+ *           slots using little-endian two's-complement layout.
+ *
+ *   slots[0] = low  32 bits
+ *   slots[1] = high 32 bits
+ *
+ * Return:   Non-negative on success / Negative on failure
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Zcd_pack_int64(int64_t val, unsigned *slots, size_t cap, size_t *n_used)
+{
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_API_NOINIT
+
+    if (n_used)
+        *n_used = 2;
+
+    if (slots) {
+        uint8_t  buf[8];
+        uint32_t lo, hi;
+
+        if (cap < 2)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "cd_values buffer too small for int64 (need 2 slots)");
+
+        H5MM_memcpy(buf, &val, 8);
+
+#if H5ZCD_BIG_ENDIAN
+        lo = ((uint32_t)buf[7]) | ((uint32_t)buf[6] << 8) | ((uint32_t)buf[5] << 16) |
+             ((uint32_t)buf[4] << 24);
+        hi = ((uint32_t)buf[3]) | ((uint32_t)buf[2] << 8) | ((uint32_t)buf[1] << 16) |
+             ((uint32_t)buf[0] << 24);
+#else
+        lo = ((uint32_t)buf[0]) | ((uint32_t)buf[1] << 8) | ((uint32_t)buf[2] << 16) |
+             ((uint32_t)buf[3] << 24);
+        hi = ((uint32_t)buf[4]) | ((uint32_t)buf[5] << 8) | ((uint32_t)buf[6] << 16) |
+             ((uint32_t)buf[7] << 24);
+#endif
+        slots[0] = lo;
+        slots[1] = hi;
+    }
+
+done:
+    FUNC_LEAVE_API_NOINIT(ret_value)
+}
+
+/*-------------------------------------------------------------------------
+ * Function: H5Zcd_unpack_int64
+ *
+ * Purpose:  Decode an int64_t from two consecutive unsigned int cd_values
+ *           slots (little-endian layout).
+ *
+ * Return:   Non-negative on success / Negative on failure
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Zcd_unpack_int64(const unsigned *slots, size_t n_slots, int64_t *val)
+{
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_API_NOINIT
+
+    if (!slots || !val)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "NULL pointer");
+    if (n_slots < 2)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "need at least 2 slots to unpack int64");
+
+    {
+        uint8_t buf[8];
+        uint32_t lo = (uint32_t)slots[0];
+        uint32_t hi = (uint32_t)slots[1];
+
+#if H5ZCD_BIG_ENDIAN
+        buf[0] = (uint8_t)(hi >> 24);
+        buf[1] = (uint8_t)(hi >> 16);
+        buf[2] = (uint8_t)(hi >> 8);
+        buf[3] = (uint8_t)(hi);
+        buf[4] = (uint8_t)(lo >> 24);
+        buf[5] = (uint8_t)(lo >> 16);
+        buf[6] = (uint8_t)(lo >> 8);
+        buf[7] = (uint8_t)(lo);
+#else
+        buf[0] = (uint8_t)(lo);
+        buf[1] = (uint8_t)(lo >> 8);
+        buf[2] = (uint8_t)(lo >> 16);
+        buf[3] = (uint8_t)(lo >> 24);
+        buf[4] = (uint8_t)(hi);
+        buf[5] = (uint8_t)(hi >> 8);
+        buf[6] = (uint8_t)(hi >> 16);
+        buf[7] = (uint8_t)(hi >> 24);
+#endif
+        H5MM_memcpy(val, buf, 8);
+    }
+
+done:
+    FUNC_LEAVE_API_NOINIT(ret_value)
+}

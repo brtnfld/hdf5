@@ -8425,7 +8425,7 @@ public class H5 implements java.io.Serializable {
     /**
      * @ingroup JH5P
      *
-     * H5Pset_filter2 adds a filter to the pipeline using a human-readable key=value parameter string.
+     * H5Pappend_filter adds a filter to the pipeline using a human-readable key=value parameter string.
      *
      * @param plist_id
      *            IN: Property list identifier.
@@ -8441,8 +8441,42 @@ public class H5 implements java.io.Serializable {
      * @exception HDF5LibraryException
      *            Error from the HDF5 Library.
      **/
-    public synchronized static native int H5Pset_filter2(long plist_id, int filter_id, int flags,
-                                                         String params) throws HDF5LibraryException;
+    public synchronized static int H5Pappend_filter(long plist_id, int filter_id, int flags, String params)
+        throws HDF5LibraryException
+    {
+        return H5Pappend_filter_str(plist_id, filter_id, flags, params);
+    }
+
+    private synchronized static native int H5Pappend_filter_str(long plist_id, int filter_id, int flags,
+                                                                String params) throws HDF5LibraryException;
+
+    /**
+     * @ingroup JH5P
+     *
+     * H5Pappend_filter adds a filter to the pipeline using raw cd_values parameters.
+     *
+     * @param plist_id
+     *            IN: Property list identifier.
+     * @param filter_id
+     *            IN: Filter to be added.
+     * @param flags
+     *            IN: Bit vector specifying general filter properties.
+     * @param cd_values
+     *            IN: Auxiliary data for the filter, or null for no parameters.
+     *
+     * @return a non-negative value if successful
+     *
+     * @exception HDF5LibraryException
+     *            Error from the HDF5 Library.
+     **/
+    public synchronized static int H5Pappend_filter(long plist_id, int filter_id, int flags, int[] cd_values)
+        throws HDF5LibraryException
+    {
+        return H5Pappend_filter_raw(plist_id, filter_id, flags, cd_values);
+    }
+
+    private synchronized static native int H5Pappend_filter_raw(long plist_id, int filter_id, int flags,
+                                                                int[] cd_values) throws HDF5LibraryException;
 
     /**
      * @ingroup JH5P

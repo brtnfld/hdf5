@@ -19,6 +19,7 @@
  */
 
 #include "H5f90.h"
+#include "H5Zpublic.h"
 
 /****if* H5Zf/h5zunregister_c
  * NAME
@@ -107,4 +108,28 @@ h5zget_filter_info_c(int_f *filter, int_f *flag)
     *flag     = (int_f)c_flag;
 
     return ret_value;
+}
+
+/* Thin C helpers for Fortran BIND(C) -- Fortran cannot represent H5Z_params_t
+   (a C union), so these helpers construct the appropriate H5Z_params_t value
+   and call H5Pappend_filter. */
+
+herr_t
+H5Pappend_filter_str_c(hid_t plist, H5Z_filter_t id, unsigned flags, const char *params)
+{
+    H5Z_params_t p;
+    p.type  = H5Z_PARAMS_STRING;
+    p.u.str = params;
+    return H5Pappend_filter(plist, id, flags, &p);
+}
+
+herr_t
+H5Pappend_filter_raw_c(hid_t plist, H5Z_filter_t id, unsigned flags, size_t cd_nelmts,
+                       const unsigned *cd_values)
+{
+    H5Z_params_t p;
+    p.type            = H5Z_PARAMS_CDVALUES;
+    p.u.raw.cd_nelmts = cd_nelmts;
+    p.u.raw.cd_values = cd_values;
+    return H5Pappend_filter(plist, id, flags, &p);
 }

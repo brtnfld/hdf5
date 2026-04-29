@@ -12393,7 +12393,8 @@ public class H5 implements java.io.Serializable {
     /**
      * @ingroup JH5P
      *
-     * H5Pset_filter2 adds a filter to the filter pipeline using a human-readable key=value parameter string.
+     * H5Pappend_filter adds a filter to the filter pipeline using a human-readable key=value parameter
+     * string.
      *
      * @param plist_id
      *            IN: Property list identifier.
@@ -12409,29 +12410,93 @@ public class H5 implements java.io.Serializable {
      * @exception HDF5LibraryException
      *            Error from the HDF5 Library.
      **/
-    public static int H5Pset_filter2(long plist_id, int filter_id, int flags, String params)
+    public static int H5Pappend_filter(long plist_id, int filter_id, int flags, String params)
         throws HDF5LibraryException
     {
         if (plist_id < 0)
             throw new HDF5FunctionArgumentException("Negative property list identifier");
 
         int retVal = -1;
+        /* H5Z_params_t layout (64-bit): int type(4) + pad(4) + union(16) = 24 bytes */
+        final int H5Z_PARAMS_STRING = 1;
         try (Arena arena = Arena.ofConfined()) {
-            MemorySegment params_seg =
-                (params != null && !params.isEmpty()) ? arena.allocateFrom(params) : MemorySegment.NULL;
+            MemorySegment str_seg     = (params != null && !params.isEmpty())
+                                            ? arena.allocateFrom(params)
+                                            : MemorySegment.NULL;
+            MemorySegment params_struct = arena.allocate(24, 8);
+            params_struct.set(ValueLayout.JAVA_INT, 0, H5Z_PARAMS_STRING);
+            params_struct.set(ValueLayout.ADDRESS, 8, str_seg);
             MethodHandle mh = Linker.nativeLinker().downcallHandle(
                 SymbolLookup.loaderLookup()
-                    .find("H5Pset_filter2")
-                    .orElseThrow(() -> new HDF5LibraryException("H5Pset_filter2 not found in library")),
+                    .find("H5Pappend_filter")
+                    .orElseThrow(
+                        () -> new HDF5LibraryException("H5Pappend_filter not found in library")),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.JAVA_LONG, ValueLayout.JAVA_INT,
                                       ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
-            retVal = (int)mh.invokeExact(plist_id, filter_id, flags, params_seg);
+            retVal = (int)mh.invokeExact(plist_id, filter_id, flags, params_struct);
         }
         catch (HDF5LibraryException e) {
             throw e;
         }
         catch (Throwable t) {
-            throw new HDF5LibraryException("H5Pset_filter2 failed: " + t.getMessage());
+            throw new HDF5LibraryException("H5Pappend_filter failed: " + t.getMessage());
+        }
+        if (retVal < 0)
+            h5libraryError();
+        return retVal;
+    }
+
+    /**
+     * @ingroup JH5P
+     *
+     * H5Pappend_filter adds a filter to the filter pipeline using raw cd_values parameters.
+     *
+     * @param plist_id
+     *            IN: Property list identifier.
+     * @param filter_id
+     *            IN: Filter to be added to the pipeline.
+     * @param flags
+     *            IN: Bit vector specifying certain general properties of the filter.
+     * @param cd_values
+     *            IN: Auxiliary data for the filter, or null for no parameters.
+     *
+     * @return a non-negative value if successful
+     *
+     * @exception HDF5LibraryException
+     *            Error from the HDF5 Library.
+     **/
+    public static int H5Pappend_filter(long plist_id, int filter_id, int flags, int[] cd_values)
+        throws HDF5LibraryException
+    {
+        if (plist_id < 0)
+            throw new HDF5FunctionArgumentException("Negative property list identifier");
+
+        int retVal = -1;
+        int nelmts = (cd_values != null) ? cd_values.length : 0;
+        /* H5Z_params_t layout (64-bit): int type(4) + pad(4) + union(16) = 24 bytes */
+        final int H5Z_PARAMS_CDVALUES = 0;
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment cd_seg = arena.allocate(ValueLayout.JAVA_INT, Math.max(nelmts, 1));
+            for (int i = 0; i < nelmts; i++)
+                cd_seg.setAtIndex(ValueLayout.JAVA_INT, i, cd_values[i]);
+            MemorySegment params_struct = arena.allocate(24, 8);
+            params_struct.set(ValueLayout.JAVA_INT, 0, H5Z_PARAMS_CDVALUES);
+            params_struct.set(ValueLayout.JAVA_LONG, 8, (long)nelmts);
+            params_struct.set(ValueLayout.ADDRESS, 16, nelmts > 0 ? cd_seg : MemorySegment.NULL);
+            MethodHandle mh = Linker.nativeLinker().downcallHandle(
+                SymbolLookup.loaderLookup()
+                    .find("H5Pappend_filter")
+                    .orElseThrow(
+                        () -> new HDF5LibraryException("H5Pappend_filter not found in library")),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.JAVA_LONG, ValueLayout.JAVA_INT,
+                                      ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
+            retVal = (int)mh.invokeExact(plist_id, filter_id, flags, params_struct);
+        }
+        catch (HDF5LibraryException e) {
+            throw e;
+        }
+        catch (Throwable t) {
+            throw new HDF5LibraryException("H5Pappend_filter failed: " + t.getMessage());
         }
         if (retVal < 0)
             h5libraryError();

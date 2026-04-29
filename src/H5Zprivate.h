@@ -57,9 +57,6 @@ struct H5Z_filter_info_t {
     size_t       cd_nelmts;                        /*number of elements in cd_values[]     */
     unsigned     _cd_values[H5Z_COMMON_CD_VALUES]; /*internal client data values           */
     unsigned    *cd_values;                        /*client data values                    */
-    /* Per-slot type tags for H5O_PLINE_VERSION_3; NULL = all H5Z_SLOT_UINT32 */
-    H5Z_slot_type_t  _cd_types[H5Z_COMMON_CD_VALUES]; /*internal type tags                   */
-    H5Z_slot_type_t *cd_types;                        /*type tags (NULL = all UINT32)        */
 };
 
 /*****************************/

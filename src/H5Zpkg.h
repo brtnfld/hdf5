@@ -37,7 +37,7 @@ typedef struct H5Z_entry_t {
     H5Z_set_local_func_t set_local;
     H5Z_func_t           filter;
     /* --- V3 extensions (NULL for v1/v2 plugins) --- */
-    const char           *description; /* display string; may be NULL */
+    const char           *filter_title; /* human-readable label packed into cd_values; may be NULL */
     H5Z_set_config_func_t set_config;
     H5Z_get_config_func_t get_config;
 } H5Z_entry_t;

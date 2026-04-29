@@ -12,7 +12,7 @@
 
 /*
  * Tests for RFC-HDFG-2026-001: String-Based Filter Configuration API
- *   - H5Pset_filter2 / H5Pget_filter_params_by_idx
+ *   - H5Pappend_filter / H5Pget_filter_params_by_idx
  *   - H5Zconfig_get_param parser
  *   - Built-in filter set_config / get_config round-trips
  *   - Name registry (H5Z_filter_id_by_name)
@@ -114,7 +114,7 @@ error:
 }
 
 /* -----------------------------------------------------------------------
- * H5Pset_filter2 / H5Pget_filter_params_by_idx callback contract tests
+ * H5Pappend_filter / H5Pget_filter_params_by_idx callback contract tests
  * ---------------------------------------------------------------------- */
 static int
 test_callback_contracts(void)
@@ -123,41 +123,45 @@ test_callback_contracts(void)
     char   pbuf[256];
     size_t plen;
 
-    TESTING("H5Pset_filter2: deflate with level=6");
+    TESTING("H5Pappend_filter: deflate with level=6");
     if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
         TEST_ERROR;
-    if (H5Pset_filter2(dcpl, H5Z_FILTER_DEFLATE, 0, "level=6") < 0)
-        TEST_ERROR;
+    {
+        H5Z_params_t _p = H5Z_PARAMS_STR("level=6");
+        if (H5Pappend_filter(dcpl, H5Z_FILTER_DEFLATE, 0, &_p) < 0)
+            TEST_ERROR;
+    }
     if (H5Pget_nfilters(dcpl) != 1)
         TEST_ERROR;
     H5Pclose(dcpl);
     dcpl = H5I_INVALID_HID;
     PASSED();
 
-    TESTING("H5Pset_filter2: deflate default (no params)");
+    TESTING("H5Pappend_filter: deflate default (no params)");
     if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
         TEST_ERROR;
-    if (H5Pset_filter2(dcpl, H5Z_FILTER_DEFLATE, 0, NULL) < 0)
+    if (H5Pappend_filter(dcpl, H5Z_FILTER_DEFLATE, 0, NULL) < 0)
         TEST_ERROR;
     H5Pclose(dcpl);
     dcpl = H5I_INVALID_HID;
     PASSED();
 
-    TESTING("H5Pset_filter2: shuffle (no params)");
+    TESTING("H5Pappend_filter: shuffle (no params)");
     if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
         TEST_ERROR;
-    if (H5Pset_filter2(dcpl, H5Z_FILTER_SHUFFLE, 0, NULL) < 0)
+    if (H5Pappend_filter(dcpl, H5Z_FILTER_SHUFFLE, 0, NULL) < 0)
         TEST_ERROR;
     H5Pclose(dcpl);
     dcpl = H5I_INVALID_HID;
     PASSED();
 
-    TESTING("H5Pset_filter2: shuffle rejects params");
+    TESTING("H5Pappend_filter: shuffle rejects params");
     if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
         TEST_ERROR;
     H5E_BEGIN_TRY
     {
-        herr_t ret = H5Pset_filter2(dcpl, H5Z_FILTER_SHUFFLE, 0, "blocksize=8");
+        H5Z_params_t _p   = H5Z_PARAMS_STR("blocksize=8");
+        herr_t       ret  = H5Pappend_filter(dcpl, H5Z_FILTER_SHUFFLE, 0, &_p);
         if (ret >= 0)
             TEST_ERROR;
     }
@@ -169,8 +173,11 @@ test_callback_contracts(void)
     TESTING("H5Pget_filter_params_by_idx: deflate level=9");
     if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
         TEST_ERROR;
-    if (H5Pset_filter2(dcpl, H5Z_FILTER_DEFLATE, 0, "level=9") < 0)
-        TEST_ERROR;
+    {
+        H5Z_params_t _p = H5Z_PARAMS_STR("level=9");
+        if (H5Pappend_filter(dcpl, H5Z_FILTER_DEFLATE, 0, &_p) < 0)
+            TEST_ERROR;
+    }
     plen = 0;
     if (H5Pget_filter_params_by_idx(dcpl, 0, pbuf, sizeof(pbuf), &plen) < 0)
         TEST_ERROR;
@@ -186,7 +193,7 @@ test_callback_contracts(void)
     TESTING("H5Pget_filter_params_by_idx: fallback for filter without get_config");
     if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
         TEST_ERROR;
-    if (H5Pset_filter2(dcpl, H5Z_FILTER_SHUFFLE, 0, NULL) < 0)
+    if (H5Pappend_filter(dcpl, H5Z_FILTER_SHUFFLE, 0, NULL) < 0)
         TEST_ERROR;
     plen = 0;
     /* Fletcher32 has no get_config, should fall back to cd_values= format */
@@ -196,12 +203,13 @@ test_callback_contracts(void)
     dcpl = H5I_INVALID_HID;
     PASSED();
 
-    TESTING("H5Pset_filter2: invalid level rejects");
+    TESTING("H5Pappend_filter: invalid level rejects");
     if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
         TEST_ERROR;
     H5E_BEGIN_TRY
     {
-        herr_t ret = H5Pset_filter2(dcpl, H5Z_FILTER_DEFLATE, 0, "level=99");
+        H5Z_params_t _p  = H5Z_PARAMS_STR("level=99");
+        herr_t       ret = H5Pappend_filter(dcpl, H5Z_FILTER_DEFLATE, 0, &_p);
         if (ret >= 0)
             TEST_ERROR;
     }
@@ -222,11 +230,11 @@ error:
  * Round-trip tests: write and read a chunked dataset through the new API
  * ---------------------------------------------------------------------- */
 
-/* Shared helper: create dataset with H5Pset_filter2, write wbuf, read back
+/* Shared helper: create dataset with H5Pappend_filter, write wbuf, read back
  * into rbuf, verify every element matches.  Returns SUCCEED or FAIL. */
 static herr_t
 h5_run_filter_roundtrip(hid_t file, const char *dset_name, hsize_t *dims, hsize_t *chunks, int ndims,
-                        H5Z_filter_t filter_id, const char *params, int *wbuf, int *rbuf,
+                        H5Z_filter_t filter_id, const H5Z_params_t *params, int *wbuf, int *rbuf,
                         size_t total_elements)
 {
     hid_t  sid  = H5I_INVALID_HID;
@@ -241,7 +249,7 @@ h5_run_filter_roundtrip(hid_t file, const char *dset_name, hsize_t *dims, hsize_
         goto done;
     if (H5Pset_chunk(dcpl, ndims, chunks) < 0)
         goto done;
-    if (H5Pset_filter2(dcpl, filter_id, 0, params) < 0)
+    if (H5Pappend_filter(dcpl, filter_id, 0, params) < 0)
         goto done;
 
     if ((dset = H5Dcreate2(file, dset_name, H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
@@ -281,9 +289,12 @@ test_roundtrip_deflate(hid_t file)
     TESTING("Round-trip: deflate=level=6 write/read");
     for (i = 0; i < 32 * 32; i++)
         wbuf[i] = i;
-    if (h5_run_filter_roundtrip(file, "deflate_rt", dims, chunks, 2, H5Z_FILTER_DEFLATE, "level=6", wbuf,
-                                rbuf, 32 * 32) < 0)
-        TEST_ERROR;
+    {
+        H5Z_params_t _p = H5Z_PARAMS_STR("level=6");
+        if (h5_run_filter_roundtrip(file, "deflate_rt", dims, chunks, 2, H5Z_FILTER_DEFLATE, &_p, wbuf,
+                                    rbuf, 32 * 32) < 0)
+            TEST_ERROR;
+    }
     PASSED();
     return 0;
 error:
@@ -396,14 +407,17 @@ test_regression_filter2_appends(void)
     hid_t dcpl = H5I_INVALID_HID;
     int   nfilters;
 
-    TESTING("Regression: H5Pset_filter2 appends (matches H5Pset_filter behavior)");
+    TESTING("Regression: H5Pappend_filter appends (matches H5Pset_filter behavior)");
 
     if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
         TEST_ERROR;
-    if (H5Pset_filter2(dcpl, H5Z_FILTER_SHUFFLE, 0, NULL) < 0)
+    if (H5Pappend_filter(dcpl, H5Z_FILTER_SHUFFLE, 0, NULL) < 0)
         TEST_ERROR;
-    if (H5Pset_filter2(dcpl, H5Z_FILTER_DEFLATE, 0, "level=3") < 0)
-        TEST_ERROR;
+    {
+        H5Z_params_t _p = H5Z_PARAMS_STR("level=3");
+        if (H5Pappend_filter(dcpl, H5Z_FILTER_DEFLATE, 0, &_p) < 0)
+            TEST_ERROR;
+    }
     if ((nfilters = H5Pget_nfilters(dcpl)) != 2)
         TEST_ERROR;
 
@@ -438,8 +452,11 @@ test_scaleoffset_params(hid_t file)
         TEST_ERROR;
     if (H5Pset_chunk(dcpl, 1, chunks) < 0)
         TEST_ERROR;
-    if (H5Pset_filter2(dcpl, H5Z_FILTER_SCALEOFFSET, 0, "scale_type=int,scale_factor=0") < 0)
-        TEST_ERROR;
+    {
+        H5Z_params_t _p = H5Z_PARAMS_STR("scale_type=int,scale_factor=0");
+        if (H5Pappend_filter(dcpl, H5Z_FILTER_SCALEOFFSET, 0, &_p) < 0)
+            TEST_ERROR;
+    }
     plen = 0;
     if (H5Pget_filter_params_by_idx(dcpl, 0, pbuf, sizeof(pbuf), &plen) < 0)
         TEST_ERROR;
@@ -450,9 +467,12 @@ test_scaleoffset_params(hid_t file)
 
     for (i = 0; i < 32; i++)
         wbuf[i] = i * 2;
-    if (h5_run_filter_roundtrip(file, "scaleoffset_rt", dims, chunks, 1, H5Z_FILTER_SCALEOFFSET,
-                                "scale_type=int,scale_factor=0", wbuf, rbuf, 32) < 0)
-        TEST_ERROR;
+    {
+        H5Z_params_t _p = H5Z_PARAMS_STR("scale_type=int,scale_factor=0");
+        if (h5_run_filter_roundtrip(file, "scaleoffset_rt", dims, chunks, 1, H5Z_FILTER_SCALEOFFSET, &_p,
+                                    wbuf, rbuf, 32) < 0)
+            TEST_ERROR;
+    }
     PASSED();
     return 0;
 
@@ -545,7 +565,7 @@ main(void)
     /* cd_packing helper tests */
     nerrors += test_cd_packing() < 0 ? 1 : 0;
 
-    /* H5Pset_filter2 callback contract tests */
+    /* H5Pappend_filter callback contract tests */
     nerrors += test_callback_contracts() < 0 ? 1 : 0;
 
     /* Round-trip tests */

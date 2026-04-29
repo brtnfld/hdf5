@@ -36,13 +36,12 @@ static herr_t H5Z__deflate_get_config(unsigned flags, size_t cd_nelmts, const un
 
 /* This message derives from H5Z */
 const H5Z_class3_t H5Z_DEFLATE[1] = {{
-    H5Z_CLASS3_T_VERS,            /* H5Z_class_t version */
-    H5Z_FILTER_DEFLATE,           /* Filter id number */
-    1,                            /* encoder_present flag (set to true) */
-    1,                            /* decoder_present flag (set to true) */
-    "deflate",                    /* Canonical name */
-    "deflate (zlib) compression", /* Description */
-    NULL,                         /* The "can apply" callback */
+    H5Z_CLASS3_T_VERS,  /* H5Z_class_t version */
+    H5Z_FILTER_DEFLATE, /* Filter id number */
+    1,                  /* encoder_present flag (set to true) */
+    1,                  /* decoder_present flag (set to true) */
+    NULL,               /* filter_title (NULL: no title packed into cd_values) */
+    NULL,               /* The "can apply" callback */
     NULL,                         /* The "set local" callback */
     H5Z__filter_deflate,          /* The actual filter function */
     H5Z__deflate_set_config,      /* String config setter */

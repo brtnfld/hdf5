@@ -226,8 +226,7 @@ typedef struct H5Z_class3_t {
     H5Z_filter_t          id;              /**< Filter ID number                           */
     unsigned              encoder_present; /**< Does this filter have an encoder?          */
     unsigned              decoder_present; /**< Does this filter have a decoder?           */
-    const char           *name;            /**< Canonical identifier (e.g. "zfp", "blosc2") */
-    const char           *description;     /**< Human-readable display string; may be NULL */
+    const char           *filter_title;    /**< Optional human-readable label; may be NULL */
     H5Z_can_apply_func_t  can_apply;       /**< The "can apply" callback for a filter      */
     H5Z_set_local_func_t  set_local;       /**< The "set local" callback for a filter      */
     H5Z_func_t            filter;          /**< The actual filter function                 */
@@ -235,21 +234,6 @@ typedef struct H5Z_class3_t {
     H5Z_get_config_func_t get_config;      /**< Parameter string reconstruction; may be NULL */
 } H5Z_class3_t;
 //! <!-- [H5Z_class3_t_snip] -->
-
-/**
- * \brief Per-slot type tags for typed cd_values encoding (H5O_PLINE_VERSION_3).
- *
- * \since 2.2.0
- */
-typedef enum H5Z_slot_type_t {
-    H5Z_SLOT_UINT32   = 0, /**< unsigned int — default; version-2 compatible               */
-    H5Z_SLOT_INT32    = 1, /**< int32_t two's-complement bitcast                           */
-    H5Z_SLOT_FLOAT    = 2, /**< float IEEE 754 memcpy into one slot                        */
-    H5Z_SLOT_DBL_LO   = 3, /**< double: lower 32 bits (little-endian memcpy)               */
-    H5Z_SLOT_DBL_HI   = 4, /**< double: upper 32 bits; MUST immediately follow DBL_LO      */
-    H5Z_SLOT_STR_LEN  = 5, /**< uint32 = byte length; followed by STR_DATA slots           */
-    H5Z_SLOT_STR_DATA = 6  /**< 4 bytes null-padded string data                            */
-} H5Z_slot_type_t;
 
 /********************/
 /* Public Variables */
@@ -325,6 +309,20 @@ H5_DLL herr_t H5Zcd_pack_string(const char *str, unsigned *slots, size_t cap, si
  * \since 2.2.0
  */
 H5_DLL herr_t H5Zcd_unpack_string(const unsigned *slots, size_t n_slots, char *buf, size_t bufsz);
+
+/**
+ * \ingroup H5Z
+ * \brief Pack an int64_t value into two consecutive unsigned int cd_values slots (little-endian).
+ * \since 2.2.0
+ */
+H5_DLL herr_t H5Zcd_pack_int64(int64_t val, unsigned *slots, size_t cap, size_t *n_used);
+
+/**
+ * \ingroup H5Z
+ * \brief Unpack an int64_t value from two consecutive unsigned int cd_values slots.
+ * \since 2.2.0
+ */
+H5_DLL herr_t H5Zcd_unpack_int64(const unsigned *slots, size_t n_slots, int64_t *val);
 
 /**
  * \ingroup H5Z

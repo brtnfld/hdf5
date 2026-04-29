@@ -295,6 +295,48 @@ typedef enum H5Z_cb_return_t {
 typedef H5Z_cb_return_t (*H5Z_filter_func_t)(H5Z_filter_t filter, void *buf, size_t buf_size, void *op_data);
 //! <!-- [H5Z_filter_func_t_snip] -->
 
+/**
+ * \brief Selects how filter parameters are specified in H5Pappend_filter().
+ * \since 2.2.0
+ */
+typedef enum {
+    H5Z_PARAMS_CDVALUES = 0, /**< raw cd_values array (same as H5Pset_filter) */
+    H5Z_PARAMS_STRING   = 1  /**< human-readable key=value string              */
+} H5Z_params_type_t;
+
+/**
+ * \brief Tagged-union parameter descriptor passed to H5Pappend_filter().
+ * \since 2.2.0
+ */
+typedef struct {
+    H5Z_params_type_t type;
+    union {
+        struct {
+            size_t          cd_nelmts;
+            const unsigned *cd_values;
+        } raw;
+        const char *str;
+    } u;
+} H5Z_params_t;
+
+#ifdef __cplusplus
+/* C++ does not support C99 compound literals.
+   H5Z_PARAMS_RAW can be expressed as a brace-initialised aggregate.
+   H5Z_PARAMS_STR cannot: a C++ aggregate initialiser cannot carry a
+   runtime pointer argument without risking silent argument loss.
+   C++ callers MUST use the named-variable form instead. */
+#define H5Z_PARAMS_RAW(n, vals) (H5Z_params_t{H5Z_PARAMS_CDVALUES, {{(n), (vals)}}})
+#define H5Z_PARAMS_STR(s)                                                                            \
+    static_assert(false,                                                                             \
+                  "H5Z_PARAMS_STR is not available in C++. "                                         \
+                  "Use the named-variable form: "                                                    \
+                  "H5Z_params_t p; p.type = H5Z_PARAMS_STRING; p.u.str = (s);")
+#else
+/* C99: compound literals with designated initialisers */
+#define H5Z_PARAMS_RAW(n, vals) ((H5Z_params_t){H5Z_PARAMS_CDVALUES, {.raw = {(n), (vals)}}})
+#define H5Z_PARAMS_STR(s)       ((H5Z_params_t){H5Z_PARAMS_STRING, {.str = (s)}})
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
