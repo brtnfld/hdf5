@@ -299,7 +299,7 @@ test_modify_filter_pattern(void)
     /* Retrieve current cd_values */
     cd_nelmts = 8;
     if (H5Pget_filter_by_id2(dcpl, H5Z_FILTER_DEFLATE, &flags, &cd_nelmts, cd_values, sizeof(name), name,
-                              &config) < 0)
+                             &config) < 0)
         TEST_ERROR;
     if (cd_nelmts < 1)
         TEST_ERROR;
@@ -316,7 +316,7 @@ test_modify_filter_pattern(void)
     /* Read back and confirm level=9 */
     cd_nelmts = 8;
     if (H5Pget_filter_by_id2(dcpl, H5Z_FILTER_DEFLATE, &flags, &cd_nelmts, cd_values, sizeof(name), name,
-                              &config) < 0)
+                             &config) < 0)
         TEST_ERROR;
     if (cd_values[0] != 9)
         TEST_ERROR;
