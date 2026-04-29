@@ -267,6 +267,85 @@ error:
 }
 
 /* -----------------------------------------------------------------------
+ * Modify-filter pattern test
+ *
+ * There is no H5Pmodify_filter2 (string-based).  The documented pattern for
+ * updating a filter's parameters on a copied DCPL is:
+ *   1. H5Pget_filter_by_id2 → retrieve current cd_values
+ *   2. Mutate cd_values in place
+ *   3. H5Pmodify_filter → write back
+ *
+ * This test verifies that a filter appended via the string API produces
+ * cd_values that round-trip correctly through this pattern.
+ * ---------------------------------------------------------------------- */
+static int
+test_modify_filter_pattern(void)
+{
+    hid_t    dcpl_orig = H5I_INVALID_HID;
+    hid_t    dcpl      = H5I_INVALID_HID;
+    unsigned flags;
+    size_t   cd_nelmts;
+    unsigned cd_values[8];
+    char     name[64];
+    unsigned config;
+
+    TESTING("modify filter params: H5Pget_filter_by_id2 + H5Pmodify_filter");
+
+    /* Build original DCPL with deflate level=6 via string API */
+    if ((dcpl_orig = H5Pcreate(H5P_DATASET_CREATE)) < 0)
+        TEST_ERROR;
+    {
+        H5Z_params_t _p = H5Z_PARAMS_STR("level=6");
+        if (H5Pappend_filter(dcpl_orig, H5Z_FILTER_DEFLATE, 0, &_p) < 0)
+            TEST_ERROR;
+    }
+
+    /* Copy it — simulates a caller receiving a DCPL they did not create */
+    if ((dcpl = H5Pcopy(dcpl_orig)) < 0)
+        TEST_ERROR;
+
+    /* Retrieve current cd_values */
+    cd_nelmts = 8;
+    if (H5Pget_filter_by_id2(dcpl, H5Z_FILTER_DEFLATE, &flags, &cd_nelmts, cd_values, sizeof(name), name,
+                              &config) < 0)
+        TEST_ERROR;
+    if (cd_nelmts < 1)
+        TEST_ERROR;
+
+    /* Verify level=6 is present before modification */
+    if (cd_values[0] != 6)
+        TEST_ERROR;
+
+    /* Bump level to 9 and write back */
+    cd_values[0] = 9;
+    if (H5Pmodify_filter(dcpl, H5Z_FILTER_DEFLATE, flags, cd_nelmts, cd_values) < 0)
+        TEST_ERROR;
+
+    /* Read back and confirm level=9 */
+    cd_nelmts = 8;
+    if (H5Pget_filter_by_id2(dcpl, H5Z_FILTER_DEFLATE, &flags, &cd_nelmts, cd_values, sizeof(name), name,
+                              &config) < 0)
+        TEST_ERROR;
+    if (cd_values[0] != 9)
+        TEST_ERROR;
+
+    H5Pclose(dcpl_orig);
+    H5Pclose(dcpl);
+    PASSED();
+
+    return 0;
+
+error:
+    H5E_BEGIN_TRY
+    {
+        H5Pclose(dcpl_orig);
+        H5Pclose(dcpl);
+    }
+    H5E_END_TRY
+    return -1;
+}
+
+/* -----------------------------------------------------------------------
  * Round-trip tests: write and read a chunked dataset through the new API
  * ---------------------------------------------------------------------- */
 
@@ -607,6 +686,9 @@ main(void)
 
     /* H5Pappend_filter callback contract tests */
     nerrors += test_callback_contracts() < 0 ? 1 : 0;
+
+    /* Modify-filter pattern (H5Pget_filter_by_id2 + H5Pmodify_filter) */
+    nerrors += test_modify_filter_pattern() < 0 ? 1 : 0;
 
     /* Round-trip tests */
     nerrors += test_roundtrip_deflate(file) < 0 ? 1 : 0;
