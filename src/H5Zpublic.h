@@ -326,11 +326,10 @@ typedef struct {
    runtime pointer argument without risking silent argument loss.
    C++ callers MUST use the named-variable form instead. */
 #define H5Z_PARAMS_RAW(n, vals) (H5Z_params_t{H5Z_PARAMS_CDVALUES, {{(n), (vals)}}})
-#define H5Z_PARAMS_STR(s)                                                                            \
-    static_assert(false,                                                                             \
-                  "H5Z_PARAMS_STR is not available in C++. "                                         \
-                  "Use the named-variable form: "                                                    \
-                  "H5Z_params_t p; p.type = H5Z_PARAMS_STRING; p.u.str = (s);")
+#define H5Z_PARAMS_STR(s)                                                                                    \
+    static_assert(false, "H5Z_PARAMS_STR is not available in C++. "                                          \
+                         "Use the named-variable form: "                                                     \
+                         "H5Z_params_t p; p.type = H5Z_PARAMS_STRING; p.u.str = (s);")
 #else
 /* C99: compound literals with designated initialisers */
 #define H5Z_PARAMS_RAW(n, vals) ((H5Z_params_t){H5Z_PARAMS_CDVALUES, {.raw = {(n), (vals)}}})

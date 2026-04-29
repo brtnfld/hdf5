@@ -200,8 +200,8 @@ test_callback_contracts(void)
         TEST_ERROR;
     H5E_BEGIN_TRY
     {
-        H5Z_params_t _p   = H5Z_PARAMS_STR("blocksize=8");
-        herr_t       ret  = H5Pappend_filter(dcpl, H5Z_FILTER_SHUFFLE, 0, &_p);
+        H5Z_params_t _p  = H5Z_PARAMS_STR("blocksize=8");
+        herr_t       ret = H5Pappend_filter(dcpl, H5Z_FILTER_SHUFFLE, 0, &_p);
         if (ret >= 0)
             TEST_ERROR;
     }
@@ -331,8 +331,8 @@ test_roundtrip_deflate(hid_t file)
         wbuf[i] = i;
     {
         H5Z_params_t _p = H5Z_PARAMS_STR("level=6");
-        if (h5_run_filter_roundtrip(file, "deflate_rt", dims, chunks, 2, H5Z_FILTER_DEFLATE, &_p, wbuf,
-                                    rbuf, 32 * 32) < 0)
+        if (h5_run_filter_roundtrip(file, "deflate_rt", dims, chunks, 2, H5Z_FILTER_DEFLATE, &_p, wbuf, rbuf,
+                                    32 * 32) < 0)
             TEST_ERROR;
     }
     PASSED();

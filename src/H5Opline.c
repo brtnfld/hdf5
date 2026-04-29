@@ -239,7 +239,6 @@ H5O__pline_decode(H5F_t H5_ATTR_UNUSED *f, H5O_t H5_ATTR_UNUSED *open_oh, unsign
                                     "ran off end of input buffer while decoding");
                     p += 4; /* padding */
                 }
-
         }
     }
 
@@ -426,9 +425,9 @@ H5O__pline_copy(const void *_src, void *_dst /*out*/)
                 else
                     dst->filter[i].cd_values = dst->filter[i]._cd_values;
 
-            }     /* end if */
-        }         /* end for */
-    }             /* end if */
+            } /* end if */
+        }     /* end for */
+    }         /* end if */
     else
         dst->filter = NULL;
 

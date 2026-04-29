@@ -1432,7 +1432,7 @@ Java_hdf_hdf5lib_H5_H5Pappend_1filter_1raw(JNIEnv *env, jclass clss, jlong plist
     H5Z_params_t p;
     jint        *c_cd_values = NULL;
     jboolean     isCopy;
-    herr_t       status   = FAIL;
+    herr_t       status    = FAIL;
     jsize        cd_nelmts = 0;
 
     UNUSED(clss);

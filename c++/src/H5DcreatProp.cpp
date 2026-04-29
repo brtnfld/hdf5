@@ -373,8 +373,8 @@ void
 DSetCreatPropList::appendFilter(H5Z_filter_t filter_id, unsigned flags, const H5std_string &params) const
 {
     H5Z_params_t p;
-    p.type  = H5Z_PARAMS_STRING;
-    p.u.str = params.c_str();
+    p.type           = H5Z_PARAMS_STRING;
+    p.u.str          = params.c_str();
     herr_t ret_value = H5Pappend_filter(id, filter_id, flags, &p);
     if (ret_value < 0)
         throw PropListIException("DSetCreatPropList::appendFilter", "H5Pappend_filter failed");

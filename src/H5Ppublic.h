@@ -2780,7 +2780,7 @@ H5_DLL herr_t H5Pset_filter(hid_t plist_id, H5Z_filter_t filter, unsigned int fl
  * \since 2.2.0
  */
 H5_DLL herr_t H5Pappend_filter(hid_t plist_id, H5Z_filter_t filter, unsigned int flags,
-                                const H5Z_params_t *params);
+                               const H5Z_params_t *params);
 /**
  * \ingroup OCPL
  *

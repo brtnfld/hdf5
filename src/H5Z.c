@@ -402,13 +402,13 @@ H5Z_register3(const H5Z_class3_t *cls)
     entry.id              = cls->id;
     entry.encoder_present = cls->encoder_present;
     entry.decoder_present = cls->decoder_present;
-    entry.name         = NULL; /* v3 struct has no canonical name field */
-    entry.can_apply    = cls->can_apply;
-    entry.set_local    = cls->set_local;
-    entry.filter       = cls->filter;
-    entry.filter_title = cls->filter_title;
-    entry.set_config   = cls->set_config;
-    entry.get_config   = cls->get_config;
+    entry.name            = NULL; /* v3 struct has no canonical name field */
+    entry.can_apply       = cls->can_apply;
+    entry.set_local       = cls->set_local;
+    entry.filter          = cls->filter;
+    entry.filter_title    = cls->filter_title;
+    entry.set_config      = cls->set_config;
+    entry.get_config      = cls->get_config;
 
     /* Is the filter already registered? */
     for (i = 0; i < H5Z_table_used_g; i++)

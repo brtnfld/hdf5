@@ -12420,17 +12420,15 @@ public class H5 implements java.io.Serializable {
         /* H5Z_params_t layout (64-bit): int type(4) + pad(4) + union(16) = 24 bytes */
         final int H5Z_PARAMS_STRING = 1;
         try (Arena arena = Arena.ofConfined()) {
-            MemorySegment str_seg     = (params != null && !params.isEmpty())
-                                            ? arena.allocateFrom(params)
-                                            : MemorySegment.NULL;
+            MemorySegment str_seg =
+                (params != null && !params.isEmpty()) ? arena.allocateFrom(params) : MemorySegment.NULL;
             MemorySegment params_struct = arena.allocate(24, 8);
             params_struct.set(ValueLayout.JAVA_INT, 0, H5Z_PARAMS_STRING);
             params_struct.set(ValueLayout.ADDRESS, 8, str_seg);
             MethodHandle mh = Linker.nativeLinker().downcallHandle(
                 SymbolLookup.loaderLookup()
                     .find("H5Pappend_filter")
-                    .orElseThrow(
-                        () -> new HDF5LibraryException("H5Pappend_filter not found in library")),
+                    .orElseThrow(() -> new HDF5LibraryException("H5Pappend_filter not found in library")),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.JAVA_LONG, ValueLayout.JAVA_INT,
                                       ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
             retVal = (int)mh.invokeExact(plist_id, filter_id, flags, params_struct);
@@ -12486,8 +12484,7 @@ public class H5 implements java.io.Serializable {
             MethodHandle mh = Linker.nativeLinker().downcallHandle(
                 SymbolLookup.loaderLookup()
                     .find("H5Pappend_filter")
-                    .orElseThrow(
-                        () -> new HDF5LibraryException("H5Pappend_filter not found in library")),
+                    .orElseThrow(() -> new HDF5LibraryException("H5Pappend_filter not found in library")),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.JAVA_LONG, ValueLayout.JAVA_INT,
                                       ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
             retVal = (int)mh.invokeExact(plist_id, filter_id, flags, params_struct);

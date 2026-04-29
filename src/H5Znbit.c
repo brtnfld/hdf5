@@ -86,12 +86,12 @@ static herr_t H5Z__nbit_set_config(const char *params, unsigned *flags, size_t *
 
 /* This message derives from H5Z */
 H5Z_class3_t H5Z_NBIT[1] = {{
-    H5Z_CLASS3_T_VERS,   /* H5Z_class_t version */
-    H5Z_FILTER_NBIT,     /* Filter id number */
-    1,                   /* Assume encoder present: check before registering */
-    1,                   /* decoder_present flag (set to true) */
-    NULL,                /* filter_title (NULL: no title packed into cd_values) */
-    H5Z__can_apply_nbit, /* The "can apply" callback */
+    H5Z_CLASS3_T_VERS,    /* H5Z_class_t version */
+    H5Z_FILTER_NBIT,      /* Filter id number */
+    1,                    /* Assume encoder present: check before registering */
+    1,                    /* decoder_present flag (set to true) */
+    NULL,                 /* filter_title (NULL: no title packed into cd_values) */
+    H5Z__can_apply_nbit,  /* The "can apply" callback */
     H5Z__set_local_nbit,  /* The "set local" callback */
     H5Z__filter_nbit,     /* The actual filter function */
     H5Z__nbit_set_config, /* String config setter */

@@ -378,7 +378,7 @@ H5Zcd_unpack_int64(const unsigned *slots, size_t n_slots, int64_t *val)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "need at least 2 slots to unpack int64");
 
     {
-        uint8_t buf[8];
+        uint8_t  buf[8];
         uint32_t lo = (uint32_t)slots[0];
         uint32_t hi = (uint32_t)slots[1];
 
