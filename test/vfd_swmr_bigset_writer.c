@@ -100,7 +100,7 @@
 #define SKIP_CHUNK              0
 
 /* #define DEBUG_RW_COMMS          1 */
- #define ADD_UNIQUE_STEP_FILE    1 /* Required to work over NFS mount */
+/* #define ADD_UNIQUE_STEP_FILE    1 /* Required to work over NFS mount */
 
 /* Calculate the time passed in seconds.
  * X is the beginning time; Y is the ending time.

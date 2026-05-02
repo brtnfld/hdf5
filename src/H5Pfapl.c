@@ -437,7 +437,6 @@ static herr_t H5P__facc_mpi_info_close(const char *name, size_t size, void *valu
 #endif /* H5_HAVE_PARALLEL */
 
 /* Internal routines */
-static herr_t H5P__facc_set_def_driver_check_predefined(const char *driver_name, hid_t *driver_id);
 
 /*********************/
 /* Package Variables */
@@ -915,7 +914,7 @@ H5P__facc_set_def_driver(void)
         } /* end else-if */
         else {
             /* Check for VFL drivers that ship with the library */
-            if (H5P__facc_set_def_driver_check_predefined(driver_env_var, &driver_id) < 0)
+            if (H5P_facc_set_def_driver_check_predefined(driver_env_var, &driver_id) < 0)
                 HGOTO_ERROR(H5E_VFL, H5E_CANTGET, FAIL, "can't check for predefined VFL driver name")
             else if (driver_id > 0) {
                 if (H5I_inc_ref(driver_id, TRUE) < 0)
@@ -968,7 +967,7 @@ done:
 } /* end H5P__facc_set_def_driver() */
 
 /*-------------------------------------------------------------------------
- * Function:    H5P__facc_set_def_driver_check_predefined
+ * Function:    H5P_facc_set_def_driver_check_predefined
  *
  * Purpose:     Checks a given driver name against a list of predefined
  *              names for VFL drivers that are internal to HDF5. If a name
@@ -980,8 +979,8 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-static herr_t
-H5P__facc_set_def_driver_check_predefined(const char *driver_name, hid_t *driver_id)
+herr_t
+H5P_facc_set_def_driver_check_predefined(const char *driver_name, hid_t *driver_id)
 {
     herr_t ret_value = SUCCEED;
 
@@ -1072,7 +1071,7 @@ H5P__facc_set_def_driver_check_predefined(const char *driver_name, hid_t *driver
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5P__facc_set_def_driver_check_predefined() */
+} /* end H5P_facc_set_def_driver_check_predefined() */
 
 /*-------------------------------------------------------------------------
  * Function:    H5Pset_alignment
@@ -6207,34 +6206,24 @@ done:
 } /* end H5P_set_vol() */
 
 /*-------------------------------------------------------------------------
- * Function:    H5Pset_vfd_swmr_config
+ * Function:    H5Pcheck_vfd_swmr_config
  *
- * Purpose:     Set VFD SWMR configuration in the target FAPL.
- *              Note: Hard-wired to set the driver in the fapl
- *                    to use the SWMR VFD driver; this will be changed
- *                    later
+ * Purpose:     Verify that the values of the H5F_vfd_swmr_config_t
+ *              struct are valid.
  *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Vailin Choi; July 2018
+ * Return:      SUCCEED/FAIL
+ * 
+ * Programmer: Cody Sloan; April 2026
  *
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Pset_vfd_swmr_config(hid_t plist_id, H5F_vfd_swmr_config_t *config_ptr)
+H5Pcheck_vfd_swmr_config(H5F_vfd_swmr_config_t *config_ptr)
 {
-    H5P_genplist_t *plist; /* Property list pointer */
     size_t          name_len;
     herr_t          ret_value = SUCCEED; /* return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE2("e", "i*!", plist_id, config_ptr);
-
-    /* Get the plist structure */
-    if (NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
-        HGOTO_ERROR(H5E_ID, H5E_BADID, FAIL, "can't find object for ID")
-
-    /* Validate the input configuration */
 
     /* Check args */
     if (config_ptr == NULL)
@@ -6283,6 +6272,44 @@ H5Pset_vfd_swmr_config(hid_t plist_id, H5F_vfd_swmr_config_t *config_ptr)
     name_len = HDstrlen(config_ptr->log_file_path);
     if (name_len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN)
         HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "log_file_path is too long")
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* end H5Pcheck_vfd_swmr_config() */
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Pset_vfd_swmr_config
+ *
+ * Purpose:     Set VFD SWMR configuration in the target FAPL.
+ *              Note: Hard-wired to set the driver in the fapl
+ *                    to use the SWMR VFD driver; this will be changed
+ *                    later
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  Vailin Choi; July 2018
+ * 
+ * Changes:     Factored out input configuration validation
+ *                  - Cody Sloan; April 2026
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_vfd_swmr_config(hid_t plist_id, H5F_vfd_swmr_config_t *config_ptr)
+{
+    H5P_genplist_t *plist; /* Property list pointer */
+    herr_t          ret_value = SUCCEED; /* return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE2("e", "i*!", plist_id, config_ptr);
+
+    /* Get the plist structure */
+    if (NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
+        HGOTO_ERROR(H5E_ID, H5E_BADID, FAIL, "can't find object for ID")
+
+    /* Validate the input configuration */
+    if (H5Pcheck_vfd_swmr_config(config_ptr) < 0) 
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "configuration contains invalid values")
 
     /* Set the modified config */
     if (H5P_set(plist, H5F_ACS_VFD_SWMR_CONFIG_NAME, config_ptr) < 0)

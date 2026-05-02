@@ -1236,7 +1236,9 @@ H5_DLL void     H5F_vfd_swmr_update_entry_eot(eot_queue_entry_t *entry);
 H5_DLL herr_t   H5F_dump_eot_queue(void);
 H5_DLL herr_t   H5F_shadow_image_defer_free(H5F_shared_t *                          shared,
                                             const struct H5FD_vfd_swmr_idx_entry_t *entry);
-H5_DLL struct H5FD_vfd_swmr_idx_entry_t *H5F_vfd_swmr_enlarge_shadow_index(H5F_t *f);
+H5_DLL struct   H5FD_vfd_swmr_idx_entry_t *H5F_vfd_swmr_enlarge_shadow_index(H5F_t *f);
+H5_DLL herr_t   H5F_setup_PLs_for_vfd_swmr(const char *config_str, hid_t fapl_id, hid_t fcpl_id,
+                                           hbool_t writer, hbool_t create_file);
 
 /* File mounting routines */
 H5_DLL herr_t  H5F_mount(const struct H5G_loc_t *loc, const char *name, H5F_t *child, hid_t plist_id);
