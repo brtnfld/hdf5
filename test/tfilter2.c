@@ -128,6 +128,19 @@ test_parser(void)
         TEST_ERROR;
     PASSED();
 
+    TESTING("H5Zconfig_get_int: braced inline-table form");
+    ret = H5Zconfig_get_int("{level = 6, mode = 2}", "level", &ival);
+    if (ret <= 0 || ival != 6)
+        TEST_ERROR;
+    PASSED();
+
+    TESTING("H5Zconfig_get_str: braced inline-table form");
+    vsz = sizeof(vbuf);
+    ret = H5Zconfig_get_str("{ coding = \"entropy\" }", "coding", vbuf, &vsz);
+    if (ret <= 0 || strcmp(vbuf, "entropy") != 0)
+        TEST_ERROR;
+    PASSED();
+
     TESTING("H5Zconfig_get_str: type mismatch error (integer key)");
     H5E_BEGIN_TRY
     {

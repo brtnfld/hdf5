@@ -61,17 +61,42 @@
  * inline-table content in params.  Returns a heap buffer that the caller
  * must free with H5MM_xfree().
  *
- * Example: params = "level = 6"  →  "__p__ = {level = 6}"
+ * Accepts both bare content and an already-braced inline table:
+ *   "level = 6"        →  "__p__ = {level = 6}"
+ *   "{level = 6}"      →  "__p__ = {level = 6}"
+ *   "{ level = 6 }"   →  "__p__ = {level = 6}"  (whitespace trimmed inside braces)
  */
 static char *
 H5Z__toml_wrap(const char *params)
 {
-    size_t plen = params ? strlen(params) : 0;
-    size_t wlen = plen + 12; /* "__p__ = {" (9) + "}" (1) + NUL (1) + margin */
-    char  *buf  = (char *)H5MM_malloc(wlen);
+    const char *p    = params ? params : "";
+    const char *e;
+    size_t      clen;
+    size_t      wlen;
+    char       *buf;
 
+    /* skip leading whitespace */
+    while (*p == ' ' || *p == '\t')
+        p++;
+
+    /* strip optional outer { } */
+    if (*p == '{') {
+        p++;
+        e = p + strlen(p);
+        while (e > p && (*(e - 1) == ' ' || *(e - 1) == '\t'))
+            e--;
+        if (e > p && *(e - 1) == '}')
+            e--;
+    }
+    else {
+        e = p + strlen(p);
+    }
+    clen = (size_t)(e - p);
+
+    wlen = clen + 12; /* "__p__ = {" (9) + content + "}" (1) + NUL */
+    buf  = (char *)H5MM_malloc(wlen);
     if (buf)
-        snprintf(buf, wlen, "__p__ = {%s}", params ? params : "");
+        snprintf(buf, wlen, "__p__ = {%.*s}", (int)clen, p);
     return buf;
 }
 
@@ -753,9 +778,47 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 }
 
+/*
+ * H5Z__config_strip_braces — if params begins (after whitespace) with '{',
+ * return a heap-allocated NUL-terminated copy of the inner content with the
+ * outer braces removed.  Returns NULL if no braces are present (caller uses
+ * params directly).  The returned buffer must be freed with H5MM_xfree().
+ */
+static char *
+H5Z__config_strip_braces(const char *params)
+{
+    const char *p, *e;
+    size_t      len;
+    char       *copy;
+
+    if (!params)
+        return NULL;
+    p = params;
+    while (*p == ' ' || *p == '\t')
+        p++;
+    if (*p != '{')
+        return NULL;
+    p++;
+    len = strlen(p);
+    e   = p + len;
+    while (e > p && (*(e - 1) == ' ' || *(e - 1) == '\t'))
+        e--;
+    if (e > p && *(e - 1) == '}')
+        e--;
+    len  = (size_t)(e - p);
+    copy = (char *)H5MM_malloc(len + 1);
+    if (copy) {
+        memcpy(copy, p, len);
+        copy[len] = '\0';
+    }
+    return copy;
+}
+
 herr_t
 H5Z__config_validate_keys(const char *params, const char *const *known_keys)
 {
+    char       *stripped  = NULL;
+    const char *use_params;
     const char *p;
     herr_t      ret_value = SUCCEED;
 
@@ -764,12 +827,15 @@ H5Z__config_validate_keys(const char *params, const char *const *known_keys)
     if (!params || *params == '\0')
         HGOTO_DONE(SUCCEED);
 
-    if (strlen(params) > H5Z_CONFIG_STRING_MAX)
+    stripped  = H5Z__config_strip_braces(params);
+    use_params = stripped ? stripped : params;
+
+    if (strlen(use_params) > H5Z_CONFIG_STRING_MAX)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "filter parameter string exceeds H5Z_CONFIG_STRING_MAX (%d bytes)",
                     H5Z_CONFIG_STRING_MAX);
 
-    p = H5Z__config_skip_ws(params);
+    p = H5Z__config_skip_ws(use_params);
     if (*p == ',')
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter string starts with a comma");
 
@@ -811,6 +877,7 @@ H5Z__config_validate_keys(const char *params, const char *const *known_keys)
     }
 
 done:
+    H5MM_xfree(stripped);
     FUNC_LEAVE_NOAPI(ret_value)
 }
 
@@ -881,6 +948,8 @@ static htri_t
 H5Z__config_lookup(const char *params, const char *key, char *val_out, size_t val_cap,
                    H5Z__config_vtype_t *vtype_out)
 {
+    char       *stripped   = NULL;
+    const char *use_params;
     const char *p;
     size_t      param_count = 0;
     bool        key_found   = false;
@@ -896,7 +965,11 @@ H5Z__config_lookup(const char *params, const char *key, char *val_out, size_t va
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "params and key must be non-NULL non-empty strings");
     if (!params[0])
         HGOTO_DONE(false);
-    if (strlen(params) > H5Z_CONFIG_STRING_MAX)
+
+    stripped   = H5Z__config_strip_braces(params);
+    use_params = stripped ? stripped : params;
+
+    if (strlen(use_params) > H5Z_CONFIG_STRING_MAX)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "filter parameter string exceeds H5Z_CONFIG_STRING_MAX (%d bytes)",
                     H5Z_CONFIG_STRING_MAX);
@@ -909,7 +982,7 @@ H5Z__config_lookup(const char *params, const char *key, char *val_out, size_t va
     if (ki >= H5Z_CONFIG_MAX_KEY_LEN && key[ki] != '\0')
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "search key exceeds maximum length");
 
-    p = H5Z__config_skip_ws(params);
+    p = H5Z__config_skip_ws(use_params);
     if (*p == ',')
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter string starts with a comma");
 
@@ -967,6 +1040,7 @@ H5Z__config_lookup(const char *params, const char *key, char *val_out, size_t va
     ret_value = key_found ? true : false;
 
 done:
+    H5MM_xfree(stripped);
     FUNC_LEAVE_NOAPI(ret_value)
 }
 
