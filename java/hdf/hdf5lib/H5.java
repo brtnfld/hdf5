@@ -23838,7 +23838,7 @@ public class H5 implements java.io.Serializable {
         try (Arena arena = Arena.ofConfined()) {
             MemorySegment params_seg = arena.allocateFrom(params);
             MemorySegment key_seg    = arena.allocateFrom(key);
-            MethodHandle mh = Linker.nativeLinker().downcallHandle(
+            MethodHandle mh          = Linker.nativeLinker().downcallHandle(
                 SymbolLookup.loaderLookup()
                     .find("H5Zconfig_has_key")
                     .orElseThrow(() -> new HDF5LibraryException("H5Zconfig_has_key not found in library")),
@@ -23885,12 +23885,12 @@ public class H5 implements java.io.Serializable {
             MemorySegment params_seg = arena.allocateFrom(params);
             MemorySegment key_seg    = arena.allocateFrom(key);
             MemorySegment out_seg    = arena.allocate(ValueLayout.JAVA_LONG);
-            MethodHandle mh = Linker.nativeLinker().downcallHandle(
+            MethodHandle mh          = Linker.nativeLinker().downcallHandle(
                 SymbolLookup.loaderLookup()
                     .find("H5Zconfig_get_int")
                     .orElseThrow(() -> new HDF5LibraryException("H5Zconfig_get_int not found in library")),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.ADDRESS,
-                                      ValueLayout.ADDRESS));
+                                               ValueLayout.ADDRESS));
             retVal = (int)mh.invokeExact(params_seg, key_seg, out_seg);
             if (retVal > 0)
                 out[0] = out_seg.get(ValueLayout.JAVA_LONG, 0);
@@ -23936,13 +23936,12 @@ public class H5 implements java.io.Serializable {
             MemorySegment params_seg = arena.allocateFrom(params);
             MemorySegment key_seg    = arena.allocateFrom(key);
             MemorySegment out_seg    = arena.allocate(ValueLayout.JAVA_DOUBLE);
-            MethodHandle mh = Linker.nativeLinker().downcallHandle(
+            MethodHandle mh          = Linker.nativeLinker().downcallHandle(
                 SymbolLookup.loaderLookup()
                     .find("H5Zconfig_get_double")
-                    .orElseThrow(
-                        () -> new HDF5LibraryException("H5Zconfig_get_double not found in library")),
+                    .orElseThrow(() -> new HDF5LibraryException("H5Zconfig_get_double not found in library")),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.ADDRESS,
-                                      ValueLayout.ADDRESS));
+                                               ValueLayout.ADDRESS));
             retVal = (int)mh.invokeExact(params_seg, key_seg, out_seg);
             if (retVal > 0)
                 out[0] = out_seg.get(ValueLayout.JAVA_DOUBLE, 0);
@@ -23973,8 +23972,7 @@ public class H5 implements java.io.Serializable {
      * @exception HDF5LibraryException
      *            Error from the HDF5 Library.
      **/
-    public static int H5Zconfig_get_bool(String params, String key, boolean[] out)
-        throws HDF5LibraryException
+    public static int H5Zconfig_get_bool(String params, String key, boolean[] out) throws HDF5LibraryException
     {
         if (params == null)
             throw new HDF5FunctionArgumentException("params string is null");
@@ -23988,13 +23986,12 @@ public class H5 implements java.io.Serializable {
             MemorySegment params_seg = arena.allocateFrom(params);
             MemorySegment key_seg    = arena.allocateFrom(key);
             MemorySegment out_seg    = arena.allocate(ValueLayout.JAVA_INT);
-            MethodHandle mh = Linker.nativeLinker().downcallHandle(
+            MethodHandle mh          = Linker.nativeLinker().downcallHandle(
                 SymbolLookup.loaderLookup()
                     .find("H5Zconfig_get_bool")
-                    .orElseThrow(
-                        () -> new HDF5LibraryException("H5Zconfig_get_bool not found in library")),
+                    .orElseThrow(() -> new HDF5LibraryException("H5Zconfig_get_bool not found in library")),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.ADDRESS,
-                                      ValueLayout.ADDRESS));
+                                               ValueLayout.ADDRESS));
             retVal = (int)mh.invokeExact(params_seg, key_seg, out_seg);
             if (retVal > 0)
                 out[0] = out_seg.get(ValueLayout.JAVA_INT, 0) != 0;
@@ -24025,8 +24022,7 @@ public class H5 implements java.io.Serializable {
      * @exception HDF5LibraryException
      *            Error from the HDF5 Library.
      **/
-    public static int H5Zconfig_get_str(String params, String key, String[] value)
-        throws HDF5LibraryException
+    public static int H5Zconfig_get_str(String params, String key, String[] value) throws HDF5LibraryException
     {
         if (params == null)
             throw new HDF5FunctionArgumentException("params string is null");
@@ -24046,8 +24042,7 @@ public class H5 implements java.io.Serializable {
             MethodHandle mh = Linker.nativeLinker().downcallHandle(
                 SymbolLookup.loaderLookup()
                     .find("H5Zconfig_get_str")
-                    .orElseThrow(
-                        () -> new HDF5LibraryException("H5Zconfig_get_str not found in library")),
+                    .orElseThrow(() -> new HDF5LibraryException("H5Zconfig_get_str not found in library")),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.ADDRESS,
                                       ValueLayout.ADDRESS, ValueLayout.ADDRESS));
             retVal = (int)mh.invokeExact(params_seg, key_seg, val_buf, bsz_seg);

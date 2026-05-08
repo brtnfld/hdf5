@@ -128,8 +128,7 @@ H5Z__toml_parse_params(const char *params, toml_result_t *tr_out, toml_datum_t *
         memcpy(errbuf, tr_out->errmsg, sizeof(errbuf));
         toml_free(*tr_out);
         memset(tr_out, 0, sizeof(*tr_out));
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                    "TOML parse error in filter parameter string: %s", errbuf);
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "TOML parse error in filter parameter string: %s", errbuf);
     }
 
     *ptab_out = toml_get(tr_out->toptab, "__p__");
@@ -276,8 +275,7 @@ H5Zconfig_get_int(const char *params, const char *key, int64_t *out)
     if (d.type == TOML_UNKNOWN)
         HGOTO_DONE(false);
     if (d.type != TOML_INT64)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                    "type mismatch: key '%s' is not a TOML integer", key);
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "type mismatch: key '%s' is not a TOML integer", key);
     *out      = d.u.int64;
     ret_value = true;
 
@@ -326,8 +324,7 @@ H5Zconfig_get_double(const char *params, const char *key, double *out)
     if (d.type == TOML_UNKNOWN)
         HGOTO_DONE(false);
     if (d.type != TOML_FP64)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                    "type mismatch: key '%s' is not a TOML float", key);
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "type mismatch: key '%s' is not a TOML float", key);
     if (isnan(d.u.fp64) || isinf(d.u.fp64))
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "inf/nan float values are not supported for filter parameters (key '%s')", key);
@@ -378,8 +375,7 @@ H5Zconfig_get_bool(const char *params, const char *key, hbool_t *out)
     if (d.type == TOML_UNKNOWN)
         HGOTO_DONE(false);
     if (d.type != TOML_BOOLEAN)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                    "type mismatch: key '%s' is not a TOML boolean", key);
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "type mismatch: key '%s' is not a TOML boolean", key);
     *out      = d.u.boolean ? true : false;
     ret_value = true;
 
@@ -505,13 +501,13 @@ done:
 
 /* Internal value-type enum */
 typedef enum {
-    H5Z__CONFIG_VTYPE_NONE,    /* bare key (no '=' sign) */
-    H5Z__CONFIG_VTYPE_INT,     /* TOML integer */
-    H5Z__CONFIG_VTYPE_FLOAT,   /* TOML float   */
-    H5Z__CONFIG_VTYPE_BOOL,    /* TOML boolean */
-    H5Z__CONFIG_VTYPE_DSTR,    /* double-quoted string */
-    H5Z__CONFIG_VTYPE_SSTR,    /* single-quoted string */
-    H5Z__CONFIG_VTYPE_INVALID  /* bare value that is not valid TOML */
+    H5Z__CONFIG_VTYPE_NONE,   /* bare key (no '=' sign) */
+    H5Z__CONFIG_VTYPE_INT,    /* TOML integer */
+    H5Z__CONFIG_VTYPE_FLOAT,  /* TOML float   */
+    H5Z__CONFIG_VTYPE_BOOL,   /* TOML boolean */
+    H5Z__CONFIG_VTYPE_DSTR,   /* double-quoted string */
+    H5Z__CONFIG_VTYPE_SSTR,   /* single-quoted string */
+    H5Z__CONFIG_VTYPE_INVALID /* bare value that is not valid TOML */
 } H5Z__config_vtype_t;
 
 static const char *
@@ -568,8 +564,7 @@ H5Z__config_classify_bare(const char *val, size_t len)
                 return H5Z__CONFIG_VTYPE_INVALID;
             while (p < end) {
                 char c = *p;
-                if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') ||
-                    (c >= 'A' && c <= 'F') || c == '_')
+                if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') || c == '_')
                     p++;
                 else
                     return H5Z__CONFIG_VTYPE_INVALID;
@@ -668,8 +663,8 @@ H5Z__config_parse_token(const char **pp, char *key_out, size_t key_cap, char *va
         p++;
         for (;;) {
             if (*p == '\0')
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                            "unbalanced double-quote in value for key '%s'", key_out);
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unbalanced double-quote in value for key '%s'",
+                            key_out);
             if (*p == '"') {
                 p++;
                 break;
@@ -678,14 +673,30 @@ H5Z__config_parse_token(const char **pp, char *key_out, size_t key_cap, char *va
                 p++;
                 char esc;
                 switch (*p) {
-                    case '\\': esc = '\\'; break;
-                    case '"':  esc = '"';  break;
-                    case 'n':  esc = '\n'; break;
-                    case 't':  esc = '\t'; break;
-                    case 'r':  esc = '\r'; break;
-                    case 'b':  esc = '\b'; break;
-                    case 'f':  esc = '\f'; break;
-                    case '0':  esc = '\0'; break;
+                    case '\\':
+                        esc = '\\';
+                        break;
+                    case '"':
+                        esc = '"';
+                        break;
+                    case 'n':
+                        esc = '\n';
+                        break;
+                    case 't':
+                        esc = '\t';
+                        break;
+                    case 'r':
+                        esc = '\r';
+                        break;
+                    case 'b':
+                        esc = '\b';
+                        break;
+                    case 'f':
+                        esc = '\f';
+                        break;
+                    case '0':
+                        esc = '\0';
+                        break;
                     default:
                         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                                     "unsupported escape '\\%c' in value for key '%s'", *p, key_out);
@@ -703,8 +714,8 @@ H5Z__config_parse_token(const char **pp, char *key_out, size_t key_cap, char *va
         }
         val_out[vlen] = '\0';
         if (vlen == 0)
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                        "empty double-quoted value for key '%s' is not allowed", key_out);
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "empty double-quoted value for key '%s' is not allowed",
+                        key_out);
         p = H5Z__config_skip_ws(p);
         if (*p != '\0' && *p != ',')
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
@@ -719,8 +730,8 @@ H5Z__config_parse_token(const char **pp, char *key_out, size_t key_cap, char *va
         p++;
         for (;;) {
             if (*p == '\0')
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                            "unbalanced single-quote in value for key '%s'", key_out);
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unbalanced single-quote in value for key '%s'",
+                            key_out);
             if (*p == '\'') {
                 p++;
                 break;
@@ -731,8 +742,8 @@ H5Z__config_parse_token(const char **pp, char *key_out, size_t key_cap, char *va
         }
         val_out[vlen] = '\0';
         if (vlen == 0)
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                        "empty single-quoted value for key '%s' is not allowed", key_out);
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "empty single-quoted value for key '%s' is not allowed",
+                        key_out);
         p = H5Z__config_skip_ws(p);
         if (*p != '\0' && *p != ',')
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
@@ -747,11 +758,11 @@ H5Z__config_parse_token(const char **pp, char *key_out, size_t key_cap, char *va
         while (*p && *p != ',') {
             unsigned char c = (unsigned char)*p;
             if (c == ';')
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                            "bare semicolon in value for key '%s' (reserved)", key_out);
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "bare semicolon in value for key '%s' (reserved)",
+                            key_out);
             if (c == '"' || c == '\'')
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                            "quote character in bare value for key '%s'", key_out);
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "quote character in bare value for key '%s'",
+                            key_out);
             if (vlen + 1 >= val_cap)
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "value exceeds maximum length");
             val_out[vlen++] = *p++;
@@ -761,14 +772,13 @@ H5Z__config_parse_token(const char **pp, char *key_out, size_t key_cap, char *va
         vlen = strlen(val_out);
 
         if (vlen == 0)
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                        "parameter '%s' has empty value after '='", key_out);
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter '%s' has empty value after '='", key_out);
 
         H5Z__config_vtype_t vt = H5Z__config_classify_bare(val_out, vlen);
         if (vt == H5Z__CONFIG_VTYPE_INVALID)
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                        "value '%s' for key '%s' is not a valid TOML integer, float, or boolean",
-                        val_out, key_out);
+                        "value '%s' for key '%s' is not a valid TOML integer, float, or boolean", val_out,
+                        key_out);
 
         *vtype_out = vt;
         *pp        = p;
@@ -869,8 +879,7 @@ H5Z__config_validate_keys(const char *params, const char *const *known_keys)
             p++;
             p = H5Z__config_skip_ws(p);
             if (*p == '\0')
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                            "parameter string ends with a trailing comma");
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter string ends with a trailing comma");
         }
         else if (*p != '\0')
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unexpected character after token");
@@ -993,8 +1002,8 @@ H5Z__config_lookup(const char *params, const char *key, char *val_out, size_t va
         size_t              si;
 
         if (param_count >= H5Z_CONFIG_MAX_PARAMS)
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                        "parameter string exceeds %d tokens", H5Z_CONFIG_MAX_PARAMS);
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter string exceeds %d tokens",
+                        H5Z_CONFIG_MAX_PARAMS);
 
         p = H5Z__config_skip_ws(p);
         if (*p == '\0')
@@ -1005,8 +1014,7 @@ H5Z__config_lookup(const char *params, const char *key, char *val_out, size_t va
 
         for (si = 0; si < seen_count; si++) {
             if (strcmp(seen_keys[si], tok_key) == 0)
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                            "duplicate key '%s' in parameter string", tok_key);
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate key '%s' in parameter string", tok_key);
         }
         H5MM_memcpy(seen_keys[seen_count++], tok_key, strlen(tok_key) + 1);
 
@@ -1030,8 +1038,7 @@ H5Z__config_lookup(const char *params, const char *key, char *val_out, size_t va
             p++;
             p = H5Z__config_skip_ws(p);
             if (*p == '\0')
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                            "parameter string ends with a trailing comma");
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter string ends with a trailing comma");
         }
         else if (*p != '\0')
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unexpected character after token");
@@ -1114,12 +1121,11 @@ H5Zconfig_get_int(const char *params, const char *key, int64_t *out)
         HGOTO_DONE(false);
 
     if (vtype != H5Z__CONFIG_VTYPE_INT)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                    "type mismatch: key '%s' is not a TOML integer", key);
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "type mismatch: key '%s' is not a TOML integer", key);
 
     if (!H5Z__config_toml_int(val_buf, out))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                    "failed to parse integer value '%s' for key '%s'", val_buf, key);
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "failed to parse integer value '%s' for key '%s'", val_buf,
+                    key);
 
     ret_value = true;
 
@@ -1165,8 +1171,7 @@ H5Zconfig_get_double(const char *params, const char *key, double *out)
         HGOTO_DONE(false);
 
     if (vtype != H5Z__CONFIG_VTYPE_FLOAT)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                    "type mismatch: key '%s' is not a TOML float", key);
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "type mismatch: key '%s' is not a TOML float", key);
 
     {
         const char *v = val_buf;
@@ -1183,8 +1188,8 @@ H5Zconfig_get_double(const char *params, const char *key, double *out)
         errno = 0;
         dv    = strtod(val_buf, &end);
         if (*end != '\0' || errno == ERANGE)
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                        "failed to parse float value '%s' for key '%s'", val_buf, key);
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "failed to parse float value '%s' for key '%s'",
+                        val_buf, key);
         *out = dv;
     }
 
@@ -1238,8 +1243,7 @@ H5Zconfig_get_bool(const char *params, const char *key, hbool_t *out)
         *out = (strcmp(val_buf, "true") == 0) ? true : false;
     }
     else {
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                    "type mismatch: key '%s' is not a TOML boolean", key);
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "type mismatch: key '%s' is not a TOML boolean", key);
     }
 
     ret_value = true;

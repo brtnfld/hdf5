@@ -106,8 +106,7 @@ H5Z__szip_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, size_t 
                 int64_t lval;
                 found = H5Zconfig_get_int(params, "pixels_per_block", &lval);
                 if (found < 0)
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                                "malformed params string for szip filter");
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "malformed params string for szip filter");
                 if (found > 0) {
                     if (lval <= 0 || lval > 32 || (lval & 1))
                         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,

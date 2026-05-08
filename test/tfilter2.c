@@ -631,16 +631,16 @@ static int
 test_filter_title(void)
 {
     static const H5Z_class3_t title_cls = {
-        H5Z_CLASS3_T_VERS,   /* version        */
-        TITLE_FILTER_ID,     /* id             */
-        1,                   /* encoder_present */
-        1,                   /* decoder_present */
-        "My Test Filter",    /* filter_title   */
-        NULL,                /* can_apply      */
-        NULL,                /* set_local      */
-        title_filter_func,   /* filter         */
-        NULL,                /* set_config     */
-        NULL,                /* get_config     */
+        H5Z_CLASS3_T_VERS, /* version        */
+        TITLE_FILTER_ID,   /* id             */
+        1,                 /* encoder_present */
+        1,                 /* decoder_present */
+        "My Test Filter",  /* filter_title   */
+        NULL,              /* can_apply      */
+        NULL,              /* set_local      */
+        title_filter_func, /* filter         */
+        NULL,              /* set_config     */
+        NULL,              /* get_config     */
     };
     hid_t    dcpl = H5I_INVALID_HID;
     unsigned flags;

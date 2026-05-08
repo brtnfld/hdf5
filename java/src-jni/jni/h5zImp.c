@@ -119,8 +119,7 @@ done:
  * Signature: (Ljava/lang/String;Ljava/lang/String;[J)I
  */
 JNIEXPORT jint JNICALL
-Java_hdf_hdf5lib_H5_H5Zconfig_1get_1int(JNIEnv *env, jclass clss, jstring params, jstring key,
-                                        jlongArray out)
+Java_hdf_hdf5lib_H5_H5Zconfig_1get_1int(JNIEnv *env, jclass clss, jstring params, jstring key, jlongArray out)
 {
     const char *c_params = NULL;
     const char *c_key    = NULL;

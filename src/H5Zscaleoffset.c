@@ -783,8 +783,7 @@ H5Z__scaleoffset_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, 
             /* scale_type = "float_dscale" | "float_escale" | "int" */
             found = H5Zconfig_get_str(params, "scale_type", val_buf, &bufsz);
             if (found < 0)
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                            "malformed params string for scaleoffset filter");
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "malformed params string for scaleoffset filter");
             if (found > 0) {
                 if (strcmp(val_buf, "float_dscale") == 0)
                     scale_type = (unsigned)H5Z_SO_FLOAT_DSCALE;
