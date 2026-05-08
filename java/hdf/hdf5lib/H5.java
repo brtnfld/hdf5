@@ -23815,12 +23815,208 @@ public class H5 implements java.io.Serializable {
     /**
      * @ingroup JH5Z
      *
-     * H5Zconfig_get_param retrieves a single named parameter from a filter parameter string.
+     * H5Zconfig_has_key checks whether a key exists in a filter parameter string.
      *
      * @param params
-     *            IN: Full parameter string (e.g. "level=6,mode=fast").
+     *            IN: Full parameter string (e.g. "level = 6, mode = \"fast\"").
      * @param key
-     *            IN: Name of the parameter to look up.
+     *            IN: Name of the parameter to look for.
+     *
+     * @return positive if found, 0 if not found, negative on error
+     *
+     * @exception HDF5LibraryException
+     *            Error from the HDF5 Library.
+     **/
+    public static int H5Zconfig_has_key(String params, String key) throws HDF5LibraryException
+    {
+        if (params == null)
+            throw new HDF5FunctionArgumentException("params string is null");
+        if (key == null)
+            throw new HDF5FunctionArgumentException("key string is null");
+
+        int retVal = -1;
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment params_seg = arena.allocateFrom(params);
+            MemorySegment key_seg    = arena.allocateFrom(key);
+            MethodHandle mh = Linker.nativeLinker().downcallHandle(
+                SymbolLookup.loaderLookup()
+                    .find("H5Zconfig_has_key")
+                    .orElseThrow(() -> new HDF5LibraryException("H5Zconfig_has_key not found in library")),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
+            retVal = (int)mh.invokeExact(params_seg, key_seg);
+        }
+        catch (HDF5LibraryException e) {
+            throw e;
+        }
+        catch (Throwable t) {
+            throw new HDF5LibraryException("H5Zconfig_has_key failed: " + t.getMessage());
+        }
+        return retVal;
+    }
+
+    /**
+     * @ingroup JH5Z
+     *
+     * H5Zconfig_get_int retrieves an integer parameter from a filter parameter string.
+     *
+     * @param params
+     *            IN: Full parameter string (e.g. "level = 6").
+     * @param key
+     *            IN: Name of the integer parameter to look up.
+     * @param out
+     *            OUT: One-element long array; out[0] receives the integer value if found.
+     *
+     * @return positive if found, 0 if not found, negative on error
+     *
+     * @exception HDF5LibraryException
+     *            Error from the HDF5 Library.
+     **/
+    public static int H5Zconfig_get_int(String params, String key, long[] out) throws HDF5LibraryException
+    {
+        if (params == null)
+            throw new HDF5FunctionArgumentException("params string is null");
+        if (key == null)
+            throw new HDF5FunctionArgumentException("key string is null");
+        if (out == null || out.length < 1)
+            throw new HDF5FunctionArgumentException("out array must have at least one element");
+
+        int retVal = -1;
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment params_seg = arena.allocateFrom(params);
+            MemorySegment key_seg    = arena.allocateFrom(key);
+            MemorySegment out_seg    = arena.allocate(ValueLayout.JAVA_LONG);
+            MethodHandle mh = Linker.nativeLinker().downcallHandle(
+                SymbolLookup.loaderLookup()
+                    .find("H5Zconfig_get_int")
+                    .orElseThrow(() -> new HDF5LibraryException("H5Zconfig_get_int not found in library")),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.ADDRESS,
+                                      ValueLayout.ADDRESS));
+            retVal = (int)mh.invokeExact(params_seg, key_seg, out_seg);
+            if (retVal > 0)
+                out[0] = out_seg.get(ValueLayout.JAVA_LONG, 0);
+        }
+        catch (HDF5LibraryException e) {
+            throw e;
+        }
+        catch (Throwable t) {
+            throw new HDF5LibraryException("H5Zconfig_get_int failed: " + t.getMessage());
+        }
+        return retVal;
+    }
+
+    /**
+     * @ingroup JH5Z
+     *
+     * H5Zconfig_get_double retrieves a floating-point parameter from a filter parameter string.
+     *
+     * @param params
+     *            IN: Full parameter string (e.g. "threshold = 1.5").
+     * @param key
+     *            IN: Name of the float parameter to look up.
+     * @param out
+     *            OUT: One-element double array; out[0] receives the value if found.
+     *
+     * @return positive if found, 0 if not found, negative on error
+     *
+     * @exception HDF5LibraryException
+     *            Error from the HDF5 Library.
+     **/
+    public static int H5Zconfig_get_double(String params, String key, double[] out)
+        throws HDF5LibraryException
+    {
+        if (params == null)
+            throw new HDF5FunctionArgumentException("params string is null");
+        if (key == null)
+            throw new HDF5FunctionArgumentException("key string is null");
+        if (out == null || out.length < 1)
+            throw new HDF5FunctionArgumentException("out array must have at least one element");
+
+        int retVal = -1;
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment params_seg = arena.allocateFrom(params);
+            MemorySegment key_seg    = arena.allocateFrom(key);
+            MemorySegment out_seg    = arena.allocate(ValueLayout.JAVA_DOUBLE);
+            MethodHandle mh = Linker.nativeLinker().downcallHandle(
+                SymbolLookup.loaderLookup()
+                    .find("H5Zconfig_get_double")
+                    .orElseThrow(
+                        () -> new HDF5LibraryException("H5Zconfig_get_double not found in library")),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.ADDRESS,
+                                      ValueLayout.ADDRESS));
+            retVal = (int)mh.invokeExact(params_seg, key_seg, out_seg);
+            if (retVal > 0)
+                out[0] = out_seg.get(ValueLayout.JAVA_DOUBLE, 0);
+        }
+        catch (HDF5LibraryException e) {
+            throw e;
+        }
+        catch (Throwable t) {
+            throw new HDF5LibraryException("H5Zconfig_get_double failed: " + t.getMessage());
+        }
+        return retVal;
+    }
+
+    /**
+     * @ingroup JH5Z
+     *
+     * H5Zconfig_get_bool retrieves a boolean parameter from a filter parameter string.
+     *
+     * @param params
+     *            IN: Full parameter string (e.g. "enabled = true").
+     * @param key
+     *            IN: Name of the boolean parameter to look up.
+     * @param out
+     *            OUT: One-element boolean array; out[0] receives the value if found.
+     *
+     * @return positive if found, 0 if not found, negative on error
+     *
+     * @exception HDF5LibraryException
+     *            Error from the HDF5 Library.
+     **/
+    public static int H5Zconfig_get_bool(String params, String key, boolean[] out)
+        throws HDF5LibraryException
+    {
+        if (params == null)
+            throw new HDF5FunctionArgumentException("params string is null");
+        if (key == null)
+            throw new HDF5FunctionArgumentException("key string is null");
+        if (out == null || out.length < 1)
+            throw new HDF5FunctionArgumentException("out array must have at least one element");
+
+        int retVal = -1;
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment params_seg = arena.allocateFrom(params);
+            MemorySegment key_seg    = arena.allocateFrom(key);
+            MemorySegment out_seg    = arena.allocate(ValueLayout.JAVA_INT);
+            MethodHandle mh = Linker.nativeLinker().downcallHandle(
+                SymbolLookup.loaderLookup()
+                    .find("H5Zconfig_get_bool")
+                    .orElseThrow(
+                        () -> new HDF5LibraryException("H5Zconfig_get_bool not found in library")),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.ADDRESS,
+                                      ValueLayout.ADDRESS));
+            retVal = (int)mh.invokeExact(params_seg, key_seg, out_seg);
+            if (retVal > 0)
+                out[0] = out_seg.get(ValueLayout.JAVA_INT, 0) != 0;
+        }
+        catch (HDF5LibraryException e) {
+            throw e;
+        }
+        catch (Throwable t) {
+            throw new HDF5LibraryException("H5Zconfig_get_bool failed: " + t.getMessage());
+        }
+        return retVal;
+    }
+
+    /**
+     * @ingroup JH5Z
+     *
+     * H5Zconfig_get_str retrieves a string parameter from a filter parameter string.
+     *
+     * @param params
+     *            IN: Full parameter string (e.g. "coding = \"entropy\"").
+     * @param key
+     *            IN: Name of the string parameter to look up.
      * @param value
      *            OUT: One-element String array; value[0] receives the found value string.
      *
@@ -23829,7 +24025,7 @@ public class H5 implements java.io.Serializable {
      * @exception HDF5LibraryException
      *            Error from the HDF5 Library.
      **/
-    public static int H5Zconfig_get_param(String params, String key, String[] value)
+    public static int H5Zconfig_get_str(String params, String key, String[] value)
         throws HDF5LibraryException
     {
         if (params == null)
@@ -23849,8 +24045,9 @@ public class H5 implements java.io.Serializable {
             bsz_seg.set(ValueLayout.JAVA_LONG, 0, (long)BUF_SIZE);
             MethodHandle mh = Linker.nativeLinker().downcallHandle(
                 SymbolLookup.loaderLookup()
-                    .find("H5Zconfig_get_param")
-                    .orElseThrow(() -> new HDF5LibraryException("H5Zconfig_get_param not found in library")),
+                    .find("H5Zconfig_get_str")
+                    .orElseThrow(
+                        () -> new HDF5LibraryException("H5Zconfig_get_str not found in library")),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.ADDRESS,
                                       ValueLayout.ADDRESS, ValueLayout.ADDRESS));
             retVal = (int)mh.invokeExact(params_seg, key_seg, val_buf, bsz_seg);
@@ -23863,7 +24060,7 @@ public class H5 implements java.io.Serializable {
             throw e;
         }
         catch (Throwable t) {
-            throw new HDF5LibraryException("H5Zconfig_get_param failed: " + t.getMessage());
+            throw new HDF5LibraryException("H5Zconfig_get_str failed: " + t.getMessage());
         }
         return retVal;
     }

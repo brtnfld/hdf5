@@ -13,7 +13,7 @@
 /*
  * Tests for RFC-HDFG-2026-001: String-Based Filter Configuration API
  *   - H5Pappend_filter / H5Pget_filter_params_by_idx
- *   - H5Zconfig_get_param parser
+ *   - Typed TOML accessor functions (H5Zconfig_get_int, _get_str, etc.)
  *   - Built-in filter set_config / get_config round-trips
  *   - Name registry (H5Z_filter_id_by_name)
  *   - Regression: existing H5Pset_filter still works
@@ -24,123 +24,115 @@
 static const char *FILENAME[] = {"tfilter2", NULL};
 
 /* -----------------------------------------------------------------------
- * Parser tests (H5Zconfig_get_param)
+ * Parser tests — typed TOML accessor functions
  * ---------------------------------------------------------------------- */
 static int
 test_parser(void)
 {
-    char   vbuf[256];
-    size_t vsz;
-    htri_t ret;
+    char    vbuf[256];
+    size_t  vsz;
+    int64_t ival;
+    double  dval;
+    hbool_t bval;
+    htri_t  ret;
 
-    TESTING("H5Zconfig_get_param basic lookup");
-    vsz = sizeof(vbuf);
-    ret = H5Zconfig_get_param("level=6,mode=fast", "level", vbuf, &vsz);
-    if (ret <= 0)
-        TEST_ERROR;
-    if (strcmp(vbuf, "6") != 0)
+    TESTING("H5Zconfig_get_int: basic integer lookup");
+    ret = H5Zconfig_get_int("level = 6, mode = 2", "level", &ival);
+    if (ret <= 0 || ival != 6)
         TEST_ERROR;
     PASSED();
 
-    TESTING("H5Zconfig_get_param key not found");
-    vsz = sizeof(vbuf);
-    ret = H5Zconfig_get_param("level=6", "mode", vbuf, &vsz);
+    TESTING("H5Zconfig_get_int: key not found");
+    ret = H5Zconfig_get_int("level = 6", "mode", &ival);
     if (ret != 0)
         TEST_ERROR;
     PASSED();
 
-    TESTING("H5Zconfig_get_param bare key (no value)");
-    vsz = sizeof(vbuf);
-    ret = H5Zconfig_get_param("verbose", "verbose", vbuf, &vsz);
+    TESTING("H5Zconfig_has_key: key present");
+    ret = H5Zconfig_has_key("level = 6, compress = true", "compress");
     if (ret <= 0)
         TEST_ERROR;
     PASSED();
 
-    TESTING("H5Zconfig_get_param double-quoted value");
-    vsz = sizeof(vbuf);
-    ret = H5Zconfig_get_param("name=\"hello world\"", "name", vbuf, &vsz);
-    if (ret <= 0)
-        TEST_ERROR;
-    if (strcmp(vbuf, "hello world") != 0)
+    TESTING("H5Zconfig_has_key: key absent");
+    ret = H5Zconfig_has_key("level = 6", "mode");
+    if (ret != 0)
         TEST_ERROR;
     PASSED();
 
-    TESTING("H5Zconfig_get_param single-quoted value");
+    TESTING("H5Zconfig_get_str: double-quoted value");
     vsz = sizeof(vbuf);
-    ret = H5Zconfig_get_param("name='hello world'", "name", vbuf, &vsz);
-    if (ret <= 0)
-        TEST_ERROR;
-    if (strcmp(vbuf, "hello world") != 0)
+    ret = H5Zconfig_get_str("name = \"hello world\"", "name", vbuf, &vsz);
+    if (ret <= 0 || strcmp(vbuf, "hello world") != 0)
         TEST_ERROR;
     PASSED();
 
-    TESTING("H5Zconfig_get_param single-quoted value with embedded double quote");
+    TESTING("H5Zconfig_get_str: single-quoted value");
     vsz = sizeof(vbuf);
-    ret = H5Zconfig_get_param("desc='say \"hello\"'", "desc", vbuf, &vsz);
-    if (ret <= 0)
-        TEST_ERROR;
-    if (strcmp(vbuf, "say \"hello\"") != 0)
+    ret = H5Zconfig_get_str("name = 'hello world'", "name", vbuf, &vsz);
+    if (ret <= 0 || strcmp(vbuf, "hello world") != 0)
         TEST_ERROR;
     PASSED();
 
-    TESTING("H5Zconfig_get_param NULL params error");
+    TESTING("H5Zconfig_get_bool: boolean true");
+    ret = H5Zconfig_get_bool("compress = true", "compress", &bval);
+    if (ret <= 0 || !bval)
+        TEST_ERROR;
+    PASSED();
+
+    TESTING("H5Zconfig_get_bool: boolean false");
+    ret = H5Zconfig_get_bool("compress = false", "compress", &bval);
+    if (ret <= 0 || bval)
+        TEST_ERROR;
+    PASSED();
+
+    TESTING("H5Zconfig_get_double: float value");
+    ret = H5Zconfig_get_double("tol = 1.5", "tol", &dval);
+    if (ret <= 0 || dval != 1.5)
+        TEST_ERROR;
+    PASSED();
+
+    TESTING("H5Zconfig_get_int: NULL params error");
     H5E_BEGIN_TRY
     {
-        vsz = sizeof(vbuf);
-        ret = H5Zconfig_get_param(NULL, "key", vbuf, &vsz);
+        ret = H5Zconfig_get_int(NULL, "key", &ival);
     }
     H5E_END_TRY
     if (ret >= 0)
         TEST_ERROR;
     PASSED();
 
-    TESTING("H5Zconfig_get_param NULL key error");
+    TESTING("H5Zconfig_get_int: NULL key error");
     H5E_BEGIN_TRY
     {
-        vsz = sizeof(vbuf);
-        ret = H5Zconfig_get_param("level=6", NULL, vbuf, &vsz);
+        ret = H5Zconfig_get_int("level = 6", NULL, &ival);
     }
     H5E_END_TRY
     if (ret >= 0)
         TEST_ERROR;
     PASSED();
 
-    TESTING("H5Zconfig_get_param duplicate key error");
+    TESTING("H5Zconfig_get_int: duplicate key error");
     H5E_BEGIN_TRY
     {
-        vsz = sizeof(vbuf);
-        ret = H5Zconfig_get_param("level=6,level=9", "level", vbuf, &vsz);
+        ret = H5Zconfig_get_int("level = 6, level = 9", "level", &ival);
     }
     H5E_END_TRY
     if (ret >= 0)
         TEST_ERROR;
     PASSED();
 
-    TESTING("H5Zconfig_get_param whitespace stripping");
-    vsz = sizeof(vbuf);
-    ret = H5Zconfig_get_param("  level = 6 , mode = fast ", "level", vbuf, &vsz);
-    if (ret <= 0)
-        TEST_ERROR;
-    if (strcmp(vbuf, "6") != 0)
+    TESTING("H5Zconfig_get_int: whitespace around equals");
+    ret = H5Zconfig_get_int("  level = 6 , mode = 2 ", "level", &ival);
+    if (ret <= 0 || ival != 6)
         TEST_ERROR;
     PASSED();
 
-    TESTING("H5Zconfig_get_param unbalanced single-quote error");
+    TESTING("H5Zconfig_get_str: type mismatch error (integer key)");
     H5E_BEGIN_TRY
     {
         vsz = sizeof(vbuf);
-        ret = H5Zconfig_get_param("path='/no/closing", "path", vbuf, &vsz);
-    }
-    H5E_END_TRY
-    if (ret >= 0)
-        TEST_ERROR;
-    PASSED();
-
-    TESTING("H5Zconfig_get_param empty single-quoted value error");
-    H5E_BEGIN_TRY
-    {
-        vsz = sizeof(vbuf);
-        ret = H5Zconfig_get_param("key=''", "key", vbuf, &vsz);
+        ret = H5Zconfig_get_str("level = 6", "level", vbuf, &vsz);
     }
     H5E_END_TRY
     if (ret >= 0)
@@ -223,8 +215,8 @@ test_callback_contracts(void)
         TEST_ERROR;
     if (plen == 0)
         TEST_ERROR;
-    /* Should contain "level=9" */
-    if (strstr(pbuf, "level=9") == NULL)
+    /* Should contain "level = 9" (TOML output format) */
+    if (strstr(pbuf, "level = 9") == NULL)
         TEST_ERROR;
     H5Pclose(dcpl);
     dcpl = H5I_INVALID_HID;
@@ -564,7 +556,7 @@ test_scaleoffset_params(hid_t file)
     size_t  plen;
     int     i;
 
-    TESTING("Round-trip: scaleoffset scale_type=int,scale_factor=0");
+    TESTING("Round-trip: scaleoffset scale_type = \"int\", scale_factor = 0");
 
     /* Verify get_config round-trip on the dcpl before writing */
     if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
@@ -572,7 +564,7 @@ test_scaleoffset_params(hid_t file)
     if (H5Pset_chunk(dcpl, 1, chunks) < 0)
         TEST_ERROR;
     {
-        H5Z_params_t _p = H5Z_PARAMS_STR("scale_type=int,scale_factor=0");
+        H5Z_params_t _p = H5Z_PARAMS_STR("scale_type = \"int\", scale_factor = 0");
         if (H5Pappend_filter(dcpl, H5Z_FILTER_SCALEOFFSET, 0, &_p) < 0)
             TEST_ERROR;
     }
@@ -587,7 +579,7 @@ test_scaleoffset_params(hid_t file)
     for (i = 0; i < 32; i++)
         wbuf[i] = i * 2;
     {
-        H5Z_params_t _p = H5Z_PARAMS_STR("scale_type=int,scale_factor=0");
+        H5Z_params_t _p = H5Z_PARAMS_STR("scale_type = \"int\", scale_factor = 0");
         if (h5_run_filter_roundtrip(file, "scaleoffset_rt", dims, chunks, 1, H5Z_FILTER_SCALEOFFSET, &_p,
                                     wbuf, rbuf, 32) < 0)
             TEST_ERROR;
@@ -598,6 +590,83 @@ test_scaleoffset_params(hid_t file)
 error:
     if (dcpl != H5I_INVALID_HID)
         H5Pclose(dcpl);
+    return -1;
+}
+
+/* -----------------------------------------------------------------------
+ * filter_title field tests
+ *
+ * Registers a minimal class3 filter with a non-NULL filter_title and
+ * verifies that H5Pget_filter_by_id2 returns the title as the filter name.
+ * ---------------------------------------------------------------------- */
+
+#define TITLE_FILTER_ID 512
+
+static size_t
+title_filter_func(unsigned int flags, size_t cd_nelmts, const unsigned int *cd_values, size_t nbytes,
+                  size_t *buf_size, void **buf)
+{
+    (void)flags;
+    (void)cd_nelmts;
+    (void)cd_values;
+    (void)buf_size;
+    (void)buf;
+    return nbytes; /* pass-through */
+}
+
+static int
+test_filter_title(void)
+{
+    static const H5Z_class3_t title_cls = {
+        H5Z_CLASS3_T_VERS,   /* version        */
+        TITLE_FILTER_ID,     /* id             */
+        1,                   /* encoder_present */
+        1,                   /* decoder_present */
+        "My Test Filter",    /* filter_title   */
+        NULL,                /* can_apply      */
+        NULL,                /* set_local      */
+        title_filter_func,   /* filter         */
+        NULL,                /* set_config     */
+        NULL,                /* get_config     */
+    };
+    hid_t    dcpl = H5I_INVALID_HID;
+    unsigned flags;
+    unsigned cd_values[8];
+    size_t   cd_nelmts;
+    char     name[64];
+    unsigned config;
+
+    TESTING("filter_title: returned by H5Pget_filter_by_id2 as filter name");
+
+    if (H5Zregister(&title_cls) < 0)
+        TEST_ERROR;
+
+    if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
+        TEST_ERROR;
+    if (H5Pappend_filter(dcpl, TITLE_FILTER_ID, 0, NULL) < 0)
+        TEST_ERROR;
+
+    cd_nelmts = 8;
+    if (H5Pget_filter_by_id2(dcpl, TITLE_FILTER_ID, &flags, &cd_nelmts, cd_values, sizeof(name), name,
+                             &config) < 0)
+        TEST_ERROR;
+    if (strcmp(name, "My Test Filter") != 0)
+        TEST_ERROR;
+
+    H5Pclose(dcpl);
+    H5Zunregister(TITLE_FILTER_ID);
+    PASSED();
+
+    return 0;
+
+error:
+    H5E_BEGIN_TRY
+    {
+        if (dcpl != H5I_INVALID_HID)
+            H5Pclose(dcpl);
+        H5Zunregister(TITLE_FILTER_ID);
+    }
+    H5E_END_TRY
     return -1;
 }
 
@@ -680,6 +749,9 @@ main(void)
 
     /* Parser tests */
     nerrors += test_parser() < 0 ? 1 : 0;
+
+    /* filter_title field test */
+    nerrors += test_filter_title() < 0 ? 1 : 0;
 
     /* cd_packing helper tests */
     nerrors += test_cd_packing() < 0 ? 1 : 0;

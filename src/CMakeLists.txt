@@ -1001,6 +1001,13 @@ if (H5_ZLIB_HEADER)
   )
 endif ()
 
+if (H5_HAVE_TOMLC17)
+  if (TOMLC17_USE_BUNDLED)
+    list (APPEND H5Z_SOURCES ${HDF5_SRC_DIR}/tomlc17/tomlc17.c)
+    message (VERBOSE "tomlc17: using bundled source ${HDF5_SRC_DIR}/tomlc17/tomlc17.c")
+  endif ()
+endif ()
+
 set (H5Z_PUBLIC_HDRS
     ${HDF5_SRC_DIR}/H5Zdevelop.h
     ${HDF5_SRC_DIR}/H5Zpublic.h

@@ -55,9 +55,10 @@ H5Z_class3_t H5Z_SZIP[1] = {{
 /*-------------------------------------------------------------------------
  * Function:    H5Z__szip_set_config
  *
- * Purpose:     Parse "coding=entropy|nn,pixels_per_block=N" into cd_values.
- *              Only the mask (cd_values[0]) and ppb (cd_values[1]) are set;
- *              the remaining szip params are filled in by set_local.
+ * Purpose:     Parse TOML "coding = \"entropy\"|\"nn\", pixels_per_block = N"
+ *              into cd_values.  Only the mask (cd_values[0]) and ppb
+ *              (cd_values[1]) are set; the remaining szip params are filled
+ *              in by set_local.
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -73,8 +74,6 @@ H5Z__szip_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, size_t 
     if (cd_values) {
         unsigned mask = H5_SZIP_NN_OPTION_MASK; /* default: nearest neighbour */
         unsigned ppb  = 32;                     /* default pixels_per_block */
-        char     val_buf[64];
-        size_t   bufsz;
         htri_t   found;
 
         if (cd_values_size < H5Z_SZIP_USER_NPARMS)
@@ -82,13 +81,14 @@ H5Z__szip_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, size_t 
 
         if (params) {
             static const char *const known[] = {"coding", "pixels_per_block", NULL};
+            char                     val_buf[64];
+            size_t                   bufsz = sizeof(val_buf);
 
             if (H5Z__config_validate_keys(params, known) < 0)
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unknown parameter key in szip filter config");
 
-            /* coding = entropy | nn */
-            bufsz = sizeof(val_buf);
-            found = H5Zconfig_get_param(params, "coding", val_buf, &bufsz);
+            /* coding = "entropy" | "nn" */
+            found = H5Zconfig_get_str(params, "coding", val_buf, &bufsz);
             if (found < 0)
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "malformed params string for szip filter");
             if (found > 0) {
@@ -98,22 +98,24 @@ H5Z__szip_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, size_t 
                     mask = H5_SZIP_NN_OPTION_MASK;
                 else
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                                "szip 'coding' must be 'entropy' or 'nn', got '%s'", val_buf);
+                                "szip 'coding' must be \"entropy\" or \"nn\", got '%s'", val_buf);
             }
 
-            /* pixels_per_block */
-            bufsz = sizeof(val_buf);
-            found = H5Zconfig_get_param(params, "pixels_per_block", val_buf, &bufsz);
-            if (found < 0)
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "malformed params string for szip filter");
-            if (found > 0) {
-                char    *end;
-                long int lval = strtol(val_buf, &end, 10);
-                if (*end != '\0' || lval <= 0 || lval > 32 || (lval & 1))
+            /* pixels_per_block = <integer> */
+            {
+                int64_t lval;
+                found = H5Zconfig_get_int(params, "pixels_per_block", &lval);
+                if (found < 0)
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                                "szip 'pixels_per_block' must be an even integer in [2,32], got '%s'",
-                                val_buf);
-                ppb = (unsigned)lval;
+                                "malformed params string for szip filter");
+                if (found > 0) {
+                    if (lval <= 0 || lval > 32 || (lval & 1))
+                        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                                    "szip 'pixels_per_block' must be an even integer in [2,32], "
+                                    "got %" PRId64,
+                                    lval);
+                    ppb = (unsigned)lval;
+                }
             }
         }
 
@@ -128,15 +130,15 @@ done:
 /*-------------------------------------------------------------------------
  * Function:    H5Z__szip_get_config
  *
- * Purpose:     Reconstruct "coding=entropy|nn,pixels_per_block=N" from
- *              cd_values.
+ * Purpose:     Reconstruct TOML "coding = \"...\", pixels_per_block = N"
+ *              from cd_values.
  *-------------------------------------------------------------------------
  */
 static herr_t
 H5Z__szip_get_config(unsigned H5_ATTR_UNUSED flags, size_t cd_nelmts, const unsigned cd_values[], char *buf,
                      size_t *buf_size)
 {
-    char        tmp[64];
+    char        tmp[80];
     size_t      n;
     const char *coding;
     unsigned    mask;
@@ -147,7 +149,7 @@ H5Z__szip_get_config(unsigned H5_ATTR_UNUSED flags, size_t cd_nelmts, const unsi
     mask   = (cd_nelmts >= 1) ? cd_values[H5Z_SZIP_PARM_MASK] : (unsigned)H5_SZIP_NN_OPTION_MASK;
     coding = (mask & H5_SZIP_EC_OPTION_MASK) ? "entropy" : "nn";
 
-    n = (size_t)snprintf(tmp, sizeof(tmp), "coding=%s,pixels_per_block=%u", coding,
+    n = (size_t)snprintf(tmp, sizeof(tmp), "coding = \"%s\", pixels_per_block = %u", coding,
                          (cd_nelmts >= 2) ? cd_values[H5Z_SZIP_PARM_PPB] : 32u);
 
     if (buf_size)

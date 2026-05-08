@@ -35,6 +35,14 @@
  */
 #define H5Z_CLASS3_T_VERS (2)
 
+/**
+ * Highest accepted version field value in H5Zregister().  Plugin authors
+ * should set the version field to the literal value documented for their
+ * chosen struct (1 for H5Z_class2_t, 2 for H5Z_class3_t) rather than
+ * referencing this constant directly. \since 2.2.0
+ */
+#define H5Z_CLASS_T_VERS_MAX (2)
+
 /*******************/
 /* Public Typedefs */
 /*******************/
@@ -250,23 +258,104 @@ extern "C" {
 /**
  * \ingroup H5Z
  *
- * \brief Look up a key in a filter parameter string.
+ * \brief Check whether a key is present in a TOML-subset filter parameter string.
  *
- * \param[in]     params    Comma-separated key=value parameter string, or NULL.
- * \param[in]     key       Key to search for (case-insensitive).
- * \param[out]    value_buf Buffer to receive the value, or NULL for a size query.
- * \param[in,out] buf_size  On entry, capacity of value_buf; on return, bytes required
- *                          (excluding NUL terminator).
+ * \param[in] params  TOML-subset key=value parameter string, or NULL.
+ * \param[in] key     Key to search for (case-insensitive).
  *
- * \return Positive if the key is present, 0 if not present, negative on error.
+ * \return Positive if the key is present, 0 if absent, negative on error.
  *
- * \details Bare keys (no equals sign) return positive with *buf_size = 0.
- *          This function is the recommended way for set_config callbacks to
- *          extract parameter values.
+ * \details Bare keys (no '=' sign, boolean flags) return positive.
+ *          This function validates the entire parameter string on every call;
+ *          duplicate keys or malformed syntax return negative.
  *
  * \since 2.2.0
  */
-H5_DLL htri_t H5Zconfig_get_param(const char *params, const char *key, char *value_buf, size_t *buf_size);
+H5_DLL htri_t H5Zconfig_has_key(const char *params, const char *key);
+
+/**
+ * \ingroup H5Z
+ *
+ * \brief Look up a TOML integer value in a filter parameter string.
+ *
+ * \param[in]  params  TOML-subset key=value parameter string.
+ * \param[in]  key     Key to search for (case-insensitive).
+ * \param[out] out     Receives the parsed int64_t value.
+ *
+ * \return Positive if found and converted, 0 if not found, negative on error.
+ *
+ * \details Accepts decimal, 0x (hex), 0o (octal), 0b (binary) integers with
+ *          optional leading sign and TOML underscore digit separators.
+ *          Returns negative (H5E_BADVALUE) if the key exists but its value
+ *          is not a TOML integer (type mismatch).
+ *
+ * \since 2.2.0
+ */
+H5_DLL htri_t H5Zconfig_get_int(const char *params, const char *key, int64_t *out);
+
+/**
+ * \ingroup H5Z
+ *
+ * \brief Look up a TOML float value in a filter parameter string.
+ *
+ * \param[in]  params  TOML-subset key=value parameter string.
+ * \param[in]  key     Key to search for (case-insensitive).
+ * \param[out] out     Receives the parsed double value.
+ *
+ * \return Positive if found and converted, 0 if not found, negative on error.
+ *
+ * \details The decimal separator is always '.', regardless of locale.
+ *          TOML special floats (inf, nan) are rejected with H5E_BADVALUE.
+ *          Returns negative if the key exists but its value is not a TOML
+ *          float (type mismatch).
+ *
+ * \since 2.2.0
+ */
+H5_DLL htri_t H5Zconfig_get_double(const char *params, const char *key, double *out);
+
+/**
+ * \ingroup H5Z
+ *
+ * \brief Look up a TOML boolean value in a filter parameter string.
+ *
+ * \param[in]  params  TOML-subset key=value parameter string.
+ * \param[in]  key     Key to search for (case-insensitive).
+ * \param[out] out     Receives TRUE or FALSE.
+ *
+ * \return Positive if found, 0 if not found, negative on error.
+ *
+ * \details Accepts "true" or "false" (lowercase only, per TOML).
+ *          Bare keys (boolean flags with no '=' sign) are treated as TRUE.
+ *          Returns negative if the key exists but its value is not a TOML
+ *          boolean (type mismatch).
+ *
+ * \since 2.2.0
+ */
+H5_DLL htri_t H5Zconfig_get_bool(const char *params, const char *key, hbool_t *out);
+
+/**
+ * \ingroup H5Z
+ *
+ * \brief Look up a TOML string value in a filter parameter string.
+ *
+ * \param[in]     params    TOML-subset key=value parameter string.
+ * \param[in]     key       Key to search for (case-insensitive).
+ * \param[out]    buf       Buffer to receive the decoded string (without quotes),
+ *                          or NULL for a size query.
+ * \param[in,out] buf_size  On entry, capacity of buf; on return, bytes required
+ *                          (excluding NUL terminator).  May be NULL when buf is NULL.
+ *
+ * \return Positive if found, 0 if not found, negative on error.
+ *
+ * \details Only quoted values (double-quoted with backslash escapes, or
+ *          single-quoted with no escape processing) are accepted.
+ *          Unquoted integers, floats, booleans, and bare keys produce a
+ *          type mismatch error (H5E_BADVALUE).
+ *          If the buffer is too small, H5E_OVERFLOW is pushed.
+ *
+ * \since 2.2.0
+ */
+H5_DLL htri_t H5Zconfig_get_str(const char *params, const char *key, char *buf, size_t *buf_size);
 
 /**
  * \ingroup H5Z

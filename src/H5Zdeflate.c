@@ -51,7 +51,7 @@ const H5Z_class3_t H5Z_DEFLATE[1] = {{
 /*-------------------------------------------------------------------------
  * Function:    H5Z__deflate_set_config
  *
- * Purpose:     Parse "level=N" (N in 0..9; default 6) into cd_values.
+ * Purpose:     Parse TOML "level = N" (N in 0..9; default 6) into cd_values.
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -71,23 +71,20 @@ H5Z__deflate_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, size
 
         if (params) {
             static const char *const known[] = {"level", NULL};
-            char                     val_buf[64];
-            size_t                   bufsz = sizeof(val_buf);
             htri_t                   found;
+            int64_t                  lval;
 
             if (H5Z__config_validate_keys(params, known) < 0)
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unknown parameter key in deflate filter config");
 
-            found = H5Zconfig_get_param(params, "level", val_buf, &bufsz);
+            found = H5Zconfig_get_int(params, "level", &lval);
             if (found < 0)
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "malformed params string for deflate filter");
 
             if (found > 0) {
-                char    *end;
-                long int lval = strtol(val_buf, &end, 10);
-                if (*end != '\0' || lval < 0 || lval > 9)
+                if (lval < 0 || lval > 9)
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                                "deflate 'level' must be an integer in [0,9], got '%s'", val_buf);
+                                "deflate 'level' must be an integer in [0,9], got %" PRId64, lval);
                 level = (unsigned)lval;
             }
         }
@@ -115,7 +112,7 @@ H5Z__deflate_get_config(unsigned H5_ATTR_UNUSED flags, size_t cd_nelmts, const u
 
     FUNC_ENTER_PACKAGE_NOERR
 
-    n = (size_t)snprintf(tmp, sizeof(tmp), "level=%u", (cd_nelmts >= 1) ? cd_values[0] : 6u);
+    n = (size_t)snprintf(tmp, sizeof(tmp), "level = %u", (cd_nelmts >= 1) ? cd_values[0] : 6u);
 
     if (buf_size)
         *buf_size = n;

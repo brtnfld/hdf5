@@ -149,17 +149,191 @@ CONTAINS
 !>
 !! \ingroup FH5Z
 !!
-!! \brief Retrieves a single named parameter from a filter parameter string.
+!! \brief Checks whether a key exists in a filter parameter string.
 !!
-!! \param params    Full parameter string (e.g. "level=6,mode=fast").
-!! \param key       Name of the parameter to retrieve.
+!! \param params  Full parameter string (e.g. "level = 6, mode = \"fast\"").
+!! \param key     Name of the parameter to look for.
+!! \param found   .TRUE. if key exists, .FALSE. otherwise.
+!! \param hdferr  \fortran_error
+!!
+!! See C API: @ref H5Zconfig_has_key()
+!!
+  SUBROUTINE h5zconfig_has_key_f(params, key, found, hdferr)
+    IMPLICIT NONE
+    CHARACTER(LEN=*), INTENT(IN)  :: params
+    CHARACTER(LEN=*), INTENT(IN)  :: key
+    LOGICAL,          INTENT(OUT) :: found
+    INTEGER,          INTENT(OUT) :: hdferr
+
+    CHARACTER(LEN=LEN_TRIM(params)+1,KIND=C_CHAR) :: c_params
+    CHARACTER(LEN=LEN_TRIM(key)+1,KIND=C_CHAR)    :: c_key
+    INTEGER(C_INT)                                :: status
+
+    INTERFACE
+       INTEGER(C_INT) FUNCTION H5Zconfig_has_key_c(params_c, key_c) &
+            BIND(C,NAME='H5Zconfig_has_key')
+         IMPORT :: C_INT, C_CHAR
+         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: params_c
+         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: key_c
+       END FUNCTION H5Zconfig_has_key_c
+    END INTERFACE
+
+    c_params = TRIM(params)//C_NULL_CHAR
+    c_key    = TRIM(key)//C_NULL_CHAR
+    status   = H5Zconfig_has_key_c(c_params, c_key)
+    hdferr   = INT(status)
+    found    = (status > 0)
+  END SUBROUTINE h5zconfig_has_key_f
+
+!>
+!! \ingroup FH5Z
+!!
+!! \brief Retrieves an integer parameter from a filter parameter string.
+!!
+!! \param params  Full parameter string (e.g. "level = 6").
+!! \param key     Name of the integer parameter to retrieve.
+!! \param value   The integer value, if found.
+!! \param found   .TRUE. if key was found, .FALSE. if not present.
+!! \param hdferr  \fortran_error
+!!
+!! See C API: @ref H5Zconfig_get_int()
+!!
+  SUBROUTINE h5zconfig_get_int_f(params, key, value, found, hdferr)
+    IMPLICIT NONE
+    CHARACTER(LEN=*), INTENT(IN)  :: params
+    CHARACTER(LEN=*), INTENT(IN)  :: key
+    INTEGER(C_INT64_T), INTENT(OUT) :: value
+    LOGICAL,          INTENT(OUT) :: found
+    INTEGER,          INTENT(OUT) :: hdferr
+
+    CHARACTER(LEN=LEN_TRIM(params)+1,KIND=C_CHAR) :: c_params
+    CHARACTER(LEN=LEN_TRIM(key)+1,KIND=C_CHAR)    :: c_key
+    INTEGER(C_INT64_T)                             :: c_val
+    INTEGER(C_INT)                                 :: status
+
+    INTERFACE
+       INTEGER(C_INT) FUNCTION H5Zconfig_get_int_c(params_c, key_c, out_c) &
+            BIND(C,NAME='H5Zconfig_get_int')
+         IMPORT :: C_INT, C_CHAR, C_INT64_T
+         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN)  :: params_c
+         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN)  :: key_c
+         INTEGER(C_INT64_T),                   INTENT(OUT) :: out_c
+       END FUNCTION H5Zconfig_get_int_c
+    END INTERFACE
+
+    c_params = TRIM(params)//C_NULL_CHAR
+    c_key    = TRIM(key)//C_NULL_CHAR
+    c_val    = 0_C_INT64_T
+    status   = H5Zconfig_get_int_c(c_params, c_key, c_val)
+    hdferr   = INT(status)
+    found    = (status > 0)
+    IF (found) value = c_val
+  END SUBROUTINE h5zconfig_get_int_f
+
+!>
+!! \ingroup FH5Z
+!!
+!! \brief Retrieves a floating-point parameter from a filter parameter string.
+!!
+!! \param params  Full parameter string (e.g. "threshold = 1.5").
+!! \param key     Name of the float parameter to retrieve.
+!! \param value   The double-precision value, if found.
+!! \param found   .TRUE. if key was found, .FALSE. if not present.
+!! \param hdferr  \fortran_error
+!!
+!! See C API: @ref H5Zconfig_get_double()
+!!
+  SUBROUTINE h5zconfig_get_double_f(params, key, value, found, hdferr)
+    IMPLICIT NONE
+    CHARACTER(LEN=*), INTENT(IN)  :: params
+    CHARACTER(LEN=*), INTENT(IN)  :: key
+    REAL(C_DOUBLE),   INTENT(OUT) :: value
+    LOGICAL,          INTENT(OUT) :: found
+    INTEGER,          INTENT(OUT) :: hdferr
+
+    CHARACTER(LEN=LEN_TRIM(params)+1,KIND=C_CHAR) :: c_params
+    CHARACTER(LEN=LEN_TRIM(key)+1,KIND=C_CHAR)    :: c_key
+    REAL(C_DOUBLE)                                 :: c_val
+    INTEGER(C_INT)                                 :: status
+
+    INTERFACE
+       INTEGER(C_INT) FUNCTION H5Zconfig_get_double_c(params_c, key_c, out_c) &
+            BIND(C,NAME='H5Zconfig_get_double')
+         IMPORT :: C_INT, C_CHAR, C_DOUBLE
+         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN)  :: params_c
+         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN)  :: key_c
+         REAL(C_DOUBLE),                       INTENT(OUT) :: out_c
+       END FUNCTION H5Zconfig_get_double_c
+    END INTERFACE
+
+    c_params = TRIM(params)//C_NULL_CHAR
+    c_key    = TRIM(key)//C_NULL_CHAR
+    c_val    = 0.0_C_DOUBLE
+    status   = H5Zconfig_get_double_c(c_params, c_key, c_val)
+    hdferr   = INT(status)
+    found    = (status > 0)
+    IF (found) value = c_val
+  END SUBROUTINE h5zconfig_get_double_f
+
+!>
+!! \ingroup FH5Z
+!!
+!! \brief Retrieves a boolean parameter from a filter parameter string.
+!!
+!! \param params  Full parameter string (e.g. "enabled = true").
+!! \param key     Name of the boolean parameter to retrieve.
+!! \param value   .TRUE. or .FALSE. value, if found.
+!! \param found   .TRUE. if key was found, .FALSE. if not present.
+!! \param hdferr  \fortran_error
+!!
+!! See C API: @ref H5Zconfig_get_bool()
+!!
+  SUBROUTINE h5zconfig_get_bool_f(params, key, value, found, hdferr)
+    IMPLICIT NONE
+    CHARACTER(LEN=*), INTENT(IN)  :: params
+    CHARACTER(LEN=*), INTENT(IN)  :: key
+    LOGICAL,          INTENT(OUT) :: value
+    LOGICAL,          INTENT(OUT) :: found
+    INTEGER,          INTENT(OUT) :: hdferr
+
+    CHARACTER(LEN=LEN_TRIM(params)+1,KIND=C_CHAR) :: c_params
+    CHARACTER(LEN=LEN_TRIM(key)+1,KIND=C_CHAR)    :: c_key
+    INTEGER(C_INT)                                 :: c_val
+    INTEGER(C_INT)                                 :: status
+
+    INTERFACE
+       INTEGER(C_INT) FUNCTION H5Zconfig_get_bool_c(params_c, key_c, out_c) &
+            BIND(C,NAME='H5Zconfig_get_bool')
+         IMPORT :: C_INT, C_CHAR
+         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN)  :: params_c
+         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN)  :: key_c
+         INTEGER(C_INT),                       INTENT(OUT) :: out_c
+       END FUNCTION H5Zconfig_get_bool_c
+    END INTERFACE
+
+    c_params = TRIM(params)//C_NULL_CHAR
+    c_key    = TRIM(key)//C_NULL_CHAR
+    c_val    = 0_C_INT
+    status   = H5Zconfig_get_bool_c(c_params, c_key, c_val)
+    hdferr   = INT(status)
+    found    = (status > 0)
+    IF (found) value = (c_val /= 0)
+  END SUBROUTINE h5zconfig_get_bool_f
+
+!>
+!! \ingroup FH5Z
+!!
+!! \brief Retrieves a string parameter from a filter parameter string.
+!!
+!! \param params    Full parameter string (e.g. "coding = \"entropy\"").
+!! \param key       Name of the string parameter to retrieve.
 !! \param value_buf Buffer to receive the value string.
 !! \param buf_size  On entry: size of value_buf; on exit: length of value found.
 !! \param hdferr    Returns > 0 if found, 0 if not found, -1 on error.
 !!
-!! See C API: @ref H5Zconfig_get_param()
+!! See C API: @ref H5Zconfig_get_str()
 !!
-  SUBROUTINE h5zconfig_get_param_f(params, key, value_buf, buf_size, hdferr)
+  SUBROUTINE h5zconfig_get_str_f(params, key, value_buf, buf_size, hdferr)
     IMPLICIT NONE
     CHARACTER(LEN=*), INTENT(IN)    :: params
     CHARACTER(LEN=*), INTENT(IN)    :: key
@@ -167,31 +341,31 @@ CONTAINS
     INTEGER(SIZE_T),  INTENT(INOUT) :: buf_size
     INTEGER,          INTENT(OUT)   :: hdferr
 
-    CHARACTER(LEN=LEN_TRIM(params)+1,KIND=C_CHAR)      :: c_params
-    CHARACTER(LEN=LEN_TRIM(key)+1,KIND=C_CHAR)         :: c_key
+    CHARACTER(LEN=LEN_TRIM(params)+1,KIND=C_CHAR)              :: c_params
+    CHARACTER(LEN=LEN_TRIM(key)+1,KIND=C_CHAR)                 :: c_key
     CHARACTER(LEN=1,KIND=C_CHAR), DIMENSION(1:LEN(value_buf)+1) :: c_valbuf
-    INTEGER(SIZE_T)                                     :: c_bufsz
+    INTEGER(SIZE_T)                                             :: c_bufsz
 
     INTERFACE
-       INTEGER(C_INT) FUNCTION H5Zconfig_get_param(params_c, key_c, value_buf_c, buf_size_c) &
-            BIND(C,NAME='H5Zconfig_get_param')
+       INTEGER(C_INT) FUNCTION H5Zconfig_get_str_c(params_c, key_c, value_buf_c, buf_size_c) &
+            BIND(C,NAME='H5Zconfig_get_str')
          IMPORT :: C_INT, C_CHAR, SIZE_T
          CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN)    :: params_c
          CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN)    :: key_c
          CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(OUT)   :: value_buf_c
          INTEGER(SIZE_T),                      INTENT(INOUT) :: buf_size_c
-       END FUNCTION H5Zconfig_get_param
+       END FUNCTION H5Zconfig_get_str_c
     END INTERFACE
 
     c_params = TRIM(params)//C_NULL_CHAR
     c_key    = TRIM(key)//C_NULL_CHAR
     c_bufsz  = INT(LEN(value_buf), SIZE_T)
-    hdferr   = INT(H5Zconfig_get_param(c_params, c_key, c_valbuf, c_bufsz))
+    hdferr   = INT(H5Zconfig_get_str_c(c_params, c_key, c_valbuf, c_bufsz))
     buf_size = c_bufsz
     IF (hdferr > 0) &
        CALL HD5c2fstring(value_buf, c_valbuf, LEN(value_buf, KIND=SIZE_T), &
                          LEN(value_buf, KIND=SIZE_T)+1_SIZE_T)
-  END SUBROUTINE h5zconfig_get_param_f
+  END SUBROUTINE h5zconfig_get_str_f
 
 END MODULE H5Z
 
