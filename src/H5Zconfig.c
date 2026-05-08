@@ -69,7 +69,7 @@
 static char *
 H5Z__toml_wrap(const char *params)
 {
-    const char *p    = params ? params : "";
+    const char *p = params ? params : "";
     const char *e;
     size_t      clen;
     size_t      wlen;
@@ -827,7 +827,7 @@ H5Z__config_strip_braces(const char *params)
 herr_t
 H5Z__config_validate_keys(const char *params, const char *const *known_keys)
 {
-    char       *stripped  = NULL;
+    char       *stripped = NULL;
     const char *use_params;
     const char *p;
     herr_t      ret_value = SUCCEED;
@@ -837,7 +837,7 @@ H5Z__config_validate_keys(const char *params, const char *const *known_keys)
     if (!params || *params == '\0')
         HGOTO_DONE(SUCCEED);
 
-    stripped  = H5Z__config_strip_braces(params);
+    stripped   = H5Z__config_strip_braces(params);
     use_params = stripped ? stripped : params;
 
     if (strlen(use_params) > H5Z_CONFIG_STRING_MAX)
@@ -957,7 +957,7 @@ static htri_t
 H5Z__config_lookup(const char *params, const char *key, char *val_out, size_t val_cap,
                    H5Z__config_vtype_t *vtype_out)
 {
-    char       *stripped   = NULL;
+    char       *stripped = NULL;
     const char *use_params;
     const char *p;
     size_t      param_count = 0;
