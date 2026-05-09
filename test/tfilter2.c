@@ -152,6 +152,80 @@ test_parser(void)
         TEST_ERROR;
     PASSED();
 
+    TESTING("H5Zconfig_get_int: negative integer");
+    ret = H5Zconfig_get_int("offset = -4", "offset", &ival);
+    if (ret <= 0 || ival != -4)
+        TEST_ERROR;
+    PASSED();
+
+    TESTING("H5Zconfig_get_double: scientific notation");
+    ret = H5Zconfig_get_double("tol = 1.0e-6", "tol", &dval);
+    if (ret <= 0 || dval < 9.9e-7 || dval > 1.1e-6)
+        TEST_ERROR;
+    PASSED();
+
+    TESTING("H5Zconfig_get_str: comma inside quoted value");
+    vsz = sizeof(vbuf);
+    ret = H5Zconfig_get_str("path = \"/data/run_1,v2/dict.bin\"", "path", vbuf, &vsz);
+    if (ret <= 0 || strcmp(vbuf, "/data/run_1,v2/dict.bin") != 0)
+        TEST_ERROR;
+    PASSED();
+
+    TESTING("H5Zconfig_get_str: backslash-quote escape in double-quoted value");
+    vsz = sizeof(vbuf);
+    ret = H5Zconfig_get_str("msg = \"say \\\"hi\\\"\"", "msg", vbuf, &vsz);
+    if (ret <= 0 || strcmp(vbuf, "say \"hi\"") != 0)
+        TEST_ERROR;
+    PASSED();
+
+    TESTING("H5Zconfig_has_key: empty string is valid (no params)");
+    ret = H5Zconfig_has_key("", "level");
+    if (ret != 0)
+        TEST_ERROR;
+    PASSED();
+
+    TESTING("H5Zconfig_get_double: inf rejected");
+    H5E_BEGIN_TRY
+    {
+        ret = H5Zconfig_get_double("tol = inf", "tol", &dval);
+    }
+    H5E_END_TRY
+    if (ret >= 0)
+        TEST_ERROR;
+    PASSED();
+
+    TESTING("H5Zconfig_get_double: nan rejected");
+    H5E_BEGIN_TRY
+    {
+        ret = H5Zconfig_get_double("tol = nan", "tol", &dval);
+    }
+    H5E_END_TRY
+    if (ret >= 0)
+        TEST_ERROR;
+    PASSED();
+
+    TESTING("H5Zconfig_get_int: semicolon outside quotes rejected");
+    H5E_BEGIN_TRY
+    {
+        ret = H5Zconfig_get_int("level = 6; mode = 2", "level", &ival);
+    }
+    H5E_END_TRY
+    if (ret >= 0)
+        TEST_ERROR;
+    PASSED();
+
+    TESTING("H5Zconfig_get_int: underscore digit separator");
+    ret = H5Zconfig_get_int("count = 1_000_000", "count", &ival);
+    if (ret <= 0 || ival != 1000000)
+        TEST_ERROR;
+    PASSED();
+
+    TESTING("H5Zconfig_get_int: hex prefix 0x");
+    ret = H5Zconfig_get_int("flags = 0xff", "flags", &ival);
+    if (ret <= 0 || ival != 255)
+        TEST_ERROR;
+    PASSED();
+
     return 0;
 
 error:
