@@ -90,6 +90,7 @@ H5Z_class3_t H5Z_NBIT[1] = {{
     H5Z_FILTER_NBIT,      /* Filter id number */
     1,                    /* Assume encoder present: check before registering */
     1,                    /* decoder_present flag (set to true) */
+    "nbit",               /* Canonical filter name */
     NULL,                 /* filter_title (NULL: no title packed into cd_values) */
     H5Z__can_apply_nbit,  /* The "can apply" callback */
     H5Z__set_local_nbit,  /* The "set local" callback */

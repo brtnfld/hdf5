@@ -44,6 +44,7 @@ H5Z_class3_t H5Z_SZIP[1] = {{
     H5Z_FILTER_SZIP,      /* Filter id number */
     1,                    /* Assume encoder present: check before registering */
     1,                    /* decoder_present flag (set to true) */
+    "szip",               /* Canonical filter name */
     NULL,                 /* filter_title (NULL: no title packed into cd_values) */
     H5Z__can_apply_szip,  /* The "can apply" callback */
     H5Z__set_local_szip,  /* The "set local" callback */

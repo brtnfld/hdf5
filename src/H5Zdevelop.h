@@ -215,6 +215,16 @@ typedef herr_t (*H5Z_set_config_func_t)(const char *params, unsigned *flags, siz
  *
  * \return Non-negative on success; negative on failure.
  *
+ * \note Implementations that format \c float or \c double values \b must use
+ *       the C99 \c \%a format specifier (e.g., \c snprintf(buf,n,"\%a",val))
+ *       rather than \c \%g, \c \%f, or \c \%e. \c \%a encodes the exact
+ *       IEEE 754 bit pattern as a hexadecimal float literal, guaranteeing that
+ *       \c strtod parses the output back to the identical value with no
+ *       rounding. This makes exact round-trips possible for filters that store
+ *       \c float or \c double parameters via the cd_values packing convention.
+ *       Decimal float input (e.g., \c rate=3.5) remains valid for user
+ *       convenience; the asymmetry (decimal in, hex-float out) is intentional.
+ *
  * \since 2.2.0
  */
 typedef herr_t (*H5Z_get_config_func_t)(unsigned flags, size_t cd_nelmts, const unsigned cd_values[],
@@ -234,6 +244,7 @@ typedef struct H5Z_class3_t {
     H5Z_filter_t          id;              /**< Filter ID number                           */
     unsigned              encoder_present; /**< Does this filter have an encoder?          */
     unsigned              decoder_present; /**< Does this filter have a decoder?           */
+    const char           *name;            /**< Canonical string identifier (e.g., "zfp"); must not be NULL */
     const char           *filter_title;    /**< Optional human-readable label; may be NULL */
     H5Z_can_apply_func_t  can_apply;       /**< The "can apply" callback for a filter      */
     H5Z_set_local_func_t  set_local;       /**< The "set local" callback for a filter      */

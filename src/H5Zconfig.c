@@ -57,6 +57,93 @@
 #include H5_TOMLC17_HEADER /* tomlc17 TOML parser */
 
 /*
+ * H5Z__rewrite_hexfloats — return a copy of `src` with every C99 hex-float
+ * literal (e.g. "0x1.8p+1", "-0x1p-1") replaced by an equivalent decimal
+ * string.  Uses %.17g which guarantees IEEE 754 double round-trip fidelity.
+ *
+ * This pre-processing step lets callers produce parameter strings with `%a`
+ * for exact float encoding (RFC-HDFG-2026-001 §float-precision) without
+ * requiring changes to the vendored tomlc17 scanner, which does not support
+ * hex-float syntax natively.
+ *
+ * Returns a heap-allocated NUL-terminated string; caller frees with
+ * H5MM_xfree().  Returns NULL on allocation failure.
+ */
+static char *
+H5Z__rewrite_hexfloats(const char *src)
+{
+    const char *p   = src;
+    size_t      len = strlen(src);
+    /* Worst case: every 3-char token "0x1" expands to ~24 chars "%.17g" → 3x */
+    size_t  cap = len * 8 + 1;
+    char   *out = (char *)H5MM_malloc(cap);
+    size_t  pos = 0;
+
+    if (!out)
+        return NULL;
+
+    while (*p) {
+        /* Detect optional sign followed by "0x" or "0X" */
+        const char *tok_start = p;
+        if (*p == '+' || *p == '-')
+            p++;
+
+        if (p[0] == '0' && (p[1] == 'x' || p[1] == 'X')) {
+            /* Scan hex digits */
+            const char *q = p + 2;
+            while (isxdigit((unsigned char)*q) || *q == '_')
+                q++;
+            /* Is this a hex-float? Requires '.' or 'p'/'P' after hex digits */
+            if (*q == '.' || *q == 'p' || *q == 'P') {
+                if (*q == '.')
+                    q++;
+                while (isxdigit((unsigned char)*q) || *q == '_')
+                    q++;
+                if (*q == 'p' || *q == 'P') {
+                    q++;
+                    if (*q == '+' || *q == '-')
+                        q++;
+                    while (isdigit((unsigned char)*q))
+                        q++;
+                    /* q now points past the hex-float token; convert it */
+                    size_t tok_len = (size_t)(q - tok_start);
+                    char   tmp[64];
+                    if (tok_len < sizeof(tmp)) {
+                        memcpy(tmp, tok_start, tok_len);
+                        tmp[tok_len] = '\0';
+                        char  *end;
+                        double val = strtod(tmp, &end);
+                        if (end == tmp + tok_len) {
+                            /* Emit decimal equivalent as a TOML float.
+                             * Use %e (scientific notation) which always
+                             * contains a decimal point and exponent, so
+                             * tomlc17 parses it as TOML_FP64 not TOML_INTEGER.
+                             * 17 significant digits guarantee IEEE 754
+                             * double round-trip fidelity (C99 DBL_DECIMAL_DIG). */
+                            char dec[32];
+                            int  n = snprintf(dec, sizeof(dec), "%.17e", val);
+                            if (n > 0 && pos + (size_t)n < cap) {
+                                memcpy(out + pos, dec, (size_t)n);
+                                pos += (size_t)n;
+                                p = q;
+                                continue;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        /* Not a hex-float: copy one character verbatim */
+        p = tok_start;
+        if (pos + 1 < cap)
+            out[pos++] = *p++;
+    }
+    out[pos] = '\0';
+    return out;
+}
+
+/*
  * H5Z__toml_wrap — allocate a NUL-terminated TOML document that wraps the
  * inline-table content in params.  Returns a heap buffer that the caller
  * must free with H5MM_xfree().
@@ -110,10 +197,20 @@ H5Z__toml_wrap(const char *params)
 static htri_t
 H5Z__toml_parse_params(const char *params, toml_result_t *tr_out, toml_datum_t *ptab_out)
 {
+    char  *expanded  = NULL;
     char  *wrapped   = NULL;
     htri_t ret_value = true;
 
     FUNC_ENTER_PACKAGE
+
+    /* Replace hex-float literals (e.g. 0x1.8p+1) with decimal equivalents
+     * so the tomlc17 scanner, which does not support C99 hex-float syntax,
+     * can parse the resulting string without modification. */
+    if (params && *params) {
+        if (NULL == (expanded = H5Z__rewrite_hexfloats(params)))
+            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "out of memory rewriting hex-float literals");
+        params = expanded;
+    }
 
     if (NULL == (wrapped = H5Z__toml_wrap(params)))
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "out of memory for TOML wrapper buffer");
@@ -141,6 +238,7 @@ H5Z__toml_parse_params(const char *params, toml_result_t *tr_out, toml_datum_t *
 
 done:
     H5MM_xfree(wrapped);
+    H5MM_xfree(expanded);
     FUNC_LEAVE_NOAPI(ret_value)
 }
 

@@ -33,6 +33,7 @@ const H5Z_class3_t H5Z_SHUFFLE[1] = {{
     H5Z_FILTER_SHUFFLE,      /* Filter id number */
     1,                       /* encoder_present flag (set to true) */
     1,                       /* decoder_present flag (set to true) */
+    "shuffle",               /* Canonical filter name */
     NULL,                    /* filter_title (NULL: no title packed into cd_values) */
     NULL,                    /* The "can apply" callback */
     H5Z__set_local_shuffle,  /* The "set local" callback */

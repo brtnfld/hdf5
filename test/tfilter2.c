@@ -226,6 +226,44 @@ test_parser(void)
         TEST_ERROR;
     PASSED();
 
+    TESTING("H5Zconfig_get_double: hex-float 0x1.8p+1 == 3.0");
+    ret = H5Zconfig_get_double("rate = 0x1.8p+1", "rate", &dval);
+    if (ret <= 0 || dval != 3.0)
+        TEST_ERROR;
+    PASSED();
+
+    TESTING("H5Zconfig_get_double: hex-float 0x1.cp+1 == 3.5");
+    ret = H5Zconfig_get_double("rate = 0x1.cp+1", "rate", &dval);
+    if (ret <= 0 || dval != 3.5)
+        TEST_ERROR;
+    PASSED();
+
+    TESTING("H5Zconfig_get_double: negative hex-float -0x1p-1 == -0.5");
+    ret = H5Zconfig_get_double("offset = -0x1p-1", "offset", &dval);
+    if (ret <= 0 || dval != -0.5)
+        TEST_ERROR;
+    PASSED();
+
+    TESTING("H5Zconfig_get_double: hex-float without fraction 0xAp0 == 10.0");
+    ret = H5Zconfig_get_double("val = 0xAp0", "val", &dval);
+    if (ret <= 0 || dval != 10.0)
+        TEST_ERROR;
+    PASSED();
+
+    /* Verify that %a output round-trips exactly for a value that is not
+     * representable exactly in decimal (0.1 requires hex-float to preserve
+     * the exact IEEE 754 bit pattern through a serialize/parse cycle). */
+    TESTING("H5Zconfig_get_double: %%a round-trip for non-decimal-exact value");
+    {
+        char   pstr[64];
+        double orig = 0.1, rt;
+        snprintf(pstr, sizeof(pstr), "rate = %a", orig);
+        ret = H5Zconfig_get_double(pstr, "rate", &rt);
+        if (ret <= 0 || orig != rt)
+            TEST_ERROR;
+    }
+    PASSED();
+
     return 0;
 
 error:
@@ -705,16 +743,17 @@ static int
 test_filter_title(void)
 {
     static const H5Z_class3_t title_cls = {
-        H5Z_CLASS3_T_VERS, /* version        */
-        TITLE_FILTER_ID,   /* id             */
-        1,                 /* encoder_present */
-        1,                 /* decoder_present */
-        "My Test Filter",  /* filter_title   */
-        NULL,              /* can_apply      */
-        NULL,              /* set_local      */
-        title_filter_func, /* filter         */
-        NULL,              /* set_config     */
-        NULL,              /* get_config     */
+        H5Z_CLASS3_T_VERS,  /* version        */
+        TITLE_FILTER_ID,    /* id             */
+        1,                  /* encoder_present */
+        1,                  /* decoder_present */
+        "test_title_filter", /* name          */
+        "My Test Filter",   /* filter_title   */
+        NULL,               /* can_apply      */
+        NULL,               /* set_local      */
+        title_filter_func,  /* filter         */
+        NULL,               /* set_config     */
+        NULL,               /* get_config     */
     };
     hid_t    dcpl = H5I_INVALID_HID;
     unsigned flags;
@@ -752,6 +791,86 @@ error:
         if (dcpl != H5I_INVALID_HID)
             H5Pclose(dcpl);
         H5Zunregister(TITLE_FILTER_ID);
+    }
+    H5E_END_TRY
+    return -1;
+}
+
+/* -----------------------------------------------------------------------
+ * H5Z_class3_t name field tests
+ * ---------------------------------------------------------------------- */
+
+#define NAME_FILTER_ID 513
+
+static size_t
+name_filter_func(unsigned int flags, size_t cd_nelmts, const unsigned int *cd_values, size_t nbytes,
+                 size_t *buf_size, void **buf)
+{
+    (void)flags;
+    (void)cd_nelmts;
+    (void)cd_values;
+    (void)buf_size;
+    (void)buf;
+    return nbytes;
+}
+
+static int
+test_class3_name(void)
+{
+    herr_t ret;
+
+    TESTING("H5Z_class3_t: NULL name rejected by H5Zregister");
+    {
+        static const H5Z_class3_t null_name_cls = {
+            H5Z_CLASS3_T_VERS, /* version        */
+            NAME_FILTER_ID,    /* id             */
+            1,                 /* encoder_present */
+            1,                 /* decoder_present */
+            NULL,              /* name — intentionally NULL to trigger error */
+            NULL,              /* filter_title   */
+            NULL,              /* can_apply      */
+            NULL,              /* set_local      */
+            name_filter_func,  /* filter         */
+            NULL,              /* set_config     */
+            NULL,              /* get_config     */
+        };
+        H5E_BEGIN_TRY
+        {
+            ret = H5Zregister(&null_name_cls);
+        }
+        H5E_END_TRY
+        if (ret >= 0)
+            TEST_ERROR;
+    }
+    PASSED();
+
+    TESTING("H5Z_class3_t: valid name accepted by H5Zregister");
+    {
+        static const H5Z_class3_t valid_cls = {
+            H5Z_CLASS3_T_VERS,   /* version        */
+            NAME_FILTER_ID,      /* id             */
+            1,                   /* encoder_present */
+            1,                   /* decoder_present */
+            "test_name_filter",  /* name           */
+            NULL,                /* filter_title   */
+            NULL,                /* can_apply      */
+            NULL,                /* set_local      */
+            name_filter_func,    /* filter         */
+            NULL,                /* set_config     */
+            NULL,                /* get_config     */
+        };
+        if (H5Zregister(&valid_cls) < 0)
+            TEST_ERROR;
+        H5Zunregister(NAME_FILTER_ID);
+    }
+    PASSED();
+
+    return 0;
+
+error:
+    H5E_BEGIN_TRY
+    {
+        H5Zunregister(NAME_FILTER_ID);
     }
     H5E_END_TRY
     return -1;
@@ -839,6 +958,9 @@ main(void)
 
     /* filter_title field test */
     nerrors += test_filter_title() < 0 ? 1 : 0;
+
+    /* H5Z_class3_t name field tests */
+    nerrors += test_class3_name() < 0 ? 1 : 0;
 
     /* cd_packing helper tests */
     nerrors += test_cd_packing() < 0 ? 1 : 0;

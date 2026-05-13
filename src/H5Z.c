@@ -257,6 +257,8 @@ H5Zregister(const void *cls)
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unable to modify predefined filters");
         if (cls3->filter == NULL)
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no filter function specified");
+        if (cls3->name == NULL)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "filter name must not be NULL for H5Z_class3_t");
 
         if (H5Z_register3(cls3) < 0)
             HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register filter");
@@ -395,6 +397,7 @@ H5Z_register3(const H5Z_class3_t *cls)
 
     assert(cls);
     assert(cls->id >= 0 && cls->id <= H5Z_FILTER_MAX);
+    assert(cls->name); /* name is required for H5Z_class3_t */
 
     /* Build entry */
     memset(&entry, 0, sizeof(entry));
@@ -402,7 +405,7 @@ H5Z_register3(const H5Z_class3_t *cls)
     entry.id              = cls->id;
     entry.encoder_present = cls->encoder_present;
     entry.decoder_present = cls->decoder_present;
-    entry.name            = NULL; /* v3 struct has no canonical name field */
+    entry.name            = cls->name;
     entry.can_apply       = cls->can_apply;
     entry.set_local       = cls->set_local;
     entry.filter          = cls->filter;
