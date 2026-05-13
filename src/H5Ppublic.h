@@ -2757,25 +2757,50 @@ H5_DLL herr_t H5Pset_filter(hid_t plist_id, H5Z_filter_t filter, unsigned int fl
  * \brief Configures a filter and appends it to the pipeline
  *
  * \ocpl_id{plist_id}
- * \param[in] filter  Filter identifier
- * \param[in] flags   Bit vector of filter flags (see H5Pset_filter())
- * \param[in] params  Pointer to an #H5Z_params_t describing the filter configuration,
- *                    or NULL for filters that take no parameters
+ * \param[in] filter  Filter identifier (e.g. #H5Z_FILTER_DEFLATE)
+ * \param[in] flags   Bit vector of filter flags; same meaning as in H5Pset_filter()
+ * \param[in] params  Pointer to an #H5Z_params_t tagged-union that describes how the
+ *                    filter should be configured, or \c NULL to use the filter's
+ *                    built-in defaults (equivalent to calling H5Pset_filter() with
+ *                    zero \c cd_nelmts).
+ *
+ *                    The union has two modes selected by the \c type field:
+ *
+ *                    - <b>#H5Z_PARAMS_CDVALUES</b> — raw integer parameter array,
+ *                      identical to H5Pset_filter().  Set \c params->u.raw.cd_nelmts
+ *                      and \c params->u.raw.cd_values.  Convenience macro:
+ *                      \code
+ *                        H5Z_params_t p = H5Z_PARAMS_RAW(cd_nelmts, cd_values_array);
+ *                      \endcode
+ *
+ *                    - <b>#H5Z_PARAMS_STRING</b> — human-readable
+ *                      comma-separated key=value string (e.g. \c "level=6").
+ *                      Set \c params->u.str to a NUL-terminated string.
+ *                      Convenience macro (C only):
+ *                      \code
+ *                        H5Z_params_t p = H5Z_PARAMS_STR("level=6");
+ *                      \endcode
+ *                      The filter plugin must expose a \c set_config callback;
+ *                      if it does not, the call returns a negative value with
+ *                      \c H5E_ARGS/\c H5E_UNSUPPORTED.
  *
  * \return \herr_t
  *
  * \details H5Pappend_filter() configures the filter identified by \p filter and
  *          appends it to the existing filter pipeline on \p plist_id.  The pipeline
- *          is subject to the existing maximum of #H5Z_MAX_NFILTERS (32) entries.
+ *          may contain at most #H5Z_MAX_NFILTERS (32) entries.
  *
- *          When \p params is NULL or \c type is #H5Z_PARAMS_CDVALUES, the function
- *          behaves identically to H5Pset_filter().
+ *          If \p params is \c NULL or \c params->type is #H5Z_PARAMS_CDVALUES, the
+ *          function behaves identically to H5Pset_filter().
  *
- *          When \c type is #H5Z_PARAMS_STRING, the library locates or loads the
- *          filter plugin, invokes its \c set_config callback to translate the
- *          parameter string into \c cd_values, and stores the result.  The plugin
- *          must be available at call time; if it cannot be found,
- *          H5Pappend_filter() returns \c H5E_NOFILTER immediately.
+ *          If \p params->type is #H5Z_PARAMS_STRING, the library locates or loads
+ *          the filter plugin, validates that it exposes a \c set_config callback,
+ *          and invokes that callback to translate the parameter string into
+ *          \c cd_values.  The filter plugin must be available at call time; if it
+ *          cannot be found, the function fails with #H5E_NOFILTER.
+ *
+ *          Unknown keys in a \c #H5Z_PARAMS_STRING string are rejected by
+ *          built-in filters and should be rejected by third-party plugins.
  *
  * \since 2.2.0
  */
