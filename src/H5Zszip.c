@@ -89,7 +89,7 @@ H5Z__szip_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, size_t 
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unknown parameter key in szip filter config");
 
             /* coding = "entropy" | "nn" */
-            found = H5Zconfig_get_str(params, "coding", val_buf, &bufsz);
+            found = H5Z__config_get_str(params, "coding", val_buf, &bufsz);
             if (found < 0)
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "malformed params string for szip filter");
             if (found > 0) {
@@ -105,7 +105,7 @@ H5Z__szip_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, size_t 
             /* pixels_per_block = <integer> */
             {
                 int64_t lval;
-                found = H5Zconfig_get_int(params, "pixels_per_block", &lval);
+                found = H5Z__config_get_int(params, "pixels_per_block", &lval);
                 if (found < 0)
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "malformed params string for szip filter");
                 if (found > 0) {

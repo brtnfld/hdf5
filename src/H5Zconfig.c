@@ -347,18 +347,12 @@ done:
 }
 
 /*-------------------------------------------------------------------------
- * Function:    H5Zconfig_get_int
- *
- * Purpose:     Look up a key and return its TOML integer value (int64_t).
- *
- * Return:      > 0 found and converted, 0 not found, < 0 error (includes
- *              type mismatch and parse error).
- *
- * Since:  2.2.0
+ * H5Z__config_get_int — package-level integer lookup (no API lock).
+ * Called by set_config callbacks which already run inside an API context.
  *-------------------------------------------------------------------------
  */
 htri_t
-H5Zconfig_get_int(const char *params, const char *key, int64_t *out)
+H5Z__config_get_int(const char *params, const char *key, int64_t *out)
 {
     toml_result_t tr;
     toml_datum_t  d;
@@ -366,7 +360,7 @@ H5Zconfig_get_int(const char *params, const char *key, int64_t *out)
     htri_t        found;
     htri_t        ret_value;
 
-    FUNC_ENTER_API_NOINIT
+    FUNC_ENTER_PACKAGE
 
     if (!out)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "out must not be NULL");
@@ -384,6 +378,30 @@ H5Zconfig_get_int(const char *params, const char *key, int64_t *out)
 done:
     if (tr_valid)
         toml_free(tr);
+    FUNC_LEAVE_NOAPI(ret_value)
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Zconfig_get_int
+ *
+ * Purpose:     Look up a key and return its TOML integer value (int64_t).
+ *
+ * Return:      > 0 found and converted, 0 not found, < 0 error (includes
+ *              type mismatch and parse error).
+ *
+ * Since:  2.2.0
+ *-------------------------------------------------------------------------
+ */
+htri_t
+H5Zconfig_get_int(const char *params, const char *key, int64_t *out)
+{
+    htri_t ret_value;
+
+    FUNC_ENTER_API_NOINIT
+
+    ret_value = H5Z__config_get_int(params, key, out);
+
+done:
     FUNC_LEAVE_API_NOINIT(ret_value)
 }
 
@@ -472,6 +490,67 @@ done:
 }
 
 /*-------------------------------------------------------------------------
+ * H5Z__config_get_str — package-level string lookup (no API lock).
+ * Called by set_config callbacks which already run inside an API context.
+ *-------------------------------------------------------------------------
+ */
+htri_t
+H5Z__config_get_str(const char *params, const char *key, char *buf, size_t *buf_size)
+{
+    toml_result_t tr;
+    toml_datum_t  d;
+    bool          tr_valid = false;
+    htri_t        found;
+    size_t        vlen;
+    htri_t        ret_value;
+
+    FUNC_ENTER_PACKAGE
+
+    if ((found = H5Z__config_get_datum(params, key, &tr, &d)) < 0)
+        HGOTO_DONE(FAIL);
+    if (found == 0)
+        HGOTO_DONE(false);
+    tr_valid = true;
+
+    if (d.type != TOML_STRING)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                    "type mismatch: key '%s' is not a TOML string (value must be quoted)", key);
+
+    vlen = (size_t)d.u.str.len;
+
+    {
+        size_t cap = buf_size ? *buf_size : 0;
+
+        if (buf_size)
+            *buf_size = vlen;
+
+        if (buf) {
+            if (cap == 0) {
+                memcpy(buf, d.u.s, vlen + 1);
+            }
+            else if (cap > vlen) {
+                memcpy(buf, d.u.s, vlen + 1);
+            }
+            else {
+                if (cap > 0) {
+                    memcpy(buf, d.u.s, cap - 1);
+                    buf[cap - 1] = '\0';
+                }
+                HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL,
+                            "output buffer too small for string value of key '%s'", key);
+            }
+        }
+    }
+
+    ret_value = true;
+
+done:
+    if (tr_valid)
+        toml_free(tr);
+    FUNC_LEAVE_NOAPI(ret_value)
+}
+
+/*-------------------------------------------------------------------------
  * Function:    H5Zconfig_get_str
  *
  * Purpose:     Look up a key and return its TOML string value (decoded,
@@ -494,58 +573,12 @@ done:
 htri_t
 H5Zconfig_get_str(const char *params, const char *key, char *buf, size_t *buf_size)
 {
-    toml_result_t tr;
-    toml_datum_t  d;
-    bool          tr_valid = false;
-    htri_t        found;
-    size_t        vlen;
-    htri_t        ret_value;
+    htri_t ret_value;
 
     FUNC_ENTER_API_NOINIT
 
-    if ((found = H5Z__config_get_datum(params, key, &tr, &d)) < 0)
-        HGOTO_DONE(FAIL);
-    if (found == 0)
-        HGOTO_DONE(false);
-    tr_valid = true;
-
-    if (d.type != TOML_STRING)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                    "type mismatch: key '%s' is not a TOML string (value must be quoted)", key);
-
-    vlen = (size_t)d.u.str.len;
-
-    /* Save the caller's capacity before overwriting *buf_size. */
-    {
-        size_t cap = buf_size ? *buf_size : 0;
-
-        if (buf_size)
-            *buf_size = vlen; /* always report required length */
-
-        if (buf) {
-            if (cap == 0) {
-                /* No capacity hint — caller guarantees sufficient space. */
-                memcpy(buf, d.u.s, vlen + 1);
-            }
-            else if (cap > vlen) {
-                memcpy(buf, d.u.s, vlen + 1);
-            }
-            else {
-                /* Buffer too small — truncate and report overflow. */
-                if (cap > 0) {
-                    memcpy(buf, d.u.s, cap - 1);
-                    buf[cap - 1] = '\0';
-                }
-                HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL,
-                            "output buffer too small for string value of key '%s'", key);
-            }
-        }
-    }
-
-    ret_value = true;
+    ret_value = H5Z__config_get_str(params, key, buf, buf_size);
 
 done:
-    if (tr_valid)
-        toml_free(tr);
     FUNC_LEAVE_API_NOINIT(ret_value)
 }

@@ -78,7 +78,7 @@ H5Z__deflate_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, size
             if (H5Z__config_validate_keys(params, known) < 0)
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unknown parameter key in deflate filter config");
 
-            found = H5Zconfig_get_int(params, "level", &lval);
+            found = H5Z__config_get_int(params, "level", &lval);
             if (found < 0)
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "malformed params string for deflate filter");
 

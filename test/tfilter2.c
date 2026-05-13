@@ -650,12 +650,16 @@ test_regression_filter2_appends(void)
     if (H5Pappend_filter(dcpl, H5Z_FILTER_SHUFFLE, 0, NULL) < 0)
         TEST_ERROR;
     {
-        H5Z_params_t _p = H5Z_PARAMS_STR("level=3");
-        if (H5Pappend_filter(dcpl, H5Z_FILTER_DEFLATE, 0, &_p) < 0)
+        int expected = 1;
+        if (H5Zfilter_avail(H5Z_FILTER_DEFLATE) > 0) {
+            H5Z_params_t _p = H5Z_PARAMS_STR("level=3");
+            if (H5Pappend_filter(dcpl, H5Z_FILTER_DEFLATE, 0, &_p) < 0)
+                TEST_ERROR;
+            expected = 2;
+        }
+        if ((nfilters = H5Pget_nfilters(dcpl)) != expected)
             TEST_ERROR;
     }
-    if ((nfilters = H5Pget_nfilters(dcpl)) != 2)
-        TEST_ERROR;
 
     H5Pclose(dcpl);
     PASSED();

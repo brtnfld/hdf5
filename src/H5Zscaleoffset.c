@@ -782,7 +782,7 @@ H5Z__scaleoffset_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, 
                             "unknown parameter key in scaleoffset filter config");
 
             /* scale_type = "float_dscale" | "float_escale" | "int" */
-            found = H5Zconfig_get_str(params, "scale_type", val_buf, &bufsz);
+            found = H5Z__config_get_str(params, "scale_type", val_buf, &bufsz);
             if (found < 0)
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "malformed params string for scaleoffset filter");
             if (found > 0) {
@@ -802,7 +802,7 @@ H5Z__scaleoffset_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, 
             /* scale_factor = <non-negative integer> */
             {
                 int64_t lval;
-                found = H5Zconfig_get_int(params, "scale_factor", &lval);
+                found = H5Z__config_get_int(params, "scale_factor", &lval);
                 if (found < 0)
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                                 "malformed params string for scaleoffset filter");

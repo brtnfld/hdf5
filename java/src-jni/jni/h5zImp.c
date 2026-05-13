@@ -231,7 +231,7 @@ Java_hdf_hdf5lib_H5_H5Zconfig_1get_1param__Ljava_lang_String_2Ljava_lang_String_
     jboolean    isCopy1, isCopy2;
     jboolean   *out_arr = NULL;
     jboolean    isCopyOut;
-    hbool_t     c_val  = FALSE;
+    hbool_t     c_val  = false;
     htri_t      status = -1;
 
     UNUSED(clss);
