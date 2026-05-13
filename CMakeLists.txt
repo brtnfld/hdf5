@@ -1029,7 +1029,6 @@ include (config/CacheURLs.cmake)
 unset (SETTINGS_EXTERNAL_FILTERS)
 include (${HDF_CONFIG_DIR}/HDF5UseZLIB.cmake)
 include (${HDF_CONFIG_DIR}/HDF5UseLibaec.cmake)
-include (${HDF_CONFIG_DIR}/HDF5UseTomlc17.cmake)
 
 # Process list of filters for libhdf5.settings (and the H5build_settings string)
 list (REMOVE_DUPLICATES SETTINGS_EXTERNAL_FILTERS)
