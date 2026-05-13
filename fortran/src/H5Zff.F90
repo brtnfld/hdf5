@@ -343,7 +343,7 @@ CONTAINS
 
     c_params = TRIM(params)//C_NULL_CHAR
     c_key    = TRIM(key)//C_NULL_CHAR
-    c_bufsz  = INT(LEN(value), SIZE_T)
+    c_bufsz  = INT(LEN(value) + 1_SIZE_T, SIZE_T)
     hdferr   = INT(H5Zconfig_get_str_c(c_params, c_key, c_valbuf, c_bufsz))
     buf_size = c_bufsz
     IF (hdferr > 0) &

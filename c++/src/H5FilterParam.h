@@ -88,12 +88,12 @@ class H5CPP_DLL FilterParam {
             throw LibraryIException("FilterParam::config_get_param", "H5Zconfig_get_str failed");
         if (ret == 0)
             return 0;
-        std::vector<char> buf(buf_size + 1, '\0');
-        ret = H5Zconfig_get_str(params.c_str(), key.c_str(), buf.data(), &buf_size);
+        size_t capacity = buf_size + 1;
+        std::vector<char> buf(capacity, '\0');
+        ret = H5Zconfig_get_str(params.c_str(), key.c_str(), buf.data(), &capacity);
         if (ret < 0)
             throw LibraryIException("FilterParam::config_get_param", "H5Zconfig_get_str failed");
-        buf[buf_size] = '\0';
-        value         = H5std_string(buf.data(), buf_size);
+        value = H5std_string(buf.data());
         return 1;
     }
 
