@@ -13,7 +13,7 @@ needed by the HDF5 filter configuration API (RFC-HDFG-2026-001) are included.
 | Upstream URL  | https://github.com/cktan/tomlc17               |
 | License       | MIT (see `LICENSE` in this directory)          |
 | Vendored on   | 2026-05-08                                     |
-| Release / tag | **unknown** — tomlc17 does not embed a version |
+| Release / tag | `R20260501`                                    |
 
 Because tomlc17 does not include a version constant in its source, the
 vendored files are identified by their SHA-256 checksums:
