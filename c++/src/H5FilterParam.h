@@ -68,12 +68,12 @@ class H5CPP_DLL FilterParam {
     ///\exception H5::LibraryIException on error.
     static int config_get_param(const H5std_string &params, const H5std_string &key, bool &value)
     {
-        hbool_t c_val = FALSE;
+        hbool_t c_val = false;
         htri_t  ret   = H5Zconfig_get_bool(params.c_str(), key.c_str(), &c_val);
         if (ret < 0)
             throw LibraryIException("FilterParam::config_get_param", "H5Zconfig_get_bool failed");
         if (ret > 0)
-            value = (c_val != FALSE);
+            value = (c_val != false);
         return static_cast<int>(ret);
     }
 
