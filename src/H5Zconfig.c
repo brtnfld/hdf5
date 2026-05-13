@@ -158,7 +158,7 @@ H5Z__toml_wrap(const char *params)
 {
     const char *p = params ? params : "";
     const char *e;
-    size_t      clen;
+    size_t      content_len;
     size_t      wlen;
     char       *buf;
 
@@ -178,12 +178,12 @@ H5Z__toml_wrap(const char *params)
     else {
         e = p + strlen(p);
     }
-    clen = (size_t)(e - p);
+    content_len = (size_t)(e - p);
 
-    wlen = clen + 12; /* "__p__ = {" (9) + content + "}" (1) + NUL */
+    wlen = content_len + 12; /* "__p__ = {" (9) + content + "}" (1) + NUL */
     buf  = (char *)H5MM_malloc(wlen);
     if (buf)
-        snprintf(buf, wlen, "__p__ = {%.*s}", (int)clen, p);
+        snprintf(buf, wlen, "__p__ = {%.*s}", (int)content_len, p);
     return buf;
 }
 
