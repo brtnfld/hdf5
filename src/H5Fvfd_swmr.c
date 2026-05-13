@@ -41,9 +41,11 @@
 #include "H5MFprivate.h" /* File memory management                   */
 #include "H5MVprivate.h" /* File memory management for VFD SWMR      */
 #include "H5MMprivate.h" /* Memory management                        */
+#include "H5Ppublic.h"
 #include "H5Pprivate.h"  /* Property lists                           */
 #include "H5SMprivate.h" /* Shared Object Header Messages            */
 #include "H5Tprivate.h"  /* Datatypes                                */
+#include "H5CLprivate.h"
 
 /****************/
 /* Local Macros */
@@ -52,6 +54,15 @@
 #define VFD_SWMR_MD_FILE_SUFFIX ".md"
 #define NANOSECS_PER_SECOND     1000000000LL /* nanoseconds per second */
 #define NANOSECS_PER_TENTH_SEC  100000000LL  /* nanoseconds per 0.1 second */
+
+/* Maximum number of name value pairs that may appear in configuration language 
+ * configuration string for the vfd swmr configuration */
+#define VFD_SWMR_CONFIG_DATA__MAX_PARAMS  4 
+#define VFD_SWMR_CONFIG__MAX_PARAMS       13 
+#define VFD_SWMR_PB_CONFIG__MAX_PARAMS    2
+#define VFD_SWMR_FS_STRATEGY__MAX_PARAMS  1
+#define VFD_SWMR_FS_PAGE_SIZE__MAX_PARAMS 1
+
 
 /* Declare an array of string to identify the VFD SMWR Log tags.
  * Note this array is used to generate the entry tag by the log reporting macro
@@ -109,6 +120,15 @@ static herr_t H5F__generate_updater_file(H5F_t *f, uint32_t num_entries, uint16_
                                          uint8_t *md_file_hdr_image_ptr, size_t md_file_hdr_image_len,
                                          uint8_t *md_file_index_image_ptr, uint64_t md_file_index_offset,
                                          size_t md_file_index_image_len);
+
+static herr_t H5F__set_vfd_swmr_config(H5CL_nv_pair_t *nv_pairs, hbool_t writer, 
+                                       H5F_vfd_swmr_config_t *config_ptr);
+static herr_t H5F__set_vfd_swmr_page_buffer_config(H5CL_nv_pair_t *nv_pairs, size_t *page_buf_size, 
+                                                   hbool_t *metadata_pages_only);
+static herr_t H5F__set_vfd_swmr_fs_strategy_config(H5CL_nv_pair_t *nv_pairs, 
+                                                   hbool_t *fs_strategy_persist);
+static herr_t H5F__set_vfd_swmr_fs_page_size_config(H5CL_nv_pair_t *nv_pairs, hsize_t *fs_page_size);
+
 
 /*********************/
 /* Package Variables */
@@ -2566,3 +2586,847 @@ H5F__vfd_swmr_enable_end_of_tick(H5F_t *f)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5F__vfd_swmr_enable_end_of_tick() */
+
+/*******************************************************************************
+ * Routines supporting VFD SWMR configuration language
+ *******************************************************************************/
+
+/*----------------------------------------------------------------------------
+ * Function:    H5F__set_vfd_swmr_config()
+ *
+ * Purpose:     Set the configuration parameters for the 'H5F_vfd_swmr_config' 
+ *              group using the provided nv_pairs. This function ensures that 
+ *              required configuration parameters are present and correctly 
+ *              assigned. Errors are triggered if any required parameters are 
+ *              missing, if parameter types do not match the expected types, 
+ *              or if duplicate parameters are found in the input.
+ * 
+ *                                                   Cody S. -- 4/13/26
+ *
+ * Return:      SUCCEED/FAIL
+ *----------------------------------------------------------------------------
+ */
+static herr_t
+H5F__set_vfd_swmr_config(H5CL_nv_pair_t *nv_pairs, hbool_t writer, H5F_vfd_swmr_config_t *config_ptr)
+{
+    int i;
+
+    /* flags for tracking duplicate/required parameters */
+    hbool_t seen_version                = FALSE;
+    hbool_t seen_tick_len               = FALSE;
+    hbool_t seen_max_lag                = FALSE;
+    hbool_t seen_posix_semantics        = FALSE;
+    hbool_t seen_maintain_md_file       = FALSE;
+    hbool_t seen_gen_updater_files      = FALSE;
+    hbool_t seen_flush_raw_data         = FALSE;
+    hbool_t seen_md_pages_reserved      = FALSE;
+    hbool_t seen_md_file_path           = FALSE;
+    hbool_t seen_md_file_name           = FALSE;
+    hbool_t seen_updater_file_path      = FALSE;
+    hbool_t seen_log_file_path          = FALSE;
+    hbool_t seen_pb_expansion_threshold = FALSE;
+
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    /* Parameter checks */
+    assert(config_ptr);
+    assert(nv_pairs);
+    
+    config_ptr->writer = writer;
+
+    /* Set default values for non required configurations */
+    config_ptr->version                 = H5F__CURR_VFD_SWMR_CONFIG_VERSION;
+    config_ptr->presume_posix_semantics = FALSE;
+    config_ptr->flush_raw_data          = FALSE;
+    config_ptr->md_file_path[0]         = '\0';
+    config_ptr->md_file_name[0]         = '\0';
+    config_ptr->updater_file_path[0]    = '\0';
+    config_ptr->log_file_path[0]        = '\0';
+    config_ptr->pb_expansion_threshold  = 0;
+
+    /* Iterate over nv_pairs */
+    for ( i = 0; i < VFD_SWMR_CONFIG__MAX_PARAMS; i++ ) {
+        
+        if ( H5CL_VAL_NONE != nv_pairs[i].val_type ) {
+            
+            /* Match each parameter name to its corresponding configuration field */
+            if ( 0 == strcmp("version", nv_pairs[i].name_ptr) ) {
+                
+                /* Duplicate detection + mark parameter as handled */
+                if ( seen_version ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: version");
+                }
+                seen_version = TRUE;
+
+                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
+                }
+
+                config_ptr->version = (int32_t)(nv_pairs[i].int_val); 
+
+            } else if ( 0 == strcmp("tick_len", nv_pairs[i].name_ptr) ) {
+
+                /* Duplicate detection + mark parameter as handled */
+                if ( seen_tick_len ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: tick_len");
+                }
+                seen_tick_len = TRUE;
+
+                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
+                }
+                
+                if ( nv_pairs[i].int_val < 0 ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid tick_len value");
+                }
+
+                config_ptr->tick_len = (uint32_t)(nv_pairs[i].int_val);
+
+            } else if ( 0 == strcmp("max_lag", nv_pairs[i].name_ptr) ) {
+
+                /* Duplicate detection + mark parameter as handled */
+                if ( seen_max_lag ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: max_lag");
+                }
+                seen_max_lag = TRUE;
+
+                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
+                }
+                
+                if ( nv_pairs[i].int_val < 0 ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid max_lag value");
+                }
+
+                config_ptr->max_lag = (uint32_t)(nv_pairs[i].int_val);
+
+            } else if ( 0 == strcmp("presume_posix_semantics", nv_pairs[i].name_ptr) ) {
+
+                /* Duplicate detection + mark parameter as handled */
+                if ( seen_posix_semantics ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: presume_posix_semantics");
+                }
+                seen_posix_semantics = TRUE;
+
+                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
+                }
+                
+                /* Boolean range check */
+                if ( nv_pairs[i].int_val != 0 && nv_pairs[i].int_val != 1 ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
+                        "presume_posix_semantics must have value of either 0 or 1");
+                }
+
+                config_ptr->presume_posix_semantics = (hbool_t)(nv_pairs[i].int_val);
+
+            } else if ( 0 == strcmp("maintain_metadata_file", nv_pairs[i].name_ptr) ) {
+
+                /* Duplicate detection + mark parameter as handled */
+                if ( seen_maintain_md_file ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: maintain_metadata_file");
+                }
+                seen_maintain_md_file = TRUE;
+                
+                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
+                }
+
+                /* Boolean range check */
+                if ( nv_pairs[i].int_val != 0 && nv_pairs[i].int_val != 1 ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
+                        "maintain_metadata_file must have value of either 0 or 1");
+                }
+
+                config_ptr->maintain_metadata_file = (hbool_t)(nv_pairs[i].int_val);
+
+            } else if ( 0 == strcmp("generate_updater_files", nv_pairs[i].name_ptr) ) {
+
+                /* Duplicate detection + mark parameter as handled */
+                if ( seen_gen_updater_files ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: generate_updater_files");
+                }
+                seen_gen_updater_files = TRUE;
+
+                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
+                }
+
+                /* Boolean range check */
+                if ( nv_pairs[i].int_val != 0 && nv_pairs[i].int_val != 1 ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
+                        "generate_updater_files must have value of either 0 or 1");
+                }
+
+                config_ptr->generate_updater_files = (hbool_t)(nv_pairs[i].int_val);
+
+            } else if ( 0 == strcmp("flush_raw_data", nv_pairs[i].name_ptr) ) {
+
+                /* Duplicate detection + mark parameter as handled */
+                if ( seen_flush_raw_data ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: flush_raw_data");
+                }
+                seen_flush_raw_data = TRUE;
+
+                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
+                } 
+
+                /* Boolean range check */
+                if ( nv_pairs[i].int_val != 0 && nv_pairs[i].int_val != 1 ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
+                        "flush_raw_data must have value of either 0 or 1");
+                }
+
+                config_ptr->flush_raw_data = (hbool_t)(nv_pairs[i].int_val);
+
+            } else if ( 0 == strcmp("md_pages_reserved", nv_pairs[i].name_ptr) ) {
+
+                /* Duplicate detection + mark parameter as handled */
+                if ( seen_md_pages_reserved ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: md_pages_reserved");
+                }
+                seen_md_pages_reserved = TRUE;
+
+                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
+                }
+
+                if ( nv_pairs[i].int_val < 0 ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid md_pages_reserved value");
+                }
+
+                config_ptr->md_pages_reserved = (uint32_t)(nv_pairs[i].int_val);
+
+            } else if ( 0 == strcmp("md_file_path", nv_pairs[i].name_ptr) ) {
+
+                /* Duplicate detection + mark parameter as handled */
+                if ( seen_md_file_path )
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: md_file_path");
+
+                seen_md_file_path = TRUE;
+
+                if ( H5CL_VAL_QSTR != nv_pairs[i].val_type ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
+                }
+
+                if ( nv_pairs[i].vlen_val_ptr == NULL ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
+                        "Expected string data for md_file_path but vlen_val_ptr is NULL.");
+                }
+                if ( nv_pairs[i].len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
+                        "string data for md_file_path is too large.");
+                }
+
+                strncpy(config_ptr->md_file_path, (const char *)nv_pairs[i].vlen_val_ptr, nv_pairs[i].len);
+                config_ptr->md_file_path[nv_pairs[i].len] = '\0'; /* null-terminate */
+
+            } else if ( 0 == strcmp("md_file_name", nv_pairs[i].name_ptr) ) {
+
+                /* Duplicate detection + mark parameter as handled */
+                if ( seen_md_file_name ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: md_file_name");
+                }
+                seen_md_file_name = TRUE;
+
+                if ( H5CL_VAL_QSTR != nv_pairs[i].val_type ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
+                }
+
+                if ( nv_pairs[i].vlen_val_ptr == NULL ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
+                        "Expected string data for md_file_name but vlen_val_ptr is NULL.");
+                }
+                if ( nv_pairs[i].len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
+                        "string data for md_file_name is too large.");
+                }
+
+                strncpy(config_ptr->md_file_name, (const char *)nv_pairs[i].vlen_val_ptr, nv_pairs[i].len);
+                config_ptr->md_file_name[nv_pairs[i].len] = '\0'; /* null-terminate */
+
+            } else if ( 0 == strcmp("updater_file_path", nv_pairs[i].name_ptr) ) {
+
+                /* Duplicate detection + mark parameter as handled */
+                if ( seen_updater_file_path ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: updater_file_path");
+                }
+                seen_updater_file_path = TRUE;
+
+                if ( H5CL_VAL_QSTR != nv_pairs[i].val_type ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
+                }
+
+                if ( nv_pairs[i].vlen_val_ptr == NULL ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
+                        "Expected string data for updater_file_path but vlen_val_ptr is NULL.");
+                }
+                
+                if ( nv_pairs[i].len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
+                        "string data for updater_file_path is too large.");
+                }
+
+                strncpy(config_ptr->updater_file_path, (const char *)nv_pairs[i].vlen_val_ptr, nv_pairs[i].len);
+                config_ptr->updater_file_path[nv_pairs[i].len] = '\0'; /* null-terminate */
+
+            } else if ( 0 == strcmp("log_file_path", nv_pairs[i].name_ptr) ) {
+
+                /* Duplicate detection + mark parameter as handled */
+                if ( seen_log_file_path ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: log_file_path");
+                }
+                seen_log_file_path = TRUE;
+
+                if ( H5CL_VAL_QSTR != nv_pairs[i].val_type ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
+                }
+
+                if ( nv_pairs[i].vlen_val_ptr == NULL ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
+                        "Expected string data for log_file_path but vlen_val_ptr is NULL.");
+                }
+
+                if ( nv_pairs[i].len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
+                        "string data for log_file_path is too large.");
+                }
+
+                strncpy(config_ptr->log_file_path, (const char *)nv_pairs[i].vlen_val_ptr, nv_pairs[i].len);
+                config_ptr->log_file_path[nv_pairs[i].len] = '\0'; /* null-terminate */
+
+            } else if ( 0 == strcmp("pb_expansion_threshold", nv_pairs[i].name_ptr) ) {
+
+                /* Duplicate detection + mark parameter as handled */
+                if ( seen_pb_expansion_threshold ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: pb_expansion_threshold");
+                }
+                seen_pb_expansion_threshold = TRUE;
+
+                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
+                }
+
+                if ( nv_pairs[i].int_val < 0 ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid pb_expansion_threshold value");
+                }
+
+                config_ptr->pb_expansion_threshold = (uint32_t)(nv_pairs[i].int_val);
+
+            } else {
+
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unknown parameter name.");
+            }
+        }
+    }
+    
+    /* Ensure required fields have been provided */
+    if ( !seen_max_lag ) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: max_lag");
+    } else if ( !seen_tick_len ) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: tick_len");
+    } else if ( !seen_maintain_md_file ) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: maintain_metadata_file");
+    } else if ( !seen_gen_updater_files ) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: generate_updater_files");
+    } else if ( !seen_md_pages_reserved ) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: md_pages_reserved");
+    }
+
+    /* Sanity check provided values */
+    if ( H5Pcheck_vfd_swmr_config(config_ptr) < 0 ) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "configuration contains invalid values");
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5F__set_vfd_swmr_config() */
+
+
+/*----------------------------------------------------------------------------
+ * Function:    H5F__set_vfd_swmr_page_buffer_config()
+ *
+ * Purpose:     Set the configuration parameters for the 'page_buffer_config' 
+ *              group using the provided nv_pairs. This function ensures that 
+ *              required configuration parameters are present and correctly 
+ *              assigned. Errors are triggered if any required parameters are 
+ *              missing, if parameter types do not match the expected types, 
+ *              or if duplicate parameters are found in the input.
+ * 
+ *                                                   Cody S. -- 4/13/26
+ *
+ * Return:      SUCCEED/FAIL
+ *----------------------------------------------------------------------------
+ */
+static herr_t
+H5F__set_vfd_swmr_page_buffer_config(H5CL_nv_pair_t *nv_pairs, size_t *page_buf_size, hbool_t *metadata_pages_only)
+{
+    int i;
+
+    /* flags for tracking duplicate/required parameters */
+    hbool_t seen_page_buf_size  = FALSE;
+    hbool_t seen_md_pages_only  = FALSE;
+
+    herr_t ret_value = SUCCEED;
+    
+    FUNC_ENTER_PACKAGE
+
+    assert(nv_pairs);
+
+    /* Iterate over nv_pairs */
+    for ( i = 0; i < VFD_SWMR_PB_CONFIG__MAX_PARAMS; i++ ) {
+        
+        if ( H5CL_VAL_NONE != nv_pairs[i].val_type ) {
+
+            /* Match each parameter name to its corresponding configuration */
+            if ( 0 == strcmp("page_buf_size", nv_pairs[i].name_ptr) ) {
+
+                if ( seen_page_buf_size ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: page_buf_size");
+                }
+                seen_page_buf_size = TRUE;
+                
+                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
+                }
+
+                if ( nv_pairs[i].int_val < 0 || (unsigned long)(nv_pairs[i].int_val) > SIZE_MAX ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "page_buf_size value is invalid or too large");
+                }
+
+                *page_buf_size = (size_t)(nv_pairs[i].int_val);
+
+            } else if ( 0 == strcmp("metadata_pages_only", nv_pairs[i].name_ptr) ) {
+                
+                if ( seen_md_pages_only ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: metadata_pages_only");
+                }
+                seen_md_pages_only = TRUE;
+                
+                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
+                }
+
+                if ( nv_pairs[i].int_val != 0 && nv_pairs[i].int_val != 1 ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
+                        "metadata_pages_only must have value of either 0 or 1");
+                }
+
+                *metadata_pages_only = (hbool_t)(nv_pairs[i].int_val);
+
+            } else {
+
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unknown parameter name.");
+            }
+        }
+    }
+
+    /* Ensure required fields have been provided */
+    if ( !seen_page_buf_size ) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: page_buf_size");
+    } else if ( !seen_md_pages_only ) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: metadata_pages_only");
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5F__set_vfd_swmr_page_buffer_config() */
+
+/*----------------------------------------------------------------------------
+ * Function:    H5F__set_vfd_swmr_fs_strategy_config()
+ *
+ * Purpose:     Set the configuration parameters for the 'file_space_strategy_config' 
+ *              group using the provided nv_pairs. This function ensures that 
+ *              required configuration parameters are present and correctly 
+ *              assigned. Errors are triggered if any required parameters are 
+ *              missing, or if parameter types do not match the expected types.
+ * 
+ *                                                   Cody S. -- 4/13/26
+ *
+ * Return:      SUCCEED/FAIL
+ *----------------------------------------------------------------------------
+ */
+static herr_t
+H5F__set_vfd_swmr_fs_strategy_config(H5CL_nv_pair_t *nv_pairs, hbool_t *fs_strategy_persist)
+{
+    int i;
+
+    /* flag for tracking that required paramater is set (+ duplication tracking if more parameters are added) */
+    hbool_t seen_fs_strategy_persist = FALSE;
+
+    herr_t ret_value = SUCCEED;
+    
+    FUNC_ENTER_PACKAGE
+
+    assert(nv_pairs);
+
+    /* Iterate over nv_pairs (currently only one expected, but loop maintained
+     * for consistency and potential future expansion) */
+    for ( i = 0; i < VFD_SWMR_FS_STRATEGY__MAX_PARAMS; i++ ) {
+        
+        if ( H5CL_VAL_NONE != nv_pairs[i].val_type ) {
+
+            if ( 0 == strcmp("persist", nv_pairs[i].name_ptr) ) {
+
+                /* No need to check for duplicates when only 1 parameter is allowed */
+                seen_fs_strategy_persist = TRUE;
+
+                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
+                }
+
+                if (nv_pairs[i].int_val != 0 && nv_pairs[i].int_val != 1) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
+                        "persist must have value of either 0 or 1");
+                }
+
+                *fs_strategy_persist = (hbool_t)(nv_pairs[i].int_val);
+            }
+        }
+    }
+
+    /* Ensure required fields have been provided */
+    if ( !seen_fs_strategy_persist ) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: persist");
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5F__set_vfd_swmr_fs_strategy_config() */
+
+/*----------------------------------------------------------------------------
+ * Function:    H5F_set_vfd_swmr_fs_page_size_config()
+ *
+ * Purpose:     Set the configuration parameters for the 'file_space_page_size' 
+ *              group using the provided nv_pairs. This function ensures that 
+ *              required configuration parameters are present and correctly 
+ *              assigned. Errors are triggered if any required parameters are 
+ *              missing, or if parameter types do not match the expected types.
+ * 
+ *                                                   Cody S. -- 4/13/26
+ *
+ * Return:      SUCCEED/FAIL
+ *----------------------------------------------------------------------------
+ */
+static herr_t
+H5F__set_vfd_swmr_fs_page_size_config(H5CL_nv_pair_t *nv_pairs, hsize_t *fs_page_size)
+{
+    int i;
+
+    /* flag for tracking that required paramater is set (+ duplication tracking if more parameters are added) */
+    hbool_t seen_fs_page_size = FALSE;
+
+    herr_t ret_value = SUCCEED;
+    
+    FUNC_ENTER_PACKAGE
+
+    /* Iterate over nv_pairs (currently only one expected, but loop maintained
+    * for consistency and potential future expansion) */
+    for ( i = 0; i < VFD_SWMR_PB_CONFIG__MAX_PARAMS; i++ ) {
+        
+        if ( H5CL_VAL_NONE != nv_pairs[i].val_type ) {
+            
+            if ( 0 == strcmp("page_size", nv_pairs[i].name_ptr) ) {
+                
+                /* No need to check for duplicates when only 1 parameter is allowed */
+                seen_fs_page_size = TRUE;
+                
+                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
+                }
+
+                /* Sanity check value */
+                if ( nv_pairs[i].int_val < H5F_FILE_SPACE_PAGE_SIZE_MIN ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "cannot set file space page size to less than 512");
+                }
+                if ( nv_pairs[i].int_val > H5F_FILE_SPACE_PAGE_SIZE_MAX ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "cannot set file space page size to more than 1GB");
+                }
+
+                *fs_page_size = (hsize_t)(nv_pairs[i].int_val);
+            }
+        }
+    }
+
+    /* Ensure required fields have been provided */
+    if ( !seen_fs_page_size ) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: page_size");
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5F_set_vfd_swmr_fs_page_size() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5F_load_vfd_swmr_config_from_file()
+ *
+ * Purpose:     Load VFD SWMR configuration data from the supplied
+ *              configuration file and apply it to the provided file
+ *              access and file creation property lists (FAPL and FCPL).
+ * 
+ *                                              Cody S. -- 5/7/26
+ *
+ * Return:      SUCCEED/FAIL
+ *-------------------------------------------------------------------------
+ */
+herr_t 
+H5F_load_vfd_swmr_config_from_file(const char *file_name, hid_t fapl_id, hid_t fcpl_id,
+                                   hbool_t writer, hbool_t create_file)
+{
+    char  *config_str = NULL;
+    herr_t ret_value  = SUCCEED;
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    assert(file_name);
+
+    if ( H5CL_load_config_string_from_file(file_name, &config_str) < 0 )
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "failed to load config string from file");
+
+    if ( H5F_load_vfd_swmr_config_from_string(config_str, fapl_id, fcpl_id, writer, create_file) < 0 )
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "failed to load vfd swmr configuration");
+
+done:
+    if (config_str)
+        free(config_str);
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5F_load_vfd_swmr_config_from_file() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5F_load_vfd_swmr_config_from_string()
+ *
+ * Purpose:     Parse VFD SWMR configuration data from the supplied
+ *              configuration string and apply it to the provided file
+ *              access and file creation property lists (FAPL and FCPL).
+ * 
+ *                                              Cody S. -- 4/14/26
+ *
+ * Return:      SUCCEED/FAIL
+ *-------------------------------------------------------------------------
+ */
+herr_t 
+H5F_load_vfd_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_t fcpl_id,
+                                     hbool_t writer, hbool_t create_file)
+{
+    int i;
+    int j;
+
+    /* Define variables used within config handling routines */
+    size_t                  page_buf_size;
+    hbool_t                 metadata_pages_only;
+    hbool_t                 fs_strategy_persist;
+    hsize_t                 fs_page_size;
+    H5F_vfd_swmr_config_t  *config_ptr = NULL;
+
+    /* Define nv_pair arrays for each possible configuration */
+    H5CL_nv_pair_t vfd_swmr_config_nv_pairs[VFD_SWMR_CONFIG__MAX_PARAMS];
+    H5CL_nv_pair_t page_buffer_config_nv_pairs[VFD_SWMR_PB_CONFIG__MAX_PARAMS];
+    H5CL_nv_pair_t file_space_strategy_nv_pairs[VFD_SWMR_FS_STRATEGY__MAX_PARAMS];
+    H5CL_nv_pair_t file_space_page_size_nv_pairs[VFD_SWMR_FS_PAGE_SIZE__MAX_PARAMS];
+
+    /* Initialize configuration names */
+    char vfd_swmr_config_data[]       = "vfd_swmr_config_data";
+    char H5F_vfd_swmr_config[]        = "H5F_vfd_swmr_config";
+    char page_buffer_config[]         = "page_buffer_config";
+    char file_space_strategy_config[] = "file_space_strategy_config";
+    char file_space_page_size[]       = "file_space_page_size";
+    
+    /* flags for tracking required configuration groups */
+    hbool_t configured_H5F_vfd_swmr_config = FALSE;
+    hbool_t configured_page_buffer_config  = FALSE;
+    hbool_t configured_fs_strategy_config  = FALSE;
+    hbool_t configured_fs_page_size        = FALSE;
+
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    assert(config_str);
+
+    /* allocate config_ptr and initialize memory */
+    if ( NULL == (config_ptr = calloc(1, sizeof(H5F_vfd_swmr_config_t))) ) {
+        HGOTO_ERROR(H5E_INTERNAL, H5E_CANTALLOC, FAIL, "cannot allocate config structure");
+    }
+    memset(config_ptr, 0, sizeof(H5F_vfd_swmr_config_t));
+
+    /* Validate fapl */
+    if ( H5Iis_valid(fapl_id) <= 0 || H5Pisa_class(fapl_id, H5P_FILE_ACCESS) <= 0 ) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid FAPL");
+    }
+    
+    /* File creation mode:
+     * Writer mode required for file creation. FCPL must be valid when creating a file
+     */
+    if ( create_file ) {
+        
+        if ( !writer ) {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "must be in writer mode to create file");
+        }
+
+        /* fcpl only needs to be valid if we are creating a file rather than opening */
+        if ( H5Iis_valid(fcpl_id) <= 0 || H5Pisa_class(fcpl_id, H5P_FILE_CREATE) <= 0 ) {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid FCPL");
+        }
+    }
+
+    /* Initialize top level group config schema */
+    H5CL_config_spec configs[VFD_SWMR_CONFIG_DATA__MAX_PARAMS] =
+    {
+      {
+        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+        /* config_name    = */ H5F_vfd_swmr_config,
+        /* max_num_params = */ VFD_SWMR_CONFIG__MAX_PARAMS,
+        /* nv_pairs       = */ vfd_swmr_config_nv_pairs,
+        /* parse          = */ false
+      },
+      {
+        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+        /* config_name    = */ page_buffer_config,
+        /* max_num_params = */ VFD_SWMR_PB_CONFIG__MAX_PARAMS,
+        /* nv_pairs       = */ page_buffer_config_nv_pairs,
+        /* parse          = */ false
+      },
+      {
+        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+        /* config_name    = */ file_space_strategy_config,
+        /* max_num_params = */ VFD_SWMR_FS_STRATEGY__MAX_PARAMS,
+        /* nv_pairs       = */ file_space_strategy_nv_pairs,
+        /* parse          = */ false
+      },
+      {
+        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+        /* config_name    = */ file_space_page_size,
+        /* max_num_params = */ VFD_SWMR_FS_PAGE_SIZE__MAX_PARAMS,
+        /* nv_pairs       = */ file_space_page_size_nv_pairs,
+        /* parse          = */ false
+      }
+    };
+
+    /* Initialize struct_tag for each nv_pair array referenced by each config entry */
+    for ( i = 0; i < VFD_SWMR_CONFIG_DATA__MAX_PARAMS; i++ ) {
+
+        for ( j = 0; j < configs[i].max_num_params; j++ ) {
+
+            configs[i].nv_pairs[j].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
+        }
+    }
+
+    /* Parse the configuration group into configs array */
+    if ( H5CL_parse_config_group(config_str, vfd_swmr_config_data, VFD_SWMR_CONFIG_DATA__MAX_PARAMS, configs) < 0 ) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "failed to load and parse config group");
+    }
+
+    for ( i = 0; i < VFD_SWMR_CONFIG_DATA__MAX_PARAMS; i++ ) {
+
+        if ( configs[i].parsed ) {
+
+            if ( 0 == strcmp("H5F_vfd_swmr_config", configs[i].config_name) ) {
+
+                if ( H5F__set_vfd_swmr_config(configs[i].nv_pairs, writer, config_ptr) < 0 ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Failed to set H5F_vfd_swmr_config configurations");
+                }
+
+                configured_H5F_vfd_swmr_config = TRUE;
+                    
+            } else if ( 0 == strcmp("page_buffer_config", configs[i].config_name) ) {
+                
+                if ( H5F__set_vfd_swmr_page_buffer_config(configs[i].nv_pairs, &page_buf_size, &metadata_pages_only) < 0 ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Failed to set parse_buffer_config configurations");
+                }
+
+                configured_page_buffer_config = TRUE;
+
+            } else if ( 0 == strcmp("file_space_strategy_config", configs[i].config_name) ) {
+                
+                if ( create_file ) {
+
+                    if ( H5F__set_vfd_swmr_fs_strategy_config(configs[i].nv_pairs, &fs_strategy_persist) < 0 ) {
+                        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
+                            "Failed to set file_space_strategy_config configurations");
+                    }
+
+                    configured_fs_strategy_config = TRUE;
+                }
+
+            } else if ( 0 == strcmp("file_space_page_size", configs[i].config_name) ) {
+                
+                if ( create_file ) {
+            
+                    if ( H5F__set_vfd_swmr_fs_page_size_config(configs[i].nv_pairs, &fs_page_size) < 0 ) {
+                        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
+                            "Failed to set file_space_page_size configurations");
+                    }
+
+                    configured_fs_page_size = TRUE;
+                }
+
+            } else {
+
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unknown parameter name.");
+            }
+        }
+    }
+
+    /* Validate always-required configs */
+    if ( !configured_H5F_vfd_swmr_config || !configured_page_buffer_config ) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "required configuration groups missing");
+    }
+
+    /* File creation mode: validate and apply FCPL properties */
+    if ( create_file) {
+
+        if ( !configured_fs_strategy_config || !configured_fs_page_size ) {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
+                "file_space_strategy_config and file_space_page_size must both be configured if create_file is TRUE");
+        }
+
+        if (H5Pset_file_space_strategy(fcpl_id, H5F_FSPACE_STRATEGY_PAGE, fs_strategy_persist, 1) < 0) {
+            HGOTO_ERROR(H5E_INTERNAL, H5E_CANTSET, FAIL, "Failed to set file space strategy");
+        }
+        if (H5Pset_file_space_page_size(fcpl_id, fs_page_size) < 0) {
+            HGOTO_ERROR(H5E_INTERNAL, H5E_CANTSET, FAIL, "Failed to set file space page size");
+        }
+    }
+
+    /* Configure FAPL properties (reader + writer) */
+    if (H5Pset_libver_bounds(fapl_id, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0) {
+        HGOTO_ERROR(H5E_INTERNAL, H5E_CANTSET, FAIL, "Failed to set file library version bounds");
+    }
+    if (H5Pset_page_buffer_size(fapl_id, page_buf_size, metadata_pages_only ? 100 : 0, 0) < 0) {
+        HGOTO_ERROR(H5E_INTERNAL, H5E_CANTSET, FAIL, "Failed to set page buffer size");
+    }
+    if ( H5Pset_vfd_swmr_config(fapl_id, config_ptr) < 0 ) {
+        HGOTO_ERROR(H5E_INTERNAL, H5E_CANTSET, FAIL, "failed to set VFD SWMR configuration in FAPL");
+    }
+
+done:
+
+    if ( config_ptr ) {
+        free(config_ptr);
+    }
+
+    /* Handle cleanup of nv_pair arrays referenced by each config entry */
+    for ( i = 0; i < VFD_SWMR_CONFIG_DATA__MAX_PARAMS; i++ ) {
+
+        for ( j = 0; j < configs[i].max_num_params; j++ ) {
+
+            /* Attempt cleanup only if struct_tag is valid */
+            if ( ( configs[i].nv_pairs[j].struct_tag == H5CL_NV_PAIR_STRUCT_TAG ) &&
+                 ( H5CL_take_down_nv_pair(&configs[i].nv_pairs[j]) < 0 ) )
+            {
+
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't take down nv_pair.");
+            }
+        }
+    }
+
+    FUNC_LEAVE_NOAPI(ret_value)
+
+} /* H5F_load_vfd_swmr_config() */
+

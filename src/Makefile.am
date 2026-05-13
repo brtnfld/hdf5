@@ -62,6 +62,7 @@ libhdf5_la_SOURCES= H5.c H5checksum.c H5dbg.c H5lib_settings.c H5system.c \
         H5Fvfd_swmr.c \
         H5FA.c H5FAcache.c H5FAdbg.c H5FAdblock.c H5FAdblkpage.c H5FAhdr.c \
         H5FAint.c H5FAstat.c H5FAtest.c \
+        H5CL.c \
         H5FD.c H5FDcore.c H5FDfamily.c H5FDint.c H5FDlog.c \
         H5FDmulti.c H5FDperform.c H5FDsec2.c H5FDspace.c \
         H5FDsplitter.c H5FDstdio.c H5FDtest.c H5FDvfd_swmr.c \
@@ -145,6 +146,7 @@ include_HEADERS = hdf5.h H5api_adpt.h H5overflow.h H5pubconf.h H5public.h H5vers
         H5Apublic.h H5ACpublic.h \
         H5Cpublic.h H5Dpublic.h \
         H5Epubgen.h H5Epublic.h H5ESpublic.h H5Fpublic.h \
+        H5CLpublic.h \
         H5FDpublic.h H5FDcore.h H5FDdirect.h H5FDfamily.h H5FDhdfs.h \
         H5FDlog.h H5FDmirror.h H5FDmpi.h H5FDmpio.h H5FDmulti.h H5FDros3.h \
         H5FDsec2.h H5FDsplitter.h H5FDstdio.h H5FDwindows.h \
@@ -159,6 +161,7 @@ include_HEADERS = hdf5.h H5api_adpt.h H5overflow.h H5pubconf.h H5public.h H5vers
 
 # Public component author headers
 include_HEADERS += H5ESdevelop.h H5FDdevelop.h H5Idevelop.h H5Ldevelop.h \
+        H5CLdevelop.h \
         H5Tdevelop.h H5TSdevelop.h H5Zdevelop.h
 
 # install libhdf5.settings in lib directory
