@@ -1538,19 +1538,54 @@ CONTAINS
                                INT(cd_nelmts, SIZE_T), cd_values))
   END SUBROUTINE h5pset_filter_f
 
+#ifdef H5_DOXYGEN
 !>
 !! \ingroup FH5P
 !!
-!! \brief Configures a filter with a key=value string and appends it to the pipeline.
+!! \brief Configures a filter and appends it to the dataset creation property list.
 !!
 !! \param prp_id     Property list identifier.
-!! \param filter     Filter to be added.
+!! \param filter     Filter to be added to the pipeline.
 !! \param flags      Bit vector specifying general filter properties.
-!! \param params     Parameter string in "key=value" format; append C_NULL_CHAR.
+!! \param params     Parameter string in \c "key=value" format; append C_NULL_CHAR.
 !! \param hdferr     \fortran_error
 !!
 !! See C API: @ref H5Pappend_filter()
 !!
+  SUBROUTINE h5pappend_filter_f(prp_id, filter, flags, params, hdferr)
+    IMPLICIT NONE
+    INTEGER(HID_T),   INTENT(IN)  :: prp_id
+    INTEGER,          INTENT(IN)  :: filter
+    INTEGER,          INTENT(IN)  :: flags
+    CHARACTER(LEN=*), INTENT(IN)  :: params
+    INTEGER,          INTENT(OUT) :: hdferr
+  END SUBROUTINE h5pappend_filter_f
+!>
+!! \ingroup FH5P
+!!
+!! \brief Configures a filter and appends it to the dataset creation property list.
+!!
+!! \param prp_id     Property list identifier.
+!! \param filter     Filter to be added to the pipeline.
+!! \param flags      Bit vector specifying general filter properties.
+!! \param cd_nelmts  Number of elements in \p cd_values.
+!! \param cd_values  Filter parameter array.
+!! \param hdferr     \fortran_error
+!!
+!! See C API: @ref H5Pappend_filter()
+!!
+  SUBROUTINE h5pappend_filter_f(prp_id, filter, flags, cd_nelmts, cd_values, hdferr)
+    IMPLICIT NONE
+    INTEGER(HID_T),  INTENT(IN)               :: prp_id
+    INTEGER,         INTENT(IN)               :: filter
+    INTEGER,         INTENT(IN)               :: flags
+    INTEGER(SIZE_T), INTENT(IN)               :: cd_nelmts
+    INTEGER,         DIMENSION(*), INTENT(IN)  :: cd_values
+    INTEGER,         INTENT(OUT)              :: hdferr
+  END SUBROUTINE h5pappend_filter_f
+
+#else
+
   SUBROUTINE h5pappend_filter_str_f(prp_id, filter, flags, params, hdferr)
     IMPLICIT NONE
     INTEGER(HID_T),   INTENT(IN)  :: prp_id
@@ -1574,20 +1609,6 @@ CONTAINS
     hdferr   = INT(H5Pappend_filter_str_c(prp_id, INT(filter, C_INT), INT(flags, C_INT), c_params))
   END SUBROUTINE h5pappend_filter_str_f
 
-!>
-!! \ingroup FH5P
-!!
-!! \brief Configures a filter with raw cd_values and appends it to the pipeline.
-!!
-!! \param prp_id     Property list identifier.
-!! \param filter     Filter to be added.
-!! \param flags      Bit vector specifying general filter properties.
-!! \param cd_nelmts  Number of elements in cd_values.
-!! \param cd_values  Filter parameter array.
-!! \param hdferr     \fortran_error
-!!
-!! See C API: @ref H5Pappend_filter()
-!!
   SUBROUTINE h5pappend_filter_raw_f(prp_id, filter, flags, cd_nelmts, cd_values, hdferr)
     IMPLICIT NONE
     INTEGER(HID_T),  INTENT(IN)              :: prp_id
@@ -1610,6 +1631,8 @@ CONTAINS
     hdferr = INT(H5Pappend_filter_raw_c(prp_id, INT(filter, C_INT), INT(flags, C_INT), &
                                         INT(cd_nelmts, SIZE_T), cd_values))
   END SUBROUTINE h5pappend_filter_raw_f
+
+#endif
 
 !>
 !! \ingroup FH5P
