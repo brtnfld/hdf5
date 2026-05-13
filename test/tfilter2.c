@@ -279,29 +279,41 @@ test_callback_contracts(void)
     hid_t  dcpl = H5I_INVALID_HID;
     char   pbuf[256];
     size_t plen;
+    htri_t deflate_avail;
+
+    if ((deflate_avail = H5Zfilter_avail(H5Z_FILTER_DEFLATE)) < 0)
+        TEST_ERROR;
 
     TESTING("H5Pappend_filter: deflate with level=6");
-    if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
-        TEST_ERROR;
-    {
-        H5Z_params_t _p = H5Z_PARAMS_STR("level=6");
-        if (H5Pappend_filter(dcpl, H5Z_FILTER_DEFLATE, 0, &_p) < 0)
+    if (deflate_avail) {
+        if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
             TEST_ERROR;
+        {
+            H5Z_params_t _p = H5Z_PARAMS_STR("level=6");
+            if (H5Pappend_filter(dcpl, H5Z_FILTER_DEFLATE, 0, &_p) < 0)
+                TEST_ERROR;
+        }
+        if (H5Pget_nfilters(dcpl) != 1)
+            TEST_ERROR;
+        H5Pclose(dcpl);
+        dcpl = H5I_INVALID_HID;
+        PASSED();
     }
-    if (H5Pget_nfilters(dcpl) != 1)
-        TEST_ERROR;
-    H5Pclose(dcpl);
-    dcpl = H5I_INVALID_HID;
-    PASSED();
+    else
+        SKIPPED();
 
     TESTING("H5Pappend_filter: deflate default (no params)");
-    if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
-        TEST_ERROR;
-    if (H5Pappend_filter(dcpl, H5Z_FILTER_DEFLATE, 0, NULL) < 0)
-        TEST_ERROR;
-    H5Pclose(dcpl);
-    dcpl = H5I_INVALID_HID;
-    PASSED();
+    if (deflate_avail) {
+        if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
+            TEST_ERROR;
+        if (H5Pappend_filter(dcpl, H5Z_FILTER_DEFLATE, 0, NULL) < 0)
+            TEST_ERROR;
+        H5Pclose(dcpl);
+        dcpl = H5I_INVALID_HID;
+        PASSED();
+    }
+    else
+        SKIPPED();
 
     TESTING("H5Pappend_filter: shuffle (no params)");
     if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
@@ -328,24 +340,28 @@ test_callback_contracts(void)
     PASSED();
 
     TESTING("H5Pget_filter_params_by_idx: deflate level=9");
-    if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
-        TEST_ERROR;
-    {
-        H5Z_params_t _p = H5Z_PARAMS_STR("level=9");
-        if (H5Pappend_filter(dcpl, H5Z_FILTER_DEFLATE, 0, &_p) < 0)
+    if (deflate_avail) {
+        if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
             TEST_ERROR;
+        {
+            H5Z_params_t _p = H5Z_PARAMS_STR("level=9");
+            if (H5Pappend_filter(dcpl, H5Z_FILTER_DEFLATE, 0, &_p) < 0)
+                TEST_ERROR;
+        }
+        plen = 0;
+        if (H5Pget_filter_params_by_idx(dcpl, 0, pbuf, sizeof(pbuf), &plen) < 0)
+            TEST_ERROR;
+        if (plen == 0)
+            TEST_ERROR;
+        /* Should contain "level = 9" (TOML output format) */
+        if (strstr(pbuf, "level = 9") == NULL)
+            TEST_ERROR;
+        H5Pclose(dcpl);
+        dcpl = H5I_INVALID_HID;
+        PASSED();
     }
-    plen = 0;
-    if (H5Pget_filter_params_by_idx(dcpl, 0, pbuf, sizeof(pbuf), &plen) < 0)
-        TEST_ERROR;
-    if (plen == 0)
-        TEST_ERROR;
-    /* Should contain "level = 9" (TOML output format) */
-    if (strstr(pbuf, "level = 9") == NULL)
-        TEST_ERROR;
-    H5Pclose(dcpl);
-    dcpl = H5I_INVALID_HID;
-    PASSED();
+    else
+        SKIPPED();
 
     TESTING("H5Pget_filter_params_by_idx: fallback for filter without get_config");
     if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
@@ -361,19 +377,23 @@ test_callback_contracts(void)
     PASSED();
 
     TESTING("H5Pappend_filter: invalid level rejects");
-    if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
-        TEST_ERROR;
-    H5E_BEGIN_TRY
-    {
-        H5Z_params_t _p  = H5Z_PARAMS_STR("level=99");
-        herr_t       ret = H5Pappend_filter(dcpl, H5Z_FILTER_DEFLATE, 0, &_p);
-        if (ret >= 0)
+    if (deflate_avail) {
+        if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
             TEST_ERROR;
+        H5E_BEGIN_TRY
+        {
+            H5Z_params_t _p  = H5Z_PARAMS_STR("level=99");
+            herr_t       ret = H5Pappend_filter(dcpl, H5Z_FILTER_DEFLATE, 0, &_p);
+            if (ret >= 0)
+                TEST_ERROR;
+        }
+        H5E_END_TRY
+        H5Pclose(dcpl);
+        dcpl = H5I_INVALID_HID;
+        PASSED();
     }
-    H5E_END_TRY
-    H5Pclose(dcpl);
-    dcpl = H5I_INVALID_HID;
-    PASSED();
+    else
+        SKIPPED();
 
     return 0;
 
@@ -407,6 +427,12 @@ test_modify_filter_pattern(void)
     unsigned config;
 
     TESTING("modify filter params: H5Pget_filter_by_id2 + H5Pmodify_filter");
+
+    if (H5Zfilter_avail(H5Z_FILTER_DEFLATE) <= 0) {
+        SKIPPED();
+        puts("    deflate filter not available");
+        return 0;
+    }
 
     /* Build original DCPL with deflate level=6 via string API */
     if ((dcpl_orig = H5Pcreate(H5P_DATASET_CREATE)) < 0)
@@ -523,6 +549,11 @@ test_roundtrip_deflate(hid_t file)
     int     i;
 
     TESTING("Round-trip: deflate=level=6 write/read");
+    if (H5Zfilter_avail(H5Z_FILTER_DEFLATE) <= 0) {
+        SKIPPED();
+        puts("    deflate filter not available");
+        return 0;
+    }
     for (i = 0; i < 32 * 32; i++)
         wbuf[i] = i;
     {
@@ -592,6 +623,12 @@ test_regression_old_api(hid_t file)
     int      i;
 
     TESTING("Regression: H5Pset_filter (old API) still works");
+
+    if (H5Zfilter_avail(H5Z_FILTER_DEFLATE) <= 0) {
+        SKIPPED();
+        puts("    deflate filter not available");
+        return 0;
+    }
 
     for (i = 0; i < 32; i++)
         wbuf[i] = i + 100;
