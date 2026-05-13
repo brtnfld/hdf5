@@ -743,17 +743,17 @@ static int
 test_filter_title(void)
 {
     static const H5Z_class3_t title_cls = {
-        H5Z_CLASS3_T_VERS,  /* version        */
-        TITLE_FILTER_ID,    /* id             */
-        1,                  /* encoder_present */
-        1,                  /* decoder_present */
+        H5Z_CLASS3_T_VERS,   /* version        */
+        TITLE_FILTER_ID,     /* id             */
+        1,                   /* encoder_present */
+        1,                   /* decoder_present */
         "test_title_filter", /* name          */
-        "My Test Filter",   /* filter_title   */
-        NULL,               /* can_apply      */
-        NULL,               /* set_local      */
-        title_filter_func,  /* filter         */
-        NULL,               /* set_config     */
-        NULL,               /* get_config     */
+        "My Test Filter",    /* filter_title   */
+        NULL,                /* can_apply      */
+        NULL,                /* set_local      */
+        title_filter_func,   /* filter         */
+        NULL,                /* set_config     */
+        NULL,                /* get_config     */
     };
     hid_t    dcpl = H5I_INVALID_HID;
     unsigned flags;
@@ -847,17 +847,17 @@ test_class3_name(void)
     TESTING("H5Z_class3_t: valid name accepted by H5Zregister");
     {
         static const H5Z_class3_t valid_cls = {
-            H5Z_CLASS3_T_VERS,   /* version        */
-            NAME_FILTER_ID,      /* id             */
-            1,                   /* encoder_present */
-            1,                   /* decoder_present */
-            "test_name_filter",  /* name           */
-            NULL,                /* filter_title   */
-            NULL,                /* can_apply      */
-            NULL,                /* set_local      */
-            name_filter_func,    /* filter         */
-            NULL,                /* set_config     */
-            NULL,                /* get_config     */
+            H5Z_CLASS3_T_VERS,  /* version        */
+            NAME_FILTER_ID,     /* id             */
+            1,                  /* encoder_present */
+            1,                  /* decoder_present */
+            "test_name_filter", /* name           */
+            NULL,               /* filter_title   */
+            NULL,               /* can_apply      */
+            NULL,               /* set_local      */
+            name_filter_func,   /* filter         */
+            NULL,               /* set_config     */
+            NULL,               /* get_config     */
         };
         if (H5Zregister(&valid_cls) < 0)
             TEST_ERROR;

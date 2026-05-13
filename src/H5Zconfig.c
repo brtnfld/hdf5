@@ -75,9 +75,9 @@ H5Z__rewrite_hexfloats(const char *src)
     const char *p   = src;
     size_t      len = strlen(src);
     /* Worst case: every 3-char token "0x1" expands to ~24 chars "%.17g" → 3x */
-    size_t  cap = len * 8 + 1;
-    char   *out = (char *)H5MM_malloc(cap);
-    size_t  pos = 0;
+    size_t cap = len * 8 + 1;
+    char  *out = (char *)H5MM_malloc(cap);
+    size_t pos = 0;
 
     if (!out)
         return NULL;
