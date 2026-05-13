@@ -120,9 +120,9 @@ done:
  */
 JNIEXPORT jint JNICALL
 Java_hdf_hdf5lib_H5_H5Zconfig_1get_1param__Ljava_lang_String_2Ljava_lang_String_2_3J(JNIEnv *env, jclass clss,
-                                                                                      jstring params,
-                                                                                      jstring key,
-                                                                                      jlongArray out)
+                                                                                     jstring    params,
+                                                                                     jstring    key,
+                                                                                     jlongArray out)
 {
     const char *c_params = NULL;
     const char *c_key    = NULL;
@@ -170,11 +170,10 @@ done:
  * Signature: (Ljava/lang/String;Ljava/lang/String;[D)I
  */
 JNIEXPORT jint JNICALL
-Java_hdf_hdf5lib_H5_H5Zconfig_1get_1param__Ljava_lang_String_2Ljava_lang_String_2_3D(JNIEnv *env,
-                                                                                      jclass  clss,
-                                                                                      jstring params,
-                                                                                      jstring key,
-                                                                                      jdoubleArray out)
+Java_hdf_hdf5lib_H5_H5Zconfig_1get_1param__Ljava_lang_String_2Ljava_lang_String_2_3D(JNIEnv *env, jclass clss,
+                                                                                     jstring      params,
+                                                                                     jstring      key,
+                                                                                     jdoubleArray out)
 {
     const char *c_params = NULL;
     const char *c_key    = NULL;
@@ -222,11 +221,10 @@ done:
  * Signature: (Ljava/lang/String;Ljava/lang/String;[Z)I
  */
 JNIEXPORT jint JNICALL
-Java_hdf_hdf5lib_H5_H5Zconfig_1get_1param__Ljava_lang_String_2Ljava_lang_String_2_3Z(JNIEnv *env,
-                                                                                      jclass  clss,
-                                                                                      jstring params,
-                                                                                      jstring key,
-                                                                                      jbooleanArray out)
+Java_hdf_hdf5lib_H5_H5Zconfig_1get_1param__Ljava_lang_String_2Ljava_lang_String_2_3Z(JNIEnv *env, jclass clss,
+                                                                                     jstring       params,
+                                                                                     jstring       key,
+                                                                                     jbooleanArray out)
 {
     const char *c_params = NULL;
     const char *c_key    = NULL;
@@ -320,7 +318,8 @@ done:
         UNPIN_JAVA_STRING(ENVONLY, params, c_params);
 
     return (jint)status;
-} /* end Java_hdf_hdf5lib_H5_H5Zconfig_1get_1param__Ljava_lang_String_2Ljava_lang_String_2_3Ljava_lang_String_2 */
+} /* end
+     Java_hdf_hdf5lib_H5_H5Zconfig_1get_1param__Ljava_lang_String_2Ljava_lang_String_2_3Ljava_lang_String_2 */
 
 #ifdef __cplusplus
 } /* end extern "C" */

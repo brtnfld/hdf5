@@ -50,13 +50,13 @@ typedef struct H5Z_filter_info_t H5Z_filter_info_t;
 
 /* Structure to store information about each filter's parameters */
 struct H5Z_filter_info_t {
-    H5Z_filter_t    id;                               /*filter identification number          */
-    unsigned        flags;                            /*defn and invocation flags             */
-    char            _name[H5Z_COMMON_NAME_LEN];       /*internal filter name                  */
-    char           *name;                             /*optional filter name                  */
-    size_t          cd_nelmts;                        /*number of elements in cd_values[]     */
-    unsigned        _cd_values[H5Z_COMMON_CD_VALUES]; /*internal client data values           */
-    unsigned       *cd_values;                        /*client data values                    */
+    H5Z_filter_t id;                               /*filter identification number          */
+    unsigned     flags;                            /*defn and invocation flags             */
+    char         _name[H5Z_COMMON_NAME_LEN];       /*internal filter name                  */
+    char        *name;                             /*optional filter name                  */
+    size_t       cd_nelmts;                        /*number of elements in cd_values[]     */
+    unsigned     _cd_values[H5Z_COMMON_CD_VALUES]; /*internal client data values           */
+    unsigned    *cd_values;                        /*client data values                    */
 };
 
 /*****************************/

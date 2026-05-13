@@ -54,30 +54,24 @@ JNIEXPORT jint JNICALL Java_hdf_hdf5lib_H5_H5Zconfig_1has_1key(JNIEnv *, jclass,
  * Method:    H5Zconfig_get_param
  * Signature: (Ljava/lang/String;Ljava/lang/String;[J)I
  */
-JNIEXPORT jint JNICALL
-Java_hdf_hdf5lib_H5_H5Zconfig_1get_1param__Ljava_lang_String_2Ljava_lang_String_2_3J(JNIEnv *, jclass,
-                                                                                      jstring, jstring,
-                                                                                      jlongArray);
+JNIEXPORT jint JNICALL Java_hdf_hdf5lib_H5_H5Zconfig_1get_1param__Ljava_lang_String_2Ljava_lang_String_2_3J(
+    JNIEnv *, jclass, jstring, jstring, jlongArray);
 
 /*
  * Class:     hdf_hdf5lib_H5
  * Method:    H5Zconfig_get_param
  * Signature: (Ljava/lang/String;Ljava/lang/String;[D)I
  */
-JNIEXPORT jint JNICALL
-Java_hdf_hdf5lib_H5_H5Zconfig_1get_1param__Ljava_lang_String_2Ljava_lang_String_2_3D(JNIEnv *, jclass,
-                                                                                      jstring, jstring,
-                                                                                      jdoubleArray);
+JNIEXPORT jint JNICALL Java_hdf_hdf5lib_H5_H5Zconfig_1get_1param__Ljava_lang_String_2Ljava_lang_String_2_3D(
+    JNIEnv *, jclass, jstring, jstring, jdoubleArray);
 
 /*
  * Class:     hdf_hdf5lib_H5
  * Method:    H5Zconfig_get_param
  * Signature: (Ljava/lang/String;Ljava/lang/String;[Z)I
  */
-JNIEXPORT jint JNICALL
-Java_hdf_hdf5lib_H5_H5Zconfig_1get_1param__Ljava_lang_String_2Ljava_lang_String_2_3Z(JNIEnv *, jclass,
-                                                                                      jstring, jstring,
-                                                                                      jbooleanArray);
+JNIEXPORT jint JNICALL Java_hdf_hdf5lib_H5_H5Zconfig_1get_1param__Ljava_lang_String_2Ljava_lang_String_2_3Z(
+    JNIEnv *, jclass, jstring, jstring, jbooleanArray);
 
 /*
  * Class:     hdf_hdf5lib_H5

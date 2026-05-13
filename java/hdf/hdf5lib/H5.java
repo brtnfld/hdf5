@@ -23921,8 +23921,7 @@ public class H5 implements java.io.Serializable {
      * @exception HDF5LibraryException
      *            Error from the HDF5 Library.
      **/
-    public static int H5Zconfig_get_param(String params, String key, double[] out)
-        throws HDF5LibraryException
+    public static int H5Zconfig_get_param(String params, String key, double[] out) throws HDF5LibraryException
     {
         if (params == null)
             throw new HDF5FunctionArgumentException("params string is null");
@@ -23972,7 +23971,8 @@ public class H5 implements java.io.Serializable {
      * @exception HDF5LibraryException
      *            Error from the HDF5 Library.
      **/
-    public static int H5Zconfig_get_param(String params, String key, boolean[] out) throws HDF5LibraryException
+    public static int H5Zconfig_get_param(String params, String key, boolean[] out)
+        throws HDF5LibraryException
     {
         if (params == null)
             throw new HDF5FunctionArgumentException("params string is null");
@@ -24022,7 +24022,8 @@ public class H5 implements java.io.Serializable {
      * @exception HDF5LibraryException
      *            Error from the HDF5 Library.
      **/
-    public static int H5Zconfig_get_param(String params, String key, String[] value) throws HDF5LibraryException
+    public static int H5Zconfig_get_param(String params, String key, String[] value)
+        throws HDF5LibraryException
     {
         if (params == null)
             throw new HDF5FunctionArgumentException("params string is null");
