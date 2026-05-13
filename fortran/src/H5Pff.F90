@@ -56,7 +56,7 @@ MODULE H5P
   PRIVATE h5pget_integer, h5pget_char, h5pget_ptr
   PRIVATE h5pregister_integer, h5pregister_ptr
   PRIVATE h5pinsert_integer, h5pinsert_char, h5pinsert_ptr
-  PRIVATE h5pset_filter_cdvals_f, h5pappend_filter_str_f, h5pappend_filter_raw_f
+  PRIVATE h5pappend_filter_str_f, h5pappend_filter_raw_f
 #ifdef H5_HAVE_PARALLEL
   PRIVATE MPI_INTEGER_KIND
   PRIVATE h5pset_fapl_mpio_f90, h5pget_fapl_mpio_f90
@@ -116,9 +116,6 @@ MODULE H5P
      MODULE PROCEDURE h5pinsert_ptr
   END INTERFACE
 
-  INTERFACE h5pset_filter_f
-     MODULE PROCEDURE h5pset_filter_cdvals_f
-  END INTERFACE h5pset_filter_f
 
   INTERFACE h5pappend_filter_f
      MODULE PROCEDURE h5pappend_filter_str_f
@@ -1517,7 +1514,7 @@ CONTAINS
 !!
 !! See C API: @ref H5Pset_filter()
 !!
-  SUBROUTINE h5pset_filter_cdvals_f(prp_id, filter, flags, cd_nelmts, cd_values, hdferr)
+  SUBROUTINE h5pset_filter_f(prp_id, filter, flags, cd_nelmts, cd_values, hdferr)
     IMPLICIT NONE
     INTEGER(HID_T),  INTENT(IN)              :: prp_id
     INTEGER,         INTENT(IN)              :: filter
@@ -1539,7 +1536,7 @@ CONTAINS
 
     hdferr = INT(H5Pset_filter(prp_id, INT(filter, C_INT), INT(flags, C_INT), &
                                INT(cd_nelmts, SIZE_T), cd_values))
-  END SUBROUTINE h5pset_filter_cdvals_f
+  END SUBROUTINE h5pset_filter_f
 
 !>
 !! \ingroup FH5P

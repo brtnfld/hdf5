@@ -2797,7 +2797,7 @@ H5_DLL herr_t H5Pset_filter(hid_t plist_id, H5Z_filter_t filter, unsigned int fl
  *          the filter plugin, validates that it exposes a \c set_config callback,
  *          and invokes that callback to translate the parameter string into
  *          \c cd_values.  The filter plugin must be available at call time; if it
- *          cannot be found, the function fails with #H5E_NOFILTER.
+ *          cannot be found, the function fails with H5E_NOFILTER.
  *
  *          Unknown keys in a \c #H5Z_PARAMS_STRING string are rejected by
  *          built-in filters and should be rejected by third-party plugins.
