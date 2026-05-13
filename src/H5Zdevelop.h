@@ -185,30 +185,6 @@ typedef struct H5Z_class2_t {
 //! <!-- [H5Z_class2_t_snip] -->
 
 /**
- * \brief Type tag for a single cd_values slot.
- *
- * \details Used in the on-disk \c H5O_PLINE_VERSION_3 format to record the
- *          semantic type of each slot so that the library can reconstruct
- *          typed parameter strings from raw cd_values.  All built-in filters
- *          only use \c H5Z_SLOT_UINT32 slots; user-defined filters that pack
- *          double, float, int64, or string parameters should tag slots
- *          accordingly via the \c set_config callback.
- *
- * \since 2.2.0
- */
-typedef enum H5Z_slot_type_t {
-    H5Z_SLOT_UINT32   = 0, /**< Plain unsigned 32-bit integer (default) */
-    H5Z_SLOT_INT32    = 1, /**< Signed 32-bit integer                  */
-    H5Z_SLOT_FLOAT    = 2, /**< IEEE 754 single-precision float         */
-    H5Z_SLOT_DBL_LO   = 3, /**< Low 32 bits of a packed double          */
-    H5Z_SLOT_DBL_HI   = 4, /**< High 32 bits of a packed double         */
-    H5Z_SLOT_INT64_LO = 5, /**< Low 32 bits of a packed int64           */
-    H5Z_SLOT_INT64_HI = 6, /**< High 32 bits of a packed int64          */
-    H5Z_SLOT_STR_LEN  = 7, /**< Byte-length slot preceding string data  */
-    H5Z_SLOT_STR_DATA = 8, /**< 4-byte chunk of packed string data      */
-} H5Z_slot_type_t;
-
-/**
  * \brief Callback to configure a filter from a key=value parameter string.
  *
  * \param[in]     params         Comma-separated key=value parameter string, or NULL.
@@ -216,22 +192,17 @@ typedef enum H5Z_slot_type_t {
  * \param[in,out] cd_nelmts      On input 0; on output, number of cd_values slots written
  *                               (or required when cd_values is NULL).
  * \param[out]    cd_values      Array to populate, or NULL for a size query.
- * \param[out]    cd_types       Parallel array of slot type tags, pre-filled with
- *                               H5Z_SLOT_UINT32.  Callback sets only slots that differ.
- *                               NULL on the size-query pass (when cd_values is NULL).
  * \param[in]     cd_values_size Capacity of cd_values in elements (0 when cd_values is NULL).
  *
  * \return Non-negative on success; negative on failure.
  *
  * \details Must return the same cd_nelmts on both the size-query pass
- *          (cd_values == NULL, cd_types == NULL) and the populate pass
- *          (cd_values != NULL, cd_types != NULL).
+ *          (cd_values == NULL) and the populate pass (cd_values != NULL).
  *
  * \since 2.2.0
  */
 typedef herr_t (*H5Z_set_config_func_t)(const char *params, unsigned *flags, size_t *cd_nelmts,
-                                        unsigned cd_values[], H5Z_slot_type_t cd_types[],
-                                        size_t cd_values_size);
+                                        unsigned cd_values[], size_t cd_values_size);
 
 /**
  * \brief Callback to reconstruct a human-readable parameter string from cd_values.

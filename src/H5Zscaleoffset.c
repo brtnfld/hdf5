@@ -88,8 +88,7 @@ static herr_t H5Z__scaleoffset_decompress(unsigned char *data, unsigned d_nelmts
 static void   H5Z__scaleoffset_compress(unsigned char *data, unsigned d_nelmts, unsigned char *buffer,
                                         size_t buffer_size, parms_atomic p);
 static herr_t H5Z__scaleoffset_set_config(const char *params, unsigned *flags, size_t *cd_nelmts,
-                                          unsigned cd_values[], H5Z_slot_type_t cd_types[],
-                                          size_t cd_values_size);
+                                          unsigned cd_values[], size_t cd_values_size);
 static herr_t H5Z__scaleoffset_get_config(unsigned flags, size_t cd_nelmts, const unsigned cd_values[],
                                           char *buf, size_t *buf_size);
 
@@ -757,8 +756,7 @@ H5Z_class3_t H5Z_SCALEOFFSET[1] = {{
  */
 static herr_t
 H5Z__scaleoffset_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, size_t *cd_nelmts,
-                            unsigned cd_values[], H5Z_slot_type_t H5_ATTR_UNUSED cd_types[],
-                            size_t cd_values_size)
+                            unsigned cd_values[], size_t cd_values_size)
 {
     herr_t ret_value = SUCCEED;
 

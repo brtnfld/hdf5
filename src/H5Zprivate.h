@@ -57,9 +57,6 @@ struct H5Z_filter_info_t {
     size_t          cd_nelmts;                        /*number of elements in cd_values[]     */
     unsigned        _cd_values[H5Z_COMMON_CD_VALUES]; /*internal client data values           */
     unsigned       *cd_values;                        /*client data values                    */
-    /* Per-slot type tags; NULL means all slots are H5Z_SLOT_UINT32 */
-    H5Z_slot_type_t _cd_types[H5Z_COMMON_CD_VALUES]; /*internal slot type tags               */
-    H5Z_slot_type_t *cd_types;                        /*slot type tags (NULL = all UINT32)    */
 };
 
 /*****************************/
@@ -76,7 +73,7 @@ H5_DLL herr_t H5Z_init(void);
 H5_DLL herr_t H5Z_register(const H5Z_class2_t *cls);
 H5_DLL herr_t H5Z_register3(const H5Z_class3_t *cls);
 H5_DLL herr_t H5Z_append(struct H5O_pline_t *pline, H5Z_filter_t filter, unsigned flags, size_t cd_nelmts,
-                         const unsigned int cd_values[], const H5Z_slot_type_t cd_types[]);
+                         const unsigned int cd_values[]);
 H5_DLL herr_t H5Z_modify(const struct H5O_pline_t *pline, H5Z_filter_t filter, unsigned flags,
                          size_t cd_nelmts, const unsigned int cd_values[]);
 H5_DLL herr_t H5Z_pipeline(const struct H5O_pline_t *pline, unsigned flags, unsigned *filter_mask /*in,out*/,

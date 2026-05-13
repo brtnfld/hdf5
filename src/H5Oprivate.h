@@ -746,13 +746,9 @@ typedef struct H5O_ginfo_t {
  */
 #define H5O_PLINE_VERSION_2 2
 
-/* Per-slot type tags appended after cd_values; written only when at least
- * one slot carries a non-UINT32 H5Z_slot_type_t tag. */
-#define H5O_PLINE_VERSION_3 3
-
 /* The latest version of the format.  Look through the 'encode' and 'size'
  *      callbacks for places to change when updating this. */
-#define H5O_PLINE_VERSION_LATEST H5O_PLINE_VERSION_3
+#define H5O_PLINE_VERSION_LATEST H5O_PLINE_VERSION_2
 
 typedef struct H5O_pline_t {
     H5O_shared_t sh_loc; /* Shared message info (must be first) */
