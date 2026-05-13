@@ -146,7 +146,11 @@ public class TestH5Z {
         }
         finally {
             if (dcpl != HDF5Constants.H5I_INVALID_HID)
-                try { H5.H5Pclose(dcpl); } catch (Exception e) { /* ignore */ }
+                try {
+                    H5.H5Pclose(dcpl);
+                }
+                catch (Exception e) { /* ignore */
+                }
         }
     }
 
@@ -174,7 +178,7 @@ public class TestH5Z {
             assertTrue("getNfilters after append", H5.H5Pget_nfilters(dcpl) == 1);
 
             String[] params = new String[1];
-            ret = H5.H5Pget_filter_params_by_idx(dcpl, 0, params);
+            ret             = H5.H5Pget_filter_params_by_idx(dcpl, 0, params);
             assertTrue("H5Pget_filter_params_by_idx", ret >= 0);
             assertTrue("params not empty", params[0] != null && !params[0].isEmpty());
             System.out.print(" PASSED");
@@ -185,7 +189,11 @@ public class TestH5Z {
         }
         finally {
             if (dcpl != HDF5Constants.H5I_INVALID_HID)
-                try { H5.H5Pclose(dcpl); } catch (Exception e) { /* ignore */ }
+                try {
+                    H5.H5Pclose(dcpl);
+                }
+                catch (Exception e) { /* ignore */
+                }
         }
     }
 
@@ -194,7 +202,7 @@ public class TestH5Z {
     {
         try {
             long[] out = new long[1];
-            int ret = H5.H5Zconfig_get_param("level = 6, mode = 2", "level", out);
+            int ret    = H5.H5Zconfig_get_param("level = 6, mode = 2", "level", out);
             assertTrue("H5Zconfig_get_param(int) found", ret > 0);
             assertTrue("H5Zconfig_get_param(int) value", out[0] == 6L);
             System.out.print(" PASSED");
