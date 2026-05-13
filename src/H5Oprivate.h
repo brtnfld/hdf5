@@ -746,7 +746,8 @@ typedef struct H5O_ginfo_t {
  */
 #define H5O_PLINE_VERSION_2 2
 
-/* Per-slot type tags; defined for reading compatibility only — never written. */
+/* Per-slot type tags appended after cd_values; written only when at least
+ * one slot carries a non-UINT32 H5Z_slot_type_t tag. */
 #define H5O_PLINE_VERSION_3 3
 
 /* The latest version of the format.  Look through the 'encode' and 'size'
