@@ -259,6 +259,6 @@ H5_DLL herr_t H5CL__lex_read_token(bool value_expected, bool eoi_expected, H5CL_
                                    H5CL_lex_vars_t * lex_vars_ptr);
 H5_DLL herr_t H5CL__parse_name_value_pair(H5CL_nv_pair_t *nv_pair_ptr, H5CL_lex_vars_t * lex_vars_ptr);
 H5_DLL herr_t H5CL__parse_name_value_pair_list(H5CL_nv_pair_t * nv_pairs, int max_nv_pairs,
-                                                H5CL_lex_vars_t * lex_vars_ptr);
+                                               H5CL_lex_vars_t * lex_vars_ptr);
 
 #endif /* H5CL_pkg_H */

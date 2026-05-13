@@ -3162,21 +3162,57 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5F_setup_PLs_for_vfd_swmr()
+ * Function:    H5F_load_vfd_swmr_config_from_file()
  *
- * Purpose:     Parse the VFD SWMR configuration string into configuration
- *              groups and dispatch each group’s parameters to the appropriate
- *              helper routines. The resulting values are then used to set up
- *              the provided file access and file creation property lists.
+ * Purpose:     Load VFD SWMR configuration data from the supplied
+ *              configuration file and apply it to the provided file
+ *              access and file creation property lists (FAPL and FCPL).
  * 
- *                                              Cody S. -- 4/13/26
+ *                                              Cody S. -- 5/7/26
  *
  * Return:      SUCCEED/FAIL
  *-------------------------------------------------------------------------
  */
 herr_t 
-H5F_setup_PLs_for_vfd_swmr(const char *config_str, hid_t fapl_id, hid_t fcpl_id,
-                           hbool_t writer, hbool_t create_file)
+H5F_load_vfd_swmr_config_from_file(const char *file_name, hid_t fapl_id, hid_t fcpl_id,
+                                   hbool_t writer, hbool_t create_file)
+{
+    char  *config_str = NULL;
+    herr_t ret_value  = SUCCEED;
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    assert(file_name);
+
+    if ( H5CL_load_config_string_from_file(file_name, &config_str) < 0 )
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "failed to load config string from file");
+
+    if ( H5F_load_vfd_swmr_config_from_string(config_str, fapl_id, fcpl_id, writer, create_file) < 0 )
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "failed to load vfd swmr configuration");
+
+done:
+    if (config_str)
+        free(config_str);
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5F_load_vfd_swmr_config_from_file() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5F_load_vfd_swmr_config_from_string()
+ *
+ * Purpose:     Parse VFD SWMR configuration data from the supplied
+ *              configuration string and apply it to the provided file
+ *              access and file creation property lists (FAPL and FCPL).
+ * 
+ *                                              Cody S. -- 4/14/26
+ *
+ * Return:      SUCCEED/FAIL
+ *-------------------------------------------------------------------------
+ */
+herr_t 
+H5F_load_vfd_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_t fcpl_id,
+                                     hbool_t writer, hbool_t create_file)
 {
     int i;
     int j;
@@ -3214,12 +3250,12 @@ H5F_setup_PLs_for_vfd_swmr(const char *config_str, hid_t fapl_id, hid_t fcpl_id,
     assert(config_str);
 
     /* allocate config_ptr and initialize memory */
-    if ( NULL == (config_ptr = HDcalloc(1, sizeof(H5F_vfd_swmr_config_t))) ) {
+    if ( NULL == (config_ptr = calloc(1, sizeof(H5F_vfd_swmr_config_t))) ) {
         HGOTO_ERROR(H5E_INTERNAL, H5E_CANTALLOC, FAIL, "cannot allocate config structure");
     }
-    HDmemset(config_ptr, 0, sizeof(H5F_vfd_swmr_config_t));
+    memset(config_ptr, 0, sizeof(H5F_vfd_swmr_config_t));
 
-    /* Validate fapl and fcpl */
+    /* Validate fapl */
     if ( H5Iis_valid(fapl_id) <= 0 || H5Pisa_class(fapl_id, H5P_FILE_ACCESS) <= 0 ) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid FAPL");
     }
@@ -3281,9 +3317,9 @@ H5F_setup_PLs_for_vfd_swmr(const char *config_str, hid_t fapl_id, hid_t fcpl_id,
         }
     }
 
-    /* Parse the configuration group into configs[].  */
+    /* Parse the configuration group into configs array */
     if ( H5CL_parse_config_group(config_str, vfd_swmr_config_data, VFD_SWMR_CONFIG_DATA__MAX_PARAMS, configs) < 0 ) {
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't parse config_str.");
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "failed to load and parse config group");
     }
 
     for ( i = 0; i < VFD_SWMR_CONFIG_DATA__MAX_PARAMS; i++ ) {
@@ -3337,7 +3373,7 @@ H5F_setup_PLs_for_vfd_swmr(const char *config_str, hid_t fapl_id, hid_t fcpl_id,
         }
     }
 
-    /* Validate always required configs */
+    /* Validate always-required configs */
     if ( !configured_H5F_vfd_swmr_config || !configured_page_buffer_config ) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "required configuration groups missing");
     }
@@ -3346,7 +3382,6 @@ H5F_setup_PLs_for_vfd_swmr(const char *config_str, hid_t fapl_id, hid_t fcpl_id,
     if ( create_file) {
 
         if ( !configured_fs_strategy_config || !configured_fs_page_size ) {
-
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
                 "file_space_strategy_config and file_space_page_size must both be configured if create_file is TRUE");
         }
@@ -3373,7 +3408,7 @@ H5F_setup_PLs_for_vfd_swmr(const char *config_str, hid_t fapl_id, hid_t fcpl_id,
 done:
 
     if ( config_ptr ) {
-        HDfree(config_ptr);
+        free(config_ptr);
     }
 
     /* Handle cleanup of nv_pair arrays referenced by each config entry */
@@ -3393,5 +3428,5 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 
-} /* H5F_setup_PLs_for_vfd_swmr() */
+} /* H5F_load_vfd_swmr_config() */
 

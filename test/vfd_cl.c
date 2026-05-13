@@ -16,6 +16,12 @@
 #define H5E_FRIEND
 #define H5CL_FRIEND
 
+#include "h5test.h"
+#include "H5CLpkg.h"
+#include "H5Epkg.h"
+#include "H5Fprivate.h"
+
+
 /* 
  * Disable calls to cl_test_verify_error_stack() because this HDF5
  * version lacks the required internal error stack structures.
@@ -25,14 +31,15 @@
  *  hdf5/hdf5-1.14.6/test/vfd_cl.c
  */
 #define VERIFY_ERROR_STACK_SUPPORTED 0
+/* file name for config file tests */
+#define TEST_CONFIG_FILE_NAME        "cl_test_config.txt"
+/* name of directory (non-regular file) for config file tests */
+#define NON_REGULAR_CONFIG_FILE_NAME "non_regular_file_dir"
 
-#include "h5test.h"
-#include "H5CLpkg.h"
-#include "H5Epkg.h"
-#include "H5Fprivate.h" /* Only needed to test H5F_setup_PLs_for_vfd_swmr() */
 
 /* utility functions */
-static bool cl_lexer_test_verify_token(H5CL_token_t * token_ptr, int token_num, int32_t expected_code, 
+static herr_t create_config_file(const char* file_name, const char *config_string, size_t len);
+static int cl_lexer_test_verify_token(H5CL_token_t * token_ptr, int token_num, int32_t expected_code, 
                                        const char * expected_str, int64_t expected_int_val, double expected_f_val, 
                                        uint8_t * expected_bb_ptr, size_t expected_bb_len, bool verbose);
 static int cl_test_verify_nv_pair(H5CL_nv_pair_t * nv_pair_ptr, int nv_pair_num, const char * expected_name_ptr, 
@@ -74,12 +81,53 @@ static herr_t cl_parse_config_group_err_check_4(void);
 static herr_t cl_parse_config_group_err_check_5(void);
 static herr_t cl_parse_config_group_err_check_6(void);
 static herr_t cl_parse_config_group_err_check_7(void);
-static herr_t vfd_swmr_setup_PLs_smoke_check(void);
-static herr_t vfd_swmr_setup_PLs_err_check_1(void);
-static herr_t vfd_swmr_setup_PLs_err_check_2(void);
-static herr_t vfd_swmr_setup_PLs_err_check_3(void);
-static herr_t vfd_swmr_setup_PLs_err_check_4(void);
-static herr_t vfd_swmr_setup_PLs_err_check_5(void);
+static herr_t vfd_swmr_load_string_config_smoke_check(void);
+static herr_t cl_load_string_from_file_smoke_check(void);
+static herr_t cl_load_string_from_file_err_check_1(void);
+static herr_t cl_load_string_from_file_err_check_2(void);
+static herr_t vfd_swmr_load_file_config_smoke_check(void);
+
+/*******************************************************************************
+ *
+ * create_config_file()
+ *
+ * Helper function to create a config file and write the supplied string to it.
+ * Opens the file specified by file_name in truncation mode and
+ * writes len bytes from config_string to the file.
+ *
+ *                                              Cody S. -- 5/11/26
+ *
+ * Changes:
+ *
+ *    None.
+ *
+ *******************************************************************************/
+static herr_t 
+create_config_file(const char* file_name, const char *config_string, size_t len)
+{
+    size_t written;
+
+    /* Open the file and truncate if it already exists */
+    FILE *fp = fopen(file_name, "w"); 
+    if ( !fp ) {
+        perror("fopen failed");
+        return -1;
+    }
+
+    written = fwrite(config_string, 1, len, fp);
+    if ( written != len ) {
+        perror("fwrite failed");
+        fclose(fp);
+        return -1;
+    }
+
+    if (fclose(fp) != 0) {
+        perror("fclose failed");
+        return -1;
+    }
+
+    return 0;
+}
 
 /*******************************************************************************
  *
@@ -95,7 +143,7 @@ static herr_t vfd_swmr_setup_PLs_err_check_5(void);
  *
  *******************************************************************************/
 
-static bool
+static int
 cl_lexer_test_verify_token(H5CL_token_t * token_ptr, int token_num, 
                            int32_t expected_code, const char * expected_str, 
                            int64_t expected_int_val, double expected_f_val, 
@@ -1470,10 +1518,9 @@ cl_lexer_error_check_2(void)
 
     /* should fail on an ill formed numeric constantt */
     if  ( H5CL__lex_read_token(true, false, &token_ptr, &lex_vars) >= 0 ) {
-
         TEST_ERROR;
-
     } 
+
 #if VERIFY_ERROR_STACK_SUPPORTED
     else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
                                "Ill-formed numerical constant.  Context: ...eric values */ + - . +. -. (an...",
@@ -1488,7 +1535,7 @@ cl_lexer_error_check_2(void)
 
         TEST_ERROR;
 
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
     else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
                                "Ill-formed numerical constant.  Context: ...ic values */ + - . +. -. (an u...",
@@ -1504,6 +1551,7 @@ cl_lexer_error_check_2(void)
         TEST_ERROR;
 
     } 
+    
 #if VERIFY_ERROR_STACK_SUPPORTED
     else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
                                "Ill-formed numerical constant.  Context: ... values */ + - . +. -. (an unt...",
@@ -4766,9 +4814,9 @@ error:
 
 /*******************************************************************************
  *
- * vfd_swmr_setup_PLs_smoke_check()
+ * vfd_swmr_load_string_config_smoke_check()
  *
- * Initial smoke check for the H5F_setup_PLs_for_vfd_swmr() function.  Note that
+ * Initial smoke check for the H5F_load_vfd_swmr_config_from_string() function.  Note that
  * this test does not trigger any errors in that function
  *
  *                                              Cody S. -- 4/28/26
@@ -4779,7 +4827,7 @@ error:
  *
  *******************************************************************************/
 static herr_t 
-vfd_swmr_setup_PLs_smoke_check(void)
+vfd_swmr_load_string_config_smoke_check(void)
 {
     /* Input values for PL setup */
     const char * input_string = 
@@ -4872,7 +4920,7 @@ vfd_swmr_setup_PLs_smoke_check(void)
     }
     HDmemset(actual_config, 0, sizeof(H5F_vfd_swmr_config_t));
 
-    TESTING("H5F_setup_PLs_for_vfd_swmr() -- Initial Smoke Check");
+    TESTING("H5F_load_vfd_swmr_config_from_string() -- Initial Smoke Check");
 
     /* Initialize property lists */
     if ( (fapl = h5_fileaccess()) < 0 )
@@ -4881,7 +4929,7 @@ vfd_swmr_setup_PLs_smoke_check(void)
         TEST_ERROR;
 
     /* Use cl string to setup property lists */
-    if ( H5F_setup_PLs_for_vfd_swmr(input_string, fapl, fcpl, writer, create_file) < 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(input_string, fapl, fcpl, writer, create_file) < 0 )
         TEST_ERROR;
 
     /* Get configured values */
@@ -4925,7 +4973,7 @@ vfd_swmr_setup_PLs_smoke_check(void)
     
     /* Free allocated config struct */
     if ( actual_config )
-        HDfree(actual_config);
+        free(actual_config);
     
     PASSED();
 
@@ -4939,15 +4987,15 @@ error:
 
     /* Free allocated config struct */
     if ( actual_config )
-        HDfree(actual_config);
+        free(actual_config);
 
     return -1;
-} /* vfd_swmr_setup_PLs_smoke_check */
+} /* vfd_swmr_load_string_config_smoke_check */
 
 
 /*******************************************************************************
  *
- * vfd_swmr_setup_PLs_err_check_1()
+ * vfd_swmr_load_string_config_err_check_1()
  *
  * Verify that the VFD SWMR property list setup function detects and reports 
  * errors as expected.
@@ -4960,7 +5008,7 @@ error:
  *
  *******************************************************************************/
 static herr_t 
-vfd_swmr_setup_PLs_err_check_1(void)
+vfd_swmr_load_string_config_err_check_1(void)
 {
     /* Input values for PL setup */
     const char * input_string = 
@@ -5006,7 +5054,7 @@ vfd_swmr_setup_PLs_err_check_1(void)
     hbool_t                writer      = false;
     hbool_t                create_file = true;
 
-    TESTING("H5F_setup_PLs_for_vfd_swmr() err detect 1");
+    TESTING("H5F_load_vfd_swmr_config_from_string() err detect 1");
 
     /* Initialize property lists */
     if ( (fapl = h5_fileaccess()) < 0 )
@@ -5015,7 +5063,7 @@ vfd_swmr_setup_PLs_err_check_1(void)
         TEST_ERROR;
 
     /* Expected to fail because writer is false but create_file is true */
-    if ( H5F_setup_PLs_for_vfd_swmr(input_string, fapl, fcpl, writer, create_file) > 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(input_string, fapl, fcpl, writer, create_file) > 0 )
         TEST_ERROR;
 
     /* Close property lists */
@@ -5035,11 +5083,11 @@ error:
     H5Pclose(fcpl);
 
     return -1;
-} /* vfd_swmr_setup_PLs_err_check_1() */
+} /* vfd_swmr_load_string_config_err_check_1() */
 
 /*******************************************************************************
  *
- * vfd_swmr_setup_PLs_err_check_2()
+ * vfd_swmr_load_string_config_err_check_2()
  *
  * Verify that the VFD SWMR property list setup function detects and reports 
  * errors as expected.
@@ -5052,7 +5100,7 @@ error:
  *
  *******************************************************************************/
 static herr_t 
-vfd_swmr_setup_PLs_err_check_2(void)
+vfd_swmr_load_string_config_err_check_2(void)
 {
     /* Input values for PL setup */
     const char * missing_H5F_vfd_swmr_config_str= 
@@ -5141,7 +5189,7 @@ vfd_swmr_setup_PLs_err_check_2(void)
     hbool_t                writer      = true;
     hbool_t                create_file = true;
 
-    TESTING("H5F_setup_PLs_for_vfd_swmr() err detect 2");
+    TESTING("H5F_load_vfd_swmr_config_from_string() err detect 2");
 
     /* Initialize property lists */
     if ( (fapl = h5_fileaccess()) < 0 )
@@ -5150,16 +5198,27 @@ vfd_swmr_setup_PLs_err_check_2(void)
         TEST_ERROR;
 
     /* Expected to fail because H5F_vfd_swmr_config missing */
-    if ( H5F_setup_PLs_for_vfd_swmr(missing_H5F_vfd_swmr_config_str, fapl, fcpl, writer, create_file) > 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(missing_H5F_vfd_swmr_config_str, 
+                                              fapl, fcpl, writer, 
+                                              create_file) > 0 )
+    {
         TEST_ERROR;
+    }
 
     /* Expected to fail because page_buffer_config missing */
-    if ( H5F_setup_PLs_for_vfd_swmr(missing_page_buffer_config_str, fapl, fcpl, writer, create_file) > 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(missing_page_buffer_config_str,
+                                              fapl, fcpl, writer, 
+                                              create_file) > 0 )
+    {
         TEST_ERROR;
-
+    }
     /* Expected to fail because create_file is true but file_space configurations missing */
-    if ( H5F_setup_PLs_for_vfd_swmr(missing_file_space_str, fapl, fcpl, writer, create_file) > 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(missing_file_space_str, 
+                                              fapl, fcpl, writer, 
+                                              create_file) > 0 )
+    {
         TEST_ERROR;
+    }
 
     /* Close property lists */
     if ( H5Pclose(fapl) < 0 )
@@ -5178,12 +5237,12 @@ error:
     H5Pclose(fcpl);
 
     return -1;
-} /* vfd_swmr_setup_PLs_err_check_2() */
+} /* vfd_swmr_load_string_config_err_check_2() */
 
 
 /*******************************************************************************
  *
- * vfd_swmr_setup_PLs_err_check_3()
+ * vfd_swmr_load_string_config_err_check_3()
  *
  * Verify that the VFD SWMR property list setup function detects and reports 
  * errors as expected.
@@ -5196,7 +5255,7 @@ error:
  *
  *******************************************************************************/
 static herr_t 
-vfd_swmr_setup_PLs_err_check_3(void)
+vfd_swmr_load_string_config_err_check_3(void)
 {
     /* Input values for PL setup */
     const char * missing_tick_len_str = 
@@ -5546,7 +5605,7 @@ vfd_swmr_setup_PLs_err_check_3(void)
     hbool_t                writer      = true;
     hbool_t                create_file = true;
 
-    TESTING("H5F_setup_PLs_for_vfd_swmr() err detect 3");
+    TESTING("H5F_load_vfd_swmr_config_from_string() err detect 3");
 
     /* Initialize property lists */
     if ( (fapl = h5_fileaccess()) < 0 )
@@ -5555,39 +5614,39 @@ vfd_swmr_setup_PLs_err_check_3(void)
         TEST_ERROR;
 
     /* Expected to fail because of missing tick_len parameter */
-    if ( H5F_setup_PLs_for_vfd_swmr(missing_tick_len_str, fapl, fcpl, writer, create_file) > 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(missing_tick_len_str, fapl, fcpl, writer, create_file) > 0 )
         TEST_ERROR;
 
     /* Expected to fail because of missing max_lag parameter */
-    if ( H5F_setup_PLs_for_vfd_swmr(missing_max_lag_str, fapl, fcpl, writer, create_file) > 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(missing_max_lag_str, fapl, fcpl, writer, create_file) > 0 )
         TEST_ERROR;
 
     /* Expected to fail because of missing maintain_metadata_file parameter */
-    if ( H5F_setup_PLs_for_vfd_swmr(missing_maintain_md_file_str, fapl, fcpl, writer, create_file) > 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(missing_maintain_md_file_str, fapl, fcpl, writer, create_file) > 0 )
         TEST_ERROR;
     
     /* Expected to fail because of missing generate_updater_file parameter */
-    if ( H5F_setup_PLs_for_vfd_swmr(missing_gen_updater_files_str, fapl, fcpl, writer, create_file) > 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(missing_gen_updater_files_str, fapl, fcpl, writer, create_file) > 0 )
         TEST_ERROR;
     
     /* Expected to fail because of missing md_pages_reserved parameter */
-    if ( H5F_setup_PLs_for_vfd_swmr(missing_md_pages_reserved_str, fapl, fcpl, writer, create_file) > 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(missing_md_pages_reserved_str, fapl, fcpl, writer, create_file) > 0 )
         TEST_ERROR;
     
     /* Expected to fail because of missing page_buf_size parameter */
-    if ( H5F_setup_PLs_for_vfd_swmr(missing_page_buf_size_str, fapl, fcpl, writer, create_file) > 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(missing_page_buf_size_str, fapl, fcpl, writer, create_file) > 0 )
         TEST_ERROR;
     
     /* Expected to fail because of missing metadata_pages_only parameter */
-    if ( H5F_setup_PLs_for_vfd_swmr(missing_md_pages_only_str, fapl, fcpl, writer, create_file) > 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(missing_md_pages_only_str, fapl, fcpl, writer, create_file) > 0 )
         TEST_ERROR;
 
     /* Expected to fail because of missing persist parameter */
-    if ( H5F_setup_PLs_for_vfd_swmr(missing_persist_str, fapl, fcpl, writer, create_file) > 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(missing_persist_str, fapl, fcpl, writer, create_file) > 0 )
         TEST_ERROR;
 
     /* Expected to fail because of missing page_size parameter */
-    if ( H5F_setup_PLs_for_vfd_swmr(missing_page_size_str, fapl, fcpl, writer, create_file) > 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(missing_page_size_str, fapl, fcpl, writer, create_file) > 0 )
         TEST_ERROR;
 
 
@@ -5608,12 +5667,12 @@ error:
     H5Pclose(fcpl);
 
     return -1;
-} /* vfd_swmr_setup_PLs_err_check_3() */
+} /* vfd_swmr_load_string_config_err_check_3() */
 
 
 /*******************************************************************************
  *
- * vfd_swmr_setup_PLs_err_check_4()
+ * vfd_swmr_load_string_config_err_check_4()
  *
  * Verify that the VFD SWMR property list setup function detects and reports 
  * errors as expected.
@@ -5626,7 +5685,7 @@ error:
  *
  *******************************************************************************/
 static herr_t 
-vfd_swmr_setup_PLs_err_check_4(void)
+vfd_swmr_load_string_config_err_check_4(void)
 {
     /* Input values for PL setup */
     const char * duplicate_H5F_vfd_swmr_config_str = 
@@ -5709,7 +5768,7 @@ vfd_swmr_setup_PLs_err_check_4(void)
     hbool_t                writer      = true;
     hbool_t                create_file = true;
 
-    TESTING("H5F_setup_PLs_for_vfd_swmr() err detect 4");
+    TESTING("H5F_load_vfd_swmr_config_from_string() err detect 4");
 
     /* Initialize property lists */
     if ( (fapl = h5_fileaccess()) < 0 )
@@ -5718,11 +5777,11 @@ vfd_swmr_setup_PLs_err_check_4(void)
         TEST_ERROR;
 
     /* Expected to fail because of duplicate parameters in H5F_vfd_swmr_config config */
-    if ( H5F_setup_PLs_for_vfd_swmr(duplicate_H5F_vfd_swmr_config_str, fapl, fcpl, writer, create_file) > 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(duplicate_H5F_vfd_swmr_config_str, fapl, fcpl, writer, create_file) > 0 )
         TEST_ERROR;
 
     /* Expected to fail because of duplicate parameters in page_buffer_config config */
-    if ( H5F_setup_PLs_for_vfd_swmr(duplicate_page_buffer_config_str, fapl, fcpl, writer, create_file) > 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(duplicate_page_buffer_config_str, fapl, fcpl, writer, create_file) > 0 )
         TEST_ERROR;
 
     /* Cannot test for duplicate parameters in file_space related configs, since both configurations
@@ -5745,7 +5804,487 @@ error:
     H5Pclose(fcpl);
 
     return -1;
-} /* vfd_swmr_setup_PLs_err_check_4() */
+} /* vfd_swmr_load_string_config_err_check_4() */
+
+
+/*******************************************************************************
+ *
+ * cl_load_string_from_file_smoke_check()
+ *
+ * Initial smoke check for the H5CL_load_config_string_from_file() function.  
+ * Note that this test does not trigger any errors in that function
+ *
+ *                                              Cody S. -- 5/10/26
+ *
+ * Changes:
+ *
+ *    None.
+ *
+ *******************************************************************************/
+static herr_t
+cl_load_string_from_file_smoke_check(void)
+{
+    const char *expected_file_str = 
+        "( vfd_swmr_config_data\n"
+        "  (\n"
+        "    ( H5F_vfd_swmr_config\n"
+        "      (\n"
+        "        ( version 1 )\n"
+        "        ( tick_len 4 )\n"
+        "        ( max_lag 7 )\n"
+        "        ( presume_posix_semantics 1 )\n"
+        "        ( maintain_metadata_file 1 )\n"
+        "        ( generate_updater_files 0 )\n"
+        "        ( flush_raw_data 1 )\n"
+        "        ( md_pages_reserved 128 )\n"
+        "        ( md_file_path \"./md_dir/\" )\n"
+        "        ( md_file_name \"md_file\" )\n"
+        "        ( updater_file_path \"\" )\n"
+        "        ( log_file_path \"\" )\n"
+        "        ( pb_expansion_threshold 0 )\n"
+        "      )\n"
+        "    )\n"
+        "    ( page_buffer_config\n"
+        "      (\n"
+        "        ( page_buf_size 4096 )\n"
+        "        ( metadata_pages_only 1 )\n"
+        "      )\n"
+        "    )\n"
+        "    ( file_space_strategy_config\n"
+        "      (\n"
+        "        ( persist 0 )\n"
+        "      )\n"
+        "    )\n"
+        "    ( file_space_page_size\n"
+        "      (\n"
+        "        ( page_size 4096 )\n"
+        "      )\n"
+        "    )\n"
+        "  )\n"
+        ")";
+    char       *actual_file_str = NULL;
+
+    TESTING("H5CL_load_config_string_from_file() -- Initial Smoke Check");
+
+    if ( create_config_file(TEST_CONFIG_FILE_NAME, 
+                            expected_file_str, 
+                            strlen(expected_file_str)) < 0 )
+    {
+        TEST_ERROR;
+    }
+    
+    if ( H5CL_load_config_string_from_file(TEST_CONFIG_FILE_NAME, &actual_file_str) < 0 )
+        TEST_ERROR;
+
+    /* Ensure string loaded from file matches expected string */
+    if (0 != strcmp(actual_file_str, expected_file_str) )
+        TEST_ERROR;
+
+    /* Remove the created config file */
+    if ( remove(TEST_CONFIG_FILE_NAME) != 0 ) {
+        perror("Error deleting file");
+    }
+
+    free(actual_file_str);
+
+    PASSED();
+
+    return 0;
+
+error:
+
+    remove(TEST_CONFIG_FILE_NAME);
+
+    if (actual_file_str)
+        free(actual_file_str);
+    
+    return -1;
+} /* cl_load_string_from_file_smoke_check() */
+
+
+/*******************************************************************************
+ *
+ * cl_load_string_from_file_err_check_1()
+ *
+ * Verify that the function for loading config language strings from files 
+ * detects and reports errors as expected. 
+ *
+ *                                              Cody S. -- 5/12/26
+ *
+ * Changes:
+ *
+ *    None.
+ *
+ *******************************************************************************/
+static herr_t
+cl_load_string_from_file_err_check_1(void)
+{
+    
+    char       *loaded_str      = NULL;
+    bool        verbose         = true;
+
+    TESTING("H5CL_load_config_string_from_file err detect 1");
+
+    /* FIRST: Test blank file name */
+
+    if ( H5CL_load_config_string_from_file("", &loaded_str) >= 0 ) {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "file_name cannot be blank",
+                                              verbose) ) {
+
+        TEST_ERROR;
+    }
+#endif
+
+    /* SECOND: test a non existing file */
+
+    if ( H5CL_load_config_string_from_file("FILE_THAT_DOES_NOT_EXIST", &loaded_str) >= 0 ) {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "could not stat file",
+                                              verbose) ) {
+
+        TEST_ERROR;
+    }
+#endif
+
+    /* THIRD: test a non regular file */
+
+    if ( mkdir(NON_REGULAR_CONFIG_FILE_NAME, 0700) != 0 ) {
+        perror("mkdir error");
+        TEST_ERROR;
+    }
+    
+    /* use directory name to trip non-regular file check */
+    if ( H5CL_load_config_string_from_file(NON_REGULAR_CONFIG_FILE_NAME, &loaded_str) >= 0 ) {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "not a regular file",
+                                              verbose) ) {
+
+        TEST_ERROR;
+    }
+#endif
+
+    if ( rmdir(NON_REGULAR_CONFIG_FILE_NAME) != 0) {
+        perror("rmdir error");
+    }
+
+    free(loaded_str);
+
+    PASSED();
+
+    return 0;
+
+error:
+
+    rmdir(NON_REGULAR_CONFIG_FILE_NAME);
+
+    if (loaded_str)
+        free(loaded_str);
+    
+    return -1;
+} /* cl_load_string_from_file_err_check_1() */
+
+
+/*******************************************************************************
+ *
+ * cl_load_string_from_file_err_check_2()
+ *
+ * Verify that the function for loading config language strings from files 
+ * detects and reports errors as expected. Uses a loop to go through all
+ * testable errors.
+ *
+ *                                              Cody S. -- 5/12/26
+ *
+ * Changes:
+ *
+ *    None.
+ *
+ *******************************************************************************/
+static herr_t
+cl_load_string_from_file_err_check_2(void)
+{
+    /* Create a struct to make looping through each test easier */
+    typedef struct {
+        const char *config_str;
+        size_t      config_len;
+        const char *expected_err_msg;
+    } invalid_config_test_t;
+
+    /* create an array of structs to hold test info for each test */
+    invalid_config_test_t config_test[3] = {
+        {
+            /* *config_str       = */ "",
+            /*  config_len       = */ 0,
+            /* *expected_err_msg = */ "file is empty",
+        },  
+        {
+            /* *config_str       = */ "( NON_ASCII_VALUE éàöñç )",
+            /*  config_len       = */ strlen("( NON_ASCII_VALUE éàöñç )"),
+            /* *expected_err_msg = */ "invalid character in string from file",
+        },
+        {
+            /* *config_str       = */ "( NUL_BYTE \0 )",
+            /*  config_len       = */ sizeof("( NUL_BYTE \0 )") - 1, /* use sizeof() - 1 for str containing nul */
+            /* *expected_err_msg = */ "NUL byte in file",
+        }
+    };
+    
+    char       *loaded_str      = NULL;
+    bool        verbose         = true;
+    int         i;
+
+    TESTING("H5CL_load_config_string_from_file err detect 2");
+
+    for ( i = 0; i < 3; i++) {
+        if ( create_config_file(TEST_CONFIG_FILE_NAME, 
+                                config_test[i].config_str,
+                                config_test[i].config_len) < 0 )
+        {
+            TEST_ERROR;
+        }
+
+        if ( H5CL_load_config_string_from_file(TEST_CONFIG_FILE_NAME, &loaded_str) >= 0 ) {
+            TEST_ERROR;
+        }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+        else if ( 0 != cl_test_verify_error_stack(H5E_FILE, H5E_BADFILE, 
+                                                  config_test[i].expected_err_msg,
+                                                  verbose) ) 
+        {
+
+            TEST_ERROR;
+        }
+#endif
+
+        if (loaded_str) {
+            free(loaded_str);
+            loaded_str = NULL;
+        }
+    }
+
+    /* Remove the created config file */
+    if ( remove(TEST_CONFIG_FILE_NAME) != 0 ) {
+        perror("Error deleting file");
+    }
+
+    PASSED();
+
+    return 0;
+
+error:
+
+    remove(TEST_CONFIG_FILE_NAME);
+
+    if (loaded_str)
+        free(loaded_str);
+    
+    return -1;
+} /* cl_load_string_from_file_err_check_2() */
+
+
+/*******************************************************************************
+ *
+ * vfd_swmr_load_file_config_smoke_check()
+ *
+ * Initial smoke check for the H5F_load_vfd_swmr_config_from_file() function.  
+ * Note that this test does not trigger any errors in that function
+ *
+ *                                              Cody S. -- 5/8/26
+ *
+ * Changes:
+ *
+ *    None.
+ *
+ *******************************************************************************/
+static herr_t 
+vfd_swmr_load_file_config_smoke_check(void)
+{
+    const char *file_str = 
+        "( vfd_swmr_config_data"
+        "  ("
+        "    ( H5F_vfd_swmr_config"
+        "      ("
+        "        ( version 1 )"
+        "        ( tick_len 4 )"
+        "        ( max_lag 7 )"
+        "        ( presume_posix_semantics 1 )"
+        "        ( maintain_metadata_file 1 )"
+        "        ( generate_updater_files 0 )"
+        "        ( flush_raw_data 1 )"
+        "        ( md_pages_reserved 128 )"
+        "        ( md_file_path \"./md_dir/\" )"
+        "        ( md_file_name \"md_file\" )"
+        "        ( updater_file_path \"\" )"
+        "        ( log_file_path \"\" )"
+        "        ( pb_expansion_threshold 0 )"
+        "      )"
+        "    )"
+        "    ( page_buffer_config"
+        "      ("
+        "        ( page_buf_size 4096 )"
+        "        ( metadata_pages_only 1 )"
+        "      )"
+        "    )"
+        "    ( file_space_strategy_config"
+        "      ("
+        "        ( persist 0 )"
+        "      )"
+        "    )"
+        "    ( file_space_page_size"
+        "      ("
+        "        ( page_size 4096 )"
+        "      )"
+        "    )"
+        "  )"
+        ")";
+
+    /* Parameters for config load function */           
+    hid_t       fapl        = H5I_INVALID_HID;
+    hid_t       fcpl        = H5I_INVALID_HID;
+    hbool_t     writer      = true;
+    hbool_t     create_file = true;
+
+    /* Output values for testing PL setup */
+    H5F_fspace_strategy_t  strategy;
+    hbool_t                persist; 
+    hsize_t                threshold;
+    hsize_t                fsp_size;
+    H5F_libver_t           libver_low;
+    H5F_libver_t           libver_high;
+    size_t                 page_buf_size;
+    unsigned int           min_meta_perc; 
+    unsigned int           min_raw_perc;
+    H5F_vfd_swmr_config_t *actual_config = NULL;
+
+    /* Expected values */
+    H5F_fspace_strategy_t expected_strategy      = H5F_FSPACE_STRATEGY_PAGE;
+    hbool_t               expected_persist       = false; 
+    hsize_t               expected_threshold     = 1;
+    hsize_t               expected_fsp_size      = 4096;
+    H5F_libver_t          expected_libver_low    = H5F_LIBVER_LATEST;
+    H5F_libver_t          expected_libver_high   = H5F_LIBVER_LATEST;
+    size_t                expected_page_buf_size = 4096;
+    unsigned int          expected_min_meta_perc = 100; 
+    unsigned int          expected_min_raw_perc  = 0;
+    H5F_vfd_swmr_config_t expected_config =
+    {
+        /* version                 = */ H5F__CURR_VFD_SWMR_CONFIG_VERSION,
+        /* tick_len                = */ 4,
+        /* max_lag                 = */ 7,
+        /* presume_posix_semantics = */ true,
+        /* writer                  = */ true,
+        /* maintain_metadata_file  = */ true,
+        /* generate_updater_files  = */ false,
+        /* flush_raw_data          = */ true,
+        /* md_pages_reserved       = */ 128,
+        /* pb_expansion_threshold  = */ 0,
+        /* md_file_path            = */ "./md_dir/",
+        /* md_file_name            = */ "md_file",
+        /* updater_file_path       = */ "",
+        /* log_file_path           = */ ""
+    };
+
+    bool verbose = true;
+
+    if ( NULL == (actual_config = HDcalloc(1, sizeof(H5F_vfd_swmr_config_t))) ) {
+        TEST_ERROR;
+    }
+    HDmemset(actual_config, 0, sizeof(H5F_vfd_swmr_config_t));
+
+    TESTING("H5F_load_vfd_swmr_config_from_string() -- Initial Smoke Check");
+
+    /* Initialize property lists */
+    if ( (fapl = h5_fileaccess()) < 0 )
+        TEST_ERROR;
+    if ( (fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0 )
+        TEST_ERROR;
+
+    /* Create config string file */
+    if ( create_config_file(TEST_CONFIG_FILE_NAME, 
+                            file_str,
+                            strlen(file_str)) < 0 )
+    {
+        TEST_ERROR;
+    }
+
+    /* Use cl file to setup property lists */
+    if ( H5F_load_vfd_swmr_config_from_file(TEST_CONFIG_FILE_NAME, fapl, fcpl, writer, create_file) < 0 )
+        TEST_ERROR;
+
+    /* Get configured values */
+    if ( H5Pget_file_space_strategy(fcpl, &strategy, &persist, &threshold) < 0 )
+        TEST_ERROR;
+
+    if ( H5Pget_file_space_page_size(fcpl, &fsp_size) < 0 )
+        TEST_ERROR;
+
+    if ( H5Pget_libver_bounds(fapl, &libver_low, &libver_high) < 0 )
+        TEST_ERROR;
+
+    if ( H5Pget_page_buffer_size(fapl, &page_buf_size, &min_meta_perc, &min_raw_perc) < 0 )
+        TEST_ERROR;
+
+    if ( H5Pget_vfd_swmr_config(fapl, actual_config) < 0 )
+        TEST_ERROR;
+
+    /* Test returned values */
+    if ( ( strategy != expected_strategy ) || 
+         ( persist != expected_persist ) || 
+         ( threshold != expected_threshold ) ||
+         ( fsp_size != expected_fsp_size ) ||
+         ( libver_low != expected_libver_low ) ||
+         ( libver_high != expected_libver_high ) ||
+         ( page_buf_size != expected_page_buf_size ) || 
+         ( min_meta_perc != expected_min_meta_perc ) ||
+         ( min_raw_perc != expected_min_raw_perc ) ||
+         ( vfd_swmr_test_verify_config(actual_config, &expected_config, verbose) > 0 ) ) 
+    {
+
+        TEST_ERROR;
+    }
+
+    /* Cleanup */
+
+    /* Close property lists */
+    if ( H5Pclose(fapl) < 0 )
+        TEST_ERROR;
+    if ( H5Pclose(fcpl) < 0 )
+        TEST_ERROR;
+    
+    /* Free allocated config struct */
+    if ( actual_config )
+        free(actual_config);
+
+    /* remove config string file */
+    if ( remove(TEST_CONFIG_FILE_NAME) != 0 ) {
+        perror("Error deleting file");
+    }
+    
+    PASSED();
+
+    return 0;
+
+error:
+
+    H5Pclose(fapl);
+    H5Pclose(fcpl);
+
+    if ( actual_config )
+        free(actual_config);
+    
+    remove(TEST_CONFIG_FILE_NAME);
+
+    return -1;
+} /* vfd_swmr_load_file_config_smoke_check */
 
 
 /*-------------------------------------------------------------------------
@@ -5793,11 +6332,15 @@ main(void)
     nerrors += cl_parse_config_group_err_check_5() < 0 ? 1 : 0;
     nerrors += cl_parse_config_group_err_check_6() < 0 ? 1 : 0;
     nerrors += cl_parse_config_group_err_check_7() < 0 ? 1 : 0;
-    nerrors += vfd_swmr_setup_PLs_smoke_check() < 0 ? 1 : 0;
-    nerrors += vfd_swmr_setup_PLs_err_check_1() < 0 ? 1 : 0;
-    nerrors += vfd_swmr_setup_PLs_err_check_2() < 0 ? 1 : 0;
-    nerrors += vfd_swmr_setup_PLs_err_check_3() < 0 ? 1 : 0;
-    nerrors += vfd_swmr_setup_PLs_err_check_4() < 0 ? 1 : 0;
+    nerrors += cl_load_string_from_file_smoke_check() < 0 ? 1 : 0;
+    nerrors += vfd_swmr_load_string_config_smoke_check() < 0 ? 1 : 0;
+    nerrors += vfd_swmr_load_string_config_err_check_1() < 0 ? 1 : 0;
+    nerrors += vfd_swmr_load_string_config_err_check_2() < 0 ? 1 : 0;
+    nerrors += vfd_swmr_load_string_config_err_check_3() < 0 ? 1 : 0;
+    nerrors += vfd_swmr_load_string_config_err_check_4() < 0 ? 1 : 0;
+    nerrors += cl_load_string_from_file_err_check_1() < 0 ? 1 : 0;
+    nerrors += cl_load_string_from_file_err_check_2() < 0 ? 1 : 0;
+    nerrors += vfd_swmr_load_file_config_smoke_check() < 0 ? 1 : 0;
     
     if (nerrors) {
         printf("***** %d Virtual File Driver Configuration Language TEST%s FAILED! *****\n", 
