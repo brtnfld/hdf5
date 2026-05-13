@@ -23857,7 +23857,7 @@ public class H5 implements java.io.Serializable {
     /**
      * @ingroup JH5Z
      *
-     * H5Zconfig_get_int retrieves an integer parameter from a filter parameter string.
+     * H5Zconfig_get_param retrieves an integer parameter from a filter parameter string.
      *
      * @param params
      *            IN: Full parameter string (e.g. "level = 6").
@@ -23871,7 +23871,7 @@ public class H5 implements java.io.Serializable {
      * @exception HDF5LibraryException
      *            Error from the HDF5 Library.
      **/
-    public static int H5Zconfig_get_int(String params, String key, long[] out) throws HDF5LibraryException
+    public static int H5Zconfig_get_param(String params, String key, long[] out) throws HDF5LibraryException
     {
         if (params == null)
             throw new HDF5FunctionArgumentException("params string is null");
@@ -23907,7 +23907,7 @@ public class H5 implements java.io.Serializable {
     /**
      * @ingroup JH5Z
      *
-     * H5Zconfig_get_double retrieves a floating-point parameter from a filter parameter string.
+     * H5Zconfig_get_param retrieves a floating-point parameter from a filter parameter string.
      *
      * @param params
      *            IN: Full parameter string (e.g. "threshold = 1.5").
@@ -23921,7 +23921,7 @@ public class H5 implements java.io.Serializable {
      * @exception HDF5LibraryException
      *            Error from the HDF5 Library.
      **/
-    public static int H5Zconfig_get_double(String params, String key, double[] out)
+    public static int H5Zconfig_get_param(String params, String key, double[] out)
         throws HDF5LibraryException
     {
         if (params == null)
@@ -23958,7 +23958,7 @@ public class H5 implements java.io.Serializable {
     /**
      * @ingroup JH5Z
      *
-     * H5Zconfig_get_bool retrieves a boolean parameter from a filter parameter string.
+     * H5Zconfig_get_param retrieves a boolean parameter from a filter parameter string.
      *
      * @param params
      *            IN: Full parameter string (e.g. "enabled = true").
@@ -23972,7 +23972,7 @@ public class H5 implements java.io.Serializable {
      * @exception HDF5LibraryException
      *            Error from the HDF5 Library.
      **/
-    public static int H5Zconfig_get_bool(String params, String key, boolean[] out) throws HDF5LibraryException
+    public static int H5Zconfig_get_param(String params, String key, boolean[] out) throws HDF5LibraryException
     {
         if (params == null)
             throw new HDF5FunctionArgumentException("params string is null");
@@ -24008,7 +24008,7 @@ public class H5 implements java.io.Serializable {
     /**
      * @ingroup JH5Z
      *
-     * H5Zconfig_get_str retrieves a string parameter from a filter parameter string.
+     * H5Zconfig_get_param retrieves a string parameter from a filter parameter string.
      *
      * @param params
      *            IN: Full parameter string (e.g. "coding = \"entropy\"").
@@ -24022,7 +24022,7 @@ public class H5 implements java.io.Serializable {
      * @exception HDF5LibraryException
      *            Error from the HDF5 Library.
      **/
-    public static int H5Zconfig_get_str(String params, String key, String[] value) throws HDF5LibraryException
+    public static int H5Zconfig_get_param(String params, String key, String[] value) throws HDF5LibraryException
     {
         if (params == null)
             throw new HDF5FunctionArgumentException("params string is null");

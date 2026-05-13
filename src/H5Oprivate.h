@@ -751,7 +751,7 @@ typedef struct H5O_ginfo_t {
 
 /* The latest version of the format.  Look through the 'encode' and 'size'
  *      callbacks for places to change when updating this. */
-#define H5O_PLINE_VERSION_LATEST H5O_PLINE_VERSION_2
+#define H5O_PLINE_VERSION_LATEST H5O_PLINE_VERSION_3
 
 typedef struct H5O_pline_t {
     H5O_shared_t sh_loc; /* Shared message info (must be first) */

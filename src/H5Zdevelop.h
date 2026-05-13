@@ -254,6 +254,30 @@ typedef struct H5Z_class3_t {
 } H5Z_class3_t;
 //! <!-- [H5Z_class3_t_snip] -->
 
+/**
+ * \brief Type tag for a single cd_values slot.
+ *
+ * \details Used in the on-disk \c H5O_PLINE_VERSION_3 format to record the
+ *          semantic type of each slot so that the library can reconstruct
+ *          typed parameter strings from raw cd_values.  All built-in filters
+ *          only use \c H5Z_SLOT_UINT32 slots; user-defined filters that pack
+ *          double, float, int64, or string parameters should tag slots
+ *          accordingly via the \c set_config callback convention.
+ *
+ * \since 2.2.0
+ */
+typedef enum H5Z_slot_type_t {
+    H5Z_SLOT_UINT32   = 0, /**< Plain unsigned 32-bit integer (default) */
+    H5Z_SLOT_INT32    = 1, /**< Signed 32-bit integer                  */
+    H5Z_SLOT_FLOAT    = 2, /**< IEEE 754 single-precision float         */
+    H5Z_SLOT_DBL_LO   = 3, /**< Low 32 bits of a packed double          */
+    H5Z_SLOT_DBL_HI   = 4, /**< High 32 bits of a packed double         */
+    H5Z_SLOT_INT64_LO = 5, /**< Low 32 bits of a packed int64           */
+    H5Z_SLOT_INT64_HI = 6, /**< High 32 bits of a packed int64          */
+    H5Z_SLOT_STR_LEN  = 7, /**< Byte-length slot preceding string data  */
+    H5Z_SLOT_STR_DATA = 8, /**< 4-byte chunk of packed string data      */
+} H5Z_slot_type_t;
+
 /********************/
 /* Public Variables */
 /********************/

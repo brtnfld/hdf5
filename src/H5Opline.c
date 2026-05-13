@@ -89,7 +89,7 @@ const unsigned H5O_pline_ver_bounds[] = {
     H5O_PLINE_VERSION_2, /* H5F_LIBVER_V112 */
     H5O_PLINE_VERSION_2, /* H5F_LIBVER_V114 */
     H5O_PLINE_VERSION_2, /* H5F_LIBVER_V200 */
-    H5O_PLINE_VERSION_2, /* H5F_LIBVER_V300 / H5F_LIBVER_LATEST */
+    H5O_PLINE_VERSION_3, /* H5F_LIBVER_V300 / H5F_LIBVER_LATEST */
 };
 
 /* Declare a free list to manage the H5O_pline_t struct */
@@ -239,6 +239,26 @@ H5O__pline_decode(H5F_t H5_ATTR_UNUSED *f, H5O_t H5_ATTR_UNUSED *open_oh, unsign
                                     "ran off end of input buffer while decoding");
                     p += 4; /* padding */
                 }
+
+            /* Version 3: read per-slot type tags */
+            if (pline->version >= H5O_PLINE_VERSION_3 && filter->cd_nelmts > 0) {
+                if (H5_IS_BUFFER_OVERFLOW(p, filter->cd_nelmts, p_end))
+                    HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL,
+                                "ran off end of input buffer while decoding slot types");
+
+                if (filter->cd_nelmts > H5Z_COMMON_CD_VALUES) {
+                    filter->cd_types = (H5Z_slot_type_t *)H5MM_malloc(
+                        filter->cd_nelmts * sizeof(H5Z_slot_type_t));
+                    if (NULL == filter->cd_types)
+                        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL,
+                                    "memory allocation failed for slot type tags");
+                }
+                else
+                    filter->cd_types = filter->_cd_types;
+
+                for (size_t j = 0; j < filter->cd_nelmts; j++)
+                    filter->cd_types[j] = (H5Z_slot_type_t)(*p++);
+            }
         }
     }
 
@@ -347,6 +367,12 @@ H5O__pline_encode(H5F_t H5_ATTR_UNUSED *f, uint8_t *p /*out*/, const void *mesg)
             if (filter->cd_nelmts % 2)
                 UINT32ENCODE(p, 0);
 
+        /* Version 3: write per-slot type tags */
+        if (pline->version >= H5O_PLINE_VERSION_3 && filter->cd_nelmts > 0) {
+            for (j = 0; j < filter->cd_nelmts; j++)
+                *p++ = (uint8_t)(filter->cd_types ? filter->cd_types[j] : H5Z_SLOT_UINT32);
+        }
+
     } /* end for */
 
     FUNC_LEAVE_NOAPI(SUCCEED)
@@ -424,6 +450,25 @@ H5O__pline_copy(const void *_src, void *_dst /*out*/)
                 } /* end if */
                 else
                     dst->filter[i].cd_values = dst->filter[i]._cd_values;
+
+                /* Deep-copy slot type tags if present */
+                if (src->filter[i].cd_types) {
+                    if (src->filter[i].cd_nelmts > H5Z_COMMON_CD_VALUES) {
+                        if (NULL == (dst->filter[i].cd_types = (H5Z_slot_type_t *)H5MM_malloc(
+                                         src->filter[i].cd_nelmts * sizeof(H5Z_slot_type_t))))
+                            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL,
+                                        "memory allocation failed for slot type tags");
+                        H5MM_memcpy(dst->filter[i].cd_types, src->filter[i].cd_types,
+                                    src->filter[i].cd_nelmts * sizeof(H5Z_slot_type_t));
+                    }
+                    else {
+                        dst->filter[i].cd_types = dst->filter[i]._cd_types;
+                        H5MM_memcpy(dst->filter[i].cd_types, src->filter[i].cd_types,
+                                    src->filter[i].cd_nelmts * sizeof(H5Z_slot_type_t));
+                    }
+                }
+                else
+                    dst->filter[i].cd_types = NULL;
 
             } /* end if */
         }     /* end for */
@@ -503,6 +548,10 @@ H5O__pline_size(const H5F_t H5_ATTR_UNUSED *f, const void *mesg)
         if (pline->version == H5O_PLINE_VERSION_1)
             if (pline->filter[i].cd_nelmts % 2)
                 ret_value += 4;
+
+        /* Version 3: one byte per slot for type tags */
+        if (pline->version >= H5O_PLINE_VERSION_3)
+            ret_value += pline->filter[i].cd_nelmts;
     } /* end for */
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -544,6 +593,8 @@ H5O__pline_reset(void *mesg)
                 assert(pline->filter[i].cd_nelmts > H5Z_COMMON_CD_VALUES);
             if (pline->filter[i].cd_values != pline->filter[i]._cd_values)
                 pline->filter[i].cd_values = (unsigned *)H5MM_xfree(pline->filter[i].cd_values);
+            if (pline->filter[i].cd_types && pline->filter[i].cd_types != pline->filter[i]._cd_types)
+                pline->filter[i].cd_types = (H5Z_slot_type_t *)H5MM_xfree(pline->filter[i].cd_types);
         } /* end for */
 
         /* Free filter array */
@@ -715,6 +766,26 @@ H5O_pline_set_version(H5F_t *f, H5O_pline_t *pline)
     /* Version bounds check */
     if (version > H5O_pline_ver_bounds[H5F_HIGH_BOUND(f)])
         HGOTO_ERROR(H5E_PLINE, H5E_BADRANGE, FAIL, "Filter pipeline version out of bounds");
+
+    /* Downgrade from V3 to V2 if no filter has any typed (non-UINT32) slots.
+     * V3 overhead is only worthwhile when typed slots actually exist. */
+    if (version >= H5O_PLINE_VERSION_3) {
+        bool has_typed_slots = false;
+
+        for (size_t vi = 0; vi < pline->nused && !has_typed_slots; vi++) {
+            if (pline->filter[vi].cd_types) {
+                for (size_t vj = 0; vj < pline->filter[vi].cd_nelmts; vj++) {
+                    if (pline->filter[vi].cd_types[vj] != H5Z_SLOT_UINT32) {
+                        has_typed_slots = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!has_typed_slots)
+            version = H5O_PLINE_VERSION_2;
+    }
 
     /* Set the message version */
     pline->version = version;
