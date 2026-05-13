@@ -334,13 +334,12 @@ H5Zconfig_has_key(const char *params, const char *key)
 {
     toml_result_t tr;
     toml_datum_t  d;
-    htri_t        ret_value;
+    htri_t        ret_value = FAIL;
 
     FUNC_ENTER_API_NOINIT
 
     ret_value = H5Z__config_get_datum(params, key, &tr, &d);
 
-done:
     if (ret_value > 0)
         toml_free(tr);
     FUNC_LEAVE_API_NOINIT(ret_value)
@@ -358,7 +357,7 @@ H5Z__config_get_int(const char *params, const char *key, int64_t *out)
     toml_datum_t  d;
     bool          tr_valid = false;
     htri_t        found;
-    htri_t        ret_value;
+    htri_t        ret_value = FAIL;
 
     FUNC_ENTER_PACKAGE
 
@@ -395,13 +394,12 @@ done:
 htri_t
 H5Zconfig_get_int(const char *params, const char *key, int64_t *out)
 {
-    htri_t ret_value;
+    htri_t ret_value = FAIL;
 
     FUNC_ENTER_API_NOINIT
 
     ret_value = H5Z__config_get_int(params, key, out);
 
-done:
     FUNC_LEAVE_API_NOINIT(ret_value)
 }
 
@@ -502,7 +500,7 @@ H5Z__config_get_str(const char *params, const char *key, char *buf, size_t *buf_
     bool          tr_valid = false;
     htri_t        found;
     size_t        vlen;
-    htri_t        ret_value;
+    htri_t        ret_value = FAIL;
 
     FUNC_ENTER_PACKAGE
 
@@ -573,12 +571,11 @@ done:
 htri_t
 H5Zconfig_get_str(const char *params, const char *key, char *buf, size_t *buf_size)
 {
-    htri_t ret_value;
+    htri_t ret_value = FAIL;
 
     FUNC_ENTER_API_NOINIT
 
     ret_value = H5Z__config_get_str(params, key, buf, buf_size);
 
-done:
     FUNC_LEAVE_API_NOINIT(ret_value)
 }
