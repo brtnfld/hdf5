@@ -291,7 +291,7 @@ static htri_t
 H5Z__config_get_datum(const char *params, const char *key, toml_result_t *tr, toml_datum_t *d)
 {
     toml_datum_t ptab;
-    bool         tr_valid = false;
+    bool         tr_valid  = false;
     htri_t       ret_value = FAIL;
 
     FUNC_ENTER_PACKAGE
