@@ -1111,6 +1111,37 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 }
 
+/* Validate params/key, short-circuit on empty string, call H5Z__config_lookup,
+ * and surface parse errors.  Returns > 0 (found), 0 (not found / empty params),
+ * or < 0 (bad args / parse error).  Errors already pushed; caller need not
+ * re-push. */
+static htri_t
+H5Z__config_validate_and_lookup(const char *params, const char *key, char val_buf[], size_t val_cap,
+                                 H5Z__config_vtype_t *vtype)
+{
+    htri_t found;
+    htri_t ret_value;
+
+    FUNC_ENTER_PACKAGE
+
+    if (!params)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "params must not be NULL");
+    if (!key || *key == '\0')
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "key must be a non-empty string");
+
+    if (!params[0])
+        HGOTO_DONE(false);
+
+    found = H5Z__config_lookup(params, key, val_buf, val_cap, vtype);
+    if (found < 0)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "error parsing parameter string");
+
+    ret_value = found;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+}
+
 /*-------------------------------------------------------------------------
  * Function:    H5Zconfig_has_key
  *
@@ -1130,15 +1161,7 @@ H5Zconfig_has_key(const char *params, const char *key)
 
     FUNC_ENTER_API_NOINIT
 
-    if (!params)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "params must not be NULL");
-    if (!key || *key == '\0')
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "key must be a non-empty string");
-
-    if (!params[0])
-        HGOTO_DONE(false);
-
-    ret_value = H5Z__config_lookup(params, key, dummy, sizeof(dummy), &vtype);
+    ret_value = H5Z__config_validate_and_lookup(params, key, dummy, sizeof(dummy), &vtype);
 
 done:
     FUNC_LEAVE_API_NOINIT(ret_value)
@@ -1164,19 +1187,11 @@ H5Zconfig_get_int(const char *params, const char *key, int64_t *out)
 
     FUNC_ENTER_API_NOINIT
 
-    if (!params)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "params must not be NULL");
-    if (!key || *key == '\0')
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "key must be a non-empty string");
     if (!out)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "out must not be NULL");
 
-    if (!params[0])
-        HGOTO_DONE(false);
-
-    found = H5Z__config_lookup(params, key, val_buf, sizeof(val_buf), &vtype);
-    if (found < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "error parsing parameter string");
+    if ((found = H5Z__config_validate_and_lookup(params, key, val_buf, sizeof(val_buf), &vtype)) < 0)
+        HGOTO_DONE(FAIL);
     if (!found)
         HGOTO_DONE(false);
 
@@ -1214,19 +1229,11 @@ H5Zconfig_get_double(const char *params, const char *key, double *out)
 
     FUNC_ENTER_API_NOINIT
 
-    if (!params)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "params must not be NULL");
-    if (!key || *key == '\0')
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "key must be a non-empty string");
     if (!out)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "out must not be NULL");
 
-    if (!params[0])
-        HGOTO_DONE(false);
-
-    found = H5Z__config_lookup(params, key, val_buf, sizeof(val_buf), &vtype);
-    if (found < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "error parsing parameter string");
+    if ((found = H5Z__config_validate_and_lookup(params, key, val_buf, sizeof(val_buf), &vtype)) < 0)
+        HGOTO_DONE(FAIL);
     if (!found)
         HGOTO_DONE(false);
 
@@ -1280,19 +1287,11 @@ H5Zconfig_get_bool(const char *params, const char *key, hbool_t *out)
 
     FUNC_ENTER_API_NOINIT
 
-    if (!params)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "params must not be NULL");
-    if (!key || *key == '\0')
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "key must be a non-empty string");
     if (!out)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "out must not be NULL");
 
-    if (!params[0])
-        HGOTO_DONE(false);
-
-    found = H5Z__config_lookup(params, key, val_buf, sizeof(val_buf), &vtype);
-    if (found < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "error parsing parameter string");
+    if ((found = H5Z__config_validate_and_lookup(params, key, val_buf, sizeof(val_buf), &vtype)) < 0)
+        HGOTO_DONE(FAIL);
     if (!found)
         HGOTO_DONE(false);
 
@@ -1337,17 +1336,8 @@ H5Zconfig_get_str(const char *params, const char *key, char *buf, size_t *buf_si
 
     FUNC_ENTER_API_NOINIT
 
-    if (!params)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "params must not be NULL");
-    if (!key || *key == '\0')
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "key must be a non-empty string");
-
-    if (!params[0])
-        HGOTO_DONE(false);
-
-    found = H5Z__config_lookup(params, key, val_buf, sizeof(val_buf), &vtype);
-    if (found < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "error parsing parameter string");
+    if ((found = H5Z__config_validate_and_lookup(params, key, val_buf, sizeof(val_buf), &vtype)) < 0)
+        HGOTO_DONE(FAIL);
     if (!found)
         HGOTO_DONE(false);
 

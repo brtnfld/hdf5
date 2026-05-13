@@ -1291,7 +1291,7 @@ done:
  */
 herr_t
 H5Z_append(H5O_pline_t *pline, H5Z_filter_t filter, unsigned flags, size_t cd_nelmts,
-           const unsigned int cd_values[/*cd_nelmts*/])
+           const unsigned int cd_values[/*cd_nelmts*/], const H5Z_slot_type_t cd_types[/*cd_nelmts*/])
 {
     size_t idx;
     herr_t ret_value = SUCCEED; /* Return value */
@@ -1373,9 +1373,28 @@ H5Z_append(H5O_pline_t *pline, H5Z_filter_t filter, unsigned flags, size_t cd_ne
         /* Copy client data values */
         for (i = 0; i < cd_nelmts; i++)
             pline->filter[idx].cd_values[i] = cd_values[i];
+
+        /* Copy slot type tags if provided; NULL means all UINT32 */
+        if (cd_types) {
+            if (cd_nelmts > H5Z_COMMON_CD_VALUES) {
+                pline->filter[idx].cd_types =
+                    (H5Z_slot_type_t *)H5MM_malloc(cd_nelmts * sizeof(H5Z_slot_type_t));
+                if (NULL == pline->filter[idx].cd_types)
+                    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL,
+                                "memory allocation failed for slot type tags");
+            }
+            else
+                pline->filter[idx].cd_types = pline->filter[idx]._cd_types;
+            for (i = 0; i < cd_nelmts; i++)
+                pline->filter[idx].cd_types[i] = cd_types[i];
+        }
+        else
+            pline->filter[idx].cd_types = NULL;
     } /* end if */
-    else
+    else {
         pline->filter[idx].cd_values = NULL;
+        pline->filter[idx].cd_types  = NULL;
+    }
 
     pline->nused++;
 

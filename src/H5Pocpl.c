@@ -673,7 +673,7 @@ H5P__set_filter(H5P_genplist_t *plist, H5Z_filter_t filter, unsigned int flags, 
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get pipeline");
 
     /* Add the filter to the I/O pipeline */
-    if (H5Z_append(&pline, filter, flags, cd_nelmts, cd_values) < 0)
+    if (H5Z_append(&pline, filter, flags, cd_nelmts, cd_values, NULL) < 0)
         HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "unable to add filter to pipeline");
 
     /* Put the I/O pipeline information back into the property list */
@@ -1064,7 +1064,7 @@ H5Pset_deflate(hid_t plist_id, unsigned level)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get pipeline");
 
     /* Add the filter */
-    if (H5Z_append(&pline, H5Z_FILTER_DEFLATE, H5Z_FLAG_OPTIONAL, (size_t)1, &level) < 0)
+    if (H5Z_append(&pline, H5Z_FILTER_DEFLATE, H5Z_FLAG_OPTIONAL, (size_t)1, &level, NULL) < 0)
         HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "unable to add deflate filter to pipeline");
 
     /* Put the I/O pipeline information back into the property list */
@@ -1103,7 +1103,7 @@ H5Pset_fletcher32(hid_t plist_id)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get pipeline");
 
     /* Add the Fletcher32 checksum as a filter */
-    if (H5Z_append(&pline, H5Z_FILTER_FLETCHER32, H5Z_FLAG_MANDATORY, (size_t)0, NULL) < 0)
+    if (H5Z_append(&pline, H5Z_FILTER_FLETCHER32, H5Z_FLAG_MANDATORY, (size_t)0, NULL, NULL) < 0)
         HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "unable to add fletcher32 filter to pipeline");
 
     /* Put the I/O pipeline information back into the property list */
@@ -1425,7 +1425,7 @@ H5P__ocrt_pipeline_dec(const void **_pp, void *_value)
             H5_DECODE_UNSIGNED(*pp, filter.cd_values[v]);
 
         /* Add the filter to the I/O pipeline */
-        if (H5Z_append(pline, filter.id, filter.flags, filter.cd_nelmts, filter.cd_values) < 0)
+        if (H5Z_append(pline, filter.id, filter.flags, filter.cd_nelmts, filter.cd_values, NULL) < 0)
             HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "unable to add filter to pipeline");
 
         /* Free cd_values, if it was allocated */
@@ -1786,12 +1786,14 @@ done:
 herr_t
 H5Pappend_filter(hid_t plist_id, H5Z_filter_t filter, unsigned int flags, const H5Z_params_t *params)
 {
-    H5P_genplist_t *plist;
-    H5O_pline_t     pline;
-    const unsigned *cd_values           = NULL;
-    unsigned       *allocated_cd_values = NULL; /* owns heap mem for string path */
-    size_t          cd_nelmts           = 0;
-    herr_t          ret_value           = SUCCEED;
+    H5P_genplist_t  *plist;
+    H5O_pline_t      pline;
+    const unsigned  *cd_values           = NULL;
+    unsigned        *allocated_cd_values = NULL; /* owns heap mem for string path */
+    const H5Z_slot_type_t *cd_types      = NULL;
+    H5Z_slot_type_t *allocated_cd_types  = NULL; /* owns heap mem for string path */
+    size_t           cd_nelmts           = 0;
+    herr_t           ret_value           = SUCCEED;
 
     FUNC_ENTER_API(FAIL)
 
@@ -1835,23 +1837,31 @@ H5Pappend_filter(hid_t plist_id, H5Z_filter_t filter, unsigned int flags, const 
             HGOTO_ERROR(H5E_ARGS, H5E_UNSUPPORTED, FAIL,
                         "filter does not support string configuration (no set_config callback)");
 
-        /* Pass 1: determine cd_nelmts */
-        if (entry->set_config(param_str, &flags, &cd_nelmts, NULL, 0) < 0)
+        /* Pass 1: determine cd_nelmts (size-query; cd_values and cd_types both NULL) */
+        if (entry->set_config(param_str, &flags, &cd_nelmts, NULL, NULL, 0) < 0)
             HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "set_config size-query call failed");
 
         if (cd_nelmts > 65535)
             HGOTO_ERROR(H5E_PLINE, H5E_BADVALUE, FAIL, "cd_nelmts from set_config exceeds maximum (65535)");
 
-        /* Allocate cd_values (at least 1 to avoid zero-length alloc) */
+        /* Allocate cd_values and cd_types (at least 1 to avoid zero-length alloc) */
         alloc_nelmts = cd_nelmts ? cd_nelmts : 1;
         if (NULL == (allocated_cd_values = (unsigned *)H5MM_malloc(alloc_nelmts * sizeof(unsigned))))
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for cd_values");
+        if (NULL == (allocated_cd_types =
+                         (H5Z_slot_type_t *)H5MM_malloc(alloc_nelmts * sizeof(H5Z_slot_type_t))))
+            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for cd_types");
+        /* Pre-fill with UINT32; set_config only needs to update non-default slots */
+        for (size_t i = 0; i < alloc_nelmts; i++)
+            allocated_cd_types[i] = H5Z_SLOT_UINT32;
         cd_values = allocated_cd_values;
+        cd_types  = allocated_cd_types;
 
         cd_nelmts2 = cd_nelmts;
 
-        /* Pass 2: populate cd_values */
-        if (entry->set_config(param_str, &flags, &cd_nelmts2, allocated_cd_values, alloc_nelmts) < 0)
+        /* Pass 2: populate cd_values and cd_types */
+        if (entry->set_config(param_str, &flags, &cd_nelmts2, allocated_cd_values, allocated_cd_types,
+                              alloc_nelmts) < 0)
             HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "set_config populate call failed");
 
         if (cd_nelmts2 != cd_nelmts)
@@ -1871,7 +1881,7 @@ H5Pappend_filter(hid_t plist_id, H5Z_filter_t filter, unsigned int flags, const 
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get pipeline");
 
     /* Append the filter */
-    if (H5Z_append(&pline, filter, flags, cd_nelmts, cd_values) < 0)
+    if (H5Z_append(&pline, filter, flags, cd_nelmts, cd_values, cd_types) < 0)
         HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "unable to add filter to pipeline");
 
     /* Store updated pipeline back in property list */
@@ -1880,6 +1890,7 @@ H5Pappend_filter(hid_t plist_id, H5Z_filter_t filter, unsigned int flags, const 
 
 done:
     H5MM_xfree(allocated_cd_values);
+    H5MM_xfree(allocated_cd_types);
     FUNC_LEAVE_API(ret_value)
 } /* end H5Pappend_filter() */
 

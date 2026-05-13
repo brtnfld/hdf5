@@ -25,7 +25,8 @@ static herr_t H5Z__set_local_shuffle(hid_t dcpl_id, hid_t type_id, hid_t space_i
 static size_t H5Z__filter_shuffle(unsigned flags, size_t cd_nelmts, const unsigned cd_values[], size_t nbytes,
                                   size_t *buf_size, void **buf);
 static herr_t H5Z__shuffle_set_config(const char *params, unsigned *flags, size_t *cd_nelmts,
-                                      unsigned cd_values[], size_t cd_values_size);
+                                      unsigned cd_values[], H5Z_slot_type_t cd_types[],
+                                      size_t cd_values_size);
 
 /* This message derives from H5Z */
 const H5Z_class3_t H5Z_SHUFFLE[1] = {{
@@ -50,7 +51,9 @@ const H5Z_class3_t H5Z_SHUFFLE[1] = {{
  */
 static herr_t
 H5Z__shuffle_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, size_t *cd_nelmts,
-                        unsigned H5_ATTR_UNUSED cd_values[], size_t H5_ATTR_UNUSED cd_values_size)
+                        unsigned H5_ATTR_UNUSED cd_values[],
+                        H5Z_slot_type_t H5_ATTR_UNUSED cd_types[],
+                        size_t H5_ATTR_UNUSED cd_values_size)
 {
     herr_t ret_value = SUCCEED;
 

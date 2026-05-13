@@ -76,7 +76,7 @@ H5_DLL herr_t H5Z_init(void);
 H5_DLL herr_t H5Z_register(const H5Z_class2_t *cls);
 H5_DLL herr_t H5Z_register3(const H5Z_class3_t *cls);
 H5_DLL herr_t H5Z_append(struct H5O_pline_t *pline, H5Z_filter_t filter, unsigned flags, size_t cd_nelmts,
-                         const unsigned int cd_values[]);
+                         const unsigned int cd_values[], const H5Z_slot_type_t cd_types[]);
 H5_DLL herr_t H5Z_modify(const struct H5O_pline_t *pline, H5Z_filter_t filter, unsigned flags,
                          size_t cd_nelmts, const unsigned int cd_values[]);
 H5_DLL herr_t H5Z_pipeline(const struct H5O_pline_t *pline, unsigned flags, unsigned *filter_mask /*in,out*/,

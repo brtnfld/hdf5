@@ -82,7 +82,8 @@ static void   H5Z__nbit_compress_one_compound(unsigned char *data, size_t data_o
 static void   H5Z__nbit_compress(unsigned char *data, unsigned d_nelmts, unsigned char *buffer,
                                  size_t *buffer_size, const unsigned parms[]);
 static herr_t H5Z__nbit_set_config(const char *params, unsigned *flags, size_t *cd_nelmts,
-                                   unsigned cd_values[], size_t cd_values_size);
+                                   unsigned cd_values[], H5Z_slot_type_t cd_types[],
+                                   size_t cd_values_size);
 
 /* This message derives from H5Z */
 H5Z_class3_t H5Z_NBIT[1] = {{
@@ -108,7 +109,9 @@ H5Z_class3_t H5Z_NBIT[1] = {{
  */
 static herr_t
 H5Z__nbit_set_config(const char *params, unsigned H5_ATTR_UNUSED *flags, size_t *cd_nelmts,
-                     unsigned H5_ATTR_UNUSED cd_values[], size_t H5_ATTR_UNUSED cd_values_size)
+                     unsigned H5_ATTR_UNUSED cd_values[],
+                     H5Z_slot_type_t H5_ATTR_UNUSED cd_types[],
+                     size_t H5_ATTR_UNUSED cd_values_size)
 {
     herr_t ret_value = SUCCEED;
 

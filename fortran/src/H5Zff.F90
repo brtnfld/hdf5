@@ -347,8 +347,9 @@ CONTAINS
     hdferr   = INT(H5Zconfig_get_str_c(c_params, c_key, c_valbuf, c_bufsz))
     buf_size = c_bufsz
     IF (hdferr > 0) &
-       CALL HD5c2fstring(value, c_valbuf, LEN(value, KIND=SIZE_T), &
-                         LEN(value, KIND=SIZE_T)+1_SIZE_T)
+       CALL HD5c2fstring(value, c_valbuf, &
+                         MIN(c_bufsz, INT(LEN(value), SIZE_T)), &
+                         MIN(c_bufsz, INT(LEN(value), SIZE_T)) + 1_SIZE_T)
   END SUBROUTINE h5zconfig_get_param_str_f
 
 END MODULE H5Z
