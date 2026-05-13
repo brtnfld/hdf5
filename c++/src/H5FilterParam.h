@@ -29,7 +29,7 @@ namespace H5 {
     H5Zconfig_get_bool, and H5Zconfig_get_str as overloaded
     \p config_get_param methods.
 */
-class H5CPP_DLL FilterParam {
+class FilterParam {
   public:
     ///\brief Returns true if \p key is present in \p params, false if absent.
     ///\exception H5::LibraryIException on error.
