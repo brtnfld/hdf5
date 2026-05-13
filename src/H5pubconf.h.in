@@ -131,8 +131,8 @@
 /* Define if support for deflate (zlib) filter is enabled */
 #cmakedefine H5_HAVE_FILTER_DEFLATE @H5_HAVE_FILTER_DEFLATE@
 
-/* Define if tomlc17 TOML parser is available for H5Z filter parameters */
-#cmakedefine H5_HAVE_TOMLC17 @H5_HAVE_TOMLC17@
+/* tomlc17 TOML parser is always compiled from the vendored src/tomlc17/ */
+#define H5_HAVE_TOMLC17 1
 
 /* Define if support for szip filter is enabled */
 #cmakedefine H5_HAVE_FILTER_SZIP @H5_HAVE_FILTER_SZIP@

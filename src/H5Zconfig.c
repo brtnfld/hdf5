@@ -14,12 +14,9 @@
  * H5Zconfig.c — TOML parameter string parser for the string-based filter
  *               configuration API (RFC-HDFG-2026-001).
  *
- * When HDF5 is built with tomlc17 support (H5_HAVE_TOMLC17 defined), the
- * tomlc17 library handles all TOML parsing.  When tomlc17 is not available,
- * the built-in custom TOML-subset parser retained under the #else branch is
- * used as a fallback.
+ * Uses the vendored tomlc17 library for all TOML parsing.
  *
- * Public typed accessor functions (both paths):
+ * Public typed accessor functions:
  *   H5Zconfig_has_key    — key presence check
  *   H5Zconfig_get_int    — TOML integer  → int64_t
  *   H5Zconfig_get_double — TOML float    → double
@@ -41,20 +38,7 @@
 #include "H5MMprivate.h" /* Memory management   */
 #include "H5Zpkg.h"      /* Filter internals    */
 
-/* ======================================================================
- * tomlc17-based implementation (compiled when H5_HAVE_TOMLC17 is defined)
- * ====================================================================== */
-
-#ifdef H5_HAVE_TOMLC17
-
-/*
- * Allow the header path to be overridden at compile time (e.g. for a
- * system-installed tomlc17).  Defaults to the bundled copy in src/tomlc17/.
- */
-#ifndef H5_TOMLC17_HEADER
-#define H5_TOMLC17_HEADER "tomlc17/tomlc17.h"
-#endif
-#include H5_TOMLC17_HEADER /* tomlc17 TOML parser */
+#include "tomlc17/tomlc17.h"
 
 /*
  * H5Z__rewrite_hexfloats — return a copy of `src` with every C99 hex-float
@@ -570,29 +554,7 @@ done:
     FUNC_LEAVE_API_NOINIT(ret_value)
 }
 
-#else /* !H5_HAVE_TOMLC17 — built-in custom TOML-subset parser (fallback) */
-
-/* ======================================================================
- * Custom TOML-subset parser
- *
- * This hand-written parser is retained as a fallback for builds that do
- * not have tomlc17 available.  It handles the restricted subset of TOML
- * inline-table syntax used by HDF5 filter configuration strings:
- *
- *   Integer : decimal (optional leading sign), 0x/0o/0b prefixes, and
- *             underscore digit separators.
- *   Float   : decimal with '.' or exponent.  inf/nan are classified as
- *             FLOAT but rejected at the API level with H5E_BADVALUE.
- *   Boolean : exactly "true" or "false" (lowercase, per TOML).
- *   String  : double-quoted with backslash escapes (\\ \" \n \t \r \b
- *             \f \0), or single-quoted with no escape processing.
- *
- * Grammar:
- *   param-string = '' | param (',' param)*
- *   param        = key '=' value | key      (bare key = boolean flag)
- *   key          = [A-Za-z0-9_-]+
- *   value        = integer | float | boolean | dquoted-str | squoted-str
- * ====================================================================== */
+#if 0 /* fallback custom TOML-subset parser — retained for reference */
 
 /* Maximum key length (internal) */
 #define H5Z_CONFIG_MAX_KEY_LEN 256
@@ -1428,4 +1390,4 @@ done:
     FUNC_LEAVE_API_NOINIT(ret_value)
 }
 
-#endif /* H5_HAVE_TOMLC17 */
+#endif /* 0 - fallback custom TOML-subset parser */
