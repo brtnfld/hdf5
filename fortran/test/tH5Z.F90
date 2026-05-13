@@ -163,6 +163,86 @@ CONTAINS
      RETURN
      END SUBROUTINE filters_test
 
+    SUBROUTINE filter_config_test(total_error)
+!   Tests h5pappend_filter_f, h5pget_filter_params_by_idx_f, h5zconfig_get_param_f
+
+      USE, INTRINSIC :: ISO_C_BINDING, ONLY : C_INT64_T, C_NULL_CHAR
+      IMPLICIT NONE
+      INTEGER, INTENT(OUT) :: total_error
+
+      INTEGER(HID_T)     :: dcpl
+      INTEGER            :: nfilters
+      INTEGER            :: error
+      INTEGER(SIZE_T)    :: cd_nelmts
+      INTEGER            :: cd_dummy(1)
+      LOGICAL            :: avail
+      CHARACTER(LEN=64)  :: pbuf
+      INTEGER(SIZE_T)    :: plen
+      INTEGER(C_INT64_T) :: ival
+      LOGICAL            :: found
+
+!
+! h5pappend_filter_f (raw cd_values variant): shuffle with no parameters
+!
+      CALL h5pcreate_f(H5P_DATASET_CREATE_F, dcpl, error)
+           CALL check("h5pcreate_f", error, total_error)
+      cd_nelmts = 0_SIZE_T
+      CALL h5pappend_filter_f(dcpl, H5Z_FILTER_SHUFFLE_F, 0, cd_nelmts, cd_dummy, error)
+           CALL check("h5pappend_filter_f(shuffle,raw)", error, total_error)
+      CALL h5pget_nfilters_f(dcpl, nfilters, error)
+           CALL check("h5pget_nfilters_f", error, total_error)
+      IF (nfilters /= 1) THEN
+           WRITE(*,*) "h5pappend_filter_f: expected 1 filter, got ", nfilters
+           total_error = total_error + 1
+      END IF
+      CALL h5pclose_f(dcpl, error)
+           CALL check("h5pclose_f", error, total_error)
+
+!
+! h5pappend_filter_f (string variant) + h5pget_filter_params_by_idx_f: deflate
+!
+      CALL h5zfilter_avail_f(H5Z_FILTER_DEFLATE_F, avail, error)
+           CALL check("h5zfilter_avail_f", error, total_error)
+      IF (avail) THEN
+         CALL h5pcreate_f(H5P_DATASET_CREATE_F, dcpl, error)
+              CALL check("h5pcreate_f", error, total_error)
+         CALL h5pappend_filter_f(dcpl, H5Z_FILTER_DEFLATE_F, 0, "level=6"//C_NULL_CHAR, error)
+              CALL check("h5pappend_filter_f(deflate,str)", error, total_error)
+         CALL h5pget_nfilters_f(dcpl, nfilters, error)
+              CALL check("h5pget_nfilters_f", error, total_error)
+         IF (nfilters /= 1) THEN
+              WRITE(*,*) "h5pappend_filter_f(deflate): expected 1 filter, got ", nfilters
+              total_error = total_error + 1
+         END IF
+         pbuf = ""
+         plen = 0_SIZE_T
+         CALL h5pget_filter_params_by_idx_f(dcpl, 0, pbuf, plen, error)
+              CALL check("h5pget_filter_params_by_idx_f", error, total_error)
+         IF (plen == 0) THEN
+              WRITE(*,*) "h5pget_filter_params_by_idx_f: empty params string"
+              total_error = total_error + 1
+         END IF
+         CALL h5pclose_f(dcpl, error)
+              CALL check("h5pclose_f", error, total_error)
+      END IF
+
+!
+! h5zconfig_get_param_f (integer variant)
+!
+      CALL h5zconfig_get_param_f("level = 6, mode = 2", "level", ival, found, error)
+           CALL check("h5zconfig_get_param_f(int)", error, total_error)
+      IF (.NOT. found) THEN
+           WRITE(*,*) "h5zconfig_get_param_f: key 'level' not found"
+           total_error = total_error + 1
+      END IF
+      IF (ival /= 6_C_INT64_T) THEN
+           WRITE(*,*) "h5zconfig_get_param_f: expected 6, got ", ival
+           total_error = total_error + 1
+      END IF
+
+      RETURN
+    END SUBROUTINE filter_config_test
+
         SUBROUTINE szip_test(szip_flag, cleanup, total_error)
 
           IMPLICIT NONE
