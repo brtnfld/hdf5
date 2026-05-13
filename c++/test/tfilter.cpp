@@ -265,7 +265,7 @@ test_append_filter()
     SUBTEST("H5FilterParam::config_get_param (int64_t)");
     try {
         int64_t val = 0;
-        int     ret = H5FilterParam::config_get_param("level = 6, mode = 2", "level", val);
+        int     ret = FilterParam::config_get_param("level = 6, mode = 2", "level", val);
         if (ret <= 0)
             throw Exception("test_append_filter", "config_get_param: key not found");
         if (val != 6)

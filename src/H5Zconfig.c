@@ -292,7 +292,7 @@ H5Z__config_get_datum(const char *params, const char *key, toml_result_t *tr, to
 {
     toml_datum_t ptab;
     bool         tr_valid = false;
-    htri_t       ret_value;
+    htri_t       ret_value = FAIL;
 
     FUNC_ENTER_PACKAGE
 
@@ -421,7 +421,7 @@ H5Zconfig_get_double(const char *params, const char *key, double *out)
     toml_datum_t  d;
     bool          tr_valid = false;
     htri_t        found;
-    htri_t        ret_value;
+    htri_t        ret_value = FAIL;
 
     FUNC_ENTER_API_NOINIT
 
@@ -464,7 +464,7 @@ H5Zconfig_get_bool(const char *params, const char *key, hbool_t *out)
     toml_datum_t  d;
     bool          tr_valid = false;
     htri_t        found;
-    htri_t        ret_value;
+    htri_t        ret_value = FAIL;
 
     FUNC_ENTER_API_NOINIT
 
