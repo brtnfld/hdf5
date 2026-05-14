@@ -788,7 +788,7 @@ test_filter_title(void)
         TITLE_FILTER_ID,     /* id             */
         1,                   /* encoder_present */
         1,                   /* decoder_present */
-        "test_title_filter", /* name          */
+        "test_title_filter", /* canonical_name */
         "My Test Filter",    /* filter_title   */
         NULL,                /* can_apply      */
         NULL,                /* set_local      */
@@ -867,7 +867,7 @@ test_class3_name(void)
             NAME_FILTER_ID,    /* id             */
             1,                 /* encoder_present */
             1,                 /* decoder_present */
-            NULL,              /* name — intentionally NULL to trigger error */
+            NULL,              /* canonical_name — intentionally NULL to trigger error */
             NULL,              /* filter_title   */
             NULL,              /* can_apply      */
             NULL,              /* set_local      */
@@ -892,7 +892,7 @@ test_class3_name(void)
             NAME_FILTER_ID,     /* id             */
             1,                  /* encoder_present */
             1,                  /* decoder_present */
-            "test_name_filter", /* name           */
+            "test_name_filter", /* canonical_name */
             NULL,               /* filter_title   */
             NULL,               /* can_apply      */
             NULL,               /* set_local      */

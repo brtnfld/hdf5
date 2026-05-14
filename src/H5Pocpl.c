@@ -1160,7 +1160,7 @@ H5P__get_filter(const H5Z_filter_info_t *filter, unsigned int *flags /*out*/, si
             H5Z_find_entry(true, filter->id, &entry_p);
             if (entry_p)
                 /* filter_title is the optional human-readable label for v3 plugins */
-                s = entry_p->filter_title ? entry_p->filter_title : entry_p->name;
+                s = entry_p->filter_title ? entry_p->filter_title : entry_p->canonical_name;
         } /* end if */
 
         /* Check for actual name */

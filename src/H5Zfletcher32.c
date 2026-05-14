@@ -29,7 +29,7 @@ H5_ATTR_VISIBILITY_HIDDEN const H5Z_class3_t H5Z_FLETCHER32[1] = {{
     H5Z_FILTER_FLETCHER32,      /* Filter id number */
     1,                          /* encoder_present flag (set to true) */
     1,                          /* decoder_present flag (set to true) */
-    "fletcher32",               /* Canonical filter name */
+    "fletcher32",               /* canonical_name */
     NULL,                       /* filter_title (NULL: no title packed into cd_values) */
     NULL,                       /* The "can apply" callback */
     NULL,                       /* The "set local" callback */

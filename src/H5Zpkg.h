@@ -32,7 +32,7 @@ typedef struct H5Z_entry_t {
     H5Z_filter_t         id;
     unsigned             encoder_present;
     unsigned             decoder_present;
-    const char          *name; /* canonical name (or debug comment for v2) */
+    const char          *canonical_name; /* canonical name (or debug comment for v2) */
     H5Z_can_apply_func_t can_apply;
     H5Z_set_local_func_t set_local;
     H5Z_func_t           filter;
