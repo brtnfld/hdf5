@@ -465,7 +465,7 @@ H5Z__reregister_deflate(void)
 {
     herr_t ret_value = SUCCEED;
 
-    FUNC_ENTER_NOAPI(FAIL)
+    FUNC_ENTER_PACKAGE
 
 #ifdef H5_HAVE_FILTER_DEFLATE
     if (H5Z_register3(H5Z_DEFLATE) < 0)

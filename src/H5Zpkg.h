@@ -73,6 +73,7 @@ H5_ATTR_VISIBILITY_HIDDEN extern H5Z_class3_t H5Z_SZIP[1];
 #endif /* H5_HAVE_FILTER_SZIP */
 
 /* Package internal routines */
+H5_DLL herr_t H5Z__reregister_deflate(void);
 H5_DLL herr_t H5Z__unregister(H5Z_filter_t filter_id);
 H5_DLL herr_t H5Z__config_validate_keys(const char *params, const char *const *known_keys);
 H5_DLL htri_t H5Z__config_get_int(const char *params, const char *key, int64_t *out);
