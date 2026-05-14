@@ -47,16 +47,16 @@ typedef struct H5Z_entry_t {
 /********************/
 
 /* Shuffle filter */
-H5_DLLVAR const H5Z_class3_t H5Z_SHUFFLE[1];
+H5_ATTR_VISIBILITY_HIDDEN extern const H5Z_class3_t H5Z_SHUFFLE[1];
 
 /* Fletcher32 filter */
-H5_DLLVAR const H5Z_class3_t H5Z_FLETCHER32[1];
+H5_ATTR_VISIBILITY_HIDDEN extern const H5Z_class3_t H5Z_FLETCHER32[1];
 
 /* n-bit filter */
-H5_DLLVAR H5Z_class3_t H5Z_NBIT[1];
+H5_ATTR_VISIBILITY_HIDDEN extern H5Z_class3_t H5Z_NBIT[1];
 
 /* Scale/offset filter */
-H5_DLLVAR H5Z_class3_t H5Z_SCALEOFFSET[1];
+H5_ATTR_VISIBILITY_HIDDEN extern H5Z_class3_t H5Z_SCALEOFFSET[1];
 
 /********************/
 /* External filters */
@@ -64,12 +64,12 @@ H5_DLLVAR H5Z_class3_t H5Z_SCALEOFFSET[1];
 
 /* Deflate filter */
 #ifdef H5_HAVE_FILTER_DEFLATE
-H5_DLLVAR const H5Z_class3_t H5Z_DEFLATE[1];
+H5_ATTR_VISIBILITY_HIDDEN extern const H5Z_class3_t H5Z_DEFLATE[1];
 #endif /* H5_HAVE_FILTER_DEFLATE */
 
 /* szip filter */
 #ifdef H5_HAVE_FILTER_SZIP
-H5_DLLVAR H5Z_class3_t H5Z_SZIP[1];
+H5_ATTR_VISIBILITY_HIDDEN extern H5Z_class3_t H5Z_SZIP[1];
 #endif /* H5_HAVE_FILTER_SZIP */
 
 /* Package internal routines */

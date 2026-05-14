@@ -35,7 +35,7 @@ static herr_t H5Z__deflate_get_config(unsigned flags, size_t cd_nelmts, const un
                                       size_t *buf_size);
 
 /* This message derives from H5Z */
-const H5Z_class3_t H5Z_DEFLATE[1] = {{
+H5_ATTR_VISIBILITY_HIDDEN const H5Z_class3_t H5Z_DEFLATE[1] = {{
     H5Z_CLASS3_T_VERS,       /* H5Z_class_t version */
     H5Z_FILTER_DEFLATE,      /* Filter id number */
     1,                       /* encoder_present flag (set to true) */

@@ -93,7 +93,7 @@ static herr_t H5Z__scaleoffset_get_config(unsigned flags, size_t cd_nelmts, cons
                                           char *buf, size_t *buf_size);
 
 /* This message derives from H5Z */
-H5Z_class3_t H5Z_SCALEOFFSET[1] = {{
+H5_ATTR_VISIBILITY_HIDDEN H5Z_class3_t H5Z_SCALEOFFSET[1] = {{
     H5Z_CLASS3_T_VERS,           /* H5Z_class_t version */
     H5Z_FILTER_SCALEOFFSET,      /* Filter id number */
     1,                           /* Assume encoder present: check before registering */
