@@ -2773,16 +2773,17 @@ H5_DLL herr_t H5Pset_filter(hid_t plist_id, H5Z_filter_t filter, unsigned int fl
  *                        H5Z_params_t p = H5Z_PARAMS_RAW(cd_nelmts, cd_values_array);
  *                      \endcode
  *
- *                    - <b>#H5Z_PARAMS_STRING</b> — human-readable
- *                      comma-separated key=value string (e.g. \c "level=6").
- *                      Set \c params->u.str to a NUL-terminated string.
+ *                    - <b>#H5Z_PARAMS_STRING</b> — human-readable parameter
+ *                      string in TOML inline-table format (e.g. \c "level=6"
+ *                      or \c "{level=6, mode=\"fast\"}").
+ *                      Set \c params->u.str to a NUL-terminated string, or
+ *                      \c NULL / \c "" for no parameters.
  *                      Convenience macro (C only):
  *                      \code
  *                        H5Z_params_t p = H5Z_PARAMS_STR("level=6");
  *                      \endcode
- *                      The filter plugin must expose a \c set_config callback;
- *                      if it does not, the call returns a negative value with
- *                      \c H5E_ARGS/\c H5E_UNSUPPORTED.
+ *                      See the \ref subsec_filter_param_string section below
+ *                      for the supported syntax.
  *
  * \return \herr_t
  *
@@ -2799,8 +2800,46 @@ H5_DLL herr_t H5Pset_filter(hid_t plist_id, H5Z_filter_t filter, unsigned int fl
  *          \c cd_values.  The filter plugin must be available at call time; if it
  *          cannot be found, the function fails with H5E_NOFILTER.
  *
+ *          <b>Empty-string fast path:</b> If \c params->u.str is \c NULL or an
+ *          empty string \c "", the call is treated as "no parameters"
+ *          (equivalent to \c H5Z_PARAMS_CDVALUES with \c cd_nelmts = 0),
+ *          regardless of whether the filter implements \c set_config.  No plugin
+ *          load and no callback invocation occur.  This makes parameterless
+ *          filters (shuffle, fletcher32, nbit) usable via the string API.
+ *
  *          Unknown keys in a \c #H5Z_PARAMS_STRING string are rejected by
  *          built-in filters and should be rejected by third-party plugins.
+ *
+ * \anchor subsec_filter_param_string
+ * <b>Parameter string syntax (#H5Z_PARAMS_STRING)</b>
+ *
+ *          The parameter string is a subset of TOML inline-table syntax: a
+ *          comma-separated list of \c key=value pairs.  Both the bare form
+ *          (\c "level=6") and the explicitly braced form (\c "{level=6}") are
+ *          accepted.  The maximum length is #H5Z_CONFIG_STRING_MAX bytes.
+ *
+ *          Supported value types:
+ *          - <b>Integer</b> — unquoted decimal with optional sign, or TOML
+ *            prefixes \c 0x (hex), \c 0o (octal), \c 0b (binary).  Underscore
+ *            digit separators are allowed (e.g. \c 1_000_000).\n
+ *            Example: \c "level=6", \c "offset=-4", \c "mask=0xff"
+ *          - <b>Float</b> — decimal floating-point with a decimal point or
+ *            exponent (e.g. \c 3.14, \c 6.0e2).  C99 hex-float literals
+ *            (\c 0x1.8p+1) are also accepted and converted internally.\n
+ *            Example: \c "scale=1.5", \c "tol=1.0e-6"
+ *          - <b>Boolean</b> — bare \c true or \c false (lowercase).\n
+ *            Example: \c "lossless=true"
+ *          - <b>String</b> — double-quoted with standard TOML escape sequences
+ *            (\c \\n, \c \\t, \c \\", \c \\\\, etc.).  Single-quoted literal
+ *            strings (\c 'no escapes here') are also accepted.\n
+ *            Example: \c "mode=\"fast\"", \c "name='zlib'"
+ *          - <b>Inline table (nested)</b> — a value may itself be a braced
+ *            key=value list for sub-filter or sub-driver configuration.\n
+ *            Example: \c "compressor={name=\"zlib\",level=6}"
+ *
+ *          Use H5Zconfig_get_int(), H5Zconfig_get_double(), H5Zconfig_get_bool(),
+ *          and H5Zconfig_get_str() inside a \c set_config callback to retrieve
+ *          individual values from the parameter string.
  *
  * \since 2.2.0
  */
