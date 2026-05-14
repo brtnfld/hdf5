@@ -187,6 +187,15 @@ H5Z__toml_parse_params(const char *params, toml_result_t *tr_out, toml_datum_t *
 
     FUNC_ENTER_PACKAGE
 
+    /* Defence-in-depth length check: callers SHOULD enforce
+     * H5Z_CONFIG_STRING_MAX, but enforce it here too so that the
+     * downstream `len * 8` worst-case allocation in H5Z__rewrite_hexfloats
+     * cannot overflow size_t. */
+    if (params && strlen(params) > H5Z_CONFIG_STRING_MAX)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                    "filter parameter string exceeds H5Z_CONFIG_STRING_MAX (%d bytes)",
+                    H5Z_CONFIG_STRING_MAX);
+
     /* Replace hex-float literals (e.g. 0x1.8p+1) with decimal equivalents
      * so the tomlc17 scanner, which does not support C99 hex-float syntax,
      * can parse the resulting string without modification. */
@@ -200,8 +209,6 @@ H5Z__toml_parse_params(const char *params, toml_result_t *tr_out, toml_datum_t *
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "out of memory for TOML wrapper buffer");
 
     *tr_out = toml_parse(wrapped, (int)strlen(wrapped));
-    H5MM_xfree(wrapped);
-    wrapped = NULL;
 
     if (!tr_out->ok) {
         /* Copy errmsg before toml_free invalidates it */
@@ -517,16 +524,21 @@ H5Z__config_get_str(const char *params, const char *key, char *buf, size_t *buf_
     vlen = (size_t)d.u.str.len;
 
     {
-        size_t cap = buf_size ? *buf_size : 0;
+        size_t cap;
+
+        /* Reject ambiguous (buf != NULL, buf_size == NULL): we have no way to
+         * know the caller's buffer size, and an unbounded memcpy is unsafe. */
+        if (buf && !buf_size)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "buf_size must not be NULL when buf is non-NULL");
+
+        cap = buf_size ? *buf_size : 0;
 
         if (buf_size)
             *buf_size = vlen;
 
         if (buf) {
-            if (cap == 0) {
-                memcpy(buf, d.u.s, vlen + 1);
-            }
-            else if (cap > vlen) {
+            if (cap > vlen) {
                 memcpy(buf, d.u.s, vlen + 1);
             }
             else {
@@ -560,8 +572,9 @@ done:
  *                  (excluding NUL), returns > 0.
  *                - buf != NULL, *buf_size > 0: copies up to *buf_size - 1
  *                  bytes plus NUL; always sets *buf_size to required length.
- *                - buf != NULL, buf_size == NULL or *buf_size == 0: copies
- *                  unconditionally (caller is responsible for buffer size).
+ *                  Returns H5E_OVERFLOW if the buffer is too small.
+ *                - buf != NULL, buf_size == NULL: rejected with H5E_BADVALUE
+ *                  (the function has no way to know the buffer capacity).
  *
  * Return:      > 0 found, 0 not found, < 0 error.
  *

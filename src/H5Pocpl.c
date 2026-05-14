@@ -1806,6 +1806,9 @@ H5Pappend_filter(hid_t plist_id, H5Z_filter_t filter, unsigned int flags, const 
         if (params) {
             cd_nelmts = params->u.raw.cd_nelmts;
             cd_values = params->u.raw.cd_values;
+            if (cd_nelmts > 0 && cd_values == NULL)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                            "cd_values is NULL but cd_nelmts > 0");
         }
     }
     else if (params->type == H5Z_PARAMS_STRING) {
@@ -1815,7 +1818,17 @@ H5Pappend_filter(hid_t plist_id, H5Z_filter_t filter, unsigned int flags, const 
         size_t       cd_nelmts2   = 0;
         size_t       alloc_nelmts = 0;
 
-        if (param_str && strlen(param_str) > H5Z_CONFIG_STRING_MAX)
+        /* RFC-HDFG-2026-001 empty-string fast path: NULL or "" means "no
+         * parameters" — equivalent to H5Z_PARAMS_CDVALUES with cd_nelmts = 0,
+         * regardless of whether the filter implements set_config.  No plugin
+         * load, no callback invocation. */
+        if (!param_str || *param_str == '\0') {
+            cd_nelmts = 0;
+            cd_values = NULL;
+            goto append_to_pipeline;
+        }
+
+        if (strlen(param_str) > H5Z_CONFIG_STRING_MAX)
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "params string exceeds H5Z_CONFIG_STRING_MAX");
 
         /* Trigger dynamic plugin load if filter is not already registered */
@@ -1862,6 +1875,7 @@ H5Pappend_filter(hid_t plist_id, H5Z_filter_t filter, unsigned int flags, const 
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unrecognised H5Z_params_t type field");
     }
 
+append_to_pipeline:
     /* Get the plist structure */
     if (NULL == (plist = H5P_object_verify(plist_id, H5P_OBJECT_CREATE, false)))
         HGOTO_ERROR(H5E_ID, H5E_BADID, FAIL, "can't find object for ID");
