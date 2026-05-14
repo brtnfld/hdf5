@@ -258,8 +258,7 @@ H5Zregister(const void *cls)
         if (cls3->filter == NULL)
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no filter function specified");
         if (cls3->canonical_name == NULL)
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                        "canonical_name must not be NULL for H5Z_class3_t");
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "canonical_name must not be NULL for H5Z_class3_t");
 
         if (H5Z_register3(cls3) < 0)
             HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register filter");
