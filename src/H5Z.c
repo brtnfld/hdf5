@@ -168,9 +168,14 @@ H5Z_term_package(void)
                                 "----", "------", "-------", "---------");
                     } /* end if */
 
-                    /* Truncate the comment to fit in the field */
-                    strncpy(comment, H5Z_table_g[i].canonical_name, sizeof comment);
-                    comment[sizeof(comment) - 1] = '\0';
+                    /* Truncate the comment to fit in the field; prefer filter_title for display */
+                    {
+                        const char *label = H5Z_table_g[i].filter_title
+                                                ? H5Z_table_g[i].filter_title
+                                                : H5Z_table_g[i].canonical_name;
+                        strncpy(comment, label, sizeof comment);
+                        comment[sizeof(comment) - 1] = '\0';
+                    }
 
                     /*
                      * Format bandwidth to have four significant digits and
