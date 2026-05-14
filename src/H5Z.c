@@ -450,6 +450,33 @@ done:
 }
 
 /*-------------------------------------------------------------------------
+ * Function:    H5Z__reregister_deflate
+ *
+ * Purpose:     Re-register the built-in deflate filter.  Used by the test
+ *              suite after deliberately unregistering deflate to test the
+ *              re-registration path; uses H5Z_register3 directly to bypass
+ *              the public-API range checks on built-in filter IDs.
+ *
+ * Return:      Non-negative on success / Negative on failure
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Z__reregister_deflate(void)
+{
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+#ifdef H5_HAVE_FILTER_DEFLATE
+    if (H5Z_register3(H5Z_DEFLATE) < 0)
+        HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "can't re-register deflate filter");
+#endif
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+}
+
+/*-------------------------------------------------------------------------
  * Function:    H5Zunregister
  *
  * Purpose:     This function unregisters a filter.
