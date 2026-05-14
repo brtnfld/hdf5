@@ -34,7 +34,6 @@ H5_ATTR_VISIBILITY_HIDDEN const H5Z_class3_t H5Z_SHUFFLE[1] = {{
     1,                       /* encoder_present flag (set to true) */
     1,                       /* decoder_present flag (set to true) */
     "shuffle",               /* canonical_name */
-    "shuffle",               /* filter_title */
     NULL,                    /* The "can apply" callback */
     H5Z__set_local_shuffle,  /* The "set local" callback */
     H5Z__filter_shuffle,     /* The actual filter function */

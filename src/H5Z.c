@@ -168,11 +168,9 @@ H5Z_term_package(void)
                                 "----", "------", "-------", "---------");
                     } /* end if */
 
-                    /* Truncate the comment to fit in the field; prefer filter_title for display */
                     {
-                        const char *label = H5Z_table_g[i].filter_title ? H5Z_table_g[i].filter_title
-                                                                        : H5Z_table_g[i].canonical_name;
-                        strncpy(comment, label, sizeof comment);
+                        const char *label = H5Z_table_g[i].canonical_name;
+                        strncpy(comment, label ? label : "", sizeof comment);
                         comment[sizeof(comment) - 1] = '\0';
                     }
 
@@ -263,8 +261,8 @@ H5Zregister(const void *cls)
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no filter function specified");
         if (cls3->canonical_name == NULL)
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "canonical_name must not be NULL for H5Z_class3_t");
-        if (cls3->filter_title && strlen(cls3->filter_title) > 255)
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "filter_title exceeds maximum length of 255 bytes");
+        if (strlen(cls3->canonical_name) > 255)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "canonical_name exceeds maximum length of 255 bytes");
 
         if (H5Z_register3(cls3) < 0)
             HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register filter");
@@ -342,7 +340,7 @@ H5Z_register(const H5Z_class2_t *cls)
     entry.can_apply       = cls->can_apply;
     entry.set_local       = cls->set_local;
     entry.filter          = cls->filter;
-    /* filter_title, set_config, get_config remain NULL for v1/v2 */
+    /* set_config, get_config remain NULL for v1/v2 */
 
     /* Is the filter already registered? */
     for (i = 0; i < H5Z_table_used_g; i++)
@@ -415,7 +413,6 @@ H5Z_register3(const H5Z_class3_t *cls)
     entry.can_apply       = cls->can_apply;
     entry.set_local       = cls->set_local;
     entry.filter          = cls->filter;
-    entry.filter_title    = cls->filter_title;
     entry.set_config      = cls->set_config;
     entry.get_config      = cls->get_config;
 

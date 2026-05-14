@@ -45,7 +45,6 @@ H5_ATTR_VISIBILITY_HIDDEN H5Z_class3_t H5Z_SZIP[1] = {{
     1,                    /* Assume encoder present: check before registering */
     1,                    /* decoder_present flag (set to true) */
     "szip",               /* canonical_name */
-    "szip",               /* filter_title */
     H5Z__can_apply_szip,  /* The "can apply" callback */
     H5Z__set_local_szip,  /* The "set local" callback */
     H5Z__filter_szip,     /* The actual filter function */

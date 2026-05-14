@@ -1159,9 +1159,8 @@ H5P__get_filter(const H5Z_filter_info_t *filter, unsigned int *flags /*out*/, si
 
             H5Z_find_entry(true, filter->id, &entry_p);
             if (entry_p)
-                s = entry_p->filter_title; /* filter_title is the display label; canonical_name is reserved
-                                              for future name↔ID mapping */
-        }                                  /* end if */
+                s = entry_p->canonical_name;
+        } /* end if */
 
         /* Check for actual name */
         if (s) {
@@ -1169,7 +1168,7 @@ H5P__get_filter(const H5Z_filter_info_t *filter, unsigned int *flags /*out*/, si
             name[namelen - 1] = '\0';
         } /* end if */
         else {
-            /* No filter_title and no stored name: fall back to decimal filter ID */
+            /* No canonical_name and no stored name: fall back to decimal filter ID */
             snprintf(name, namelen, "%d", (int)filter->id);
         } /* end else */
     }     /* end if */
@@ -1864,27 +1863,27 @@ H5Pappend_filter(hid_t plist_id, H5Z_filter_t filter, unsigned int flags, const 
             HGOTO_ERROR(H5E_PLINE, H5E_BADVALUE, FAIL,
                         "set_config returned different cd_nelmts on second call (contract violation)");
 
-        /* RFC §filter_title: pack filter_title at the end of cd_values so that
-         * it persists in the file and h5dump can display it without the plugin. */
-        if (entry->filter_title) {
-            size_t    title_nelmts = 0;
+        /* Pack canonical_name at the end of cd_values so that it persists in
+         * the file and h5dump can display it without the plugin loaded. */
+        if (entry->canonical_name) {
+            size_t    name_nelmts = 0;
             unsigned *new_buf;
 
-            if (H5Zcd_pack_string(entry->filter_title, NULL, 0, &title_nelmts) < 0)
-                HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "failed to compute filter_title packing size");
+            if (H5Zcd_pack_string(entry->canonical_name, NULL, 0, &name_nelmts) < 0)
+                HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "failed to compute canonical_name packing size");
 
             new_buf =
-                (unsigned *)H5MM_realloc(allocated_cd_values, (cd_nelmts + title_nelmts) * sizeof(unsigned));
+                (unsigned *)H5MM_realloc(allocated_cd_values, (cd_nelmts + name_nelmts) * sizeof(unsigned));
             if (!new_buf)
                 HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL,
-                            "memory allocation failed for filter_title in cd_values");
+                            "memory allocation failed for canonical_name in cd_values");
             allocated_cd_values = new_buf;
             cd_values           = new_buf;
 
-            if (H5Zcd_pack_string(entry->filter_title, allocated_cd_values + cd_nelmts, title_nelmts, NULL) <
-                0)
-                HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "failed to pack filter_title into cd_values");
-            cd_nelmts += title_nelmts;
+            if (H5Zcd_pack_string(entry->canonical_name, allocated_cd_values + cd_nelmts, name_nelmts,
+                                  NULL) < 0)
+                HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "failed to pack canonical_name into cd_values");
+            cd_nelmts += name_nelmts;
         }
     }
     else {
@@ -1904,22 +1903,22 @@ append_to_pipeline:
     if (H5Z_append(&pline, filter, flags, cd_nelmts, cd_values) < 0)
         HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "unable to add filter to pipeline");
 
-    /* RFC §filter_title: persist filter_title as the pipeline filter name so
-     * H5Pget_filter2 and h5dump can display it without the plugin loaded. */
+    /* Persist canonical_name as the pipeline filter name so H5Pget_filter2
+     * and h5dump can display it without the plugin loaded. */
     {
         H5Z_entry_t       *te = NULL;
         H5Z_filter_info_t *fi = &pline.filter[pline.nused - 1];
 
         if (H5Z_find_entry(true, filter, &te) >= 0 && te && te->version >= H5Z_CLASS3_T_VERS &&
-            te->filter_title) {
-            size_t len = strlen(te->filter_title) + 1;
+            te->canonical_name) {
+            size_t len = strlen(te->canonical_name) + 1;
 
             if (len <= H5Z_COMMON_NAME_LEN) {
-                memcpy(fi->_name, te->filter_title, len);
+                memcpy(fi->_name, te->canonical_name, len);
                 fi->name = fi->_name;
             }
             else {
-                if (NULL == (fi->name = (char *)H5MM_strdup(te->filter_title)))
+                if (NULL == (fi->name = (char *)H5MM_strdup(te->canonical_name)))
                     HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for filter name");
             }
         }

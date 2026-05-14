@@ -41,7 +41,6 @@ H5_ATTR_VISIBILITY_HIDDEN const H5Z_class3_t H5Z_DEFLATE[1] = {{
     1,                       /* encoder_present flag (set to true) */
     1,                       /* decoder_present flag (set to true) */
     "deflate",               /* canonical_name */
-    "deflate",               /* filter_title */
     NULL,                    /* The "can apply" callback */
     NULL,                    /* The "set local" callback */
     H5Z__filter_deflate,     /* The actual filter function */

@@ -244,8 +244,7 @@ typedef struct H5Z_class3_t {
     H5Z_filter_t          id;              /**< Filter ID number                           */
     unsigned              encoder_present; /**< Does this filter have an encoder?          */
     unsigned              decoder_present; /**< Does this filter have a decoder?           */
-    const char           *canonical_name;  /**< Canonical string identifier (e.g., "zfp"); must not be NULL */
-    const char           *filter_title;    /**< Optional human-readable label; may be NULL */
+    const char           *canonical_name;  /**< Canonical string identifier (e.g., "zfp"); must not be NULL; used as display name */
     H5Z_can_apply_func_t  can_apply;       /**< The "can apply" callback for a filter      */
     H5Z_set_local_func_t  set_local;       /**< The "set local" callback for a filter      */
     H5Z_func_t            filter;          /**< The actual filter function                 */
