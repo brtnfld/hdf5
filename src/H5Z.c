@@ -170,9 +170,8 @@ H5Z_term_package(void)
 
                     /* Truncate the comment to fit in the field; prefer filter_title for display */
                     {
-                        const char *label = H5Z_table_g[i].filter_title
-                                                ? H5Z_table_g[i].filter_title
-                                                : H5Z_table_g[i].canonical_name;
+                        const char *label = H5Z_table_g[i].filter_title ? H5Z_table_g[i].filter_title
+                                                                        : H5Z_table_g[i].canonical_name;
                         strncpy(comment, label, sizeof comment);
                         comment[sizeof(comment) - 1] = '\0';
                     }
@@ -265,8 +264,7 @@ H5Zregister(const void *cls)
         if (cls3->canonical_name == NULL)
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "canonical_name must not be NULL for H5Z_class3_t");
         if (cls3->filter_title && strlen(cls3->filter_title) > 255)
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                        "filter_title exceeds maximum length of 255 bytes");
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "filter_title exceeds maximum length of 255 bytes");
 
         if (H5Z_register3(cls3) < 0)
             HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register filter");
