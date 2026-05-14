@@ -465,14 +465,12 @@ H5Z__reregister_deflate(void)
 {
     herr_t ret_value = SUCCEED;
 
-    FUNC_ENTER_PACKAGE
+    FUNC_ENTER_PACKAGE_NOERR
 
 #ifdef H5_HAVE_FILTER_DEFLATE
-    if (H5Z_register3(H5Z_DEFLATE) < 0)
-        HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "can't re-register deflate filter");
+    ret_value = H5Z_register3(H5Z_DEFLATE);
 #endif
 
-done:
     FUNC_LEAVE_NOAPI(ret_value)
 }
 
