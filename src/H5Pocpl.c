@@ -1807,8 +1807,7 @@ H5Pappend_filter(hid_t plist_id, H5Z_filter_t filter, unsigned int flags, const 
             cd_nelmts = params->u.raw.cd_nelmts;
             cd_values = params->u.raw.cd_values;
             if (cd_nelmts > 0 && cd_values == NULL)
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                            "cd_values is NULL but cd_nelmts > 0");
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "cd_values is NULL but cd_nelmts > 0");
         }
     }
     else if (params->type == H5Z_PARAMS_STRING) {

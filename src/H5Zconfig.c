@@ -529,8 +529,7 @@ H5Z__config_get_str(const char *params, const char *key, char *buf, size_t *buf_
         /* Reject ambiguous (buf != NULL, buf_size == NULL): we have no way to
          * know the caller's buffer size, and an unbounded memcpy is unsafe. */
         if (buf && !buf_size)
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                        "buf_size must not be NULL when buf is non-NULL");
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "buf_size must not be NULL when buf is non-NULL");
 
         cap = buf_size ? *buf_size : 0;
 
