@@ -91,7 +91,7 @@ H5_ATTR_VISIBILITY_HIDDEN H5Z_class3_t H5Z_NBIT[1] = {{
     1,                    /* Assume encoder present: check before registering */
     1,                    /* decoder_present flag (set to true) */
     "nbit",               /* canonical_name */
-    NULL,                 /* filter_title (NULL: no title packed into cd_values) */
+    "nbit",               /* filter_title */
     H5Z__can_apply_nbit,  /* The "can apply" callback */
     H5Z__set_local_nbit,  /* The "set local" callback */
     H5Z__filter_nbit,     /* The actual filter function */
