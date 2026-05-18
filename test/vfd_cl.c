@@ -82,6 +82,13 @@ static herr_t cl_parse_config_group_err_check_5(void);
 static herr_t cl_parse_config_group_err_check_6(void);
 static herr_t cl_parse_config_group_err_check_7(void);
 static herr_t vfd_swmr_load_string_config_smoke_check(void);
+static herr_t vfd_swmr_load_string_config_err_check_1(void);
+static herr_t vfd_swmr_load_string_config_err_check_2(void);
+static herr_t vfd_swmr_load_string_config_err_check_3(void);
+static herr_t vfd_swmr_load_string_config_err_check_4(void);
+static herr_t vfd_swmr_load_string_config_err_check_5(void);
+static herr_t vfd_swmr_load_string_config_err_check_6(void);
+static herr_t vfd_swmr_config_check_err_check_1(void);
 static herr_t cl_load_string_from_file_smoke_check(void);
 static herr_t cl_load_string_from_file_err_check_1(void);
 static herr_t cl_load_string_from_file_err_check_2(void);
@@ -4073,7 +4080,9 @@ error:
  *
  * Verify that the config group parser function detects and reports errors 
  * as expected.
- *
+ * Specifically, test that duplicate configuration names in a 
+ * configuration group will cause errors in H5CL_parse_config_group().
+ * 
  *                                              Cody S. -- 4/17/26
  *
  * Changes:
@@ -4105,7 +4114,7 @@ cl_parse_config_group_err_check_1(void){
         ")";
     int i;
     int j;
-    int num_config_groups = 3;
+    int num_configs = 3;
     int duplicate_1_num_params = 1;
     int normal_num_params = 1;
     int duplicate_2_num_params = 1;
@@ -4166,7 +4175,7 @@ cl_parse_config_group_err_check_1(void){
     configs[1].nv_pairs = &(normal_config_nv_pairs[0]);
     configs[2].nv_pairs = &(duplicate_2_config_nv_pairs[0]);
 
-    if ( H5CL_parse_config_group(input_string, top_name, 3, configs) >= 0 ) {
+    if ( H5CL_parse_config_group(input_string, top_name, num_configs, configs) >= 0 ) {
         TEST_ERROR;
 
     }
@@ -4180,7 +4189,7 @@ cl_parse_config_group_err_check_1(void){
 #endif
 
     /* cleanup after test. */
-    for ( i = 0; i < num_config_groups; i++ ) {
+    for ( i = 0; i < num_configs; i++ ) {
 
         for ( j = 0; j < configs[i].max_num_params; j++ ) {
 
@@ -4208,7 +4217,9 @@ error:
  *
  * Verify that the config group parser function detects and reports errors 
  * as expected.
- *
+ * Specifically, test that H5CL_parse_config_group() errors when num_configs 
+ * is too small.
+ * 
  *                                              Cody S. -- 4/17/26
  *
  * Changes:
@@ -4221,12 +4232,12 @@ cl_parse_config_group_err_check_2(void){
     const char * input_string = 
         "( top_name "
         "  ("
-        "    ( group_1 "
+        "    ( config_1 "
         "      ("
         "        ( param_1 1 )"
         "      )"
         "    )"
-        "   ( group_2 "
+        "   ( config_2 "
         "     ("
         "       (param_2 2)"
         "     )"
@@ -4236,53 +4247,53 @@ cl_parse_config_group_err_check_2(void){
     bool verbose = true;
     int i;
     int j;
-    int num_config_groups = 2;
-    int group_1_num_params = 1;
-    int group_2_num_params = 1;
+    int num_configs = 2;
+    int config_1_num_params = 1;
+    int config_2_num_params = 1;
     char top_name[] = "top_name";
-    char group_1_name[] = "group_1";
-    char group_2_name[] = "group_2";
+    char config_1_name[] = "config_1";
+    char config_2_name[] = "config_2";
     H5CL_config_spec configs[2] =
     {
       {
         /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ group_1_name,
-        /* max_num_params = */ group_1_num_params,
+        /* config_name    = */ config_1_name,
+        /* max_num_params = */ config_1_num_params,
         /* nv_pairs       = */ NULL, /* will overwrite */
         /* parse          = */ false
       },
       {
         /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ group_2_name,
-        /* max_num_params = */ group_2_num_params,
+        /* config_name    = */ config_2_name,
+        /* max_num_params = */ config_2_num_params,
         /* nv_pairs       = */ NULL, /* will overwrite */
         /* parse          = */ false
       }
     };
 
-    H5CL_nv_pair_t group_1_config_nv_pairs[1];
-    H5CL_nv_pair_t group_2_config_nv_pairs[1];
+    H5CL_nv_pair_t config_1_config_nv_pairs[1];
+    H5CL_nv_pair_t config_2_config_nv_pairs[1];
 
     TESTING("H5CL_parse_config_group() err detect & report 2");
 
     /* setup the name value pair arrays. */
 
-    for ( i = 0; i < group_1_num_params; i++ ) {
+    for ( i = 0; i < config_1_num_params; i++ ) {
 
-        group_1_config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
+        config_1_config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
 
-    for ( i = 0; i < group_2_num_params; i++ ) {
+    for ( i = 0; i < config_2_num_params; i++ ) {
 
-        group_2_config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
+        config_2_config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
 
     /* load pointers to the actual nv pair arrays into configs[] */
-    configs[0].nv_pairs = &(group_1_config_nv_pairs[0]);
-    configs[1].nv_pairs = &(group_2_config_nv_pairs[0]);
+    configs[0].nv_pairs = &(config_1_config_nv_pairs[0]);
+    configs[1].nv_pairs = &(config_2_config_nv_pairs[0]);
 
     /* Purposely pass num_configs value that is less than required */
-    if ( H5CL_parse_config_group(input_string, top_name, num_config_groups - 1, configs) >= 0 ) {
+    if ( H5CL_parse_config_group(input_string, top_name, num_configs - 1, configs) >= 0 ) {
        TEST_ERROR;
 
     }
@@ -4297,7 +4308,7 @@ cl_parse_config_group_err_check_2(void){
 
     /* cleanup after test. */
     /* Don't try to clean up nv pairs that H5CL_parse_config_group() didn't initialize */
-    for ( i = 0; i < num_config_groups - 1; i++ ) {
+    for ( i = 0; i < num_configs - 1; i++ ) {
 
         for ( j = 0; j < configs[i].max_num_params; j++ ) {
 
@@ -4326,7 +4337,9 @@ error:
  *
  * Verify that the config group parser function detects and reports errors 
  * as expected.
- *
+ * Specifically, test that H5CL_parse_config_group() errors when one of the
+ * configs[].max_num_configs values is too small.
+ * 
  *                                              Cody S. -- 4/17/26
  *
  * Changes:
@@ -4339,7 +4352,7 @@ cl_parse_config_group_err_check_3(void){
     const char * input_string = 
         "( top_name "
         "  ("
-        "    ( group_name "
+        "    ( config_name "
         "      ("
         "        ( param_1 1 )"
         "        ( param_2 2 )"
@@ -4351,35 +4364,35 @@ cl_parse_config_group_err_check_3(void){
     bool verbose = true;
     int i;
     int j;
-    int num_config_groups = 1;
-    int group_num_params = 3;
+    int num_configs = 1;
+    int config_num_params = 3;
     char top_name[] = "top_name";
-    char group_name[] = "group_name";
+    char config_name[] = "config_name";
     H5CL_config_spec configs[1] =
     {
       {
         /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ group_name,
-        /* max_num_params = */ group_num_params - 1,    /* purposely set to less than needed*/
+        /* config_name    = */ config_name,
+        /* max_num_params = */ config_num_params - 1,    /* purposely set to less than needed*/
         /* nv_pairs       = */ NULL, /* will overwrite */
         /* parse          = */ false
       }
     };
 
-    H5CL_nv_pair_t group_config_nv_pairs[3];
+    H5CL_nv_pair_t config_nv_pairs[3];
 
     TESTING("H5CL_parse_config_group() err detect & report 3");
 
     /* setup the name value pair arrays */
-    for ( i = 0; i < group_num_params; i++ ) {
+    for ( i = 0; i < config_num_params; i++ ) {
 
-        group_config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
+        config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
 
     /* load pointers to the actual nv pair arrays into configs[] */
-    configs[0].nv_pairs = &(group_config_nv_pairs[0]);
+    configs[0].nv_pairs = &(config_nv_pairs[0]);
 
-    if ( H5CL_parse_config_group(input_string, top_name, num_config_groups, configs) >= 0 ) {
+    if ( H5CL_parse_config_group(input_string, top_name, num_configs, configs) >= 0 ) {
         TEST_ERROR;
     }
 #if VERIFY_ERROR_STACK_SUPPORTED
@@ -4392,7 +4405,7 @@ cl_parse_config_group_err_check_3(void){
 #endif
 
     /* cleanup after test. */
-    for ( i = 0; i < num_config_groups; i++ ) {
+    for ( i = 0; i < num_configs; i++ ) {
 
         for ( j = 0; j < configs[i].max_num_params; j++ ) {
 
@@ -4421,7 +4434,9 @@ error:
  *
  * Verify that the config group parser function detects and reports errors 
  * as expected.
- *
+ * Specifically, test that H5CL_parse_config_group() errors both when the 
+ * top-level group name and a config name dont match the configuration string.
+ * 
  *                                              Cody S. -- 4/21/26
  *
  * Changes:
@@ -4434,7 +4449,7 @@ cl_parse_config_group_err_check_4(void){
     const char * input_string = 
         "( top_name "
         "  ("
-        "    ( group_name "
+        "    ( config_name "
         "      ("
         "        ( param 1 )"
         "      )"
@@ -4444,38 +4459,38 @@ cl_parse_config_group_err_check_4(void){
     bool verbose = true;
     int i;
     int j;
-    int num_config_groups = 1;
-    int group_num_params = 1;
+    int num_configs = 1;
+    int config_num_params = 1;
     char wrong_name[] = "wrong_name";
     char top_name[] = "top_name";
-    char group_name[] = "group_name";
+    char config_name[] = "config_name";
     H5CL_config_spec configs[1] =
     {
       {
         /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ group_name,
-        /* max_num_params = */ group_num_params,
+        /* config_name    = */ config_name,
+        /* max_num_params = */ config_num_params,
         /* nv_pairs       = */ NULL, /* will overwrite */
         /* parse          = */ false
       }
     };
     
-    H5CL_nv_pair_t group_config_nv_pairs[1];
+    H5CL_nv_pair_t config_nv_pairs[1];
 
     TESTING("H5CL_parse_config_group() err detect & report 4");
 
     /* setup the name value pair array. */
-    for ( i = 0; i < group_num_params; i++ ) {
+    for ( i = 0; i < config_num_params; i++ ) {
 
-        group_config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
+        config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
 
 
     /* load pointers to the actual nv pair arrays into configs[] */
-    configs[0].nv_pairs = &(group_config_nv_pairs[0]);
+    configs[0].nv_pairs = &(config_nv_pairs[0]);
 
     /* First pass wrong topmost nv_pair name */
-    if ( H5CL_parse_config_group(input_string, wrong_name, num_config_groups, configs) >= 0 ) {
+    if ( H5CL_parse_config_group(input_string, wrong_name, num_configs, configs) >= 0 ) {
        TEST_ERROR;
     }
 #if VERIFY_ERROR_STACK_SUPPORTED
@@ -4487,10 +4502,10 @@ cl_parse_config_group_err_check_4(void){
     }
 #endif
 
-    /* Now set the config group's expected name to wrong_name and retry with the correct top-level name */
+    /* Now set the config's expected name to wrong_name and retry with the correct top-level name */
     configs[0].config_name = wrong_name;
     
-    if ( H5CL_parse_config_group(input_string, top_name, num_config_groups, configs) >= 0 ) {
+    if ( H5CL_parse_config_group(input_string, top_name, num_configs, configs) >= 0 ) {
        TEST_ERROR;
 
     } 
@@ -4504,7 +4519,7 @@ cl_parse_config_group_err_check_4(void){
 #endif
 
     /* cleanup after test. */
-    for ( i = 0; i < num_config_groups; i++ ) {
+    for ( i = 0; i < num_configs; i++ ) {
 
         for ( j = 0; j < configs[i].max_num_params; j++ ) {
 
@@ -4532,7 +4547,9 @@ error:
  *
  * Verify that the config group parser function detects and reports errors 
  * as expected.
- *
+ * Specifically, test that H5CL_parse_config_group() errors when the 
+ * top-level group config doesn't use a list as its value.
+ * 
  *                                              Cody S. -- 4/21/26
  *
  * Changes:
@@ -4546,35 +4563,35 @@ cl_parse_config_group_err_check_5(void){
     bool verbose = true;
     int i;
     int j;
-    int num_config_groups = 1;
-    int group_num_params = 1;
+    int num_configs = 1;
+    int config_num_params = 1;
     char top_name[] = "top_name";
-    char group_name[] = "group_name";
+    char config_name[] = "config_name";
     H5CL_config_spec configs[1] =
     {
       {
         /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ group_name,
-        /* max_num_params = */ group_num_params,
+        /* config_name    = */ config_name,
+        /* max_num_params = */ config_num_params,
         /* nv_pairs       = */ NULL,
         /* parse          = */ false
       }
     };
 
-    H5CL_nv_pair_t group_config_nv_pairs[1];
+    H5CL_nv_pair_t config_nv_pairs[1];
 
     TESTING("H5CL_parse_config_group() err detect & report 5");
 
     /* setup the name value pair array. */
-    for ( i = 0; i < group_num_params; i++ ) {
+    for ( i = 0; i < config_num_params; i++ ) {
 
-        group_config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
+        config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
 
     /* load pointers to the actual nv pair arrays into configs[] */
-    configs[0].nv_pairs = &(group_config_nv_pairs[0]);
+    configs[0].nv_pairs = &(config_nv_pairs[0]);
 
-    if ( H5CL_parse_config_group(input_string, top_name, num_config_groups, configs) >= 0 ) {
+    if ( H5CL_parse_config_group(input_string, top_name, num_configs, configs) >= 0 ) {
        TEST_ERROR;
 
     } 
@@ -4588,7 +4605,7 @@ cl_parse_config_group_err_check_5(void){
 #endif
 
     /* cleanup after test. */
-    for ( i = 0; i < num_config_groups; i++ ) {
+    for ( i = 0; i < num_configs; i++ ) {
 
         for ( j = 0; j < configs[i].max_num_params; j++ ) {
 
@@ -4616,7 +4633,9 @@ error:
  *
  * Verify that the config group parser function detects and reports errors 
  * as expected.
- *
+ * Specifically, test that H5CL_parse_config_group() errors when a 
+ * configuration within the group doesn't contain a list as its value.
+ * 
  *                                              Cody S. -- 4/21/26
  *
  * Changes:
@@ -4629,41 +4648,41 @@ cl_parse_config_group_err_check_6(void){
     const char * input_string = 
         "( top_name "
         "  ("
-        "    ( group_name 1 )" /* Group value isn't a list */
+        "    ( config_name 1 )" /* config value isn't a list */
         "  )"
         ")";
     bool verbose = true;
     int i;
     int j;
-    int num_config_groups = 1;
-    int group_num_params = 1;
+    int num_configs = 1;
+    int config_num_params = 1;
     char top_name[] = "top_name";
-    char group_name[] = "group_name";
+    char config_name[] = "config_name";
     H5CL_config_spec configs[1] =
     {
       {
         /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ group_name,
-        /* max_num_params = */ group_num_params,
+        /* config_name    = */ config_name,
+        /* max_num_params = */ config_num_params,
         /* nv_pairs       = */ NULL, /* will overwrite */
         /* parse          = */ false
       }
     };
     
-    H5CL_nv_pair_t group_config_nv_pairs[1];
+    H5CL_nv_pair_t config_nv_pairs[1];
 
     TESTING("H5CL_parse_config_group() err detect & report 6");
 
     /* setup the name value pair array. */
-    for ( i = 0; i < group_num_params; i++ ) {
+    for ( i = 0; i < config_num_params; i++ ) {
 
-        group_config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
+        config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
 
     /* load pointers to the actual nv pair arrays into configs[] */
-    configs[0].nv_pairs = &(group_config_nv_pairs[0]);
+    configs[0].nv_pairs = &(config_nv_pairs[0]);
 
-    if ( H5CL_parse_config_group(input_string, top_name, num_config_groups, configs) >= 0 ) {
+    if ( H5CL_parse_config_group(input_string, top_name, num_configs, configs) >= 0 ) {
        TEST_ERROR;
 
     } 
@@ -4677,7 +4696,7 @@ cl_parse_config_group_err_check_6(void){
 #endif
 
     /* cleanup after test. */
-    for ( i = 0; i < num_config_groups; i++ ) {
+    for ( i = 0; i < num_configs; i++ ) {
 
         for ( j = 0; j < configs[i].max_num_params; j++ ) {
 
@@ -4706,7 +4725,9 @@ error:
  *
  * Verify that the config group parser function detects and reports errors 
  * as expected.
- *
+ * Specifically, test that H5CL_parse_config_group() errors when an extra 
+ * unneeded H5CL_config_spec element is added to the configs[] array.
+ * 
  *                                              Cody S. -- 4/21/26
  *
  * Changes:
@@ -4719,7 +4740,7 @@ cl_parse_config_group_err_check_7(void){
     const char * input_string = 
         "( top_name "
         "  ("
-        "    ( group_name "
+        "    ( config_name "
         "      ("
         "        ( param 1 )"
         "      )"
@@ -4729,53 +4750,53 @@ cl_parse_config_group_err_check_7(void){
     bool verbose = true;
     int i;
     int j;
-    int num_config_groups = 2;
-    int group_1_num_params = 1;
-    int group_2_num_params = 1;
+    int num_configs = 2;
+    int config_1_num_params = 1;
+    int config_2_num_params = 1;
     char top_name[] = "top_name";
-    char group_1_name[] = "group_1_name";
-    char group_2_name[] = "group_2_name";
+    char config_1_name[] = "config_1_name";
+    char config_2_name[] = "config_2_name";
     H5CL_config_spec configs[2] =
     {
       {
         /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ group_1_name,
-        /* max_num_params = */ group_1_num_params,
+        /* config_name    = */ config_1_name,
+        /* max_num_params = */ config_1_num_params,
         /* nv_pairs       = */ NULL, /* will overwrite */
         /* parse          = */ false
       },
       /* Add extra unneeded element */
       {
         /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ group_2_name,
-        /* max_num_params = */ group_2_num_params,
+        /* config_name    = */ config_2_name,
+        /* max_num_params = */ config_2_num_params,
         /* nv_pairs       = */ NULL, /* will overwrite */
         /* parse          = */ false
       }
     };
     
-    H5CL_nv_pair_t group_1_config_nv_pairs[1];
-    H5CL_nv_pair_t group_2_config_nv_pairs[1];
+    H5CL_nv_pair_t config_1_nv_pairs[1];
+    H5CL_nv_pair_t config_2_nv_pairs[1];
 
     TESTING("H5CL_parse_config_group() err detect & report 7");
 
     /* setup the name value pair array. */
-    for ( i = 0; i < group_1_num_params; i++ ) {
+    for ( i = 0; i < config_1_num_params; i++ ) {
 
-        group_1_config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
+        config_1_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
 
-    for ( i = 0; i < group_2_num_params; i++ ) {
+    for ( i = 0; i < config_2_num_params; i++ ) {
 
-        group_2_config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
+        config_2_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
 
 
     /* load pointers to the actual nv pair arrays into configs[] */
-    configs[0].nv_pairs = &(group_1_config_nv_pairs[0]);
-    configs[1].nv_pairs = &(group_2_config_nv_pairs[0]);
+    configs[0].nv_pairs = &(config_1_nv_pairs[0]);
+    configs[1].nv_pairs = &(config_2_nv_pairs[0]);
     
-    if ( H5CL_parse_config_group(input_string, top_name, num_config_groups, configs) >= 0 ) {
+    if ( H5CL_parse_config_group(input_string, top_name, num_configs, configs) >= 0 ) {
        TEST_ERROR;
 
     } 
@@ -4789,7 +4810,7 @@ cl_parse_config_group_err_check_7(void){
 #endif
 
     /* cleanup after test. */
-    for ( i = 0; i < num_config_groups; i++ ) {
+    for ( i = 0; i < num_configs; i++ ) {
 
         for ( j = 0; j < configs[i].max_num_params; j++ ) {
 
@@ -4816,8 +4837,8 @@ error:
  *
  * vfd_swmr_load_string_config_smoke_check()
  *
- * Initial smoke check for the H5F_load_vfd_swmr_config_from_string() function.  Note that
- * this test does not trigger any errors in that function
+ * Initial smoke check for the H5F_load_vfd_swmr_config_from_string() function.
+ * Note that this test does not trigger any errors in that function.
  *
  *                                              Cody S. -- 4/28/26
  *
@@ -4999,6 +5020,8 @@ error:
  *
  * Verify that the VFD SWMR property list setup function detects and reports 
  * errors as expected.
+ * Specifically, test that H5F_load_vfd_swmr_config_from_string() errors when
+ * create_file parameter is TRUE but writer parameter is FALSE.
  *
  *                                              Cody S. -- 4/30/26
  *
@@ -5049,10 +5072,11 @@ vfd_swmr_load_string_config_err_check_1(void)
         "    )"
         "  )"
         ")";
-    hid_t                  fapl        = H5I_INVALID_HID;
-    hid_t                  fcpl        = H5I_INVALID_HID;
-    hbool_t                writer      = false;
-    hbool_t                create_file = true;
+    hid_t   fapl        = H5I_INVALID_HID;
+    hid_t   fcpl        = H5I_INVALID_HID;
+    hbool_t writer      = false;
+    hbool_t create_file = true;
+    bool    verbose     = true;
 
     TESTING("H5F_load_vfd_swmr_config_from_string() err detect 1");
 
@@ -5063,8 +5087,17 @@ vfd_swmr_load_string_config_err_check_1(void)
         TEST_ERROR;
 
     /* Expected to fail because writer is false but create_file is true */
-    if ( H5F_load_vfd_swmr_config_from_string(input_string, fapl, fcpl, writer, create_file) > 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(input_string, fapl, fcpl, writer, create_file) >= 0 ) {
+       TEST_ERROR;
+    } 
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "must be in writer mode to create file",
+                                              verbose) )
+    {
         TEST_ERROR;
+    }
+#endif
 
     /* Close property lists */
     if ( H5Pclose(fapl) < 0 )
@@ -5091,6 +5124,8 @@ error:
  *
  * Verify that the VFD SWMR property list setup function detects and reports 
  * errors as expected.
+ * Specifically, test that H5F_load_vfd_swmr_config_from_string() errors when
+ * required configs are missing.
  *
  *                                              Cody S. -- 4/30/26
  *
@@ -5184,10 +5219,11 @@ vfd_swmr_load_string_config_err_check_2(void)
         "    )"
         "  )"
         ")";
-    hid_t                  fapl        = H5I_INVALID_HID;
-    hid_t                  fcpl        = H5I_INVALID_HID;
-    hbool_t                writer      = true;
-    hbool_t                create_file = true;
+    hid_t   fapl        = H5I_INVALID_HID;
+    hid_t   fcpl        = H5I_INVALID_HID;
+    hbool_t writer      = true;
+    hbool_t create_file = true;
+    bool    verbose     = true;
 
     TESTING("H5F_load_vfd_swmr_config_from_string() err detect 2");
 
@@ -5200,25 +5236,50 @@ vfd_swmr_load_string_config_err_check_2(void)
     /* Expected to fail because H5F_vfd_swmr_config missing */
     if ( H5F_load_vfd_swmr_config_from_string(missing_H5F_vfd_swmr_config_str, 
                                               fapl, fcpl, writer, 
-                                              create_file) > 0 )
+                                              create_file) >= 0 )
+    {
+       TEST_ERROR;
+    } 
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "required configuration groups missing",
+                                              verbose) )
     {
         TEST_ERROR;
     }
+#endif
 
     /* Expected to fail because page_buffer_config missing */
     if ( H5F_load_vfd_swmr_config_from_string(missing_page_buffer_config_str,
                                               fapl, fcpl, writer, 
-                                              create_file) > 0 )
+                                              create_file) >= 0 )
+    {
+       TEST_ERROR;
+    } 
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "required configuration groups missing",
+                                              verbose) )
     {
         TEST_ERROR;
     }
+#endif
+
     /* Expected to fail because create_file is true but file_space configurations missing */
     if ( H5F_load_vfd_swmr_config_from_string(missing_file_space_str, 
                                               fapl, fcpl, writer, 
-                                              create_file) > 0 )
+                                              create_file) >= 0 )
     {
         TEST_ERROR;
     }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                "file_space_strategy_config and file_space_page_size must both be configured if create_file is TRUE",
+                verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
 
     /* Close property lists */
     if ( H5Pclose(fapl) < 0 )
@@ -5246,7 +5307,9 @@ error:
  *
  * Verify that the VFD SWMR property list setup function detects and reports 
  * errors as expected.
- *
+ * Specifically, test that H5F_load_vfd_swmr_config_from_string() errors when
+ * any of the required configuration paramaters are missing.
+ * 
  *                                              Cody S. -- 4/30/26
  *
  * Changes:
@@ -5600,10 +5663,11 @@ vfd_swmr_load_string_config_err_check_3(void)
         "    )"
         "  )"
         ")";
-    hid_t                  fapl        = H5I_INVALID_HID;
-    hid_t                  fcpl        = H5I_INVALID_HID;
-    hbool_t                writer      = true;
-    hbool_t                create_file = true;
+    hid_t   fapl        = H5I_INVALID_HID;
+    hid_t   fcpl        = H5I_INVALID_HID;
+    hbool_t writer      = true;
+    hbool_t create_file = true;
+    bool    verbose     = true;
 
     TESTING("H5F_load_vfd_swmr_config_from_string() err detect 3");
 
@@ -5613,41 +5677,114 @@ vfd_swmr_load_string_config_err_check_3(void)
     if ( (fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0 )
         TEST_ERROR;
 
-    /* Expected to fail because of missing tick_len parameter */
-    if ( H5F_load_vfd_swmr_config_from_string(missing_tick_len_str, fapl, fcpl, writer, create_file) > 0 )
-        TEST_ERROR;
 
-    /* Expected to fail because of missing max_lag parameter */
-    if ( H5F_load_vfd_swmr_config_from_string(missing_max_lag_str, fapl, fcpl, writer, create_file) > 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(missing_tick_len_str, fapl, fcpl, writer, create_file) >= 0 ) {
+       TEST_ERROR;
+    } 
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "missing required parameter: tick_len",
+                                              verbose) )
+    {
         TEST_ERROR;
+    }
+#endif
 
-    /* Expected to fail because of missing maintain_metadata_file parameter */
-    if ( H5F_load_vfd_swmr_config_from_string(missing_maintain_md_file_str, fapl, fcpl, writer, create_file) > 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(missing_max_lag_str, fapl, fcpl, writer, create_file) >= 0 ) {
+       TEST_ERROR;
+    } 
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "missing required parameter: max_lag",
+                                              verbose) )
+    {
         TEST_ERROR;
-    
-    /* Expected to fail because of missing generate_updater_file parameter */
-    if ( H5F_load_vfd_swmr_config_from_string(missing_gen_updater_files_str, fapl, fcpl, writer, create_file) > 0 )
-        TEST_ERROR;
-    
-    /* Expected to fail because of missing md_pages_reserved parameter */
-    if ( H5F_load_vfd_swmr_config_from_string(missing_md_pages_reserved_str, fapl, fcpl, writer, create_file) > 0 )
-        TEST_ERROR;
-    
-    /* Expected to fail because of missing page_buf_size parameter */
-    if ( H5F_load_vfd_swmr_config_from_string(missing_page_buf_size_str, fapl, fcpl, writer, create_file) > 0 )
-        TEST_ERROR;
-    
-    /* Expected to fail because of missing metadata_pages_only parameter */
-    if ( H5F_load_vfd_swmr_config_from_string(missing_md_pages_only_str, fapl, fcpl, writer, create_file) > 0 )
-        TEST_ERROR;
+    }
+#endif
 
-    /* Expected to fail because of missing persist parameter */
-    if ( H5F_load_vfd_swmr_config_from_string(missing_persist_str, fapl, fcpl, writer, create_file) > 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(missing_maintain_md_file_str, fapl, fcpl, writer, create_file) >= 0 ) {
+       TEST_ERROR;
+    } 
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "missing required parameter: maintain_metadata_file",
+                                              verbose) )
+    {
         TEST_ERROR;
+    }
+#endif
+    
+    if ( H5F_load_vfd_swmr_config_from_string(missing_gen_updater_files_str, fapl, fcpl, writer, create_file) >= 0 ) {
+       TEST_ERROR;
+    } 
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "missing required parameter: generate_updater_file",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+    
+    if ( H5F_load_vfd_swmr_config_from_string(missing_md_pages_reserved_str, fapl, fcpl, writer, create_file) >= 0 ) {
+       TEST_ERROR;
+    } 
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "missing required parameter: md_pages_reserved",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+    
+    if ( H5F_load_vfd_swmr_config_from_string(missing_page_buf_size_str, fapl, fcpl, writer, create_file) >= 0 ) {
+       TEST_ERROR;
+    } 
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "missing required parameter: page_buf_size",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+    
+    if ( H5F_load_vfd_swmr_config_from_string(missing_md_pages_only_str, fapl, fcpl, writer, create_file) >= 0 ) {
+       TEST_ERROR;
+    } 
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "missing required parameter: metadata_pages_only",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
 
-    /* Expected to fail because of missing page_size parameter */
-    if ( H5F_load_vfd_swmr_config_from_string(missing_page_size_str, fapl, fcpl, writer, create_file) > 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(missing_persist_str, fapl, fcpl, writer, create_file) >= 0 ) {
+       TEST_ERROR;
+    } 
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "missing required parameter: persist",
+                                              verbose) )
+    {
         TEST_ERROR;
+    }
+#endif
+
+    if ( H5F_load_vfd_swmr_config_from_string(missing_page_size_str, fapl, fcpl, writer, create_file) >= 0 ) {
+       TEST_ERROR;
+    } 
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "missing required parameter: page_size",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
 
 
     /* Close property lists */
@@ -5676,6 +5813,8 @@ error:
  *
  * Verify that the VFD SWMR property list setup function detects and reports 
  * errors as expected.
+ * Specifically, test that H5F_load_vfd_swmr_config_from_string() errors when
+ * configs contain duplicate parameters.
  *
  *                                              Cody S. -- 4/30/26
  *
@@ -5763,10 +5902,11 @@ vfd_swmr_load_string_config_err_check_4(void)
         "    )"
         "  )"
         ")";
-    hid_t                  fapl        = H5I_INVALID_HID;
-    hid_t                  fcpl        = H5I_INVALID_HID;
-    hbool_t                writer      = true;
-    hbool_t                create_file = true;
+    hid_t   fapl        = H5I_INVALID_HID;
+    hid_t   fcpl        = H5I_INVALID_HID;
+    hbool_t writer      = true;
+    hbool_t create_file = true;
+    bool    verbose     = true;
 
     TESTING("H5F_load_vfd_swmr_config_from_string() err detect 4");
 
@@ -5776,13 +5916,29 @@ vfd_swmr_load_string_config_err_check_4(void)
     if ( (fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0 )
         TEST_ERROR;
 
-    /* Expected to fail because of duplicate parameters in H5F_vfd_swmr_config config */
-    if ( H5F_load_vfd_swmr_config_from_string(duplicate_H5F_vfd_swmr_config_str, fapl, fcpl, writer, create_file) > 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(duplicate_H5F_vfd_swmr_config_str, fapl, fcpl, writer, create_file) >= 0 ) {
+       TEST_ERROR;
+    } 
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "duplicate parameter: tick_len",
+                                              verbose) )
+    {
         TEST_ERROR;
+    }
+#endif
 
-    /* Expected to fail because of duplicate parameters in page_buffer_config config */
-    if ( H5F_load_vfd_swmr_config_from_string(duplicate_page_buffer_config_str, fapl, fcpl, writer, create_file) > 0 )
+    if ( H5F_load_vfd_swmr_config_from_string(duplicate_page_buffer_config_str, fapl, fcpl, writer, create_file) >= 0 ) {
+       TEST_ERROR;
+    } 
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "duplicate parameter: page_buf_size",
+                                              verbose) )
+    {
         TEST_ERROR;
+    }
+#endif
 
     /* Cannot test for duplicate parameters in file_space related configs, since both configurations
      * are limited to only allow 1 parameter */
@@ -5809,10 +5965,1171 @@ error:
 
 /*******************************************************************************
  *
+ * vfd_swmr_load_string_config_err_check_5()
+ *
+ * Verify that the VFD SWMR property list setup function detects and reports 
+ * errors as expected.
+ * Specifically, test that H5F_load_vfd_swmr_config_from_string() errors when
+ * unique parameter range checks are violated.
+ *
+ *                                              Cody S. -- 5/14/26
+ *
+ * Changes:
+ *
+ *    None.
+ *
+ *******************************************************************************/
+static herr_t 
+vfd_swmr_load_string_config_err_check_5(void)
+{
+    /* string to test lower int32_t bound in H5F__set_vfd_swmr_config() */
+    const char * invalid_config_str_1 = 
+        "( vfd_swmr_config_data "
+        "  ("
+        "    ( H5F_vfd_swmr_config"
+        "      ("
+        "        ( version -2147483649 )" /* value < INT32_MIN to exercise range check */
+        "        ( tick_len 4 )" 
+        "        ( max_lag 7 )"
+        "        ( presume_posix_semantics 1 )"
+        "        ( maintain_metadata_file 1 )"
+        "        ( generate_updater_files 0 )"
+        "        ( flush_raw_data 1 )"
+        "        ( md_pages_reserved 128 )"
+        "        ( md_file_path \"/a/path/\" )"
+        "        ( md_file_name \"md_file\" )"
+        "        ( updater_file_path \"\" )"
+        "        ( log_file_path \"\" )"
+        "        ( pb_expansion_threshold 0 ) "
+        "      )"
+        "    )"
+        "    ( page_buffer_config "
+        "      ("
+        "        ( page_buf_size 409600 )"
+        "        ( metadata_pages_only 1 )"
+        "      )"
+        "    )"
+        "    ( file_space_strategy_config "
+        "      ("
+        "        ( persist 0 )"
+        "      )"
+        "    )"
+        "    ( file_space_page_size "
+        "      ("
+        "        ( page_size 4096 )"
+        "      )"
+        "    )"
+        "  )"
+        ")";
+    /* string to test upper int32_t bound in H5F__set_vfd_swmr_config() */
+    const char * invalid_config_str_2 = 
+        "( vfd_swmr_config_data "
+        "  ("
+        "    ( H5F_vfd_swmr_config"
+        "      ("
+        "        ( version 2147483649 )" /* value > INT32_MAX to exercise range check */
+        "        ( tick_len 4 )" 
+        "        ( max_lag 7 )"
+        "        ( presume_posix_semantics 1 )"
+        "        ( maintain_metadata_file 1 )"
+        "        ( generate_updater_files 0 )"
+        "        ( flush_raw_data 1 )"
+        "        ( md_pages_reserved 128 )"
+        "        ( md_file_path \"/a/path/\" )"
+        "        ( md_file_name \"md_file\" )"
+        "        ( updater_file_path \"\" )"
+        "        ( log_file_path \"\" )"
+        "        ( pb_expansion_threshold 0 ) "
+        "      )"
+        "    )"
+        "    ( page_buffer_config "
+        "      ("
+        "        ( page_buf_size 409600 )"
+        "        ( metadata_pages_only 1 )"
+        "      )"
+        "    )"
+        "    ( file_space_strategy_config "
+        "      ("
+        "        ( persist 0 )"
+        "      )"
+        "    )"
+        "    ( file_space_page_size "
+        "      ("
+        "        ( page_size 4096 )"
+        "      )"
+        "    )"
+        "  )"
+        ")";
+    /* string to test lower uint32_t bound in H5F__set_vfd_swmr_config() */
+    const char * invalid_config_str_3 = 
+        "( vfd_swmr_config_data "
+        "  ("
+        "    ( H5F_vfd_swmr_config"
+        "      ("
+        "        ( version 1 )"
+        "        ( tick_len -4 )" /* invalid negative value to exercise range check */
+        "        ( max_lag 7 )"
+        "        ( presume_posix_semantics 1 )"
+        "        ( maintain_metadata_file 1 )"
+        "        ( generate_updater_files 0 )"
+        "        ( flush_raw_data 1 )"
+        "        ( md_pages_reserved 128 )"
+        "        ( md_file_path \"/a/path/\" )"
+        "        ( md_file_name \"md_file\" )"
+        "        ( updater_file_path \"\" )"
+        "        ( log_file_path \"\" )"
+        "        ( pb_expansion_threshold 0 ) "
+        "      )"
+        "    )"
+        "    ( page_buffer_config "
+        "      ("
+        "        ( page_buf_size 409600 )"
+        "        ( metadata_pages_only 1 )"
+        "      )"
+        "    )"
+        "    ( file_space_strategy_config "
+        "      ("
+        "        ( persist 0 )"
+        "      )"
+        "    )"
+        "    ( file_space_page_size "
+        "      ("
+        "        ( page_size 4096 )"
+        "      )"
+        "    )"
+        "  )"
+        ")";
+    /* string to test upper uint32_t bound in H5F__set_vfd_swmr_config() */
+    const char * invalid_config_str_4 = 
+        "( vfd_swmr_config_data "
+        "  ("
+        "    ( H5F_vfd_swmr_config"
+        "      ("
+        "        ( version 1 )"
+        "        ( tick_len 4294967296 )" /* value > UINT32_MAX to exercise range check */
+        "        ( max_lag 7 )"
+        "        ( presume_posix_semantics 1 )"
+        "        ( maintain_metadata_file 1 )"
+        "        ( generate_updater_files 0 )"
+        "        ( flush_raw_data 1 )"
+        "        ( md_pages_reserved 128 )"
+        "        ( md_file_path \"/a/path/\" )"
+        "        ( md_file_name \"md_file\" )"
+        "        ( updater_file_path \"\" )"
+        "        ( log_file_path \"\" )"
+        "        ( pb_expansion_threshold 0 ) "
+        "      )"
+        "    )"
+        "    ( page_buffer_config "
+        "      ("
+        "        ( page_buf_size 409600 )"
+        "        ( metadata_pages_only 1 )"
+        "      )"
+        "    )"
+        "    ( file_space_strategy_config "
+        "      ("
+        "        ( persist 0 )"
+        "      )"
+        "    )"
+        "    ( file_space_page_size "
+        "      ("
+        "        ( page_size 4096 )"
+        "      )"
+        "    )"
+        "  )"
+        ")";
+    /* string to test below 0 for boolean field in H5F__set_vfd_swmr_config() */
+    const char * invalid_config_str_5 = 
+        "( vfd_swmr_config_data "
+        "  ("
+        "    ( H5F_vfd_swmr_config"
+        "      ("
+        "        ( version 1 )"
+        "        ( tick_len 4 )"
+        "        ( max_lag 7 )"
+        "        ( presume_posix_semantics -1 )" /* invalid boolean value to exercise range check */
+        "        ( maintain_metadata_file 1 )"
+        "        ( generate_updater_files 0 )"
+        "        ( flush_raw_data 1 )"
+        "        ( md_pages_reserved 128 )"
+        "        ( md_file_path \"/a/path/\" )"
+        "        ( md_file_name \"md_file\" )"
+        "        ( updater_file_path \"\" )"
+        "        ( log_file_path \"\" )"
+        "        ( pb_expansion_threshold 0 ) "
+        "      )"
+        "    )"
+        "    ( page_buffer_config "
+        "      ("
+        "        ( page_buf_size 409600 )"
+        "        ( metadata_pages_only 1 )"
+        "      )"
+        "    )"
+        "    ( file_space_strategy_config "
+        "      ("
+        "        ( persist 0 )"
+        "      )"
+        "    )"
+        "    ( file_space_page_size "
+        "      ("
+        "        ( page_size 4096 )"
+        "      )"
+        "    )"
+        "  )"
+        ")";
+    /* string to test above 1 for boolean field in H5F__set_vfd_swmr_config() */
+    const char * invalid_config_str_6 = 
+        "( vfd_swmr_config_data "
+        "  ("
+        "    ( H5F_vfd_swmr_config"
+        "      ("
+        "        ( version 1 )"
+        "        ( tick_len 4 )"
+        "        ( max_lag 7 )"
+        "        ( presume_posix_semantics 2 )" /* invalid boolean value to exercise range check */
+        "        ( maintain_metadata_file 1 )"
+        "        ( generate_updater_files 0 )"
+        "        ( flush_raw_data 1 )"
+        "        ( md_pages_reserved 128 )"
+        "        ( md_file_path \"/a/path/\" )"
+        "        ( md_file_name \"md_file\" )"
+        "        ( updater_file_path \"\" )"
+        "        ( log_file_path \"\" )"
+        "        ( pb_expansion_threshold 0 ) "
+        "      )"
+        "    )"
+        "    ( page_buffer_config "
+        "      ("
+        "        ( page_buf_size 409600 )"
+        "        ( metadata_pages_only 1 )"
+        "      )"
+        "    )"
+        "    ( file_space_strategy_config "
+        "      ("
+        "        ( persist 0 )"
+        "      )"
+        "    )"
+        "    ( file_space_page_size "
+        "      ("
+        "        ( page_size 4096 )"
+        "      )"
+        "    )"
+        "  )"
+        ")";
+    /* string to test below 0 for size_t field in H5F__set_vfd_swmr_page_buffer_config() */
+    const char * invalid_config_str_7 = 
+        "( vfd_swmr_config_data "
+        "  ("
+        "    ( H5F_vfd_swmr_config"
+        "      ("
+        "        ( version 1 )"
+        "        ( tick_len 4 )"
+        "        ( max_lag 7 )"
+        "        ( presume_posix_semantics 1 )"
+        "        ( maintain_metadata_file 1 )"
+        "        ( generate_updater_files 0 )"
+        "        ( flush_raw_data 1 )"
+        "        ( md_pages_reserved 128 )"
+        "        ( md_file_path \"/a/path/\" )"
+        "        ( md_file_name \"md_file\" )"
+        "        ( updater_file_path \"\" )"
+        "        ( log_file_path \"\" )"
+        "        ( pb_expansion_threshold 0 ) "
+        "      )"
+        "    )"
+        "    ( page_buffer_config "
+        "      ("
+        "        ( page_buf_size -1 )"  /* value less than 0 to exercise range check */
+        "        ( metadata_pages_only 1 )"
+        "      )"
+        "    )"
+        "    ( file_space_strategy_config "
+        "      ("
+        "        ( persist 0 )"
+        "      )"
+        "    )"
+        "    ( file_space_page_size "
+        "      ("
+        "        ( page_size 4096 )"
+        "      )"
+        "    )"
+        "  )"
+        ")";
+    /* string to test below 0 for boolean field in H5F__set_vfd_swmr_page_buffer_config() */
+    const char * invalid_config_str_8 = 
+        "( vfd_swmr_config_data "
+        "  ("
+        "    ( H5F_vfd_swmr_config"
+        "      ("
+        "        ( version 1 )"
+        "        ( tick_len 4 )"
+        "        ( max_lag 7 )"
+        "        ( presume_posix_semantics 1 )"
+        "        ( maintain_metadata_file 1 )"
+        "        ( generate_updater_files 0 )"
+        "        ( flush_raw_data 1 )"
+        "        ( md_pages_reserved 128 )"
+        "        ( md_file_path \"/a/path/\" )"
+        "        ( md_file_name \"md_file\" )"
+        "        ( updater_file_path \"\" )"
+        "        ( log_file_path \"\" )"
+        "        ( pb_expansion_threshold 0 ) "
+        "      )"
+        "    )"
+        "    ( page_buffer_config "
+        "      ("
+        "        ( page_buf_size 409600 )"
+        "        ( metadata_pages_only -1 )" /* invalid boolean value to exercise range check */
+        "      )"
+        "    )"
+        "    ( file_space_strategy_config "
+        "      ("
+        "        ( persist 0 )"
+        "      )"
+        "    )"
+        "    ( file_space_page_size "
+        "      ("
+        "        ( page_size 4096 )"
+        "      )"
+        "    )"
+        "  )"
+        ")";
+    /* string to test above 1 for boolean field in H5F__set_vfd_swmr_page_buffer_config() */
+    const char * invalid_config_str_9 = 
+        "( vfd_swmr_config_data "
+        "  ("
+        "    ( H5F_vfd_swmr_config"
+        "      ("
+        "        ( version 1 )"
+        "        ( tick_len 4 )"
+        "        ( max_lag 7 )"
+        "        ( presume_posix_semantics 1 )"
+        "        ( maintain_metadata_file 1 )"
+        "        ( generate_updater_files 0 )"
+        "        ( flush_raw_data 1 )"
+        "        ( md_pages_reserved 128 )"
+        "        ( md_file_path \"/a/path/\" )"
+        "        ( md_file_name \"md_file\" )"
+        "        ( updater_file_path \"\" )"
+        "        ( log_file_path \"\" )"
+        "        ( pb_expansion_threshold 0 ) "
+        "      )"
+        "    )"
+        "    ( page_buffer_config "
+        "      ("
+        "        ( page_buf_size 409600 )"
+        "        ( metadata_pages_only 2 )" /* invalid boolean value to exercise range check */
+        "      )"
+        "    )"
+        "    ( file_space_strategy_config "
+        "      ("
+        "        ( persist 0 )"
+        "      )"
+        "    )"
+        "    ( file_space_page_size "
+        "      ("
+        "        ( page_size 4096 )"
+        "      )"
+        "    )"
+        "  )"
+        ")";
+    /* string to test below 0 for boolean field in H5F__set_vfd_swmr_fs_strategy_config() */
+    const char * invalid_config_str_10 = 
+        "( vfd_swmr_config_data "
+        "  ("
+        "    ( H5F_vfd_swmr_config"
+        "      ("
+        "        ( version 1 )"
+        "        ( tick_len 4 )"
+        "        ( max_lag 7 )"
+        "        ( presume_posix_semantics 1 )"
+        "        ( maintain_metadata_file 1 )"
+        "        ( generate_updater_files 0 )"
+        "        ( flush_raw_data 1 )"
+        "        ( md_pages_reserved 128 )"
+        "        ( md_file_path \"/a/path/\" )"
+        "        ( md_file_name \"md_file\" )"
+        "        ( updater_file_path \"\" )"
+        "        ( log_file_path \"\" )"
+        "        ( pb_expansion_threshold 0 ) "
+        "      )"
+        "    )"
+        "    ( page_buffer_config "
+        "      ("
+        "        ( page_buf_size 409600 )"
+        "        ( metadata_pages_only 1 )"
+        "      )"
+        "    )"
+        "    ( file_space_strategy_config "
+        "      ("
+        "        ( persist -1 )" /* invalid boolean value to exercise range check */
+        "      )"
+        "    )"
+        "    ( file_space_page_size "
+        "      ("
+        "        ( page_size 4096 )"
+        "      )"
+        "    )"
+        "  )"
+        ")";
+    /* string to test above 1 for boolean field in H5F__set_vfd_swmr_fs_strategy_config() */
+    const char * invalid_config_str_11 = 
+        "( vfd_swmr_config_data "
+        "  ("
+        "    ( H5F_vfd_swmr_config"
+        "      ("
+        "        ( version 1 )"
+        "        ( tick_len 4 )"
+        "        ( max_lag 7 )"
+        "        ( presume_posix_semantics 1 )" 
+        "        ( maintain_metadata_file 1 )"
+        "        ( generate_updater_files 0 )"
+        "        ( flush_raw_data 1 )"
+        "        ( md_pages_reserved 128 )"
+        "        ( md_file_path \"/a/path/\" )"
+        "        ( md_file_name \"md_file\" )"
+        "        ( updater_file_path \"\" )"
+        "        ( log_file_path \"\" )"
+        "        ( pb_expansion_threshold 0 ) "
+        "      )"
+        "    )"
+        "    ( page_buffer_config "
+        "      ("
+        "        ( page_buf_size 409600 )"
+        "        ( metadata_pages_only 1 )"
+        "      )"
+        "    )"
+        "    ( file_space_strategy_config "
+        "      ("
+        "        ( persist 2 )" /* invalid boolean value to exercise range check */
+        "      )"
+        "    )"
+        "    ( file_space_page_size "
+        "      ("
+        "        ( page_size 4096 )"
+        "      )"
+        "    )"
+        "  )"
+        ")";
+    /* string to test below 512 for page_size field in H5F__set_vfd_swmr_fs_page_size_config() */
+    const char * invalid_config_str_12 = 
+        "( vfd_swmr_config_data "
+        "  ("
+        "    ( H5F_vfd_swmr_config"
+        "      ("
+        "        ( version 1 )"
+        "        ( tick_len 4 )"
+        "        ( max_lag 7 )"
+        "        ( presume_posix_semantics 1 )"
+        "        ( maintain_metadata_file 1 )"
+        "        ( generate_updater_files 0 )"
+        "        ( flush_raw_data 1 )"
+        "        ( md_pages_reserved 128 )"
+        "        ( md_file_path \"/a/path/\" )"
+        "        ( md_file_name \"md_file\" )"
+        "        ( updater_file_path \"\" )"
+        "        ( log_file_path \"\" )"
+        "        ( pb_expansion_threshold 0 ) "
+        "      )"
+        "    )"
+        "    ( page_buffer_config "
+        "      ("
+        "        ( page_buf_size 409600 )"
+        "        ( metadata_pages_only 1 )"
+        "      )"
+        "    )"
+        "    ( file_space_strategy_config "
+        "      ("
+        "        ( persist 0 )"
+        "      )"
+        "    )"
+        "    ( file_space_page_size "
+        "      ("
+        "        ( page_size 511 )" /* page_size value < 512 (minimum value) to exercise range check */
+        "      )"
+        "    )"
+        "  )"
+        ")";
+    /* string to test above 1073741824 for page_size field in H5F__set_vfd_swmr_fs_page_size_config() */
+    const char * invalid_config_str_13 = 
+        "( vfd_swmr_config_data "
+        "  ("
+        "    ( H5F_vfd_swmr_config"
+        "      ("
+        "        ( version 1 )"
+        "        ( tick_len 4 )"
+        "        ( max_lag 7 )"
+        "        ( presume_posix_semantics 1 )"
+        "        ( maintain_metadata_file 1 )"
+        "        ( generate_updater_files 0 )"
+        "        ( flush_raw_data 1 )"
+        "        ( md_pages_reserved 128 )"
+        "        ( md_file_path \"/a/path/\" )"
+        "        ( md_file_name \"md_file\" )"
+        "        ( updater_file_path \"\" )"
+        "        ( log_file_path \"\" )"
+        "        ( pb_expansion_threshold 0 ) "
+        "      )"
+        "    )"
+        "    ( page_buffer_config "
+        "      ("
+        "        ( page_buf_size 409600 )"
+        "        ( metadata_pages_only 1 )"
+        "      )"
+        "    )"
+        "    ( file_space_strategy_config "
+        "      ("
+        "        ( persist 0 )"
+        "      )"
+        "    )"
+        "    ( file_space_page_size "
+        "      ("
+        "        ( page_size 1073741825 )" /* page_size value > 1073741824 (maximum value) */
+        "      )"
+        "    )"
+        "  )"
+        ")";
+    hid_t   fapl        = H5I_INVALID_HID;
+    hid_t   fcpl        = H5I_INVALID_HID;
+    hbool_t writer      = true;
+    hbool_t create_file = true;
+    bool    verbose     = true;
+
+    TESTING("H5F_load_vfd_swmr_config_from_string() err detect 5");
+
+    /* Initialize property lists */
+    if ( (fapl = h5_fileaccess()) < 0 )
+        TEST_ERROR;
+    if ( (fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0 )
+        TEST_ERROR;
+
+    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_1, 
+                                              fapl, fcpl, writer, 
+                                              create_file) >= 0 )
+    {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "version value out of range",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+
+    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_2,
+                                              fapl, fcpl, writer, 
+                                              create_file) >= 0 )
+    {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "version value out of range",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+
+    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_3, 
+                                              fapl, fcpl, writer, 
+                                              create_file) >= 0 )
+    {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "tick_len value out of range",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+
+    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_4, 
+                                              fapl, fcpl, writer, 
+                                              create_file) >= 0 )
+    {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "tick_len value out of range",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+
+    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_5, 
+                                              fapl, fcpl, writer, 
+                                              create_file) >= 0 )
+    {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "presume_posix_semantics must have value of either 0 or 1",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+
+    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_6, 
+                                              fapl, fcpl, writer, 
+                                              create_file) >= 0 )
+    {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "presume_posix_semantics must have value of either 0 or 1",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+
+    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_7, 
+                                              fapl, fcpl, writer, 
+                                              create_file) >= 0 )
+    {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "page_buf_size value out of range",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+
+    /* Cannot test upper bound of page_buf_size because most on modern systems, 
+     * SIZE_MAX is greater than INT64_MAX (used by config parser int_val) */
+    
+
+    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_8, 
+                                              fapl, fcpl, writer, 
+                                              create_file) >= 0 )
+    {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "metadata_pages_only must have value of either 0 or 1",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+
+    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_9, 
+                                              fapl, fcpl, writer, 
+                                              create_file) >= 0 )
+    {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "metadata_pages_only must have value of either 0 or 1",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+
+    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_10, 
+                                              fapl, fcpl, writer, 
+                                              create_file) >= 0 )
+    {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "persist must have value of either 0 or 1",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+
+    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_11, 
+                                              fapl, fcpl, writer, 
+                                              create_file) >= 0 )
+    {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "persist must have value of either 0 or 1",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+
+    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_12, 
+                                              fapl, fcpl, writer, 
+                                              create_file) >= 0 )
+    {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "cannot set file space page size to less than 512",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+
+    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_13, 
+                                              fapl, fcpl, writer, 
+                                              create_file) >= 0 )
+    {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "cannot set file space page size to more than 1GB",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+
+    /* Close property lists */
+    if ( H5Pclose(fapl) < 0 )
+        TEST_ERROR;
+    if ( H5Pclose(fcpl) < 0 )
+        TEST_ERROR;
+    
+    PASSED();
+
+    return 0;
+
+error:
+
+    /* Close property lists (ignore errors) */
+    H5Pclose(fapl);
+    H5Pclose(fcpl);
+
+    return -1;
+} /* vfd_swmr_load_string_config_err_check_5() */
+
+
+/*******************************************************************************
+ *
+ * vfd_swmr_load_string_config_err_check_6()
+ *
+ * Verify that the VFD SWMR property list setup function detects and reports 
+ * errors as expected.
+ * Specifically, test that H5F_load_vfd_swmr_config_from_string() errors when
+ * strings that are too large are used.
+ *
+ *                                              Cody S. -- 5/14/26
+ *
+ * Changes:
+ *
+ *    None.
+ *
+ *******************************************************************************/
+static herr_t 
+vfd_swmr_load_string_config_err_check_6(void)
+{
+    /* Create config string with an nv_pair string value greater than allowed */
+    char config_str[2048];
+    char long_path[1026];
+
+    memset(long_path, 'A', 1025);
+    long_path[1025] = '\0';
+    
+    snprintf(config_str, sizeof(config_str),
+        "( vfd_swmr_config_data "
+        "  ("
+        "    ( H5F_vfd_swmr_config"
+        "      ("
+        "        ( version 1 )"
+        "        ( tick_len 4 )" 
+        "        ( max_lag 7 )"
+        "        ( presume_posix_semantics 1 )"
+        "        ( maintain_metadata_file 1 )"
+        "        ( generate_updater_files 0 )"
+        "        ( flush_raw_data 1 )"
+        "        ( md_pages_reserved 128 )"
+        "        ( md_file_path \"%s\" )" /* use string format specifier to add a long string value */
+        "        ( md_file_name \"md_file\" )"
+        "        ( updater_file_path \"\" )"
+        "        ( log_file_path \"\" )"
+        "        ( pb_expansion_threshold 0 ) "
+        "      )"
+        "    )"
+        "    ( page_buffer_config "
+        "      ("
+        "        ( page_buf_size 409600 )"
+        "        ( metadata_pages_only 1 )"
+        "      )"
+        "    )"
+        "    ( file_space_strategy_config "
+        "      ("
+        "        ( persist 0 )"
+        "      )"
+        "    )"
+        "    ( file_space_page_size "
+        "      ("
+        "        ( page_size 4096 )"
+        "      )"
+        "    )"
+        "  )"
+        ")",
+        long_path);
+    hid_t   fapl        = H5I_INVALID_HID;
+    hid_t   fcpl        = H5I_INVALID_HID;
+    hbool_t writer      = true;
+    hbool_t create_file = true;
+    bool    verbose     = true;
+
+    TESTING("H5F_load_vfd_swmr_config_from_string() err detect 6");
+
+    /* Initialize property lists */
+    if ( (fapl = h5_fileaccess()) < 0 )
+        TEST_ERROR;
+    if ( (fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0 )
+        TEST_ERROR;
+
+    if ( H5F_load_vfd_swmr_config_from_string(config_str, 
+                                              fapl, fcpl, writer, 
+                                              create_file) >= 0 )
+    {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+                                              "string data for md_file_path is too large.",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+
+    /* Close property lists */
+    if ( H5Pclose(fapl) < 0 )
+        TEST_ERROR;
+    if ( H5Pclose(fcpl) < 0 )
+        TEST_ERROR;
+    
+    PASSED();
+
+    return 0;
+
+error:
+
+    /* Close property lists (ignore errors) */
+    H5Pclose(fapl);
+    H5Pclose(fcpl);
+
+    return -1;
+} /* vfd_swmr_load_string_config_err_check_6() */
+
+
+/*******************************************************************************
+ *
+ * vfd_swmr_config_check_err_check_1()
+ *
+ * Test that H5P_check_vfd_swmr_config() errors when H5F_vfd_swmr_config_t 
+ * contains invalid values.
+ *
+ *                                              Cody S. -- 5/14/26
+ *
+ * Changes:
+ *
+ *    None.
+ *
+ *******************************************************************************/
+static herr_t 
+vfd_swmr_config_check_err_check_1(void)
+{
+    /* Invalid version number */
+    H5F_vfd_swmr_config_t invalid_config_1 =
+    {
+        /* version                 = */ -1,
+        /* tick_len                = */ 4,
+        /* max_lag                 = */ 7,
+        /* presume_posix_semantics = */ true,
+        /* writer                  = */ true,
+        /* maintain_metadata_file  = */ true,
+        /* generate_updater_files  = */ false,
+        /* flush_raw_data          = */ true,
+        /* md_pages_reserved       = */ 128,
+        /* pb_expansion_threshold  = */ 0,
+        /* md_file_path            = */ "./md_dir/",
+        /* md_file_name            = */ "md_file",
+        /* updater_file_path       = */ "",
+        /* log_file_path           = */ ""
+    };
+
+    /* max_lag less than 3 */
+    H5F_vfd_swmr_config_t invalid_config_2 =
+    {
+        /* version                 = */ H5F__CURR_VFD_SWMR_CONFIG_VERSION,
+        /* tick_len                = */ 4,
+        /* max_lag                 = */ 2,
+        /* presume_posix_semantics = */ true,
+        /* writer                  = */ true,
+        /* maintain_metadata_file  = */ true,
+        /* generate_updater_files  = */ false,
+        /* flush_raw_data          = */ true,
+        /* md_pages_reserved       = */ 128,
+        /* pb_expansion_threshold  = */ 0,
+        /* md_file_path            = */ "./md_dir/",
+        /* md_file_name            = */ "md_file",
+        /* updater_file_path       = */ "",
+        /* log_file_path           = */ ""
+    };
+
+    /* md_pages_reserved less than 2 */
+    H5F_vfd_swmr_config_t invalid_config_3 =
+    {
+        /* version                 = */ H5F__CURR_VFD_SWMR_CONFIG_VERSION,
+        /* tick_len                = */ 4,
+        /* max_lag                 = */ 7,
+        /* presume_posix_semantics = */ true,
+        /* writer                  = */ true,
+        /* maintain_metadata_file  = */ true,
+        /* generate_updater_files  = */ false,
+        /* flush_raw_data          = */ true,
+        /* md_pages_reserved       = */ 1, 
+        /* pb_expansion_threshold  = */ 0,
+        /* md_file_path            = */ "./md_dir/",
+        /* md_file_name            = */ "md_file",
+        /* updater_file_path       = */ "",
+        /* log_file_path           = */ ""
+    };
+
+    /* pb_expansion_threshold greater than 100 (must be in range [0,100]) */
+    H5F_vfd_swmr_config_t invalid_config_4 =
+    {
+        /* version                 = */ H5F__CURR_VFD_SWMR_CONFIG_VERSION,
+        /* tick_len                = */ 4,
+        /* max_lag                 = */ 7,
+        /* presume_posix_semantics = */ true,
+        /* writer                  = */ true,
+        /* maintain_metadata_file  = */ true,
+        /* generate_updater_files  = */ false,
+        /* flush_raw_data          = */ true,
+        /* md_pages_reserved       = */ 128,
+        /* pb_expansion_threshold  = */ 101,
+        /* md_file_path            = */ "./md_dir/",
+        /* md_file_name            = */ "md_file",
+        /* updater_file_path       = */ "",
+        /* log_file_path           = */ ""
+    };
+
+    /* Both maintain_metadata_file and generate_updater_files set to false even 
+     * though writer == true */
+    H5F_vfd_swmr_config_t invalid_config_5 =
+    {
+        /* version                 = */ H5F__CURR_VFD_SWMR_CONFIG_VERSION,
+        /* tick_len                = */ 4,
+        /* max_lag                 = */ 7,
+        /* presume_posix_semantics = */ true,
+        /* writer                  = */ true,
+        /* maintain_metadata_file  = */ false,
+        /* generate_updater_files  = */ false,
+        /* flush_raw_data          = */ true,
+        /* md_pages_reserved       = */ 128,
+        /* pb_expansion_threshold  = */ 0,
+        /* md_file_path            = */ "./md_dir/",
+        /* md_file_name            = */ "md_file",
+        /* updater_file_path       = */ "",
+        /* log_file_path           = */ ""
+    };
+
+    /* updater_file_path empty while generate_updater_files == true */
+    H5F_vfd_swmr_config_t invalid_config_6 =
+    {
+        /* version                 = */ H5F__CURR_VFD_SWMR_CONFIG_VERSION,
+        /* tick_len                = */ 4,
+        /* max_lag                 = */ 7,
+        /* presume_posix_semantics = */ true,
+        /* writer                  = */ true,
+        /* maintain_metadata_file  = */ true,
+        /* generate_updater_files  = */ true,
+        /* flush_raw_data          = */ true,
+        /* md_pages_reserved       = */ 128,
+        /* pb_expansion_threshold  = */ 0,
+        /* md_file_path            = */ "",
+        /* md_file_name            = */ "",
+        /* updater_file_path       = */ "",
+        /* log_file_path           = */ ""
+    };
+
+   
+    /* Test for oversized md_file_name + md_file_path strings */
+    char long_md_path[600];
+    char long_md_name[500];
+
+    /* Create oversized strings */
+    memset(long_md_path, 'A', sizeof(long_md_path) - 1);
+    long_md_path[sizeof(long_md_path) - 1] = '\0';
+
+    memset(long_md_name, 'B', sizeof(long_md_name) - 1);
+    long_md_name[sizeof(long_md_name) - 1] = '\0';
+
+    /* md_file_path + md_file_name combined length > 1024 */
+    H5F_vfd_swmr_config_t invalid_config_7 =
+    {
+        /* version                 = */ H5F__CURR_VFD_SWMR_CONFIG_VERSION,
+        /* tick_len                = */ 4,
+        /* max_lag                 = */ 7,
+        /* presume_posix_semantics = */ true,
+        /* writer                  = */ true,
+        /* maintain_metadata_file  = */ true,
+        /* generate_updater_files  = */ false,
+        /* flush_raw_data          = */ true,
+        /* md_pages_reserved       = */ 128,
+        /* pb_expansion_threshold  = */ 0,
+        /* md_file_path            = */ "",
+        /* md_file_name            = */ "",
+        /* updater_file_path       = */ "",
+        /* log_file_path           = */ ""
+    };
+    strcpy(invalid_config_7.md_file_path, long_md_path);
+    strcpy(invalid_config_7.md_file_name, long_md_name);
+
+    bool verbose = true;
+
+
+    TESTING("H5P_check_vfd_swmr_config() err detect 1");
+
+    if ( H5P_check_vfd_swmr_config(NULL) >= 0 )
+    {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, 
+                                              "NULL config_ptr on entry",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+
+    if ( H5P_check_vfd_swmr_config(&invalid_config_1) >= 0 )
+    {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, 
+                                              "Unknown config version",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+
+    if ( H5P_check_vfd_swmr_config(&invalid_config_2) >= 0 )
+    {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, 
+                                              "max_lag must be at least 3",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+
+    if ( H5P_check_vfd_swmr_config(&invalid_config_3) >= 0 )
+    {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, 
+                                              "md_pages_reserved must be at least 2",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+
+    if ( H5P_check_vfd_swmr_config(&invalid_config_4) >= 0 )
+    {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, 
+                                              "pb_expansion_threshold out of range",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+
+    if ( H5P_check_vfd_swmr_config(&invalid_config_5) >= 0 )
+    {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, 
+                                              "either maintain_metadata_file or generate_updater_files must be TRUE",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+
+    if ( H5P_check_vfd_swmr_config(&invalid_config_6) >= 0 )
+    {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, 
+                                              "updater_file_path is empty",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+
+    if ( H5P_check_vfd_swmr_config(&invalid_config_7) >= 0 )
+    {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED    
+    else if ( 0 != cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, 
+                                              "md_file_name + md_file_path is too long",
+                                              verbose) )
+    {
+        TEST_ERROR;
+    }
+#endif
+
+    /* Cannot test updater_file_path/log_file_path upper length bounds here,
+    * because the struct fields are fixed-size arrays that cap valid strlen().
+    */
+
+    PASSED();
+
+    return 0;
+
+error:
+
+    return -1;
+} /* vfd_swmr_config_check_err_check_1() */
+
+
+/*******************************************************************************
+ *
  * cl_load_string_from_file_smoke_check()
  *
  * Initial smoke check for the H5CL_load_config_string_from_file() function.  
- * Note that this test does not trigger any errors in that function
+ * Note that this test does not trigger any errors in that function.
  *
  *                                              Cody S. -- 5/10/26
  *
@@ -5908,6 +7225,8 @@ error:
  *
  * Verify that the function for loading config language strings from files 
  * detects and reports errors as expected. 
+ * Specifically, test that H5CL_load_config_string_from_file() errors when
+ * unsupported files/filenames are passed to it.
  *
  *                                              Cody S. -- 5/12/26
  *
@@ -5920,8 +7239,8 @@ static herr_t
 cl_load_string_from_file_err_check_1(void)
 {
     
-    char       *loaded_str      = NULL;
-    bool        verbose         = true;
+    char *loaded_str = NULL;
+    bool  verbose    = true;
 
     TESTING("H5CL_load_config_string_from_file err detect 1");
 
@@ -5999,9 +7318,10 @@ error:
  * cl_load_string_from_file_err_check_2()
  *
  * Verify that the function for loading config language strings from files 
- * detects and reports errors as expected. Uses a loop to go through all
- * testable errors.
- *
+ * detects and reports errors as expected. 
+ * Specifically, test that H5CL_load_config_string_from_file() errors when
+ * file contents are unsupported.
+ * 
  *                                              Cody S. -- 5/12/26
  *
  * Changes:
@@ -6038,9 +7358,9 @@ cl_load_string_from_file_err_check_2(void)
         }
     };
     
-    char       *loaded_str      = NULL;
-    bool        verbose         = true;
-    int         i;
+    char *loaded_str = NULL;
+    bool  verbose    = true;
+    int   i;
 
     TESTING("H5CL_load_config_string_from_file err detect 2");
 
@@ -6148,10 +7468,10 @@ vfd_swmr_load_file_config_smoke_check(void)
         ")";
 
     /* Parameters for config load function */           
-    hid_t       fapl        = H5I_INVALID_HID;
-    hid_t       fcpl        = H5I_INVALID_HID;
-    hbool_t     writer      = true;
-    hbool_t     create_file = true;
+    hid_t   fapl        = H5I_INVALID_HID;
+    hid_t   fcpl        = H5I_INVALID_HID;
+    hbool_t writer      = true;
+    hbool_t create_file = true;
 
     /* Output values for testing PL setup */
     H5F_fspace_strategy_t  strategy;
@@ -6332,12 +7652,15 @@ main(void)
     nerrors += cl_parse_config_group_err_check_5() < 0 ? 1 : 0;
     nerrors += cl_parse_config_group_err_check_6() < 0 ? 1 : 0;
     nerrors += cl_parse_config_group_err_check_7() < 0 ? 1 : 0;
-    nerrors += cl_load_string_from_file_smoke_check() < 0 ? 1 : 0;
     nerrors += vfd_swmr_load_string_config_smoke_check() < 0 ? 1 : 0;
     nerrors += vfd_swmr_load_string_config_err_check_1() < 0 ? 1 : 0;
     nerrors += vfd_swmr_load_string_config_err_check_2() < 0 ? 1 : 0;
     nerrors += vfd_swmr_load_string_config_err_check_3() < 0 ? 1 : 0;
     nerrors += vfd_swmr_load_string_config_err_check_4() < 0 ? 1 : 0;
+    nerrors += vfd_swmr_load_string_config_err_check_5() < 0 ? 1 : 0;
+    nerrors += vfd_swmr_load_string_config_err_check_6() < 0 ? 1 : 0;
+    nerrors += vfd_swmr_config_check_err_check_1() < 0 ? 1 : 0;
+    nerrors += cl_load_string_from_file_smoke_check() < 0 ? 1 : 0;
     nerrors += cl_load_string_from_file_err_check_1() < 0 ? 1 : 0;
     nerrors += cl_load_string_from_file_err_check_2() < 0 ? 1 : 0;
     nerrors += vfd_swmr_load_file_config_smoke_check() < 0 ? 1 : 0;

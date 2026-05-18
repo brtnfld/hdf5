@@ -1266,6 +1266,9 @@ H5Pset_file_space_strategy(hid_t plist_id, H5F_fspace_strategy_t strategy, hbool
     FUNC_ENTER_API(FAIL)
     H5TRACE4("e", "iFfbh", plist_id, strategy, persist, threshold);
 
+    /* Any addtional sanity checking may need to be replicated in H5F__load_vfd_swmr_fs_strategy_config() 
+     *              -- Cody S. 5/15/26 */
+
     /* Check arguments */
     if (strategy >= H5F_FSPACE_STRATEGY_NTYPES)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid strategy")
@@ -1427,6 +1430,9 @@ H5Pset_file_space_page_size(hid_t plist_id, hsize_t fsp_size)
     /* Get the plist structure */
     if (NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_CREATE)))
         HGOTO_ERROR(H5E_ID, H5E_BADID, FAIL, "can't find object for ID")
+
+    /* Any addtional sanity checking may need to be replicated in H5F__load_vfd_swmr_fs_page_size_config() 
+     *              -- Cody S. 5/15/26 */
 
     if (fsp_size < H5F_FILE_SPACE_PAGE_SIZE_MIN)
         HGOTO_ERROR(H5E_ID, H5E_BADID, FAIL, "cannot set file space page size to less than 512")

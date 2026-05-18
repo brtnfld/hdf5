@@ -6100,6 +6100,9 @@ H5Pset_page_buffer_size(hid_t plist_id, size_t buf_size, unsigned min_meta_perc,
     if (NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
         HGOTO_ERROR(H5E_ID, H5E_BADID, FAIL, "can't find object for ID")
 
+    /* Any addtional sanity checking may need to be replicated in H5F__load_vfd_swmr_page_buffer_config() 
+     *              -- Cody S. 5/15/26 */
+
     if (min_meta_perc > 100)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "Minimum metadata fractions must be between 0 and 100 inclusive")
@@ -6206,7 +6209,7 @@ done:
 } /* end H5P_set_vol() */
 
 /*-------------------------------------------------------------------------
- * Function:    H5Pcheck_vfd_swmr_config
+ * Function:    H5P_check_vfd_swmr_config
  *
  * Purpose:     Verify that the values of the H5F_vfd_swmr_config_t
  *              struct are valid.
@@ -6218,12 +6221,12 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Pcheck_vfd_swmr_config(H5F_vfd_swmr_config_t *config_ptr)
+H5P_check_vfd_swmr_config(H5F_vfd_swmr_config_t *config_ptr)
 {
     size_t          name_len;
     herr_t          ret_value = SUCCEED; /* return value */
 
-    FUNC_ENTER_API(FAIL)
+    FUNC_ENTER_NOAPI(FAIL)
 
     /* Check args */
     if (config_ptr == NULL)
@@ -6274,8 +6277,8 @@ H5Pcheck_vfd_swmr_config(H5F_vfd_swmr_config_t *config_ptr)
         HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "log_file_path is too long")
 
 done:
-    FUNC_LEAVE_API(ret_value)
-} /* end H5Pcheck_vfd_swmr_config() */
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5P_check_vfd_swmr_config() */
 
 /*-------------------------------------------------------------------------
  * Function:    H5Pset_vfd_swmr_config
@@ -6308,7 +6311,7 @@ H5Pset_vfd_swmr_config(hid_t plist_id, H5F_vfd_swmr_config_t *config_ptr)
         HGOTO_ERROR(H5E_ID, H5E_BADID, FAIL, "can't find object for ID")
 
     /* Validate the input configuration */
-    if (H5Pcheck_vfd_swmr_config(config_ptr) < 0) 
+    if (H5P_check_vfd_swmr_config(config_ptr) < 0) 
         HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "configuration contains invalid values")
 
     /* Set the modified config */
