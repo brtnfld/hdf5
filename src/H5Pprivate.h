@@ -202,6 +202,7 @@ H5_DLL herr_t H5P_get_filter_by_id(H5P_genplist_t *plist, H5Z_filter_t id, unsig
                                    unsigned *filter_config);
 H5_DLL htri_t H5P_filter_in_pline(H5P_genplist_t *plist, H5Z_filter_t id);
 H5_DLL herr_t H5P_facc_set_def_driver_check_predefined(const char *driver_name, hid_t *driver_id);
+H5_DLL herr_t H5P_check_vfd_swmr_config(H5F_vfd_swmr_config_t *config_ptr);
 
 /* Query internal fields of the property list struct */
 H5_DLL hid_t H5P_get_plist_id(const H5P_genplist_t *plist);

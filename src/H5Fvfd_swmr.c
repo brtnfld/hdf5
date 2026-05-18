@@ -63,6 +63,9 @@
 #define VFD_SWMR_FS_STRATEGY__MAX_PARAMS  1
 #define VFD_SWMR_FS_PAGE_SIZE__MAX_PARAMS 1
 
+/* Environment variable that will hold name of config file */
+#define VFD_SWMR_CONFIG_FILE_ENV_VAR      "HDF5_VFD_SWMR_CONFIG"
+
 
 /* Declare an array of string to identify the VFD SMWR Log tags.
  * Note this array is used to generate the entry tag by the log reporting macro
@@ -121,13 +124,13 @@ static herr_t H5F__generate_updater_file(H5F_t *f, uint32_t num_entries, uint16_
                                          uint8_t *md_file_index_image_ptr, uint64_t md_file_index_offset,
                                          size_t md_file_index_image_len);
 
-static herr_t H5F__set_vfd_swmr_config(H5CL_nv_pair_t *nv_pairs, hbool_t writer, 
+static herr_t H5F__load_vfd_swmr_config(H5CL_nv_pair_t *nv_pairs, hbool_t writer, 
                                        H5F_vfd_swmr_config_t *config_ptr);
-static herr_t H5F__set_vfd_swmr_page_buffer_config(H5CL_nv_pair_t *nv_pairs, size_t *page_buf_size, 
+static herr_t H5F__load_vfd_swmr_page_buffer_config(H5CL_nv_pair_t *nv_pairs, size_t *page_buf_size, 
                                                    hbool_t *metadata_pages_only);
-static herr_t H5F__set_vfd_swmr_fs_strategy_config(H5CL_nv_pair_t *nv_pairs, 
+static herr_t H5F__load_vfd_swmr_fs_strategy_config(H5CL_nv_pair_t *nv_pairs, 
                                                    hbool_t *fs_strategy_persist);
-static herr_t H5F__set_vfd_swmr_fs_page_size_config(H5CL_nv_pair_t *nv_pairs, hsize_t *fs_page_size);
+static herr_t H5F__load_vfd_swmr_fs_page_size_config(H5CL_nv_pair_t *nv_pairs, hsize_t *fs_page_size);
 
 
 /*********************/
@@ -2592,7 +2595,7 @@ done:
  *******************************************************************************/
 
 /*----------------------------------------------------------------------------
- * Function:    H5F__set_vfd_swmr_config()
+ * Function:    H5F__load_vfd_swmr_config()
  *
  * Purpose:     Set the configuration parameters for the 'H5F_vfd_swmr_config' 
  *              group using the provided nv_pairs. This function ensures that 
@@ -2607,7 +2610,7 @@ done:
  *----------------------------------------------------------------------------
  */
 static herr_t
-H5F__set_vfd_swmr_config(H5CL_nv_pair_t *nv_pairs, hbool_t writer, H5F_vfd_swmr_config_t *config_ptr)
+H5F__load_vfd_swmr_config(H5CL_nv_pair_t *nv_pairs, hbool_t writer, H5F_vfd_swmr_config_t *config_ptr)
 {
     int i;
 
@@ -2664,6 +2667,10 @@ H5F__set_vfd_swmr_config(H5CL_nv_pair_t *nv_pairs, hbool_t writer, H5F_vfd_swmr_
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
                 }
 
+                if ( nv_pairs[i].int_val < INT32_MIN || nv_pairs[i].int_val > INT32_MAX ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "version value out of range");
+                }
+
                 config_ptr->version = (int32_t)(nv_pairs[i].int_val); 
 
             } else if ( 0 == strcmp("tick_len", nv_pairs[i].name_ptr) ) {
@@ -2678,8 +2685,8 @@ H5F__set_vfd_swmr_config(H5CL_nv_pair_t *nv_pairs, hbool_t writer, H5F_vfd_swmr_
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
                 }
                 
-                if ( nv_pairs[i].int_val < 0 ) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid tick_len value");
+                if ( nv_pairs[i].int_val < 0 || nv_pairs[i].int_val > (int64_t)(UINT32_MAX) ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "tick_len value out of range");
                 }
 
                 config_ptr->tick_len = (uint32_t)(nv_pairs[i].int_val);
@@ -2696,8 +2703,8 @@ H5F__set_vfd_swmr_config(H5CL_nv_pair_t *nv_pairs, hbool_t writer, H5F_vfd_swmr_
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
                 }
                 
-                if ( nv_pairs[i].int_val < 0 ) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid max_lag value");
+                if ( nv_pairs[i].int_val < 0 || nv_pairs[i].int_val > (int64_t)(UINT32_MAX) ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "max_lag value out of range");
                 }
 
                 config_ptr->max_lag = (uint32_t)(nv_pairs[i].int_val);
@@ -2794,8 +2801,8 @@ H5F__set_vfd_swmr_config(H5CL_nv_pair_t *nv_pairs, hbool_t writer, H5F_vfd_swmr_
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
                 }
 
-                if ( nv_pairs[i].int_val < 0 ) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid md_pages_reserved value");
+                if ( nv_pairs[i].int_val < 0 || nv_pairs[i].int_val > (int64_t)(UINT32_MAX) ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "md_pages_reserved value out of range");
                 }
 
                 config_ptr->md_pages_reserved = (uint32_t)(nv_pairs[i].int_val);
@@ -2910,8 +2917,8 @@ H5F__set_vfd_swmr_config(H5CL_nv_pair_t *nv_pairs, hbool_t writer, H5F_vfd_swmr_
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
                 }
 
-                if ( nv_pairs[i].int_val < 0 ) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid pb_expansion_threshold value");
+                if ( nv_pairs[i].int_val < 0 || nv_pairs[i].int_val > (int64_t)(UINT32_MAX) ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "pb_expansion_threshold value out of range");
                 }
 
                 config_ptr->pb_expansion_threshold = (uint32_t)(nv_pairs[i].int_val);
@@ -2924,30 +2931,34 @@ H5F__set_vfd_swmr_config(H5CL_nv_pair_t *nv_pairs, hbool_t writer, H5F_vfd_swmr_
     }
     
     /* Ensure required fields have been provided */
+    if ( !seen_tick_len ) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: tick_len");
+    } 
     if ( !seen_max_lag ) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: max_lag");
-    } else if ( !seen_tick_len ) {
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: tick_len");
-    } else if ( !seen_maintain_md_file ) {
+    } 
+    if ( !seen_maintain_md_file ) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: maintain_metadata_file");
-    } else if ( !seen_gen_updater_files ) {
+    }
+    if ( !seen_gen_updater_files ) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: generate_updater_files");
-    } else if ( !seen_md_pages_reserved ) {
+    }
+    if ( !seen_md_pages_reserved ) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: md_pages_reserved");
     }
 
     /* Sanity check provided values */
-    if ( H5Pcheck_vfd_swmr_config(config_ptr) < 0 ) {
+    if ( H5P_check_vfd_swmr_config(config_ptr) < 0 ) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "configuration contains invalid values");
     }
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5F__set_vfd_swmr_config() */
+} /* H5F__load_vfd_swmr_config() */
 
 
 /*----------------------------------------------------------------------------
- * Function:    H5F__set_vfd_swmr_page_buffer_config()
+ * Function:    H5F__load_vfd_swmr_page_buffer_config()
  *
  * Purpose:     Set the configuration parameters for the 'page_buffer_config' 
  *              group using the provided nv_pairs. This function ensures that 
@@ -2962,7 +2973,7 @@ done:
  *----------------------------------------------------------------------------
  */
 static herr_t
-H5F__set_vfd_swmr_page_buffer_config(H5CL_nv_pair_t *nv_pairs, size_t *page_buf_size, hbool_t *metadata_pages_only)
+H5F__load_vfd_swmr_page_buffer_config(H5CL_nv_pair_t *nv_pairs, size_t *page_buf_size, hbool_t *metadata_pages_only)
 {
     int i;
 
@@ -2993,8 +3004,8 @@ H5F__set_vfd_swmr_page_buffer_config(H5CL_nv_pair_t *nv_pairs, size_t *page_buf_
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
                 }
 
-                if ( nv_pairs[i].int_val < 0 || (unsigned long)(nv_pairs[i].int_val) > SIZE_MAX ) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "page_buf_size value is invalid or too large");
+                if ( nv_pairs[i].int_val < 0 || (uint64_t)(nv_pairs[i].int_val) > SIZE_MAX ) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "page_buf_size value is out of range");
                 }
 
                 *page_buf_size = (size_t)(nv_pairs[i].int_val);
@@ -3027,16 +3038,17 @@ H5F__set_vfd_swmr_page_buffer_config(H5CL_nv_pair_t *nv_pairs, size_t *page_buf_
     /* Ensure required fields have been provided */
     if ( !seen_page_buf_size ) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: page_buf_size");
-    } else if ( !seen_md_pages_only ) {
+    }
+    if ( !seen_md_pages_only ) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: metadata_pages_only");
     }
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5F__set_vfd_swmr_page_buffer_config() */
+} /* H5F__load_vfd_swmr_page_buffer_config() */
 
 /*----------------------------------------------------------------------------
- * Function:    H5F__set_vfd_swmr_fs_strategy_config()
+ * Function:    H5F__load_vfd_swmr_fs_strategy_config()
  *
  * Purpose:     Set the configuration parameters for the 'file_space_strategy_config' 
  *              group using the provided nv_pairs. This function ensures that 
@@ -3050,7 +3062,7 @@ done:
  *----------------------------------------------------------------------------
  */
 static herr_t
-H5F__set_vfd_swmr_fs_strategy_config(H5CL_nv_pair_t *nv_pairs, hbool_t *fs_strategy_persist)
+H5F__load_vfd_swmr_fs_strategy_config(H5CL_nv_pair_t *nv_pairs, hbool_t *fs_strategy_persist)
 {
     int i;
 
@@ -3095,7 +3107,7 @@ H5F__set_vfd_swmr_fs_strategy_config(H5CL_nv_pair_t *nv_pairs, hbool_t *fs_strat
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5F__set_vfd_swmr_fs_strategy_config() */
+} /* H5F__load_vfd_swmr_fs_strategy_config() */
 
 /*----------------------------------------------------------------------------
  * Function:    H5F_set_vfd_swmr_fs_page_size_config()
@@ -3112,7 +3124,7 @@ done:
  *----------------------------------------------------------------------------
  */
 static herr_t
-H5F__set_vfd_swmr_fs_page_size_config(H5CL_nv_pair_t *nv_pairs, hsize_t *fs_page_size)
+H5F__load_vfd_swmr_fs_page_size_config(H5CL_nv_pair_t *nv_pairs, hsize_t *fs_page_size)
 {
     int i;
 
@@ -3158,7 +3170,7 @@ H5F__set_vfd_swmr_fs_page_size_config(H5CL_nv_pair_t *nv_pairs, hsize_t *fs_page
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5F_set_vfd_swmr_fs_page_size() */
+} /* H5F_load_vfd_swmr_fs_page_size() */
 
 
 /*-------------------------------------------------------------------------
@@ -3328,7 +3340,7 @@ H5F_load_vfd_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_
 
             if ( 0 == strcmp("H5F_vfd_swmr_config", configs[i].config_name) ) {
 
-                if ( H5F__set_vfd_swmr_config(configs[i].nv_pairs, writer, config_ptr) < 0 ) {
+                if ( H5F__load_vfd_swmr_config(configs[i].nv_pairs, writer, config_ptr) < 0 ) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Failed to set H5F_vfd_swmr_config configurations");
                 }
 
@@ -3336,7 +3348,7 @@ H5F_load_vfd_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_
                     
             } else if ( 0 == strcmp("page_buffer_config", configs[i].config_name) ) {
                 
-                if ( H5F__set_vfd_swmr_page_buffer_config(configs[i].nv_pairs, &page_buf_size, &metadata_pages_only) < 0 ) {
+                if ( H5F__load_vfd_swmr_page_buffer_config(configs[i].nv_pairs, &page_buf_size, &metadata_pages_only) < 0 ) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Failed to set parse_buffer_config configurations");
                 }
 
@@ -3346,7 +3358,7 @@ H5F_load_vfd_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_
                 
                 if ( create_file ) {
 
-                    if ( H5F__set_vfd_swmr_fs_strategy_config(configs[i].nv_pairs, &fs_strategy_persist) < 0 ) {
+                    if ( H5F__load_vfd_swmr_fs_strategy_config(configs[i].nv_pairs, &fs_strategy_persist) < 0 ) {
                         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
                             "Failed to set file_space_strategy_config configurations");
                     }
@@ -3358,7 +3370,7 @@ H5F_load_vfd_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_
                 
                 if ( create_file ) {
             
-                    if ( H5F__set_vfd_swmr_fs_page_size_config(configs[i].nv_pairs, &fs_page_size) < 0 ) {
+                    if ( H5F__load_vfd_swmr_fs_page_size_config(configs[i].nv_pairs, &fs_page_size) < 0 ) {
                         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
                             "Failed to set file_space_page_size configurations");
                     }

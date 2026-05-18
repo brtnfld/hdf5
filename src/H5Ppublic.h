@@ -5607,10 +5607,6 @@ H5_DLL herr_t H5Pset_page_buffer_size(hid_t plist_id, size_t buf_size, unsigned 
 /**
  * \todo Add missing documentation
  */
-H5_DLL herr_t H5Pcheck_vfd_swmr_config(H5F_vfd_swmr_config_t *config_ptr);
-/**
- * \todo Add missing documentation
- */
 H5_DLL herr_t H5Pset_vfd_swmr_config(hid_t plist_id, H5F_vfd_swmr_config_t *config_ptr);
 
 /* Dataset creation property list (DCPL) routines */
