@@ -50,7 +50,7 @@
 /****************/
 /* Local Macros */
 /****************/
-
+#define FILE_NAME_LEN           1024
 #define VFD_SWMR_MD_FILE_SUFFIX ".md"
 #define NANOSECS_PER_SECOND     1000000000LL /* nanoseconds per second */
 #define NANOSECS_PER_TENTH_SEC  100000000LL  /* nanoseconds per 0.1 second */
@@ -3171,6 +3171,62 @@ H5F__load_vfd_swmr_fs_page_size_config(H5CL_nv_pair_t *nv_pairs, hsize_t *fs_pag
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5F_load_vfd_swmr_fs_page_size() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5F_load_vfd_swmr_config_from_file()
+ *
+ * Purpose:     Load VFD SWMR configuration data from a configuration
+ *              file specified by an environment variable and apply it
+ *              to the provided file access and file creation property
+ *              lists (FAPL and FCPL).
+ * 
+ *              If supplied, env_var_name is used in place of the
+ *              default environment variable HDF5_VFD_SWMR_CONFIG.
+ * 
+ *                                              Cody S. -- 5/19/26
+ *
+ * Return:      SUCCEED/FAIL
+ *-------------------------------------------------------------------------
+ */
+herr_t 
+H5F_load_vfd_swmr_config_from_env_var(hid_t fapl_id, hid_t fcpl_id, hbool_t writer, 
+                                      hbool_t create_file, const char *env_var_name)
+{
+    char  *config_file_name = NULL;
+    herr_t ret_value        = SUCCEED;
+    
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Check if user provided custom environment variable */
+    if (env_var_name && env_var_name[0] != '\0') {
+
+        config_file_name = getenv(env_var_name);
+    } 
+    else { /* otherwise use default environment variable */
+
+        config_file_name = getenv(VFD_SWMR_CONFIG_FILE_ENV_VAR);
+    }
+
+    /* check  */
+    if ( config_file_name == NULL || config_file_name[0] == '\0' )
+        HGOTO_ERROR(H5E_PATH, H5E_BADVALUE, FAIL,
+                    "configuration environment variable not set");
+
+    if ( strlen(config_file_name) >= FILE_NAME_LEN )
+        HGOTO_ERROR(H5E_PATH, H5E_BADVALUE, FAIL,
+                    "configuration file path is too long");
+
+    if ( H5F_load_vfd_swmr_config_from_file(config_file_name, fapl_id, fcpl_id, 
+                                            writer, create_file) < 0 ) 
+    {
+        HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL,
+                    "failed to load VFD SWMR configuration file");
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
+} /* H5F_load_vfd_swmr_config_from_env_var() */
 
 
 /*-------------------------------------------------------------------------

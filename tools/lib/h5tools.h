@@ -565,6 +565,34 @@ typedef struct h5tools_vol_info_t {
     } u;
 } h5tools_vol_info_t;
 
+/*******************************************************************************
+ * struct h5tools_vfd_info_t
+ *
+ * The structure used to store information used by the HDF5 tools to specify
+ * a Virtual File Driver (VFD) and associated configuration.
+ *
+ * The fields in the structure are discussed individually below.
+ * 
+ *  * type:  Specifies how the VFD is identified. Can be by name or numeric
+ *           class value.
+ * 
+ *  * info:  Opaque pointer to driver-specific configuration data. Interpretation
+ *           depends on the selected VFD.
+ * 
+ *  * u:     Union containing either:
+ *           name  - String identifier for the VFD
+ *           value - VFD class value identifier
+ *                   (see H5FD_class_value_t definition for valid ranges)
+ * 
+ *  * fname: Name of the file associated with the VFD. Only needed by
+ *           VFD SWMR. (Although does not seem to be used even by VFD SWMR).
+ *
+ *  * swmr_config_file: Optional path to a SWMR configuration file.
+ * 
+ *                           Cody S. -- 5/20/26
+ *                           Added Description and vfd_swmr_config_file field.
+ * 
+ *******************************************************************************/
 typedef struct h5tools_vfd_info_t {
     h5tools_vfd_info_type_t type;
 
@@ -579,6 +607,9 @@ typedef struct h5tools_vfd_info_t {
 
     /* Name of the file to open with the VFD (only needed by VFD SWMR) */
     const char *fname;
+
+    /* Name of the file containing configuration info for VFD SWMR */
+    const char *swmr_config_file;
 } h5tools_vfd_info_t;
 
 /* This enum should match the entries in the above 'volnames'

@@ -20,6 +20,12 @@
 
 #include "hdf5.h"
 #include "nbcompat.h"
+#include "H5Fprivate.h"
+
+/* Controls whether vfd configuration settings should be set 
+ * using configuration file instead of using hardcoded 
+ * configurations */
+#define USE_CONFIGURATION_FILE 1
 
 #define DATAROWS 1
 #define DATACOLS 10
@@ -101,7 +107,9 @@ usage(const char *progname)
     fprintf(stderr,
             "usage: %s [-u milliseconds]\n"
             "\n"
+#if !USE_CONFIGURATION_FILE
             "-a: if vfd swmr, generate updater files.  Don't maintain metadata file\n"
+#endif
             "-o: oneshot mode, perform one iteration, wait for a signal, "
             "then quit.\n"
             "-s: print statistics at end\n"
@@ -135,11 +143,16 @@ state_init(state_t *s, int argc, char **argv)
     *s = ALL_HID_INITIALIZER;
     strlcpy(tfile, argv[0], sizeof(tfile));
     strlcpy(s->progname, basename(tfile), sizeof(s->progname));
-    while ((ch = getopt(argc, argv, "an:ou:sSv")) != -1) {
+#if USE_CONFIGURATION_FILE
+    while ((ch = getopt(argc, argv, "n:ou:sSv")) != -1) {
+        switch (ch) {
+#else /* USE_CONFIGURATION_FILE */
+while ((ch = getopt(argc, argv, "an:ou:sSv")) != -1) {
         switch (ch) {
             case 'a':
                 s->gen_updaters = true;
                 break;
+#endif /* USE_CONFIGURATION_FILE */
             case 'n':
                 niters = strtoumax(optarg, &end, 0);
                 if (niters == UINTMAX_MAX && errno == ERANGE) {
@@ -180,6 +193,7 @@ state_init(state_t *s, int argc, char **argv)
                 usage(s->progname);
         }
     }
+
     argc -= optind;
     argv += optind;
 
@@ -342,6 +356,29 @@ main(int argc, char **argv)
     state_t               storage;
     state_t *             s = &storage;
     int64_t               i;
+
+    state_init(s, argc, argv);
+
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+    if (fapl < 0) {
+        errx(EXIT_FAILURE, "%s.%d H5Pcreate failed", __func__, __LINE__);
+    }
+
+    fcpl = H5Pcreate(H5P_FILE_CREATE);
+    if (fcpl < 0) {
+        errx(EXIT_FAILURE, "%s.%d H5Pcreate failed", __func__, __LINE__);
+    }
+
+#if USE_CONFIGURATION_FILE
+    bool writer = true;
+    bool create_file = true;
+
+    if (H5F_load_vfd_swmr_config_from_env_var(fapl, fcpl, writer, create_file, NULL) < 0) {
+        errx(EXIT_FAILURE, "%s.%d: H5F_load_vfd_swmr_config_from_env_var() failed", __func__, __LINE__);
+    }
+
+#else /* USE_CONFIGURATION_FILE */
+
     H5F_vfd_swmr_config_t config =
     {
         /* int32_t  version;                                   = */ H5F__CURR_VFD_SWMR_CONFIG_VERSION,
@@ -360,13 +397,6 @@ main(int argc, char **argv)
         /* char     log_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];     = */ ""
     };
 
-    state_init(s, argc, argv);
-
-
-    fapl = H5Pcreate(H5P_FILE_ACCESS);
-    if (fapl < 0) {
-        errx(EXIT_FAILURE, "%s.%d H5Pcreate failed", __func__, __LINE__);
-    }
     H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
     if (fapl < 0) {
         errx(EXIT_FAILURE, "%s.%d H5Pset_libver_bounds failed", __func__, __LINE__);
@@ -391,11 +421,6 @@ main(int argc, char **argv)
         }
     }
 
-    fcpl = H5Pcreate(H5P_FILE_CREATE);
-    if (fcpl < 0) {
-        errx(EXIT_FAILURE, "%s.%d H5Pcreate failed", __func__, __LINE__);
-    }
-
     /* Set file space strategy to paged aggregation in fcpl.
      * Page buffering *requires* this strategy.
      *
@@ -404,6 +429,8 @@ main(int argc, char **argv)
      */
     if (H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, false, 1) < 0)
         errx(EXIT_FAILURE, "H5Pset_file_space_strategy failed");
+
+#endif /* USE_CONFIGURATION_FILE */
 
     s->file = H5Fcreate(s->output_file, H5F_ACC_TRUNC, fcpl, fapl);
 

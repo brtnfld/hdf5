@@ -1,5 +1,10 @@
                                HDF5 Examples
 
+***************************************************************************************
+THIS SECTION OF THE README IS OUTDATED AND INCORRECT. RUNNING run-all-ex.sh WILL
+ONLY LEAD TO ERROR. The section below this (for compiling and running the two 
+VFD SWMR demo programs) works as intended, however.
+
 This directory contains example programs for the installed APIs and scripts to 
 compile and run them.  Examples in the c and hl/c subdirectories are always 
 installed, and those in fortran, hl/fortran, c++ and hl/c++ will be installed 
@@ -17,33 +22,34 @@ directory with the compile scripts h5cc, h5fc, etc.  For example, export
 prefix=/usr/local/hdf5 to use h5cc, h5fc, etc. in /usr/local/hdf5/bin.  
 
 ***************************************************************************************
+
 Instruction for compiling and running the two VFD SWMR demo programs in this directory:
 
 credel.c:
 =========
 To compile:
-    h5cc -o credel credel.c nbcompat.c
+    ../install/bin/h5cc -I../src/ -o credel credel.c nbcompat.c
 
 To run:
-    ./credel -v (on one window)
-    h5ls --vfd=swmr --poll=100 -r -d ./credel.h5 (on another window)
+    HDF5_VFD_SWMR_CONFIG=credel_swmr_config.txt ./credel -v  (on one window)
+    ../install/bin/h5ls --swmr-config-file=credel_swmr_config.txt --poll=100 -r -d ./credel.h5  (on another window)
 
 To run with auxilary process:
-    ./credel -v -a   (in one window)
+    HDF5_VFD_SWMR_CONFIG=credel_swmr_config.txt ./credel -v -a   (in one window)
     ../utils/vfd_swmr/aux_process my_md_file ./credel_updater_file  (in a second window)
-    ../install/bin/h5ls --vfd=swmr --poll=100 -r -d ./credel.h5   (in a third window)
+    ../install/bin/h5ls --swmr-config-file=credel_swmr_config.txt --poll=100 -r -d ./credel.h5  (in a third window)
 
 vfd_swmr_gaussians.c
 ====================
 To compile:
-    h5cc -o gaussians ./gaussians.c ./nbcompat.c -lcurses
+    ../install/bin/h5cc -I../src/ -o gaussians ./gaussians.c ./nbcompat.c -lcurses
 To link as writer:
     ln -s gaussians wgaussians
 To link as reader:
     ln -s gaussians rgaussians
 
 To run standalone:
-    ./gaussians
+    HDF5_VFD_SWMR_CONFIG=gaussians_swmr_config.txt ./gaussians
 To run as writer and reader:
-    ./wgaussians (on one window)
-    ./rgaussians (on another window)
+    HDF5_VFD_SWMR_CONFIG=gaussians_swmr_config.txt ./wgaussians (on one window)
+    HDF5_VFD_SWMR_CONFIG=gaussians_swmr_config.txt ./rgaussians (on another window)

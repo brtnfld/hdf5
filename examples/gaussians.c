@@ -27,8 +27,14 @@
 
 #include "hdf5.h"
 #include "nbcompat.h"
+#include "H5Fprivate.h"
 
 #define SWMR_TICK_LEN 4 /* in 100 ms */
+
+/* Controls whether vfd configuration settings should be set 
+ * using configuration file instead of using hardcoded 
+ * configurations */
+#define USE_CONFIGURATION_FILE 1
 
 typedef enum { STANDALONE = 0, READ = 1, WRITE = 2 } personality_t;
 
@@ -523,7 +529,6 @@ matrix_open(state_t *s, bool rw)
 {
     const char *          func;
     hid_t                 fapl, fcpl;
-    H5F_vfd_swmr_config_t config;
 
     fapl = H5Pcreate(H5P_FILE_ACCESS);
     if (fapl < 0) {
@@ -535,6 +540,14 @@ matrix_open(state_t *s, bool rw)
         errx(EXIT_FAILURE, "%s.%d H5Pcreate failed", __func__, __LINE__);
     }
 
+#if USE_CONFIGURATION_FILE
+
+    /* Use rw bool both for writer and create_file boolean options */
+    if (H5F_load_vfd_swmr_config_from_env_var(fapl, fcpl, rw, rw, NULL) < 0) {
+        errx(EXIT_FAILURE, "%s.%d: H5F_load_vfd_swmr_config_from_env_var() failed", __func__, __LINE__);
+    }
+# else /* USE_CONFIGURATION_FILE */
+    H5F_vfd_swmr_config_t config;
     memset(&config, '\0', sizeof(config));
 
     config.version           = H5F__CURR_VFD_SWMR_CONFIG_VERSION;
@@ -567,6 +580,7 @@ matrix_open(state_t *s, bool rw)
 
     if (H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0)
         errx(EXIT_FAILURE, "H5Pset_libver_bounds");
+#endif /* USE_CONFIGURATION_FILE */
 
     if (rw) {
         s->file = H5Fcreate("gaussians.h5", H5F_ACC_TRUNC, fcpl, fapl);

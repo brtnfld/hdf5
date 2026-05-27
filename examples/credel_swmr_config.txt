@@ -1,0 +1,37 @@
+( vfd_swmr_config_data
+  (
+    ( H5F_vfd_swmr_config
+      (
+        ( version 1 )
+        ( tick_len 4 )
+        ( max_lag 7 )
+        ( presume_posix_semantics 1 )
+        ( maintain_metadata_file 1 )
+        ( generate_updater_files 0 )
+        ( flush_raw_data 1 )
+        ( md_pages_reserved 128 )
+        ( md_file_path "./" )
+        ( md_file_name "my_md_file" )
+        ( updater_file_path "./credel_updater_file" )
+        ( log_file_path "" )
+        ( pb_expansion_threshold 50 )
+      )
+    )
+    ( page_buffer_config
+      (
+        ( page_buf_size 4096 )
+        ( metadata_pages_only 1 )
+      )
+    )
+    ( file_space_strategy_config
+      (
+        ( persist 0 )
+      )
+    )
+    ( file_space_page_size
+      (
+        ( page_size 4096 )
+      ) 
+    )
+  )
+)

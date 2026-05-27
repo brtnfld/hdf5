@@ -21,6 +21,7 @@
 #include "h5tools_ref.h"
 #include "h5tools_utils.h"
 #include "H5private.h"
+#include "H5Fprivate.h" /* For H5F_load_vfd_swmr_config_from_file() */
 
 #ifdef H5_TOOLS_DEBUG
 /* global debug variables */
@@ -470,38 +471,47 @@ h5tools_set_error_file(const char *fname, int is_bin)
  *-------------------------------------------------------------------------
  */
 static herr_t
-h5tools_set_up_vfd_swmr(hid_t fapl, const char *fname)
+h5tools_set_up_vfd_swmr(hid_t fapl, const char *config_file)
+
 {
-    H5F_vfd_swmr_config_t config = /* Configuration for VFD SWMR */
-    {
-        /* int32_t  version;                                   = */ H5F__CURR_VFD_SWMR_CONFIG_VERSION,
-        /* uint32_t tick_len;                                               = */ 4,
-        /* uint32_t max_lag;                                                = */ 5,
-        /* hbool_t  presume_posix_semantics;                                = */ true,
-        /* hbool_t  writer;                                                 = */ false,
-        /* hbool_t  maintain_metadata_file;                                 = */ true,
-        /* hbool_t  generate_updater_files;                                 = */ false,
-        /* hbool_t  flush_raw_data;                                         = */ true,
-        /* uint32_t md_pages_reserved;                                      = */ 128,
-        /* uint32_t pb_expansion_threshold;                                 = */ 0,
-        /* char     md_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];      = */ "./",
-        /* char     md_file_name[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];      = */ "my_md_file",
-        /* char     updater_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1]; = */ "",
-        /* char     log_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];     = */ ""
-    };
-    char *                 dname     = NULL;
     herr_t                 ret_value = SUCCEED;
 
-    /* Enable page buffering */
-    if (H5Pset_page_buffer_size(fapl, 4096, 100, 0) < 0)
-        H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_page_buffer_size failed");
+    if (config_file == NULL || config_file == '\0') {
+        /* Set up SWMR fapl with default config values */
+        H5F_vfd_swmr_config_t config = /* Configuration for VFD SWMR */
+        {
+            /* int32_t  version;                                   = */ H5F__CURR_VFD_SWMR_CONFIG_VERSION,
+            /* uint32_t tick_len;                                               = */ 4,
+            /* uint32_t max_lag;                                                = */ 5,
+            /* hbool_t  presume_posix_semantics;                                = */ true,
+            /* hbool_t  writer;                                                 = */ false,
+            /* hbool_t  maintain_metadata_file;                                 = */ true,
+            /* hbool_t  generate_updater_files;                                 = */ false,
+            /* hbool_t  flush_raw_data;                                         = */ true,
+            /* uint32_t md_pages_reserved;                                      = */ 128,
+            /* uint32_t pb_expansion_threshold;                                 = */ 0,
+            /* char     md_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];      = */ "./",
+            /* char     md_file_name[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];      = */ "my_md_file",
+            /* char     updater_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1]; = */ "",
+            /* char     log_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];     = */ ""
+        };
 
-    /* Enable VFD SWMR configuration */
-    if (H5Pset_vfd_swmr_config(fapl, &config) < 0)
-        H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_vrd_swmr_config failed");
+        /* Enable page buffering */
+        if (H5Pset_page_buffer_size(fapl, 4096, 100, 0) < 0)
+            H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_page_buffer_size failed");
+
+        /* Enable VFD SWMR configuration */
+        if (H5Pset_vfd_swmr_config(fapl, &config) < 0)
+            H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_vrd_swmr_config failed");
+    } 
+    else { 
+        /* set up VFD SWMR fapl with values defined in config file.
+         * fcpl id set to H5I_INVALID_HID since it is unneeded.  */
+        if (H5F_load_vfd_swmr_config_from_file(config_file, fapl, H5I_INVALID_HID, false, false) < 0)
+            H5TOOLS_GOTO_ERROR(FAIL, "H5F_load_vfd_swmr_config_from_file failed");
+    }
 
 done:
-    HDfree(dname);
     return ret_value;
 }
 
@@ -621,7 +631,7 @@ h5tools_set_fapl_vfd(hid_t fapl_id, h5tools_vfd_info_t *vfd_info)
             }
             else if (!HDstrcmp(vfd_info->u.name, drivernames[SWMR_VFD_IDX])) {
                 /* VFD SWMR driver */
-                if (h5tools_set_up_vfd_swmr(fapl_id, vfd_info->fname) < 0)
+                if (h5tools_set_up_vfd_swmr(fapl_id, vfd_info->swmr_config_file) < 0)
                     H5TOOLS_GOTO_ERROR(FAIL, "swmr_fapl_augment failed");
             }
             else {
