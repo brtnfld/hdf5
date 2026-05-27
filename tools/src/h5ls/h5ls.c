@@ -2793,6 +2793,12 @@ main(int argc, char *argv[])
             vfd_info.info   = NULL;
             custom_vfd_fapl = TRUE;
         }
+        else if (!HDstrncmp(argv[argno], "--swmr-config-file=", (size_t)19)) {
+            vfd_info.type             = VFD_BY_NAME;
+            vfd_info.u.name           = "swmr";
+            vfd_info.swmr_config_file = argv[argno] + 19;
+            custom_vfd_fapl           = TRUE;
+        }
         else if (!HDstrncmp(argv[argno], "--vfd-value=", (size_t)12)) {
             vfd_info.type    = VFD_BY_VALUE;
             vfd_info.u.value = (H5FD_class_value_t)HDatoi(argv[argno] + 12);

@@ -57,6 +57,16 @@ mkdir crash_test
 cd crash_test
 
 
+# Use copy-on-write (CoW) cloning where available: macOS uses 'cp -c', Linux uses
+# 'cp --reflink=auto'. In both cases, the commands automatically fall back to a normal
+# full copy if CoW is not supported by the filesystem.
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    COPY_CMD=(cp -c)
+else
+    COPY_CMD=(cp --reflink=auto)
+fi
+
+
 ###############################################################################
 # configure_test_env() <test_name>
 #   Arguments:
@@ -170,8 +180,10 @@ catch_out_err_and_rc()
     outbase=$1
     shift
 
-    eval "$*" > ${outbase}.out 2>&1
-    echo $? > ${outbase}.rc
+    "$@" > "${outbase}.out" 2>&1
+    rc=$?
+
+    echo "$rc" > "${outbase}.rc"
 } # catch_out_err_and_rc()
 
 ###############################################################################
@@ -190,33 +202,33 @@ keep_output_files() {
     count=$1
     # rename the output files so they don't get overwritten
 
-    if [ -f $EXPECTED_H5_FILE ]; then
-        mv $EXPECTED_H5_FILE $EXPECTED_H5_FILE.$count
+    if [ -f "$EXPECTED_H5_FILE" ]; then
+        mv -- "$EXPECTED_H5_FILE" "${EXPECTED_H5_FILE}.${count}"
     fi
-    if [ -f $EXPECTED_H5_FILE_A ]; then
-        mv $EXPECTED_H5_FILE_A $EXPECTED_H5_FILE_A.$count
+    if [ -f "$EXPECTED_H5_FILE_A" ]; then
+        mv -- "$EXPECTED_H5_FILE_A" "${EXPECTED_H5_FILE_A}.${count}"
     fi
-    if [ -f $EXPECTED_H5_FILE_B ]; then
-        mv $EXPECTED_H5_FILE_B $EXPECTED_H5_FILE_B.$count
+    if [ -f "$EXPECTED_H5_FILE_B" ]; then
+        mv -- "$EXPECTED_H5_FILE_B" "${EXPECTED_H5_FILE_B}.${count}"
     fi
 
-    if [ -f $WRITER_NAME.out ]; then
-        mv $WRITER_NAME.out $WRITER_NAME.out.$count
+    if [ -f "${WRITER_NAME}.out" ]; then
+        mv -- "${WRITER_NAME}.out" "${WRITER_NAME}.out.${count}"
     fi
-    if [ -f ${test_name}_recovery.out ]; then 
-        mv ${test_name}_recovery.out ${test_name}_recovery.out.$count
+    if [ -f "${test_name}_recovery.out" ]; then 
+        mv -- "${test_name}_recovery.out" "${test_name}_recovery.out.${count}"
     fi
-    if [ -f ${test_name}_validation_pre.out ]; then
-        mv ${test_name}_validation_pre.out ${test_name}_validation_pre.out.$count
+    if [ -f "${test_name}_validation_pre.out" ]; then
+        mv -- "${test_name}_validation_pre.out" "${test_name}_validation_pre.out.${count}"
     fi
-    if [ -f ${test_name}_validation_post.out ]; then
-        mv ${test_name}_validation_post.out ${test_name}_validation_post.out.$count
+    if [ -f "${test_name}_validation_post.out" ]; then
+        mv -- "${test_name}_validation_post.out" "${test_name}_validation_post.out.${count}"
     fi
-    if [ -f ${test_name}_h5clear_pre.out ]; then
-        mv ${test_name}_h5clear_pre.out ${test_name}_h5clear_pre.out.$count
+    if [ -f "${test_name}_h5clear_pre.out" ]; then
+        mv -- "${test_name}_h5clear_pre.out" "${test_name}_h5clear_pre.out.${count}"
     fi
-    if [ -f h5clear_post.out ]; then
-        mv h5clear_post.out ${test_name}_h5clear_post.out.$count
+    if [ -f "h5clear_post.out" ]; then
+        mv -- h5clear_post.out "${test_name}_h5clear_post.out.${count}"
     fi
 } # keep_output_files()
 
@@ -239,8 +251,6 @@ keep_output_files() {
 #      (This will check if the HDF5 file is readable after recovery.)
 #   6. If $KEEP_OUTPUT_FILES is true: Renames output files so they wont be 
 #      overwritten.
-#   7. If $HDF5_NOCLEANUP is undefined: Cleans up any files created 
-#      during the test (not including files that were renamed in step 6).
 # - Returns:
 #   0 - Either all tests are successful, or the test encountered a soft error
 #       that is not critical and is exiting early, but without a failure.
@@ -262,7 +272,7 @@ run_test_case() {
         $VFD_GENERATOR $generator_config
         rc=$(cat generator.rc)
 
-        if [ $rc -ne 0 ]; then
+        if [ "$rc" -ne 0 ]; then
             echo "Generator failed with rc=$rc. Exiting."
             nerrors=$((nerrors + 1))
             return 1
@@ -278,10 +288,11 @@ run_test_case() {
     vprintf "%-32s : " "$WRITER_NAME"
     # Crasher tool handles output redirection so no need for catch_out_err_and_rc
     $CRASHER_TOOL $delay $WRITER_TOOL $WRITER_OPTIONS 
-    rc=$(cat $WRITER_NAME.rc)
+    rc=$(cat "${WRITER_NAME}.rc")
 
-    cp $EXPECTED_H5_FILE  $EXPECTED_H5_FILE_A
-    cp $EXPECTED_H5_FILE  $EXPECTED_H5_FILE_B
+    # Attempt copy-on-write cloning to optimize file data copying
+    "${COPY_CMD[@]}" "$EXPECTED_H5_FILE"  "$EXPECTED_H5_FILE_A"
+    "${COPY_CMD[@]}" "$EXPECTED_H5_FILE"  "$EXPECTED_H5_FILE_B"
 
     # Check the return code of the writer tool
     if [ "$rc" -eq 0 ]; then
@@ -306,17 +317,17 @@ run_test_case() {
     #   the recovery tool already does this as part of the recovery process.
     #=======================================================================
     vprintf "%-32s : " "H5CLEAR -s"
-    if [ -f $EXPECTED_H5_FILE_A ]
+    if [ -f "$EXPECTED_H5_FILE_A" ]
     then
-        catch_out_err_and_rc ${test_name}_h5clear_pre \
-           $H5CLEAR -s $EXPECTED_H5_FILE_A
-        rc=$(cat ${test_name}_h5clear_pre.rc)
+        catch_out_err_and_rc "${test_name}_h5clear_pre" \
+           $H5CLEAR -s "$EXPECTED_H5_FILE_A"
+        rc=$(cat "${test_name}_h5clear_pre.rc")
     else
         vprintf "FAILED -- $EXPECTED_H5_FILE_A does not exist\n"
         return 0
     fi
 
-    if [ $rc -ne 0 ]; then
+    if [ "$rc" -ne 0 ]; then
         vprintf "FAILED (rc = $rc)\n"
     else
         vprintf "SUCCEEDED\n"
@@ -329,17 +340,17 @@ run_test_case() {
     #   before recovery.
     #=======================================================================
     vprintf "%-32s : " "PRE-RECOVERY VALIDATION"
-    if [ -f $EXPECTED_H5_FILE_A ]
+    if [ -f "$EXPECTED_H5_FILE_A" ]
     then
         # Run validation on the H5 file with h5ls
-        catch_out_err_and_rc ${test_name}_validation_pre \
-            $H5LS $EXPECTED_H5_FILE_A
-        rc=$(cat ${test_name}_validation_pre.rc)
+        catch_out_err_and_rc "${test_name}_validation_pre" \
+            $H5LS "$EXPECTED_H5_FILE_A"
+        rc=$(cat "${test_name}_validation_pre.rc")
 
         # Run H5DUMP to further validate recovery
-        if [[ $rc -eq 0 ]] ; then
-            printf "\nRunning H5DUMP for further validation.\n" >> ${test_name}_validation_pre.out
-            $H5DUMP -pH $EXPECTED_H5_FILE_A >> ${test_name}_validation_pre.out 2>&1 
+        if [[ "$rc" -eq 0 ]] ; then
+            printf "\nRunning H5DUMP for further validation.\n" >> "${test_name}_validation_pre.out"
+            $H5DUMP -pH "$EXPECTED_H5_FILE_A" >> "${test_name}_validation_pre.out" 2>&1 
             rc=$?
         fi
 
@@ -349,7 +360,7 @@ run_test_case() {
         return 0
     fi
 
-    if [ $rc -ne 0 ]; then
+    if [ "$rc" -ne 0 ]; then
         vprintf "FAILED (rc = $rc)\n"
     else
         vprintf "SUCCEEDED -- Pre-recovery validation passed\n"
@@ -364,14 +375,16 @@ run_test_case() {
     # athe recovery tool.
     if [ -f "$EXPECTED_UD_FILE.0" ]
     then
-        catch_out_err_and_rc ${test_name}_recovery \
-            $RECOVERY_TOOL $EXPECTED_H5_FILE_B $EXPECTED_UD_FILE
-        rc=$(cat ${test_name}_recovery.rc)
+        catch_out_err_and_rc "${test_name}_recovery" \
+            $RECOVERY_TOOL -v "$EXPECTED_H5_FILE_B" "$EXPECTED_UD_FILE"
+        rc=$(cat "${test_name}_recovery.rc")
 
         # delete updater files, unless using fixed-delay mode
-        if ! $USE_FIXED_DELAY; then
-            rm $EXPECTED_UD_FILE*
+    if ! $USE_FIXED_DELAY; then
+        if [ -n "$EXPECTED_UD_FILE" ]; then # make sure file name is set, otherwise "rm *" will be run
+            rm -- "${EXPECTED_UD_FILE}"*
         fi
+    fi
 
     else
         vprintf "FAILED -- $EXPECTED_UD_FILE.0 does not exist\n"
@@ -394,17 +407,17 @@ run_test_case() {
     #   after recovery.
     #=======================================================================
     vprintf "%-32s : " "POST-RECOVERY VALIDATION"
-    if [ -f $EXPECTED_H5_FILE_B ]
+    if [ -f "$EXPECTED_H5_FILE_B" ]
     then
         # Run validation on the recovered H5 file
-        catch_out_err_and_rc ${test_name}_validation_post \
-            $H5LS $EXPECTED_H5_FILE_B
-        rc=$(cat ${test_name}_validation_post.rc)
+        catch_out_err_and_rc "${test_name}_validation_post" \
+            $H5LS "$EXPECTED_H5_FILE_B"
+        rc=$(cat "${test_name}_validation_post.rc")
 
         # Run H5DUMP to further validate recovery
-        if [[ $rc -eq 0 ]] ; then
-            printf "\nRunning H5DUMP for further validation.\n" >> ${test_name}_validation_post.out
-            $H5DUMP -pH $EXPECTED_H5_FILE_B >> ${test_name}_validation_post.out 2>&1 
+        if [[ "$rc" -eq 0 ]] ; then
+            printf "\nRunning H5DUMP for further validation.\n" >> "${test_name}_validation_post.out"
+            $H5DUMP -pH "$EXPECTED_H5_FILE_B" >> "${test_name}_validation_post.out" 2>&1 
             rc=$?
         fi
         
@@ -414,7 +427,7 @@ run_test_case() {
         return 0
     fi
 
-    if [ $rc -ne 0 ]; then
+    if [ "$rc" -ne 0 ]; then
         vprintf "FAILED (rc = $rc)\n"
     else
         vprintf "SUCCEEDED -- Post-recovery validation passed\n"
@@ -424,28 +437,22 @@ run_test_case() {
     #=======================================================================
     # OUTPUT FILE HANDLING
     #   Rename output files if KEEP_OUTPUT_FILES is true
-    #   If HDF5_NOCLEANUP is not set, remove all output files (that haven't
-    #   been renamed)
-    #   In fixed-delay mode we skip cleanup entirely to preserve all artifacts
+    #   Otherwise, remove all files.
     #=======================================================================
-    if $KEEP_OUTPUT_FILES && ! $USE_FIXED_DELAY; then
+    if $KEEP_OUTPUT_FILES; then
         # Rename the output files so they don't get deleted in the cleanup step
         keep_output_files $count
-    fi
-
-    # Clean up output files. In fixed-delay mode we skip cleanup entirely to 
-    # preserve all artifacts
-    if test -z "$HDF5_NOCLEANUP" && ! $USE_FIXED_DELAY; then
-        rm -f $EXPECTED_H5_FILE
-        rm -f $EXPECTED_H5_FILE_A
-        rm -f $EXPECTED_H5_FILE_B
-        rm -f ${test_name}_recovery.out ${test_name}_recovery.rc 
-        rm -f $WRITER_NAME.out $WRITER_NAME.rc 
-        rm -f ${test_name}_h5clear_pre.out ${test_name}_h5clear_pre.rc 
+    else
+        rm -f "${EXPECTED_H5_FILE}"
+        rm -f "${EXPECTED_H5_FILE_A}"
+        rm -f "${EXPECTED_H5_FILE_B}"
+        rm -f "${test_name}_recovery.out" "${test_name}_recovery.rc" 
+        rm -f "${WRITER_NAME}.out" "${WRITER_NAME}.rc" 
+        rm -f "${test_name}_h5clear_pre.out" "${test_name}_h5clear_pre.rc" 
         rm -f h5clear_post.out h5clear_post.rc 
-        rm -f ${test_name}_validation_pre.out ${test_name}_validation_pre.rc 
-        rm -f ${test_name}_validation_post.out ${test_name}_validation_post.rc
-        rm -f $EXPECTED_UD_FILE.[0-9]* # Remove all updater files
+        rm -f "${test_name}_validation_pre.out" "${test_name}_validation_pre.rc" 
+        rm -f "${test_name}_validation_post.out" "${test_name}_validation_post.rc"
+        rm -f "${EXPECTED_UD_FILE}".[0-9]* # Remove all updater files
         rm -f VFD_SWMR_WRITER_MESSAGE
 
         if $REQUIRES_GENERATOR; then
@@ -456,8 +463,8 @@ run_test_case() {
         # been removed. Thus, the following cleanup is not necessary anymore, but has been left here
         # in case we want to re-add pid file functionality later.
         if false; then
-            rm -f ${test_name}_recovery.pid $WRITER_NAME.pid h5clear.pid h5clear_post.pid 
-            rm -f ${test_name}_validation_pre.pid ${test_name}_validation_post.pid
+            rm -f "${test_name}_recovery.pid" "${WRITER_NAME}.pid" h5clear.pid h5clear_post.pid 
+            rm -f "${test_name}_validation_pre.pid" "${test_name}_validation_post.pid"
             if $REQUIRES_GENERATOR; then rm -f generator.pid ; fi
         fi
     fi
@@ -511,10 +518,9 @@ run_crash_recovery_loop() {
 } # run_crash_recovery_loop()
 
 
-
 # Usage function
 usage() {
-    echo "Usage: $0 [-h] [-v] [-k] [test1 test2 ...]"
+    echo "Usage: $0 [-h] [-d] [-v] [-k] [test1 test2 ...]"
     echo ""
     echo "Run crash recovery tests for VFD SWMR"
     echo "For each test iteration, the writer tool will be executed and then crashed after"
@@ -525,8 +531,7 @@ usage() {
     echo "Options:"
     echo "  -h        Show this help message and exit"
     echo "  -d        Choose a specific delay in seconds (e.g. 0.5, 1.1, ...)"
-    echo "             will keep all output files. "
-    echo "             NOTE: A single specific test must be selected with this option."
+    echo "              NOTE: A single specific test must be selected with this option."
     echo "  -v        Enable verbose output"
     echo "  -k        Keep output files from each iteration. Useful for debugging."
     echo "            WILL GENERATE DOZENS OF FILES."
@@ -662,7 +667,7 @@ main() {
             vprintf "    Writer:           %s <delay> %s %s\n" "$CRASHER_TOOL" "$WRITER_TOOL" "$WRITER_OPTIONS"
             vprintf "    Validation:       %s && %s\n" "$H5LS $EXPECTED_H5_FILE" "$H5DUMP -pH $EXPECTED_H5_FILE"
             vprintf "    Expected files:   %s, %s.*\n" "$EXPECTED_H5_FILE" "$EXPECTED_UD_FILE"
-            vprintf "    Recovery:         %s\n" "$RECOVERY_TOOL"
+            vprintf "    Recovery:         %s\n" "$RECOVERY_TOOL -v"
             vprintf "    H5Clear:          %s -s\n" "$H5CLEAR"
             
             if $REQUIRES_GENERATOR && [ -n "$generator_config" ]; then
