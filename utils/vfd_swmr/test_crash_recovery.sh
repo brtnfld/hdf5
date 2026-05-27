@@ -57,33 +57,15 @@ mkdir crash_test
 cd crash_test
 
 
-###############################################################################
-# configure_test_env() <source> <destination>
-#   Arguments:
-#     $1 - source: path to file or directory to copy
-#     $2 - destination: new file or directory copied from source
-#
-# Cross-platform copy wrapper for macOS and Linux.
-#
-# Copies files or directories from SOURCE to DESTINATION, using
-#   copy-on-write (CoW) cloning when available on the current system
-#   (APFS on macOS, reflink-capable filesystems on Linux).
-#
-# Falls back to a standard recursive copy when CoW is not supported.
-################################################################################
-clone_cp() {
-  src="$1"
-  dst="$2"
+# Use copy-on-write (CoW) cloning where available: macOS uses 'cp -c', Linux uses
+# 'cp --reflink=auto'. In both cases, the commands automatically fall back to a normal
+# full copy if CoW is not supported by the filesystem.
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    COPY_CMD=(cp -c)
+else
+    COPY_CMD=(cp --reflink=auto)
+fi
 
-  case "$(uname -s)" in
-    Darwin)
-      cp -c "$src" "$dst" 2>/dev/null || cp "$src" "$dst"
-      ;;
-    *)
-      cp --reflink=auto "$src" "$dst" 2>/dev/null || cp "$src" "$dst"
-      ;;
-  esac
-}
 
 ###############################################################################
 # configure_test_env() <test_name>
@@ -309,8 +291,8 @@ run_test_case() {
     rc=$(cat "${WRITER_NAME}.rc")
 
     # Attempt copy-on-write cloning to optimize file data copying
-    clone_cp "$EXPECTED_H5_FILE"  "$EXPECTED_H5_FILE_A"
-    clone_cp "$EXPECTED_H5_FILE"  "$EXPECTED_H5_FILE_B"
+    "${COPY_CMD[@]}" "$EXPECTED_H5_FILE"  "$EXPECTED_H5_FILE_A"
+    "${COPY_CMD[@]}" "$EXPECTED_H5_FILE"  "$EXPECTED_H5_FILE_B"
 
     # Check the return code of the writer tool
     if [ "$rc" -eq 0 ]; then
