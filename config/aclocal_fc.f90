@@ -57,6 +57,10 @@ PROGRAM PROG_CHAR_ALLOC
 END PROGRAM PROG_CHAR_ALLOC
 
 !---- START ----- Check to see C_BOOL is different from LOGICAL
+! No CALL statements: tests that the compiler accepts the generic interface
+! at module-definition time, mirroring how tf_gen.F90 is compiled.
+! gfortran-14 -m32 suppresses the ambiguity error only when unambiguous call
+! sites are present, masking the bug that causes the actual build to fail.
 MODULE l_type_mod
   USE ISO_C_BINDING
   INTERFACE h5t
@@ -72,12 +76,7 @@ CONTAINS
   END SUBROUTINE h5t_logical
 END MODULE l_type_mod
 PROGRAM PROG_FC_C_BOOL_EQ_LOGICAL
-  USE ISO_C_BINDING
   USE l_type_mod
-  LOGICAL(KIND=C_BOOL) :: lcb
-  LOGICAL              :: l
-  CALL h5t(lcb)
-  CALL h5t(l)
 END PROGRAM PROG_FC_C_BOOL_EQ_LOGICAL
 !---- END ------- Check to see C_BOOL is different from LOGICAL
 
