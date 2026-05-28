@@ -1,0 +1,2 @@
+TC-1: review-checklist action test file — single area (fortran/).
+Safe to delete after testing is complete.
