@@ -130,7 +130,7 @@ END PROGRAM probe
 FORTRAN
 
 M32_SUPPORTED=0
-if $FC -m32 -c "$TMPDIR/probe_m32.f90" -o "$TMPDIR/probe_m32.o" 2>/dev/null; then
+if $FC -m32 "$TMPDIR/probe_m32.f90" -o "$TMPDIR/probe_m32" 2>/dev/null; then
     M32_SUPPORTED=1
 fi
 
