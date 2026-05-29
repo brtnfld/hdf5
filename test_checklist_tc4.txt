@@ -1,0 +1,4 @@
+TC-4: review-checklist action test file — no tracked CODEOWNERS area.
+This file is at the repo root and only matches the global wildcard (*), which the
+action skips. Expected result: no checklist comment is posted.
+Safe to delete after testing is complete.
