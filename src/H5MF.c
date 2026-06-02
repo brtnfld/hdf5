@@ -332,9 +332,7 @@ H5MF__alloc_to_fs_type(H5F_shared_t *f_sh, H5FD_mem_t alloc_type, hsize_t size, 
                 else
                     *fs_type = (H5F_mem_page_t)(f_sh->fs_type_map[alloc_type] + (H5FD_MEM_NTYPES - 1));
             } /* end if */
-#if 0 /* JRM */
-            /* Comment this our for now, as it causes two failures in the VFD SWMR tests */
-
+#if 1 /* JRM */
             else if ( f_sh->vfd_swmr ) {
 
                 /* If running VFD SWMR, use two large space allocators.  Neet to do this 
@@ -408,7 +406,25 @@ H5MF__open_fstype(H5F_t *f, H5F_mem_page_t type)
 
     /* Set up the alignment and threshold to use depending on the manager type */
     if (H5F_PAGED_AGGR(f)) {
+#if 1 /* JRM */
+        if ( H5F_USE_VFD_SWMR(f) ) {
+
+            if ( ( type >= H5F_MEM_PAGE_LARGE_SUPER ) && ( type <= H5F_MEM_PAGE_LARGE_OHDR ) ) {
+
+                assert( ( type == H5F_MEM_PAGE_LARGE_SUPER ) || ( type == H5F_MEM_PAGE_LARGE_DRAW ) );
+                alignment = f->shared->fs_page_size;
+
+            } else {
+
+                alignment = (hsize_t)H5F_ALIGN_DEF;
+            }
+        } else {
+
         alignment = (type == H5F_MEM_PAGE_GENERIC) ? f->shared->fs_page_size : (hsize_t)H5F_ALIGN_DEF;
+        }
+#else /* JRM */
+        alignment = (type == H5F_MEM_PAGE_GENERIC) ? f->shared->fs_page_size : (hsize_t)H5F_ALIGN_DEF;
+#endif /* JRM */
         threshold = H5F_ALIGN_THRHD_DEF;
     } /* end if */
     else {
@@ -497,7 +513,25 @@ H5MF__create_fstype(H5F_t *f, H5F_mem_page_t type)
 
     /* Set up alignment and threshold to use depending on TYPE */
     if (H5F_PAGED_AGGR(f)) {
+#if 1 /* JRM */
+        if ( H5F_USE_VFD_SWMR(f) ) {
+
+            if ( ( type >= H5F_MEM_PAGE_LARGE_SUPER ) && ( type <= H5F_MEM_PAGE_LARGE_OHDR ) ) {
+
+                assert( ( type == H5F_MEM_PAGE_LARGE_SUPER ) || ( type == H5F_MEM_PAGE_LARGE_DRAW ) );
+                alignment = f->shared->fs_page_size;
+
+            } else {
+
+                alignment = (hsize_t)H5F_ALIGN_DEF;
+            }
+        } else {
+
         alignment = (type == H5F_MEM_PAGE_GENERIC) ? f->shared->fs_page_size : (hsize_t)H5F_ALIGN_DEF;
+        }
+#else /* JRM */
+        alignment = (type == H5F_MEM_PAGE_GENERIC) ? f->shared->fs_page_size : (hsize_t)H5F_ALIGN_DEF;
+#endif /* JRM */
         threshold = H5F_ALIGN_THRHD_DEF;
     } /* end if */
     else {

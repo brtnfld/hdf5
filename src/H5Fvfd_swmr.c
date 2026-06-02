@@ -3137,7 +3137,7 @@ H5F__load_vfd_swmr_fs_page_size_config(H5CL_nv_pair_t *nv_pairs, hsize_t *fs_pag
 
     /* Iterate over nv_pairs (currently only one expected, but loop maintained
     * for consistency and potential future expansion) */
-    for ( i = 0; i < VFD_SWMR_PB_CONFIG__MAX_PARAMS; i++ ) {
+    for ( i = 0; i < VFD_SWMR_FS_PAGE_SIZE__MAX_PARAMS; i++ ) {
         
         if ( H5CL_VAL_NONE != nv_pairs[i].val_type ) {
             
