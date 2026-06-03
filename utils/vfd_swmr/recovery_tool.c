@@ -17,7 +17,7 @@
  * It invokes `h5clear -s` automatically, using the `h5clear` binary from
  * either the system PATH or the H5CLEAR_PATH environment variable.
  *
- * This tool currently only supports POSIX-compliant systems and is not
+ * NOTE: This tool currently only supports POSIX-compliant systems and is not
  * expected to function on Windows environments.
  */
 

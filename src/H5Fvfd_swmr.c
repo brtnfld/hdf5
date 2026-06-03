@@ -3304,44 +3304,6 @@ H5F_load_vfd_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_
     char page_buffer_config[]         = "page_buffer_config";
     char file_space_strategy_config[] = "file_space_strategy_config";
     char file_space_page_size[]       = "file_space_page_size";
-    
-    /* flags for tracking required configuration groups */
-    hbool_t configured_H5F_vfd_swmr_config = FALSE;
-    hbool_t configured_page_buffer_config  = FALSE;
-    hbool_t configured_fs_strategy_config  = FALSE;
-    hbool_t configured_fs_page_size        = FALSE;
-
-    herr_t ret_value = SUCCEED;
-
-    FUNC_ENTER_NOAPI(FAIL)
-
-    assert(config_str);
-
-    /* allocate config_ptr and initialize memory */
-    if ( NULL == (config_ptr = calloc(1, sizeof(H5F_vfd_swmr_config_t))) ) {
-        HGOTO_ERROR(H5E_INTERNAL, H5E_CANTALLOC, FAIL, "cannot allocate config structure");
-    }
-    memset(config_ptr, 0, sizeof(H5F_vfd_swmr_config_t));
-
-    /* Validate fapl */
-    if ( H5Iis_valid(fapl_id) <= 0 || H5Pisa_class(fapl_id, H5P_FILE_ACCESS) <= 0 ) {
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid FAPL");
-    }
-    
-    /* File creation mode:
-     * Writer mode required for file creation. FCPL must be valid when creating a file
-     */
-    if ( create_file ) {
-        
-        if ( !writer ) {
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "must be in writer mode to create file");
-        }
-
-        /* fcpl only needs to be valid if we are creating a file rather than opening */
-        if ( H5Iis_valid(fcpl_id) <= 0 || H5Pisa_class(fcpl_id, H5P_FILE_CREATE) <= 0 ) {
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid FCPL");
-        }
-    }
 
     /* Initialize top level group config schema */
     H5CL_config_spec configs[VFD_SWMR_CONFIG_DATA__MAX_PARAMS] =
@@ -3382,6 +3344,44 @@ H5F_load_vfd_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_
         for ( j = 0; j < configs[i].max_num_params; j++ ) {
 
             configs[i].nv_pairs[j].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
+        }
+    }
+
+    /* flags for tracking required configuration groups */
+    hbool_t configured_H5F_vfd_swmr_config = FALSE;
+    hbool_t configured_page_buffer_config  = FALSE;
+    hbool_t configured_fs_strategy_config  = FALSE;
+    hbool_t configured_fs_page_size        = FALSE;
+
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    assert(config_str);
+
+    /* allocate config_ptr and initialize memory */
+    if ( NULL == (config_ptr = calloc(1, sizeof(H5F_vfd_swmr_config_t))) ) {
+        HGOTO_ERROR(H5E_INTERNAL, H5E_CANTALLOC, FAIL, "cannot allocate config structure");
+    }
+    memset(config_ptr, 0, sizeof(H5F_vfd_swmr_config_t));
+
+    /* Validate fapl */
+    if ( H5Iis_valid(fapl_id) <= 0 || H5Pisa_class(fapl_id, H5P_FILE_ACCESS) <= 0 ) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid FAPL");
+    }
+    
+    /* File creation mode:
+     * Writer mode required for file creation. FCPL must be valid when creating a file
+     */
+    if ( create_file ) {
+        
+        if ( !writer ) {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "must be in writer mode to create file");
+        }
+
+        /* fcpl only needs to be valid if we are creating a file rather than opening */
+        if ( H5Iis_valid(fcpl_id) <= 0 || H5Pisa_class(fcpl_id, H5P_FILE_CREATE) <= 0 ) {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid FCPL");
         }
     }
 
