@@ -1,0 +1,2 @@
+TC-2: review-checklist action test file — multi-area (java/).
+Safe to delete after testing is complete.

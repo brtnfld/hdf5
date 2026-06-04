@@ -1,0 +1,3 @@
+TC-6: second commit on TC-2 branch to test sync idempotency.
+The checklist comment should be updated in-place, not duplicated.
+Safe to delete after testing is complete.
