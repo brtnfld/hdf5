@@ -3292,14 +3292,19 @@ H5F_load_vfd_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_
     hsize_t                 fs_page_size;
     H5F_vfd_swmr_config_t  *config_ptr = NULL;
 
-    /* Define nv_pair arrays for each possible configuration.
-     * zero initialize to protect against errors that occur when freeing before values
-     * are set 
-     */
-    H5CL_nv_pair_t vfd_swmr_config_nv_pairs[VFD_SWMR_CONFIG__MAX_PARAMS]            = {0};
-    H5CL_nv_pair_t page_buffer_config_nv_pairs[VFD_SWMR_PB_CONFIG__MAX_PARAMS]      = {0};
-    H5CL_nv_pair_t file_space_strategy_nv_pairs[VFD_SWMR_FS_STRATEGY__MAX_PARAMS]   = {0};
-    H5CL_nv_pair_t file_space_page_size_nv_pairs[VFD_SWMR_FS_PAGE_SIZE__MAX_PARAMS] = {0};
+    /* flags for tracking required configuration groups */
+    hbool_t configured_H5F_vfd_swmr_config = FALSE;
+    hbool_t configured_page_buffer_config  = FALSE;
+    hbool_t configured_fs_strategy_config  = FALSE;
+    hbool_t configured_fs_page_size        = FALSE;
+
+    herr_t ret_value = SUCCEED;
+
+    /* Define nv_pair arrays for each possible configuration */
+    H5CL_nv_pair_t vfd_swmr_config_nv_pairs[VFD_SWMR_CONFIG__MAX_PARAMS];
+    H5CL_nv_pair_t page_buffer_config_nv_pairs[VFD_SWMR_PB_CONFIG__MAX_PARAMS];
+    H5CL_nv_pair_t file_space_strategy_nv_pairs[VFD_SWMR_FS_STRATEGY__MAX_PARAMS];
+    H5CL_nv_pair_t file_space_page_size_nv_pairs[VFD_SWMR_FS_PAGE_SIZE__MAX_PARAMS];
 
     /* Initialize configuration names */
     char vfd_swmr_config_data[]       = "vfd_swmr_config_data";
@@ -3341,24 +3346,19 @@ H5F_load_vfd_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_
       }
     };
 
-    /* Initialize struct_tag for each nv_pair array referenced by each config entry */
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Initialize nv_pair arrays in each config entry */
     for ( i = 0; i < VFD_SWMR_CONFIG_DATA__MAX_PARAMS; i++ ) {
 
         for ( j = 0; j < configs[i].max_num_params; j++ ) {
 
             configs[i].nv_pairs[j].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
+
+            if ( H5CL_init_nv_pair(&(configs[i].nv_pairs[j])) > 0 )
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't configure specific nv pair.");
         }
     }
-
-    /* flags for tracking required configuration groups */
-    hbool_t configured_H5F_vfd_swmr_config = FALSE;
-    hbool_t configured_page_buffer_config  = FALSE;
-    hbool_t configured_fs_strategy_config  = FALSE;
-    hbool_t configured_fs_page_size        = FALSE;
-
-    herr_t ret_value = SUCCEED;
-
-    FUNC_ENTER_NOAPI(FAIL)
 
     assert(config_str);
 
