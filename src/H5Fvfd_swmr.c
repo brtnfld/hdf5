@@ -3292,11 +3292,14 @@ H5F_load_vfd_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_
     hsize_t                 fs_page_size;
     H5F_vfd_swmr_config_t  *config_ptr = NULL;
 
-    /* Define nv_pair arrays for each possible configuration */
-    H5CL_nv_pair_t vfd_swmr_config_nv_pairs[VFD_SWMR_CONFIG__MAX_PARAMS];
-    H5CL_nv_pair_t page_buffer_config_nv_pairs[VFD_SWMR_PB_CONFIG__MAX_PARAMS];
-    H5CL_nv_pair_t file_space_strategy_nv_pairs[VFD_SWMR_FS_STRATEGY__MAX_PARAMS];
-    H5CL_nv_pair_t file_space_page_size_nv_pairs[VFD_SWMR_FS_PAGE_SIZE__MAX_PARAMS];
+    /* Define nv_pair arrays for each possible configuration.
+     * zero initialize to protect against errors that occur when freeing before values
+     * are set 
+     */
+    H5CL_nv_pair_t vfd_swmr_config_nv_pairs[VFD_SWMR_CONFIG__MAX_PARAMS]            = {0};
+    H5CL_nv_pair_t page_buffer_config_nv_pairs[VFD_SWMR_PB_CONFIG__MAX_PARAMS]      = {0};
+    H5CL_nv_pair_t file_space_strategy_nv_pairs[VFD_SWMR_FS_STRATEGY__MAX_PARAMS]   = {0};
+    H5CL_nv_pair_t file_space_page_size_nv_pairs[VFD_SWMR_FS_PAGE_SIZE__MAX_PARAMS] = {0};
 
     /* Initialize configuration names */
     char vfd_swmr_config_data[]       = "vfd_swmr_config_data";
