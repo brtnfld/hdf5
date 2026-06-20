@@ -4837,7 +4837,7 @@ error:
  *
  * vfd_swmr_load_string_config_smoke_check()
  *
- * Initial smoke check for the H5F_load_vfd_swmr_config_from_string() function.
+ * Initial smoke check for the H5F_load_swmr_config_from_string() function.
  * Note that this test does not trigger any errors in that function.
  *
  *                                              Cody S. -- 4/28/26
@@ -4941,7 +4941,7 @@ vfd_swmr_load_string_config_smoke_check(void)
     }
     HDmemset(actual_config, 0, sizeof(H5F_vfd_swmr_config_t));
 
-    TESTING("H5F_load_vfd_swmr_config_from_string() -- Initial Smoke Check");
+    TESTING("H5F_load_swmr_config_from_string() -- Initial Smoke Check");
 
     /* Initialize property lists */
     if ( (fapl = h5_fileaccess()) < 0 )
@@ -4950,7 +4950,7 @@ vfd_swmr_load_string_config_smoke_check(void)
         TEST_ERROR;
 
     /* Use cl string to setup property lists */
-    if ( H5F_load_vfd_swmr_config_from_string(input_string, fapl, fcpl, writer, create_file) < 0 )
+    if ( H5F_load_swmr_config_from_string(input_string, fapl, fcpl, writer, create_file) < 0 )
         TEST_ERROR;
 
     /* Get configured values */
@@ -5020,7 +5020,7 @@ error:
  *
  * Verify that the VFD SWMR property list setup function detects and reports 
  * errors as expected.
- * Specifically, test that H5F_load_vfd_swmr_config_from_string() errors when
+ * Specifically, test that H5F_load_swmr_config_from_string() errors when
  * create_file parameter is TRUE but writer parameter is FALSE.
  *
  *                                              Cody S. -- 4/30/26
@@ -5078,7 +5078,7 @@ vfd_swmr_load_string_config_err_check_1(void)
     hbool_t create_file = true;
     bool    verbose     = true;
 
-    TESTING("H5F_load_vfd_swmr_config_from_string() err detect 1");
+    TESTING("H5F_load_swmr_config_from_string() err detect 1");
 
     /* Initialize property lists */
     if ( (fapl = h5_fileaccess()) < 0 )
@@ -5087,7 +5087,7 @@ vfd_swmr_load_string_config_err_check_1(void)
         TEST_ERROR;
 
     /* Expected to fail because writer is false but create_file is true */
-    if ( H5F_load_vfd_swmr_config_from_string(input_string, fapl, fcpl, writer, create_file) >= 0 ) {
+    if ( H5F_load_swmr_config_from_string(input_string, fapl, fcpl, writer, create_file) >= 0 ) {
        TEST_ERROR;
     } 
 #if VERIFY_ERROR_STACK_SUPPORTED    
@@ -5124,7 +5124,7 @@ error:
  *
  * Verify that the VFD SWMR property list setup function detects and reports 
  * errors as expected.
- * Specifically, test that H5F_load_vfd_swmr_config_from_string() errors when
+ * Specifically, test that H5F_load_swmr_config_from_string() errors when
  * required configs are missing.
  *
  *                                              Cody S. -- 4/30/26
@@ -5225,7 +5225,7 @@ vfd_swmr_load_string_config_err_check_2(void)
     hbool_t create_file = true;
     bool    verbose     = true;
 
-    TESTING("H5F_load_vfd_swmr_config_from_string() err detect 2");
+    TESTING("H5F_load_swmr_config_from_string() err detect 2");
 
     /* Initialize property lists */
     if ( (fapl = h5_fileaccess()) < 0 )
@@ -5234,7 +5234,7 @@ vfd_swmr_load_string_config_err_check_2(void)
         TEST_ERROR;
 
     /* Expected to fail because H5F_vfd_swmr_config missing */
-    if ( H5F_load_vfd_swmr_config_from_string(missing_H5F_vfd_swmr_config_str, 
+    if ( H5F_load_swmr_config_from_string(missing_H5F_vfd_swmr_config_str, 
                                               fapl, fcpl, writer, 
                                               create_file) >= 0 )
     {
@@ -5250,7 +5250,7 @@ vfd_swmr_load_string_config_err_check_2(void)
 #endif
 
     /* Expected to fail because page_buffer_config missing */
-    if ( H5F_load_vfd_swmr_config_from_string(missing_page_buffer_config_str,
+    if ( H5F_load_swmr_config_from_string(missing_page_buffer_config_str,
                                               fapl, fcpl, writer, 
                                               create_file) >= 0 )
     {
@@ -5266,7 +5266,7 @@ vfd_swmr_load_string_config_err_check_2(void)
 #endif
 
     /* Expected to fail because create_file is true but file_space configurations missing */
-    if ( H5F_load_vfd_swmr_config_from_string(missing_file_space_str, 
+    if ( H5F_load_swmr_config_from_string(missing_file_space_str, 
                                               fapl, fcpl, writer, 
                                               create_file) >= 0 )
     {
@@ -5307,7 +5307,7 @@ error:
  *
  * Verify that the VFD SWMR property list setup function detects and reports 
  * errors as expected.
- * Specifically, test that H5F_load_vfd_swmr_config_from_string() errors when
+ * Specifically, test that H5F_load_swmr_config_from_string() errors when
  * any of the required configuration paramaters are missing.
  * 
  *                                              Cody S. -- 4/30/26
@@ -5669,7 +5669,7 @@ vfd_swmr_load_string_config_err_check_3(void)
     hbool_t create_file = true;
     bool    verbose     = true;
 
-    TESTING("H5F_load_vfd_swmr_config_from_string() err detect 3");
+    TESTING("H5F_load_swmr_config_from_string() err detect 3");
 
     /* Initialize property lists */
     if ( (fapl = h5_fileaccess()) < 0 )
@@ -5678,7 +5678,7 @@ vfd_swmr_load_string_config_err_check_3(void)
         TEST_ERROR;
 
 
-    if ( H5F_load_vfd_swmr_config_from_string(missing_tick_len_str, fapl, fcpl, writer, create_file) >= 0 ) {
+    if ( H5F_load_swmr_config_from_string(missing_tick_len_str, fapl, fcpl, writer, create_file) >= 0 ) {
        TEST_ERROR;
     } 
 #if VERIFY_ERROR_STACK_SUPPORTED    
@@ -5690,7 +5690,7 @@ vfd_swmr_load_string_config_err_check_3(void)
     }
 #endif
 
-    if ( H5F_load_vfd_swmr_config_from_string(missing_max_lag_str, fapl, fcpl, writer, create_file) >= 0 ) {
+    if ( H5F_load_swmr_config_from_string(missing_max_lag_str, fapl, fcpl, writer, create_file) >= 0 ) {
        TEST_ERROR;
     } 
 #if VERIFY_ERROR_STACK_SUPPORTED    
@@ -5702,7 +5702,7 @@ vfd_swmr_load_string_config_err_check_3(void)
     }
 #endif
 
-    if ( H5F_load_vfd_swmr_config_from_string(missing_maintain_md_file_str, fapl, fcpl, writer, create_file) >= 0 ) {
+    if ( H5F_load_swmr_config_from_string(missing_maintain_md_file_str, fapl, fcpl, writer, create_file) >= 0 ) {
        TEST_ERROR;
     } 
 #if VERIFY_ERROR_STACK_SUPPORTED    
@@ -5714,7 +5714,7 @@ vfd_swmr_load_string_config_err_check_3(void)
     }
 #endif
     
-    if ( H5F_load_vfd_swmr_config_from_string(missing_gen_updater_files_str, fapl, fcpl, writer, create_file) >= 0 ) {
+    if ( H5F_load_swmr_config_from_string(missing_gen_updater_files_str, fapl, fcpl, writer, create_file) >= 0 ) {
        TEST_ERROR;
     } 
 #if VERIFY_ERROR_STACK_SUPPORTED    
@@ -5726,7 +5726,7 @@ vfd_swmr_load_string_config_err_check_3(void)
     }
 #endif
     
-    if ( H5F_load_vfd_swmr_config_from_string(missing_md_pages_reserved_str, fapl, fcpl, writer, create_file) >= 0 ) {
+    if ( H5F_load_swmr_config_from_string(missing_md_pages_reserved_str, fapl, fcpl, writer, create_file) >= 0 ) {
        TEST_ERROR;
     } 
 #if VERIFY_ERROR_STACK_SUPPORTED    
@@ -5738,7 +5738,7 @@ vfd_swmr_load_string_config_err_check_3(void)
     }
 #endif
     
-    if ( H5F_load_vfd_swmr_config_from_string(missing_page_buf_size_str, fapl, fcpl, writer, create_file) >= 0 ) {
+    if ( H5F_load_swmr_config_from_string(missing_page_buf_size_str, fapl, fcpl, writer, create_file) >= 0 ) {
        TEST_ERROR;
     } 
 #if VERIFY_ERROR_STACK_SUPPORTED    
@@ -5750,7 +5750,7 @@ vfd_swmr_load_string_config_err_check_3(void)
     }
 #endif
     
-    if ( H5F_load_vfd_swmr_config_from_string(missing_md_pages_only_str, fapl, fcpl, writer, create_file) >= 0 ) {
+    if ( H5F_load_swmr_config_from_string(missing_md_pages_only_str, fapl, fcpl, writer, create_file) >= 0 ) {
        TEST_ERROR;
     } 
 #if VERIFY_ERROR_STACK_SUPPORTED    
@@ -5762,7 +5762,7 @@ vfd_swmr_load_string_config_err_check_3(void)
     }
 #endif
 
-    if ( H5F_load_vfd_swmr_config_from_string(missing_persist_str, fapl, fcpl, writer, create_file) >= 0 ) {
+    if ( H5F_load_swmr_config_from_string(missing_persist_str, fapl, fcpl, writer, create_file) >= 0 ) {
        TEST_ERROR;
     } 
 #if VERIFY_ERROR_STACK_SUPPORTED    
@@ -5774,7 +5774,7 @@ vfd_swmr_load_string_config_err_check_3(void)
     }
 #endif
 
-    if ( H5F_load_vfd_swmr_config_from_string(missing_page_size_str, fapl, fcpl, writer, create_file) >= 0 ) {
+    if ( H5F_load_swmr_config_from_string(missing_page_size_str, fapl, fcpl, writer, create_file) >= 0 ) {
        TEST_ERROR;
     } 
 #if VERIFY_ERROR_STACK_SUPPORTED    
@@ -5813,7 +5813,7 @@ error:
  *
  * Verify that the VFD SWMR property list setup function detects and reports 
  * errors as expected.
- * Specifically, test that H5F_load_vfd_swmr_config_from_string() errors when
+ * Specifically, test that H5F_load_swmr_config_from_string() errors when
  * configs contain duplicate parameters.
  *
  *                                              Cody S. -- 4/30/26
@@ -5908,7 +5908,7 @@ vfd_swmr_load_string_config_err_check_4(void)
     hbool_t create_file = true;
     bool    verbose     = true;
 
-    TESTING("H5F_load_vfd_swmr_config_from_string() err detect 4");
+    TESTING("H5F_load_swmr_config_from_string() err detect 4");
 
     /* Initialize property lists */
     if ( (fapl = h5_fileaccess()) < 0 )
@@ -5916,7 +5916,7 @@ vfd_swmr_load_string_config_err_check_4(void)
     if ( (fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0 )
         TEST_ERROR;
 
-    if ( H5F_load_vfd_swmr_config_from_string(duplicate_H5F_vfd_swmr_config_str, fapl, fcpl, writer, create_file) >= 0 ) {
+    if ( H5F_load_swmr_config_from_string(duplicate_H5F_vfd_swmr_config_str, fapl, fcpl, writer, create_file) >= 0 ) {
        TEST_ERROR;
     } 
 #if VERIFY_ERROR_STACK_SUPPORTED    
@@ -5928,7 +5928,7 @@ vfd_swmr_load_string_config_err_check_4(void)
     }
 #endif
 
-    if ( H5F_load_vfd_swmr_config_from_string(duplicate_page_buffer_config_str, fapl, fcpl, writer, create_file) >= 0 ) {
+    if ( H5F_load_swmr_config_from_string(duplicate_page_buffer_config_str, fapl, fcpl, writer, create_file) >= 0 ) {
        TEST_ERROR;
     } 
 #if VERIFY_ERROR_STACK_SUPPORTED    
@@ -5969,7 +5969,7 @@ error:
  *
  * Verify that the VFD SWMR property list setup function detects and reports 
  * errors as expected.
- * Specifically, test that H5F_load_vfd_swmr_config_from_string() errors when
+ * Specifically, test that H5F_load_swmr_config_from_string() errors when
  * unique parameter range checks are violated.
  *
  *                                              Cody S. -- 5/14/26
@@ -6495,7 +6495,7 @@ vfd_swmr_load_string_config_err_check_5(void)
     hbool_t create_file = true;
     bool    verbose     = true;
 
-    TESTING("H5F_load_vfd_swmr_config_from_string() err detect 5");
+    TESTING("H5F_load_swmr_config_from_string() err detect 5");
 
     /* Initialize property lists */
     if ( (fapl = h5_fileaccess()) < 0 )
@@ -6503,7 +6503,7 @@ vfd_swmr_load_string_config_err_check_5(void)
     if ( (fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0 )
         TEST_ERROR;
 
-    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_1, 
+    if ( H5F_load_swmr_config_from_string(invalid_config_str_1, 
                                               fapl, fcpl, writer, 
                                               create_file) >= 0 )
     {
@@ -6518,7 +6518,7 @@ vfd_swmr_load_string_config_err_check_5(void)
     }
 #endif
 
-    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_2,
+    if ( H5F_load_swmr_config_from_string(invalid_config_str_2,
                                               fapl, fcpl, writer, 
                                               create_file) >= 0 )
     {
@@ -6533,7 +6533,7 @@ vfd_swmr_load_string_config_err_check_5(void)
     }
 #endif
 
-    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_3, 
+    if ( H5F_load_swmr_config_from_string(invalid_config_str_3, 
                                               fapl, fcpl, writer, 
                                               create_file) >= 0 )
     {
@@ -6548,7 +6548,7 @@ vfd_swmr_load_string_config_err_check_5(void)
     }
 #endif
 
-    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_4, 
+    if ( H5F_load_swmr_config_from_string(invalid_config_str_4, 
                                               fapl, fcpl, writer, 
                                               create_file) >= 0 )
     {
@@ -6563,7 +6563,7 @@ vfd_swmr_load_string_config_err_check_5(void)
     }
 #endif
 
-    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_5, 
+    if ( H5F_load_swmr_config_from_string(invalid_config_str_5, 
                                               fapl, fcpl, writer, 
                                               create_file) >= 0 )
     {
@@ -6578,7 +6578,7 @@ vfd_swmr_load_string_config_err_check_5(void)
     }
 #endif
 
-    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_6, 
+    if ( H5F_load_swmr_config_from_string(invalid_config_str_6, 
                                               fapl, fcpl, writer, 
                                               create_file) >= 0 )
     {
@@ -6593,7 +6593,7 @@ vfd_swmr_load_string_config_err_check_5(void)
     }
 #endif
 
-    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_7, 
+    if ( H5F_load_swmr_config_from_string(invalid_config_str_7, 
                                               fapl, fcpl, writer, 
                                               create_file) >= 0 )
     {
@@ -6612,7 +6612,7 @@ vfd_swmr_load_string_config_err_check_5(void)
      * SIZE_MAX is greater than INT64_MAX (used by config parser int_val) */
     
 
-    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_8, 
+    if ( H5F_load_swmr_config_from_string(invalid_config_str_8, 
                                               fapl, fcpl, writer, 
                                               create_file) >= 0 )
     {
@@ -6627,7 +6627,7 @@ vfd_swmr_load_string_config_err_check_5(void)
     }
 #endif
 
-    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_9, 
+    if ( H5F_load_swmr_config_from_string(invalid_config_str_9, 
                                               fapl, fcpl, writer, 
                                               create_file) >= 0 )
     {
@@ -6642,7 +6642,7 @@ vfd_swmr_load_string_config_err_check_5(void)
     }
 #endif
 
-    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_10, 
+    if ( H5F_load_swmr_config_from_string(invalid_config_str_10, 
                                               fapl, fcpl, writer, 
                                               create_file) >= 0 )
     {
@@ -6657,7 +6657,7 @@ vfd_swmr_load_string_config_err_check_5(void)
     }
 #endif
 
-    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_11, 
+    if ( H5F_load_swmr_config_from_string(invalid_config_str_11, 
                                               fapl, fcpl, writer, 
                                               create_file) >= 0 )
     {
@@ -6672,7 +6672,7 @@ vfd_swmr_load_string_config_err_check_5(void)
     }
 #endif
 
-    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_12, 
+    if ( H5F_load_swmr_config_from_string(invalid_config_str_12, 
                                               fapl, fcpl, writer, 
                                               create_file) >= 0 )
     {
@@ -6687,7 +6687,7 @@ vfd_swmr_load_string_config_err_check_5(void)
     }
 #endif
 
-    if ( H5F_load_vfd_swmr_config_from_string(invalid_config_str_13, 
+    if ( H5F_load_swmr_config_from_string(invalid_config_str_13, 
                                               fapl, fcpl, writer, 
                                               create_file) >= 0 )
     {
@@ -6728,7 +6728,7 @@ error:
  *
  * Verify that the VFD SWMR property list setup function detects and reports 
  * errors as expected.
- * Specifically, test that H5F_load_vfd_swmr_config_from_string() errors when
+ * Specifically, test that H5F_load_swmr_config_from_string() errors when
  * strings that are too large are used.
  *
  *                                              Cody S. -- 5/14/26
@@ -6793,7 +6793,7 @@ vfd_swmr_load_string_config_err_check_6(void)
     hbool_t create_file = true;
     bool    verbose     = true;
 
-    TESTING("H5F_load_vfd_swmr_config_from_string() err detect 6");
+    TESTING("H5F_load_swmr_config_from_string() err detect 6");
 
     /* Initialize property lists */
     if ( (fapl = h5_fileaccess()) < 0 )
@@ -6801,7 +6801,7 @@ vfd_swmr_load_string_config_err_check_6(void)
     if ( (fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0 )
         TEST_ERROR;
 
-    if ( H5F_load_vfd_swmr_config_from_string(config_str, 
+    if ( H5F_load_swmr_config_from_string(config_str, 
                                               fapl, fcpl, writer, 
                                               create_file) >= 0 )
     {
@@ -7415,7 +7415,7 @@ error:
  *
  * vfd_swmr_load_file_config_smoke_check()
  *
- * Initial smoke check for the H5F_load_vfd_swmr_config_from_file() function.  
+ * Initial smoke check for the H5Fswmr_config_file() function.  
  * Note that this test does not trigger any errors in that function
  *
  *                                              Cody S. -- 5/8/26
@@ -7520,7 +7520,7 @@ vfd_swmr_load_file_config_smoke_check(void)
     }
     HDmemset(actual_config, 0, sizeof(H5F_vfd_swmr_config_t));
 
-    TESTING("H5F_load_vfd_swmr_config_from_string() -- Initial Smoke Check");
+    TESTING("H5Fswmr_config_file() -- Initial Smoke Check");
 
     /* Initialize property lists */
     if ( (fapl = h5_fileaccess()) < 0 )
@@ -7537,7 +7537,7 @@ vfd_swmr_load_file_config_smoke_check(void)
     }
 
     /* Use cl file to setup property lists */
-    if ( H5F_load_vfd_swmr_config_from_file(TEST_CONFIG_FILE_NAME, fapl, fcpl, writer, create_file) < 0 )
+    if ( H5Fswmr_config_file(TEST_CONFIG_FILE_NAME, fapl, fcpl, writer, create_file) < 0 )
         TEST_ERROR;
 
     /* Get configured values */

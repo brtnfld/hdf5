@@ -27,7 +27,6 @@
 
 #include "hdf5.h"
 #include "nbcompat.h"
-#include "H5Fprivate.h"
 
 #define SWMR_TICK_LEN 4 /* in 100 ms */
 
@@ -543,8 +542,8 @@ matrix_open(state_t *s, bool rw)
 #if USE_CONFIGURATION_FILE
 
     /* Use rw bool both for writer and create_file boolean options */
-    if (H5F_load_vfd_swmr_config_from_env_var(fapl, fcpl, rw, rw, NULL) < 0) {
-        errx(EXIT_FAILURE, "%s.%d: H5F_load_vfd_swmr_config_from_env_var() failed", __func__, __LINE__);
+    if (H5Fswmr_config_env(fapl, fcpl, rw, rw, NULL) < 0) {
+        errx(EXIT_FAILURE, "%s.%d: H5Fswmr_config_env() failed", __func__, __LINE__);
     }
 # else /* USE_CONFIGURATION_FILE */
     H5F_vfd_swmr_config_t config;
@@ -604,7 +603,7 @@ fuzz(float mat[ROWS][COLS])
 
     for (i = 0; i < ROWS; i++) {
         for (j = 0; j < COLS; j++) {
-            mat[i][j] += (float)random() / RAND_MAX * (9. / 64.);
+            mat[i][j] += (float)random() / (float)RAND_MAX * (9. / 64.);
         }
     }
 }

@@ -131,6 +131,7 @@ static struct h5_long_options l_opts[] = {{"attribute", require_arg, 'a'},
                                           {"vfd-value", require_arg, '4'},
                                           {"vfd-name", require_arg, '5'},
                                           {"vfd-info", require_arg, '6'},
+                                          {"swmr-config-file", require_arg, '7'},
                                           {NULL, 0, '\0'}};
 
 /*-------------------------------------------------------------------------
@@ -214,6 +215,8 @@ usage(const char *prog)
     PRINTVALSTREAM(rawoutstream,
                    "     --vfd-info           VFD-specific info to pass to the VFL driver used for\n");
     PRINTVALSTREAM(rawoutstream, "                          opening the HDF5 file specified\n");
+    PRINTVALSTREAM(rawoutstream, "     --swmr-config-file   Path to a swmr configuration file used to set VFD SWMR\n");
+    PRINTVALSTREAM(rawoutstream, "                          specific configurations to use\n");             
     PRINTVALSTREAM(rawoutstream, "--------------- Object Options ---------------\n");
     PRINTVALSTREAM(rawoutstream, "     -a P, --attribute=P  Print the specified attribute\n");
     PRINTVALSTREAM(rawoutstream,
@@ -1296,6 +1299,13 @@ end_collect:
 
             case '6':
                 vfd_info_g.info = (const void *)H5_optarg;
+                break;
+
+            case '7':
+                vfd_info_g.type             = VFD_BY_NAME;
+                vfd_info_g.u.name           = "swmr";
+                vfd_info_g.swmr_config_file = H5_optarg;
+                use_custom_vfd_g            = TRUE;
                 break;
 
             case '?':
