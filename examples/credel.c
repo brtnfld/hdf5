@@ -20,7 +20,6 @@
 
 #include "hdf5.h"
 #include "nbcompat.h"
-#include "H5Fprivate.h"
 
 /* Controls whether vfd configuration settings should be set 
  * using configuration file instead of using hardcoded 
@@ -373,8 +372,8 @@ main(int argc, char **argv)
     bool writer = true;
     bool create_file = true;
 
-    if (H5F_load_vfd_swmr_config_from_env_var(fapl, fcpl, writer, create_file, NULL) < 0) {
-        errx(EXIT_FAILURE, "%s.%d: H5F_load_vfd_swmr_config_from_env_var() failed", __func__, __LINE__);
+    if (H5Fswmr_config_env(fapl, fcpl, writer, create_file, NULL) < 0) {
+        errx(EXIT_FAILURE, "%s.%d: H5Fswmr_config_env() failed", __func__, __LINE__);
     }
 
 #else /* USE_CONFIGURATION_FILE */

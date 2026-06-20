@@ -21,7 +21,6 @@
 #include "h5tools_ref.h"
 #include "h5tools_utils.h"
 #include "H5private.h"
-#include "H5Fprivate.h" /* For H5F_load_vfd_swmr_config_from_file() */
 
 #ifdef H5_TOOLS_DEBUG
 /* global debug variables */
@@ -507,8 +506,8 @@ h5tools_set_up_vfd_swmr(hid_t fapl, const char *config_file)
     else { 
         /* set up VFD SWMR fapl with values defined in config file.
          * fcpl id set to H5I_INVALID_HID since it is unneeded.  */
-        if (H5F_load_vfd_swmr_config_from_file(config_file, fapl, H5I_INVALID_HID, false, false) < 0)
-            H5TOOLS_GOTO_ERROR(FAIL, "H5F_load_vfd_swmr_config_from_file failed");
+        if (H5Fswmr_config_file(config_file, fapl, H5I_INVALID_HID, false, false) < 0)
+            H5TOOLS_GOTO_ERROR(FAIL, "H5Fswmr_config_file() failed");
     }
 
 done:

@@ -65,8 +65,12 @@ Options:
 Example:
     crasher -v -p 5 ./my_program arg1 arg2
 
-
-test_crash_recovery.sh
+<!-- 
+The test scripts have been commented out because they are not quite ready for user testing.
+The instructions are also likely to be out of date too.
+                                -- Cody S. 6/15/26
+ -->
+<!-- test_crash_recovery.sh
 ======================
 This script tests the recovery tool's ability to recover HDF5 files that have been corrupted by simulated 
 crashes during the write process. It uses the crasher utility to kill VFD SWMR writer programs at 
@@ -181,4 +185,4 @@ role, to allow the socket connection to establish correctly.
 Note: Since the bigset test requires the auxiliary process to 
 run with access to a valid POSIX file system, the [md_dir] 
 argument MUST be set to a valid local posix path on the reader 
-device. The writer doesn't need this argument.
+device. The writer doesn't need this argument. -->

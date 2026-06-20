@@ -2063,6 +2063,120 @@ H5_DLL herr_t H5Fset_latest_format(hid_t file_id, hbool_t latest_format);
  */
 H5_DLL htri_t H5Fis_hdf5(const char *file_name);
 
+/**
+ * \ingroup H5F
+ *
+ * \brief Loads and applies VFD SWMR configurations into FAPL and FCPL from a configuration file
+ *        path.
+ *
+ * \param[in] file_path path to the configuration file.
+ * \param[in] fapl_id index ID for the fapl to set the VFD SWMR configuration data.
+ * \param[in] fcpl_id index ID for the fcpl to set the VFD SWMR related file creation properties
+ *            (Used only when creating a new file).
+ * \param[in] writer indicates whether the caller is operating in SWMR writer mode.
+ * \param[in] create_file indicates whether a new file is being created.
+ *            When true, FCPL-related configuration is applied. This parameter
+ *            may only be true when \p writer is true.
+ *
+ * \return \herr_t
+ *
+ *
+ * \details H5Fswmr_config_file() reads a VFD SWMR configuration file from the
+ *          specified path and applies the resulting configuration to the
+ *          supplied file access property list (FAPL). When \p create_file is
+ *          true, any file creation properties specified by the configuration
+ *          are also applied to the supplied file creation property list (FCPL).
+ *          The \p writer parameter determines whether writer-specific or
+ *          reader-specific configuration settings are applied. If \p writer is 
+ *          false, \p create_file must also be false.
+ *          
+ *
+ * \since ?
+ * 
+ * \todo In which version was this function introduced?
+ *
+ */
+H5_DLL herr_t H5Fswmr_config_file(const char *file_path, hid_t fapl_id, hid_t fcpl_id, 
+                                  hbool_t writer, hbool_t create_file);
+
+/**
+ * \ingroup H5F
+ *
+ * \brief Loads and applies VFD SWMR configurations into FAPL and FCPL from a configuration file
+ *        path specified in an environment variable. Uses HDF5_VFD_SWMR_CONFIG by default, or a 
+ *        custom environment variable if supplied.
+ * 
+ * \param[in] fapl_id index ID for the fapl to set the VFD SWMR configuration data.
+ * \param[in] fcpl_id index ID for the fcpl to set the VFD SWMR related file creation properties
+ *            (Used only when creating a new file).
+ * \param[in] writer indicates whether the caller is operating in SWMR writer mode.
+ * \param[in] create_file indicates whether a new file is being created.
+ *            When true, FCPL-related configuration is applied. This parameter
+ *            may only be true when \p writer is true.
+ * \param[in] env_var_name name of the environment variable containing the VFD
+ *            SWMR configuration file path. If NULL, HDF5_VFD_SWMR_CONFIG is
+ *            used.
+ *
+ * \return \herr_t
+ *
+ *
+ * \details H5Fswmr_config_env() reads a VFD SWMR configuration file whose path
+ *          is specified by an environment variable and applies the resulting
+ *          configuration to the supplied file access property list (FAPL).
+ *          When \p create_file is true, any file creation properties specified
+ *          by the configuration are also applied to the supplied file creation
+ *          property list (FCPL). The \p writer parameter determines whether
+ *          writer-specific or reader-specific configuration settings are
+ *          applied. If \p env_var_name is NULL, the default environment
+ *          variable, HDF5_VFD_SWMR_CONFIG, is used.
+ *
+ * \since ?
+ * 
+ * \todo In which version was this function introduced?
+ *
+ */
+H5_DLL herr_t H5Fswmr_config_env(hid_t fapl_id, hid_t fcpl_id, hbool_t writer, 
+                                 hbool_t create_file, const char *env_var_name);
+
+/**
+ * \ingroup H5F
+ *
+ * \brief Loads and applies VFD SWMR configurations into FAPL and FCPL from a configuration file
+ *        path specified in an environment variable. Uses HDF5_VFD_SWMR_CONFIG by default, or a 
+ *        custom environment variable if supplied.
+ * 
+ * \param[in] config_str configuration language string containing valid configurations to be
+ *            applied to property lists for VFD SWMR.
+ * \param[in] fapl_id index ID for the fapl to set the VFD SWMR configuration data.
+ * \param[in] fcpl_id index ID for the fcpl to set the VFD SWMR related file creation properties
+ *            (Used only when creating a new file).
+ * \param[in] writer indicates whether the caller is operating in SWMR writer mode.
+ * \param[in] create_file indicates whether a new file is being created.
+ *            When true, FCPL-related configuration is applied. This parameter
+ *            may only be true when \p writer is true.
+ *
+ * \return \herr_t
+ *
+ *
+ * \details H5Fswmr_config_env() reads a VFD SWMR configuration file whose path
+ *          is specified by an environment variable and applies the resulting
+ *          configuration to the supplied file access property list (FAPL).
+ *          When \p create_file is true, any file creation properties specified
+ *          by the configuration are also applied to the supplied file creation
+ *          property list (FCPL). The \p writer parameter determines whether
+ *          writer-specific or reader-specific configuration settings are
+ *          applied. If \p env_var_name is NULL, the default environment
+ *          variable, HDF5_VFD_SWMR_CONFIG, is used.
+ *
+ * \since ?
+ * 
+ * \todo In which version was this function introduced?
+ *
+ */
+H5_DLL herr_t H5Fswmr_config_string(const char *config_str, hid_t fapl_id, hid_t fcpl_id, 
+                                    hbool_t writer, hbool_t create_file);
+
+
 #endif /* H5_NO_DEPRECATED_SYMBOLS */
 
 #ifdef __cplusplus

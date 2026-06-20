@@ -2127,7 +2127,7 @@ done:
  *----------------------------------------------------------------------------
  */
 herr_t 
-H5CL_load_config_string_from_file(const char *file_name, char **cfg_str_ptr_ptr)
+H5CL_load_config_string_from_file(const char *file_path, char **cfg_str_ptr_ptr)
 {
     struct stat st;
     size_t      num_chars;
@@ -2142,12 +2142,12 @@ H5CL_load_config_string_from_file(const char *file_name, char **cfg_str_ptr_ptr)
 
     *cfg_str_ptr_ptr = NULL;
 
-    if ( file_name == NULL || file_name[0] == '\0' )
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "file_name cannot be blank");
+    if ( file_path == NULL || file_path[0] == '\0' )
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "file_path cannot be blank");
 
     /* Not using realpath() now. Should be fine in UNIX type OS's, not sure about others */
 
-    if ( stat(file_name, &st) != 0 )
+    if ( stat(file_path, &st) != 0 )
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "could not stat file");
 
     if ( !S_ISREG(st.st_mode) )
@@ -2160,7 +2160,7 @@ H5CL_load_config_string_from_file(const char *file_name, char **cfg_str_ptr_ptr)
     if ( !buf )
         HGOTO_ERROR(H5E_INTERNAL, H5E_CANTALLOC, FAIL, "unable to allocate string buffer");
 
-    file = fopen(file_name, "rb");
+    file = fopen(file_path, "rb");
     if ( !file ) {
         HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL, "unable to open file");
     }

@@ -23,6 +23,13 @@
 #include <assert.h>
 #include <time.h>
 
+/* Macro to disable switch case fallthrough warning on supported systems */
+#if defined(__clang__) || defined(__GNUC__)
+#  define FALLTHROUGH __attribute__((fallthrough))
+#else
+#  define FALLTHROUGH ((void)0)
+#endif
+
 #define FILE_NAME_LEN                  1024
 #define SIGNATURE_LEN                  4
 #define UPDATER_SIGNATURE              "VUDH"
@@ -703,37 +710,37 @@ checksum_lookup(const void *key, size_t length, uint32_t initval)
     {
         case 12:
             c += ((uint32_t)k[11]) << 24;
-            /* FALLTHROUGH */
+            FALLTHROUGH;
         case 11:
             c += ((uint32_t)k[10]) << 16;
-            /* FALLTHROUGH */
+            FALLTHROUGH;
         case 10:
             c += ((uint32_t)k[9]) << 8;
-            /* FALLTHROUGH */
+            FALLTHROUGH;
         case 9:
             c += k[8];
-            /* FALLTHROUGH */
+            FALLTHROUGH;
         case 8:
             b += ((uint32_t)k[7]) << 24;
-            /* FALLTHROUGH */
+            FALLTHROUGH;
         case 7:
             b += ((uint32_t)k[6]) << 16;
-            /* FALLTHROUGH */
+            FALLTHROUGH;
         case 6:
             b += ((uint32_t)k[5]) << 8;
-            /* FALLTHROUGH */
+            FALLTHROUGH;
         case 5:
             b += k[4];
-            /* FALLTHROUGH */
+            FALLTHROUGH;
         case 4:
             a += ((uint32_t)k[3]) << 24;
-            /* FALLTHROUGH */
+            FALLTHROUGH;
         case 3:
             a += ((uint32_t)k[2]) << 16;
-            /* FALLTHROUGH */
+            FALLTHROUGH;
         case 2:
             a += ((uint32_t)k[1]) << 8;
-            /* FALLTHROUGH */
+            FALLTHROUGH;
         case 1:
             a += k[0];
             break;
@@ -906,8 +913,8 @@ decode_ud_header(updater_t *updater, handler_t *hand)
     /* Output the log info */
     if (hand->output) {
         fprintf(hand->output, "header signature=%s\n", updater->header_signature);
-        fprintf(hand->output, "version=%h" PRIu16 "\n", updater->version);
-        fprintf(hand->output, "flags=%h" PRIu16 "\n", updater->flags);
+        fprintf(hand->output, "version=%" PRIu16 "\n", updater->version);
+        fprintf(hand->output, "flags=%" PRIu16 "\n", updater->flags);
         fprintf(hand->output, "page size (bytes)=%" PRIu32 "\n", updater->page_size);
         fprintf(hand->output, "sequence number=%" PRIu64 "\n", updater->sequence_num);
         fprintf(hand->output, "tick number=%" PRIu64 "\n", updater->tick_num);

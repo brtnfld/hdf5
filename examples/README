@@ -28,21 +28,21 @@ Instruction for compiling and running the two VFD SWMR demo programs in this dir
 credel.c:
 =========
 To compile:
-    ../install/bin/h5cc -I../src/ -o credel credel.c nbcompat.c
+    ../install/bin/h5cc -o credel credel.c nbcompat.c
 
 To run:
     HDF5_VFD_SWMR_CONFIG=credel_swmr_config.txt ./credel -v  (on one window)
     ../install/bin/h5ls --swmr-config-file=credel_swmr_config.txt --poll=100 -r -d ./credel.h5  (on another window)
 
 To run with auxilary process:
-    HDF5_VFD_SWMR_CONFIG=credel_swmr_config.txt ./credel -v -a   (in one window)
-    ../utils/vfd_swmr/aux_process my_md_file ./credel_updater_file  (in a second window)
-    ../install/bin/h5ls --swmr-config-file=credel_swmr_config.txt --poll=100 -r -d ./credel.h5  (in a third window)
+    HDF5_VFD_SWMR_CONFIG=credel_swmr_gen_updater_config.txt ./credel -v (in one window)
+    ../utils/vfd_swmr/aux_process credel_md_file ./credel_updater_file  (in a second window)
+    ../install/bin/h5ls --swmr-config-file=credel_swmr_gen_updater_config.txt --poll=100 -r -d ./credel.h5  (in a third window)
 
 vfd_swmr_gaussians.c
 ====================
 To compile:
-    ../install/bin/h5cc -I../src/ -o gaussians ./gaussians.c ./nbcompat.c -lcurses
+    ../install/bin/h5cc -o gaussians gaussians.c nbcompat.c -lcurses
 To link as writer:
     ln -s gaussians wgaussians
 To link as reader:

@@ -46,6 +46,13 @@
 
 #define READER_WAIT_TICKS 4
 
+/* Controls whether vfd configuration settings should be set 
+ * using configuration file instead of using hardcoded 
+ * configurations */
+/* Configuration file usage disabled for now so we don't have to update build tests yet. \
+ * Will be implemented in the future -- Cody S. 6/18/26 */
+/* #define USE_CONFIGURATION_FILE 1 */
+
 /* Structure to hold info for options specified */
 typedef struct {
     hid_t        file;               /* File ID */
@@ -62,7 +69,7 @@ typedef struct {
     hbool_t      chunked;            /* For -k option */
     hbool_t      vl_attr;            /* For -v option */
     hbool_t      mod_attr;           /* For -m option */
-    hbool_t      use_np;             /* For -N option */
+    hbool_t      use_communication;  /* For -N option */
     hbool_t      use_vfd_swmr;       /* For -S option */
 } state_t;
 
@@ -101,34 +108,14 @@ typedef struct {
         .implicit_max_compact = 0, .fa_max_compact = 0, .ea_max_compact = 0, .bt2_max_compact = 0            \
     }
 
-/* Structure to hold info for named pipes */
-typedef struct {
-    const char *fifo_writer_to_reader; /* Name of fifo for writer to reader */
-    const char *fifo_reader_to_writer; /* Name of fifo for reader to writer */
-    int         fd_writer_to_reader;   /* File ID for fifo from writer to reader */
-    int         fd_reader_to_writer;   /* File ID for fifo from reader to writer */
-    int         notify;                /* Value to notify between writer and reader */
-    int         verify;                /* Value to verify between writer and reader */
-} np_state_t;
 
-/* Initializations for np_state_t */
-#define NP_INITIALIZER                                                                                       \
-    (np_state_t)                                                                                             \
-    {                                                                                                        \
-        .fifo_writer_to_reader = "./fifo_attrdset_writer_to_reader",                                         \
-        .fifo_reader_to_writer = "./fifo_attrdset_reader_to_writer", .fd_writer_to_reader = -1,              \
-        .fd_reader_to_writer = -1, .notify = 0, .verify = 0                                                  \
-    }
+static hbool_t state_init(state_t *s, socket_state_t *sock, int argc, const char *const *argv);
 
-static hbool_t state_init(state_t *s, int argc, const char *const *argv);
-
-static hbool_t np_init(np_state_t *np, hbool_t writer);
-static hbool_t np_close(np_state_t *np, hbool_t writer);
-static hbool_t np_writer(hbool_t result, unsigned step, const state_t *s, np_state_t *np,
+static hbool_t sock_writer(hbool_t result, unsigned step, const state_t *s, socket_state_t *sock,
                          H5F_vfd_swmr_config_t *config);
-static hbool_t np_reader(hbool_t result, unsigned step, const state_t *s, np_state_t *np);
-static hbool_t np_confirm_verify_notify(int fd, unsigned step, const state_t *s, np_state_t *np);
-static hbool_t np_reader_no_verification(const state_t *s, np_state_t *np, H5F_vfd_swmr_config_t *config);
+static hbool_t sock_reader(hbool_t result, unsigned step, const state_t *s, socket_state_t *sock);
+static hbool_t sock_confirm_verify_notify(unsigned step, const state_t *s, socket_state_t *sock);
+static hbool_t sock_reader_no_verification(const state_t *s, socket_state_t *sock, H5F_vfd_swmr_config_t *config);
 
 static hbool_t create_dsets(const state_t *s, dsets_state_t *ds);
 static hbool_t open_dsets(const state_t *s, dsets_state_t *ds);
@@ -137,7 +124,7 @@ static hbool_t open_dset_real(hid_t fid, hid_t *did, const char *name, unsigned 
 static hbool_t close_dsets(const dsets_state_t *ds);
 
 static hbool_t perform_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *config,
-                                        np_state_t *np);
+                                        socket_state_t *sock);
 static hbool_t attr_dsets_action(unsigned action, const state_t *s, const dsets_state_t *ds, unsigned which);
 static hbool_t attr_action(unsigned action, const state_t *s, hid_t did, unsigned which);
 static hbool_t add_attr(const state_t *s, hid_t did, unsigned int which);
@@ -145,7 +132,7 @@ static hbool_t modify_attr(const state_t *s, hid_t did, unsigned int which);
 static hbool_t delete_attr(hid_t did, unsigned int which);
 
 static hbool_t verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *config,
-                                       np_state_t *np);
+                                       socket_state_t *sock);
 static hbool_t verify_attr_dsets_action(unsigned action, const state_t *s, const dsets_state_t *ds,
                                         unsigned which);
 static hbool_t verify_attr_action(unsigned action, hid_t did, unsigned which);
@@ -154,6 +141,7 @@ static hbool_t verify_delete_attr(hid_t did, char *attr_name);
 static hbool_t verify_storage_cont(unsigned action, hid_t did, unsigned int which, unsigned max_compact,
                                    unsigned min_dense, unsigned asteps);
 static hbool_t verify_storage_cont_real(hid_t did, unsigned int which, unsigned cut_point);
+
 
 /* Names for datasets */
 #define DSET_COMPACT_NAME  "compact_dset"
@@ -190,7 +178,7 @@ usage(const char *progname)
               "-c csteps:         `csteps` steps communication interval between reader and writer\n"
               "                   (default is 1)\n"
               "-S:	           do not use VFD SWMR\n"
-              "-N:	           do not use named pipes for test synchronization\n"
+              "-N:	           do not use communication between writer/reader for test synchronization\n"
               "-b:	           write data in big-endian byte order if no -v option\n"
               "                   (default is H5T_NATIVE_UINT32)\n\n"
               "Note:\n"
@@ -206,30 +194,33 @@ usage(const char *progname)
  * Initialize option info in state_t
  */
 static hbool_t
-state_init(state_t *s, int argc, const char *const *argv)
+state_init(state_t *s, socket_state_t *sock, int argc, const char *const *argv)
 {
     unsigned long          tmp;
     int                    opt;
     const hsize_t          dims  = 1;
     char *                 tfile = NULL;
     char *                 end;
-    const char *           s_opts   = "pgkvmbqSNa:d:u:c:";
-    struct h5_long_options l_opts[] = {{NULL, 0, '\0'}};
+    const char *           s_opts   = "pgkvmbqSNa:d:u:c:i:";
+    struct h5_long_options l_opts[] = {
+        {"ip_addr", require_arg, 'i'},    
+        {NULL, 0, '\0'}
+    };
 
-    s->file            = H5I_INVALID_HID;
-    s->one_by_one_sid  = H5I_INVALID_HID;
-    s->filetype        = H5T_NATIVE_UINT32;
-    s->asteps          = 0;
-    s->csteps          = 1;
-    s->dattrs          = 0;
-    s->use_np          = TRUE;
-    s->use_vfd_swmr    = TRUE;
-    s->compact         = FALSE;
-    s->contig          = FALSE;
-    s->chunked         = FALSE;
-    s->vl_attr         = FALSE;
-    s->mod_attr        = FALSE;
-    s->update_interval = READER_WAIT_TICKS;
+    s->file              = H5I_INVALID_HID;
+    s->one_by_one_sid    = H5I_INVALID_HID;
+    s->filetype          = H5T_NATIVE_UINT32;
+    s->asteps            = 0;
+    s->csteps            = 1;
+    s->dattrs            = 0;
+    s->use_communication = TRUE;
+    s->use_vfd_swmr     = TRUE;
+    s->compact          = FALSE;
+    s->contig           = FALSE;
+    s->chunked          = FALSE;
+    s->vl_attr          = FALSE;
+    s->mod_attr         = FALSE;
+    s->update_interval  = READER_WAIT_TICKS;
 
     HDmemset(s->filename, 0, PATH_MAX);
     HDmemset(s->progname, 0, PATH_MAX);
@@ -278,7 +269,7 @@ state_init(state_t *s, int argc, const char *const *argv)
                 s->use_vfd_swmr = FALSE;
                 break;
             case 'N':
-                s->use_np = FALSE;
+                s->use_communication = FALSE;
                 break;
             case 'a':
             case 'd':
@@ -308,7 +299,13 @@ state_init(state_t *s, int argc, const char *const *argv)
                 else if (opt == 'c')
                     s->csteps = (unsigned)tmp;
                 break;
-
+            case 'i':
+                if (HDstrlen(H5_optarg) >= MAX_IP_ADDR_LEN) {
+                    HDfprintf(stderr, "-i,--ip_addr argument %s is too long\n", H5_optarg);
+                    TEST_ERROR;
+                }
+                sock->ip_address = H5_optarg;
+                break;
             case '?':
             default:
                 usage(s->progname);
@@ -913,15 +910,8 @@ error:
 /*
  *  Writer
  */
-
-/*
- * Perform the attribute operations specified on the command line.
- *      ADD_ATTR    : -a <nattrs> option
- *      MODIFY_ATTR : -m option
- *      DELETE_ATTR : -d <dattrs> option
- */
 static hbool_t
-perform_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *config, np_state_t *np)
+perform_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *config, socket_state_t *sock)
 {
     unsigned step;
     hbool_t  result;
@@ -932,8 +922,8 @@ perform_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *c
 
         result = attr_dsets_action(ADD_ATTR, s, ds, step);
 
-        if (s->use_np && !np_writer(result, step, s, np, config)) {
-            HDprintf("np_writer() for addition failed\n");
+        if (s->use_communication && !sock_writer(result, step, s, sock, config)) {
+            HDprintf("sock_writer() for addition failed\n");
             TEST_ERROR;
         }
     }
@@ -941,8 +931,8 @@ perform_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *c
     if (s->mod_attr) {
 
         /* Need to sync up writer/reader before moving onto the next phase */
-        if (s->use_np && !np_writer(TRUE, 0, s, np, config)) {
-            HDprintf("np_writer() for modification failed\n");
+        if (s->use_communication && !sock_writer(TRUE, 0, s, sock, config)) {
+            HDprintf("sock_writer() for modification failed\n");
             TEST_ERROR;
         }
 
@@ -952,8 +942,8 @@ perform_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *c
 
             result = attr_dsets_action(MODIFY_ATTR, s, ds, step);
 
-            if (s->use_np && !np_writer(result, step, s, np, config)) {
-                HDprintf("np_writer() for modification failed\n");
+            if (s->use_communication && !sock_writer(result, step, s, sock, config)) {
+                HDprintf("sock_writer() for modification failed\n");
                 TEST_ERROR;
             }
         }
@@ -962,8 +952,8 @@ perform_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *c
     if (s->dattrs) {
 
         /* Need to sync up writer/reader before moving onto the next phase */
-        if (s->use_np && !np_writer(TRUE, 0, s, np, config)) {
-            HDprintf("np_writer() for deletion failed\n");
+        if (s->use_communication && !sock_writer(TRUE, 0, s, sock, config)) {
+            HDprintf("sock_writer() for deletion failed\n");
             TEST_ERROR;
         }
 
@@ -973,8 +963,8 @@ perform_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *c
 
             result = attr_dsets_action(DELETE_ATTR, s, ds, step);
 
-            if (s->use_np && !np_writer(result, step, s, np, config)) {
-                HDprintf("np_writer() for deletion failed\n");
+            if (s->use_communication && !sock_writer(result, step, s, sock, config)) {
+                HDprintf("sock_writer() for deletion failed\n");
                 TEST_ERROR;
             }
         }
@@ -1271,7 +1261,6 @@ error:
 /*
  * Verification by the reader
  */
-
 /*
  * Verify the attribute operations specified on the command line:
  *      ADD_ATTR    : -a <nattrs> option
@@ -1283,7 +1272,7 @@ error:
  *      --not applicable for -m option
  */
 static hbool_t
-verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *config, np_state_t *np)
+verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *config, socket_state_t *sock)
 {
     unsigned step;
     hbool_t  result;
@@ -1293,8 +1282,8 @@ verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *co
     for (step = 0; step < s->asteps; step++) {
         dbgf(2, "Verifying...attribute %d\n", step);
 
-        if (s->use_np && !np_confirm_verify_notify(np->fd_writer_to_reader, step, s, np)) {
-            HDprintf("np_confirm_verify_notify() verify/notify not in sync failed\n");
+        if (s->use_communication && !sock_confirm_verify_notify(step, s, sock)) {
+            HDprintf("sock_confirm_verify_notify() verify/notify not in sync failed\n");
             TEST_ERROR;
         }
 
@@ -1303,16 +1292,16 @@ verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *co
 
         result = verify_attr_dsets_action(ADD_ATTR, s, ds, step);
 
-        if (s->use_np && !np_reader(result, step, s, np)) {
-            HDprintf("np_reader() for verifying addition failed\n");
+        if (s->use_communication && !sock_reader(result, step, s, sock)) {
+            HDprintf("sock_reader() for verifying addition failed\n");
             TEST_ERROR;
         }
     }
 
     if (s->mod_attr) {
         /* Need to sync up writer/reader before moving onto the next phase */
-        if (!np_reader_no_verification(s, np, config)) {
-            HDprintf("np_reader_no_verification() for verifying modification failed\n");
+        if (!sock_reader_no_verification(s, sock, config)) {
+            HDprintf("sock_reader_no_verification() for verifying modification failed\n");
             TEST_ERROR;
         }
 
@@ -1320,8 +1309,8 @@ verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *co
         for (step = 0; step < s->asteps; step++) {
             dbgf(2, "Verifying...modify attribute %d\n", step);
 
-            if (s->use_np && !np_confirm_verify_notify(np->fd_writer_to_reader, step, s, np)) {
-                HDprintf("np_confirm_verify_notify() verify/notify not in sync failed\n");
+            if (s->use_communication && !sock_confirm_verify_notify(step, s, sock)) {
+                HDprintf("sock_confirm_verify_notify() verify/notify not in sync failed\n");
                 TEST_ERROR;
             }
 
@@ -1330,8 +1319,8 @@ verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *co
 
             result = verify_attr_dsets_action(MODIFY_ATTR, s, ds, step);
 
-            if (s->use_np && !np_reader(result, step, s, np)) {
-                HDprintf("np_reader() for verifying modification failed\n");
+            if (s->use_communication && !sock_reader(result, step, s, sock)) {
+                HDprintf("sock_reader() for verifying modification failed\n");
                 TEST_ERROR;
             }
         }
@@ -1340,8 +1329,8 @@ verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *co
     if (s->dattrs) {
 
         /* Need to sync up writer/reader before moving onto the next phase */
-        if (!np_reader_no_verification(s, np, config)) {
-            HDprintf("np_reader_no_verification() for verifying modification failed\n");
+        if (!sock_reader_no_verification(s, sock, config)) {
+            HDprintf("sock_reader_no_verification() for verifying modification failed\n");
             TEST_ERROR;
         }
 
@@ -1349,8 +1338,8 @@ verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *co
         for (dd = 0, step = s->asteps - 1; dd < s->dattrs; dd++, --step) {
             dbgf(2, "Verifying...delete attribute %d\n", step);
 
-            if (s->use_np && !np_confirm_verify_notify(np->fd_writer_to_reader, step, s, np)) {
-                HDprintf("np_confirm_verify_notify() verify/notify not in sync failed\n");
+            if (s->use_communication && !sock_confirm_verify_notify(step, s, sock)) {
+                HDprintf("sock_confirm_verify_notify() verify/notify not in sync failed\n");
                 TEST_ERROR;
             }
 
@@ -1359,8 +1348,8 @@ verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *co
 
             result = verify_attr_dsets_action(DELETE_ATTR, s, ds, step);
 
-            if (s->use_np && !np_reader(result, step, s, np)) {
-                HDprintf("np_reader() for verifying deletion failed\n");
+            if (s->use_communication && !sock_reader(result, step, s, sock)) {
+                HDprintf("sock_reader() for verifying deletion failed\n");
                 TEST_ERROR;
             }
         }
@@ -1697,108 +1686,12 @@ error:
 
 } /* verify_storage_cont_real() */
 
-/*
- * Named pipes handling
- */
-
-/*
- * Initialize the named pipes for test synchronization.
- */
-static hbool_t
-np_init(np_state_t *np, hbool_t writer)
-{
-    *np = NP_INITIALIZER;
-
-    /*
-     * Use two named pipes(FIFO) to coordinate the writer and reader for
-     * two-way communication so that the two sides can move forward together.
-     * One is for the writer to write to the reader.
-     * The other one is for the reader to signal the writer.
-     */
-    if (writer) {
-        /* If the named pipes are present at the start of the test, remove them */
-        if (HDaccess(np->fifo_writer_to_reader, F_OK) == 0)
-            if (HDremove(np->fifo_writer_to_reader) != 0) {
-                HDprintf("HDremove fifo_writer_to_reader failed\n");
-                TEST_ERROR;
-            }
-
-        if (HDaccess(np->fifo_reader_to_writer, F_OK) == 0)
-            if (HDremove(np->fifo_reader_to_writer) != 0) {
-                HDprintf("HDremove fifo_reader_to_writer failed\n");
-                TEST_ERROR;
-            }
-
-        /* Writer creates two named pipes(FIFO) */
-        if (HDmkfifo(np->fifo_writer_to_reader, 0600) < 0) {
-            HDprintf("HDmkfifo fifo_writer_to_reader failed\n");
-            TEST_ERROR;
-        }
-
-        if (HDmkfifo(np->fifo_reader_to_writer, 0600) < 0) {
-            HDprintf("HDmkfifo fifo_reader_to_writer failed\n");
-            TEST_ERROR;
-        }
-    }
-
-    /* Both the writer and reader open the pipes */
-    if ((np->fd_writer_to_reader = HDopen(np->fifo_writer_to_reader, O_RDWR)) < 0) {
-        HDprintf("HDopen fifo_writer_to_reader failed\n");
-        TEST_ERROR;
-    }
-
-    if ((np->fd_reader_to_writer = HDopen(np->fifo_reader_to_writer, O_RDWR)) < 0) {
-        HDprintf("HDopen fifo_reader_to_writer failed\n");
-        TEST_ERROR;
-    }
-
-    return true;
-
-error:
-    return false;
-
-} /* np_init() */
-
-/*
- * Close the named pipes.
- */
-static hbool_t
-np_close(np_state_t *np, hbool_t writer)
-{
-    /* Both the writer and reader close the named pipes */
-    if (HDclose(np->fd_writer_to_reader) < 0) {
-        HDprintf("HDclose fd_writer_to_reader failed\n");
-        TEST_ERROR;
-    }
-
-    if (HDclose(np->fd_reader_to_writer) < 0) {
-        HDprintf("HDclose fd_reader_to_writer failed\n");
-        TEST_ERROR;
-    }
-
-    /* Reader finishes last and deletes the named pipes */
-    if (!writer) {
-        if (HDremove(np->fifo_writer_to_reader) != 0) {
-            HDprintf("HDremove fifo_writer_to_reader failed\n");
-            TEST_ERROR;
-        }
-
-        if (HDremove(np->fifo_reader_to_writer) != 0) {
-            HDprintf("HDremove fifo_reader_to_writer failed\n");
-            TEST_ERROR;
-        }
-    }
-    return true;
-
-error:
-    return false;
-} /* np_close() */
 
 /*
  *  Writer synchronization depending on the result from the attribute action performed.
  */
 static hbool_t
-np_writer(hbool_t result, unsigned step, const state_t *s, np_state_t *np, H5F_vfd_swmr_config_t *config)
+sock_writer(hbool_t result, unsigned step, const state_t *s, socket_state_t *sock, H5F_vfd_swmr_config_t *config)
 {
     unsigned int i;
 
@@ -1810,9 +1703,9 @@ np_writer(hbool_t result, unsigned step, const state_t *s, np_state_t *np, H5F_v
 
         /* At communication interval, notify the reader about the failure and quit */
         if (step % s->csteps == 0) {
-            np->notify = -1;
-            if (HDwrite(np->fd_writer_to_reader, &np->notify, sizeof(int)) < 0) {
-                HDprintf("HDwrite failed\n");
+            sock->notify = -1;
+            if (send(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
+                HDprintf("send failed\n");
                 TEST_ERROR;
             }
             goto error;
@@ -1823,9 +1716,9 @@ np_writer(hbool_t result, unsigned step, const state_t *s, np_state_t *np, H5F_v
         /* At communication interval, notify the reader and wait for its response */
         if (step % s->csteps == 0) {
             /* Bump up the value of notify to tell the reader to start reading */
-            np->notify++;
-            if (HDwrite(np->fd_writer_to_reader, &np->notify, sizeof(int)) < 0) {
-                HDprintf("HDwrite failed\n");
+            sock->notify++;
+            if (send(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
+                HDprintf("send failed\n");
                 TEST_ERROR;
             }
 
@@ -1841,8 +1734,8 @@ np_writer(hbool_t result, unsigned step, const state_t *s, np_state_t *np, H5F_v
             }
 
             /* Handshake between writer and reader */
-            if (!np_confirm_verify_notify(np->fd_reader_to_writer, step, s, np)) {
-                HDprintf("np_confirm_verify_notify() verify/notify not in sync failed\n");
+            if (!sock_confirm_verify_notify(step, s, sock)) {
+                HDprintf("sock_confirm_verify_notify() verify/notify not in sync failed\n");
                 TEST_ERROR;
             }
         }
@@ -1852,14 +1745,14 @@ np_writer(hbool_t result, unsigned step, const state_t *s, np_state_t *np, H5F_v
 error:
     return false;
 
-} /* np_writer() */
+} /* sock_writer() */
 
 /*
  *
  *  Reader synchronization depending on the result from the verification.
  */
 static hbool_t
-np_reader(hbool_t result, unsigned step, const state_t *s, np_state_t *np)
+sock_reader(hbool_t result, unsigned step, const state_t *s, socket_state_t *sock)
 {
     /* The verification fails */
     if (!result) {
@@ -1869,21 +1762,21 @@ np_reader(hbool_t result, unsigned step, const state_t *s, np_state_t *np)
 
         /* At communication interval, tell the writer about the failure and exit */
         if (step % s->csteps == 0) {
-            np->notify = -1;
-            if (HDwrite(np->fd_reader_to_writer, &np->notify, sizeof(int)) < 0) {
-                HDprintf("HDwrite failed\n");
+            sock->notify = -1;
+            if (send(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
+                HDprintf("send failed\n");
                 TEST_ERROR;
             }
             goto error;
         }
-        /* The verification succeeds */
-    }
+        
+    } /* The verification succeeds */
     else {
         if (step % s->csteps == 0) {
             /* Send back the same notify value for acknowledgement:
              *   --inform the writer to move to the next step */
-            if (HDwrite(np->fd_reader_to_writer, &np->notify, sizeof(int)) < 0) {
-                HDprintf("HDwrite failed\n");
+            if (send(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
+                HDprintf("send failed\n");
                 TEST_ERROR;
             }
         }
@@ -1893,29 +1786,29 @@ np_reader(hbool_t result, unsigned step, const state_t *s, np_state_t *np)
 error:
     return false;
 
-} /* np_reader() */
+} /* sock_reader() */
 
 /*
  *  Handshake between writer and reader:
  *      Confirm `verify` is same as `notify`.
  */
 static hbool_t
-np_confirm_verify_notify(int fd, unsigned step, const state_t *s, np_state_t *np)
+sock_confirm_verify_notify(unsigned step, const state_t *s, socket_state_t *sock)
 {
     if (step % s->csteps == 0) {
-        np->verify++;
-        if (HDread(fd, &np->notify, sizeof(int)) < 0) {
-            HDprintf("HDread failed\n");
+        sock->verify++;
+        if (recv(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
+            HDprintf("recv failed\n");
             TEST_ERROR;
         }
 
-        if (np->notify == -1) {
+        if (sock->notify == -1) {
             HDprintf("reader/writer failed to verify\n");
             TEST_ERROR;
         }
 
-        if (np->notify != np->verify) {
-            HDprintf("received message %d, expecting %d\n", np->notify, np->verify);
+        if (sock->notify != sock->verify) {
+            HDprintf("received message %d, expecting %d\n", sock->notify, sock->verify);
             TEST_ERROR;
         }
     }
@@ -1924,18 +1817,18 @@ np_confirm_verify_notify(int fd, unsigned step, const state_t *s, np_state_t *np
 
 error:
     return false;
-} /* confirm_verify_notify() */
+} /* sock_confirm_verify_notify() */
 
 /*
  * Synchronization done by the reader before moving onto the
  * next verification phase.
  */
 static hbool_t
-np_reader_no_verification(const state_t *s, np_state_t *np, H5F_vfd_swmr_config_t *config)
+sock_reader_no_verification(const state_t *s, socket_state_t *sock, H5F_vfd_swmr_config_t *config)
 {
-    if (s->use_np) {
-        if (!np_confirm_verify_notify(np->fd_writer_to_reader, 0, s, np)) {
-            HDprintf("np_confirm_verify_notify() verify/notify not in sync failed\n");
+    if (s->use_communication) {
+        if (!sock_confirm_verify_notify(0, s, sock)) {
+            HDprintf("sock_confirm_verify_notify() verify/notify not in sync failed\n");
             TEST_ERROR;
         }
     }
@@ -1943,11 +1836,11 @@ np_reader_no_verification(const state_t *s, np_state_t *np, H5F_vfd_swmr_config_
     /* Wait for a few ticks for the update to happen */
     decisleep(config->tick_len * s->update_interval);
 
-    if (s->use_np) {
+    if (s->use_communication) {
         /* Send back the same notify value for acknowledgement:
          *   --inform the writer to move to the next step */
-        if (HDwrite(np->fd_reader_to_writer, &np->notify, sizeof(int)) < 0) {
-            HDprintf("HDwrite failed\n");
+        if (send(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
+            HDprintf("send failed\n");
             TEST_ERROR;
         }
     }
@@ -1957,7 +1850,7 @@ np_reader_no_verification(const state_t *s, np_state_t *np, H5F_vfd_swmr_config_
 error:
     return false;
 
-} /* np_reader_no_verification() */
+} /* sock_reader_no_verification() */
 
 int
 main(int argc, char **argv)
@@ -1965,12 +1858,16 @@ main(int argc, char **argv)
     hid_t                  fapl   = H5I_INVALID_HID;
     hid_t                  fcpl   = H5I_INVALID_HID;
     hbool_t                writer = FALSE;
+    socket_state_t        *sock   = NULL;
     state_t *              s      = NULL;
-    const char *           personality;
     H5F_vfd_swmr_config_t *config = NULL;
-    np_state_t             np;
+    const char *           personality;
     dsets_state_t          ds;
 
+    if (NULL == (sock = HDcalloc(1, sizeof(socket_state_t)))) {
+        HDprintf("memory allocation failed");
+        TEST_ERROR;
+    }
     if (NULL == (s = HDcalloc(1, sizeof(state_t)))) {
         HDprintf("memory allocation failed");
         TEST_ERROR;
@@ -1980,7 +1877,15 @@ main(int argc, char **argv)
         TEST_ERROR;
     }
 
-    if (!state_init(s, argc, (const char *const *)argv)) {
+    /* Need to initialize right after calloc call */
+    if (!socket_init(sock)) {
+        H5_FAILED();
+        AT();
+        HDprintf("socket_init failed");
+        goto error;
+    }
+
+    if (!state_init(s, sock, argc, (const char *const *)argv)) {
         HDprintf("state_init() failed\n");
         TEST_ERROR;
     }
@@ -1995,6 +1900,59 @@ main(int argc, char **argv)
         HDprintf("unknown personality, expected vfd_swmr_attrdset_{reader,writer}\n");
         TEST_ERROR;
     }
+#ifdef USE_CONFIGURATION_FILE
+
+    if (!s->use_vfd_swmr) {
+        /* When VFD SWMR is disabled, perform only the normal FAPL/FCPL setup. The 
+        * configuration-file initialization also sets a VFD SWMR configuration on 
+        * the property lists, which should not happen when use_vfd_swmr is false. 
+        * We still need the usual property list configuration (libver bounds, page 
+        * buffer size, file space settings, etc.), so those steps are performed 
+        * separately here.
+        */
+        
+        /* config, tick_len, max_lag, presume_posix_semantics, writer,
+        * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
+        * md_file_path, md_file_name, updater_file_path */
+        init_vfd_swmr_config(config, 4, 7, FALSE, writer, TRUE, FALSE, TRUE, 128, "./", "attrdset-shadow", NULL);
+
+        /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */
+        if ((fapl = vfd_swmr_create_fapl(TRUE, s->use_vfd_swmr, TRUE, 4096, config)) < 0) {
+            HDprintf("vfd_swmr_create_fapl() failed\n");
+            TEST_ERROR;
+        }
+        /* Set fs_strategy (file space strategy) and fs_page_size (file space page size) */
+        if ((fcpl = vfd_swmr_create_fcpl(H5F_FSPACE_STRATEGY_PAGE, 4096)) < 0) {
+            HDprintf("vfd_swmr_create_fcpl() failed\n");
+            TEST_ERROR;
+        }
+
+
+    } else {
+        /* This was originally called in vfd_swmr_create_fapl() */
+        if ((fapl = h5_fileaccess()) < 0) {
+            HDprintf("h5_fileaccess() failed\n");
+            TEST_ERROR;
+        }
+        /* This was originally called in vfd_swmr_create_fcpl() */
+        if ((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0) {
+            HDprintf("H5Pcreate() failed\n");
+            TEST_ERROR;
+        }
+        /* Use writer bool both for writer and create_file boolean parameters */
+        if (H5Fswmr_config_env(fapl, fcpl, writer, writer, NULL) < 0) {
+            HDprintf("H5Fswmr_config_env() failed\n");
+            TEST_ERROR;
+        }
+    
+        /* config values are still needed later in this program */
+        if (H5Pget_vfd_swmr_config(fapl, config) < 0) {
+            HDprintf("H5Pget_vfd_swmr_config() failed\n");
+            TEST_ERROR;
+        }
+    }
+
+#else /* USE_CONFIGURATION_FILE */
 
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
      * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
@@ -2009,22 +1967,24 @@ main(int argc, char **argv)
 
     /* Set fs_strategy (file space strategy) and fs_page_size (file space page size) */
     if ((fcpl = vfd_swmr_create_fcpl(H5F_FSPACE_STRATEGY_PAGE, 4096)) < 0) {
-        HDprintf("vfd_swmr_create_fcpl() failed");
+        HDprintf("vfd_swmr_create_fcpl() failed\n");
         TEST_ERROR;
     }
+
+#endif /* USE_CONFIGURATION_FILE */
 
     if (writer) {
         if ((s->file = H5Fcreate(s->filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) {
             HDprintf("H5Fcreate failed\n");
             TEST_ERROR;
         }
-
         if (!create_dsets(s, &ds)) {
             HDprintf("create_dsets() failed\n");
             TEST_ERROR;
         }
     }
     else {
+
         if ((s->file = H5Fopen(s->filename, H5F_ACC_RDONLY, fapl)) < 0) {
             HDprintf("H5Fopen failed\n");
             TEST_ERROR;
@@ -2035,20 +1995,26 @@ main(int argc, char **argv)
         }
     }
 
-    /* Initiailze named pipes */
-    if (s->use_np && !np_init(&np, writer)) {
-        HDprintf("np_init() failed\n");
+    /* Must be added between file creation/opening and socket connections */
+    if (H5Fvfd_swmr_end_tick(s->file) < 0) {
+        HDprintf("H5Fvfd_swmr_end_tick failed\n");
+        TEST_ERROR;
+    }
+
+    /* Initialize socket connections */
+    if (s->use_communication && !socket_connect(sock, writer)) {
+        HDprintf("socket_connect() failed\n");
         TEST_ERROR;
     }
 
     if (writer) {
-        if (!perform_dsets_operations(s, &ds, config, &np)) {
+        if (!perform_dsets_operations(s, &ds, config, sock)) {
             HDprintf("perform_dsets_operations() failed\n");
             TEST_ERROR;
         }
     }
     else {
-        if (!verify_dsets_operations(s, &ds, config, &np)) {
+        if (!verify_dsets_operations(s, &ds, config, sock)) {
             HDprintf("verify_dsets_operations() failed\n");
             TEST_ERROR;
         }
@@ -2079,9 +2045,9 @@ main(int argc, char **argv)
         TEST_ERROR;
     }
 
-    if (s->use_np && !np_close(&np, writer)) {
-        HDprintf("np_close() failed\n");
-        TEST_ERROR;
+    if (sock != NULL) {
+        socket_close(sock); 
+        HDfree(sock);
     }
 
     HDfree(s);
@@ -2099,15 +2065,9 @@ error:
     }
     H5E_END_TRY;
 
-    if (s->use_np && np.fd_writer_to_reader >= 0)
-        HDclose(np.fd_writer_to_reader);
-
-    if (s->use_np && np.fd_reader_to_writer >= 0)
-        HDclose(np.fd_reader_to_writer);
-
-    if (s->use_np && !writer) {
-        HDremove(np.fifo_writer_to_reader);
-        HDremove(np.fifo_reader_to_writer);
+    if (sock != NULL) {
+        socket_close(sock);
+        HDfree(sock);
     }
 
     HDfree(s);
