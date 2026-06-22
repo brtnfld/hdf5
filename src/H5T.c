@@ -1065,6 +1065,8 @@ H5T__init_package(void)
 #ifdef H5_HAVE__FLOAT16
     H5T_t *native_float16 = NULL; /* Datatype structure for native _Float16 type */
 #endif
+    H5T_t *bfloat16_le = NULL; /* Datatype structure for IEEE bfloat16 LE type */
+    H5T_t *bfloat16_be = NULL; /* Datatype structure for IEEE bfloat16 BE type */
 #ifdef H5_HAVE_COMPLEX_NUMBERS
     H5T_t *native_float_complex  = NULL; /* Datatype structure for native float _Complex / _Fcomplex type */
     H5T_t *native_double_complex = NULL; /* Datatype structure for native double _Complex / _Dcomplex type */
@@ -1202,6 +1204,11 @@ H5T__init_package(void)
 
     /* 2-byte big-endian bfloat16 float type */
     H5T_INIT_TYPE(BFLOAT16BE, H5T_FLOAT_BFLOAT16BE_g, COPY, native_double, SET, 2)
+
+    if (NULL == (bfloat16_le = (H5T_t *)H5I_object(H5T_FLOAT_BFLOAT16LE_g)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a datatype object");
+    if (NULL == (bfloat16_be = (H5T_t *)H5I_object(H5T_FLOAT_BFLOAT16BE_g)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a datatype object");
 
     /* 8-bit FP8 E4M3 float type */
     H5T_INIT_TYPE(FLOAT8E4M3, H5T_FLOAT_F8E4M3_g, COPY, native_double, SET, 1)
@@ -1529,6 +1536,23 @@ H5T__init_package(void)
                                 H5T__conv_ldouble__Float16);
 #endif
 #endif
+    /* bfloat16 fast-path converters */
+    status |=
+        H5T__register_int(H5T_PERS_HARD, "dbl_bf16le", native_double, bfloat16_le, H5T__conv_double_bfloat16);
+    status |=
+        H5T__register_int(H5T_PERS_HARD, "dbl_bf16be", native_double, bfloat16_be, H5T__conv_double_bfloat16);
+    status |=
+        H5T__register_int(H5T_PERS_HARD, "flt_bf16le", native_float, bfloat16_le, H5T__conv_float_bfloat16);
+    status |=
+        H5T__register_int(H5T_PERS_HARD, "flt_bf16be", native_float, bfloat16_be, H5T__conv_float_bfloat16);
+    status |=
+        H5T__register_int(H5T_PERS_HARD, "bf16le_dbl", bfloat16_le, native_double, H5T__conv_bfloat16_double);
+    status |=
+        H5T__register_int(H5T_PERS_HARD, "bf16be_dbl", bfloat16_be, native_double, H5T__conv_bfloat16_double);
+    status |=
+        H5T__register_int(H5T_PERS_HARD, "bf16le_flt", bfloat16_le, native_float, H5T__conv_bfloat16_float);
+    status |=
+        H5T__register_int(H5T_PERS_HARD, "bf16be_flt", bfloat16_be, native_float, H5T__conv_bfloat16_float);
 #ifdef H5_HAVE_COMPLEX_NUMBERS
     status |= H5T__register_int(H5T_PERS_HARD, "flt_fcomplex", native_float, native_float_complex,
                                 H5T__conv_float_fcomplex);

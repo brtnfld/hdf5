@@ -7059,15 +7059,29 @@ test_bfloat16(void)
     }
 
     /*
-     * Ensure that some random conversions on the bfloat16 datatypes
-     * are currently covered by general software routines rather
-     * than compiler conversions.
+     * Ensure that conversions between the bfloat16 datatypes and native
+     * float/double formats use the hardware-accelerated fast-path
+     * converters, while conversions to unrelated types (e.g. integers)
+     * remain general software conversions.
      */
 
-    if (H5Tcompiler_conv(H5T_FLOAT_BFLOAT16LE, H5T_IEEE_F32LE) != false) {
-        H5_FAILED();
-        printf("Conversion path for H5T_FLOAT_BFLOAT16LE -> H5T_IEEE_F32LE was not a software conversion\n");
-        goto error;
+    /* Check for a native type that matches H5T_IEEE_F32LE before
+     * checking for a hard conversion path
+     */
+    if (H5Tequal(H5T_NATIVE_FLOAT, H5T_IEEE_F32LE) == true ||
+        H5Tequal(H5T_NATIVE_DOUBLE, H5T_IEEE_F32LE) == true ||
+        H5Tequal(H5T_NATIVE_LDOUBLE, H5T_IEEE_F32LE) == true) {
+        if (H5Tcompiler_conv(H5T_FLOAT_BFLOAT16LE, H5T_IEEE_F32LE) != true) {
+            H5_FAILED();
+            printf("Conversion path for H5T_FLOAT_BFLOAT16LE -> H5T_IEEE_F32LE was not a hard conversion\n");
+            goto error;
+        }
+
+        if (H5Tcompiler_conv(H5T_FLOAT_BFLOAT16BE, H5T_IEEE_F32LE) != true) {
+            H5_FAILED();
+            printf("Conversion path for H5T_FLOAT_BFLOAT16BE -> H5T_IEEE_F32LE was not a hard conversion\n");
+            goto error;
+        }
     }
 
     if (H5Tcompiler_conv(H5T_FLOAT_BFLOAT16LE, H5T_NATIVE_INT) != false) {
@@ -7076,10 +7090,25 @@ test_bfloat16(void)
         goto error;
     }
 
-    if (H5Tcompiler_conv(H5T_FLOAT_BFLOAT16BE, H5T_IEEE_F64BE) != false) {
-        H5_FAILED();
-        printf("Conversion path for H5T_FLOAT_BFLOAT16BE -> H5T_IEEE_F64BE was not a software conversion\n");
-        goto error;
+    /* Check for a native type that matches H5T_IEEE_F64BE before
+     * checking for a hard conversion path
+     */
+    if (H5Tequal(H5T_NATIVE_FLOAT, H5T_IEEE_F64BE) == true ||
+        H5Tequal(H5T_NATIVE_DOUBLE, H5T_IEEE_F64BE) == true ||
+        H5Tequal(H5T_NATIVE_LDOUBLE, H5T_IEEE_F64BE) == true) {
+        if (H5Tcompiler_conv(H5T_FLOAT_BFLOAT16BE, H5T_IEEE_F64BE) != true) {
+            H5_FAILED();
+            printf("Conversion path for H5T_FLOAT_BFLOAT16BE -> H5T_IEEE_F64BE was not a hard conversion\n");
+            goto error;
+        }
+    }
+    else {
+        if (H5Tcompiler_conv(H5T_FLOAT_BFLOAT16BE, H5T_IEEE_F64BE) != false) {
+            H5_FAILED();
+            printf(
+                "Conversion path for H5T_FLOAT_BFLOAT16BE -> H5T_IEEE_F64BE was not a software conversion\n");
+            goto error;
+        }
     }
 
     if (H5Tcompiler_conv(H5T_FLOAT_BFLOAT16BE, H5T_STD_I64LE) != false) {

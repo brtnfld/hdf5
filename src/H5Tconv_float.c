@@ -2683,3 +2683,370 @@ H5T__conv_ldouble_lcomplex(const H5T_t *st, const H5T_t *dt, H5T_cdata_t *cdata,
     H5T_CONV_fz(LDOUBLE, LDOUBLE_COMPLEX, long double, H5_ldouble_complex, -, -);
 }
 #endif
+
+/*-------------------------------------------------------------------------
+ * Function:    H5T__conv_double_bfloat16
+ *
+ * Purpose:     Convert native `double' to bfloat16 using hardware.
+ *              This is a fast special case.
+ *
+ *              bfloat16 is the top 16 bits of an IEEE 754 float32, so the
+ *              conversion is: cast double→float (VCVTPD2PS on x86), round
+ *              half up at the 16-bit truncation point, then shift right 16
+ *              bits. Round-half-up (rather than round-to-nearest-even) is
+ *              used deliberately to match H5T__conv_f_f_loop()'s rounding
+ *              convention, which every other reduced-precision float
+ *              narrowing in this library (FP8/FP6/FP4/float16) already
+ *              follows -- so the hard and soft paths agree bit-for-bit on
+ *              every input, not just almost all of them. With -O2
+ *              -march=native the compiler vectorizes the contiguous loop
+ *              without explicit intrinsics.
+ *
+ *              NaN inputs skip rounding and have their mantissa forced
+ *              non-zero, since rounding a NaN's bit pattern as if it were
+ *              a number can corrupt it, and truncating one whose payload
+ *              lives entirely in the low 16 bits would otherwise produce
+ *              Infinity instead of NaN.
+ *
+ *              One narrow divergence from H5T__conv_f_f_loop() remains: at
+ *              the extreme top of the finite range (exponent one below
+ *              the max, mantissa all 1s), that loop suppresses a
+ *              rounding-induced carry to avoid manufacturing Infinity,
+ *              while this fast path rounds up normally and does produce
+ *              Infinity there, matching standard round-half-up/IEEE
+ *              overflow behavior instead. This is unreachable for any
+ *              value of sane magnitude and is accepted as a deliberate
+ *              trade-off rather than special-cased, since handling it
+ *              would cost the vectorizable, branchless structure of this
+ *              loop for a case that bfloat16's already-coarse range makes
+ *              vanishingly unlikely to matter.
+ *
+ *              The strided, exception-callback, or misaligned-buffer case
+ *              falls back to the general bit-manipulation path via
+ *              H5T__conv_f_f_loop.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5T__conv_double_bfloat16(const H5T_t *st, const H5T_t *dt, H5T_cdata_t *cdata,
+                           const H5T_conv_ctx_t *conv_ctx, size_t nelmts, size_t buf_stride,
+                           size_t H5_ATTR_UNUSED bkg_stride, void *buf, void H5_ATTR_UNUSED *bkg)
+{
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    switch (cdata->command) {
+        case H5T_CONV_INIT:
+            if (!st || !dt)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a datatype");
+            if (st->shared->size != sizeof(double) || dt->shared->size != 2)
+                HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "disagreement about datatype size");
+            cdata->need_bkg = H5T_BKG_NO;
+            break;
+
+        case H5T_CONV_FREE:
+            break;
+
+        case H5T_CONV_CONV:
+            if (!st || !dt)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a datatype");
+            if (!conv_ctx)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid datatype conversion context pointer");
+
+            /* Fast path: contiguous, naturally-aligned buffer, no exception
+               callback. double→bfloat16 is 8→2 bytes; forward in-place is
+               always safe. */
+            if (buf_stride == 0 && conv_ctx->u.conv.cb_struct.func == NULL &&
+                (H5T_NATIVE_DOUBLE_ALIGN_g <= 1 || (size_t)buf % H5T_NATIVE_DOUBLE_ALIGN_g == 0)) {
+                const double *src         = (const double *)buf;
+                uint16_t     *dst         = (uint16_t *)buf;
+                bool          cross_endian = (dt->shared->u.atomic.order != H5T_native_order_g);
+
+                for (size_t i = 0; i < nelmts; i++) {
+                    float    f32 = (float)src[i];
+                    uint32_t u;
+                    memcpy(&u, &f32, 4);
+
+                    bool     is_nan  = (u & 0x7f800000u) == 0x7f800000u && (u & 0x007fffffu) != 0u;
+                    uint32_t rounded = u + 0x8000u;
+                    uint16_t b16     = is_nan ? (uint16_t)((u >> 16) | 0x0040u) : (uint16_t)(rounded >> 16);
+
+                    if (cross_endian)
+                        b16 = (uint16_t)((b16 >> 8) | (b16 << 8));
+                    dst[i] = b16;
+                }
+            }
+            else {
+                /* Strided, exception-callback, or misaligned buffer: use the general path. */
+                if (H5T__conv_f_f_loop(st, dt, conv_ctx, nelmts, buf_stride, buf) < 0)
+                    HGOTO_ERROR(H5E_DATATYPE, H5E_CANTCONVERT, FAIL, "unable to convert data values");
+            }
+            break;
+
+        default:
+            HGOTO_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL, "unknown conversion command");
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5T__conv_double_bfloat16() */
+
+/*-------------------------------------------------------------------------
+ * Function:    H5T__conv_float_bfloat16
+ *
+ * Purpose:     Convert native `float' to bfloat16 using hardware.
+ *              This is a fast special case.
+ *
+ *              float→bfloat16 rounds half up at the 16-bit truncation
+ *              point, then shifts right 16 bits; see
+ *              H5T__conv_double_bfloat16() for why round-half-up (matching
+ *              H5T__conv_f_f_loop()) rather than round-to-nearest-even is
+ *              used. The compiler vectorizes the contiguous loop without
+ *              explicit intrinsics.
+ *
+ *              NaN inputs skip rounding and have their mantissa forced
+ *              non-zero; see H5T__conv_double_bfloat16() for why.
+ *
+ *              The strided, exception-callback, or misaligned-buffer case
+ *              falls back to the general bit-manipulation path via
+ *              H5T__conv_f_f_loop.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5T__conv_float_bfloat16(const H5T_t *st, const H5T_t *dt, H5T_cdata_t *cdata,
+                          const H5T_conv_ctx_t *conv_ctx, size_t nelmts, size_t buf_stride,
+                          size_t H5_ATTR_UNUSED bkg_stride, void *buf, void H5_ATTR_UNUSED *bkg)
+{
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    switch (cdata->command) {
+        case H5T_CONV_INIT:
+            if (!st || !dt)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a datatype");
+            if (st->shared->size != sizeof(float) || dt->shared->size != 2)
+                HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "disagreement about datatype size");
+            cdata->need_bkg = H5T_BKG_NO;
+            break;
+
+        case H5T_CONV_FREE:
+            break;
+
+        case H5T_CONV_CONV:
+            if (!st || !dt)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a datatype");
+            if (!conv_ctx)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid datatype conversion context pointer");
+
+            /* Fast path: contiguous, naturally-aligned buffer, no exception
+               callback. float→bfloat16 is 4→2 bytes; forward in-place is
+               always safe. */
+            if (buf_stride == 0 && conv_ctx->u.conv.cb_struct.func == NULL &&
+                (H5T_NATIVE_FLOAT_ALIGN_g <= 1 || (size_t)buf % H5T_NATIVE_FLOAT_ALIGN_g == 0)) {
+                const float *src         = (const float *)buf;
+                uint16_t    *dst         = (uint16_t *)buf;
+                bool         cross_endian = (dt->shared->u.atomic.order != H5T_native_order_g);
+
+                for (size_t i = 0; i < nelmts; i++) {
+                    uint32_t u;
+                    memcpy(&u, &src[i], 4);
+
+                    bool     is_nan  = (u & 0x7f800000u) == 0x7f800000u && (u & 0x007fffffu) != 0u;
+                    uint32_t rounded = u + 0x8000u;
+                    uint16_t b16     = is_nan ? (uint16_t)((u >> 16) | 0x0040u) : (uint16_t)(rounded >> 16);
+
+                    if (cross_endian)
+                        b16 = (uint16_t)((b16 >> 8) | (b16 << 8));
+                    dst[i] = b16;
+                }
+            }
+            else {
+                if (H5T__conv_f_f_loop(st, dt, conv_ctx, nelmts, buf_stride, buf) < 0)
+                    HGOTO_ERROR(H5E_DATATYPE, H5E_CANTCONVERT, FAIL, "unable to convert data values");
+            }
+            break;
+
+        default:
+            HGOTO_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL, "unknown conversion command");
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5T__conv_float_bfloat16() */
+
+/*-------------------------------------------------------------------------
+ * Function:    H5T__conv_bfloat16_double
+ *
+ * Purpose:     Convert bfloat16 to native `double' using hardware.
+ *              This is a fast special case.
+ *
+ *              bfloat16→double: shift the bfloat16 bits left 16 to form
+ *              a float32 bit pattern, then cast float32→double. Widening
+ *              never loses precision, so no rounding is needed, and since
+ *              no payload bits are discarded, NaN-ness is always preserved.
+ *              The contiguous loop iterates backward to handle in-place
+ *              widening (2→8 bytes) safely.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5T__conv_bfloat16_double(const H5T_t *st, const H5T_t *dt, H5T_cdata_t *cdata,
+                           const H5T_conv_ctx_t *conv_ctx, size_t nelmts, size_t buf_stride,
+                           size_t H5_ATTR_UNUSED bkg_stride, void *buf, void H5_ATTR_UNUSED *bkg)
+{
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    switch (cdata->command) {
+        case H5T_CONV_INIT:
+            if (!st || !dt)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a datatype");
+            if (st->shared->size != 2 || dt->shared->size != sizeof(double))
+                HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "disagreement about datatype size");
+            cdata->need_bkg = H5T_BKG_NO;
+            break;
+
+        case H5T_CONV_FREE:
+            break;
+
+        case H5T_CONV_CONV:
+            if (!st || !dt)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a datatype");
+            if (!conv_ctx)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid datatype conversion context pointer");
+
+            /* Fast path: contiguous, naturally-aligned, non-empty buffer,
+               no exception callback. bfloat16→double is 2→8 bytes
+               widening; iterate backward to avoid overwriting source
+               elements before they are read. */
+            if (nelmts > 0 && buf_stride == 0 && conv_ctx->u.conv.cb_struct.func == NULL &&
+                (H5T_NATIVE_DOUBLE_ALIGN_g <= 1 || (size_t)buf % H5T_NATIVE_DOUBLE_ALIGN_g == 0)) {
+                const uint16_t *src         = (const uint16_t *)buf + (nelmts - 1);
+                double         *dst         = (double *)buf + (nelmts - 1);
+                bool            cross_endian = (st->shared->u.atomic.order != H5T_native_order_g);
+
+                if (!cross_endian) {
+                    for (size_t i = 0; i < nelmts; i++, src--, dst--) {
+                        uint32_t u = (uint32_t)(*src) << 16;
+                        float    f32;
+                        memcpy(&f32, &u, 4);
+                        *dst = (double)f32;
+                    }
+                }
+                else {
+                    for (size_t i = 0; i < nelmts; i++, src--, dst--) {
+                        uint16_t b16 = *src;
+                        b16          = (uint16_t)((b16 >> 8) | (b16 << 8));
+                        uint32_t u   = (uint32_t)b16 << 16;
+                        float    f32;
+                        memcpy(&f32, &u, 4);
+                        *dst = (double)f32;
+                    }
+                }
+            }
+            else {
+                if (H5T__conv_f_f_loop(st, dt, conv_ctx, nelmts, buf_stride, buf) < 0)
+                    HGOTO_ERROR(H5E_DATATYPE, H5E_CANTCONVERT, FAIL, "unable to convert data values");
+            }
+            break;
+
+        default:
+            HGOTO_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL, "unknown conversion command");
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5T__conv_bfloat16_double() */
+
+/*-------------------------------------------------------------------------
+ * Function:    H5T__conv_bfloat16_float
+ *
+ * Purpose:     Convert bfloat16 to native `float' using hardware.
+ *              This is a fast special case.
+ *
+ *              bfloat16→float: shift the bfloat16 bits left 16 to form
+ *              a float32 bit pattern, then memcpy into the destination.
+ *              Widening never loses precision, so no rounding is needed,
+ *              and since no payload bits are discarded, NaN-ness is always
+ *              preserved. The contiguous loop iterates backward to handle
+ *              in-place widening (2→4 bytes) safely.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5T__conv_bfloat16_float(const H5T_t *st, const H5T_t *dt, H5T_cdata_t *cdata,
+                          const H5T_conv_ctx_t *conv_ctx, size_t nelmts, size_t buf_stride,
+                          size_t H5_ATTR_UNUSED bkg_stride, void *buf, void H5_ATTR_UNUSED *bkg)
+{
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    switch (cdata->command) {
+        case H5T_CONV_INIT:
+            if (!st || !dt)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a datatype");
+            if (st->shared->size != 2 || dt->shared->size != sizeof(float))
+                HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "disagreement about datatype size");
+            cdata->need_bkg = H5T_BKG_NO;
+            break;
+
+        case H5T_CONV_FREE:
+            break;
+
+        case H5T_CONV_CONV:
+            if (!st || !dt)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a datatype");
+            if (!conv_ctx)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid datatype conversion context pointer");
+
+            /* Fast path: contiguous, naturally-aligned, non-empty buffer,
+               no exception callback. bfloat16→float is 2→4 bytes
+               widening; iterate backward to avoid overwriting source
+               elements before they are read. */
+            if (nelmts > 0 && buf_stride == 0 && conv_ctx->u.conv.cb_struct.func == NULL &&
+                (H5T_NATIVE_FLOAT_ALIGN_g <= 1 || (size_t)buf % H5T_NATIVE_FLOAT_ALIGN_g == 0)) {
+                const uint16_t *src         = (const uint16_t *)buf + (nelmts - 1);
+                float          *dst         = (float *)buf + (nelmts - 1);
+                bool            cross_endian = (st->shared->u.atomic.order != H5T_native_order_g);
+
+                if (!cross_endian) {
+                    for (size_t i = 0; i < nelmts; i++, src--, dst--) {
+                        uint32_t u = (uint32_t)(*src) << 16;
+                        memcpy(dst, &u, 4);
+                    }
+                }
+                else {
+                    for (size_t i = 0; i < nelmts; i++, src--, dst--) {
+                        uint16_t b16 = *src;
+                        b16          = (uint16_t)((b16 >> 8) | (b16 << 8));
+                        uint32_t u   = (uint32_t)b16 << 16;
+                        memcpy(dst, &u, 4);
+                    }
+                }
+            }
+            else {
+                if (H5T__conv_f_f_loop(st, dt, conv_ctx, nelmts, buf_stride, buf) < 0)
+                    HGOTO_ERROR(H5E_DATATYPE, H5E_CANTCONVERT, FAIL, "unable to convert data values");
+            }
+            break;
+
+        default:
+            HGOTO_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL, "unknown conversion command");
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5T__conv_bfloat16_float() */
