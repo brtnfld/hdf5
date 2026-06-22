@@ -32,6 +32,20 @@ For releases prior to version 2.0.0, please see the release.txt file and for mor
 
 ## Performance Enhancements:
 
+- Added hardware-accelerated fast-path conversions between bfloat16 and native float/double
+
+  Conversions between the bfloat16 datatypes (`H5T_FLOAT_BFLOAT16LE`/`BE`) and
+  native `float`/`double` previously always went through the general
+  bit-manipulation loop (`H5T__conv_f_f_loop`), which processes each element
+  individually and cannot be auto-vectorized. Because bfloat16 is simply the
+  top 16 bits of an IEEE-754 float32, these conversions are now registered as
+  hard (compiler) conversions that take a contiguous, naturally-aligned,
+  callback-free fast path the compiler can vectorize, falling back to the
+  general loop for strided, misaligned, or exception-callback cases or for
+  non-IEEE-754 native float formats. As a result, `H5Tcompiler_conv()` now
+  reports a hard conversion path for these type pairs where it previously
+  reported a software conversion.
+
 
 ## Significant Advancements:
 

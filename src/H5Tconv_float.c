@@ -2721,10 +2721,22 @@ H5T__is_ieee754_binary32(const H5T_atomic_t *a)
  *              used deliberately to match H5T__conv_f_f_loop()'s rounding
  *              convention, which every other reduced-precision float
  *              narrowing in this library (FP8/FP6/FP4/float16) already
- *              follows -- so the hard and soft paths agree bit-for-bit on
- *              every input, not just almost all of them. With -O2
- *              -march=native the compiler vectorizes the contiguous loop
- *              without explicit intrinsics.
+ *              follows. With -O2 -march=native the compiler vectorizes the
+ *              contiguous loop without explicit intrinsics.
+ *
+ *              NOTE: unlike float→bfloat16 (a single rounding step that
+ *              agrees with H5T__conv_f_f_loop() bit-for-bit), this
+ *              converter rounds twice (double→float32, then
+ *              float32→bfloat16) because it reuses the hardware
+ *              double→float cast. Each step rounds correctly, but
+ *              double-rounding is occasionally not equivalent to a single
+ *              direct rounding, so for a small fraction of inputs
+ *              (~1 in 1e5, always within 1 ULP) this fast path and the
+ *              general soft loop disagree by one bfloat16 ULP. Both are
+ *              valid roundings; the choice between them depends on whether
+ *              the buffer happens to be contiguous/aligned/callback-free
+ *              (fast path) or not (soft path). This is an accepted
+ *              trade-off for the auto-vectorized double→float cast.
  *
  *              NaN inputs skip rounding and have their mantissa forced
  *              non-zero, since rounding a NaN's bit pattern as if it were

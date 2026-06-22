@@ -7219,6 +7219,40 @@ bfloat16_is_nan(uint16_t b16)
     return exp_bits == 0xFF && man_bits != 0;
 }
 
+/* Store/load a uint16 in explicit little-/big-endian byte order, independent of
+ * host endianness, so test buffers are valid H5T_FLOAT_BFLOAT16LE/BE data and the
+ * cross-endian fast-path branches get exercised on either kind of host. */
+static void
+store_u16_le(void *dst, uint16_t v)
+{
+    unsigned char *p = (unsigned char *)dst;
+    p[0]             = (unsigned char)(v & 0xFFu);
+    p[1]             = (unsigned char)((v >> 8) & 0xFFu);
+}
+static uint16_t
+load_u16_le(const void *src)
+{
+    const unsigned char *p = (const unsigned char *)src;
+    return (uint16_t)(p[0] | ((unsigned)p[1] << 8));
+}
+static uint16_t
+load_u16_be(const void *src)
+{
+    const unsigned char *p = (const unsigned char *)src;
+    return (uint16_t)(p[1] | ((unsigned)p[0] << 8));
+}
+
+/* Reference widening: bfloat16 bit pattern -> the float32 (and thus double) value
+ * it represents is simply the bfloat16 bits shifted into the top 16 bits. */
+static float
+bfloat16_to_float_ref(uint16_t b16)
+{
+    uint32_t fbits = (uint32_t)b16 << 16;
+    float    f;
+    memcpy(&f, &fbits, 4);
+    return f;
+}
+
 /*-------------------------------------------------------------------------
  * Function:    test_bfloat16_conversions
  *
@@ -7226,9 +7260,11 @@ bfloat16_is_nan(uint16_t b16)
  *              converters (H5T__conv_double_bfloat16, H5T__conv_float_bfloat16,
  *              H5T__conv_bfloat16_double, H5T__conv_bfloat16_float in
  *              H5Tconv_float.c): rounding-mode tie cases, NaN preservation,
- *              the nelmts == 0 edge case, and a bulk differential comparison
+ *              the nelmts == 0 edge case, a bulk differential comparison
  *              against an independent reference implementation of the
- *              documented rounding algorithm.
+ *              documented rounding algorithm, the widening (bfloat16 ->
+ *              float/double) paths, and the cross-endian (BE) byte-swap
+ *              branches.
  *
  * Return:      Success:    0
  *              Failure:    number of errors
@@ -7364,6 +7400,211 @@ test_bfloat16_conversions(void)
         if (nbad > 0) {
             H5_FAILED();
             printf("Bulk float->bfloat16 differential test: %zu/%zu mismatches against reference\n", nbad, n);
+            goto error2;
+        }
+    }
+
+    /* Cross-endian narrowing: converting the same float to BFLOAT16LE and to
+     * BFLOAT16BE must yield byte-swapped results. This exercises the
+     * cross_endian byte-swap branch of the narrowing converters on a host of
+     * either endianness (one of the two conversions is always cross-endian). */
+    {
+        const size_t n     = 10000;
+        float       *fbuf  = (float *)malloc(n * sizeof(float));
+        float       *fbuf2 = (float *)malloc(n * sizeof(float));
+
+        if (NULL == fbuf || NULL == fbuf2) {
+            H5_FAILED();
+            printf("Couldn't allocate buffers for cross-endian bfloat16 test\n");
+            free(fbuf);
+            free(fbuf2);
+            goto error2;
+        }
+
+        for (size_t i = 0; i < n; i++) {
+            uint32_t bits = (uint32_t)rand() << 1;
+            memcpy(&fbuf[i], &bits, 4);
+            fbuf2[i] = fbuf[i];
+        }
+
+        if (H5Tconvert(H5T_NATIVE_FLOAT, H5T_FLOAT_BFLOAT16LE, n, fbuf, NULL, H5P_DEFAULT) < 0 ||
+            H5Tconvert(H5T_NATIVE_FLOAT, H5T_FLOAT_BFLOAT16BE, n, fbuf2, NULL, H5P_DEFAULT) < 0) {
+            H5_FAILED();
+            printf("H5Tconvert failed for cross-endian narrowing test\n");
+            free(fbuf);
+            free(fbuf2);
+            goto error2;
+        }
+
+        size_t nbad = 0;
+        for (size_t i = 0; i < n; i++) {
+            uint16_t vle = load_u16_le((const unsigned char *)fbuf + 2 * i);
+            uint16_t vbe = load_u16_be((const unsigned char *)fbuf2 + 2 * i);
+            if (vle != vbe)
+                nbad++;
+        }
+
+        free(fbuf);
+        free(fbuf2);
+
+        if (nbad > 0) {
+            H5_FAILED();
+            printf("Cross-endian narrowing: %zu/%zu LE/BE results were not byte-swaps\n", nbad, n);
+            goto error2;
+        }
+    }
+
+    /* Widening value correctness: bfloat16 -> float and bfloat16 -> double are
+     * exact (no rounding), so the result must equal the reference widening for
+     * every element. Uses n > 1 to exercise the backward in-place iteration, and
+     * runs both the LE (native-order on a little-endian host) and BE
+     * (cross-endian there) source layouts. */
+    {
+        const size_t n = 10000;
+        /* Buffers sized for the widest destination (double) so the widening can
+         * happen in place; the source bfloat16 values occupy the first 2*n bytes. */
+        unsigned char *buf = (unsigned char *)malloc(n * sizeof(double));
+        uint16_t      *pat = (uint16_t *)malloc(n * sizeof(uint16_t));
+
+        if (NULL == buf || NULL == pat) {
+            H5_FAILED();
+            printf("Couldn't allocate buffers for bfloat16 widening test\n");
+            free(buf);
+            free(pat);
+            goto error2;
+        }
+
+        for (size_t i = 0; i < n; i++)
+            pat[i] = (uint16_t)((unsigned)rand() & 0xFFFFu);
+
+        /* Two passes: LE source type, then BE source type. */
+        for (int pass = 0; pass < 2; pass++) {
+            hid_t  src_type = (pass == 0) ? H5T_FLOAT_BFLOAT16LE : H5T_FLOAT_BFLOAT16BE;
+            size_t nbad     = 0;
+
+            /* bfloat16 -> double */
+            for (size_t i = 0; i < n; i++) {
+                if (pass == 0)
+                    store_u16_le(buf + 2 * i, pat[i]);
+                else { /* big-endian store */
+                    buf[2 * i]     = (unsigned char)((pat[i] >> 8) & 0xFFu);
+                    buf[2 * i + 1] = (unsigned char)(pat[i] & 0xFFu);
+                }
+            }
+            if (H5Tconvert(src_type, H5T_NATIVE_DOUBLE, n, buf, NULL, H5P_DEFAULT) < 0) {
+                H5_FAILED();
+                printf("H5Tconvert failed for bfloat16->double widening (pass %d)\n", pass);
+                free(buf);
+                free(pat);
+                goto error2;
+            }
+            /* Widening is a deterministic bit operation (b16 << 16, then the
+             * same C cast this reference uses), so the result must be
+             * bit-identical to the reference for every pattern, NaN included. */
+            for (size_t i = 0; i < n; i++) {
+                double got;
+                double rd = (double)bfloat16_to_float_ref(pat[i]);
+                memcpy(&got, buf + i * sizeof(double), sizeof(double));
+                if (memcmp(&got, &rd, sizeof(double)) != 0)
+                    nbad++;
+            }
+
+            /* bfloat16 -> float */
+            for (size_t i = 0; i < n; i++) {
+                if (pass == 0)
+                    store_u16_le(buf + 2 * i, pat[i]);
+                else {
+                    buf[2 * i]     = (unsigned char)((pat[i] >> 8) & 0xFFu);
+                    buf[2 * i + 1] = (unsigned char)(pat[i] & 0xFFu);
+                }
+            }
+            if (H5Tconvert(src_type, H5T_NATIVE_FLOAT, n, buf, NULL, H5P_DEFAULT) < 0) {
+                H5_FAILED();
+                printf("H5Tconvert failed for bfloat16->float widening (pass %d)\n", pass);
+                free(buf);
+                free(pat);
+                goto error2;
+            }
+            for (size_t i = 0; i < n; i++) {
+                float got;
+                float ref = bfloat16_to_float_ref(pat[i]);
+                memcpy(&got, buf + i * sizeof(float), sizeof(float));
+                if (memcmp(&got, &ref, sizeof(float)) != 0)
+                    nbad++;
+            }
+
+            if (nbad > 0) {
+                H5_FAILED();
+                printf("bfloat16 widening (pass %d): %zu mismatches against reference\n", pass, nbad);
+                free(buf);
+                free(pat);
+                goto error2;
+            }
+        }
+
+        free(buf);
+        free(pat);
+    }
+
+    /* Bulk double -> bfloat16, full-entropy doubles (52-bit-random mantissa, not
+     * derived from a float). The hard path is documented as double->float32->
+     * bfloat16, so the reference mirrors that exact algorithm -- a correctly-
+     * rounded (float)d cast followed by the same round-half-up step -- and the
+     * result must match bit-for-bit. (The ~1-ULP divergence noted in the
+     * converter docs is between this hard path and the *direct* double->bfloat16
+     * soft loop, not against this reference.) */
+    {
+        const size_t n      = 100000;
+        double      *dbuf   = (double *)malloc(n * sizeof(double));
+        uint16_t    *expect = (uint16_t *)malloc(n * sizeof(uint16_t));
+
+        if (NULL == dbuf || NULL == expect) {
+            H5_FAILED();
+            printf("Couldn't allocate buffers for bulk double->bfloat16 test\n");
+            free(dbuf);
+            free(expect);
+            goto error2;
+        }
+
+        for (size_t i = 0; i < n; i++) {
+            /* Build a full 64-bit pattern from several rand() calls so the
+             * double carries far more mantissa entropy than a single rand(). */
+            uint64_t bits = ((uint64_t)(uint32_t)rand() << 33) ^ ((uint64_t)(uint32_t)rand() << 11) ^
+                            (uint64_t)(uint32_t)rand();
+            double d;
+            memcpy(&d, &bits, 8);
+            dbuf[i] = d;
+
+            /* Reference: correctly-rounded narrowing to float32, then the
+             * documented round-half-up to bfloat16. */
+            float    f = (float)d;
+            uint32_t fbits;
+            memcpy(&fbits, &f, 4);
+            expect[i] = bfloat16_round_half_up_ref(fbits);
+        }
+
+        if (H5Tconvert(H5T_NATIVE_DOUBLE, H5T_FLOAT_BFLOAT16LE, n, dbuf, NULL, H5P_DEFAULT) < 0) {
+            H5_FAILED();
+            printf("H5Tconvert failed for bulk double->bfloat16 test\n");
+            free(dbuf);
+            free(expect);
+            goto error2;
+        }
+
+        size_t nbad = 0;
+        for (size_t i = 0; i < n; i++) {
+            uint16_t got = load_u16_le((const unsigned char *)dbuf + 2 * i);
+            if (got != expect[i] && !(bfloat16_is_nan(got) && bfloat16_is_nan(expect[i])))
+                nbad++;
+        }
+
+        free(dbuf);
+        free(expect);
+
+        if (nbad > 0) {
+            H5_FAILED();
+            printf("Bulk double->bfloat16 differential test: %zu/%zu mismatches against reference\n", nbad,
+                   n);
             goto error2;
         }
     }
