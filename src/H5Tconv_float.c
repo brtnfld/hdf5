@@ -2684,6 +2684,30 @@ H5T__conv_ldouble_lcomplex(const H5T_t *st, const H5T_t *dt, H5T_cdata_t *cdata,
 }
 #endif
 
+/* The bfloat16 fast-path converters below hand-code IEEE-754 binary32/64 bit
+ * positions (e.g. shifting by 16, masking 0x7f800000) rather than going
+ * through a plain C cast the way H5T_CONV_Ff's macro-based converters do
+ * (e.g. double->float, double->_Float16). A plain cast automatically
+ * adapts to whatever the compiler's real `double`/`float` layout is; these
+ * hard-coded bit positions do not, so each fast path is gated on the
+ * source/destination native type actually having the expected IEEE-754
+ * layout, checked once per H5T_CONV_CONV call. This guards against (in
+ * practice all-but-extinct) non-IEEE-754 native float formats, falling
+ * back to the general bit-manipulation loop for them. */
+static bool
+H5T__is_ieee754_binary64(const H5T_atomic_t *a)
+{
+    return a->u.f.sign == 63 && a->u.f.epos == 52 && a->u.f.esize == 11 && a->u.f.ebias == 1023 &&
+           a->u.f.mpos == 0 && a->u.f.msize == 52 && a->u.f.norm == H5T_NORM_IMPLIED;
+}
+
+static bool
+H5T__is_ieee754_binary32(const H5T_atomic_t *a)
+{
+    return a->u.f.sign == 31 && a->u.f.epos == 23 && a->u.f.esize == 8 && a->u.f.ebias == 127 &&
+           a->u.f.mpos == 0 && a->u.f.msize == 23 && a->u.f.norm == H5T_NORM_IMPLIED;
+}
+
 /*-------------------------------------------------------------------------
  * Function:    H5T__conv_double_bfloat16
  *
@@ -2760,7 +2784,8 @@ H5T__conv_double_bfloat16(const H5T_t *st, const H5T_t *dt, H5T_cdata_t *cdata,
                callback. double→bfloat16 is 8→2 bytes; forward in-place is
                always safe. */
             if (buf_stride == 0 && conv_ctx->u.conv.cb_struct.func == NULL &&
-                (H5T_NATIVE_DOUBLE_ALIGN_g <= 1 || (size_t)buf % H5T_NATIVE_DOUBLE_ALIGN_g == 0)) {
+                (H5T_NATIVE_DOUBLE_ALIGN_g <= 1 || (size_t)buf % H5T_NATIVE_DOUBLE_ALIGN_g == 0) &&
+                H5T__is_ieee754_binary64(&st->shared->u.atomic)) {
                 const double *src         = (const double *)buf;
                 uint16_t     *dst         = (uint16_t *)buf;
                 bool          cross_endian = (dt->shared->u.atomic.order != H5T_native_order_g);
@@ -2849,7 +2874,8 @@ H5T__conv_float_bfloat16(const H5T_t *st, const H5T_t *dt, H5T_cdata_t *cdata,
                callback. float→bfloat16 is 4→2 bytes; forward in-place is
                always safe. */
             if (buf_stride == 0 && conv_ctx->u.conv.cb_struct.func == NULL &&
-                (H5T_NATIVE_FLOAT_ALIGN_g <= 1 || (size_t)buf % H5T_NATIVE_FLOAT_ALIGN_g == 0)) {
+                (H5T_NATIVE_FLOAT_ALIGN_g <= 1 || (size_t)buf % H5T_NATIVE_FLOAT_ALIGN_g == 0) &&
+                H5T__is_ieee754_binary32(&st->shared->u.atomic)) {
                 const float *src         = (const float *)buf;
                 uint16_t    *dst         = (uint16_t *)buf;
                 bool         cross_endian = (dt->shared->u.atomic.order != H5T_native_order_g);
@@ -2930,7 +2956,8 @@ H5T__conv_bfloat16_double(const H5T_t *st, const H5T_t *dt, H5T_cdata_t *cdata,
                widening; iterate backward to avoid overwriting source
                elements before they are read. */
             if (nelmts > 0 && buf_stride == 0 && conv_ctx->u.conv.cb_struct.func == NULL &&
-                (H5T_NATIVE_DOUBLE_ALIGN_g <= 1 || (size_t)buf % H5T_NATIVE_DOUBLE_ALIGN_g == 0)) {
+                (H5T_NATIVE_DOUBLE_ALIGN_g <= 1 || (size_t)buf % H5T_NATIVE_DOUBLE_ALIGN_g == 0) &&
+                H5T__is_ieee754_binary64(&dt->shared->u.atomic)) {
                 const uint16_t *src         = (const uint16_t *)buf + (nelmts - 1);
                 double         *dst         = (double *)buf + (nelmts - 1);
                 bool            cross_endian = (st->shared->u.atomic.order != H5T_native_order_g);
@@ -3017,7 +3044,8 @@ H5T__conv_bfloat16_float(const H5T_t *st, const H5T_t *dt, H5T_cdata_t *cdata,
                widening; iterate backward to avoid overwriting source
                elements before they are read. */
             if (nelmts > 0 && buf_stride == 0 && conv_ctx->u.conv.cb_struct.func == NULL &&
-                (H5T_NATIVE_FLOAT_ALIGN_g <= 1 || (size_t)buf % H5T_NATIVE_FLOAT_ALIGN_g == 0)) {
+                (H5T_NATIVE_FLOAT_ALIGN_g <= 1 || (size_t)buf % H5T_NATIVE_FLOAT_ALIGN_g == 0) &&
+                H5T__is_ieee754_binary32(&dt->shared->u.atomic)) {
                 const uint16_t *src         = (const uint16_t *)buf + (nelmts - 1);
                 float          *dst         = (float *)buf + (nelmts - 1);
                 bool            cross_endian = (st->shared->u.atomic.order != H5T_native_order_g);

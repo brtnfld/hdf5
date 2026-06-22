@@ -7196,6 +7196,186 @@ error:
     return 1;
 }
 
+/* Independent reference implementation of the bfloat16 hard-path conversion
+ * algorithm: round half up (matching H5T__conv_f_f_loop's convention -- see
+ * H5T__conv_double_bfloat16() in H5Tconv_float.c for why round-half-up was
+ * chosen over round-to-nearest-even), with NaN inputs forced to a non-zero
+ * mantissa so they can't truncate into Infinity. Used below to regression-
+ * test the actual library output via the public H5Tconvert() API, without
+ * needing to mutate global conversion-path registration state. */
+static uint16_t
+bfloat16_round_half_up_ref(uint32_t f32_bits)
+{
+    bool     is_nan  = (f32_bits & 0x7f800000u) == 0x7f800000u && (f32_bits & 0x007fffffu) != 0u;
+    uint32_t rounded = f32_bits + 0x8000u;
+    return is_nan ? (uint16_t)((f32_bits >> 16) | 0x0040u) : (uint16_t)(rounded >> 16);
+}
+
+static bool
+bfloat16_is_nan(uint16_t b16)
+{
+    uint16_t exp_bits = (uint16_t)((b16 >> 7) & 0xFF);
+    uint16_t man_bits = (uint16_t)(b16 & 0x7F);
+    return exp_bits == 0xFF && man_bits != 0;
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    test_bfloat16_conversions
+ *
+ * Purpose:     Regression tests for the bfloat16 hardware fast-path
+ *              converters (H5T__conv_double_bfloat16, H5T__conv_float_bfloat16,
+ *              H5T__conv_bfloat16_double, H5T__conv_bfloat16_float in
+ *              H5Tconv_float.c): rounding-mode tie cases, NaN preservation,
+ *              the nelmts == 0 edge case, and a bulk differential comparison
+ *              against an independent reference implementation of the
+ *              documented rounding algorithm.
+ *
+ * Return:      Success:    0
+ *              Failure:    number of errors
+ *-------------------------------------------------------------------------
+ */
+static int
+test_bfloat16_conversions(void)
+{
+    TESTING("bfloat16 hardware fast-path conversion correctness");
+
+    /* Round-half-up tie cases: dropped bits relative to 0x8000 (the tie point) */
+    {
+        struct {
+            uint32_t    f32_bits;
+            uint16_t    expected;
+            const char *label;
+        } cases[] = {
+            {0x3F800000u | 0x00008000u, 0x3f81, "exact tie, kept LSB even -> still rounds up"},
+            {0x3F810000u | 0x00008000u, 0x3f82, "exact tie, kept LSB odd -> rounds up"},
+            {0x3F810000u | 0x00007FFFu, 0x3f81, "just below tie -> rounds down"},
+            {0x3F800000u | 0x00008001u, 0x3f81, "just above tie -> rounds up"},
+        };
+
+        for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+            float f;
+            memcpy(&f, &cases[i].f32_bits, 4);
+            double d = (double)f;
+            if (H5Tconvert(H5T_NATIVE_DOUBLE, H5T_FLOAT_BFLOAT16LE, 1, &d, NULL, H5P_DEFAULT) < 0) {
+                H5_FAILED();
+                printf("H5Tconvert failed for case: %s\n", cases[i].label);
+                goto error2;
+            }
+            uint16_t got;
+            memcpy(&got, &d, 2);
+            if (got != cases[i].expected) {
+                H5_FAILED();
+                printf("Rounding mismatch for case '%s': got 0x%04x, expected 0x%04x\n", cases[i].label,
+                       got, cases[i].expected);
+                goto error2;
+            }
+        }
+    }
+
+    /* NaN preservation: a payload-only-in-low-bits NaN must stay NaN, not degrade to Infinity */
+    {
+        uint32_t nan_bits = 0x7F800001u;
+        float    f;
+        memcpy(&f, &nan_bits, 4);
+        double d = (double)f;
+        if (H5Tconvert(H5T_NATIVE_DOUBLE, H5T_FLOAT_BFLOAT16LE, 1, &d, NULL, H5P_DEFAULT) < 0) {
+            H5_FAILED();
+            printf("H5Tconvert failed for low-payload NaN case\n");
+            goto error2;
+        }
+        uint16_t got;
+        memcpy(&got, &d, 2);
+        if (!bfloat16_is_nan(got)) {
+            H5_FAILED();
+            printf("Low-payload NaN degraded to non-NaN (bits=0x%04x); should have stayed NaN\n", got);
+            goto error2;
+        }
+    }
+
+    /* nelmts == 0: must not crash (previously undefined behavior via pointer underflow
+     * in the widening converters' backward-iteration setup) */
+    {
+        double dummy_d;
+        float  dummy_f;
+        if (H5Tconvert(H5T_FLOAT_BFLOAT16LE, H5T_NATIVE_DOUBLE, 0, &dummy_d, NULL, H5P_DEFAULT) < 0) {
+            H5_FAILED();
+            printf("H5Tconvert with nelmts=0 (bfloat16->double) failed\n");
+            goto error2;
+        }
+        if (H5Tconvert(H5T_FLOAT_BFLOAT16LE, H5T_NATIVE_FLOAT, 0, &dummy_f, NULL, H5P_DEFAULT) < 0) {
+            H5_FAILED();
+            printf("H5Tconvert with nelmts=0 (bfloat16->float) failed\n");
+            goto error2;
+        }
+    }
+
+    /* Bulk differential test: float -> bfloat16 is a single rounding step, so the
+     * actual hard-path output must match the reference implementation exactly. */
+    {
+        const size_t n      = 100000;
+        float       *fbuf   = (float *)malloc(n * sizeof(float));
+        uint16_t    *expect = (uint16_t *)malloc(n * sizeof(uint16_t));
+
+        if (NULL == fbuf || NULL == expect) {
+            H5_FAILED();
+            printf("Couldn't allocate buffers for bulk bfloat16 conversion test\n");
+            free(fbuf);
+            free(expect);
+            goto error2;
+        }
+
+        for (size_t i = 0; i < n; i++) {
+            uint32_t bits;
+            int      pick = rand() % 5;
+            if (pick == 0)
+                bits = (uint32_t)rand() << 1; /* arbitrary bit pattern */
+            else if (pick == 1)
+                bits = 0x7F800000u; /* +Inf */
+            else if (pick == 2)
+                bits = 0xFF800000u; /* -Inf */
+            else if (pick == 3)
+                bits = 0x7FC00000u; /* canonical QNaN */
+            else
+                bits = ((uint32_t)rand() % 2) << 31; /* +/- 0 */
+            memcpy(&fbuf[i], &bits, 4);
+            expect[i] = bfloat16_round_half_up_ref(bits);
+        }
+
+        if (H5Tconvert(H5T_NATIVE_FLOAT, H5T_FLOAT_BFLOAT16LE, n, fbuf, NULL, H5P_DEFAULT) < 0) {
+            H5_FAILED();
+            printf("H5Tconvert failed for bulk float->bfloat16 test\n");
+            free(fbuf);
+            free(expect);
+            goto error2;
+        }
+
+        uint16_t *got16 = (uint16_t *)fbuf;
+        size_t    nbad  = 0;
+        for (size_t i = 0; i < n; i++) {
+            /* NaN payload bits are not required to match exactly across implementations
+             * (IEEE-754 doesn't mandate it) -- only require both sides agree it's a NaN. */
+            if (got16[i] != expect[i] && !(bfloat16_is_nan(got16[i]) && bfloat16_is_nan(expect[i])))
+                nbad++;
+        }
+
+        free(fbuf);
+        free(expect);
+
+        if (nbad > 0) {
+            H5_FAILED();
+            printf("Bulk float->bfloat16 differential test: %zu/%zu mismatches against reference\n", nbad,
+                   n);
+            goto error2;
+        }
+    }
+
+    PASSED();
+    return 0;
+
+error2:
+    return 1;
+}
+
 /*-------------------------------------------------------------------------
  * Function:    test_fp8
  *
@@ -14498,6 +14678,7 @@ main(void)
 
     nerrors += test__Float16();
     nerrors += test_bfloat16();
+    nerrors += test_bfloat16_conversions();
     nerrors += test_fp8();
     nerrors += test_fp6();
     nerrors += test_fp4();
