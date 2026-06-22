@@ -2755,8 +2755,8 @@ H5T__is_ieee754_binary32(const H5T_atomic_t *a)
  */
 herr_t
 H5T__conv_double_bfloat16(const H5T_t *st, const H5T_t *dt, H5T_cdata_t *cdata,
-                           const H5T_conv_ctx_t *conv_ctx, size_t nelmts, size_t buf_stride,
-                           size_t H5_ATTR_UNUSED bkg_stride, void *buf, void H5_ATTR_UNUSED *bkg)
+                          const H5T_conv_ctx_t *conv_ctx, size_t nelmts, size_t buf_stride,
+                          size_t H5_ATTR_UNUSED bkg_stride, void *buf, void H5_ATTR_UNUSED *bkg)
 {
     herr_t ret_value = SUCCEED;
 
@@ -2786,8 +2786,8 @@ H5T__conv_double_bfloat16(const H5T_t *st, const H5T_t *dt, H5T_cdata_t *cdata,
             if (buf_stride == 0 && conv_ctx->u.conv.cb_struct.func == NULL &&
                 (H5T_NATIVE_DOUBLE_ALIGN_g <= 1 || (size_t)buf % H5T_NATIVE_DOUBLE_ALIGN_g == 0) &&
                 H5T__is_ieee754_binary64(&st->shared->u.atomic)) {
-                const double *src         = (const double *)buf;
-                uint16_t     *dst         = (uint16_t *)buf;
+                const double *src          = (const double *)buf;
+                uint16_t     *dst          = (uint16_t *)buf;
                 bool          cross_endian = (dt->shared->u.atomic.order != H5T_native_order_g);
 
                 for (size_t i = 0; i < nelmts; i++) {
@@ -2844,9 +2844,9 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5T__conv_float_bfloat16(const H5T_t *st, const H5T_t *dt, H5T_cdata_t *cdata,
-                          const H5T_conv_ctx_t *conv_ctx, size_t nelmts, size_t buf_stride,
-                          size_t H5_ATTR_UNUSED bkg_stride, void *buf, void H5_ATTR_UNUSED *bkg)
+H5T__conv_float_bfloat16(const H5T_t *st, const H5T_t *dt, H5T_cdata_t *cdata, const H5T_conv_ctx_t *conv_ctx,
+                         size_t nelmts, size_t buf_stride, size_t H5_ATTR_UNUSED bkg_stride, void *buf,
+                         void H5_ATTR_UNUSED *bkg)
 {
     herr_t ret_value = SUCCEED;
 
@@ -2876,8 +2876,8 @@ H5T__conv_float_bfloat16(const H5T_t *st, const H5T_t *dt, H5T_cdata_t *cdata,
             if (buf_stride == 0 && conv_ctx->u.conv.cb_struct.func == NULL &&
                 (H5T_NATIVE_FLOAT_ALIGN_g <= 1 || (size_t)buf % H5T_NATIVE_FLOAT_ALIGN_g == 0) &&
                 H5T__is_ieee754_binary32(&st->shared->u.atomic)) {
-                const float *src         = (const float *)buf;
-                uint16_t    *dst         = (uint16_t *)buf;
+                const float *src          = (const float *)buf;
+                uint16_t    *dst          = (uint16_t *)buf;
                 bool         cross_endian = (dt->shared->u.atomic.order != H5T_native_order_g);
 
                 for (size_t i = 0; i < nelmts; i++) {
@@ -2926,8 +2926,8 @@ done:
  */
 herr_t
 H5T__conv_bfloat16_double(const H5T_t *st, const H5T_t *dt, H5T_cdata_t *cdata,
-                           const H5T_conv_ctx_t *conv_ctx, size_t nelmts, size_t buf_stride,
-                           size_t H5_ATTR_UNUSED bkg_stride, void *buf, void H5_ATTR_UNUSED *bkg)
+                          const H5T_conv_ctx_t *conv_ctx, size_t nelmts, size_t buf_stride,
+                          size_t H5_ATTR_UNUSED bkg_stride, void *buf, void H5_ATTR_UNUSED *bkg)
 {
     herr_t ret_value = SUCCEED;
 
@@ -2958,8 +2958,8 @@ H5T__conv_bfloat16_double(const H5T_t *st, const H5T_t *dt, H5T_cdata_t *cdata,
             if (nelmts > 0 && buf_stride == 0 && conv_ctx->u.conv.cb_struct.func == NULL &&
                 (H5T_NATIVE_DOUBLE_ALIGN_g <= 1 || (size_t)buf % H5T_NATIVE_DOUBLE_ALIGN_g == 0) &&
                 H5T__is_ieee754_binary64(&dt->shared->u.atomic)) {
-                const uint16_t *src         = (const uint16_t *)buf + (nelmts - 1);
-                double         *dst         = (double *)buf + (nelmts - 1);
+                const uint16_t *src          = (const uint16_t *)buf + (nelmts - 1);
+                double         *dst          = (double *)buf + (nelmts - 1);
                 bool            cross_endian = (st->shared->u.atomic.order != H5T_native_order_g);
 
                 if (!cross_endian) {
@@ -3013,9 +3013,9 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5T__conv_bfloat16_float(const H5T_t *st, const H5T_t *dt, H5T_cdata_t *cdata,
-                          const H5T_conv_ctx_t *conv_ctx, size_t nelmts, size_t buf_stride,
-                          size_t H5_ATTR_UNUSED bkg_stride, void *buf, void H5_ATTR_UNUSED *bkg)
+H5T__conv_bfloat16_float(const H5T_t *st, const H5T_t *dt, H5T_cdata_t *cdata, const H5T_conv_ctx_t *conv_ctx,
+                         size_t nelmts, size_t buf_stride, size_t H5_ATTR_UNUSED bkg_stride, void *buf,
+                         void H5_ATTR_UNUSED *bkg)
 {
     herr_t ret_value = SUCCEED;
 
@@ -3046,8 +3046,8 @@ H5T__conv_bfloat16_float(const H5T_t *st, const H5T_t *dt, H5T_cdata_t *cdata,
             if (nelmts > 0 && buf_stride == 0 && conv_ctx->u.conv.cb_struct.func == NULL &&
                 (H5T_NATIVE_FLOAT_ALIGN_g <= 1 || (size_t)buf % H5T_NATIVE_FLOAT_ALIGN_g == 0) &&
                 H5T__is_ieee754_binary32(&dt->shared->u.atomic)) {
-                const uint16_t *src         = (const uint16_t *)buf + (nelmts - 1);
-                float          *dst         = (float *)buf + (nelmts - 1);
+                const uint16_t *src          = (const uint16_t *)buf + (nelmts - 1);
+                float          *dst          = (float *)buf + (nelmts - 1);
                 bool            cross_endian = (st->shared->u.atomic.order != H5T_native_order_g);
 
                 if (!cross_endian) {

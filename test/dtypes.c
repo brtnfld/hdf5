@@ -7265,8 +7265,8 @@ test_bfloat16_conversions(void)
             memcpy(&got, &d, 2);
             if (got != cases[i].expected) {
                 H5_FAILED();
-                printf("Rounding mismatch for case '%s': got 0x%04x, expected 0x%04x\n", cases[i].label,
-                       got, cases[i].expected);
+                printf("Rounding mismatch for case '%s': got 0x%04x, expected 0x%04x\n", cases[i].label, got,
+                       cases[i].expected);
                 goto error2;
             }
         }
@@ -7363,8 +7363,7 @@ test_bfloat16_conversions(void)
 
         if (nbad > 0) {
             H5_FAILED();
-            printf("Bulk float->bfloat16 differential test: %zu/%zu mismatches against reference\n", nbad,
-                   n);
+            printf("Bulk float->bfloat16 differential test: %zu/%zu mismatches against reference\n", nbad, n);
             goto error2;
         }
     }
