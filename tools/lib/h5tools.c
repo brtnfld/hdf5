@@ -475,7 +475,7 @@ h5tools_set_up_vfd_swmr(hid_t fapl, const char *config_file)
 {
     herr_t                 ret_value = SUCCEED;
 
-    if (config_file == NULL || config_file == '\0') {
+    if (config_file == NULL || *config_file == '\0') {
         /* Set up SWMR fapl with default config values */
         H5F_vfd_swmr_config_t config = /* Configuration for VFD SWMR */
         {

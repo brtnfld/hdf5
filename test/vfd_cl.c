@@ -1254,7 +1254,9 @@ static herr_t
 cl_lexer_error_check_1(void)
 {
     const char * input_string = "* /* a comment */&/*another comment */    _=% {}[]\"unterminated string";
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
+#endif
     H5CL_token_t * token_ptr;
     H5CL_lex_vars_t lex_vars = {
         /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
@@ -1476,7 +1478,9 @@ static herr_t
 cl_lexer_error_check_2(void)
 {
     const char * input_string = "/* malformed numeric values */ + - . +. -. (an unterminated list";
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
+#endif
     H5CL_token_t * token_ptr;
     H5CL_lex_vars_t lex_vars = {
         /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
@@ -1642,7 +1646,9 @@ static herr_t
 cl_lexer_error_check_3(void)
 {
     const char * input_string = " /* an empty input string to generate an unexpected EOI error */";
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
+#endif
     H5CL_token_t * token_ptr;
     H5CL_lex_vars_t lex_vars = {
         /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
@@ -1733,7 +1739,9 @@ static herr_t
 cl_lexer_error_check_4(void)
 {
     const char * input_string = " /* end of input in a comment ";
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
+#endif
     H5CL_token_t * token_ptr;
     H5CL_lex_vars_t lex_vars = {
         /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
@@ -1970,7 +1978,9 @@ static herr_t
 cl_parse_nv_pair_error_check_1(void)
 {
     const char * input_string = "name 1 ) /* NV pair missing the opening paren */";
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
+#endif
     H5CL_lex_vars_t lex_vars = {
         /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
         /* input_str_ptr     = */ NULL,
@@ -2066,7 +2076,9 @@ static herr_t
 cl_parse_nv_pair_error_check_2(void)
 {
     const char * input_string = "( /* NV pair missing the name */ 1 --01020304 )";
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
+#endif
     H5CL_lex_vars_t lex_vars = {
         /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
         /* input_str_ptr     = */ NULL,
@@ -2163,7 +2175,9 @@ static herr_t
 cl_parse_nv_pair_error_check_3(void)
 {
     const char * input_string = "( name /* NV pair missing the value */ )";
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
+#endif
     H5CL_lex_vars_t lex_vars = {
         /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
         /* input_str_ptr     = */ NULL,
@@ -2260,7 +2274,9 @@ static herr_t
 cl_parse_nv_pair_error_check_4(void)
 {
     const char * input_string = "( name 1.1 /* NV pair with extra value */ --01020304 )";
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
+#endif
     H5CL_lex_vars_t lex_vars = {
         /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
         /* input_str_ptr     = */ NULL,
@@ -2357,7 +2373,9 @@ static herr_t
 cl_parse_nv_pair_error_check_5(void)
 {
     const char * input_string = "( name \" unterminated quote string ";
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
+#endif
     H5CL_lex_vars_t lex_vars = {
         /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
         /* input_str_ptr     = */ NULL,
@@ -2454,7 +2472,9 @@ static herr_t
 cl_parse_nv_pair_error_check_6(void)
 {
     const char * input_string = "( name ( unterminated list ";
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
+#endif
     H5CL_lex_vars_t lex_vars = {
         /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
         /* input_str_ptr     = */ NULL,
@@ -2551,7 +2571,9 @@ static herr_t
 cl_parse_nv_pair_error_check_7(void)
 {
     const char * input_string = "( name 3.14159 /* unexpected EOI */ ";
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
+#endif
     H5CL_lex_vars_t lex_vars = {
         /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
         /* input_str_ptr     = */ NULL,
@@ -2821,7 +2843,9 @@ error:
 static herr_t
 cl_parse_name_val_pair_list_err_check_1(void)
 {
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
+#endif
     int nv_pair_num = 0;
     const char * input_string = " ( name_0 1 ) ( name_1 3.14159 ) ( name_2 \"Hello World\" ) "
                                 "( name_3 --10111213 ) ( name_4 ( sec2 () ) ) )";
@@ -2937,7 +2961,9 @@ error:
 static herr_t
 cl_parse_name_val_pair_list_err_check_2(void)
 {
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
+#endif
     int nv_pair_num = 0;
     const char * input_string = "  name_0 1 ) ( name_1 3.14159 ) ( name_2 \"Hello World\" ) "
                                 "( name_3 --10111213 ) ( name_4 ( sec2 () ) ) )";
@@ -3053,7 +3079,9 @@ error:
 static herr_t
 cl_parse_name_val_pair_list_err_check_3(void)
 {
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
+#endif
     int nv_pair_num = 0;
     const char * input_string = "( ( name_3 --10111213- ) ( name_4 ( sec2 () ) ) )";
     H5CL_nv_pair_t actual_nv_pairs[5];
@@ -4118,7 +4146,9 @@ cl_parse_config_group_err_check_1(void){
     int duplicate_1_num_params = 1;
     int normal_num_params = 1;
     int duplicate_2_num_params = 1;
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
+#endif
     char top_name[] = "top_name";
     char duplicate_name[] = "duplicate_name";
     char normal_name[] = "normal_name";
@@ -4244,7 +4274,9 @@ cl_parse_config_group_err_check_2(void){
         "   )"
         "  )"
         ")";
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
+#endif
     int i;
     int j;
     int num_configs = 2;
@@ -4361,7 +4393,9 @@ cl_parse_config_group_err_check_3(void){
         "    )"
         "  )"
         ")";
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
+#endif
     int i;
     int j;
     int num_configs = 1;
@@ -4456,7 +4490,9 @@ cl_parse_config_group_err_check_4(void){
         "    )"
         "  )"
         ")";
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
+#endif
     int i;
     int j;
     int num_configs = 1;
@@ -4560,7 +4596,9 @@ error:
 static herr_t
 cl_parse_config_group_err_check_5(void){
     const char * input_string = "( top_name 1 )"; /* value isnt a list */
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
+#endif
     int i;
     int j;
     int num_configs = 1;
@@ -4651,7 +4689,9 @@ cl_parse_config_group_err_check_6(void){
         "    ( config_name 1 )" /* config value isn't a list */
         "  )"
         ")";
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
+#endif
     int i;
     int j;
     int num_configs = 1;
@@ -4747,7 +4787,9 @@ cl_parse_config_group_err_check_7(void){
         "    )"
         "  )"
         ")";
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
+#endif
     int i;
     int j;
     int num_configs = 2;
@@ -4936,6 +4978,7 @@ vfd_swmr_load_string_config_smoke_check(void)
 
     bool verbose = true;
 
+
     if ( NULL == (actual_config = HDcalloc(1, sizeof(H5F_vfd_swmr_config_t))) ) {
         TEST_ERROR;
     }
@@ -5076,7 +5119,9 @@ vfd_swmr_load_string_config_err_check_1(void)
     hid_t   fcpl        = H5I_INVALID_HID;
     hbool_t writer      = false;
     hbool_t create_file = true;
+#if VERIFY_ERROR_STACK_SUPPORTED    
     bool    verbose     = true;
+#endif
 
     TESTING("H5F_load_swmr_config_from_string() err detect 1");
 
@@ -5223,7 +5268,9 @@ vfd_swmr_load_string_config_err_check_2(void)
     hid_t   fcpl        = H5I_INVALID_HID;
     hbool_t writer      = true;
     hbool_t create_file = true;
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool    verbose     = true;
+#endif
 
     TESTING("H5F_load_swmr_config_from_string() err detect 2");
 
@@ -5667,7 +5714,9 @@ vfd_swmr_load_string_config_err_check_3(void)
     hid_t   fcpl        = H5I_INVALID_HID;
     hbool_t writer      = true;
     hbool_t create_file = true;
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool    verbose     = true;
+#endif
 
     TESTING("H5F_load_swmr_config_from_string() err detect 3");
 
@@ -5906,7 +5955,9 @@ vfd_swmr_load_string_config_err_check_4(void)
     hid_t   fcpl        = H5I_INVALID_HID;
     hbool_t writer      = true;
     hbool_t create_file = true;
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool    verbose     = true;
+#endif
 
     TESTING("H5F_load_swmr_config_from_string() err detect 4");
 
@@ -6493,7 +6544,9 @@ vfd_swmr_load_string_config_err_check_5(void)
     hid_t   fcpl        = H5I_INVALID_HID;
     hbool_t writer      = true;
     hbool_t create_file = true;
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool    verbose     = true;
+#endif
 
     TESTING("H5F_load_swmr_config_from_string() err detect 5");
 
@@ -6791,7 +6844,9 @@ vfd_swmr_load_string_config_err_check_6(void)
     hid_t   fcpl        = H5I_INVALID_HID;
     hbool_t writer      = true;
     hbool_t create_file = true;
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool    verbose     = true;
+#endif
 
     TESTING("H5F_load_swmr_config_from_string() err detect 6");
 
@@ -7001,7 +7056,9 @@ vfd_swmr_config_check_err_check_1(void)
     strcpy(invalid_config_7.md_file_path, long_md_path);
     strcpy(invalid_config_7.md_file_name, long_md_name);
 
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
+#endif
 
 
     TESTING("H5P_check_vfd_swmr_config() err detect 1");
@@ -7240,7 +7297,9 @@ cl_load_string_from_file_err_check_1(void)
 {
     
     char *loaded_str = NULL;
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool  verbose    = true;
+#endif
 
     TESTING("H5CL_load_config_string_from_file err detect 1");
 
@@ -7359,7 +7418,9 @@ cl_load_string_from_file_err_check_2(void)
     };
     
     char *loaded_str = NULL;
+#if VERIFY_ERROR_STACK_SUPPORTED
     bool  verbose    = true;
+#endif
     int   i;
 
     TESTING("H5CL_load_config_string_from_file err detect 2");
