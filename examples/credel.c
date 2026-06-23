@@ -391,7 +391,7 @@ main(int argc, char **argv)
         /* uint32_t md_pages_reserved;                                      = */ 128,
         /* uint32_t pb_expansion_threshold;                                 = */ 50,
         /* char     md_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];      = */ "./",
-        /* char     md_file_name[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];      = */ "my_md_file",
+        /* char     md_file_name[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];      = */ "credel_md_file",
         /* char     updater_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1]; = */ "./credel_updater_file",
         /* char     log_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];     = */ ""
     };

@@ -558,7 +558,7 @@ matrix_open(state_t *s, bool rw)
     config.pb_expansion_threshold = 50;
     config.md_pages_reserved = 128;
     strlcpy(config.md_file_path, "./", sizeof(config.md_file_path));
-    strlcpy(config.md_file_name, "./my_md_file", sizeof(config.md_file_path));
+    strlcpy(config.md_file_name, "./gaussians_md_file", sizeof(config.md_file_path));
 
     /* Enable page buffering */
     if (H5Pset_page_buffer_size(fapl, 4096, 100, 0) < 0)
