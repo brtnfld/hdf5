@@ -3289,7 +3289,7 @@ H5Fswmr_config_string(const char *config_str, hid_t fapl_id, hid_t fcpl_id,
 
     FUNC_ENTER_API(FAIL)
 
-    if (config_str == NULL || config_str == "\0") {
+    if (config_str == NULL || *config_str == '\0') {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid configuration string");
     }
 
@@ -3409,8 +3409,11 @@ H5F_load_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_t fc
     /* Variables needed for direct property list manipulation */
 
     /* Property list objects */
-    H5P_genplist_t *fapl_plist;
-    H5P_genplist_t *fcpl_plist;
+    H5P_genplist_t *fapl_plist = NULL;
+    H5P_genplist_t *fcpl_plist = NULL;
+
+    /* FCPL will only be applied in create_file mode */
+    const hbool_t use_fcpl = create_file;
 
     /* FCPL configuration */
     H5F_fspace_strategy_t fs_strategy;
@@ -3461,9 +3464,8 @@ H5F_load_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_t fc
     
 
     /* File creation mode:
-     * Writer mode required for file creation. FCPL must be valid when creating a file
-     */
-    if ( create_file ) {
+     * Writer mode required for file creation. FCPL must be valid when creating a file */
+    if ( use_fcpl ) {
         
         if ( !writer ) {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "must be in writer mode to create file");
@@ -3546,7 +3548,7 @@ H5F_load_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_t fc
     }
 
     /* File creation mode: validate and apply FCPL properties */
-    if ( create_file) {
+    if ( use_fcpl ) {
 
         if ( !configured_fs_strategy_config || !configured_fs_page_size ) {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 

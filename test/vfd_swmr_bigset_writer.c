@@ -1126,6 +1126,8 @@ notify_reader(state_t *s, socket_state_t *sock, unsigned step)
     }
     s->fd_step_file = -1;
 #else /* ADD_UNIQUE_STEP_FILE */
+    (void)s; /* silence compiler warning about unused variable */
+
     if (send(sock->comm_fd, last, sizeof(exchange_info_t), 0) < 0) {
         HDfprintf(stderr, "send() failed");
         TEST_ERROR;
@@ -2193,6 +2195,8 @@ verify_dsets(state_t *s, socket_state_t *sock, mat_t *mat)
         }
         s->fd_step_file = -1;
 #else
+        (void)attempts; /* silence compiler warning about unused variable */
+
         if (recv(sock->comm_fd, &last, sizeof(last), 0) < 0) {
                 HDfprintf(stderr, "recv() failed\n");
                 TEST_ERROR;
