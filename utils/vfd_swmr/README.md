@@ -2,69 +2,118 @@
 
 aux_process.c:
 ==============
-To support NFS file system, this utility applies the updater files to the copy of the metadata file.
+To support NFS file systems, this utility applies updater files to a locally created copy of the metadata file.
 
-Usage: aux_process [options] <md_file> <ud_path>
+**Usage:** 
+```bash
+aux_process [options] <md_file> <ud_path>
+```
 
-Where: <md_file> is the path to the metadata file. Must be on a POSIX file system. Note that the file may not exist yet.
-       <ud_path> is the path of the updater files including the directory. This will typically be in an NFS mounted file system.
+**Where:**  
+  - `<md_file>`  
+  The path to the metadata file. Must be on a POSIX file system. Note that the file may not exist yet.  
+  - `<ud_path>`   
+  The path of the updater files including the directory. For example, updater files named `updater_file.0`, `updater_file.1`, ..., `updater_file.n` should be specified as `/path/to/updater_file`. This will typically be in an NFS mounted file system.
 
-Options:
-    -a --skip_aux:       Exit if VDS across multiple file is being enabled (to be implemented in the future).
-    -c --vfd_config:     Quoted string containing the configuration string for the VFD stack to be used. Default: sec2
-    -l --log_file:       Path to the log file. Default: no log file.
-    -m --md_chksum_path: Path to the file containing the checksum values for testing purpose.
-    -p --polls_per_tick: Number of times to poll for a new updater file per tick. Default: 10.
-    -s --stats:          Display stats on exit.
-    -t --tick_len:       Integer value indicating the tick length in tenths of a second.
-    -v --verbose:        Write log entries to stdout.
+**Options:**  
+  - `-a --skip_aux`  
+  Exit if VDS across multiple file is being enabled (to be implemented in the future).  
+  - `-l --log_file`  
+  Path to the log file. Default: no log file.  
+  - `-m --md_chksum_path`  
+  Path to the file containing the checksum values for testing purpose.  
+  - `-p --polls_per_tick`  
+  Number of times to poll for a new updater file per tick. Default: 10.  
+  - `-s --stats`  
+  Display stats on exit.  
+  - `-t --tick_len`  
+  Integer value indicating the tick length in tenths of a second.  
+  - `-v --verbose`  
+  Write log entries to stdout.
+
+**Example:**
+```bash
+aux_process --verbose my_md_file /path/to/updater_file
+```
+
+**Note:**  
+The `--log_file` option may need to be reworked. Errors are currently written to `stderr`, and selected command-line options are written to `stdout`; neither is written to the specified log file.
+
 
 
 recovery_tool.c:
 ================
-To enable recovery of HDF5 files, this utility applies the updater files directly to the HDF5 file metadata.
+This utility performs HDF5 metadata recovery by applying updater files to the file’s metadata.
+It reconstructs the metadata state from a sequence of updater files.
 
-Usage: recovery_tool [options] <h5_file> <ud_path>
+**Usage:** 
+```bash
+recovery_tool [options] <h5_file> <ud_path>
+```
 
-Where: <h5_file> is the path to the HDF5 file. Must be on a POSIX file system.
-       <ud_path> is  the path of the updater files including the directory.
+**Where:**
+  - `<h5_file>`  
+  Path to the HDF5 file.
+  - `<ud_path>`  
+  Path prefix of the updater files, including the directory. For example, updater files named `updater_file.0`, `updater_file.1`, ..., `updater_file.n` should be specified as `/path/to/updater_file`. 
 
-Options:
-    -h --help:     Prints a usage message for the program.
-    -p --posix:    Indicate that the HDF5 file is on POSIX file system; HDF5 file will be kept open during the 
-                   sequence of the metadata modifications.
-    -v --verbose:  Prints detailed information about each updater file being processed, including headers, 
-                   change lists, and data operations, to stdout.
-    -l --log_file <log_file>: 
-                   Specify path of a log file for log entries. (Will ignore verbose option)
+**Options:**
+  - `-h --help`  
+  Print the usage message and exit.  
+  - `-p --posix`  
+  Indicate that the HDF5 file is on POSIX file system; HDF5 file will be kept open during the sequence of the metadata modifications. (Currently, only POSIX-compliant systems are supported).  
+  - `-v --verbose`  
+  Prints detailed information about each updater file being processed, including headers, change lists, and data operations, to stdout.  
+  - `-l --log_file <log_file>`  
+  Specify path of a log file for log entries. (Will ignore verbose option) 
 
-Note: 
-    The different prints need to be reworked, possibly in aux_process.c as well. None of the critical errors 
-    get printed to the logging file, and some things are printed to stdout regardless of the verbose flag, 
-    but not printed to the logging file.
+**Example:**
+```bash
+recovery_tool --verbose path/to/h5_file.h5 /path/to/updater_file
+```
+
+**Requirement:**  
+The `h5clear` utility must be available to this program. The path to `h5clear` must either be present in the system `PATH` or specified through the `H5CLEAR_PATH` environment variable.
+
+### Notes:
+#### Platform support
+This tool currently supports POSIX-compliant systems only and is not expected to function on Windows.
+
+#### Logging behavior
+The `--log_file` option is incomplete: some output is still written to `stdout` or `stderr` regardless of this setting, and logging behavior is not fully consistent with the `--verbose` option.
 
 
 crasher.c
 =========
-To allow for testing the recovery tool, this utility runs and crashes (sends a KILL -9 signal to) the 
-command you provide it after <delay> seconds. This allows us to crash a VFD SWMR writer at any time during 
-HDF5 file creation, and test how recoverable that file is.
+This utility is used to test the recovery tool by deliberately terminating a running process. It executes the provided command and then sends a SIGKILL (kill -9) signal after a specified delay. This makes it possible to interrupt a VFD SWMR writer at any point during HDF5 file creation and evaluate how recoverable the resulting file is.
 
-Usage: crasher [options] <delay> <command> [args]
+By default, the command’s standard output is redirected to \<command\>.out. This behavior can be overridden with the `-p` option to print output directly to the console.
 
-Where:  <delay> is the time in seconds to wait before crashing (decimals allowed, e.g., 1.5 or 0.25, 
-            max precision 6 decimal places)
-        <command> [args] is the command to execute and then crash. Any arguments after the command 
-            are passed to it.
+**Usage:**
+```bash
+crasher [options] <delay> <command> [args]
+```
 
-Options:
-    -h: Prints a usage message for the program.
-    -v: Prints detailed information.
-    -p: Prints command's output to console instead of redirecting to <command>.out.
+**Where:**  
+  - `<delay>`  
+  Time in seconds to wait before crashing the process.  
+  Decimal values are supported (e.g., 1.5, 0.25).  
+  Maximum precision: 6 decimal places. 
+  - `<command> [args]`  
+  The command to execute. Any additional arguments are passed directly to the command.
 
-Example:
-    crasher -v -p 5 ./my_program arg1 arg2
+**Options:**
+  - `-h`  
+  Print the usage message and exit.  
+  - `-v`  
+  Prints detailed information.  
+  - `-p`  
+  Prints command's output to console instead of redirecting to \<command\>.out.
 
+**Example:**
+```bash
+crasher -v -p 5 ./my_program arg1 arg2
+```
 <!-- 
 The test scripts have been commented out because they are not quite ready for user testing.
 The instructions are also likely to be out of date too.

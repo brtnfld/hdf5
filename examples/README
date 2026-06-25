@@ -39,7 +39,7 @@ To run with auxilary process:
     ../utils/vfd_swmr/aux_process credel_md_file ./credel_updater_file  (in a second window)
     ../install/bin/h5ls --swmr-config-file=credel_swmr_gen_updater_config.txt --poll=100 -r -d ./credel.h5  (in a third window)
 
-vfd_swmr_gaussians.c
+gaussians.c
 ====================
 To compile:
     ../install/bin/h5cc -o gaussians gaussians.c nbcompat.c -lcurses

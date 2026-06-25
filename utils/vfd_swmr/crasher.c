@@ -50,7 +50,7 @@ run_command_with_crash(const char *outbase, char *const cmd_argv[], double delay
         perror("fork failed");
         goto error;
     } else if (pid == 0) { /* Child process */
-        /*If print_to_console is false, redirect stdout and stderr to an 
+        /* If print_to_console is false, redirect stdout and stderr to an 
         output file instead of printing to the console. */
         if (!print_to_console){
             /* Prepare output file names */
