@@ -1572,8 +1572,8 @@ usage(void)
     printf("      [-v --verbose]:             Write log entries to stdout.\n");
     printf("      [-l --log_file] <log_file>: Specify path of a log file for log entries.\n");
     printf("                                  (Will ignore verbose option)\n");
-    printf("\nNote: h5clear command must be available in PATH or H5CLEAR_PATH\n");
-    printf("environment variable.\n");
+    printf("\nNote: The h5clear utility must be available in PATH or specified\n");
+    printf("      through the H5CLEAR_PATH environment variable.\n");
     printf("\n");
 } /* usage() */
 

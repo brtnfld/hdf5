@@ -3225,7 +3225,7 @@ H5Fswmr_config_env(hid_t fapl_id, hid_t fcpl_id, hbool_t writer,
     }
 
 done:
-    FUNC_LEAVE_API(ret_value);
+    FUNC_LEAVE_API(ret_value)
 } /* H5Fswmr_config_env() */
 
 

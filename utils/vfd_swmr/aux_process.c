@@ -155,7 +155,7 @@ typedef struct {
     bool  verbose;        /* print out the details of this program                                        */
     bool  skip_aux;       /* skip this program in the case of VDS across multiple files (not implemented) */
     int   tick_len;       /* tick length in tenths of a second (default is 4)                             */
-    char *vfd_config;     /* configuration string for the VFD stack to be used (default is sec2)          */
+    // char *vfd_config;     /* configuration string for the VFD stack to be used (default is sec2)          */
     char *updater_path;   /* path name for the updater files                                              */
     char *md_file_path;   /* path name for the metadata file                                              */
     char *md_chksum_path; /* path name for file containing the checksum values for the metadata file      */
@@ -460,14 +460,16 @@ do_sleep(handler_t *hand)
 static void
 usage(void)
 {
-    printf("    [-h] [-a --skip_aux] [-c --vfd_config] [-l --log_file_path] [-m --md_chksum_path] [-p "
-           "--polls_per_tick] [-s --stats] [-t --tick_len] [-v --verbose]\n");
+    printf("    [-h] [-a --skip_aux] [-l --log_file_path] [-m --md_chksum_path] [-p --polls_per_tick]"
+           " [-s --stats] [-t --tick_len] [-v --verbose]\n");
+    // printf("    [-h] [-a --skip_aux] [-c --vfd_config] [-l --log_file_path] [-m --md_chksum_path] [-p "
+    //        "--polls_per_tick] [-s --stats] [-t --tick_len] [-v --verbose]\n");
     printf("    <md_file> <ud_file>\n");
     printf("    [-h --help]: this help page\n");
     printf("    [-a --skip_aux]: exit if VDS across multiple file is being enabled (to be implemented in the "
            "future)\n");
-    printf("    [-c --vfd_config]: quoted string containing the configuration string for the VFD stack to be "
-           "used (default is sec2)\n");
+    // printf("    [-c --vfd_config]: quoted string containing the configuration string for the VFD stack to be "
+    //        "used (default is sec2)\n");
     printf("    [-l --log_file_path]: path to the log file (default is no log file)\n");
     printf(
         "    [-m --md_chksum_path]: path to the file containing the checksum values for testing purpose\n");
@@ -498,15 +500,16 @@ static int
 parse_command_line(int argc, char *argv[], handler_t *hand)
 {
     int              opt;
-    aux_long_options long_options[] = {{"vfd_config=", require_arg, 'c'},
-                                       {"help", no_arg, 'h'},
+    // aux_long_options long_options[] = {{"vfd_config=", require_arg, 'c'},
+    //                                    {"help", no_arg, 'h'},
+    aux_long_options long_options[] = {{"help", no_arg, 'h'},
                                        {"skip_aux", no_arg, 'a'},
                                        {"log_file_path=", require_arg, 'l'},
                                        {"md_file_chksum=", require_arg, 'm'},
                                        {"polls_per_tick=", require_arg, 'p'},
                                        {"stats=", require_arg, 's'},
                                        {"tick_len=", require_arg, 't'},
-                                       {"verbose=", require_arg, 'v'},
+                                       {"verbose", no_arg, 'v'},
                                        {NULL, 0, 0}};
 
     /* Initialize the command line options */
@@ -518,7 +521,7 @@ parse_command_line(int argc, char *argv[], handler_t *hand)
     hand->tick_len             = 4;
     hand->verbose              = false;
     hand->skip_aux             = false;
-    hand->vfd_config           = NULL;
+    // hand->vfd_config           = NULL;
     hand->updater_path         = NULL;
     hand->md_file_path         = NULL;
     hand->md_chksum_path       = NULL;
@@ -541,22 +544,23 @@ parse_command_line(int argc, char *argv[], handler_t *hand)
     /*
      * aux_get_options supports both POSIX and Windows
      */
-    while ((opt = aux_get_options(argc, argv, "ac:hl:m:p:st:v", long_options)) != EOF) {
+    // while ((opt = aux_get_options(argc, argv, "ac:hl:m:p:st:v", long_options)) != EOF) {
+    while ((opt = aux_get_options(argc, argv, "ahl:m:p:st:v", long_options)) != EOF) {
         switch (opt) {
             case 'a':
                 /* Whether to exit if VDS across multiple files is enabled.  To be implemented in the future
                  */
                 hand->skip_aux = true;
                 break;
-            case 'c':
-                /* The configuration string for the VFD stack */
-                if (aux_optarg) {
-                    fprintf(stdout, "The configuration string for the VFD stack:\t%s\n", aux_optarg);
-                    hand->vfd_config = strdup(aux_optarg);
-                }
-                else
-                    fprintf(stderr, "aux_optarg is null\n");
-                break;
+            // case 'c':
+            //     /* The configuration string for the VFD stack */
+            //     if (aux_optarg) {
+            //         fprintf(stdout, "The configuration string for the VFD stack:\t%s\n", aux_optarg);
+            //         hand->vfd_config = strdup(aux_optarg);
+            //     }
+            //     else
+            //         fprintf(stderr, "aux_optarg is null\n");
+            //     break;
             case 'h':
                 fprintf(stdout, "Help page:\n");
                 usage();
@@ -1540,8 +1544,8 @@ release_resources(handler_t *hand)
         }
     }
 
-    if (hand->vfd_config)
-        free(hand->vfd_config);
+    // if (hand->vfd_config)
+    //     free(hand->vfd_config);
 
     if (hand->updater_path)
         free(hand->updater_path);
