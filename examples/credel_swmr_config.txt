@@ -12,6 +12,7 @@
         ( md_pages_reserved 128 )
         ( md_file_path "./" )
         ( md_file_name "credel_md_file" )
+        ( log_file_path "" )
         ( pb_expansion_threshold 50 )
       )
     )
