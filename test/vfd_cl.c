@@ -6857,8 +6857,8 @@ vfd_swmr_load_string_config_err_check_6(void)
         TEST_ERROR;
 
     if ( H5F_load_swmr_config_from_string(config_str, 
-                                              fapl, fcpl, writer, 
-                                              create_file) >= 0 )
+                                          fapl, fcpl, writer, 
+                                          create_file) >= 0 )
     {
         TEST_ERROR;
     }
