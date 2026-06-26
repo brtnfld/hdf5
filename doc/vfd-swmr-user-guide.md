@@ -197,32 +197,35 @@ option. Be careful to not use a non-VFD-SWMR system h5ls here.
 
 ## Configuring VFD SWMR
 
+VFD SWMR may be configured either using the configuration parser or directly through the HDF5 property list API. The configuration parser approach is recommended for most applications because it automatically applies the required HDF5 property list settings in addition to the VFD SWMR configuration parameters.
+
 ### File-creation properties
 
-To use VFD SWMR, creating your HDF5 file with a paged allocation strategy
-is mandatory.  This call enables the paged allocation strategy:
+VFD SWMR requires HDF5 files to be created using a paged allocation strategy. This requirement may be satisfied automatically using a VFD SWMR configuration file (recommended) or configured manually through the file creation property list (FCPL).
+
+When configuring manually, the paged allocation strategy is enabled with:
 
 ```
 ret = H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, false, 1);
 ```
 
-Allocated storage that is smaller than the page size will
-not overlap a page boundary, and allocated storage that is one page or
-greater in size will start on a page boundary.  VFD SWMR relies on that
-allocation strategy.
+Allocated storage that is smaller than the page size will not overlap a page boundary, and allocated storage that is one page or greater in size will start on a page boundary. VFD SWMR relies on this allocation strategy.
 
 ### File-access properties
 
-In this section we show how to configure your application to use VFD
-SWMR.
+VFD SWMR also requires several file access properties to be configured before opening or creating an HDF5 file. These properties may be configured automatically using the VFD SWMR configuration parser (recommended) or manually through the file access property list (FAPL).
+
+When configuring manually, the application must:
 
 1. Create a file access property list using `H5Pcreate(H5P_FILE_ACCESS)`.
 2. Set the latest file format using `H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST)`. 
 3. Enable page buffering using `H5Pset_page_buffer_size()`.
 4. Set any VFD SWMR configuration properties using `H5Pset_vfd_swmr_config()`. 
-The struct `H5F_vfd_swmr_config_t` is documented in 
-[H5Fpublic.h](https://github.com/LifeboatLLC/hdf5_swmr/blob/feature/vfd_swmr/src/H5Fpublic.h). Below we provide an example on how to set the fields.
 
+The following sections describe the available VFD SWMR configuration parameters. 
+These parameters may be specified either in a VFD SWMR configuration file
+or programmatically through the `H5F_vfd_swmr_config_t` structure, which is documented in 
+[H5Fpublic.h](https://github.com/LifeboatLLC/hdf5_swmr/blob/feature/vfd_swmr/src/H5Fpublic.h). 
 
 VFD SWMR relies on metadata reads and writes to go through the
 page buffer.  Note that the default page size is 4096 bytes. Finding good
@@ -234,13 +237,145 @@ set by `H5Pset_page_buffer_size()` does not actually control the
 pages reserved for raw data.  *All* pages are dedicated to buffering
 metadata.
 
-### `H5F_vfd_swmr_config_t` fields discussion
+### Using the VFD SWMR configuration parser (recommended)
 
-Below are examples of how to configure SWMR access mode for both writer and reader. 
+The recommended method for configuring VFD SWMR is through the VFD SWMR configuration parser. The parser reads VFD SWMR configuration settings from a configuration string or file and automatically applies the required file creation properties, file access properties, and VFD SWMR configuration to the supplied property lists.
 
-Example code: Setting VFD SWMR for writer process
+Before calling the configuration parser, the application must create the required property lists using `H5Pcreate()`. The parser configures the supplied property lists but does not create or open HDF5 files. After the parser returns successfully, the configured property lists may be used with the appropriate HDF5 file creation or file opening routines.
+
+The parser accepts configuration expressed in the VFD SWMR configuration language. For a complete description of the configuration syntax, supported directives, and examples, see the [VFD SWMR Configuration Language RFC](https://github.com/LifeboatLLC/HDF5-Encryption/blob/main/design_docs/RFC-VFD-Configuration-Language-2026-05-28.pdf).
+
+All configuration parser interfaces use the same configuration format and apply the same VFD SWMR settings. They differ only in how the configuration is provided:
+
+```c
+herr_t H5Fswmr_config_string(const char *config_str,
+                             hid_t fapl_id,
+                             hid_t fcpl_id,
+                             hbool_t writer,
+                             hbool_t create_file);
+
+herr_t H5Fswmr_config_file(const char *file_path,
+                           hid_t fapl_id,
+                           hid_t fcpl_id,
+                           hbool_t writer,
+                           hbool_t create_file);
+
+herr_t H5Fswmr_config_env(hid_t fapl_id,
+                         hid_t fcpl_id,
+                         hbool_t writer,
+                         hbool_t create_file,
+                         const char *env_var_name);
+```
+* `H5Fswmr_config_string()`
+Uses the configuration provided in config_str.
+* `H5Fswmr_config_file()`
+Loads configuration from the file specified by file_path.
+* `H5Fswmr_config_env()`
+Loads configuration from a file path stored in an environment variable.  
+If `env_var_name` is `NULL`, the default environment variable `HDF5_VFD_SWMR_CONFIG` is used. Otherwise, the value of `env_var_name` is used as the environment variable containing the configuration file path.
+
+#### Common parameters
+
+All configuration parser interfaces accept the following parameters:
+
+- `fapl_id`  
+  The `hid_t` identifier of a valid file access property list.  
+  The parser updates this property list with the VFD SWMR file access configuration.
+
+- `fcpl_id`  
+  The `hid_t` identifier of a valid file creation property list.  
+  The parser updates this property list with the VFD SWMR file creation configuration when `create_file` is `true`.  
+  This parameter is ignored when `create_file` is `false`, in which case `H5I_INVALID_HID` can be used.
+
+- `writer`  
+  Specifies whether the configuration is applied for a writer (`true`) or reader (`false`).
+
+- `create_file`  
+  Indicates whether the configuration is being applied in the context of file creation.  
+  When `true`, both file creation and file access properties are configured.  
+  When `false`, only file access properties are configured.
+
+
+*Note:* An error will occur if `create_file` is `true` while `writer` is `false`.
+
+#### Example configuration:
+The following example configuration is used by the `credel` demo program and is included in [credel_swmr_config.txt](https://github.com/LifeboatLLC/hdf5_swmr/blob/feature/vfd_swmr/examples/credel_swmr_config.txt). All three parser interfaces accept this same configuration format. 
+
+Comments have been added to explain field meanings and the use of boolean values (`0` and `1`). These comments are valid configuration syntax, but are included here for documentation and are not required for correct configuration.
 
 ```
+( vfd_swmr_config_data
+  (
+    ( H5F_vfd_swmr_config                   
+      (
+        ( version 1 )                       /* Only valid version number currently */
+        ( tick_len 4 )
+        ( max_lag 7 )
+        ( presume_posix_semantics 1 )       /* boolean (0/1) */
+        ( maintain_metadata_file 1 )        /* boolean (0/1) */
+        ( generate_updater_files 0 )        /* boolean (0/1) */
+        ( flush_raw_data 1 )                /* boolean (0/1) */
+        ( md_pages_reserved 128 )
+        ( md_file_path "./" )
+        ( md_file_name "credel_md_file" )'
+        ( log_file_path "" )                /* Empty string or omit this field to disable logging */
+        ( pb_expansion_threshold 50 )
+      )
+    )
+    ( page_buffer_config
+      (
+        ( page_buf_size 4096 )
+        ( metadata_pages_only 1 )           /* boolean (0/1) */
+      )
+    )
+    ( file_space_strategy_config
+      (
+        ( persist 0 )                       /* boolean (0/1) */
+      )
+    )
+    ( file_space_page_size
+      (
+        ( page_size 4096 )
+      ) 
+    )
+  )
+)
+```
+
+#### Example: Configuring writer and reader
+The following examples demonstrate how to configure VFD SWMR for both a writer and a reader using a configuration parser interface.
+
+Example code: Setting VFD SWMR for writer process:
+```c
+hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+hid_t fcpl = H5Pcreate(H5P_FILE_CREATE);
+
+H5Fswmr_config_file("/path/to/configuration_file", 
+                    fapl, 
+                    fcpl, 
+                    true,  /* writer */
+                    true); /* creating a file */
+```
+
+Example code: Setting VFD SWMR for reader process:
+```c
+hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+
+H5Fswmr_config_file("/path/to/configuration_file", 
+                    fapl, 
+                    H5I_INVALID_HID, /* No FCPL needed */ 
+                    false,           /* reader */
+                    false);          /* open an existing file */
+```
+After successful configuration, the property lists can be passed to `H5Fcreate()` or `H5Fopen()` to create or open the HDF5 file.
+
+### Configuring through the HDF5 API
+
+Below are examples of how to configure SWMR access mode for both writer and reader programmatically. 
+
+Example code: Setting VFD SWMR for writer process:
+
+```c
     fapl = H5Pcreate(H5P_FILE_ACCESS);
     H5Pset_page_buffer_size(fapl, 4096, 100, 0);
     H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, false, 1);
@@ -262,7 +397,7 @@ Example code: Setting VFD SWMR for writer process
 
 Example code: Setting VFD SWMR for reader process
 
-```
+```c
     fapl = H5Pcreate(H5P_FILE_ACCESS);
 
     memset(&config, 0, sizeof(config));
@@ -276,20 +411,12 @@ Example code: Setting VFD SWMR for reader process
     H5Pset_vfd_swmr_config(fapl, &config);
 ```
 
+### `H5F_vfd_swmr_config_t` fields discussion
 
 When VFD SWMR is enabled, changes to the HDF5 metadata accumulate in
 RAM until a configurable unit of time known as a *tick* has passed.
 At the end of each tick, a snapshot of the metadata at the end of
-the tick is "published"---that is, made visible to the readers.
-
-The length of a *tick* is configurable in units of 100 milliseconds
-using the `tick_len` parameter.  Here, `tick_len` is set to `4` to
-select a tick length of 400ms.
-
-A snapshot does not persist forever, but it expires after a number
-of ticks, given by the *maximum lag*, has passed.  Here, `max_lag`
-is set to `7` to select a maximum lag of 7 ticks.  After a snapshot
-has expired, the writer may overwrite it.
+an
 
 When a reader first enters the API, it starts to use, or "selects,"
 the metadata in the newest snapshot, and on every subsequent API
@@ -327,10 +454,7 @@ The `version` parameter tells what version of VFD SWMR configuration
 the parameter struct `config` contains.  For now, it should be
 initialized to `H5F__CURR_VFD_SWMR_CONFIG_VERSION`.
 
-
-**Important** Please notice that the tick length `tick_len` and maximim lag `max_lag` parameters should 
-be the same for writer and reader. Future releases of VFD SWMR will allow configure both writer and readers
-using configuration file thus avoiding a priori knowledge of writer's SWMR settings.
+**Important:** Writer and reader processes must use compatible VFD SWMR configuration parameters. In particular, the tick_len and max_lag values must be identical for both processes. Using the same configuration file for both the writer and reader is the recommended way to ensure the settings remain synchronized.
 
 ## Using virtual datasets (VDS)
 
@@ -424,6 +548,27 @@ and stops new snapshots from being taken on the given file until
 `H5Fvfd_swmr_enable_end_of_tick()` is called on the same file.
 Needless to say, end of tick processing should only be disabled
 briefly.
+
+# VFD SWMR utilities
+
+The VFD SWMR distribution includes auxiliary utilities for supporting metadata consistency and recovery in environments such as NFS-mounted filesystems or interrupted executions. The utilities are located in the `utils/vfd_swmr` directory in this source tree. More detailed information, including command-line usage, can be found in the accompanying `README.md` in the same directory.
+
+These utilities operate on updater files generated during VFD SWMR writer execution. Depending on the tool, these updater files are either used to build a consistent external metadata view, or to rebuild the internal metadata state of an HDF5 file after interruption.
+
+## aux_process
+
+The `aux_process` utility is used in networked or NFS-based environments to maintain a local, up-to-date metadata view of a VFD SWMR dataset. Because metadata updates from the writer may appear late or inconsistently due to filesystem behavior, `aux_process` provides a local metadata copy on the reader system.
+
+It works by processing a sequence of updater files created during writer execution. These files contain step-by-step metadata updates and rely on filesystem rename behavior to ensure they are seen in the correct order. The resulting local metadata file reflects the latest state that can be built from the updater files that are available.
+
+## recovery_tool
+
+The `recovery_tool` is used to restore a consistent HDF5 metadata state after an unexpected interruption, such as a writer crash. It applies the same sequence of updater files used during normal execution, but instead rebuilds the metadata directly inside the HDF5 file so it can be safely reopened.
+
+## crasher (testing utility)
+
+The `crasher` utility is used only for testing recovery behavior. It simulates an abrupt termination of a running writer process so that interrupted SWMR sessions can be validated using the `recovery_tool`.
+
 
 # Known issues
 

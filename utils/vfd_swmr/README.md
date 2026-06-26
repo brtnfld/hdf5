@@ -2,7 +2,11 @@
 
 aux_process.c:
 ==============
-To support NFS file systems, this utility applies updater files to a locally created copy of the metadata file.
+The `aux_process` utility applies a sequence of updater files to generate a locally maintained copy of the VFD SWMR metadata file.
+
+This utility is primarily intended for use on the reader system in NFS-based workflows, where direct access to up-to-date metadata produced by the writer may be delayed.
+
+The updater files are expected to be generated incrementally during writer execution and are processed in order to reconstruct the latest available metadata state.
 
 **Usage:** 
 ```bash
@@ -39,12 +43,11 @@ aux_process --verbose my_md_file /path/to/updater_file
 **Note:**  
 The `--log_file` option may need to be reworked. Errors are currently written to `stderr`, and selected command-line options are written to `stdout`; neither is written to the specified log file.
 
-
-
 recovery_tool.c:
 ================
-This utility performs HDF5 metadata recovery by applying updater files to the file’s metadata.
-It reconstructs the metadata state from a sequence of updater files.
+The `recovery_tool` applies a sequence of updater files to an HDF5 file in order to reconstruct a consistent metadata state after interruption.
+
+This process restores the file to a state where it can be safely reopened using standard HDF5 APIs.
 
 **Usage:** 
 ```bash
