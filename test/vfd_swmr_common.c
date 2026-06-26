@@ -564,8 +564,9 @@ socket_connect(socket_state_t *sock, bool server) {
             HDfprintf(stderr, "error accepting client connection\n");
             goto error;
         }
-
+#ifdef DEBUG_SOCKETS
         HDfprintf(stderr, "SERVER SOCKET: Accepted connection from client with IP: %s\n", inet_ntoa(client.sin_addr));
+#endif
         
         /* Close the listening socket, we don't need it anymore */
         HDclose(sock->listen_fd);
@@ -593,8 +594,9 @@ socket_connect(socket_state_t *sock, bool server) {
             HDfprintf(stderr, "socket communication connection error\n");
             goto error;
         }
-
+#ifdef DEBUG_SOCKETS
         HDfprintf(stderr, "CLIENT SOCKET: Connected to server with IP: %s\n", sock->ip_address);
+#endif
     }
     
     return true;

@@ -50,6 +50,11 @@
 #define MAX_IP_ADDR_LEN 16 /* xxx.xxx.xxx.xxx + null terminator */
 #define DEFAULT_PORT 42424 /* Random port number. Only a single socket connection is supported at a time. */
 
+/* Determines whether socket connection messages are printed for
+ * purposes debugging
+ */
+#define DEBUG_SOCKETS
+
 /************/
 /* Typedefs */
 /************/
