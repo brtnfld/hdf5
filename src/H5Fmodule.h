@@ -25,7 +25,7 @@
 #define H5_MY_PKG     H5F
 #define H5_MY_PKG_ERR H5E_FILE
 
-/** \page H5F_UG  The HDF5 File
+/** \page H5F_UG HDF5 File
  *
  * \section sec_file The HDF5 File
  * \subsection subsec_file_intro Introduction
@@ -235,11 +235,11 @@
  * Note that the root group, indicated above by /, was automatically created when the file was created.
  *
  * h5dump is described on the
- * <a href="https://portal.hdfgroup.org/display/HDF5/h5dump">Tools</a>
+ * <a href="https://\DOXURL/_view_tools_view.html#subsecViewToolsViewContent_h5dump">
+ * Tools</a>
  * page under
- * <a href="https://portal.hdfgroup.org/display/HDF5/Libraries+and+Tools+Reference">
- * Libraries and Tools Reference</a>.
- * The HDF5 DDL grammar is described in the document \ref DDLBNF110.
+ * <a href="https://\DOXURL/_view_tools_command.html">Command-line Tools</a>.
+ * The HDF5 DDL grammar is described in the document \ref DDLBNF114.
  *
  * \subsection subsec_file_summary File Function Summaries
  * General library (\ref H5 functions and macros), (\ref H5F functions), file related
@@ -408,14 +408,19 @@
  * </table>
  *
  * \anchor fcpl_table_tag File creation property list functions (H5P)
+ * <div>
  * \snippet{doc} tables/propertyLists.dox fcpl_table
+ * </div>
  *
  * \anchor fapl_table_tag File access property list functions (H5P)
+ * <div>
  * \snippet{doc} tables/propertyLists.dox fapl_table
+ * </div>
  *
  * \anchor fd_pl_table_tag File driver property list functions (H5P)
+ * <div>
  * \snippet{doc} tables/propertyLists.dox fd_pl_table
- *
+ * </div>
  *
  * \subsection subsec_file_create Creating or Opening an HDF5 File
  * This section describes in more detail how to create and how to open files.
@@ -672,7 +677,9 @@
  * #H5FD_SEC2. Alternative layouts and drivers are designed to suit the needs of a variety of
  * systems, environments, and applications. The drivers are listed in the table below.
  *
+ * <div>
  * \snippet{doc} tables/fileDriverLists.dox supported_file_driver_table
+ * </div>
  *
  * For more information, see the HDF5 Reference Manual entries for the function calls shown in
  * the column on the right in the table above.
@@ -705,7 +712,7 @@
  * If the application opens an HDF5 file without both determining the driver used to create the file
  * and setting up the use of that driver, the HDF5 Library will examine the superblock and the
  * driver definition block to identify the driver.
- * See the <a href="https://docs.hdfgroup.org/hdf5/develop/_s_p_e_c.html">HDF5 File Format Specification</a>
+ * See the <a href="https://\DOXURL/_s_p_e_c.html">HDF5 File Format Specification</a>
  * for detailed descriptions of the superblock and the driver definition block.
  *
  * \subsubsection subsubsec_file_alternate_drivers_sec2 The POSIX (aka SEC2) Driver
@@ -845,8 +852,8 @@
  *
  * <em>Managing file access for in-memory files</em>
  * \code
- *   herr_t H5Pset_fapl_core (hid_t access_properties, size_t block_size, hbool_t backing_store)
- *   herr_t H5Pget_fapl_core (hid_t access_properties, size_t *block_size), hbool_t *backing_store)
+ *   herr_t H5Pset_fapl_core (hid_t access_properties, size_t block_size, bool backing_store)
+ *   herr_t H5Pget_fapl_core (hid_t access_properties, size_t *block_size), bool *backing_store)
  * \endcode
  *
  * #H5Pset_fapl_core sets the file access property list to use the Memory driver; any previously
@@ -856,9 +863,9 @@
  *
  * The backing_store Boolean flag is set when the in-memory file is created.
  * backing_store indicates whether to write the file contents to disk when the file is closed. If
- * backing_store is set to 1 (TRUE), the file contents are flushed to a file with the same name as the
+ * backing_store is set to 1 (true), the file contents are flushed to a file with the same name as the
  * in-memory file when the file is closed or access to the file is terminated in memory. If
- * backing_store is set to 0 (FALSE), the file is not saved.
+ * backing_store is set to 0 (false), the file is not saved.
  *
  * The application is allowed to open an existing file with the #H5FD_CORE driver. While using
  * #H5Fopen to open an existing file, if backing_store is set to 1 and the flag for #H5Fopen is set to
@@ -881,10 +888,11 @@
  *
  * Additional parameters may be added to these functions in the future.
  *
- * @see <a href="https://portal.hdfgroup.org/display/HDF5/HDF5+File+Image+Operations">
+ * @see <a href="https://\DOCURL/advanced_topics/file_image_ops.html">
  * HDF5 File Image Operations</a>
  * section for information on more advanced usage of the Memory file driver, and
- * @see <a href="http://www.hdfgroup.org/HDF5/doc/Advanced/ModifiedRegionWrites/ModifiedRegionWrites.pdf">
+ * @see <a
+ * href="https://docs.hdfgroup.org/archive/support/HDF5/doc/Advanced/ModifiedRegionWrites/ModifiedRegionWrites.pdf">
  * Modified Region Writes</a>
  * section for information on how to set write operations so that only modified regions are written
  * to storage.
@@ -923,8 +931,7 @@
  * access property list for each member of the file family. memb_size specifies the logical size, in
  * bytes, of each family member. memb_size is used only when creating a new file or truncating an
  * existing file; otherwise the member size is determined by the size of the first member of the
- * family being opened. Note: If the size of the off_t type is four bytes, the maximum family
- * member size is usually 2^31-1 because the byte at offset 2,147,483,647 is generally inaccessible.
+ * family being opened.
  *
  * #H5Pget_fapl_family is used to retrieve file family properties. If the file access property list is set
  * to use the Family driver, member_properties will be returned with a pointer to a copy of the
@@ -981,9 +988,9 @@
  * \code
  *   herr_t H5Pset_fapl_multi (hid_t fapl_id, const H5FD_mem_t *memb_map, const hid_t *memb_fapl,
  *                             const char * const *memb_name, const haddr_t *memb_addr,
- *                             hbool_t relax)
+ *                             bool relax)
  *  herr_t H5Pget_fapl_multi (hid_t fapl_id, const H5FD_mem_t *memb_map, const hid_t *memb_fapl,
- *                             const char **memb_name, const haddr_t *memb_addr, hbool_t *relax)
+ *                             const char **memb_name, const haddr_t *memb_addr, bool *relax)
  * \endcode
  *
  * #H5Pset_fapl_multi sets the file access properties to use the Multi driver; any previously defined
@@ -998,7 +1005,7 @@
  * Additional parameters may be added to these functions in the future.
  *
  * \subsubsection subsubsec_file_alternate_drivers_split The Split Driver
- * The Split driver, H5FD_SPLIT, is a limited case of the Multi driver where only two files are
+ * The Split driver is a limited case of the Multi driver where only two files are
  * created. One file holds metadata, and the other file holds raw data.
  * The function #H5Pset_fapl_split is used to manage Split file access properties. See the example
  * below.
@@ -1045,7 +1052,7 @@
  * The file access properties managed by #H5Pset_fapl_mpio and retrieved by
  * #H5Pget_fapl_mpio are the MPI communicator, comm, and the MPI info object, info. comm and
  * info are used for file open. info is an information object much like an HDF5 property list. Both
- * are defined in MPI_FILE_OPEN of MPI-2.
+ * are defined in MPI_FILE_OPEN of MPI.
  *
  * The communicator and the info object are saved in the file access property list fapl_id.
  * fapl_id can then be passed to MPI_FILE_OPEN to create and/or open the file.

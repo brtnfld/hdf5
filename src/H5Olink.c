@@ -19,14 +19,12 @@
  *-------------------------------------------------------------------------
  */
 
-#define H5G_FRIEND     /*suppress error about including H5Gpkg   */
 #define H5L_FRIEND     /*suppress error about including H5Lpkg	  */
 #include "H5Omodule.h" /* This source code file is part of the H5O module */
 
 #include "H5private.h"   /* Generic Functions			*/
 #include "H5Eprivate.h"  /* Error handling		  	*/
 #include "H5FLprivate.h" /* Free lists                           */
-#include "H5Gpkg.h"      /* Groups		  		*/
 #include "H5Iprivate.h"  /* IDs                                  */
 #include "H5Lpkg.h"      /* Links                                */
 #include "H5MMprivate.h" /* Memory management			*/
@@ -35,14 +33,15 @@
 /* PRIVATE PROTOTYPES */
 static void *H5O__link_decode(H5F_t *f, H5O_t *open_oh, unsigned mesg_flags, unsigned *ioflags, size_t p_size,
                               const uint8_t *p);
-static herr_t H5O__link_encode(H5F_t *f, hbool_t disable_shared, uint8_t *p, const void *_mesg);
+static herr_t H5O__link_encode(H5F_t *f, bool disable_shared, size_t H5_ATTR_UNUSED p_size, uint8_t *p,
+                               const void *_mesg);
 static void  *H5O__link_copy(const void *_mesg, void *_dest);
-static size_t H5O__link_size(const H5F_t *f, hbool_t disable_shared, const void *_mesg);
+static size_t H5O__link_size(const H5F_t *f, bool disable_shared, const void *_mesg);
 static herr_t H5O__link_reset(void *_mesg);
 static herr_t H5O__link_free(void *_mesg);
-static herr_t H5O__link_pre_copy_file(H5F_t *file_src, const void *mesg_src, hbool_t *deleted,
+static herr_t H5O__link_pre_copy_file(H5F_t *file_src, const void *mesg_src, bool *deleted,
                                       const H5O_copy_t *cpy_info, void *udata);
-static void  *H5O__link_copy_file(H5F_t *file_src, void *native_src, H5F_t *file_dst, hbool_t *recompute_size,
+static void  *H5O__link_copy_file(H5F_t *file_src, void *native_src, H5F_t *file_dst, bool *recompute_size,
                                   unsigned *mesg_flags, H5O_copy_t *cpy_info, void *udata);
 static herr_t H5O__link_post_copy_file(const H5O_loc_t *src_oloc, const void *mesg_src, H5O_loc_t *dst_oloc,
                                        void *mesg_dst, unsigned *mesg_flags, H5O_copy_t *cpy_info);
@@ -118,29 +117,29 @@ H5O__link_decode(H5F_t *f, H5O_t H5_ATTR_UNUSED *open_oh, unsigned H5_ATTR_UNUSE
     assert(p);
 
     if (H5_IS_BUFFER_OVERFLOW(p, 1, p_end))
-        HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding")
+        HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
     if (*p++ != H5O_LINK_VERSION)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad version number for message")
+        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad version number for message");
 
     /* Allocate space for message */
     if (NULL == (lnk = H5FL_CALLOC(H5O_link_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
 
     /* Get the encoding flags for the link */
     if (H5_IS_BUFFER_OVERFLOW(p, 1, p_end))
-        HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding")
+        HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
     link_flags = *p++;
     if (link_flags & ~H5O_LINK_ALL_FLAGS)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad flag value for message")
+        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad flag value for message");
 
     /* Check for non-default link type */
     if (link_flags & H5O_LINK_STORE_LINK_TYPE) {
         /* Get the type of the link */
         if (H5_IS_BUFFER_OVERFLOW(p, 1, p_end))
-            HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding")
+            HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
         lnk->type = (H5L_type_t)*p++;
         if (lnk->type < H5L_TYPE_HARD || lnk->type > H5L_TYPE_MAX)
-            HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad link type")
+            HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad link type");
     }
     else
         lnk->type = H5L_TYPE_HARD;
@@ -148,23 +147,23 @@ H5O__link_decode(H5F_t *f, H5O_t H5_ATTR_UNUSED *open_oh, unsigned H5_ATTR_UNUSE
     /* Get the link creation time from the file */
     if (link_flags & H5O_LINK_STORE_CORDER) {
         if (H5_IS_BUFFER_OVERFLOW(p, 8, p_end))
-            HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding")
+            HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
         INT64DECODE(p, lnk->corder);
-        lnk->corder_valid = TRUE;
+        lnk->corder_valid = true;
     }
     else {
         lnk->corder       = 0;
-        lnk->corder_valid = FALSE;
+        lnk->corder_valid = false;
     }
 
     /* Check for non-default name character set */
     if (link_flags & H5O_LINK_STORE_NAME_CSET) {
         /* Get the link name's character set */
         if (H5_IS_BUFFER_OVERFLOW(p, 1, p_end))
-            HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding")
+            HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
         lnk->cset = (H5T_cset_t)*p++;
         if (lnk->cset < H5T_CSET_ASCII || lnk->cset > H5T_CSET_UTF8)
-            HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad cset type")
+            HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad cset type");
     }
     else
         lnk->cset = H5T_CSET_ASCII;
@@ -173,39 +172,39 @@ H5O__link_decode(H5F_t *f, H5O_t H5_ATTR_UNUSED *open_oh, unsigned H5_ATTR_UNUSE
     switch (link_flags & H5O_LINK_NAME_SIZE) {
         case 0: /* 1 byte size */
             if (H5_IS_BUFFER_OVERFLOW(p, 1, p_end))
-                HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding")
+                HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
             len = *p++;
             break;
 
         case 1: /* 2 byte size */
             if (H5_IS_BUFFER_OVERFLOW(p, 2, p_end))
-                HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding")
+                HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
             UINT16DECODE(p, len);
             break;
 
         case 2: /* 4 byte size */
             if (H5_IS_BUFFER_OVERFLOW(p, 4, p_end))
-                HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding")
+                HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
             UINT32DECODE(p, len);
             break;
 
         case 3: /* 8 byte size */
             if (H5_IS_BUFFER_OVERFLOW(p, 8, p_end))
-                HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding")
+                HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
             UINT64DECODE(p, len);
             break;
 
         default:
-            HGOTO_ERROR(H5E_OHDR, H5E_BADVALUE, NULL, "no appropriate size for name length")
+            HGOTO_ERROR(H5E_OHDR, H5E_BADVALUE, NULL, "no appropriate size for name length");
     }
     if (len == 0)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "invalid name length")
+        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "invalid name length");
 
     /* Get the link's name */
     if (H5_IS_BUFFER_OVERFLOW(p, len, p_end))
-        HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding")
+        HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
     if (NULL == (lnk->name = (char *)H5MM_malloc(len + 1)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
     H5MM_memcpy(lnk->name, p, len);
     lnk->name[len] = '\0';
     p += len;
@@ -215,22 +214,22 @@ H5O__link_decode(H5F_t *f, H5O_t H5_ATTR_UNUSED *open_oh, unsigned H5_ATTR_UNUSE
         case H5L_TYPE_HARD:
             /* Get the address of the object the link points to */
             if (H5_IS_BUFFER_OVERFLOW(p, H5F_sizeof_addr(f), p_end))
-                HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding")
+                HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
             H5F_addr_decode(f, &p, &(lnk->u.hard.addr));
             break;
 
         case H5L_TYPE_SOFT:
             /* Get the link value */
             if (H5_IS_BUFFER_OVERFLOW(p, 2, p_end))
-                HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding")
+                HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
             UINT16DECODE(p, len);
             if (len == 0)
-                HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "invalid link length")
+                HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "invalid link length");
 
             if (H5_IS_BUFFER_OVERFLOW(p, len, p_end))
-                HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding")
+                HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
             if (NULL == (lnk->u.soft.name = (char *)H5MM_malloc((size_t)len + 1)))
-                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
             H5MM_memcpy(lnk->u.soft.name, p, len);
             lnk->u.soft.name[len] = '\0';
             p += len;
@@ -242,20 +241,20 @@ H5O__link_decode(H5F_t *f, H5O_t H5_ATTR_UNUSED *open_oh, unsigned H5_ATTR_UNUSE
         case H5L_TYPE_MAX:
         default:
             if (lnk->type < H5L_TYPE_UD_MIN || lnk->type > H5L_TYPE_MAX)
-                HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "unknown link type")
+                HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "unknown link type");
 
             /* A UD link.  Get the user-supplied data */
             if (H5_IS_BUFFER_OVERFLOW(p, 2, p_end))
-                HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding")
+                HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
             UINT16DECODE(p, len);
             if (lnk->type == H5L_TYPE_EXTERNAL && len < 3)
-                HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "external link information length < 3")
+                HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "external link information length < 3");
             lnk->u.ud.size = len;
             if (len > 0) {
                 if (H5_IS_BUFFER_OVERFLOW(p, len, p_end))
-                    HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding")
+                    HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
                 if (NULL == (lnk->u.ud.udata = H5MM_malloc((size_t)len)))
-                    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+                    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
                 H5MM_memcpy(lnk->u.ud.udata, p, len);
                 p += len;
             }
@@ -289,7 +288,8 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O__link_encode(H5F_t *f, hbool_t H5_ATTR_UNUSED disable_shared, uint8_t *p, const void *_mesg)
+H5O__link_encode(H5F_t *f, bool H5_ATTR_UNUSED disable_shared, size_t H5_ATTR_UNUSED p_size, uint8_t *p,
+                 const void *_mesg)
 {
     const H5O_link_t *lnk = (const H5O_link_t *)_mesg;
     uint64_t          len;        /* Length of a string in the message */
@@ -303,7 +303,7 @@ H5O__link_encode(H5F_t *f, hbool_t H5_ATTR_UNUSED disable_shared, uint8_t *p, co
     assert(lnk);
 
     /* Get length of link's name */
-    len = (uint64_t)HDstrlen(lnk->name);
+    len = (uint64_t)strlen(lnk->name);
     assert(len > 0);
 
     /* encode */
@@ -370,7 +370,7 @@ H5O__link_encode(H5F_t *f, hbool_t H5_ATTR_UNUSED disable_shared, uint8_t *p, co
 
         case H5L_TYPE_SOFT:
             /* Store the link value */
-            len = (uint16_t)HDstrlen(lnk->u.soft.name);
+            len = (uint16_t)strlen(lnk->u.soft.name);
             assert(len > 0);
             UINT16ENCODE(p, len);
             H5MM_memcpy(p, lnk->u.soft.name, (size_t)len);
@@ -421,7 +421,7 @@ H5O__link_copy(const void *_mesg, void *_dest)
     /* Check args */
     assert(lnk);
     if (!dest && NULL == (dest = H5FL_MALLOC(H5O_link_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
 
     /* Copy static information */
     *dest = *lnk;
@@ -429,17 +429,17 @@ H5O__link_copy(const void *_mesg, void *_dest)
     /* Duplicate the link's name */
     assert(lnk->name);
     if (NULL == (dest->name = H5MM_xstrdup(lnk->name)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "can't duplicate link name")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "can't duplicate link name");
 
     /* Copy other information needed for different link types */
     if (lnk->type == H5L_TYPE_SOFT) {
         if (NULL == (dest->u.soft.name = H5MM_xstrdup(lnk->u.soft.name)))
-            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "can't duplicate soft link value")
+            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "can't duplicate soft link value");
     } /* end if */
     else if (lnk->type >= H5L_TYPE_UD_MIN) {
         if (lnk->u.ud.size > 0) {
             if (NULL == (dest->u.ud.udata = H5MM_malloc(lnk->u.ud.size)))
-                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
             H5MM_memcpy(dest->u.ud.udata, lnk->u.ud.udata, lnk->u.ud.size);
         } /* end if */
     }     /* end if */
@@ -473,7 +473,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static size_t
-H5O__link_size(const H5F_t *f, hbool_t H5_ATTR_UNUSED disable_shared, const void *_mesg)
+H5O__link_size(const H5F_t *f, bool H5_ATTR_UNUSED disable_shared, const void *_mesg)
 {
     const H5O_link_t *lnk = (const H5O_link_t *)_mesg;
     uint64_t          name_len;      /* Length of name */
@@ -486,7 +486,7 @@ H5O__link_size(const H5F_t *f, hbool_t H5_ATTR_UNUSED disable_shared, const void
     HDcompile_assert(sizeof(uint64_t) >= sizeof(size_t));
 
     /* Get name's length */
-    name_len = (uint64_t)HDstrlen(lnk->name);
+    name_len = (uint64_t)strlen(lnk->name);
 
     /* Determine correct value for name size bits */
     if (name_len > 4294967295)
@@ -514,8 +514,8 @@ H5O__link_size(const H5F_t *f, hbool_t H5_ATTR_UNUSED disable_shared, const void
             break;
 
         case H5L_TYPE_SOFT:
-            ret_value += 2 +                         /* Link value length */
-                         HDstrlen(lnk->u.soft.name); /* Link value */
+            ret_value += 2 +                       /* Link value length */
+                         strlen(lnk->u.soft.name); /* Link value */
             break;
 
         case H5L_TYPE_ERROR:
@@ -620,7 +620,7 @@ H5O_link_delete(H5F_t *f, H5O_t H5_ATTR_UNUSED *open_oh, void *_mesg)
 
         /* Decrement the ref count for the object */
         if (H5O_link(&oloc, -1) < 0)
-            HGOTO_ERROR(H5E_OHDR, H5E_CANTFREE, FAIL, "unable to decrement object link count")
+            HGOTO_ERROR(H5E_OHDR, H5E_CANTFREE, FAIL, "unable to decrement object link count");
     } /* end if */
     /* Perform the "delete" callback when a user-defined link is removed */
     else if (lnk->type >= H5L_TYPE_UD_MIN) {
@@ -628,17 +628,17 @@ H5O_link_delete(H5F_t *f, H5O_t H5_ATTR_UNUSED *open_oh, void *_mesg)
 
         /* Get the link class for this type of link. */
         if (NULL == (link_class = H5L_find_class(lnk->type)))
-            HGOTO_ERROR(H5E_OHDR, H5E_NOTREGISTERED, FAIL, "link class not registered")
+            HGOTO_ERROR(H5E_OHDR, H5E_NOTREGISTERED, FAIL, "link class not registered");
 
         /* Check for delete callback */
         if (link_class->del_func) {
             /* Get a file ID for the file the link is in */
             if ((file_id = H5F_get_id(f)) < 0)
-                HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "unable to get file ID")
+                HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "unable to get file ID");
 
             /* Call user-defined link's 'delete' callback */
             if ((link_class->del_func)(lnk->name, file_id, lnk->u.ud.udata, lnk->u.ud.size) < 0)
-                HGOTO_ERROR(H5E_OHDR, H5E_CALLBACK, FAIL, "link deletion callback returned failure")
+                HGOTO_ERROR(H5E_OHDR, H5E_CALLBACK, FAIL, "link deletion callback returned failure");
         } /* end if */
     }     /* end if */
 
@@ -663,8 +663,8 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O__link_pre_copy_file(H5F_t H5_ATTR_UNUSED *file_src, const void H5_ATTR_UNUSED *native_src,
-                        hbool_t *deleted, const H5O_copy_t *cpy_info, void H5_ATTR_UNUSED *udata)
+H5O__link_pre_copy_file(H5F_t H5_ATTR_UNUSED *file_src, const void H5_ATTR_UNUSED *native_src, bool *deleted,
+                        const H5O_copy_t *cpy_info, void H5_ATTR_UNUSED *udata)
 {
     FUNC_ENTER_PACKAGE_NOERR
 
@@ -678,7 +678,7 @@ H5O__link_pre_copy_file(H5F_t H5_ATTR_UNUSED *file_src, const void H5_ATTR_UNUSE
      *  on it.
      */
     if (cpy_info->max_depth >= 0 && cpy_info->curr_depth >= cpy_info->max_depth)
-        *deleted = TRUE;
+        *deleted = true;
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5O__link_pre_copy_file() */
@@ -696,7 +696,7 @@ H5O__link_pre_copy_file(H5F_t H5_ATTR_UNUSED *file_src, const void H5_ATTR_UNUSE
  */
 static void *
 H5O__link_copy_file(H5F_t H5_ATTR_UNUSED *file_src, void *native_src, H5F_t H5_ATTR_UNUSED *file_dst,
-                    hbool_t H5_ATTR_UNUSED *recompute_size, unsigned H5_ATTR_UNUSED *mesg_flags,
+                    bool H5_ATTR_UNUSED *recompute_size, unsigned H5_ATTR_UNUSED *mesg_flags,
                     H5O_copy_t H5_ATTR_UNUSED *cpy_info, void H5_ATTR_UNUSED *udata)
 {
     H5O_link_t *link_src  = (H5O_link_t *)native_src;
@@ -711,12 +711,12 @@ H5O__link_copy_file(H5F_t H5_ATTR_UNUSED *file_src, void *native_src, H5F_t H5_A
 
     /* Sanity check source link type */
     if (link_src->type > H5L_TYPE_SOFT && link_src->type < H5L_TYPE_UD_MIN)
-        HGOTO_ERROR(H5E_SYM, H5E_BADVALUE, NULL, "unrecognized built-in link type")
+        HGOTO_ERROR(H5E_SYM, H5E_BADVALUE, NULL, "unrecognized built-in link type");
 
     /* Allocate "blank" link for destination */
     /* (values will be filled in during 'post copy' operation) */
     if (NULL == (ret_value = H5FL_CALLOC(H5O_link_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -752,7 +752,7 @@ H5O__link_post_copy_file(const H5O_loc_t *src_oloc, const void *mesg_src, H5O_lo
 
     /* Copy the link (and the object it points to) */
     if (H5L__link_copy_file(dst_oloc->file, link_src, src_oloc, link_dst, cpy_info) < 0)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, FAIL, "unable to copy link")
+        HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, FAIL, "unable to copy link");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -816,7 +816,7 @@ H5O__link_debug(H5F_t H5_ATTR_UNUSED *f, const void *_mesg, FILE *stream, int in
             if (lnk->type >= H5L_TYPE_UD_MIN) {
                 if (lnk->type == H5L_TYPE_EXTERNAL) {
                     const char *objname =
-                        (const char *)lnk->u.ud.udata + (HDstrlen((const char *)lnk->u.ud.udata) + 1);
+                        (const char *)lnk->u.ud.udata + (strlen((const char *)lnk->u.ud.udata) + 1);
 
                     fprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
                             "External File Name:", (const char *)lnk->u.ud.udata);
@@ -828,7 +828,7 @@ H5O__link_debug(H5F_t H5_ATTR_UNUSED *f, const void *_mesg, FILE *stream, int in
                 } /* end else */
             }     /* end if */
             else
-                HGOTO_ERROR(H5E_SYM, H5E_BADVALUE, FAIL, "unrecognized link type")
+                HGOTO_ERROR(H5E_SYM, H5E_BADVALUE, FAIL, "unrecognized link type");
             break;
     } /* end switch */
 

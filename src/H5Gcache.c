@@ -30,10 +30,9 @@
 /***********/
 #include "H5private.h"   /* Generic Functions			*/
 #include "H5Eprivate.h"  /* Error handling		  	*/
+#include "H5FLprivate.h" /* Free Lists                               */
 #include "H5Gpkg.h"      /* Groups		  		*/
-#include "H5MFprivate.h" /* File memory management		*/
 #include "H5MMprivate.h" /* Memory management			*/
-#include "H5WBprivate.h" /* Wrapped Buffers                      */
 
 /****************/
 /* Local Macros */
@@ -55,7 +54,7 @@
 
 /* Metadata cache (H5AC) callbacks */
 static herr_t H5G__cache_node_get_initial_load_size(void *udata, size_t *image_len);
-static void  *H5G__cache_node_deserialize(const void *image, size_t len, void *udata, hbool_t *dirty);
+static void  *H5G__cache_node_deserialize(const void *image, size_t len, void *udata, bool *dirty);
 static herr_t H5G__cache_node_image_len(const void *thing, size_t *image_len);
 static herr_t H5G__cache_node_serialize(const H5F_t *f, void *image, size_t len, void *thing);
 static herr_t H5G__cache_node_free_icr(void *thing);
@@ -139,7 +138,7 @@ H5G__cache_node_get_initial_load_size(void *_udata, size_t *image_len)
  *-------------------------------------------------------------------------
  */
 static void *
-H5G__cache_node_deserialize(const void *_image, size_t len, void *_udata, hbool_t H5_ATTR_UNUSED *dirty)
+H5G__cache_node_deserialize(const void *_image, size_t len, void *_udata, bool H5_ATTR_UNUSED *dirty)
 {
     H5F_t         *f         = (H5F_t *)_udata;         /* User data for callback */
     H5G_node_t    *sym       = NULL;                    /* Symbol table node created */
@@ -156,23 +155,23 @@ H5G__cache_node_deserialize(const void *_image, size_t len, void *_udata, hbool_
 
     /* Allocate symbol table data structures */
     if (NULL == (sym = H5FL_CALLOC(H5G_node_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
     sym->node_size = (size_t)(H5G_NODE_SIZE(f));
     if (NULL == (sym->entry = H5FL_SEQ_CALLOC(H5G_entry_t, (size_t)(2 * H5F_SYM_LEAF_K(f)))))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
 
     /* Magic */
     if (H5_IS_BUFFER_OVERFLOW(image, H5_SIZEOF_MAGIC, image_end))
         HGOTO_ERROR(H5E_SYM, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
     if (memcmp(image, H5G_NODE_MAGIC, (size_t)H5_SIZEOF_MAGIC) != 0)
-        HGOTO_ERROR(H5E_SYM, H5E_BADVALUE, NULL, "bad symbol table node signature")
+        HGOTO_ERROR(H5E_SYM, H5E_BADVALUE, NULL, "bad symbol table node signature");
     image += H5_SIZEOF_MAGIC;
 
     /* Version */
     if (H5_IS_BUFFER_OVERFLOW(image, 1, image_end))
         HGOTO_ERROR(H5E_SYM, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
     if (H5G_NODE_VERS != *image++)
-        HGOTO_ERROR(H5E_SYM, H5E_VERSION, NULL, "bad symbol table node version")
+        HGOTO_ERROR(H5E_SYM, H5E_VERSION, NULL, "bad symbol table node version");
 
     /* Reserved */
     if (H5_IS_BUFFER_OVERFLOW(image, 1, image_end))
@@ -186,7 +185,7 @@ H5G__cache_node_deserialize(const void *_image, size_t len, void *_udata, hbool_
 
     /* Entries */
     if (H5G__ent_decode_vec(f, &image, image_end, sym->entry, sym->nsyms) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_CANTLOAD, NULL, "unable to decode symbol table entries")
+        HGOTO_ERROR(H5E_SYM, H5E_CANTLOAD, NULL, "unable to decode symbol table entries");
 
     /* Set return value */
     ret_value = sym;
@@ -265,7 +264,7 @@ H5G__cache_node_serialize(const H5F_t *f, void *_image, size_t len, void *_thing
 
     /* Entries */
     if (H5G__ent_encode_vec(f, &image, sym->entry, sym->nsyms) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_CANTENCODE, FAIL, "can't serialize")
+        HGOTO_ERROR(H5E_SYM, H5E_CANTENCODE, FAIL, "can't serialize");
 
     /* Clear rest of symbol table node */
     memset(image, 0, len - (size_t)(image - (uint8_t *)_image));
@@ -295,7 +294,7 @@ H5G__cache_node_free_icr(void *_thing)
 
     /* Destroy symbol table node */
     if (H5G__node_free(sym) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_CANTFREE, FAIL, "unable to destroy symbol table node")
+        HGOTO_ERROR(H5E_SYM, H5E_CANTFREE, FAIL, "unable to destroy symbol table node");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

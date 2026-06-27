@@ -30,9 +30,10 @@
 /* PRIVATE PROTOTYPES */
 static void  *H5O__fsinfo_decode(H5F_t *f, H5O_t *open_oh, unsigned mesg_flags, unsigned *ioflags,
                                  size_t p_size, const uint8_t *p);
-static herr_t H5O__fsinfo_encode(H5F_t *f, hbool_t disable_shared, uint8_t *p, const void *_mesg);
+static herr_t H5O__fsinfo_encode(H5F_t *f, bool disable_shared, size_t H5_ATTR_UNUSED p_size, uint8_t *p,
+                                 const void *_mesg);
 static void  *H5O__fsinfo_copy(const void *_mesg, void *_dest);
-static size_t H5O__fsinfo_size(const H5F_t *f, hbool_t disable_shared, const void *_mesg);
+static size_t H5O__fsinfo_size(const H5F_t *f, bool disable_shared, const void *_mesg);
 static herr_t H5O__fsinfo_free(void *mesg);
 static herr_t H5O__fsinfo_debug(H5F_t *f, const void *_mesg, FILE *stream, int indent, int fwidth);
 
@@ -68,6 +69,7 @@ static const unsigned H5O_fsinfo_ver_bounds[] = {
     H5O_FSINFO_VERSION_1,     /* H5F_LIBVER_V110 */
     H5O_FSINFO_VERSION_1,     /* H5F_LIBVER_V112 */
     H5O_FSINFO_VERSION_1,     /* H5F_LIBVER_V114 */
+    H5O_FSINFO_VERSION_1,     /* H5F_LIBVER_V116 */
     H5O_FSINFO_VERSION_LATEST /* H5F_LIBVER_LATEST */
 };
 #define N_FSINFO_VERSION_BOUNDS H5F_LIBVER_NBOUNDS
@@ -101,7 +103,7 @@ H5O__fsinfo_decode(H5F_t *f, H5O_t H5_ATTR_UNUSED *open_oh, unsigned H5_ATTR_UNU
 
     /* Allocate space for message */
     if (NULL == (fsinfo = H5FL_CALLOC(H5O_fsinfo_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
 
     for (ptype = H5F_MEM_PAGE_SUPER; ptype < H5F_MEM_PAGE_NTYPES; ptype++)
         fsinfo->fs_addr[ptype - 1] = HADDR_UNDEF;
@@ -131,10 +133,10 @@ H5O__fsinfo_decode(H5F_t *f, H5O_t H5_ATTR_UNUSED *open_oh, unsigned H5_ATTR_UNU
         switch (strategy) {
             case H5F_FILE_SPACE_ALL_PERSIST:
                 fsinfo->strategy  = H5F_FSPACE_STRATEGY_FSM_AGGR;
-                fsinfo->persist   = TRUE;
+                fsinfo->persist   = true;
                 fsinfo->threshold = threshold;
                 if (HADDR_UNDEF == (fsinfo->eoa_pre_fsm_fsalloc = H5F_get_eoa(f, H5FD_MEM_DEFAULT)))
-                    HGOTO_ERROR(H5E_FILE, H5E_CANTGET, NULL, "unable to get file size")
+                    HGOTO_ERROR(H5E_FILE, H5E_CANTGET, NULL, "unable to get file size");
                 for (type = H5FD_MEM_SUPER; type < H5FD_MEM_NTYPES; type++) {
                     if (H5_IS_BUFFER_OVERFLOW(p, H5F_sizeof_addr(f), p_end))
                         HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL,
@@ -159,15 +161,15 @@ H5O__fsinfo_decode(H5F_t *f, H5O_t H5_ATTR_UNUSED *open_oh, unsigned H5_ATTR_UNU
             case H5F_FILE_SPACE_NTYPES:
             case H5F_FILE_SPACE_DEFAULT:
             default:
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "invalid file space strategy")
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "invalid file space strategy");
         }
 
         fsinfo->version = H5O_FSINFO_VERSION_1;
-        fsinfo->mapped  = TRUE;
+        fsinfo->mapped  = true;
     }
     else {
         if (vers < H5O_FSINFO_VERSION_1)
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "bad version number")
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "bad version number");
 
         fsinfo->version = vers;
         if (H5_IS_BUFFER_OVERFLOW(p, 1 + 1, p_end))
@@ -199,7 +201,7 @@ H5O__fsinfo_decode(H5F_t *f, H5O_t H5_ATTR_UNUSED *open_oh, unsigned H5_ATTR_UNU
                     HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
                 H5F_addr_decode(f, &p, &(fsinfo->fs_addr[ptype - 1]));
             }
-        fsinfo->mapped = FALSE;
+        fsinfo->mapped = false;
     }
 
     /* Set return value */
@@ -222,7 +224,8 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O__fsinfo_encode(H5F_t *f, hbool_t H5_ATTR_UNUSED disable_shared, uint8_t *p, const void *_mesg)
+H5O__fsinfo_encode(H5F_t *f, bool H5_ATTR_UNUSED disable_shared, size_t H5_ATTR_UNUSED p_size, uint8_t *p,
+                   const void *_mesg)
 {
     const H5O_fsinfo_t *fsinfo = (const H5O_fsinfo_t *)_mesg;
     H5F_mem_page_t      ptype; /* Memory type for iteration */
@@ -275,7 +278,7 @@ H5O__fsinfo_copy(const void *_mesg, void *_dest)
     /* check args */
     assert(fsinfo);
     if (!dest && NULL == (dest = H5FL_CALLOC(H5O_fsinfo_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
 
     /* copy */
     *dest = *fsinfo;
@@ -300,7 +303,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static size_t
-H5O__fsinfo_size(const H5F_t *f, hbool_t H5_ATTR_UNUSED disable_shared, const void *_mesg)
+H5O__fsinfo_size(const H5F_t *f, bool H5_ATTR_UNUSED disable_shared, const void *_mesg)
 {
     const H5O_fsinfo_t *fsinfo    = (const H5O_fsinfo_t *)_mesg;
     size_t              ret_value = 0; /* Return value */
@@ -441,7 +444,7 @@ H5O_fsinfo_set_version(H5F_libver_t low, H5F_libver_t high, H5O_fsinfo_t *fsinfo
 
     /* Version bounds check */
     if (H5O_fsinfo_ver_bounds[high] == H5O_INVALID_VERSION || version > H5O_fsinfo_ver_bounds[high])
-        HGOTO_ERROR(H5E_OHDR, H5E_BADRANGE, FAIL, "File space info message's version out of bounds")
+        HGOTO_ERROR(H5E_OHDR, H5E_BADRANGE, FAIL, "File space info message's version out of bounds");
 
     /* Set the message version */
     fsinfo->version = version;
@@ -472,7 +475,7 @@ H5O_fsinfo_check_version(H5F_libver_t high, H5O_fsinfo_t *fsinfo)
 
     /* Check the version */
     if (H5O_fsinfo_ver_bounds[high] == H5O_INVALID_VERSION || fsinfo->version > H5O_fsinfo_ver_bounds[high])
-        HGOTO_ERROR(H5E_OHDR, H5E_BADRANGE, FAIL, "File space info message's version out of bounds")
+        HGOTO_ERROR(H5E_OHDR, H5E_BADRANGE, FAIL, "File space info message's version out of bounds");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

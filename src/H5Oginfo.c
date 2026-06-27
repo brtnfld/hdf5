@@ -29,9 +29,10 @@
 /* PRIVATE PROTOTYPES */
 static void  *H5O__ginfo_decode(H5F_t *f, H5O_t *open_oh, unsigned mesg_flags, unsigned *ioflags,
                                 size_t p_size, const uint8_t *p);
-static herr_t H5O__ginfo_encode(H5F_t *f, hbool_t disable_shared, uint8_t *p, const void *_mesg);
+static herr_t H5O__ginfo_encode(H5F_t *f, bool disable_shared, size_t H5_ATTR_UNUSED p_size, uint8_t *p,
+                                const void *_mesg);
 static void  *H5O__ginfo_copy(const void *_mesg, void *_dest);
-static size_t H5O__ginfo_size(const H5F_t *f, hbool_t disable_shared, const void *_mesg);
+static size_t H5O__ginfo_size(const H5F_t *f, bool disable_shared, const void *_mesg);
 static herr_t H5O__ginfo_free(void *_mesg);
 static herr_t H5O__ginfo_debug(H5F_t *f, const void *_mesg, FILE *stream, int indent, int fwidth);
 
@@ -96,28 +97,28 @@ H5O__ginfo_decode(H5F_t H5_ATTR_UNUSED *f, H5O_t H5_ATTR_UNUSED *open_oh, unsign
 
     /* Version of message */
     if (H5_IS_BUFFER_OVERFLOW(p, 1, p_end))
-        HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding")
+        HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
     if (*p++ != H5O_GINFO_VERSION)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad version number for message")
+        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad version number for message");
 
     /* Allocate space for message */
     if (NULL == (ginfo = H5FL_CALLOC(H5O_ginfo_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
 
     /* Get the flags for the group */
     if (H5_IS_BUFFER_OVERFLOW(p, 1, p_end))
-        HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding")
+        HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
 
     flags = *p++;
     if (flags & ~H5O_GINFO_ALL_FLAGS)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad flag value for message")
-    ginfo->store_link_phase_change = (flags & H5O_GINFO_STORE_PHASE_CHANGE) ? TRUE : FALSE;
-    ginfo->store_est_entry_info    = (flags & H5O_GINFO_STORE_EST_ENTRY_INFO) ? TRUE : FALSE;
+        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad flag value for message");
+    ginfo->store_link_phase_change = (flags & H5O_GINFO_STORE_PHASE_CHANGE) ? true : false;
+    ginfo->store_est_entry_info    = (flags & H5O_GINFO_STORE_EST_ENTRY_INFO) ? true : false;
 
     /* Get the max. # of links to store compactly & the min. # of links to store densely */
     if (ginfo->store_link_phase_change) {
         if (H5_IS_BUFFER_OVERFLOW(p, 2 * 2, p_end))
-            HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding")
+            HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
         UINT16DECODE(p, ginfo->max_compact);
         UINT16DECODE(p, ginfo->min_dense);
     }
@@ -129,7 +130,7 @@ H5O__ginfo_decode(H5F_t H5_ATTR_UNUSED *f, H5O_t H5_ATTR_UNUSED *open_oh, unsign
     /* Get the estimated # of entries & name lengths */
     if (ginfo->store_est_entry_info) {
         if (H5_IS_BUFFER_OVERFLOW(p, 2 * 2, p_end))
-            HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding")
+            HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
         UINT16DECODE(p, ginfo->est_num_entries);
         UINT16DECODE(p, ginfo->est_name_len);
     }
@@ -158,8 +159,8 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O__ginfo_encode(H5F_t H5_ATTR_UNUSED *f, hbool_t H5_ATTR_UNUSED disable_shared, uint8_t *p,
-                  const void *_mesg)
+H5O__ginfo_encode(H5F_t H5_ATTR_UNUSED *f, bool H5_ATTR_UNUSED disable_shared, size_t H5_ATTR_UNUSED p_size,
+                  uint8_t *p, const void *_mesg)
 {
     const H5O_ginfo_t *ginfo = (const H5O_ginfo_t *)_mesg;
     unsigned char      flags = 0; /* Flags for encoding group info */
@@ -217,7 +218,7 @@ H5O__ginfo_copy(const void *_mesg, void *_dest)
     /* check args */
     assert(ginfo);
     if (!dest && NULL == (dest = H5FL_MALLOC(H5O_ginfo_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
 
     /* copy */
     *dest = *ginfo;
@@ -243,7 +244,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static size_t
-H5O__ginfo_size(const H5F_t H5_ATTR_UNUSED *f, hbool_t H5_ATTR_UNUSED disable_shared, const void *_mesg)
+H5O__ginfo_size(const H5F_t H5_ATTR_UNUSED *f, bool H5_ATTR_UNUSED disable_shared, const void *_mesg)
 {
     const H5O_ginfo_t *ginfo     = (const H5O_ginfo_t *)_mesg;
     size_t             ret_value = 0; /* Return value */

@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-/** \page H5IM_UG The HDF5 High Level Images
+/** \page H5IM_UG HDF5 High Level Images
  * @todo Under Construction
  */
 
@@ -66,7 +66,7 @@ extern "C" {
  * - \ref H5IMread_image
  *   \n Reads image data from disk.
  * - \ref H5IMunlink_palette
- *   \n Dettaches a palette from an image.
+ *   \n Detaches a palette from an image.
  *
  */
 
@@ -229,7 +229,7 @@ H5_HLDLL herr_t H5IMlink_palette(hid_t loc_id, const char *image_name, const cha
  * --------------------------------------------------------------------------
  * \ingroup H5IM
  *
- * \brief Dettaches a palette from an image.
+ * \brief Detaches a palette from an image.
  *
  * \fg_loc_id
  * \param[in] image_name    The name of the image dataset
@@ -237,7 +237,7 @@ H5_HLDLL herr_t H5IMlink_palette(hid_t loc_id, const char *image_name, const cha
  *
  * \return \herr_t
  *
- * \details H5IMunlink_palette() dettaches a palette from an image
+ * \details H5IMunlink_palette() detaches a palette from an image
  *          specified by \p image_name.
  *
  */

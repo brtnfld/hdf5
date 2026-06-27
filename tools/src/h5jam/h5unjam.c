@@ -24,7 +24,7 @@ hsize_t write_pad(int, hsize_t);
 hsize_t compute_pad(hsize_t);
 herr_t  copy_to_file(FILE *, FILE *, ssize_t, ssize_t);
 
-int   do_delete   = FALSE;
+int   do_delete   = false;
 char *output_file = NULL;
 char *input_file  = NULL;
 char *ub_file     = NULL;
@@ -92,25 +92,25 @@ usage(const char *prog)
 static int
 parse_command_line(int argc, const char *const *argv)
 {
-    int opt = FALSE;
+    int opt = false;
 
     /* parse command line options */
     while ((opt = H5_get_option(argc, argv, s_opts, l_opts)) != EOF) {
         switch ((char)opt) {
             case 'o':
-                output_file = HDstrdup(H5_optarg);
+                output_file = strdup(H5_optarg);
                 if (output_file)
                     h5tools_set_data_output_file(output_file, 1);
                 break;
 
             case 'i':
-                input_file = HDstrdup(H5_optarg);
+                input_file = strdup(H5_optarg);
                 if (input_file)
                     h5tools_set_input_file(input_file, 1);
                 break;
 
             case 'u':
-                ub_file = HDstrdup(H5_optarg);
+                ub_file = strdup(H5_optarg);
                 if (ub_file)
                     h5tools_set_output_file(ub_file, 1);
                 else
@@ -118,7 +118,7 @@ parse_command_line(int argc, const char *const *argv)
                 break;
 
             case 'd':
-                do_delete = TRUE;
+                do_delete = true;
                 break;
 
             case 'h':
@@ -173,7 +173,7 @@ main(int argc, char *argv[])
 {
     hid_t     ifile = H5I_INVALID_HID;
     hid_t     plist = H5I_INVALID_HID;
-    off_t     fsize;
+    HDoff_t   fsize;
     hsize_t   usize;
     htri_t    testval;
     herr_t    status;
@@ -241,6 +241,7 @@ main(int argc, char *argv[])
         goto done;
     }
 
+    memset(&sbuf, 0, sizeof(h5_stat_t));
     res = HDfstat(HDfileno(rawinstream), &sbuf);
     if (res < 0) {
         error_msg("Can't stat file \"%s\"\n", input_file);
@@ -305,9 +306,9 @@ copy_to_file(FILE *infid, FILE *ofid, ssize_t _where, ssize_t show_much)
 {
     static char buf[COPY_BUF_SIZE];
     size_t      how_much;
-    off_t       where = (off_t)_where;
-    off_t       to;
-    off_t       from;
+    HDoff_t     where = (HDoff_t)_where;
+    HDoff_t     to;
+    HDoff_t     from;
     herr_t      ret_value = 0;
 
     /* nothing to copy */
@@ -348,8 +349,8 @@ copy_to_file(FILE *infid, FILE *ofid, ssize_t _where, ssize_t show_much)
 
         /* Update positions/size */
         how_much -= bytes_read;
-        from += (off_t)bytes_read;
-        to += (off_t)bytes_read;
+        from += (HDoff_t)bytes_read;
+        to += (HDoff_t)bytes_read;
 
         /* Write nchars bytes to output file */
         bytes_wrote = fwrite(buf, (size_t)1, bytes_read, ofid);

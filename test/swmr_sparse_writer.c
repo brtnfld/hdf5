@@ -102,7 +102,7 @@ open_skeleton(const char *filename, unsigned verbose)
         return -1;
     if (H5Aclose(aid) < 0)
         return -1;
-    HDsrandom(seed);
+    srand(seed);
 
     /* Open the datasets */
     for (u = 0; u < NLEVELS; u++)
@@ -173,7 +173,7 @@ add_records(hid_t fid, unsigned verbose, unsigned long nrecords, unsigned long f
         symbol_info_t *symbol;   /* Symbol to write record to */
         hid_t          file_sid; /* Dataset's space ID */
         hid_t          aid;      /* Attribute ID */
-        hbool_t        corked;   /* Whether the dataset was corked */
+        bool           corked;   /* Whether the dataset was corked */
 
         /* Get a random dataset, according to the symbol distribution */
         symbol = choose_dataset(NULL, NULL, verbose);
@@ -188,7 +188,7 @@ add_records(hid_t fid, unsigned verbose, unsigned long nrecords, unsigned long f
              * flushed before the data has been written */
             if (H5Odisable_mdc_flushes(symbol->dsid) < 0)
                 return -1;
-            corked = TRUE;
+            corked = true;
 
             if (H5Dset_extent(symbol->dsid, dim) < 0)
                 return -1;
@@ -204,11 +204,11 @@ add_records(hid_t fid, unsigned verbose, unsigned long nrecords, unsigned long f
         else {
             if ((aid = H5Aopen(symbol->dsid, "seq", H5P_DEFAULT)) < 0)
                 return -1;
-            corked = FALSE;
+            corked = false;
         } /* end else */
 
         /* Get the coordinate to write */
-        start[1] = (hsize_t)HDrandom() % symbol->nrecords;
+        start[1] = (hsize_t)rand() % symbol->nrecords;
 
         /* Set the record's ID (equal to its position) */
         record.rec_id = start[1];

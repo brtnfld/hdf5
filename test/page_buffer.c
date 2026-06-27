@@ -38,27 +38,21 @@
 #define FILENAME_LEN 1024
 
 /* test routines */
-#ifdef H5_HAVE_PARALLEL
-static unsigned verify_page_buffering_disabled(hid_t orig_fapl, const char *env_h5_drvr);
-#else
 #define NUM_DSETS 5
 #define NX        100
 #define NY        50
 
-static unsigned test_args(hid_t fapl, const char *env_h5_drvr);
-static unsigned test_raw_data_handling(hid_t orig_fapl, const char *env_h5_drvr);
-static unsigned test_lru_processing(hid_t orig_fapl, const char *env_h5_drvr);
-static unsigned test_min_threshold(hid_t orig_fapl, const char *env_h5_drvr);
-static unsigned test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr);
+static unsigned test_args(hid_t fapl, const char *driver_name);
+static unsigned test_raw_data_handling(hid_t orig_fapl, const char *driver_name);
+static unsigned test_lru_processing(hid_t orig_fapl, const char *driver_name);
+static unsigned test_min_threshold(hid_t orig_fapl, const char *driver_name);
+static unsigned test_stats_collection(hid_t orig_fapl, const char *driver_name);
 
 /* helper routines */
 static unsigned create_file(char *filename, hid_t fcpl, hid_t fapl);
 static unsigned open_file(char *filename, hid_t fapl, hsize_t page_size, size_t page_buffer_size);
-#endif /* H5_HAVE_PARALLEL */
 
 static const char *FILENAME[] = {"filepaged", NULL};
-
-#ifndef H5_HAVE_PARALLEL
 
 /*-------------------------------------------------------------------------
  * Function:    create_file()
@@ -82,13 +76,13 @@ static const char *FILENAME[] = {"filepaged", NULL};
 static unsigned
 create_file(char *filename, hid_t fcpl, hid_t fapl)
 {
-    hid_t   file_id   = -1;
-    hid_t   dset_id   = -1;
-    hid_t   grp_id    = -1;
-    hid_t   filespace = -1;
+    hid_t   file_id   = H5I_INVALID_HID;
+    hid_t   dset_id   = H5I_INVALID_HID;
+    hid_t   grp_id    = H5I_INVALID_HID;
+    hid_t   filespace = H5I_INVALID_HID;
     hsize_t dimsf[2]  = {NX, NY}; /* dataset dimensions */
     int    *data      = NULL;     /* pointer to data buffer to write */
-    hid_t   dcpl      = -1;
+    hid_t   dcpl      = H5I_INVALID_HID;
     int     i;
     int     num_elements;
     int     j;
@@ -116,28 +110,28 @@ create_file(char *filename, hid_t fcpl, hid_t fapl)
 
     for (i = 0; i < NUM_DSETS; i++) {
 
-        HDsnprintf(dset_name, sizeof(dset_name), "D1dset%d", i);
+        snprintf(dset_name, sizeof(dset_name), "D1dset%d", i);
         if ((dset_id = H5Dcreate2(grp_id, dset_name, H5T_NATIVE_INT, filespace, H5P_DEFAULT, dcpl,
                                   H5P_DEFAULT)) < 0)
             FAIL_STACK_ERROR;
         if (H5Dclose(dset_id) < 0)
             FAIL_STACK_ERROR;
 
-        HDsnprintf(dset_name, sizeof(dset_name), "D2dset%d", i);
+        snprintf(dset_name, sizeof(dset_name), "D2dset%d", i);
         if ((dset_id = H5Dcreate2(grp_id, dset_name, H5T_NATIVE_INT, filespace, H5P_DEFAULT, dcpl,
                                   H5P_DEFAULT)) < 0)
             FAIL_STACK_ERROR;
         if (H5Dclose(dset_id) < 0)
             FAIL_STACK_ERROR;
 
-        HDsnprintf(dset_name, sizeof(dset_name), "D3dset%d", i);
+        snprintf(dset_name, sizeof(dset_name), "D3dset%d", i);
         if ((dset_id = H5Dcreate2(grp_id, dset_name, H5T_NATIVE_INT, filespace, H5P_DEFAULT, dcpl,
                                   H5P_DEFAULT)) < 0)
             FAIL_STACK_ERROR;
         if (H5Dclose(dset_id) < 0)
             FAIL_STACK_ERROR;
 
-        HDsnprintf(dset_name, sizeof(dset_name), "dset%d", i);
+        snprintf(dset_name, sizeof(dset_name), "dset%d", i);
         if ((dset_id = H5Dcreate2(grp_id, dset_name, H5T_NATIVE_INT, filespace, H5P_DEFAULT, dcpl,
                                   H5P_DEFAULT)) < 0)
             FAIL_STACK_ERROR;
@@ -162,13 +156,13 @@ create_file(char *filename, hid_t fcpl, hid_t fapl)
             }
         }
 
-        HDsnprintf(dset_name, sizeof(dset_name), "D1dset%d", i);
+        snprintf(dset_name, sizeof(dset_name), "D1dset%d", i);
         if (H5Ldelete(grp_id, dset_name, H5P_DEFAULT) < 0)
             FAIL_STACK_ERROR;
-        HDsnprintf(dset_name, sizeof(dset_name), "D2dset%d", i);
+        snprintf(dset_name, sizeof(dset_name), "D2dset%d", i);
         if (H5Ldelete(grp_id, dset_name, H5P_DEFAULT) < 0)
             FAIL_STACK_ERROR;
-        HDsnprintf(dset_name, sizeof(dset_name), "D3dset%d", i);
+        snprintf(dset_name, sizeof(dset_name), "D3dset%d", i);
         if (H5Ldelete(grp_id, dset_name, H5P_DEFAULT) < 0)
             FAIL_STACK_ERROR;
     }
@@ -219,9 +213,9 @@ error:
 static unsigned
 open_file(char *filename, hid_t fapl, hsize_t page_size, size_t page_buffer_size)
 {
-    hid_t  file_id = -1;
-    hid_t  dset_id = -1;
-    hid_t  grp_id  = -1;
+    hid_t  file_id = H5I_INVALID_HID;
+    hid_t  dset_id = H5I_INVALID_HID;
+    hid_t  grp_id  = H5I_INVALID_HID;
     int   *data    = NULL; /* pointer to data buffer to write */
     int    i;
     int    j;
@@ -252,7 +246,7 @@ open_file(char *filename, hid_t fapl, hsize_t page_size, size_t page_buffer_size
 
     for (i = 0; i < NUM_DSETS; i++) {
 
-        HDsnprintf(dset_name, sizeof(dset_name), "dset%d", i);
+        snprintf(dset_name, sizeof(dset_name), "dset%d", i);
         if ((dset_id = H5Dopen2(grp_id, dset_name, H5P_DEFAULT)) < 0)
             FAIL_STACK_ERROR;
 
@@ -289,7 +283,6 @@ error:
     H5E_END_TRY
     return 1;
 }
-#endif /* H5_HAVE_PARALLEL */
 
 /*
  *
@@ -299,22 +292,22 @@ error:
  *
  */
 static unsigned
-set_multi_split(const char *env_h5_drvr, hid_t fapl, hsize_t pagesize)
+set_multi_split(const char *driver_name, hid_t fapl, hsize_t pagesize)
 {
-    hbool_t    split = FALSE;
-    hbool_t    multi = FALSE;
+    bool       split = false;
+    bool       multi = false;
     H5FD_mem_t memb_map[H5FD_MEM_NTYPES];
     hid_t      memb_fapl_arr[H5FD_MEM_NTYPES];
     char      *memb_name[H5FD_MEM_NTYPES];
     haddr_t    memb_addr[H5FD_MEM_NTYPES];
-    hbool_t    relax;
+    bool       relax;
     H5FD_mem_t mt;
 
     /* Check for split or multi driver */
-    if (!HDstrcmp(env_h5_drvr, "split"))
-        split = TRUE;
-    else if (!HDstrcmp(env_h5_drvr, "multi"))
-        multi = TRUE;
+    if (!strcmp(driver_name, "split"))
+        split = true;
+    else if (!strcmp(driver_name, "multi"))
+        multi = true;
 
     if (split || multi) {
 
@@ -353,8 +346,6 @@ error:
 
 } /* set_multi_split() */
 
-#ifndef H5_HAVE_PARALLEL
-
 /*-------------------------------------------------------------------------
  * Function:    test_args()
  *
@@ -374,12 +365,12 @@ error:
  *-------------------------------------------------------------------------
  */
 static unsigned
-test_args(hid_t orig_fapl, const char *env_h5_drvr)
+test_args(hid_t orig_fapl, const char *driver_name)
 {
-    char   filename[FILENAME_LEN]; /* Filename to use */
-    hid_t  file_id = -1;           /* File ID */
-    hid_t  fcpl    = -1;
-    hid_t  fapl    = -1;
+    char   filename[FILENAME_LEN];    /* Filename to use */
+    hid_t  file_id = H5I_INVALID_HID; /* File ID */
+    hid_t  fcpl    = H5I_INVALID_HID;
+    hid_t  fapl    = H5I_INVALID_HID;
     herr_t ret;
 
     TESTING("Settings for Page Buffering");
@@ -440,7 +431,7 @@ test_args(hid_t orig_fapl, const char *env_h5_drvr)
     if (ret >= 0)
         TEST_ERROR;
 
-    if (set_multi_split(env_h5_drvr, fapl, 512) != 0)
+    if (set_multi_split(driver_name, fapl, 512) != 0)
         TEST_ERROR;
 
     /* Test setting a page buffer with a size equal to a single page size */
@@ -477,7 +468,7 @@ test_args(hid_t orig_fapl, const char *env_h5_drvr)
     if (open_file(filename, fapl, 512, 512) != 0)
         TEST_ERROR;
 
-    if (set_multi_split(env_h5_drvr, fapl, 4194304) != 0)
+    if (set_multi_split(driver_name, fapl, 4194304) != 0)
         TEST_ERROR;
 
     /* Test setting a large page buffer size and page size */
@@ -496,7 +487,7 @@ test_args(hid_t orig_fapl, const char *env_h5_drvr)
     if (open_file(filename, fapl, 4194304, 16777216) != 0)
         TEST_ERROR;
 
-    if (set_multi_split(env_h5_drvr, fapl, 1) != 0)
+    if (set_multi_split(driver_name, fapl, 1) != 0)
         TEST_ERROR;
 
     /* Test setting a 512 byte page buffer size and page size */
@@ -545,12 +536,12 @@ error:
  *-------------------------------------------------------------------------
  */
 static unsigned
-test_raw_data_handling(hid_t orig_fapl, const char *env_h5_drvr)
+test_raw_data_handling(hid_t orig_fapl, const char *driver_name)
 {
-    char    filename[FILENAME_LEN]; /* Filename to use */
-    hid_t   file_id = -1;           /* File ID */
-    hid_t   fcpl    = -1;
-    hid_t   fapl    = -1;
+    char    filename[FILENAME_LEN];    /* Filename to use */
+    hid_t   file_id = H5I_INVALID_HID; /* File ID */
+    hid_t   fcpl    = H5I_INVALID_HID;
+    hid_t   fapl    = H5I_INVALID_HID;
     size_t  base_page_cnt;
     size_t  page_count = 0;
     int     i, num_elements = 2000;
@@ -565,7 +556,7 @@ test_raw_data_handling(hid_t orig_fapl, const char *env_h5_drvr)
     if ((fapl = H5Pcopy(orig_fapl)) < 0)
         TEST_ERROR;
 
-    if (set_multi_split(env_h5_drvr, fapl, sizeof(int) * 200) != 0)
+    if (set_multi_split(driver_name, fapl, sizeof(int) * 200) != 0)
         TEST_ERROR;
 
     if ((data = (int *)calloc((size_t)num_elements, sizeof(int))) == NULL)
@@ -808,12 +799,12 @@ error:
  */
 
 static unsigned
-test_lru_processing(hid_t orig_fapl, const char *env_h5_drvr)
+test_lru_processing(hid_t orig_fapl, const char *driver_name)
 {
-    char    filename[FILENAME_LEN]; /* Filename to use */
-    hid_t   file_id = -1;           /* File ID */
-    hid_t   fcpl    = -1;
-    hid_t   fapl    = -1;
+    char    filename[FILENAME_LEN];    /* Filename to use */
+    hid_t   file_id = H5I_INVALID_HID; /* File ID */
+    hid_t   fcpl    = H5I_INVALID_HID;
+    hid_t   fapl    = H5I_INVALID_HID;
     size_t  base_page_cnt;
     size_t  page_count = 0;
     int     i;
@@ -830,7 +821,7 @@ test_lru_processing(hid_t orig_fapl, const char *env_h5_drvr)
     if ((fapl = H5Pcopy(orig_fapl)) < 0)
         FAIL_STACK_ERROR;
 
-    if (set_multi_split(env_h5_drvr, fapl, sizeof(int) * 200) != 0)
+    if (set_multi_split(driver_name, fapl, sizeof(int) * 200) != 0)
         TEST_ERROR;
 
     if ((data = (int *)calloc((size_t)num_elements, sizeof(int))) == NULL)
@@ -1047,12 +1038,12 @@ error:
  */
 
 static unsigned
-test_min_threshold(hid_t orig_fapl, const char *env_h5_drvr)
+test_min_threshold(hid_t orig_fapl, const char *driver_name)
 {
-    char    filename[FILENAME_LEN]; /* Filename to use */
-    hid_t   file_id       = -1;     /* File ID */
-    hid_t   fcpl          = -1;
-    hid_t   fapl          = -1;
+    char    filename[FILENAME_LEN];          /* Filename to use */
+    hid_t   file_id       = H5I_INVALID_HID; /* File ID */
+    hid_t   fcpl          = H5I_INVALID_HID;
+    hid_t   fapl          = H5I_INVALID_HID;
     size_t  base_raw_cnt  = 0;
     size_t  base_meta_cnt = 0;
     size_t  page_count    = 0;
@@ -1071,7 +1062,7 @@ test_min_threshold(hid_t orig_fapl, const char *env_h5_drvr)
     if ((fapl = H5Pcopy(orig_fapl)) < 0)
         TEST_ERROR;
 
-    if (set_multi_split(env_h5_drvr, fapl, sizeof(int) * 200) != 0)
+    if (set_multi_split(driver_name, fapl, sizeof(int) * 200) != 0)
         TEST_ERROR;
 
     if ((data = (int *)calloc((size_t)num_elements, sizeof(int))) == NULL)
@@ -1651,6 +1642,114 @@ error:
 } /* test_min_threshold */
 
 /*-------------------------------------------------------------------------
+ * Function:    test_pb_fapl_tolerance_at_open()
+ *
+ * Purpose:     Tests if the library tolerates setting fapl page buffer
+ *              values via H5Pset_page_buffer_size() when opening a file
+ *              that does not use page buffering or has a size smaller
+ *              than the file's page size.
+ *
+ *              As of HDF5 1.14.4, these should succeed.
+ *
+ * Return:      0 if test is successful
+ *              1 if test fails
+ *
+ *-------------------------------------------------------------------------
+ */
+static unsigned
+test_pb_fapl_tolerance_at_open(void)
+{
+    const char *filename = "pb_fapl_tolerance.h5";
+    hid_t       fapl     = H5I_INVALID_HID;
+    hid_t       fcpl     = H5I_INVALID_HID;
+    hid_t       fid      = H5I_INVALID_HID;
+    H5F_t      *f        = NULL;
+
+    TESTING("if opening non-page-buffered files works w/ H5Pset_page_buffer_size()");
+
+    /* Create a file WITHOUT page buffering */
+    if ((fid = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+        TEST_ERROR;
+    if (H5Fclose(fid) < 0)
+        TEST_ERROR;
+
+    /* Set up page buffering values on a fapl */
+    if ((fapl = H5Pcreate(H5P_FILE_ACCESS)) < 0)
+        TEST_ERROR;
+    if (H5Pset_page_buffer_size(fapl, 512, 0, 0) < 0)
+        TEST_ERROR;
+
+    /* Attempt to open non-page-buf file w/ page buf fapl. Should succeed,
+     * but without a page buffer.
+     */
+    if ((fid = H5Fopen(filename, H5F_ACC_RDWR, fapl)) < 0)
+        TEST_ERROR;
+    if (NULL == (f = (H5F_t *)H5VL_object(fid)))
+        TEST_ERROR;
+    if (f->shared->fs_strategy == H5F_FSPACE_STRATEGY_PAGE)
+        TEST_ERROR;
+    if (f->shared->page_buf != NULL)
+        TEST_ERROR;
+    if (H5Fclose(fid) < 0)
+        TEST_ERROR;
+
+    /* Set up a fcpl with a page size that is larger than the fapl size */
+    if ((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
+        TEST_ERROR;
+    if (H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, false, 1) < 0)
+        TEST_ERROR;
+    if (H5Pset_file_space_page_size(fcpl, 4096) < 0)
+        TEST_ERROR;
+
+    /* Create a file that uses page buffering with a larger page size */
+    if ((fid = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, H5P_DEFAULT)) < 0)
+        TEST_ERROR;
+    if (H5Fclose(fid) < 0)
+        TEST_ERROR;
+
+    /* Attempt to open page-buf file w/ fapl page buf size that is too small.
+     * Should succeed with a page buffer size that matches the file's page size.
+     */
+    if ((fid = H5Fopen(filename, H5F_ACC_RDWR, fapl)) < 0)
+        TEST_ERROR;
+    if (NULL == (f = (H5F_t *)H5VL_object(fid)))
+        TEST_ERROR;
+    if (f->shared->fs_strategy != H5F_FSPACE_STRATEGY_PAGE)
+        TEST_ERROR;
+    if (f->shared->page_buf == NULL)
+        TEST_ERROR;
+    if (f->shared->fs_page_size != 4096)
+        TEST_ERROR;
+    if (H5Fclose(fid) < 0)
+        TEST_ERROR;
+
+    /* Shut down */
+    if (H5Pclose(fcpl) < 0)
+        TEST_ERROR;
+    if (H5Pclose(fapl) < 0)
+        TEST_ERROR;
+
+    HDremove(filename);
+
+    PASSED();
+
+    return 0;
+
+error:
+
+    H5E_BEGIN_TRY
+    {
+        H5Pclose(fapl);
+        H5Pclose(fcpl);
+        H5Fclose(fid);
+    }
+    H5E_END_TRY
+
+    return 1;
+
+} /* test_pb_fapl_tolerance_at_open */
+
+/*-------------------------------------------------------------------------
  * Function:    test_stats_collection()
  *
  * Purpose:     Tests verifying correct collection of statistics
@@ -1665,12 +1764,12 @@ error:
  *-------------------------------------------------------------------------
  */
 static unsigned
-test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr)
+test_stats_collection(hid_t orig_fapl, const char *driver_name)
 {
-    char    filename[FILENAME_LEN]; /* Filename to use */
-    hid_t   file_id = -1;           /* File ID */
-    hid_t   fcpl    = -1;
-    hid_t   fapl    = -1;
+    char    filename[FILENAME_LEN];    /* Filename to use */
+    hid_t   file_id = H5I_INVALID_HID; /* File ID */
+    hid_t   fcpl    = H5I_INVALID_HID;
+    hid_t   fapl    = H5I_INVALID_HID;
     int     i;
     int     num_elements  = 1000;
     size_t  base_raw_cnt  = 0;
@@ -1687,7 +1786,7 @@ test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr)
     if ((fapl = H5Pcopy(orig_fapl)) < 0)
         TEST_ERROR;
 
-    if (set_multi_split(env_h5_drvr, fapl, sizeof(int) * 200) != 0)
+    if (set_multi_split(driver_name, fapl, sizeof(int) * 200) != 0)
         TEST_ERROR;
 
     if ((data = (int *)calloc((size_t)num_elements, sizeof(int))) == NULL)
@@ -1935,121 +2034,6 @@ error:
 
     return 1;
 } /* test_stats_collection */
-#endif /* #ifndef H5_HAVE_PARALLEL */
-
-/*-------------------------------------------------------------------------
- * Function:    verify_page_buffering_disabled()
- *
- * Purpose:     This function should only be called in parallel
- *              builds.
- *
- *              At present, page buffering should be disabled in parallel
- *              builds.  Verify this.
- *
- * Return:      0 if test is successful
- *              1 if test fails
- *
- *-------------------------------------------------------------------------
- */
-
-#ifdef H5_HAVE_PARALLEL
-static unsigned
-verify_page_buffering_disabled(hid_t orig_fapl, const char *env_h5_drvr)
-{
-    char  filename[FILENAME_LEN]; /* Filename to use */
-    hid_t file_id = -1;           /* File ID */
-    hid_t fcpl    = -1;
-    hid_t fapl    = -1;
-
-    TESTING("Page Buffering Disabled");
-    h5_fixname(FILENAME[0], orig_fapl, filename, sizeof(filename));
-
-    /* first, try to create a file with page buffering enabled */
-
-    if ((fapl = H5Pcopy(orig_fapl)) < 0)
-        TEST_ERROR;
-
-    if (set_multi_split(env_h5_drvr, fapl, 4096) != 0)
-        TEST_ERROR;
-
-    if ((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
-        FAIL_STACK_ERROR;
-
-    if (H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, 0, (hsize_t)1) < 0)
-        FAIL_STACK_ERROR;
-
-    if (H5Pset_file_space_page_size(fcpl, 4096) < 0)
-        FAIL_STACK_ERROR;
-
-    if (H5Pset_page_buffer_size(fapl, 4096 * 8, 0, 0) < 0)
-        FAIL_STACK_ERROR;
-
-    /* try to create  the file -- should fail */
-    H5E_BEGIN_TRY
-    {
-        file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl);
-    }
-    H5E_END_TRY
-
-    if (file_id >= 0)
-        TEST_ERROR;
-
-    /* now, create a file, close it, and then try to open it with page
-     * buffering enabled.
-     */
-    if ((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
-        FAIL_STACK_ERROR;
-
-    if (H5Pset_file_space_strategy(fcpl, H5F_FSPACE_STRATEGY_PAGE, 0, (hsize_t)1) < 0)
-        FAIL_STACK_ERROR;
-
-    if (H5Pset_file_space_page_size(fcpl, 4096) < 0)
-        FAIL_STACK_ERROR;
-
-    /* create the file */
-    if ((file_id = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, H5P_DEFAULT)) < 0)
-        FAIL_STACK_ERROR;
-
-    /* close the file */
-    if (H5Fclose(file_id) < 0)
-        FAIL_STACK_ERROR;
-
-    /* try to open the file using the fapl prepared above which enables
-     * page buffering.  Should fail.
-     */
-    H5E_BEGIN_TRY
-    {
-        file_id = H5Fopen(filename, H5F_ACC_RDWR, fapl);
-    }
-    H5E_END_TRY
-
-    if (file_id >= 0)
-        TEST_ERROR;
-
-    if (H5Pclose(fcpl) < 0)
-        FAIL_STACK_ERROR;
-
-    if (H5Pclose(fapl) < 0)
-        FAIL_STACK_ERROR;
-
-    PASSED();
-
-    return 0;
-
-error:
-
-    H5E_BEGIN_TRY
-    {
-        H5Pclose(fapl);
-        H5Pclose(fcpl);
-        H5Fclose(file_id);
-    }
-    H5E_END_TRY
-
-    return 1;
-
-} /* verify_page_buffering_disabled() */
-#endif /* H5_HAVE_PARALLEL */
 
 /*-------------------------------------------------------------------------
  * Function:    main()
@@ -2064,65 +2048,56 @@ error:
 int
 main(void)
 {
-    hid_t       fapl           = -1;    /* File access property list for data files */
-    unsigned    nerrors        = 0;     /* Cumulative error count */
-    const char *env_h5_drvr    = NULL;  /* File Driver value from environment */
-    hbool_t     api_ctx_pushed = FALSE; /* Whether API context pushed */
+    hid_t       fapl           = H5I_INVALID_HID; /* File access property list for data files */
+    unsigned    nerrors        = 0;               /* Cumulative error count */
+    const char *driver_name    = NULL;            /* File Driver value from environment */
+    bool        api_ctx_pushed = false;           /* Whether API context pushed */
 
-    h5_reset();
+    h5_test_init();
 
     /* Get the VFD to use */
-    env_h5_drvr = HDgetenv(HDF5_DRIVER);
-    if (env_h5_drvr == NULL)
-        env_h5_drvr = "nomatch";
+    driver_name = h5_get_test_driver_name();
 
     /* Temporary skip testing with multi/split drivers:
      * Page buffering depends on paged aggregation which is
      * currently disabled for multi/split drivers.
      */
-    if ((0 == HDstrcmp(env_h5_drvr, "multi")) || (0 == HDstrcmp(env_h5_drvr, "split"))) {
+    if ((0 == strcmp(driver_name, "multi")) || (0 == strcmp(driver_name, "split"))) {
 
         SKIPPED();
-        HDputs("Skip page buffering test because paged aggregation is disabled for multi/split drivers");
+        puts("Skip page buffering test because paged aggregation is disabled for multi/split drivers");
         exit(EXIT_SUCCESS);
-    } /* end if */
+    }
 
     if ((fapl = h5_fileaccess()) < 0) {
         nerrors++;
         PUTS_ERROR("Can't get VFD-dependent fapl");
-    } /* end if */
+    }
 
     /* Push API context */
     if (H5CX_push() < 0)
         FAIL_STACK_ERROR;
-    api_ctx_pushed = TRUE;
+    api_ctx_pushed = true;
 
-#ifdef H5_HAVE_PARALLEL
+    nerrors += test_args(fapl, driver_name);
+    nerrors += test_raw_data_handling(fapl, driver_name);
+    nerrors += test_lru_processing(fapl, driver_name);
+    nerrors += test_min_threshold(fapl, driver_name);
+    nerrors += test_stats_collection(fapl, driver_name);
+    nerrors += test_pb_fapl_tolerance_at_open();
 
-    HDputs("Page Buffering is disabled for parallel.");
-    nerrors += verify_page_buffering_disabled(fapl, env_h5_drvr);
-
-#else /* H5_HAVE_PARALLEL */
-
-    nerrors += test_args(fapl, env_h5_drvr);
-    nerrors += test_raw_data_handling(fapl, env_h5_drvr);
-    nerrors += test_lru_processing(fapl, env_h5_drvr);
-    nerrors += test_min_threshold(fapl, env_h5_drvr);
-    nerrors += test_stats_collection(fapl, env_h5_drvr);
-
-#endif /* H5_HAVE_PARALLEL */
-
-    h5_clean_files(FILENAME, fapl);
+    h5_delete_all_test_files(FILENAME, fapl);
+    H5Pclose(fapl);
 
     if (nerrors)
         goto error;
 
     /* Pop API context */
-    if (api_ctx_pushed && H5CX_pop(FALSE) < 0)
+    if (api_ctx_pushed && H5CX_pop(false) < 0)
         FAIL_STACK_ERROR;
-    api_ctx_pushed = FALSE;
+    api_ctx_pushed = false;
 
-    HDputs("All Page Buffering tests passed.");
+    puts("All Page Buffering tests passed.");
 
     exit(EXIT_SUCCESS);
 
@@ -2136,7 +2111,7 @@ error:
     H5E_END_TRY
 
     if (api_ctx_pushed)
-        H5CX_pop(FALSE);
+        H5CX_pop(false);
 
     exit(EXIT_FAILURE);
 } /* main() */

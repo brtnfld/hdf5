@@ -245,7 +245,7 @@ parse_options(int argc, char **argv)
 hid_t
 create_faccess_plist(MPI_Comm comm, MPI_Info info, int l_facc_type)
 {
-    hid_t  ret_pl = -1;
+    hid_t  ret_pl = H5I_INVALID_HID;
     herr_t ret;      /* generic return value */
     int    mpi_rank; /* mpi variables */
 
@@ -262,9 +262,9 @@ create_faccess_plist(MPI_Comm comm, MPI_Info info, int l_facc_type)
         /* set Parallel access with communicator */
         ret = H5Pset_fapl_mpio(ret_pl, comm, info);
         VRFY((ret >= 0), "");
-        ret = H5Pset_all_coll_metadata_ops(ret_pl, TRUE);
+        ret = H5Pset_all_coll_metadata_ops(ret_pl, true);
         VRFY((ret >= 0), "");
-        ret = H5Pset_coll_metadata_write(ret_pl, TRUE);
+        ret = H5Pset_coll_metadata_write(ret_pl, true);
         VRFY((ret >= 0), "");
         return (ret_pl);
     }
@@ -3323,7 +3323,7 @@ none_selection_chunk(void)
  *
  *              TEST_ACTUAL_IO_RESET:
  *                  Performs collective and then independent I/O with the same dxpl to
- *                  make sure the peroperty is correctly reset to the default on each use.
+ *                  make sure the property is correctly reset to the default on each use.
  *                  Specifically, this test runs TEST_ACTUAL_IO_MULTI_CHUNK_NO_OPT_MIX_DISAGREE
  *                  (The most complex case that works on all builds) and then performs
  *                  an independent read and write with the same dxpls.
@@ -3344,10 +3344,10 @@ test_actual_io_mode(int selection_mode)
     H5D_mpio_actual_io_mode_t        actual_io_mode_expected        = H5D_MPIO_NO_COLLECTIVE;
     const char                      *filename;
     const char                      *test_name;
-    hbool_t                          direct_multi_chunk_io;
-    hbool_t                          multi_chunk_io;
-    hbool_t                          is_chunked;
-    hbool_t                          is_collective;
+    bool                             direct_multi_chunk_io;
+    bool                             multi_chunk_io;
+    bool                             is_chunked;
+    bool                             is_collective;
     int                              mpi_size = -1;
     int                              mpi_rank = -1;
     int                              length;
@@ -3355,16 +3355,16 @@ test_actual_io_mode(int selection_mode)
     int                              i;
     MPI_Comm                         mpi_comm   = MPI_COMM_NULL;
     MPI_Info                         mpi_info   = MPI_INFO_NULL;
-    hid_t                            fid        = -1;
-    hid_t                            sid        = -1;
-    hid_t                            dataset    = -1;
+    hid_t                            fid        = H5I_INVALID_HID;
+    hid_t                            sid        = H5I_INVALID_HID;
+    hid_t                            dataset    = H5I_INVALID_HID;
     hid_t                            data_type  = H5T_NATIVE_INT;
-    hid_t                            fapl_id    = -1;
-    hid_t                            mem_space  = -1;
-    hid_t                            file_space = -1;
-    hid_t                            dcpl       = -1;
-    hid_t                            dxpl_write = -1;
-    hid_t                            dxpl_read  = -1;
+    hid_t                            fapl_id    = H5I_INVALID_HID;
+    hid_t                            mem_space  = H5I_INVALID_HID;
+    hid_t                            file_space = H5I_INVALID_HID;
+    hid_t                            dcpl       = H5I_INVALID_HID;
+    hid_t                            dxpl_write = H5I_INVALID_HID;
+    hid_t                            dxpl_read  = H5I_INVALID_HID;
     hsize_t                          dims[MAX_RANK];
     hsize_t                          chunk_dims[MAX_RANK];
     hsize_t                          start[MAX_RANK];
@@ -3693,10 +3693,10 @@ test_actual_io_mode(int selection_mode)
     /* Test values */
     if (actual_chunk_opt_mode_expected != (H5D_mpio_actual_chunk_opt_mode_t)-1 &&
         actual_io_mode_expected != (H5D_mpio_actual_io_mode_t)-1) {
-        HDsnprintf(message, sizeof(message), "Actual Chunk Opt Mode has the correct value for %s.\n",
-                   test_name);
+        snprintf(message, sizeof(message), "Actual Chunk Opt Mode has the correct value for %s.\n",
+                 test_name);
         VRFY((actual_chunk_opt_mode_write == actual_chunk_opt_mode_expected), message);
-        HDsnprintf(message, sizeof(message), "Actual IO Mode has the correct value for %s.\n", test_name);
+        snprintf(message, sizeof(message), "Actual IO Mode has the correct value for %s.\n", test_name);
         VRFY((actual_io_mode_write == actual_io_mode_expected), message);
     }
     else {
@@ -3858,8 +3858,8 @@ test_no_collective_cause_mode(int selection_mode)
 
     const char *filename;
     const char *test_name;
-    hbool_t     is_chunked     = 1;
-    hbool_t     is_independent = 0;
+    bool        is_chunked     = 1;
+    bool        is_independent = 0;
     int         mpi_size       = -1;
     int         mpi_rank       = -1;
     int         length;
@@ -3867,17 +3867,17 @@ test_no_collective_cause_mode(int selection_mode)
     int         i;
     MPI_Comm    mpi_comm;
     MPI_Info    mpi_info;
-    hid_t       fid        = -1;
-    hid_t       sid        = -1;
-    hid_t       dataset    = -1;
+    hid_t       fid        = H5I_INVALID_HID;
+    hid_t       sid        = H5I_INVALID_HID;
+    hid_t       dataset    = H5I_INVALID_HID;
     hid_t       data_type  = H5T_NATIVE_INT;
-    hid_t       fapl_id    = -1;
-    hid_t       dcpl       = -1;
-    hid_t       dxpl_write = -1;
-    hid_t       dxpl_read  = -1;
+    hid_t       fapl_id    = H5I_INVALID_HID;
+    hid_t       dcpl       = H5I_INVALID_HID;
+    hid_t       dxpl_write = H5I_INVALID_HID;
+    hid_t       dxpl_read  = H5I_INVALID_HID;
     hsize_t     dims[MAX_RANK];
-    hid_t       mem_space  = -1;
-    hid_t       file_space = -1;
+    hid_t       mem_space  = H5I_INVALID_HID;
+    hid_t       file_space = H5I_INVALID_HID;
     hsize_t     chunk_dims[MAX_RANK];
     herr_t      ret;
     /* set to global value as default */
@@ -3906,7 +3906,7 @@ test_no_collective_cause_mode(int selection_mode)
     }
 
     if (selection_mode & TEST_NOT_CONTIGUOUS_OR_CHUNKED_DATASET_EXTERNAL) {
-        ret = H5Pset_external(dcpl, FILE_EXTERNAL, (off_t)0, H5F_UNLIMITED);
+        ret = H5Pset_external(dcpl, FILE_EXTERNAL, 0, H5F_UNLIMITED);
         VRFY((ret >= 0), "set EXTERNAL file layout succeeded");
         is_chunked = 0;
     }
@@ -4135,12 +4135,12 @@ test_no_collective_cause_mode(int selection_mode)
 
     /* Test values */
     memset(message, 0, sizeof(message));
-    HDsnprintf(message, sizeof(message),
-               "Local cause of Broken Collective I/O has the correct value for %s.\n", test_name);
+    snprintf(message, sizeof(message), "Local cause of Broken Collective I/O has the correct value for %s.\n",
+             test_name);
     VRFY((no_collective_cause_local_write == no_collective_cause_local_expected), message);
     memset(message, 0, sizeof(message));
-    HDsnprintf(message, sizeof(message),
-               "Global cause of Broken Collective I/O has the correct value for %s.\n", test_name);
+    snprintf(message, sizeof(message),
+             "Global cause of Broken Collective I/O has the correct value for %s.\n", test_name);
     VRFY((no_collective_cause_global_write == no_collective_cause_global_expected), message);
 
     /* Release some resources */
@@ -4198,344 +4198,6 @@ no_collective_cause_tests(void)
                                   TEST_DATA_TRANSFORMS);
 
     return;
-}
-
-/*
- * Test consistency semantics of atomic mode
- */
-
-/*
- * Example of using the parallel HDF5 library to create a dataset,
- * where process 0 writes and the other processes read at the same
- * time. If atomic mode is set correctly, the other processes should
- * read the old values in the dataset or the new ones.
- */
-
-void
-dataset_atomicity(void)
-{
-    hid_t       fid;              /* HDF5 file ID */
-    hid_t       acc_tpl;          /* File access templates */
-    hid_t       sid;              /* Dataspace ID */
-    hid_t       dataset1;         /* Dataset IDs */
-    hsize_t     dims[MAX_RANK];   /* dataset dim sizes */
-    int        *write_buf = NULL; /* data buffer */
-    int        *read_buf  = NULL; /* data buffer */
-    int         buf_size;
-    hid_t       dataset2;
-    hid_t       file_dataspace; /* File dataspace ID */
-    hid_t       mem_dataspace;  /* Memory dataspace ID */
-    hsize_t     start[MAX_RANK];
-    hsize_t     stride[MAX_RANK];
-    hsize_t     count[MAX_RANK];
-    hsize_t     block[MAX_RANK];
-    const char *filename;
-    herr_t      ret; /* Generic return value */
-    int         mpi_size, mpi_rank;
-    int         i, j, k;
-    hbool_t     atomicity = FALSE;
-    MPI_Comm    comm      = test_comm;
-    MPI_Info    info      = MPI_INFO_NULL;
-
-    dim0     = 64;
-    dim1     = 32;
-    filename = GetTestParameters();
-    if (facc_type != FACC_MPIO) {
-        printf("Atomicity tests will not work without the MPIO VFD\n");
-        return;
-    }
-    if (VERBOSE_MED)
-        printf("atomic writes to file %s\n", filename);
-
-    /* set up MPI parameters */
-    MPI_Comm_size(test_comm, &mpi_size);
-    MPI_Comm_rank(test_comm, &mpi_rank);
-
-    buf_size = dim0 * dim1;
-    /* allocate memory for data buffer */
-    write_buf = (int *)calloc((size_t)buf_size, sizeof(int));
-    VRFY((write_buf != NULL), "write_buf calloc succeeded");
-    /* allocate memory for data buffer */
-    read_buf = (int *)calloc((size_t)buf_size, sizeof(int));
-    VRFY((read_buf != NULL), "read_buf calloc succeeded");
-
-    /* setup file access template */
-    acc_tpl = create_faccess_plist(comm, info, facc_type);
-    VRFY((acc_tpl >= 0), "");
-
-    /* create the file collectively */
-    fid = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, acc_tpl);
-    VRFY((fid >= 0), "H5Fcreate succeeded");
-
-    /* Release file-access template */
-    ret = H5Pclose(acc_tpl);
-    VRFY((ret >= 0), "H5Pclose succeeded");
-
-    /* setup dimensionality object */
-    dims[0] = (hsize_t)dim0;
-    dims[1] = (hsize_t)dim1;
-    sid     = H5Screate_simple(MAX_RANK, dims, NULL);
-    VRFY((sid >= 0), "H5Screate_simple succeeded");
-
-    /* create datasets */
-    dataset1 = H5Dcreate2(fid, DATASETNAME5, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    VRFY((dataset1 >= 0), "H5Dcreate2 succeeded");
-
-    dataset2 = H5Dcreate2(fid, DATASETNAME6, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    VRFY((dataset2 >= 0), "H5Dcreate2 succeeded");
-
-    /* initialize datasets to 0s */
-    if (0 == mpi_rank) {
-        ret = H5Dwrite(dataset1, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, write_buf);
-        VRFY((ret >= 0), "H5Dwrite dataset1 succeeded");
-
-        ret = H5Dwrite(dataset2, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, write_buf);
-        VRFY((ret >= 0), "H5Dwrite dataset2 succeeded");
-    }
-
-    ret = H5Dclose(dataset1);
-    VRFY((ret >= 0), "H5Dclose succeeded");
-    ret = H5Dclose(dataset2);
-    VRFY((ret >= 0), "H5Dclose succeeded");
-    ret = H5Sclose(sid);
-    VRFY((ret >= 0), "H5Sclose succeeded");
-    ret = H5Fclose(fid);
-    VRFY((ret >= 0), "H5Fclose succeeded");
-
-    MPI_Barrier(comm);
-
-    /* make sure setting atomicity fails on a serial file ID */
-    /* file locking allows only one file open (serial) for writing */
-    if (MAINPROCESS) {
-        fid = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT);
-        VRFY((fid >= 0), "H5Fopen succeeded");
-    }
-
-    /* should fail */
-    ret = H5Fset_mpi_atomicity(fid, TRUE);
-    VRFY((ret == FAIL), "H5Fset_mpi_atomicity failed");
-
-    if (MAINPROCESS) {
-        ret = H5Fclose(fid);
-        VRFY((ret >= 0), "H5Fclose succeeded");
-    }
-
-    MPI_Barrier(comm);
-
-    /* setup file access template */
-    acc_tpl = create_faccess_plist(comm, info, facc_type);
-    VRFY((acc_tpl >= 0), "");
-
-    /* open the file collectively */
-    fid = H5Fopen(filename, H5F_ACC_RDWR, acc_tpl);
-    VRFY((fid >= 0), "H5Fopen succeeded");
-
-    /* Release file-access template */
-    ret = H5Pclose(acc_tpl);
-    VRFY((ret >= 0), "H5Pclose succeeded");
-
-    ret = H5Fset_mpi_atomicity(fid, TRUE);
-    VRFY((ret >= 0), "H5Fset_mpi_atomicity succeeded");
-
-    /* open dataset1 (contiguous case) */
-    dataset1 = H5Dopen2(fid, DATASETNAME5, H5P_DEFAULT);
-    VRFY((dataset1 >= 0), "H5Dopen2 succeeded");
-
-    if (0 == mpi_rank) {
-        for (i = 0; i < buf_size; i++) {
-            write_buf[i] = 5;
-        }
-    }
-    else {
-        for (i = 0; i < buf_size; i++) {
-            read_buf[i] = 8;
-        }
-    }
-
-    /* check that the atomicity flag is set */
-    ret = H5Fget_mpi_atomicity(fid, &atomicity);
-    VRFY((ret >= 0), "atomcity get failed");
-    VRFY((atomicity == TRUE), "atomcity set failed");
-
-    MPI_Barrier(comm);
-
-    /* Process 0 writes contiguously to the entire dataset */
-    if (0 == mpi_rank) {
-        ret = H5Dwrite(dataset1, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, write_buf);
-        VRFY((ret >= 0), "H5Dwrite dataset1 succeeded");
-    }
-    /* The other processes read the entire dataset */
-    else {
-        ret = H5Dread(dataset1, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, read_buf);
-        VRFY((ret >= 0), "H5Dwrite() dataset multichunk write succeeded");
-    }
-
-    if (VERBOSE_MED) {
-        i = 0;
-        j = 0;
-        k = 0;
-        for (i = 0; i < dim0; i++) {
-            printf("\n");
-            for (j = 0; j < dim1; j++)
-                printf("%d ", read_buf[k++]);
-        }
-    }
-
-    /* The processes that read the dataset must either read all values
-    as 0 (read happened before process 0 wrote to dataset 1), or 5
-    (read happened after process 0 wrote to dataset 1) */
-    if (0 != mpi_rank) {
-        int compare = read_buf[0];
-
-        VRFY((compare == 0 || compare == 5),
-             "Atomicity Test Failed Process %d: Value read should be 0 or 5\n");
-        for (i = 1; i < buf_size; i++) {
-            if (read_buf[i] != compare) {
-                printf("Atomicity Test Failed Process %d: read_buf[%d] is %d, should be %d\n", mpi_rank, i,
-                       read_buf[i], compare);
-                nerrors++;
-            }
-        }
-    }
-
-    ret = H5Dclose(dataset1);
-    VRFY((ret >= 0), "H5D close succeeded");
-
-    /* release data buffers */
-    if (write_buf)
-        free(write_buf);
-    if (read_buf)
-        free(read_buf);
-
-    /* open dataset2 (non-contiguous case) */
-    dataset2 = H5Dopen2(fid, DATASETNAME6, H5P_DEFAULT);
-    VRFY((dataset2 >= 0), "H5Dopen2 succeeded");
-
-    /* allocate memory for data buffer */
-    write_buf = (int *)calloc((size_t)buf_size, sizeof(int));
-    VRFY((write_buf != NULL), "write_buf calloc succeeded");
-    /* allocate memory for data buffer */
-    read_buf = (int *)calloc((size_t)buf_size, sizeof(int));
-    VRFY((read_buf != NULL), "read_buf calloc succeeded");
-
-    for (i = 0; i < buf_size; i++) {
-        write_buf[i] = 5;
-    }
-    for (i = 0; i < buf_size; i++) {
-        read_buf[i] = 8;
-    }
-
-    atomicity = FALSE;
-    /* check that the atomicity flag is set */
-    ret = H5Fget_mpi_atomicity(fid, &atomicity);
-    VRFY((ret >= 0), "atomcity get failed");
-    VRFY((atomicity == TRUE), "atomcity set failed");
-
-    block[0]  = (hsize_t)(dim0 / mpi_size) - 1;
-    block[1]  = (hsize_t)(dim1 / mpi_size) - 1;
-    stride[0] = block[0] + 1;
-    stride[1] = block[1] + 1;
-    count[0]  = (hsize_t)mpi_size;
-    count[1]  = (hsize_t)mpi_size;
-    start[0]  = 0;
-    start[1]  = 0;
-
-    /* create a file dataspace */
-    file_dataspace = H5Dget_space(dataset2);
-    VRFY((file_dataspace >= 0), "H5Dget_space succeeded");
-    ret = H5Sselect_hyperslab(file_dataspace, H5S_SELECT_SET, start, stride, count, block);
-    VRFY((ret >= 0), "H5Sset_hyperslab succeeded");
-
-    /* create a memory dataspace */
-    mem_dataspace = H5Screate_simple(MAX_RANK, dims, NULL);
-    VRFY((mem_dataspace >= 0), "");
-
-    ret = H5Sselect_hyperslab(mem_dataspace, H5S_SELECT_SET, start, stride, count, block);
-    VRFY((ret >= 0), "H5Sset_hyperslab succeeded");
-
-    MPI_Barrier(comm);
-
-    /* Process 0 writes to the dataset */
-    if (0 == mpi_rank) {
-        ret = H5Dwrite(dataset2, H5T_NATIVE_INT, mem_dataspace, file_dataspace, H5P_DEFAULT, write_buf);
-        VRFY((ret >= 0), "H5Dwrite dataset2 succeeded");
-    }
-    /* All processes wait for the write to finish. This works because
-       atomicity is set to true */
-    MPI_Barrier(comm);
-    /* The other processes read the entire dataset */
-    if (0 != mpi_rank) {
-        ret = H5Dread(dataset2, H5T_NATIVE_INT, mem_dataspace, file_dataspace, H5P_DEFAULT, read_buf);
-        VRFY((ret >= 0), "H5Dread dataset2 succeeded");
-    }
-
-    if (VERBOSE_MED) {
-        if (mpi_rank == 1) {
-            i = 0;
-            j = 0;
-            k = 0;
-            for (i = 0; i < dim0; i++) {
-                printf("\n");
-                for (j = 0; j < dim1; j++)
-                    printf("%d ", read_buf[k++]);
-            }
-            printf("\n");
-        }
-    }
-
-    /* The processes that read the dataset must either read all values
-    as 5 (read happened after process 0 wrote to dataset 1) */
-    if (0 != mpi_rank) {
-        int compare;
-        i = 0;
-        j = 0;
-        k = 0;
-
-        compare = 5;
-
-        for (i = 0; i < dim0; i++) {
-            if ((hsize_t)i >= (hsize_t)mpi_rank * (block[0] + 1)) {
-                break;
-            }
-            if (((hsize_t)i + 1) % (block[0] + 1) == 0) {
-                k += dim1;
-                continue;
-            }
-            for (j = 0; j < dim1; j++) {
-                if ((hsize_t)j >= (hsize_t)mpi_rank * (block[1] + 1)) {
-                    H5_CHECKED_ASSIGN(k, int, (hsize_t)dim1 - (hsize_t)mpi_rank * (block[1] + 1) + (hsize_t)k,
-                                      hsize_t);
-                    break;
-                }
-                if (((hsize_t)j + 1) % (block[1] + 1) == 0) {
-                    k++;
-                    continue;
-                }
-                else if (compare != read_buf[k]) {
-                    printf("Atomicity Test Failed Process %d: read_buf[%d] is %d, should be %d\n", mpi_rank,
-                           k, read_buf[k], compare);
-                    nerrors++;
-                }
-                k++;
-            }
-        }
-    }
-
-    ret = H5Dclose(dataset2);
-    VRFY((ret >= 0), "H5Dclose succeeded");
-    ret = H5Sclose(file_dataspace);
-    VRFY((ret >= 0), "H5Sclose succeeded");
-    ret = H5Sclose(mem_dataspace);
-    VRFY((ret >= 0), "H5Sclose succeeded");
-
-    /* release data buffers */
-    if (write_buf)
-        free(write_buf);
-    if (read_buf)
-        free(read_buf);
-
-    ret = H5Fclose(fid);
-    VRFY((ret >= 0), "H5Fclose succeeded");
 }
 
 /* Function: dense_attr_test
@@ -4608,13 +4270,15 @@ main(int argc, char **argv)
 
 #ifndef H5_HAVE_WIN32_API
     /* Un-buffer the stdout and stderr */
-    HDsetbuf(stderr, NULL);
-    HDsetbuf(stdout, NULL);
+    setbuf(stderr, NULL);
+    setbuf(stdout, NULL);
 #endif
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(test_comm, &mpi_size);
     MPI_Comm_rank(test_comm, &mpi_rank);
+
+    mpi_rank_framework_g = mpi_rank;
 
     memset(filenames, 0, sizeof(filenames));
 
@@ -4627,8 +4291,9 @@ main(int argc, char **argv)
         printf("2 GByte IO TESTS START\n");
         printf("2 MPI ranks will run the tests...\n");
         printf("===================================\n");
-        h5_show_hostname();
     }
+
+    h5_show_hostname();
 
     if (H5dont_atexit() < 0) {
         printf("Failed to turn off atexit processing. Continue.\n");
@@ -4681,8 +4346,7 @@ main(int argc, char **argv)
 #endif /* H5_HAVE_FILTER_DEFLATE */
 
         /* Display testing information */
-        if (MAINPROCESS)
-            TestInfo(argv[0]);
+        TestInfo(argv[0]);
 
         /* setup file access property list */
         fapl = H5Pcreate(H5P_FILE_ACCESS);

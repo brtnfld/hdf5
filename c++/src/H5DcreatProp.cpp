@@ -368,7 +368,7 @@ DSetCreatPropList::setFilter(H5Z_filter_t filter_id, unsigned int flags, size_t 
 ///\exception   H5::PropListIException
 ///\par Description
 ///             Deletes a filter from the dataset creation property list;
-///             deletes all filters if \a filter_id is \c H5Z_FILTER_NONE.
+///             deletes all filters if \a filter_id is \c H5Z_FILTER_ALL.
 //--------------------------------------------------------------------------
 void
 DSetCreatPropList::removeFilter(H5Z_filter_t filter_id) const
@@ -645,9 +645,14 @@ DSetCreatPropList::setFletcher32() const
 ///             the total size is larger than the size of a dataset then the
 ///             dataset can be extended (provided the data space also allows
 ///             the extending).
+///\note        In 1.14.x and earlier, the offset parameter was of type off_t,
+///             which is a 32-bit signed long value on Windows, which limited
+///             the valid offset that can be set to 2 GiB.
+///
+///\version     1.16.0 \p offset parameter type changed to HDoff_t from off_t.
 //--------------------------------------------------------------------------
 void
-DSetCreatPropList::setExternal(const char *name, off_t offset, hsize_t size) const
+DSetCreatPropList::setExternal(const char *name, HDoff_t offset, hsize_t size) const
 {
     herr_t ret_value = H5Pset_external(id, name, offset, size);
     if (ret_value < 0) {
@@ -693,9 +698,15 @@ DSetCreatPropList::getExternalCount() const
 ///             external file name will not be returned.  If \a offset or
 ///             \a size are null pointers then the corresponding information
 ///             will not be returned.
+///\note        In 1.14.x and earlier, the offset parameter was of type off_t,
+///             which is a 32-bit signed long value on Windows, which limited
+///             the valid offset that can be returned to 2 GiB.
+///
+///\version     1.16.0 \p offset parameter type changed to HDoff_t from off_t.
 //--------------------------------------------------------------------------
 void
-DSetCreatPropList::getExternal(unsigned idx, size_t name_size, char *name, off_t &offset, hsize_t &size) const
+DSetCreatPropList::getExternal(unsigned idx, size_t name_size, char *name, HDoff_t &offset,
+                               hsize_t &size) const
 {
     herr_t ret_value = H5Pget_external(id, idx, name_size, name, &offset, &size);
     if (ret_value < 0) {
@@ -752,14 +763,6 @@ DSetCreatPropList::setVirtual(const DataSpace &vspace, const H5std_string src_fn
                               const H5std_string src_dsname, const DataSpace &sspace) const
 {
     setVirtual(vspace, src_fname.c_str(), src_dsname.c_str(), sspace);
-}
-
-//--------------------------------------------------------------------------
-// Function:    DSetCreatPropList destructor
-///\brief       Noop destructor.
-//--------------------------------------------------------------------------
-DSetCreatPropList::~DSetCreatPropList()
-{
 }
 
 } // namespace H5

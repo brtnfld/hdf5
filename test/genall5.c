@@ -2705,7 +2705,7 @@ random_pause(unsigned int max_pause_msecs)
     if (max_pause_msecs == 0)
         return;
 
-    nsecs_per_msec = 1 + (uint64_t)HDrandom() % (1000 * 1000);
+    nsecs_per_msec = 1 + (uint64_t)random() % (1000 * 1000);
     nsecs          = max_pause_msecs * nsecs_per_msec;
 
     H5_nanosleep(nsecs);
@@ -2736,7 +2736,7 @@ tend_zoo(hid_t fid, const char *base_path, struct timespec *lastmsgtime, zoo_con
         return FALSE;
     }
 
-    if ((leafp = HDstrrchr(full_path, '*')) == NULL) {
+    if ((leafp = strrchr(full_path, '*')) == NULL) {
         failure_mssg = "tend_zoo: strrchr failed";
         return FALSE;
     }

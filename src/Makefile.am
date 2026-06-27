@@ -38,7 +38,6 @@ libhdf5_la_SOURCES= H5.c H5build_settings.c H5checksum.c H5dbg.c H5system.c \
         H5C.c H5Cdbg.c H5Centry.c H5Cepoch.c H5Cimage.c H5Cint.c \
         H5Clog.c H5Clog_json.c H5Clog_trace.c \
         H5Cprefetched.c H5Cquery.c H5Ctag.c H5Ctest.c \
-        H5CS.c \
         H5CX.c \
         H5D.c H5Dbtree.c H5Dbtree2.c H5Dchunk.c H5Dcompact.c H5Dcontig.c \
         H5Ddbg.c H5Ddeprec.c H5Dearray.c H5Defl.c H5Dfarray.c H5Dfill.c \
@@ -56,7 +55,7 @@ libhdf5_la_SOURCES= H5.c H5build_settings.c H5checksum.c H5dbg.c H5system.c \
         H5FD.c H5FDcore.c H5FDfamily.c H5FDint.c H5FDlog.c H5FDmulti.c \
         H5FDonion.c H5FDonion_header.c H5FDonion_history.c H5FDonion_index.c \
         H5FDperform.c H5FDsec2.c H5FDspace.c \
-        H5FDsplitter.c H5FDstdio.c H5FDtest.c \
+        H5FDsplitter.c H5FDstdio.c H5FDtest.c H5FDwindows.c \
         H5FL.c H5FO.c H5FS.c H5FScache.c H5FSdbg.c H5FSint.c H5FSsection.c \
         H5FSstat.c H5FStest.c \
         H5G.c H5Gbtree2.c H5Gcache.c H5Gcompact.c H5Gdense.c H5Gdeprec.c \
@@ -92,11 +91,15 @@ libhdf5_la_SOURCES= H5.c H5build_settings.c H5checksum.c H5dbg.c H5system.c \
         H5SL.c \
         H5SM.c H5SMbtree2.c H5SMcache.c H5SMmessage.c H5SMtest.c \
         H5T.c H5Tarray.c H5Tbit.c H5Tcommit.c H5Tcompound.c H5Tconv.c \
+        H5Tconv_integer.c H5Tconv_float.c H5Tconv_string.c H5Tconv_bitfield.c \
+        H5Tconv_compound.c H5Tconv_reference.c H5Tconv_enum.c H5Tconv_vlen.c H5Tconv_array.c \
         H5Tcset.c H5Tdbg.c H5Tdeprec.c H5Tenum.c H5Tfields.c H5Tfixed.c \
         H5Tfloat.c H5Tinit_float.c H5Tnative.c H5Toffset.c H5Toh.c H5Topaque.c \
         H5Torder.c H5Tref.c H5Tpad.c H5Tprecis.c H5Tstrpad.c H5Tvisit.c \
         H5Tvlen.c \
-        H5TS.c \
+        H5TS.c H5TSatomic.c H5TSbarrier.c H5TSc11.c H5TScond.c \
+        H5TSint.c H5TSkey.c H5TSmutex.c H5TSonce.c H5TSpool.c H5TSpthread.c \
+        H5TSrwlock.c H5TSsemaphore.c H5TSthread.c H5TSwin.c \
         H5VL.c H5VLcallback.c H5VLdyn_ops.c H5VLint.c H5VLnative.c \
         H5VLnative_attr.c H5VLnative_blob.c H5VLnative_dataset.c \
         H5VLnative_datatype.c H5VLnative_file.c H5VLnative_group.c \
@@ -163,27 +166,15 @@ include_HEADERS = hdf5.h H5api_adpt.h H5overflow.h H5pubconf.h H5public.h H5vers
 include_HEADERS += H5ESdevelop.h H5FDdevelop.h H5Idevelop.h H5Ldevelop.h \
         H5Tdevelop.h H5TSdevelop.h H5Zdevelop.h
 
-if SUBFILING_VFD_CONDITIONAL
-
-# Temporarily use internal Mercury until usage of Mercury is refactored
-if HAVE_MERCURY_CONDITIONAL
-    libhdf5_la_SOURCES += H5FDsubfiling/mercury/src/util/mercury_thread.c \
-    H5FDsubfiling/mercury/src/util/mercury_thread_condition.c \
-    H5FDsubfiling/mercury/src/util/mercury_thread_pool.c \
-    H5FDsubfiling/mercury/src/util/mercury_thread_mutex.c
-endif
-
-endif
-
 # install libhdf5.settings in lib directory
 settingsdir=$(libdir)
 settings_DATA=libhdf5.settings
 
 # Error header generation
 #
-# Actually, H5Einit.h, H5Eterm.h, H5Edefin.h and H5Epubgen.h all
-# depend on H5err.txt, but the perl script generates them all, so just
-# list one here.
+# Actually, H5Einit.h, H5Eterm.h, H5Edefin.h, H5Emajdef.h, H5Emindef.h,
+# and H5Epubgen.h all depend on H5err.txt, but the perl script generates them
+# all, so just list one here.
 $(top_srcdir)/src/H5Edefin.h: $(top_srcdir)/src/H5err.txt
 	perl $(top_srcdir)/bin/make_err $?
 

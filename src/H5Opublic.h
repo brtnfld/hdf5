@@ -143,15 +143,16 @@ typedef struct H5O_hdr_info_t {
  * (For H5Oget_info(), H5Oget_info_by_name(), H5Oget_info_by_idx() version 3)
  */
 typedef struct H5O_info2_t {
-    unsigned long fileno;    /**< File number that object is located in */
-    H5O_token_t   token;     /**< Token representing the object        */
-    H5O_type_t    type;      /**< Basic object type (group, dataset, etc.) */
-    unsigned      rc;        /**< Reference count of object            */
-    time_t        atime;     /**< Access time                          */
-    time_t        mtime;     /**< Modification time                    */
-    time_t        ctime;     /**< Change time                          */
-    time_t        btime;     /**< Birth time                           */
-    hsize_t       num_attrs; /**< Number of attributes attached to object   */
+    unsigned long
+        fileno; /**< File number that object is located in. Constant across multiple opens of the same file */
+    H5O_token_t token;     /**< Token representing the object        */
+    H5O_type_t  type;      /**< Basic object type (group, dataset, etc.) */
+    unsigned    rc;        /**< Reference count of object            */
+    time_t      atime;     /**< Access time                          */
+    time_t      mtime;     /**< Modification time                    */
+    time_t      ctime;     /**< Change time                          */
+    time_t      btime;     /**< Birth time                           */
+    hsize_t     num_attrs; /**< Number of attributes attached to object   */
 } H5O_info2_t;
 //! <!-- [H5O_info2_t_snip] -->
 
@@ -187,6 +188,8 @@ typedef uint32_t H5O_msg_crt_idx_t;
  *                        in processing the object; a pass-through of the \c op_data
  *                        pointer provided with the H5Ovisit3() function call
  * \return \herr_t_iter
+ *
+ * \since 1.12.0
  *
  */
 typedef herr_t (*H5O_iterate2_t)(hid_t obj, const char *name, const H5O_info2_t *info, void *op_data);
@@ -231,7 +234,7 @@ extern "C" {
  * \param[in] name Path to the object; relative to \p loc_id
  * \lapl_id
  *
- * \return \hid_tv{object}
+ * \return \hid_ti{object}
  *
  * \details H5Oopen() opens a group, dataset, or committed (named) datatype
  *          specified by a location, \p loc_id, and a path name, \p name, in an HDF5 file.
@@ -308,7 +311,7 @@ H5_DLL hid_t H5Oopen_by_token(hid_t loc_id, H5O_token_t token);
  * \param[in] n Object to open
  * \lapl_id
  *
- * \return \hid_tv{object}
+ * \return \hid_ti{object}
  *
  * \details H5Oopen_by_idx() opens the nth object in the group specified by \p loc_id
  *          and \p group_name.
@@ -745,7 +748,7 @@ H5_DLL herr_t H5Oget_native_info_by_idx(hid_t loc_id, const char *group_name, H5
  *      hid_t lcpl_id = H5Pcreate(H5P_LINK_CREATE);
  *
  *      // Sets "create missing intermediate groups" property in that LCPL.
- *      int status = H5Pset_create_intermediate_group(lcpl_id, TRUE);
+ *      int status = H5Pset_create_intermediate_group(lcpl_id, true);
  *
  *      // Creates a group without linking it into the file structure.
  *      hid_t gid  = H5Gcreate_anon(file_id, H5P_DEFAULT, H5P_DEFAULT);
@@ -1717,7 +1720,8 @@ typedef struct H5O_stat_t {
  * H5Oget_info_by_idx() versions 1 & 2.)
  */
 typedef struct H5O_info1_t {
-    unsigned long  fileno;    /**< File number that object is located in */
+    unsigned long
+        fileno; /**< File number that object is located in. Constant across multiple opens of the same file */
     haddr_t        addr;      /**< Object address in file                */
     H5O_type_t     type;      /**< Basic object type (group, dataset, etc.) */
     unsigned       rc;        /**< Reference count of object    */
@@ -1748,6 +1752,8 @@ typedef struct H5O_info1_t {
  *                        in processing the object
  * \return \herr_t_iter
  *
+ * \since 1.8.0
+ *
  */
 typedef herr_t (*H5O_iterate1_t)(hid_t obj, const char *name, const H5O_info1_t *info, void *op_data);
 //! <!-- [H5O_iterate1_t_snip] -->
@@ -1763,7 +1769,7 @@ typedef herr_t (*H5O_iterate1_t)(hid_t obj, const char *name, const H5O_info1_t 
  * \fgdta_loc_obj_id{loc_id}
  * \param[in] addr Object's address in the file
  *
- * \return \hid_tv{object}
+ * \return \hid_ti{object}
  *
  * \deprecated As of HDF5-1.12 this function has been deprecated in favor of
  *             the function H5Oopen_by_token().

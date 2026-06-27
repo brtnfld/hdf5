@@ -143,18 +143,18 @@ H5A__dense_fh_name_cmp(const void *obj, size_t obj_len, void *_udata)
 {
     H5A_fh_ud_cmp_t *udata = (H5A_fh_ud_cmp_t *)_udata; /* User data for 'op' callback */
     H5A_t           *attr  = NULL;                      /* Pointer to attribute created from heap object */
-    hbool_t took_ownership = FALSE;   /* Whether the "found" operator took ownership of the attribute */
-    herr_t  ret_value      = SUCCEED; /* Return value */
+    bool   took_ownership  = false;   /* Whether the "found" operator took ownership of the attribute */
+    herr_t ret_value       = SUCCEED; /* Return value */
 
     FUNC_ENTER_PACKAGE
 
     /* Decode attribute information */
     if (NULL ==
         (attr = (H5A_t *)H5O_msg_decode(udata->f, NULL, H5O_ATTR_ID, obj_len, (const unsigned char *)obj)))
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTDECODE, FAIL, "can't decode attribute")
+        HGOTO_ERROR(H5E_OHDR, H5E_CANTDECODE, FAIL, "can't decode attribute");
 
     /* Compare the string values */
-    udata->cmp = HDstrcmp(udata->name, attr->shared->name);
+    udata->cmp = strcmp(udata->name, attr->shared->name);
 
     /* Check for correct attribute & callback to make */
     if (udata->cmp == 0 && udata->found_op) {
@@ -167,7 +167,7 @@ H5A__dense_fh_name_cmp(const void *obj, size_t obj_len, void *_udata)
 
         /* Make callback */
         if ((udata->found_op)(attr, &took_ownership, udata->found_op_data) < 0)
-            HGOTO_ERROR(H5E_OHDR, H5E_CANTOPERATE, FAIL, "attribute found callback failed")
+            HGOTO_ERROR(H5E_OHDR, H5E_CANTOPERATE, FAIL, "attribute found callback failed");
     } /* end if */
 
 done:
@@ -261,7 +261,7 @@ H5A__dense_btree2_name_compare(const void *_bt2_udata, const void *_bt2_rec, int
 
         /* Check if the user's attribute and the B-tree's attribute have the same name */
         if (H5HF_op(fheap, &bt2_rec->id, H5A__dense_fh_name_cmp, &fh_udata) < 0)
-            HGOTO_ERROR(H5E_HEAP, H5E_CANTCOMPARE, FAIL, "can't compare btree2 records")
+            HGOTO_ERROR(H5E_HEAP, H5E_CANTCOMPARE, FAIL, "can't compare btree2 records");
 
         /* Callback will set comparison value */
         *result = fh_udata.cmp;

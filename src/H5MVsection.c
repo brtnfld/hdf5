@@ -125,8 +125,7 @@ H5MV__sect_new(haddr_t sect_off, hsize_t sect_size)
 
     /* Create free space section node */
     if (NULL == (sect = H5FL_MALLOC(H5MV_free_section_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for free section node")
-
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for free section node");
     /* Set the information passed in */
     sect->sect_info.addr = sect_off;
     sect->sect_info.size = sect_size;
@@ -235,8 +234,7 @@ H5MV__sect_merge(H5FS_section_info_t **_sect1, H5FS_section_info_t *_sect2, void
 
     /* Get rid of second section */
     if (H5MV__sect_free((H5FS_section_info_t *)sect2) < 0)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTRELEASE, FAIL, "can't free section node")
-
+        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTRELEASE, FAIL, "can't free section node");
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5MV__sect_merge() */
@@ -268,8 +266,7 @@ H5MV__sect_can_shrink(const H5FS_section_info_t *_sect, void *_udata)
 
     /* Retrieve the end oa the file's address space */
     if (HADDR_UNDEF == (eoa = H5MV_get_vfd_swmr_md_eoa(shared)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "get_eoa request for VFD SWMR metadata file failed")
-
+        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, FAIL, "get_eoa request for VFD SWMR metadata file failed");
     /* Compute address of end of section to check */
     end = sect->sect_info.addr + sect->sect_info.size;
 
@@ -308,12 +305,10 @@ H5MV__sect_shrink(H5FS_section_info_t **_sect, void *_udata)
 
     /* Release section's space at EOA */
     if (H5MV__free_md(shared, (*sect)->sect_info.addr, (*sect)->sect_info.size) < 0)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, "free request for VFD SWMR metadata file failed")
-
+        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, "free request for VFD SWMR metadata file failed");
     /* Free the section */
     if (H5MV__sect_free(&(*sect)->sect_info) < 0)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTRELEASE, FAIL, "can't free simple section node")
-
+        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTRELEASE, FAIL, "can't free simple section node");
     /* Mark section as freed, for free space manager */
     *sect = NULL;
 
@@ -364,8 +359,7 @@ H5MV__sect_split(H5FS_section_info_t *sect, hsize_t frag_size)
 
     /* Allocate space for new section */
     if (NULL == (ret_value = H5MV__sect_new(sect->addr, frag_size)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, NULL, "can't initialize free space section")
-
+        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, NULL, "can't initialize free space section");
     /* Set new section's info */
     sect->addr += frag_size;
     sect->size -= frag_size;

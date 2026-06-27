@@ -55,18 +55,18 @@
           text-indent: 0px;
           font-size: 100%;
         }
-      <!--
+      /*
       p.item {    margin-left: 2em;
                   text-indent: -2em
-             } -->
-               <!-- p.item2 { margin-left: 2em; text-indent: 2em} -->
+             } */
+      /* p.item2 { margin-left: 2em; text-indent: 2em} */
 
-                                                                  table.format {  border:solid;
-                                                                                  border-collapse:collapse;
-                                                                                  caption-side:top;
-                                                                                  text-align:center;
-                                                                                  width:80%;
-                                                                               }
+      table.format {  border:solid;
+                      border-collapse:collapse;
+                      caption-side:top;
+                      text-align:center;
+                      width:80%;
+                   }
       table.format th {   border:ridge;
                           padding:4px;
                           width:25%;
@@ -76,6 +76,7 @@
                       }
       table.format caption {  font-weight:bold;
                               font-size:larger;
+                              width: 800px;
                            }
 
       table.note {border:none;
@@ -85,7 +86,7 @@
 
       table.desc {    border:solid;
                       border-collapse:collapse;
-                      caption-size:top;
+                      caption-side:top;
                       text-align:left;
                       width:80%;
                  }
@@ -94,14 +95,15 @@
       table.desc th { border-style:ridge;
                       font-size:larger;
                       padding:4px;
-                      <!-- text-decoration:underline; -->
+                      /* text-decoration:underline; */
                     }
       table.desc td { border-style:ridge;
-                      <!-- padding: 4px; -->
-                                         vertical-align:text-top;
+                      /* padding: 4px; */
+                      vertical-align:text-top;
                     }
       table.desc caption {    font-weight:bold;
                               font-size:larger;
+                              width: 800px;
                          }
 
       table.list {    border:none;
@@ -184,7 +186,7 @@
   </head>
   <body>
     <!-- #EndLibraryItem -->
-
+    <div class="full_width_table">
     <center>
       <table border="0" width="90%">
         <tr>
@@ -1432,7 +1434,7 @@
 
 	    <tr>
 	      <td><p>Address of Member File N</p></td>
-	      <td><p>This field Specifies the virtual address at which the member file starts.</p>
+	      <td><p>This field specifies the virtual address at which the member file starts.</p>
 	        <p>N is the number of member files.</p>
 	      </td>
 	    </tr>
@@ -9123,7 +9125,7 @@ is located within.
 	  <dl>
 	    <dt>Mesh Type: (unsigned 32-bit integer)
 	      <dd>This value indicates whether the grid is
-	        polar/spherical/cartesion,
+	        polar/spherical/cartesian,
 	        structured/unstructured and regular/irregular. <br />
 	        The mesh type value is broken up as follows: <br />
 
@@ -10780,6 +10782,12 @@ within the embedded dataspace]<br />
               <a name="ClassReference"></a>
                 <p>Class specific information for the Reference class (Class 7):</p>
 
+                <p>Note that for region references, the stored data is
+                   a <a href="#GlobalHeapID">Global Heap ID</a> pointing to information
+                   about the region stored in the global heap.
+                </p>
+
+
                 <div align="center">
                   <table class="desc">
                     <caption>
@@ -11118,6 +11126,11 @@ within the embedded dataspace]<br />
                   <a name="ClassVarLen"></a>
                     <p>Class specific information for the Variable-length class (Class 9):</p>
 
+                    <p>Note that data with a variable length type is stored on the global heap.
+                      Locations that would normally store the data directly (e.g. attribute message)
+                      will instead contain a <a href="#GlobalHeapID">Global Heap ID</a>.
+                    </p>
+
                     <div align="center">
                       <table class="desc">
                         <caption>
@@ -11276,7 +11289,7 @@ within the embedded dataspace]<br />
                         </tr>
 
                         <tr>
-                          <td colspan="4"><br />Base Type<br /><br /></td>
+                          <td colspan="4"><br />Parent Type Message<br /><br /></td>
                         </tr>
 
                       </table>
@@ -11294,11 +11307,14 @@ within the embedded dataspace]<br />
 	                    </tr>
 
 	                    <tr>
-	                      <td><p>Base Type</p></td>
+	                      <td><p>Parent Type</p></td>
 	                      <td>
-                            <p>Each variable-length type is based on some parent type.  The
-                              information for that parent type is described recursively by
-                              this field.
+                            <p>Each variable-length type is based on some parent type.
+                              This field contains the datatype message describing that parent type.
+                              In the case of nested variable-length types, this parent datatype message will
+                              recursively contain all parent datatype messages.
+
+                              Variable-length strings are considered to have the parent type `H5T_NATIVE_UCHAR`.
                             </p>
                           </td>
 	                    </tr>
@@ -14212,8 +14228,8 @@ Data Layout message.
           Filters supported by The HDF Group are documented immediately
           below.  Information on 3rd-party filters can be found at
           The HDF Group&rsquo;s
-          <a href="http://www.hdfgroup.org/services/contributions.html">
-            Contributions</a> page.</p>
+          <a href="https://github.com/HDFGroup/hdf5_plugins/blob/master/docs/RegisteredFilterPlugins.md">
+          Registered Filters</a> page.</p>
 
         <p>
           To request a filter identifier, please contact
@@ -14474,8 +14490,8 @@ Data Layout message.
           Filters supported by The HDF Group are documented immediately
           below.  Information on 3rd-party filters can be found at
           The HDF Group&rsquo;s
-          <a href="http://www.hdfgroup.org/services/contributions.html">
-            Contributions</a> page.</p>
+          <a href="https://github.com/HDFGroup/hdf5_plugins/blob/master/docs/RegisteredFilterPlugins.md">
+          Registered Filters</a> page.</p>
 
         <p>
           To request a filter identifier, please contact
@@ -17713,8 +17729,8 @@ disk address for the chunk.</p>
 
      <p>A description of the rationale that leads to the present
        implementation of the extensible array can be found at
-       <a href="https://svn.hdfgroup.org/hdf5doc/trunk/projects/1_10_alpha/ReviseChunks/skip_lists">
-         https://svn.hdfgroup.org/hdf5doc/trunk/projects/1_10_alpha/ReviseChunks/skip_lists</a>.
+       <a href="https://github.com/HDFGroup/hdf5doc/tree/master/projects/1_10_alpha/ReviseChunks/skip_lists">
+         https://github.com/HDFGroup/hdf5doc/tree/master/projects/1_10_alpha/ReviseChunks/skip_lists</a>.
      </p>
 
 <p>The current implementation differs from the data structure
@@ -20392,6 +20408,6 @@ disk address for the chunk.</p>
 <br />
 <br />
 
-
+</div>
 </body>
 </html>

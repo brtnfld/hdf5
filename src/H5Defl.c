@@ -55,6 +55,7 @@ typedef struct H5D_efl_writevv_ud_t {
 
 /* Layout operation callbacks */
 static herr_t  H5D__efl_construct(H5F_t *f, H5D_t *dset);
+static herr_t  H5D__efl_init(H5F_t *f, const H5D_t *dset, hid_t dapl_id);
 static herr_t  H5D__efl_io_init(H5D_io_info_t *io_info, H5D_dset_io_info_t *dinfo);
 static ssize_t H5D__efl_readvv(const H5D_io_info_t *io_info, const H5D_dset_io_info_t *dset_info,
                                size_t dset_max_nseq, size_t *dset_curr_seq, size_t dset_len_arr[],
@@ -77,7 +78,7 @@ static herr_t H5D__efl_write(const H5O_efl_t *efl, const H5D_t *dset, haddr_t ad
 /* External File List (EFL) storage layout I/O ops */
 const H5D_layout_ops_t H5D_LOPS_EFL[1] = {{
     H5D__efl_construct,      /* construct */
-    NULL,                    /* init */
+    H5D__efl_init,           /* init */
     H5D__efl_is_space_alloc, /* is_space_alloc */
     NULL,                    /* is_data_cached */
     H5D__efl_io_init,        /* io_init */
@@ -130,27 +131,28 @@ H5D__efl_construct(H5F_t *f, H5D_t *dset)
     /* Check for invalid dataset dimensions */
     for (u = 1; u < dset->shared->ndims; u++)
         if (dset->shared->max_dims[u] > dset->shared->curr_dims[u])
-            HGOTO_ERROR(H5E_DATASET, H5E_UNSUPPORTED, FAIL, "only the first dimension can be extendible")
+            HGOTO_ERROR(H5E_DATASET, H5E_UNSUPPORTED, FAIL, "only the first dimension can be extendible");
 
     /* Retrieve the size of the dataset's datatype */
     if (0 == (dt_size = H5T_get_size(dset->shared->type)))
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to determine datatype size")
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to determine datatype size");
 
     /* Check for storage overflows */
-    max_points  = H5S_get_npoints_max(dset->shared->space);
-    max_storage = H5O_efl_total_size(&dset->shared->dcpl_cache.efl);
+    max_points = H5S_get_npoints_max(dset->shared->space);
+    if (H5O_efl_total_size(&dset->shared->dcpl_cache.efl, &max_storage) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "unable to retrieve size of external file");
     if (H5S_UNLIMITED == max_points) {
         if (H5O_EFL_UNLIMITED != max_storage)
-            HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unlimited dataspace but finite storage")
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unlimited dataspace but finite storage");
     } /* end if */
     else if ((max_points * dt_size) < max_points)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "dataspace * type size overflowed")
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "dataspace * type size overflowed");
     else if ((max_points * dt_size) > max_storage)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "dataspace size exceeds external storage size")
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "dataspace size exceeds external storage size");
 
     /* Compute the total size of dataset */
-    stmp_size = H5S_GET_EXTENT_NPOINTS(dset->shared->space);
-    assert(stmp_size >= 0);
+    if ((stmp_size = H5S_GET_EXTENT_NPOINTS(dset->shared->space)) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "unable to retrieve number of elements in dataspace");
     tmp_size = (hsize_t)stmp_size * dt_size;
     H5_CHECKED_ASSIGN(dset->shared->layout.storage.u.contig.size, hsize_t, tmp_size, hssize_t);
 
@@ -162,6 +164,57 @@ done:
 } /* end H5D__efl_construct() */
 
 /*-------------------------------------------------------------------------
+ * Function:	H5D__efl_init
+ *
+ * Purpose:	Initialize the info for a EFL dataset.  This is
+ *		called when the dataset is initialized.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5D__efl_init(H5F_t H5_ATTR_UNUSED *f, const H5D_t *dset, hid_t H5_ATTR_UNUSED dapl_id)
+{
+    size_t   dt_size;             /* Size of datatype */
+    hssize_t snelmts;             /* Temporary holder for number of elements in dataspace */
+    hsize_t  nelmts;              /* Number of elements in dataspace */
+    hsize_t  data_size;           /* Raw data size */
+    hsize_t  max_storage;         /* Maximum storage size */
+    herr_t   ret_value = SUCCEED; /* Return value */
+
+    FUNC_ENTER_PACKAGE
+
+    /* Sanity check */
+    assert(dset);
+
+    /* Retrieve the size of the dataset's datatype */
+    if (0 == (dt_size = H5T_get_size(dset->shared->type)))
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to determine datatype size");
+
+    /* Retrieve the number of elements in the dataspace */
+    if ((snelmts = H5S_GET_EXTENT_NPOINTS(dset->shared->space)) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "unable to retrieve number of elements in dataspace");
+    nelmts = (hsize_t)snelmts;
+
+    /* Compute the size of the dataset's contiguous storage */
+    data_size = nelmts * dt_size;
+
+    /* Check for overflow during multiplication */
+    if (nelmts != (data_size / dt_size))
+        HGOTO_ERROR(H5E_DATASET, H5E_OVERFLOW, FAIL, "size of dataset's storage overflowed");
+
+    /* Check for storage overflows */
+    if (H5O_efl_total_size(&dset->shared->dcpl_cache.efl, &max_storage) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "unable to retrieve size of external file");
+    if (H5O_EFL_UNLIMITED != max_storage && data_size > max_storage)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "dataspace size exceeds external storage size");
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5D__efl_init() */
+
+/*-------------------------------------------------------------------------
  * Function:	H5D__efl_is_space_alloc
  *
  * Purpose:	Query if space is allocated for layout
@@ -170,7 +223,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-hbool_t
+bool
 H5D__efl_is_space_alloc(const H5O_storage_t H5_ATTR_UNUSED *storage)
 {
     FUNC_ENTER_PACKAGE_NOERR
@@ -179,7 +232,7 @@ H5D__efl_is_space_alloc(const H5O_storage_t H5_ATTR_UNUSED *storage)
     assert(storage);
 
     /* EFL storage is currently always treated as allocated */
-    FUNC_LEAVE_NOAPI(TRUE)
+    FUNC_LEAVE_NOAPI(true)
 } /* end H5D__efl_is_space_alloc() */
 
 /*-------------------------------------------------------------------------
@@ -197,6 +250,9 @@ H5D__efl_io_init(H5D_io_info_t *io_info, H5D_dset_io_info_t *dinfo)
     FUNC_ENTER_PACKAGE_NOERR
 
     H5MM_memcpy(&dinfo->store->efl, &(dinfo->dset->shared->dcpl_cache.efl), sizeof(H5O_efl_t));
+
+    /* No "pieces" selected */
+    dinfo->layout_io_info.contig_piece_info = NULL;
 
     /* Disable selection I/O */
     io_info->use_select_io = H5D_SELECTION_IO_MODE_OFF;
@@ -253,15 +309,15 @@ H5D__efl_read(const H5O_efl_t *efl, const H5D_t *dset, haddr_t addr, size_t size
     while (size) {
         assert(buf);
         if (u >= efl->nused)
-            HGOTO_ERROR(H5E_EFL, H5E_OVERFLOW, FAIL, "read past logical end of file")
+            HGOTO_ERROR(H5E_EFL, H5E_OVERFLOW, FAIL, "read past logical end of file");
         if (H5F_OVERFLOW_HSIZET2OFFT((hsize_t)efl->slot[u].offset + skip))
-            HGOTO_ERROR(H5E_EFL, H5E_OVERFLOW, FAIL, "external file address overflowed")
+            HGOTO_ERROR(H5E_EFL, H5E_OVERFLOW, FAIL, "external file address overflowed");
         if (H5_combine_path(dset->shared->extfile_prefix, efl->slot[u].name, &full_name) < 0)
-            HGOTO_ERROR(H5E_EFL, H5E_NOSPACE, FAIL, "can't build external file name")
+            HGOTO_ERROR(H5E_EFL, H5E_NOSPACE, FAIL, "can't build external file name");
         if ((fd = HDopen(full_name, O_RDONLY)) < 0)
-            HGOTO_ERROR(H5E_EFL, H5E_CANTOPENFILE, FAIL, "unable to open external raw data file")
+            HGOTO_ERROR(H5E_EFL, H5E_CANTOPENFILE, FAIL, "unable to open external raw data file");
         if (HDlseek(fd, (HDoff_t)(efl->slot[u].offset + (HDoff_t)skip), SEEK_SET) < 0)
-            HGOTO_ERROR(H5E_EFL, H5E_SEEKERROR, FAIL, "unable to seek in external raw data file")
+            HGOTO_ERROR(H5E_EFL, H5E_SEEKERROR, FAIL, "unable to seek in external raw data file");
 #ifndef NDEBUG
         tempto_read = MIN((size_t)(efl->slot[u].size - skip), (hsize_t)size);
         H5_CHECK_OVERFLOW(tempto_read, hsize_t, size_t);
@@ -270,7 +326,7 @@ H5D__efl_read(const H5O_efl_t *efl, const H5D_t *dset, haddr_t addr, size_t size
         to_read  = MIN((size_t)(efl->slot[u].size - skip), (hsize_t)size);
 #endif /* NDEBUG */
         if ((n = HDread(fd, buf, to_read)) < 0)
-            HGOTO_ERROR(H5E_EFL, H5E_READERROR, FAIL, "read error in external raw data file")
+            HGOTO_ERROR(H5E_EFL, H5E_READERROR, FAIL, "read error in external raw data file");
         else if ((size_t)n < to_read)
             memset(buf + n, 0, to_read - (size_t)n);
         full_name = (char *)H5MM_xfree(full_name);
@@ -338,19 +394,19 @@ H5D__efl_write(const H5O_efl_t *efl, const H5D_t *dset, haddr_t addr, size_t siz
     while (size) {
         assert(buf);
         if (u >= efl->nused)
-            HGOTO_ERROR(H5E_EFL, H5E_OVERFLOW, FAIL, "write past logical end of file")
+            HGOTO_ERROR(H5E_EFL, H5E_OVERFLOW, FAIL, "write past logical end of file");
         if (H5F_OVERFLOW_HSIZET2OFFT((hsize_t)efl->slot[u].offset + skip))
-            HGOTO_ERROR(H5E_EFL, H5E_OVERFLOW, FAIL, "external file address overflowed")
+            HGOTO_ERROR(H5E_EFL, H5E_OVERFLOW, FAIL, "external file address overflowed");
         if (H5_combine_path(dset->shared->extfile_prefix, efl->slot[u].name, &full_name) < 0)
-            HGOTO_ERROR(H5E_EFL, H5E_NOSPACE, FAIL, "can't build external file name")
+            HGOTO_ERROR(H5E_EFL, H5E_NOSPACE, FAIL, "can't build external file name");
         if ((fd = HDopen(full_name, O_CREAT | O_RDWR, H5_POSIX_CREATE_MODE_RW)) < 0) {
             if (HDaccess(full_name, F_OK) < 0)
-                HGOTO_ERROR(H5E_EFL, H5E_CANTOPENFILE, FAIL, "external raw data file does not exist")
+                HGOTO_ERROR(H5E_EFL, H5E_CANTOPENFILE, FAIL, "external raw data file does not exist");
             else
-                HGOTO_ERROR(H5E_EFL, H5E_CANTOPENFILE, FAIL, "unable to open external raw data file")
+                HGOTO_ERROR(H5E_EFL, H5E_CANTOPENFILE, FAIL, "unable to open external raw data file");
         } /* end if */
         if (HDlseek(fd, (HDoff_t)(efl->slot[u].offset + (HDoff_t)skip), SEEK_SET) < 0)
-            HGOTO_ERROR(H5E_EFL, H5E_SEEKERROR, FAIL, "unable to seek in external raw data file")
+            HGOTO_ERROR(H5E_EFL, H5E_SEEKERROR, FAIL, "unable to seek in external raw data file");
 #ifndef NDEBUG
         tempto_write = MIN(efl->slot[u].size - skip, (hsize_t)size);
         H5_CHECK_OVERFLOW(tempto_write, hsize_t, size_t);
@@ -359,7 +415,7 @@ H5D__efl_write(const H5O_efl_t *efl, const H5D_t *dset, haddr_t addr, size_t siz
         to_write = MIN((size_t)(efl->slot[u].size - skip), size);
 #endif /* NDEBUG */
         if ((size_t)HDwrite(fd, buf, to_write) != to_write)
-            HGOTO_ERROR(H5E_EFL, H5E_READERROR, FAIL, "write error in external raw data file")
+            HGOTO_ERROR(H5E_EFL, H5E_READERROR, FAIL, "write error in external raw data file");
         full_name = (char *)H5MM_xfree(full_name);
         HDclose(fd);
         fd = -1;
@@ -397,7 +453,7 @@ H5D__efl_readvv_cb(hsize_t dst_off, hsize_t src_off, size_t len, void *_udata)
 
     /* Read data */
     if (H5D__efl_read(udata->efl, udata->dset, dst_off, len, (udata->rbuf + src_off)) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_READERROR, FAIL, "EFL read failed")
+        HGOTO_ERROR(H5E_DATASET, H5E_READERROR, FAIL, "EFL read failed");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -447,7 +503,7 @@ H5D__efl_readvv(const H5D_io_info_t H5_ATTR_NDEBUG_UNUSED *io_info, const H5D_ds
     /* Call generic sequence operation routine */
     if ((ret_value = H5VM_opvv(dset_max_nseq, dset_curr_seq, dset_len_arr, dset_off_arr, mem_max_nseq,
                                mem_curr_seq, mem_len_arr, mem_off_arr, H5D__efl_readvv_cb, &udata)) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTOPERATE, FAIL, "can't perform vectorized EFL read")
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTOPERATE, FAIL, "can't perform vectorized EFL read");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -472,7 +528,7 @@ H5D__efl_writevv_cb(hsize_t dst_off, hsize_t src_off, size_t len, void *_udata)
 
     /* Write data */
     if (H5D__efl_write(udata->efl, udata->dset, dst_off, len, (udata->wbuf + src_off)) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "EFL write failed")
+        HGOTO_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "EFL write failed");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -522,7 +578,7 @@ H5D__efl_writevv(const H5D_io_info_t H5_ATTR_NDEBUG_UNUSED *io_info, const H5D_d
     /* Call generic sequence operation routine */
     if ((ret_value = H5VM_opvv(dset_max_nseq, dset_curr_seq, dset_len_arr, dset_off_arr, mem_max_nseq,
                                mem_curr_seq, mem_len_arr, mem_off_arr, H5D__efl_writevv_cb, &udata)) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTOPERATE, FAIL, "can't perform vectorized EFL write")
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTOPERATE, FAIL, "can't perform vectorized EFL write");
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__efl_writevv() */
@@ -553,7 +609,7 @@ H5D__efl_bh_info(H5F_t *f, H5O_efl_t *efl, hsize_t *heap_size)
 
     /* Get the size of the local heap for EFL's file list */
     if (H5HL_heapsize(f, efl->heap_addr, heap_size) < 0)
-        HGOTO_ERROR(H5E_EFL, H5E_CANTINIT, FAIL, "unable to retrieve local heap info")
+        HGOTO_ERROR(H5E_EFL, H5E_CANTINIT, FAIL, "unable to retrieve local heap info");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

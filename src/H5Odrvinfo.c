@@ -23,9 +23,10 @@
 
 static void  *H5O__drvinfo_decode(H5F_t *f, H5O_t *open_oh, unsigned mesg_flags, unsigned *ioflags,
                                   size_t p_size, const uint8_t *p);
-static herr_t H5O__drvinfo_encode(H5F_t *f, hbool_t disable_shared, uint8_t *p, const void *_mesg);
+static herr_t H5O__drvinfo_encode(H5F_t *f, bool disable_shared, size_t H5_ATTR_UNUSED p_size, uint8_t *p,
+                                  const void *_mesg);
 static void  *H5O__drvinfo_copy(const void *_mesg, void *_dest);
-static size_t H5O__drvinfo_size(const H5F_t *f, hbool_t disable_shared, const void *_mesg);
+static size_t H5O__drvinfo_size(const H5F_t *f, bool disable_shared, const void *_mesg);
 static herr_t H5O__drvinfo_reset(void *_mesg);
 static herr_t H5O__drvinfo_debug(H5F_t *f, const void *_mesg, FILE *stream, int indent, int fwidth);
 
@@ -84,11 +85,11 @@ H5O__drvinfo_decode(H5F_t H5_ATTR_UNUSED *f, H5O_t H5_ATTR_UNUSED *open_oh,
     if (H5_IS_BUFFER_OVERFLOW(p, 1, p_end))
         HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
     if (*p++ != H5O_DRVINFO_VERSION)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad version number for message")
+        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad version number for message");
 
     /* Allocate space for message */
     if (NULL == (mesg = (H5O_drvinfo_t *)H5MM_calloc(sizeof(H5O_drvinfo_t))))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for driver info message")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for driver info message");
 
     /* Retrieve driver name */
     if (H5_IS_BUFFER_OVERFLOW(p, 8, p_end))
@@ -106,7 +107,7 @@ H5O__drvinfo_decode(H5F_t H5_ATTR_UNUSED *f, H5O_t H5_ATTR_UNUSED *open_oh,
 
     /* Allocate space for buffer */
     if (NULL == (mesg->buf = (uint8_t *)H5MM_malloc(mesg->len)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for driver info buffer")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for driver info buffer");
 
     /* Copy encoded driver info into buffer */
     if (H5_IS_BUFFER_OVERFLOW(p, mesg->len, p_end))
@@ -135,8 +136,8 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O__drvinfo_encode(H5F_t H5_ATTR_UNUSED *f, hbool_t H5_ATTR_UNUSED disable_shared, uint8_t *p,
-                    const void *_mesg)
+H5O__drvinfo_encode(H5F_t H5_ATTR_UNUSED *f, bool H5_ATTR_UNUSED disable_shared, size_t H5_ATTR_UNUSED p_size,
+                    uint8_t *p, const void *_mesg)
 {
     const H5O_drvinfo_t *mesg = (const H5O_drvinfo_t *)_mesg;
 
@@ -183,7 +184,7 @@ H5O__drvinfo_copy(const void *_mesg, void *_dest)
 
     if (!dest && NULL == (dest = (H5O_drvinfo_t *)H5MM_malloc(sizeof(H5O_drvinfo_t))))
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL,
-                    "memory allocation failed for shared message table message")
+                    "memory allocation failed for shared message table message");
 
     /* Shallow copy the fields */
     *dest = *mesg;
@@ -192,7 +193,7 @@ H5O__drvinfo_copy(const void *_mesg, void *_dest)
     if (NULL == (dest->buf = (uint8_t *)H5MM_malloc(mesg->len))) {
         if (dest != _dest)
             dest = (H5O_drvinfo_t *)H5MM_xfree(dest);
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
     } /* end if */
     H5MM_memcpy(dest->buf, mesg->buf, mesg->len);
 
@@ -215,7 +216,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static size_t
-H5O__drvinfo_size(const H5F_t H5_ATTR_UNUSED *f, hbool_t H5_ATTR_UNUSED disable_shared, const void *_mesg)
+H5O__drvinfo_size(const H5F_t H5_ATTR_UNUSED *f, bool H5_ATTR_UNUSED disable_shared, const void *_mesg)
 {
     const H5O_drvinfo_t *mesg      = (const H5O_drvinfo_t *)_mesg;
     size_t               ret_value = 0; /* Return value */

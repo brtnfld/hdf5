@@ -123,7 +123,7 @@ dbgf(int level, const char *fmt, ...)
         return;
 
     va_start(ap, fmt);
-    (void)HDvfprintf(stderr, fmt, ap);
+    (void)vfprintf(stderr, fmt, ap);
     va_end(ap);
 }
 
@@ -471,7 +471,7 @@ fetch_env_ulong(const char *varname, unsigned long limit, unsigned long *valp)
     errno = 0;
     ul    = strtoul(tmp, &end, 0);
     if (ul == ULONG_MAX && errno != 0) {
-        fprintf(stderr, "could not parse %s: %s\n", varname, HDstrerror(errno));
+        fprintf(stderr, "could not parse %s: %s\n", varname, strerror(errno));
         return -1;
     }
     if (end == tmp || *end != '\0') {

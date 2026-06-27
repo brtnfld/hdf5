@@ -24,9 +24,10 @@
 
 static void  *H5O__shmesg_decode(H5F_t *f, H5O_t *open_oh, unsigned mesg_flags, unsigned *ioflags,
                                  size_t p_size, const uint8_t *p);
-static herr_t H5O__shmesg_encode(H5F_t *f, hbool_t disable_shared, uint8_t *p, const void *_mesg);
+static herr_t H5O__shmesg_encode(H5F_t *f, bool disable_shared, size_t H5_ATTR_UNUSED p_size, uint8_t *p,
+                                 const void *_mesg);
 static void  *H5O__shmesg_copy(const void *_mesg, void *_dest);
-static size_t H5O__shmesg_size(const H5F_t *f, hbool_t disable_shared, const void *_mesg);
+static size_t H5O__shmesg_size(const H5F_t *f, bool disable_shared, const void *_mesg);
 static herr_t H5O__shmesg_debug(H5F_t *f, const void *_mesg, FILE *stream, int indent, int fwidth);
 
 /* This message derives from H5O message class */
@@ -78,7 +79,7 @@ H5O__shmesg_decode(H5F_t *f, H5O_t H5_ATTR_UNUSED *open_oh, unsigned H5_ATTR_UNU
 
     if (NULL == (mesg = (H5O_shmesg_table_t *)H5MM_calloc(sizeof(H5O_shmesg_table_t))))
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL,
-                    "memory allocation failed for shared message table message")
+                    "memory allocation failed for shared message table message");
 
     /* Retrieve version, table address, and number of indexes */
     if (H5_IS_BUFFER_OVERFLOW(p, 1, p_end))
@@ -113,7 +114,8 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O__shmesg_encode(H5F_t *f, hbool_t H5_ATTR_UNUSED disable_shared, uint8_t *p, const void *_mesg)
+H5O__shmesg_encode(H5F_t *f, bool H5_ATTR_UNUSED disable_shared, size_t H5_ATTR_UNUSED p_size, uint8_t *p,
+                   const void *_mesg)
 {
     const H5O_shmesg_table_t *mesg = (const H5O_shmesg_table_t *)_mesg;
 
@@ -157,7 +159,7 @@ H5O__shmesg_copy(const void *_mesg, void *_dest)
 
     if (!dest && NULL == (dest = (H5O_shmesg_table_t *)H5MM_malloc(sizeof(H5O_shmesg_table_t))))
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL,
-                    "memory allocation failed for shared message table message")
+                    "memory allocation failed for shared message table message");
 
     /* All this message requires is a shallow copy */
     *dest = *mesg;
@@ -181,7 +183,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static size_t
-H5O__shmesg_size(const H5F_t *f, hbool_t H5_ATTR_UNUSED disable_shared, const void H5_ATTR_UNUSED *_mesg)
+H5O__shmesg_size(const H5F_t *f, bool H5_ATTR_UNUSED disable_shared, const void H5_ATTR_UNUSED *_mesg)
 {
     size_t ret_value = 0; /* Return value */
 

@@ -67,14 +67,16 @@ static const char *flavors[] = {
  * occurs), and `op' will be set to H5F_OP_UNKNOWN.
  */
 typedef struct H5FD_log_t {
-    H5FD_t         pub; /* public stuff, must be first      */
-    int            fd;  /* the unix file                    */
-    haddr_t        eoa; /* end of allocated region          */
-    haddr_t        eof; /* end of file; current file size   */
+    H5FD_t  pub; /* public stuff, must be first      */
+    int     fd;  /* the unix file                    */
+    haddr_t eoa; /* end of allocated region          */
+    haddr_t eof; /* end of file; current file size   */
+#ifndef H5_HAVE_PREADWRITE
     haddr_t        pos; /* current file I/O position        */
     H5FD_file_op_t op;  /* last operation                   */
-    hbool_t        ignore_disabled_file_locks;
-    char           filename[H5FD_MAX_FILENAME_LEN]; /* Copy of file name from open operation */
+#endif                  /* H5_HAVE_PREADWRITE */
+    bool ignore_disabled_file_locks;
+    char filename[H5FD_MAX_FILENAME_LEN]; /* Copy of file name from open operation */
 #ifndef H5_HAVE_WIN32_API
     /* On most systems the combination of device and i-node number uniquely
      * identify a file.  Note that Cygwin, MinGW and other Windows POSIX
@@ -111,7 +113,7 @@ typedef struct H5FD_log_t {
      * Whether to eliminate the family driver info and convert this file to
      * a single file
      */
-    hbool_t fam_to_single;
+    bool fam_to_single;
 
     /* Fields for tracking I/O operations */
     unsigned char     *nread;               /* Number of reads from a file location             */
@@ -170,8 +172,8 @@ static herr_t  H5FD__log_read(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, had
                               void *buf);
 static herr_t  H5FD__log_write(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr, size_t size,
                                const void *buf);
-static herr_t  H5FD__log_truncate(H5FD_t *_file, hid_t dxpl_id, hbool_t closing);
-static herr_t  H5FD__log_lock(H5FD_t *_file, hbool_t rw);
+static herr_t  H5FD__log_truncate(H5FD_t *_file, hid_t dxpl_id, bool closing);
+static herr_t  H5FD__log_lock(H5FD_t *_file, bool rw);
 static herr_t  H5FD__log_unlock(H5FD_t *_file);
 static herr_t  H5FD__log_delete(const char *filename, hid_t fapl_id);
 
@@ -244,16 +246,16 @@ H5FD_log_init(void)
     FUNC_ENTER_NOAPI_NOERR
 
     /* Check the use disabled file locks environment variable */
-    lock_env_var = HDgetenv(HDF5_USE_FILE_LOCKING);
-    if (lock_env_var && !HDstrcmp(lock_env_var, "BEST_EFFORT"))
-        ignore_disabled_file_locks_s = TRUE; /* Override: Ignore disabled locks */
-    else if (lock_env_var && (!HDstrcmp(lock_env_var, "TRUE") || !HDstrcmp(lock_env_var, "1")))
-        ignore_disabled_file_locks_s = FALSE; /* Override: Don't ignore disabled locks */
+    lock_env_var = getenv(HDF5_USE_FILE_LOCKING);
+    if (lock_env_var && !strcmp(lock_env_var, "BEST_EFFORT"))
+        ignore_disabled_file_locks_s = true; /* Override: Ignore disabled locks */
+    else if (lock_env_var && (!strcmp(lock_env_var, "TRUE") || !strcmp(lock_env_var, "1")))
+        ignore_disabled_file_locks_s = false; /* Override: Don't ignore disabled locks */
     else
         ignore_disabled_file_locks_s = FAIL; /* Environment variable not set, or not set correctly */
 
     if (H5I_VFL != H5I_get_type(H5FD_LOG_g))
-        H5FD_LOG_g = H5FD_register(&H5FD_log_g, sizeof(H5FD_class_t), FALSE);
+        H5FD_LOG_g = H5FD_register(&H5FD_log_g, sizeof(H5FD_class_t), false);
 
     /* Set return value */
     ret_value = H5FD_LOG_g;
@@ -299,7 +301,6 @@ H5Pset_fapl_log(hid_t fapl_id, const char *logfile, unsigned long long flags, si
     herr_t          ret_value; /* Return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE4("e", "i*sULz", fapl_id, logfile, flags, buf_size);
 
     /* Do this first, so that we don't try to free a wild pointer if
      * H5P_object_verify() fails.
@@ -308,7 +309,7 @@ H5Pset_fapl_log(hid_t fapl_id, const char *logfile, unsigned long long flags, si
 
     /* Check arguments */
     if (NULL == (plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list");
 
     /* Duplicate the log file string
      * A little wasteful, since this string will just be copied later, but
@@ -316,7 +317,7 @@ H5Pset_fapl_log(hid_t fapl_id, const char *logfile, unsigned long long flags, si
      * const cast warnings.
      */
     if (logfile != NULL && NULL == (fa.logfile = H5MM_xstrdup(logfile)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "unable to copy log file name")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "unable to copy log file name");
 
     fa.flags    = flags;
     fa.buf_size = buf_size;
@@ -379,7 +380,7 @@ H5FD__log_fapl_copy(const void *_old_fa)
 
     /* Allocate the new FAPL info */
     if (NULL == (new_fa = (H5FD_log_fapl_t *)H5MM_calloc(sizeof(H5FD_log_fapl_t))))
-        HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, NULL, "unable to allocate log file FAPL")
+        HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, NULL, "unable to allocate log file FAPL");
 
     /* Copy the general information */
     H5MM_memcpy(new_fa, old_fa, sizeof(H5FD_log_fapl_t));
@@ -387,7 +388,7 @@ H5FD__log_fapl_copy(const void *_old_fa)
     /* Deep copy the log file name */
     if (old_fa->logfile != NULL)
         if (NULL == (new_fa->logfile = H5MM_strdup(old_fa->logfile)))
-            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "unable to allocate log file name")
+            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "unable to allocate log file name");
 
     /* Set return value */
     ret_value = new_fa;
@@ -463,11 +464,11 @@ H5FD__log_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
 
     /* Check arguments */
     if (!name || !*name)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "invalid file name")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "invalid file name");
     if (0 == maxaddr || HADDR_UNDEF == maxaddr)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, NULL, "bogus maxaddr")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, NULL, "bogus maxaddr");
     if (ADDR_OVERFLOW(maxaddr))
-        HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, NULL, "bogus maxaddr")
+        HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, NULL, "bogus maxaddr");
 
     /* Initialize timers */
     H5_timer_init(&open_timer);
@@ -484,7 +485,7 @@ H5FD__log_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
 
     /* Get the driver specific information */
     if (NULL == (plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a file access property list")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a file access property list");
     if (NULL == (fa = (const H5FD_log_fapl_t *)H5P_peek_driver_info(plist))) {
         /* Use default driver configuration*/
         fa = &default_fa;
@@ -501,7 +502,7 @@ H5FD__log_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
         HGOTO_ERROR(
             H5E_FILE, H5E_CANTOPENFILE, NULL,
             "unable to open file: name = '%s', errno = %d, error message = '%s', flags = %x, o_flags = %x",
-            name, myerrno, HDstrerror(myerrno), flags, (unsigned)o_flags);
+            name, myerrno, strerror(myerrno), flags, (unsigned)o_flags);
     }
 
     /* Stop timer for open() call */
@@ -513,8 +514,9 @@ H5FD__log_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
         H5_timer_start(&stat_timer);
 
     /* Get the file stats */
+    memset(&sb, 0, sizeof(h5_stat_t));
     if (HDfstat(fd, &sb) < 0)
-        HSYS_GOTO_ERROR(H5E_FILE, H5E_BADFILE, NULL, "unable to fstat file")
+        HSYS_GOTO_ERROR(H5E_FILE, H5E_BADFILE, NULL, "unable to fstat file");
 
     /* Stop timer for stat() call */
     if (fa->flags & H5FD_LOG_TIME_STAT)
@@ -522,19 +524,21 @@ H5FD__log_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
 
     /* Create the new file struct */
     if (NULL == (file = H5FL_CALLOC(H5FD_log_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "unable to allocate file struct")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "unable to allocate file struct");
 
     file->fd = fd;
     H5_CHECKED_ASSIGN(file->eof, haddr_t, sb.st_size, h5_stat_size_t);
+#ifndef H5_HAVE_PREADWRITE
     file->pos = HADDR_UNDEF;
     file->op  = OP_UNKNOWN;
+#endif /* H5_HAVE_PREADWRITE */
 #ifdef H5_HAVE_WIN32_API
     file->hFile = (HANDLE)_get_osfhandle(fd);
     if (INVALID_HANDLE_VALUE == file->hFile)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to get Windows file handle")
+        HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to get Windows file handle");
 
     if (!GetFileInformationByHandle((HANDLE)file->hFile, &fileinfo))
-        HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to get Windows file information")
+        HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to get Windows file information");
 
     file->nFileIndexHigh       = fileinfo.nFileIndexHigh;
     file->nFileIndexLow        = fileinfo.nFileIndexLow;
@@ -545,7 +549,7 @@ H5FD__log_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
 #endif /* H5_HAVE_WIN32_API */
 
     /* Retain a copy of the name used to open the file, for possible error reporting */
-    HDstrncpy(file->filename, name, sizeof(file->filename));
+    strncpy(file->filename, name, sizeof(file->filename) - 1);
     file->filename[sizeof(file->filename) - 1] = '\0';
 
     /* Get the flags for logging */
@@ -601,7 +605,7 @@ H5FD__log_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
     else {
         /* Use the value in the property list */
         if (H5P_get(plist, H5F_ACS_IGNORE_DISABLED_FILE_LOCKS_NAME, &file->ignore_disabled_file_locks) < 0)
-            HGOTO_ERROR(H5E_VFL, H5E_CANTGET, NULL, "can't get ignore disabled file locks property")
+            HGOTO_ERROR(H5E_VFL, H5E_CANTGET, NULL, "can't get ignore disabled file locks property");
     }
 
     /* Check for non-default FAPL */
@@ -613,7 +617,7 @@ H5FD__log_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
          */
         if (H5P_exist_plist(plist, H5F_ACS_FAMILY_TO_SINGLE_NAME) > 0)
             if (H5P_get(plist, H5F_ACS_FAMILY_TO_SINGLE_NAME, &file->fam_to_single) < 0)
-                HGOTO_ERROR(H5E_VFL, H5E_CANTGET, NULL, "can't get property of changing family to single")
+                HGOTO_ERROR(H5E_VFL, H5E_CANTGET, NULL, "can't get property of changing family to single");
     }
 
     /* Set return value */
@@ -661,7 +665,7 @@ H5FD__log_close(H5FD_t *_file)
 
     /* Close the underlying file */
     if (HDclose(file->fd) < 0)
-        HSYS_GOTO_ERROR(H5E_IO, H5E_CANTCLOSEFILE, FAIL, "unable to close file")
+        HSYS_GOTO_ERROR(H5E_IO, H5E_CANTCLOSEFILE, FAIL, "unable to close file");
 
     /* Stop timer for close() call */
     if (file->fa.flags & H5FD_LOG_TIME_CLOSE)
@@ -1089,7 +1093,7 @@ H5FD__log_get_handle(H5FD_t *_file, hid_t H5_ATTR_UNUSED fapl, void **file_handl
     FUNC_ENTER_PACKAGE
 
     if (!file_handle)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "file handle not valid")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "file handle not valid");
 
     *file_handle = &(file->fd);
 
@@ -1132,9 +1136,9 @@ H5FD__log_read(H5FD_t *_file, H5FD_mem_t type, hid_t H5_ATTR_UNUSED dxpl_id, had
 
     /* Check for overflow conditions */
     if (!H5_addr_defined(addr))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "addr undefined, addr = %llu", (unsigned long long)addr)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "addr undefined, addr = %llu", (unsigned long long)addr);
     if (REGION_OVERFLOW(addr, size))
-        HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL, "addr overflow, addr = %llu", (unsigned long long)addr)
+        HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL, "addr overflow, addr = %llu", (unsigned long long)addr);
 
     /* Log the I/O information about the read */
     if (file->fa.flags != 0) {
@@ -1163,7 +1167,7 @@ H5FD__log_read(H5FD_t *_file, H5FD_mem_t type, hid_t H5_ATTR_UNUSED dxpl_id, had
             H5_timer_start(&seek_timer);
 
         if (HDlseek(file->fd, (HDoff_t)addr, SEEK_SET) < 0)
-            HSYS_GOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to seek to proper position")
+            HSYS_GOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to seek to proper position");
 
         /* Stop timer for seek() call */
         if (file->fa.flags & H5FD_LOG_TIME_SEEK)
@@ -1227,9 +1231,9 @@ H5FD__log_read(H5FD_t *_file, H5FD_mem_t type, hid_t H5_ATTR_UNUSED dxpl_id, had
 
         if (-1 == bytes_read) { /* error */
             int    myerrno = errno;
-            time_t mytime  = HDtime(NULL);
+            time_t mytime  = time(NULL);
 
-            offset = HDlseek(file->fd, (HDoff_t)0, SEEK_CUR);
+            offset = HDlseek(file->fd, 0, SEEK_CUR);
 
             if (file->fa.flags & H5FD_LOG_LOC_READ)
                 fprintf(file->logfp, "Error! Reading: %10" PRIuHADDR "-%10" PRIuHADDR " (%10zu bytes)\n",
@@ -1239,7 +1243,7 @@ H5FD__log_read(H5FD_t *_file, H5FD_mem_t type, hid_t H5_ATTR_UNUSED dxpl_id, had
                         "file read failed: time = %s, filename = '%s', file descriptor = %d, errno = %d, "
                         "error message = '%s', buf = %p, total read size = %llu, bytes this sub-read = %llu, "
                         "bytes actually read = %llu, offset = %llu",
-                        HDctime(&mytime), file->filename, file->fd, myerrno, HDstrerror(myerrno), buf,
+                        ctime(&mytime), file->filename, file->fd, myerrno, strerror(myerrno), buf,
                         (unsigned long long)size, (unsigned long long)bytes_in,
                         (unsigned long long)bytes_read, (unsigned long long)offset);
         }
@@ -1296,16 +1300,20 @@ H5FD__log_read(H5FD_t *_file, H5FD_mem_t type, hid_t H5_ATTR_UNUSED dxpl_id, had
             fprintf(file->logfp, "\n");
     }
 
+#ifndef H5_HAVE_PREADWRITE
     /* Update current position */
     file->pos = addr;
     file->op  = OP_READ;
+#endif /* H5_HAVE_PREADWRITE */
 
 done:
+#ifndef H5_HAVE_PREADWRITE
     if (ret_value < 0) {
         /* Reset last file I/O information */
         file->pos = HADDR_UNDEF;
         file->op  = OP_UNKNOWN;
     }
+#endif /* H5_HAVE_PREADWRITE */
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FD__log_read() */
@@ -1352,10 +1360,10 @@ H5FD__log_write(H5FD_t *_file, H5FD_mem_t type, hid_t H5_ATTR_UNUSED dxpl_id, ha
 
     /* Check for overflow conditions */
     if (!H5_addr_defined(addr))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "addr undefined, addr = %llu", (unsigned long long)addr)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "addr undefined, addr = %llu", (unsigned long long)addr);
     if (REGION_OVERFLOW(addr, size))
         HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL, "addr overflow, addr = %llu, size = %llu",
-                    (unsigned long long)addr, (unsigned long long)size)
+                    (unsigned long long)addr, (unsigned long long)size);
 
     /* Log the I/O information about the write */
     if (file->fa.flags & H5FD_LOG_FILE_WRITE) {
@@ -1382,7 +1390,7 @@ H5FD__log_write(H5FD_t *_file, H5FD_mem_t type, hid_t H5_ATTR_UNUSED dxpl_id, ha
             H5_timer_start(&seek_timer);
 
         if (HDlseek(file->fd, (HDoff_t)addr, SEEK_SET) < 0)
-            HSYS_GOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to seek to proper position")
+            HSYS_GOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to seek to proper position");
 
         /* Stop timer for seek() call */
         if (file->fa.flags & H5FD_LOG_TIME_SEEK)
@@ -1446,9 +1454,9 @@ H5FD__log_write(H5FD_t *_file, H5FD_mem_t type, hid_t H5_ATTR_UNUSED dxpl_id, ha
 
         if (-1 == bytes_wrote) { /* error */
             int    myerrno = errno;
-            time_t mytime  = HDtime(NULL);
+            time_t mytime  = time(NULL);
 
-            offset = HDlseek(file->fd, (HDoff_t)0, SEEK_CUR);
+            offset = HDlseek(file->fd, 0, SEEK_CUR);
 
             if (file->fa.flags & H5FD_LOG_LOC_WRITE)
                 fprintf(file->logfp, "Error! Writing: %10" PRIuHADDR "-%10" PRIuHADDR " (%10zu bytes)\n",
@@ -1458,7 +1466,7 @@ H5FD__log_write(H5FD_t *_file, H5FD_mem_t type, hid_t H5_ATTR_UNUSED dxpl_id, ha
                         "file write failed: time = %s, filename = '%s', file descriptor = %d, errno = %d, "
                         "error message = '%s', buf = %p, total write size = %llu, bytes this sub-write = "
                         "%llu, bytes actually written = %llu, offset = %llu",
-                        HDctime(&mytime), file->filename, file->fd, myerrno, HDstrerror(myerrno), buf,
+                        ctime(&mytime), file->filename, file->fd, myerrno, strerror(myerrno), buf,
                         (unsigned long long)size, (unsigned long long)bytes_in,
                         (unsigned long long)bytes_wrote, (unsigned long long)offset);
         } /* end if */
@@ -1510,17 +1518,21 @@ H5FD__log_write(H5FD_t *_file, H5FD_mem_t type, hid_t H5_ATTR_UNUSED dxpl_id, ha
     }
 
     /* Update current position and eof */
+#ifndef H5_HAVE_PREADWRITE
     file->pos = addr;
     file->op  = OP_WRITE;
-    if (file->pos > file->eof)
-        file->eof = file->pos;
+#endif /* H5_HAVE_PREADWRITE */
+    if (addr > file->eof)
+        file->eof = addr;
 
 done:
+#ifndef H5_HAVE_PREADWRITE
     if (ret_value < 0) {
         /* Reset last file I/O information */
         file->pos = HADDR_UNDEF;
         file->op  = OP_UNKNOWN;
     }
+#endif /* H5_HAVE_PREADWRITE */
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FD__log_write() */
@@ -1536,7 +1548,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD__log_truncate(H5FD_t *_file, hid_t H5_ATTR_UNUSED dxpl_id, hbool_t H5_ATTR_UNUSED closing)
+H5FD__log_truncate(H5FD_t *_file, hid_t H5_ATTR_UNUSED dxpl_id, bool H5_ATTR_UNUSED closing)
 {
     H5FD_log_t *file      = (H5FD_log_t *)_file;
     herr_t      ret_value = SUCCEED; /* Return value */
@@ -1578,16 +1590,16 @@ H5FD__log_truncate(H5FD_t *_file, hid_t H5_ATTR_UNUSED dxpl_id, hbool_t H5_ATTR_
 
                 dwError = GetLastError();
                 if (dwError != NO_ERROR)
-                    HGOTO_ERROR(H5E_FILE, H5E_FILEOPEN, FAIL, "unable to set file pointer")
+                    HGOTO_ERROR(H5E_FILE, H5E_FILEOPEN, FAIL, "unable to set file pointer");
             }
 
             if (0 == SetEndOfFile(file->hFile))
-                HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to extend file properly")
+                HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to extend file properly");
         }
 #else  /* H5_HAVE_WIN32_API */
         /* Truncate/extend the file */
         if (-1 == HDftruncate(file->fd, (HDoff_t)file->eoa))
-            HSYS_GOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to extend file properly")
+            HSYS_GOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to extend file properly");
 #endif /* H5_HAVE_WIN32_API */
 
         /* Stop timer for truncate operation */
@@ -1621,10 +1633,12 @@ H5FD__log_truncate(H5FD_t *_file, hid_t H5_ATTR_UNUSED dxpl_id, hbool_t H5_ATTR_
         /* Update the eof value */
         file->eof = file->eoa;
 
+#ifndef H5_HAVE_PREADWRITE
         /* Reset last file I/O information */
         file->pos = HADDR_UNDEF;
         file->op  = OP_UNKNOWN;
-    } /* end if */
+#endif /* H5_HAVE_PREADWRITE */
+    }  /* end if */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1641,7 +1655,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD__log_lock(H5FD_t *_file, hbool_t rw)
+H5FD__log_lock(H5FD_t *_file, bool rw)
 {
     H5FD_log_t *file = (H5FD_log_t *)_file; /* VFD file struct          */
     int         lock_flags;                 /* file locking flags       */
@@ -1664,7 +1678,7 @@ H5FD__log_lock(H5FD_t *_file, hbool_t rw)
             errno = 0;
         }
         else
-            HSYS_GOTO_ERROR(H5E_VFL, H5E_CANTLOCKFILE, FAIL, "unable to lock file")
+            HSYS_GOTO_ERROR(H5E_VFL, H5E_CANTLOCKFILE, FAIL, "unable to lock file");
     }
 
 done:
@@ -1698,7 +1712,7 @@ H5FD__log_unlock(H5FD_t *_file)
             errno = 0;
         }
         else
-            HSYS_GOTO_ERROR(H5E_VFL, H5E_CANTUNLOCKFILE, FAIL, "unable to unlock file")
+            HSYS_GOTO_ERROR(H5E_VFL, H5E_CANTUNLOCKFILE, FAIL, "unable to unlock file");
     }
 
 done:
@@ -1724,7 +1738,7 @@ H5FD__log_delete(const char *filename, hid_t H5_ATTR_UNUSED fapl_id)
     assert(filename);
 
     if (HDremove(filename) < 0)
-        HSYS_GOTO_ERROR(H5E_VFL, H5E_CANTDELETEFILE, FAIL, "unable to delete file")
+        HSYS_GOTO_ERROR(H5E_VFL, H5E_CANTDELETEFILE, FAIL, "unable to delete file");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

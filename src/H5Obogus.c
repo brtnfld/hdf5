@@ -35,8 +35,9 @@
 /* PRIVATE PROTOTYPES */
 static void  *H5O__bogus_decode(H5F_t *f, H5O_t *open_oh, unsigned mesg_flags, unsigned *ioflags,
                                 size_t p_size, const uint8_t *p);
-static herr_t H5O__bogus_encode(H5F_t *f, hbool_t disable_shared, uint8_t *p, const void *_mesg);
-static size_t H5O__bogus_size(const H5F_t *f, hbool_t disable_shared, const void *_mesg);
+static herr_t H5O__bogus_encode(H5F_t *f, bool disable_shared, size_t H5_ATTR_UNUSED p_size, uint8_t *p,
+                                const void *_mesg);
+static size_t H5O__bogus_size(const H5F_t *f, bool disable_shared, const void *_mesg);
 static herr_t H5O__bogus_debug(H5F_t *f, const void *_mesg, FILE *stream, int indent, int fwidth);
 
 /* This message derives from H5O message class */
@@ -112,7 +113,7 @@ H5O__bogus_decode(H5F_t *f, H5O_t H5_ATTR_NDEBUG_UNUSED *open_oh, unsigned H5_AT
 
     /* Allocate the bogus message */
     if (NULL == (mesg = (H5O_bogus_t *)H5MM_calloc(sizeof(H5O_bogus_t))))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
 
     if (H5_IS_BUFFER_OVERFLOW(p, 4, p_end))
         HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, NULL, "ran off end of input buffer while decoding");
@@ -120,7 +121,7 @@ H5O__bogus_decode(H5F_t *f, H5O_t H5_ATTR_NDEBUG_UNUSED *open_oh, unsigned H5_AT
 
     /* Validate the bogus info */
     if (mesg->u != H5O_BOGUS_VALUE)
-        HGOTO_ERROR(H5E_OHDR, H5E_BADVALUE, NULL, "invalid bogus value :-)")
+        HGOTO_ERROR(H5E_OHDR, H5E_BADVALUE, NULL, "invalid bogus value :-)");
 
     /* Set return value */
     ret_value = mesg;
@@ -142,8 +143,8 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O__bogus_encode(H5F_t H5_ATTR_UNUSED *f, hbool_t H5_ATTR_UNUSED disable_shared, uint8_t *p,
-                  const void H5_ATTR_UNUSED *mesg)
+H5O__bogus_encode(H5F_t H5_ATTR_UNUSED *f, bool H5_ATTR_UNUSED disable_shared, size_t H5_ATTR_UNUSED p_size,
+                  uint8_t *p, const void H5_ATTR_UNUSED *mesg)
 {
     FUNC_ENTER_PACKAGE_NOERR
 
@@ -173,7 +174,7 @@ H5O__bogus_encode(H5F_t H5_ATTR_UNUSED *f, hbool_t H5_ATTR_UNUSED disable_shared
  *-------------------------------------------------------------------------
  */
 static size_t
-H5O__bogus_size(const H5F_t H5_ATTR_UNUSED *f, hbool_t H5_ATTR_UNUSED disable_shared,
+H5O__bogus_size(const H5F_t H5_ATTR_UNUSED *f, bool H5_ATTR_UNUSED disable_shared,
                 const void H5_ATTR_UNUSED *mesg)
 {
     FUNC_ENTER_PACKAGE_NOERR

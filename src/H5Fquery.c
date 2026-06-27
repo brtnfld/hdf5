@@ -236,10 +236,10 @@ H5F_get_shared(const H5F_t *f)
  *
  * Purpose:  Determine if two files have the same shared file pointer
  *
- * Return:   TRUE/FALSE on success/abort on failure (shouldn't fail)
+ * Return:   true/false on success/abort on failure (shouldn't fail)
  *-------------------------------------------------------------------------
  */
-hbool_t
+bool
 H5F_same_shared(const H5F_t *f1, const H5F_t *f2)
 {
     /* Use FUNC_ENTER_NOAPI_NOINIT_NOERR here to avoid performance issues */
@@ -277,10 +277,10 @@ H5F_get_nopen_objs(const H5F_t *f)
  *
  * Purpose:     Determines if a file ID exists for this file struct
  *
- * Return:      TRUE/FALSE
+ * Return:      true/false
  *-------------------------------------------------------------------------
  */
-hbool_t
+bool
 H5F_file_id_exists(const H5F_t *f)
 {
     /* Use FUNC_ENTER_NOAPI_NOINIT_NOERR here to avoid performance issues */
@@ -372,9 +372,8 @@ H5F_get_fcpl(const H5F_t *f)
 /*-------------------------------------------------------------------------
  * Function: H5F_sizeof_addr
  *
- * Purpose:  Quick and dirty routine to retrieve the size of the file's size_t
- *           (Mainly added to stop non-file routines from poking about in the
- *           H5F_t data structure)
+ * Purpose:  Quick and dirty routine to retrieve the size of the file's size
+ *           of addresses
  *
  * Return:   'sizeof_addr' on success/abort on failure (shouldn't fail)
  *-------------------------------------------------------------------------
@@ -394,9 +393,8 @@ H5F_sizeof_addr(const H5F_t *f)
 /*-------------------------------------------------------------------------
  * Function: H5F_sizeof_size
  *
- * Purpose:  Quick and dirty routine to retrieve the size of the file's off_t
- *           (Mainly added to stop non-file routines from poking about in the
- *           H5F_t data structure)
+ * Purpose:  Quick and dirty routine to retrieve the size of the file's size
+ *           of sizes
  *
  * Return:   'sizeof_size' on success/abort on failure (shouldn't fail)
  *-------------------------------------------------------------------------
@@ -503,10 +501,10 @@ H5F_sym_leaf_k(const H5F_t *f)
  *
  * Purpose:  Get the setting flag for minimized dataset object headers
  *
- * Return:   TRUE/FALSE as set in file
+ * Return:   true/false as set in file
  *-------------------------------------------------------------------------
  */
-hbool_t
+bool
 H5F_get_min_dset_ohdr(const H5F_t *f)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
@@ -761,7 +759,7 @@ H5F_get_fc_degree(const H5F_t *f)
  *              Failure:    (can't happen)
  *-------------------------------------------------------------------------
  */
-hbool_t
+bool
 H5F_get_evict_on_close(const H5F_t *f)
 {
     /* Use FUNC_ENTER_NOAPI_NOINIT_NOERR here to avoid performance issues */
@@ -782,7 +780,7 @@ H5F_get_evict_on_close(const H5F_t *f)
  *           Failure:    (can't happen)
  *-------------------------------------------------------------------------
  */
-hbool_t
+bool
 H5F_store_msg_crt_idx(const H5F_t *f)
 {
     /* Use FUNC_ENTER_NOAPI_NOINIT_NOERR here to avoid performance issues */
@@ -799,11 +797,11 @@ H5F_store_msg_crt_idx(const H5F_t *f)
  *
  * Purpose:  Check if a file has a particular feature enabled
  *
- * Return:   Success:    Non-negative - TRUE or FALSE
+ * Return:   Success:    Non-negative - true or false
  *           Failure:    Negative (should not happen)
  *-------------------------------------------------------------------------
  */
-hbool_t
+bool
 H5F_shared_has_feature(const H5F_shared_t *f_sh, unsigned feature)
 {
     /* Use FUNC_ENTER_NOAPI_NOINIT_NOERR here to avoid performance issues */
@@ -811,7 +809,7 @@ H5F_shared_has_feature(const H5F_shared_t *f_sh, unsigned feature)
 
     assert(f_sh);
 
-    FUNC_LEAVE_NOAPI((hbool_t)(f_sh->lf->feature_flags & feature))
+    FUNC_LEAVE_NOAPI((bool)(f_sh->lf->feature_flags & feature))
 } /* end H5F_shared_has_feature() */
 
 /*-------------------------------------------------------------------------
@@ -819,11 +817,11 @@ H5F_shared_has_feature(const H5F_shared_t *f_sh, unsigned feature)
  *
  * Purpose:  Check if a file has a particular feature enabled
  *
- * Return:   Success:    Non-negative - TRUE or FALSE
+ * Return:   Success:    Non-negative - true or false
  *           Failure:    Negative (should not happen)
  *-------------------------------------------------------------------------
  */
-hbool_t
+bool
 H5F_has_feature(const H5F_t *f, unsigned feature)
 {
     /* Use FUNC_ENTER_NOAPI_NOINIT_NOERR here to avoid performance issues */
@@ -832,7 +830,7 @@ H5F_has_feature(const H5F_t *f, unsigned feature)
     assert(f);
     assert(f->shared);
 
-    FUNC_LEAVE_NOAPI((hbool_t)(f->shared->lf->feature_flags & feature))
+    FUNC_LEAVE_NOAPI((bool)(f->shared->lf->feature_flags & feature))
 } /* end H5F_has_feature() */
 
 /*-------------------------------------------------------------------------
@@ -882,7 +880,7 @@ H5F_get_fileno(const H5F_t *f, unsigned long *filenum)
 
     /* Retrieve the file's serial number */
     if (H5FD_get_fileno(f->shared->lf, filenum) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_BADRANGE, FAIL, "can't retrieve fileno")
+        HGOTO_ERROR(H5E_FILE, H5E_BADRANGE, FAIL, "can't retrieve fileno");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -907,7 +905,7 @@ H5F_shared_get_eoa(const H5F_shared_t *f_sh, H5FD_mem_t type)
 
     /* Dispatch to driver */
     if (HADDR_UNDEF == (ret_value = H5FD_get_eoa(f_sh->lf, type)))
-        HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, HADDR_UNDEF, "driver get_eoa request failed")
+        HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, HADDR_UNDEF, "driver get_eoa request failed");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -933,7 +931,7 @@ H5F_get_eoa(const H5F_t *f, H5FD_mem_t type)
 
     /* Dispatch to driver */
     if (HADDR_UNDEF == (ret_value = H5FD_get_eoa(f->shared->lf, type)))
-        HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, HADDR_UNDEF, "driver get_eoa request failed")
+        HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, HADDR_UNDEF, "driver get_eoa request failed");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -985,7 +983,7 @@ H5F_get_vfd_handle(const H5F_t *file, hid_t fapl, void **file_handle)
 
     /* Get the VFD handle */
     if (H5FD_get_vfd_handle(file->shared->lf, fapl, file_handle) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get file handle for file driver")
+        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get file handle for file driver");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -999,10 +997,10 @@ done:
  *           (Mainly added to stop non-file routines from poking about in the
  *           H5F_t data structure)
  *
- * Return:   TRUE/FALSE on success/abort on failure (shouldn't fail)
+ * Return:   true/false on success/abort on failure (shouldn't fail)
  *-------------------------------------------------------------------------
  */
-hbool_t
+bool
 H5F_is_tmp_addr(const H5F_t *f, haddr_t addr)
 {
     /* Use FUNC_ENTER_NOAPI_NOINIT_NOERR here to avoid performance issues */
@@ -1022,10 +1020,10 @@ H5F_is_tmp_addr(const H5F_t *f, haddr_t addr)
  *           (Mainly added to stop non-file routines from poking about in the
  *           H5F_t data structure)
  *
- * Return:   TRUE/FALSE on success/abort on failure (shouldn't fail)
+ * Return:   true/false on success/abort on failure (shouldn't fail)
  *-------------------------------------------------------------------------
  */
-hbool_t
+bool
 H5F_use_tmp_space(const H5F_t *f)
 {
     /* Use FUNC_ENTER_NOAPI_NOINIT_NOERR here to avoid performance issues */
@@ -1054,10 +1052,30 @@ H5F_coll_md_read(const H5F_t *f)
     /* Use FUNC_ENTER_NOAPI_NOINIT_NOERR here to avoid performance issues */
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-    assert(f);
+    assert(f && f->shared);
 
     FUNC_LEAVE_NOAPI(f->shared->coll_md_read)
 } /* end H5F_coll_md_read() */
+
+/*-------------------------------------------------------------------------
+ * Function: H5F_shared_coll_md_read
+ *
+ * Purpose:  Retrieve the 'collective metadata reads' flag for the file.
+ *
+ * Return:   Success:    Non-negative, the 'collective metadata reads' flag
+ *           Failure:    (can't happen)
+ *-------------------------------------------------------------------------
+ */
+H5P_coll_md_read_flag_t
+H5F_shared_coll_md_read(const H5F_shared_t *f_sh)
+{
+    /* Use FUNC_ENTER_NOAPI_NOINIT_NOERR here to avoid performance issues */
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    assert(f_sh);
+
+    FUNC_LEAVE_NOAPI(f_sh->coll_md_read)
+} /* end H5F_shared_coll_md_read() */
 
 /*-------------------------------------------------------------------------
  * Function:    H5F_shared_get_mpi_file_sync_required
@@ -1070,7 +1088,7 @@ H5F_coll_md_read(const H5F_t *f)
  *-------------------------------------------------------------------------
  */
 herr_t
-H5F_shared_get_mpi_file_sync_required(const H5F_shared_t *f_sh, hbool_t *flag /*out*/)
+H5F_shared_get_mpi_file_sync_required(const H5F_shared_t *f_sh, bool *flag /*out*/)
 {
     herr_t ret_value = SUCCEED; /* Return value */
 
@@ -1081,7 +1099,7 @@ H5F_shared_get_mpi_file_sync_required(const H5F_shared_t *f_sh, hbool_t *flag /*
 
     /* Dispatch to driver */
     if ((ret_value = H5FD_mpi_get_file_sync_required(f_sh->lf, flag)) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "driver get_file_sync_required request failed")
+        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "driver get_file_sync_required request failed");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1096,10 +1114,10 @@ done:
  *           (Mainly added to stop non-file routines from poking about in the
  *           H5F_t data structure)
  *
- * Return:   TRUE/FALSE on success/abort on failure (shouldn't fail)
+ * Return:   true/false on success/abort on failure (shouldn't fail)
  *-------------------------------------------------------------------------
  */
-hbool_t
+bool
 H5F_use_mdc_logging(const H5F_t *f)
 {
     /* Use FUNC_ENTER_NOAPI_NOINIT_NOERR here to avoid performance issues */
@@ -1119,10 +1137,10 @@ H5F_use_mdc_logging(const H5F_t *f)
  *           (Mainly added to stop non-file routines from poking about in the
  *           H5F_t data structure)
  *
- * Return:   TRUE/FALSE on success/abort on failure (shouldn't fail)
+ * Return:   true/false on success/abort on failure (shouldn't fail)
  *-------------------------------------------------------------------------
  */
-hbool_t
+bool
 H5F_start_mdc_log_on_access(const H5F_t *f)
 {
     /* Use FUNC_ENTER_NOAPI_NOINIT_NOERR here to avoid performance issues */
@@ -1142,7 +1160,7 @@ H5F_start_mdc_log_on_access(const H5F_t *f)
  *           (Mainly added to stop non-file routines from poking about in the
  *           H5F_t data structure)
  *
- * Return:   TRUE/FALSE on success/abort on failure (shouldn't fail)
+ * Return:   true/false on success/abort on failure (shouldn't fail)
  *-------------------------------------------------------------------------
  */
 char *
@@ -1229,7 +1247,7 @@ H5F_get_pgend_meta_thres(const H5F_t *f)
  *           Failure:    (can't happen)
  *-------------------------------------------------------------------------
  */
-hbool_t
+bool
 H5F_get_point_of_no_return(const H5F_t *f)
 {
     /* Use FUNC_ENTER_NOAPI_NOINIT_NOERR here to avoid performance issues */
@@ -1250,7 +1268,7 @@ H5F_get_point_of_no_return(const H5F_t *f)
  *           Failure:    (can't happen)
  *-------------------------------------------------------------------------
  */
-hbool_t
+bool
 H5F_get_null_fsm_addr(const H5F_t *f)
 {
     /* Use FUNC_ENTER_NOAPI_NOINIT_NOERR here to avoid performance issues */
@@ -1324,7 +1342,7 @@ H5F__get_cont_info(const H5F_t *f, H5VL_file_cont_info_t *info)
 
     /* Verify structure version */
     if (info->version != H5VL_CONTAINER_INFO_VERSION)
-        HGOTO_ERROR(H5E_FILE, H5E_VERSION, FAIL, "wrong container info version #")
+        HGOTO_ERROR(H5E_FILE, H5E_VERSION, FAIL, "wrong container info version #");
 
     /* Set the container info fields */
     info->feature_flags = 0; /* None currently defined */
@@ -1336,16 +1354,16 @@ done:
 } /* end H5F_get_cont_info */
 
 /*-------------------------------------------------------------------------
- * Function: H5F_get_file_locking
+ * Function: H5F_get_use_file_locking
  *
- * Purpose:  Get the file locking flag for the file
+ * Purpose:  Get the 'use file locking' flag for the file
  *
- * Return:   TRUE/FALSE
+ * Return:   true/false
  *
  *-------------------------------------------------------------------------
  */
-hbool_t
-H5F_get_file_locking(const H5F_t *f)
+bool
+H5F_get_use_file_locking(const H5F_t *f)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
@@ -1353,21 +1371,21 @@ H5F_get_file_locking(const H5F_t *f)
     assert(f->shared);
 
     FUNC_LEAVE_NOAPI(f->shared->use_file_locking)
-} /* end H5F_get_file_locking */
+} /* end H5F_get_use_file_locking */
 
 /*-------------------------------------------------------------------------
  * Function: H5F_has_vector_select_io
  *
  * Purpose:  Determine if vector or selection I/O is supported by this file
  *
- * Return:   TRUE/FALSE
+ * Return:   true/false
  *
  *-------------------------------------------------------------------------
  */
-hbool_t
-H5F_has_vector_select_io(const H5F_t *f, hbool_t is_write)
+bool
+H5F_has_vector_select_io(const H5F_t *f, bool is_write)
 {
-    hbool_t ret_value; /* Return value */
+    bool ret_value; /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
@@ -1381,3 +1399,23 @@ H5F_has_vector_select_io(const H5F_t *f, hbool_t is_write)
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F_has_vector_select_io */
+
+/*-------------------------------------------------------------------------
+ * Function: H5F_get_rfic_flags
+ *
+ * Purpose:  Get the relaxed file integrity checks (RFIC) flags for the file
+ *
+ * Return:   RFIC flags for a file on success (which can be 0), can't fail
+ *
+ *-------------------------------------------------------------------------
+ */
+uint64_t
+H5F_get_rfic_flags(const H5F_t *f)
+{
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    assert(f);
+    assert(f->shared);
+
+    FUNC_LEAVE_NOAPI(f->shared->rfic_flags)
+} /* end H5F_get_rfic_flags */

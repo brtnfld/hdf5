@@ -24,7 +24,7 @@ static int check_d_input(const char *);
  * Command-line options: The user can specify short or long-named
  * parameters.
  */
-static const char            *s_opts   = "cd:ehln:p:qrv*xA:CE:NS*V";
+static const char            *s_opts   = "cd:ehln:p:qrv*xA:CE:K:NS*V";
 static struct h5_long_options l_opts[] = {{"compare", no_arg, 'c'},
                                           {"delta", require_arg, 'd'},
                                           {"use-system-epsilon", no_arg, 'e'},
@@ -39,6 +39,7 @@ static struct h5_long_options l_opts[] = {{"compare", no_arg, 'c'},
                                           {"exclude-attribute", require_arg, 'A'},
                                           {"no-compact-subset", no_arg, 'C'},
                                           {"exclude-path", require_arg, 'E'},
+                                          {"page-buffer-size", require_arg, 'K'},
                                           {"nan", no_arg, 'N'},
                                           {"enable-error-stack", optional_arg, 'S'},
                                           {"version", no_arg, 'V'},
@@ -137,6 +138,9 @@ parse_command_line(int argc, const char *const *argv, const char **fname1, const
     /**this is bad in mixing option with results**/
     opts->not_cmp = 0;
 
+    /* init for page buffer cache size option */
+    opts->page_cache = 0;
+
     /* init for exclude-path option */
     exclude_head = NULL;
 
@@ -198,7 +202,7 @@ parse_command_line(int argc, const char *const *argv, const char **fname1, const
                 break;
 
             case 'l':
-                opts->follow_links = TRUE;
+                opts->follow_links = true;
                 break;
 
             case 'x':
@@ -241,7 +245,7 @@ parse_command_line(int argc, const char *const *argv, const char **fname1, const
                 break;
 
             case 'C':
-                opts->disable_compact_subset = TRUE;
+                opts->disable_compact_subset = true;
                 break;
 
             case 'A':
@@ -320,16 +324,20 @@ parse_command_line(int argc, const char *const *argv, const char **fname1, const
                 opts->use_system_epsilon = 1;
                 break;
 
+            case 'K':
+                opts->page_cache = strtoul(H5_optarg, NULL, 0);
+                break;
+
             case '1':
                 opts->vol_info[0].type    = VOL_BY_VALUE;
                 opts->vol_info[0].u.value = (H5VL_class_value_t)atoi(H5_optarg);
-                opts->custom_vol[0]       = TRUE;
+                opts->custom_vol[0]       = true;
                 break;
 
             case '2':
                 opts->vol_info[0].type   = VOL_BY_NAME;
                 opts->vol_info[0].u.name = H5_optarg;
-                opts->custom_vol[0]      = TRUE;
+                opts->custom_vol[0]      = true;
                 break;
 
             case '3':
@@ -339,13 +347,13 @@ parse_command_line(int argc, const char *const *argv, const char **fname1, const
             case '4':
                 opts->vol_info[1].type    = VOL_BY_VALUE;
                 opts->vol_info[1].u.value = (H5VL_class_value_t)atoi(H5_optarg);
-                opts->custom_vol[1]       = TRUE;
+                opts->custom_vol[1]       = true;
                 break;
 
             case '5':
                 opts->vol_info[1].type   = VOL_BY_NAME;
                 opts->vol_info[1].u.name = H5_optarg;
-                opts->custom_vol[1]      = TRUE;
+                opts->custom_vol[1]      = true;
                 break;
 
             case '6':
@@ -355,13 +363,13 @@ parse_command_line(int argc, const char *const *argv, const char **fname1, const
             case '7':
                 opts->vfd_info[0].type    = VFD_BY_VALUE;
                 opts->vfd_info[0].u.value = (H5FD_class_value_t)atoi(H5_optarg);
-                opts->custom_vfd[0]       = TRUE;
+                opts->custom_vfd[0]       = true;
                 break;
 
             case '8':
                 opts->vfd_info[0].type   = VFD_BY_NAME;
                 opts->vfd_info[0].u.name = H5_optarg;
-                opts->custom_vfd[0]      = TRUE;
+                opts->custom_vfd[0]      = true;
                 break;
 
             case '9':
@@ -371,13 +379,13 @@ parse_command_line(int argc, const char *const *argv, const char **fname1, const
             case '0':
                 opts->vfd_info[1].type    = VFD_BY_VALUE;
                 opts->vfd_info[1].u.value = (H5FD_class_value_t)atoi(H5_optarg);
-                opts->custom_vfd[1]       = TRUE;
+                opts->custom_vfd[1]       = true;
                 break;
 
             case 'Y':
                 opts->vfd_info[1].type   = VFD_BY_NAME;
                 opts->vfd_info[1].u.name = H5_optarg;
-                opts->custom_vfd[1]      = TRUE;
+                opts->custom_vfd[1]      = true;
                 break;
 
             case 'Z':
@@ -387,7 +395,7 @@ parse_command_line(int argc, const char *const *argv, const char **fname1, const
     }
 
     /* If file 1 uses the onion VFD, get the revision number */
-    if (opts->vfd_info[0].u.name && !HDstrcmp(opts->vfd_info[0].u.name, "onion")) {
+    if (opts->vfd_info[0].u.name && !strcmp(opts->vfd_info[0].u.name, "onion")) {
         if (opts->vfd_info[0].info) {
             errno                     = 0;
             onion_fa_g_1.revision_num = strtoull(opts->vfd_info[0].info, NULL, 10);
@@ -404,7 +412,7 @@ parse_command_line(int argc, const char *const *argv, const char **fname1, const
     }
 
     /* If file 2 uses the onion VFD, get the revision number */
-    if (opts->vfd_info[1].u.name && !HDstrcmp(opts->vfd_info[1].u.name, "onion")) {
+    if (opts->vfd_info[1].u.name && !strcmp(opts->vfd_info[1].u.name, "onion")) {
         if (opts->vfd_info[1].info) {
             errno                     = 0;
             onion_fa_g_2.revision_num = strtoull(opts->vfd_info[1].info, NULL, 10);
@@ -512,7 +520,7 @@ check_n_input(const char *str)
     unsigned i;
     char     c;
 
-    for (i = 0; i < HDstrlen(str); i++) {
+    for (i = 0; i < strlen(str); i++) {
         c = str[i];
         if (i == 0) {
             if (c < 49 || c > 57) /* ascii values between 1 and 9 */
@@ -541,7 +549,7 @@ check_p_input(const char *str)
      * the atof return value on a hexadecimal input is different
      * on some systems; we do a character check for this
      */
-    if (HDstrlen(str) > 2 && str[0] == '0' && str[1] == 'x')
+    if (strlen(str) > 2 && str[0] == '0' && str[1] == 'x')
         return -1;
 
     x = atof(str);
@@ -568,7 +576,7 @@ check_d_input(const char *str)
      * the atof return value on a hexadecimal input is different
      * on some systems; we do a character check for this
      */
-    if (HDstrlen(str) > 2 && str[0] == '0' && str[1] == 'x')
+    if (strlen(str) > 2 && str[0] == '0' && str[1] == 'x')
         return -1;
 
     x = atof(str);
@@ -622,6 +630,8 @@ usage(void)
     PRINTVALSTREAM(rawoutstream, "          3 : All level 2 information plus file names.\n");
     PRINTVALSTREAM(rawoutstream, "   -q, --quiet\n");
     PRINTVALSTREAM(rawoutstream, "         Quiet mode. Do not produce output.\n");
+    PRINTVALSTREAM(rawoutstream,
+                   "   --page-buffer-size=N    Set the page buffer cache size, N=non-negative integers\n");
     PRINTVALSTREAM(rawoutstream,
                    "   --vol-value-1           Value (ID) of the VOL connector to use for opening the\n");
     PRINTVALSTREAM(rawoutstream, "                           first HDF5 file specified\n");
@@ -813,7 +823,7 @@ usage(void)
                    "      specified group) and generates a report of objects that appear in only\n");
     PRINTVALSTREAM(rawoutstream,
                    "      one group or in both groups. Common objects are then compared recursively.\n");
-    PRINTVALSTREAM(rawoutstream, "  2) Datasets\n");
+    PRINTVALSTREAM(rawoutstream, "  2) Attributes and Datasets\n");
     PRINTVALSTREAM(rawoutstream,
                    "      Array rank and dimensions, datatypes, and data values are compared.\n");
     PRINTVALSTREAM(rawoutstream, "  3) Datatypes\n");

@@ -65,7 +65,7 @@ typedef struct H5FD_vfd_swmr_t {
 
 } H5FD_vfd_swmr_t;
 
-#define MAXADDR            (((haddr_t)1 << (8 * sizeof(HDoff_t) - 1)) - 1)
+#define MAXADDR            (((haddr_t)1 << (8 * sizeof(off_t) - 1)) - 1)
 #define VFD_SWMR_MD_SUFFIX ".md"
 
 /* Prototypes */
@@ -245,8 +245,7 @@ H5FD__vfd_swmr_fapl_copy(const void *_old_fa)
 
     new_fa_ptr = H5FL_CALLOC(H5FD_vfd_swmr_reader_fapl_t);
     if (NULL == new_fa_ptr)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTALLOC, NULL, "unable to allocate vfd swmr FAPL")
-
+        HGOTO_ERROR(H5E_VFL, H5E_CANTALLOC, NULL, "unable to allocate vfd swmr FAPL");
     H5MM_memcpy(new_fa_ptr, old_fa_ptr, sizeof(H5FD_vfd_swmr_reader_fapl_t));
 
     ret_value = (void *)new_fa_ptr;
@@ -281,8 +280,7 @@ H5FD__vfd_swmr_fapl_free(void *_fapl)
 
     /* Check arguments */
     if ((NULL == fapl) || (fapl->magic != H5FD_VFD_SWMR_READER_MAGIC))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "NULL or invalid H5FD_vfd_swmr_reader_fapl_t *")
-
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "NULL or invalid H5FD_vfd_swmr_reader_fapl_t *");
     /* Free the property list */
     fapl->magic = 0;
     fapl        = H5FL_FREE(H5FD_vfd_swmr_reader_fapl_t, fapl);
@@ -332,25 +330,21 @@ H5P_pop_vfd_swmr_reader_vfd_off_fapl(hid_t fapl_id)
 
     /* sanity checks -- get ptr to plist in passing */
     if (NULL == (plist_ptr = H5P_object_verify(fapl_id, H5P_FILE_ACCESS)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list")
-
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list");
     /* 1) Read the file driver entry from the supplied fapl.  Verify
      *    that it specifies the vfd swmr reader VFD.
      */
 
     /* get the driver property from the supplied fapl */
     if (H5P_peek(plist_ptr, H5F_ACS_FILE_DRV_NAME, &driver_prop) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get file driver ID & info")
-
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get file driver ID & info");
     /* verify that it specifies the vfd swrm reader vfd */
     if (driver_prop.driver_id != H5FD_VFD_SWMR)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "fapl driver prop not vfd swmr reader")
-
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "fapl driver prop not vfd swmr reader");
     if ((((const H5FD_vfd_swmr_reader_fapl_t *)(driver_prop.driver_info)) == NULL) ||
         (((const H5FD_vfd_swmr_reader_fapl_t *)(driver_prop.driver_info))->magic !=
          H5FD_VFD_SWMR_READER_MAGIC))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "fapl driver info invalid")
-
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "fapl driver info invalid");
     sub_fapl_id = ((const H5FD_vfd_swmr_reader_fapl_t *)(driver_prop.driver_info))->fapl_id;
 
     /* 2) Read the file driver entry from the sub fapl specified
@@ -360,12 +354,10 @@ H5P_pop_vfd_swmr_reader_vfd_off_fapl(hid_t fapl_id)
      */
     /* get a pointer to the sub-fapl */
     if (NULL == (sub_plist_ptr = (H5P_genplist_t *)H5I_object(sub_fapl_id)))
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get sub-fapl pointer")
-
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get sub-fapl pointer");
     /* get the driver property from the sub-fapl */
     if (H5P_peek(sub_plist_ptr, H5F_ACS_FILE_DRV_NAME, &driver_prop) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get sub-fapl file driver ID & info")
-
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get sub-fapl file driver ID & info");
     /* insert the driver info from the sub-fapl into the supplied fapl.  There is
      * some question in my mind as to whether I should be making a copy of the
      * info and string obtained above.  While I don't think it is necessary,
@@ -377,8 +369,7 @@ H5P_pop_vfd_swmr_reader_vfd_off_fapl(hid_t fapl_id)
      */
     if (H5P_set_driver(plist_ptr, driver_prop.driver_id, driver_prop.driver_info,
                        driver_prop.driver_config_str) < 0)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTSET, FAIL, "can't set driver on supplied fapl")
-
+        HGOTO_ERROR(H5E_VFL, H5E_CANTSET, FAIL, "can't set driver on supplied fapl");
     /* 3) Discard the sub-fapl?  Not sure if this is necessary.  Will wait on this for now. */
 
 done:
@@ -430,8 +421,7 @@ H5P_push_vfd_swmr_reader_vfd_on_fapl(hid_t fapl_id)
 
     /* sanity checks -- get ptr to plist in passing */
     if (NULL == (plist_ptr = H5P_object_verify(fapl_id, H5P_FILE_ACCESS)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list")
-
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list");
     /* 1) Copy the file driver from the supplied fapl.  Note
      *    that due to potential VFD stacking, we can't verify
      *    that this VFD supports vfd swmr.  This will have to
@@ -440,8 +430,7 @@ H5P_push_vfd_swmr_reader_vfd_on_fapl(hid_t fapl_id)
 
     /* get the driver property from the supplied fapl */
     if (H5P_peek(plist_ptr, H5F_ACS_FILE_DRV_NAME, &driver_prop) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get init driver ID & info")
-
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get init driver ID & info");
     /* 2) Create a new FAPL, and set the file driver obtained in 1) in the new FAPL. */
 
     /* create a new FAPL */
@@ -453,8 +442,7 @@ H5P_push_vfd_swmr_reader_vfd_on_fapl(hid_t fapl_id)
 
     /* get a pointer to it */
     if (NULL == (sub_plist_ptr = (H5P_genplist_t *)H5I_object(sub_fapl_id)))
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get sub-fapl pointer")
-
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get sub-fapl pointer");
     /* insert the driver info from the base fapl into the sub-fapl.  There is
      * some question in my mind as to whether I should be making a copy of the
      * info and string obtained above.  While I don't think it is necessary,
@@ -466,8 +454,7 @@ H5P_push_vfd_swmr_reader_vfd_on_fapl(hid_t fapl_id)
      */
     if (H5P_set_driver(sub_plist_ptr, driver_prop.driver_id, driver_prop.driver_info,
                        driver_prop.driver_config_str) < 0)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTSET, FAIL, "can't set driver on sub-fapl")
-
+        HGOTO_ERROR(H5E_VFL, H5E_CANTSET, FAIL, "can't set driver on sub-fapl");
     /* 3) Allocate a new instance of H5FD_vfd_swmr_reader_config_t,
      *    load it with the ID of the FAPL created in 2, and use
      *    it to overwrite the file driver entry in the supplied
@@ -476,8 +463,7 @@ H5P_push_vfd_swmr_reader_vfd_on_fapl(hid_t fapl_id)
 
     info = H5FL_CALLOC(H5FD_vfd_swmr_reader_fapl_t);
     if (NULL == info)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTALLOC, FAIL, "unable to allocate vfd swmr fapl struct")
-
+        HGOTO_ERROR(H5E_VFL, H5E_CANTALLOC, FAIL, "unable to allocate vfd swmr fapl struct");
     /* initialize the vfd swmr reader vfd info */
     info->magic   = H5FD_VFD_SWMR_READER_MAGIC;
     info->fapl_id = sub_fapl_id;
@@ -522,14 +508,13 @@ H5FD__swmr_reader_open(H5FD_vfd_swmr_t *file)
     file->api_elapsed_ticks = H5MM_calloc(file->api_elapsed_nbuckets * sizeof(*file->api_elapsed_ticks));
 
     if (file->api_elapsed_ticks == NULL)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTALLOC, FAIL, "could not allocate API elapsed ticks")
-
+        HGOTO_ERROR(H5E_VFL, H5E_CANTALLOC, FAIL, "could not allocate API elapsed ticks");
     if (!file->make_believe) {
         /* Retry on opening the metadata file */
         for (do_try         = H5_retry_init(&retry, H5FD_VFD_SWMR_MD_FILE_RETRY_MAX, H5_RETRY_DEFAULT_MINIVAL,
                                     H5_RETRY_DEFAULT_MAXIVAL);
              do_try; do_try = H5_retry_next(&retry)) {
-            if ((file->md_fd = HDopen(file->md_file_path_name, O_RDONLY)) >= 0)
+            if ((file->md_fd = open(file->md_file_path_name, O_RDONLY)) >= 0)
                 break;
         }
 
@@ -608,7 +593,7 @@ H5FD__vfd_swmr_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t H5_
     H5F_vfd_swmr_config_t *            vfd_swmr_config;
     const H5FD_vfd_swmr_reader_fapl_t *fa_ptr    = NULL;
     H5FD_t *                           ret_value = NULL; /* Return value     */
-    htri_t                             is_hdf5;
+    bool                               is_hdf5 = false;
 
     FUNC_ENTER_PACKAGE
 
@@ -617,8 +602,7 @@ H5FD__vfd_swmr_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t H5_
 
     /* Get file access property list */
     if (NULL == (plist = (H5P_genplist_t *)H5I_object(fapl_id)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a file access property list")
-
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a file access property list");
     if (H5P_get(plist, H5F_ACS_PAGE_BUFFER_SIZE_NAME, &page_buf_size) < 0)
         HGOTO_ERROR(H5E_VFL, H5E_CANTGET, NULL, "can't get page buffer size");
 
@@ -627,12 +611,10 @@ H5FD__vfd_swmr_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t H5_
      * and return an error.
      */
     if (page_buf_size == 0)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTGET, NULL, "page buffering must be enabled")
-
+        HGOTO_ERROR(H5E_VFL, H5E_CANTGET, NULL, "page buffering must be enabled");
     /* Create the new driver struct */
     if (NULL == (file = H5FL_CALLOC(H5FD_vfd_swmr_t)))
-        HGOTO_ERROR(H5E_VFL, H5E_NOSPACE, NULL, "unable to allocate file struct")
-
+        HGOTO_ERROR(H5E_VFL, H5E_NOSPACE, NULL, "unable to allocate file struct");
     /* get the vfd swrm reader fapl entry. */
     if (H5P_peek_driver(plist) != H5FD_VFD_SWMR)
         HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, NULL, "incorrect VFL driver");
@@ -656,8 +638,7 @@ H5FD__vfd_swmr_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t H5_
 
     /* Get VFD SWMR configuration */
     if (H5P_get(plist, H5F_ACS_VFD_SWMR_CONFIG_NAME, vfd_swmr_config) < 0)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTGET, NULL, "can't get VFD SWMR config info")
-
+        HGOTO_ERROR(H5E_VFL, H5E_CANTGET, NULL, "can't get VFD SWMR config info");
     assert(!vfd_swmr_config->writer);
 
     file->md_fd             = -1;
@@ -665,17 +646,17 @@ H5FD__vfd_swmr_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t H5_
     file->md_pages_reserved = vfd_swmr_config->md_pages_reserved;
 
     /* Retain a copy of the name used to open the HDF5 file */
-    HDstrncpy(file->hdf5_filename, name, sizeof(file->hdf5_filename));
+    strncpy(file->hdf5_filename, name, sizeof(file->hdf5_filename));
     file->hdf5_filename[sizeof(file->hdf5_filename) - 1] = '\0';
 
     /* Retain a copy of the metadata file name */
     if (H5F_vfd_swmr_build_md_path_name(vfd_swmr_config, name, file->md_file_path_name) < 0)
-        HGOTO_ERROR(H5E_VFL, H5E_OPENERROR, NULL, "building md_file_path and md_file_name failed")
-
+        HGOTO_ERROR(H5E_VFL, H5E_OPENERROR, NULL, "building md_file_path and md_file_name failed");
     file->md_file_path_name[sizeof(file->md_file_path_name) - 1] = '\0';
 
     /* Make sure the hdf5 file exists and is valid */
-    is_hdf5 = H5F__is_hdf5(name, H5P_FILE_ACCESS_DEFAULT);
+    if (H5F__is_hdf5(name, H5P_FILE_ACCESS_DEFAULT, &is_hdf5) < 0)
+        HGOTO_ERROR(H5E_VFL, H5E_CANTGET, NULL, "unable to check if HDF5 file");
 
     /* Ensure reader */
     if (!vfd_swmr_config->writer) {
@@ -687,13 +668,12 @@ H5FD__vfd_swmr_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t H5_
             H5FD__vfd_swmr_create_make_believe_data(file);
         }
         if (H5FD__swmr_reader_open(file) < 0)
-            HGOTO_ERROR(H5E_VFL, H5E_OPENERROR, NULL, "perform reader-specific opening steps failed")
-    }
+            HGOTO_ERROR(H5E_VFL, H5E_OPENERROR, NULL, "perform reader-specific opening steps failed");    }
 
     /* Hard-wired to open the underlying HDF5 file with SEC2 */
     /* H5FD_SEC2 is the default driver for H5P_FILE_ACCESS_DEFAULT except when
        the environment variable HDF5_DRIVER is set to otherwise */
-    if ((file->hdf5_file_lf = H5FD_open(name, flags, H5P_FILE_ACCESS_DEFAULT, HADDR_UNDEF)) == NULL)
+    if (H5FD_open(false, &file->hdf5_file_lf, name, flags, H5P_FILE_ACCESS_DEFAULT, HADDR_UNDEF) < 0)
         HGOTO_ERROR(H5E_VFL, H5E_CANTOPENFILE, NULL, "can't set driver info");
 
     /* set pb_configured to FALSE.  This field should not exist, but
@@ -714,8 +694,7 @@ done:
     /* Handle closing if error */
     if (NULL == ret_value && file)
         if (H5FD__vfd_swmr_close(&file->pub) < 0)
-            HDONE_ERROR(H5E_VFL, H5E_CANTCLOSEFILE, NULL, "error from closing")
-
+            HDONE_ERROR(H5E_VFL, H5E_CANTCLOSEFILE, NULL, "error from closing");
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FD__vfd_swmr_open() */
 
@@ -752,7 +731,7 @@ H5FD__vfd_swmr_close(H5FD_t *_file)
         H5MM_xfree(file->api_elapsed_ticks);
 
     /* Close the metadata file */
-    if (file->md_fd >= 0 && HDclose(file->md_fd) < 0)
+    if (file->md_fd >= 0 && close(file->md_fd) < 0)
         /* Push error, but keep going */
         HDONE_ERROR(H5E_VFL, H5E_CANTCLOSEFILE, FAIL, "unable to close the metadata file");
 
@@ -861,8 +840,7 @@ H5FD__vfd_swmr_get_eoa(const H5FD_t *_file, H5FD_mem_t type)
     FUNC_ENTER_PACKAGE
 
     if ((ret_value = H5FD_get_eoa(file->hdf5_file_lf, type)) == HADDR_UNDEF)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, HADDR_UNDEF, "unable to get HDF5 file eoa")
-
+        HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, HADDR_UNDEF, "unable to get HDF5 file eoa");
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FD__vfd_swmr_get_eoa() */
@@ -888,8 +866,7 @@ H5FD__vfd_swmr_set_eoa(H5FD_t *_file, H5FD_mem_t type, haddr_t addr)
     FUNC_ENTER_PACKAGE
 
     if (H5FD_set_eoa(file->hdf5_file_lf, type, addr) < 0)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, FAIL, "unable to set HDF5 file eoa")
-
+        HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, FAIL, "unable to set HDF5 file eoa");
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FD__vfd_swmr_set_eoa() */
@@ -916,8 +893,7 @@ H5FD__vfd_swmr_get_eof(const H5FD_t *_file, H5FD_mem_t type)
 
     /* LATER: need to determine the metadata file or underlying HDF5 file ? */
     if ((ret_value = H5FD_get_eof(file->hdf5_file_lf, type)) == HADDR_UNDEF)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, HADDR_UNDEF, "unable to set file eoa")
-
+        HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, HADDR_UNDEF, "unable to set file eoa");
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FD__vfd_swmr_get_eof() */
@@ -940,14 +916,12 @@ H5FD__vfd_swmr_get_handle(H5FD_t *_file, hid_t fapl, void **file_handle)
     FUNC_ENTER_PACKAGE
 
     if (!file_handle)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "file handle not valid")
-
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "file handle not valid");
     /* LATER? H5P_get(plist, H5F_ACS_SWMR_FILE_NAME, &type) */
 
     if ((ret_value = H5FD_get_vfd_handle(file->hdf5_file_lf, fapl, file_handle)) < 0)
 
-        HGOTO_ERROR(H5E_VFL, H5E_BADVALUE, FAIL, "unable to get handle for HDF5 file")
-
+        HGOTO_ERROR(H5E_VFL, H5E_BADVALUE, FAIL, "unable to get handle for HDF5 file");
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FD__vfd_swmr_get_handle() */
@@ -1030,8 +1004,7 @@ H5FD__vfd_swmr_read(H5FD_t *_file, H5FD_mem_t type, hid_t H5_ATTR_UNUSED dxpl_id
     if (entry == NULL) {
         /* Cannot find addr in index, read from the underlying hdf5 file */
         if (H5FD_read(file->hdf5_file_lf, type, addr, size, buf) < 0)
-            HGOTO_ERROR(H5E_VFL, H5E_READERROR, FAIL, "file read request failed")
-
+            HGOTO_ERROR(H5E_VFL, H5E_READERROR, FAIL, "file read request failed");
         HGOTO_DONE(SUCCEED);
     }
 
@@ -1046,10 +1019,9 @@ H5FD__vfd_swmr_read(H5FD_t *_file, H5FD_mem_t type, hid_t H5_ATTR_UNUSED dxpl_id
     assert(addr < (entry->hdf5_page_offset + 1) * fs_page_size);
     assert(page_offset + init_size <= entry->length);
 
-    if (HDlseek(file->md_fd, (HDoff_t)((entry->md_file_page_offset * fs_page_size) + page_offset), SEEK_SET) <
+    if (lseek(file->md_fd, (off_t)((entry->md_file_page_offset * fs_page_size) + page_offset), SEEK_SET) <
         0)
-        HGOTO_ERROR(H5E_VFL, H5E_SEEKERROR, FAIL, "unable to seek in metadata file")
-
+        HGOTO_ERROR(H5E_VFL, H5E_SEEKERROR, FAIL, "unable to seek in metadata file");
     /* Coding borrowed from sec2 read */
     while (size > 0) {
 
@@ -1065,13 +1037,12 @@ H5FD__vfd_swmr_read(H5FD_t *_file, H5FD_mem_t type, hid_t H5_ATTR_UNUSED dxpl_id
             bytes_in = (h5_posix_io_t)size;
 
         do {
-            bytes_read = HDread(file->md_fd, p, bytes_in);
+            bytes_read = read(file->md_fd, p, bytes_in);
         } while (-1 == bytes_read && EINTR == errno);
 
         if (-1 == bytes_read)
             HGOTO_ERROR(H5E_VFL, H5E_READERROR, FAIL,
-                        "error reading the page/multi-page entry from the md file")
-
+                        "error reading the page/multi-page entry from the md file");
         assert(0 <= bytes_read && (size_t)bytes_read <= size);
 
         size -= (size_t)bytes_read;
@@ -1094,10 +1065,8 @@ H5FD__vfd_swmr_read(H5FD_t *_file, H5FD_mem_t type, hid_t H5_ATTR_UNUSED dxpl_id
 
         if (H5FD__vfd_swmr_header_deserialize(file, &tmp_header) != TRUE)
             HGOTO_ERROR(H5E_VFL, H5E_CANTLOAD, FAIL,
-                        "checksum error in shadow file entry; could not load header")
-
-        HGOTO_ERROR(H5E_VFL, H5E_CANTLOAD, FAIL, "checksum error in shadow file entry")
-    }
+                        "checksum error in shadow file entry; could not load header");
+        HGOTO_ERROR(H5E_VFL, H5E_CANTLOAD, FAIL, "checksum error in shadow file entry");    }
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1166,8 +1135,7 @@ H5FD__vfd_swmr_lock(H5FD_t *_file, hbool_t rw)
     assert(file);
 
     if (H5FD_lock(file->hdf5_file_lf, rw) < 0)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTLOCK, FAIL, "unable to lock the HDF5 file")
-
+        HGOTO_ERROR(H5E_VFL, H5E_CANTLOCK, FAIL, "unable to lock the HDF5 file");
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FD__vfd_swmr_lock() */
@@ -1192,8 +1160,7 @@ H5FD__vfd_swmr_unlock(H5FD_t *_file)
     assert(file);
 
     if (H5FD_unlock(file->hdf5_file_lf) < 0)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTUNLOCK, FAIL, "unable to unlock the HDF5 file")
-
+        HGOTO_ERROR(H5E_VFL, H5E_CANTUNLOCK, FAIL, "unable to unlock the HDF5 file");
 done:
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1239,15 +1206,14 @@ H5FD__vfd_swmr_ctl(H5FD_t *_file, uint64_t op_code, uint64_t flags, const void *
             if (flags & H5FD_CTL_ROUTE_TO_TERMINAL_VFD_FLAG) {
                 /* Pass ctl call down to R/W channel VFD */
                 if (H5FDctl(file->hdf5_file_lf, op_code, flags, input, output) < 0)
-                    HGOTO_ERROR(H5E_VFL, H5E_FCNTL, FAIL, "VFD ctl request failed")
-            }
+                    HGOTO_ERROR(H5E_VFL, H5E_FCNTL, FAIL, "VFD ctl request failed");            }
             else {
                 /* If no valid VFD routing flag is specified, fail for unknown op code
                  * if H5FD_CTL_FAIL_IF_UNKNOWN_FLAG flag is set.
                  */
                 if (flags & H5FD_CTL_FAIL_IF_UNKNOWN_FLAG)
                     HGOTO_ERROR(H5E_VFL, H5E_FCNTL, FAIL,
-                                "VFD ctl request failed (unknown op code and fail if unknown flag is set)")
+                                "VFD ctl request failed (unknown op code and fail if unknown flag is set)");
             }
 
             break;
@@ -1337,8 +1303,7 @@ H5FD__vfd_swmr_load_hdr_and_idx(H5FD_vfd_swmr_t *file, hbool_t open)
             continue;
 
         if (rc != TRUE)
-            HGOTO_ERROR(H5E_VFL, H5E_BADVALUE, FAIL, "could not read header")
-
+            HGOTO_ERROR(H5E_VFL, H5E_BADVALUE, FAIL, "could not read header");
         if (md_header.index_offset != last_index_offset)
             last_index_offset = md_header.index_offset;
 
@@ -1353,8 +1318,7 @@ H5FD__vfd_swmr_load_hdr_and_idx(H5FD_vfd_swmr_t *file, hbool_t open)
         }
         else if (md_header.tick_num < file->md_header.tick_num)
             /* The tick number must not move backward. */
-            HGOTO_ERROR(H5E_VFL, H5E_BADVALUE, FAIL, "tick number in header moved backwards")
-
+            HGOTO_ERROR(H5E_VFL, H5E_BADVALUE, FAIL, "tick number in header moved backwards");
         assert(md_header.tick_num > file->md_header.tick_num || open);
 
         /* Load and decode the index.  Go around again on a temporary
@@ -1366,8 +1330,7 @@ H5FD__vfd_swmr_load_hdr_and_idx(H5FD_vfd_swmr_t *file, hbool_t open)
             continue;
 
         if (rc != TRUE)
-            HGOTO_ERROR(H5E_VFL, H5E_BADVALUE, FAIL, "could not read index")
-
+            HGOTO_ERROR(H5E_VFL, H5E_BADVALUE, FAIL, "could not read index");
         /* If the tick_num is the same in both header and index,
          * and the header reads the same the second time as the first time,
          * then we should have a consistent picture of the index.
@@ -1387,16 +1350,14 @@ H5FD__vfd_swmr_load_hdr_and_idx(H5FD_vfd_swmr_t *file, hbool_t open)
         }
 
         if (rc == FAIL)
-            HGOTO_ERROR(H5E_VFL, H5E_BADVALUE, FAIL, "could not re-read header")
-    }
+            HGOTO_ERROR(H5E_VFL, H5E_BADVALUE, FAIL, "could not re-read header");    }
 
     /* Exhaust all retries for loading and decoding the md file header
      * and index
      */
     if (!do_try)
         HGOTO_ERROR(H5E_VFL, H5E_CANTLOAD, FAIL,
-                    "error in loading/decoding the metadata file header and index")
-
+                    "error in loading/decoding the metadata file header and index");
     /* Free VFD local entries */
     if (file->md_index.entries != NULL) {
 
@@ -1454,11 +1415,10 @@ H5FD__vfd_swmr_header_deserialize(H5FD_vfd_swmr_t *file, H5FD_vfd_swmr_md_header
     FUNC_ENTER_PACKAGE
 
     /* Set file pointer to the beginning the file */
-    if (HDlseek(file->md_fd, H5FD_MD_HEADER_OFF, SEEK_SET) < 0)
-        HGOTO_ERROR(H5E_VFL, H5E_SEEKERROR, FAIL, "unable to seek in metadata file")
-
+    if (lseek(file->md_fd, H5FD_MD_HEADER_OFF, SEEK_SET) < 0)
+        HGOTO_ERROR(H5E_VFL, H5E_SEEKERROR, FAIL, "unable to seek in metadata file");
     /* Read the header */
-    nread = HDread(file->md_fd, image, H5FD_MD_HEADER_SIZE);
+    nread = read(file->md_fd, image, H5FD_MD_HEADER_SIZE);
 
     /* Try again if a signal interrupted the read. */
     if (nread == -1 && errno == EINTR)
@@ -1468,8 +1428,7 @@ H5FD__vfd_swmr_header_deserialize(H5FD_vfd_swmr_t *file, H5FD_vfd_swmr_md_header
      * so bail out.
      */
     if (nread == -1)
-        HGOTO_ERROR(H5E_VFL, H5E_READERROR, FAIL, "error in reading the shadow header")
-
+        HGOTO_ERROR(H5E_VFL, H5E_READERROR, FAIL, "error in reading the shadow header");
     if ((uint64_t)nread < H5FD_MD_HEADER_SIZE)
         HGOTO_DONE(FALSE);
 
@@ -1492,8 +1451,7 @@ H5FD__vfd_swmr_header_deserialize(H5FD_vfd_swmr_t *file, H5FD_vfd_swmr_md_header
     UINT64DECODE(p, md_header->index_offset);
     UINT64DECODE(p, index_length);
     if (index_length > SIZE_MAX)
-        HGOTO_ERROR(H5E_VFL, H5E_BADVALUE, FAIL, "index is too large to hold in core")
-
+        HGOTO_ERROR(H5E_VFL, H5E_BADVALUE, FAIL, "index is too large to hold in core");
     md_header->index_length = (size_t)index_length;
 
     /* Checksum is already valid */
@@ -1540,13 +1498,11 @@ H5FD__vfd_swmr_index_deserialize(const H5FD_vfd_swmr_t *file, H5FD_vfd_swmr_md_i
 
     /* Allocate buffer for reading index */
     if (NULL == (image = H5MM_malloc(md_header->index_length)))
-        HGOTO_ERROR(H5E_VFL, H5E_CANTALLOC, FAIL, "memory allocation failed for index's on disk image buffer")
-
+        HGOTO_ERROR(H5E_VFL, H5E_CANTALLOC, FAIL, "memory allocation failed for index's on disk image buffer");
     /* We may seek past EOF.  That's ok, the read(2) will catch that. */
-    if (HDlseek(file->md_fd, (HDoff_t)md_header->index_offset, SEEK_SET) < 0)
-        HGOTO_ERROR(H5E_VFL, H5E_SEEKERROR, FAIL, "unable to seek in metadata file")
-
-    nread = HDread(file->md_fd, image, md_header->index_length);
+    if (lseek(file->md_fd, (off_t)md_header->index_offset, SEEK_SET) < 0)
+        HGOTO_ERROR(H5E_VFL, H5E_SEEKERROR, FAIL, "unable to seek in metadata file");
+    nread = read(file->md_fd, image, md_header->index_length);
 
     /* Try again if a signal interrupted the read. */
     if (nread == -1 && errno == EINTR)
@@ -1556,8 +1512,7 @@ H5FD__vfd_swmr_index_deserialize(const H5FD_vfd_swmr_t *file, H5FD_vfd_swmr_md_i
      * so bail out.
      */
     if (nread == -1)
-        HGOTO_ERROR(H5E_VFL, H5E_READERROR, FAIL, "error in reading the header in metadata file")
-
+        HGOTO_ERROR(H5E_VFL, H5E_READERROR, FAIL, "error in reading the header in metadata file");
     /* Try again if the read was not full.
      *
      * XXX XXX XXX
@@ -1613,8 +1568,7 @@ H5FD__vfd_swmr_index_deserialize(const H5FD_vfd_swmr_t *file, H5FD_vfd_swmr_md_i
         /* Allocate memory for index entries */
         md_index->entries = H5FL_SEQ_CALLOC(H5FD_vfd_swmr_idx_entry_t, md_index->num_entries);
         if (NULL == md_index->entries)
-            HGOTO_ERROR(H5E_VFL, H5E_CANTALLOC, FAIL, "memory allocation failed for index entries")
-
+            HGOTO_ERROR(H5E_VFL, H5E_CANTALLOC, FAIL, "memory allocation failed for index entries");
         /* Decode index entries */
         for (i = 0; i < md_index->num_entries; i++) {
             UINT32DECODE(p, md_index->entries[i].hdf5_page_offset);
@@ -1681,8 +1635,7 @@ H5FD_vfd_swmr_get_tick_and_idx(H5FD_t *_file, hbool_t reload_hdr_and_index, uint
 
     /* Load and decode the header and index as indicated */
     if (reload_hdr_and_index && H5FD__vfd_swmr_load_hdr_and_idx(file, FALSE) < 0)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTLOAD, FAIL, "unable to load/decode md header and index")
-
+        HGOTO_ERROR(H5E_VFL, H5E_CANTLOAD, FAIL, "unable to load/decode md header and index");
     /* Return tick_num */
     if (tick_ptr != NULL)
         *tick_ptr = file->md_header.tick_num;
@@ -1690,8 +1643,7 @@ H5FD_vfd_swmr_get_tick_and_idx(H5FD_t *_file, hbool_t reload_hdr_and_index, uint
     if (index != NULL) {
 
         if (*num_entries_ptr < file->md_index.num_entries)
-            HGOTO_ERROR(H5E_VFL, H5E_CANTLOAD, FAIL, "not enough space to copy index")
-
+            HGOTO_ERROR(H5E_VFL, H5E_CANTLOAD, FAIL, "not enough space to copy index");
         memcpy(index, file->md_index.entries,
                  (file->md_index.num_entries * sizeof(file->md_index.entries[0])));
     }
@@ -1926,7 +1878,7 @@ H5FD_vfd_swmr_assess_make_believe(H5FD_t *_file)
         for (do_try         = H5_retry_init(&retry, H5FD_VFD_SWMR_MD_FILE_RETRY_MAX, H5_RETRY_DEFAULT_MINIVAL,
                                     H5_RETRY_DEFAULT_MAXIVAL);
              do_try; do_try = H5_retry_next(&retry)) {
-            if ((file->md_fd = HDopen(file->md_file_path_name, O_RDONLY)) >= 0)
+            if ((file->md_fd = open(file->md_file_path_name, O_RDONLY)) >= 0)
                 break;
         }
 

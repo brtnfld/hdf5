@@ -92,6 +92,14 @@ PROGRAM fortranlibtest
   CALL file_space("file_space",cleanup, ret_total_error)
   CALL write_test_status(ret_total_error, ' File free space test', total_error)
 
+  ret_total_error = 0
+  CALL test_file_info("file_info",cleanup, ret_total_error)
+  CALL write_test_status(ret_total_error, ' File information test', total_error)
+
+  ret_total_error = 0
+  CALL test_get_file_image(ret_total_error)
+  CALL write_test_status(ret_total_error, ' Testing get file image ', total_error)
+
 !
 !      '========================================='
 !      'Testing DATASET Interface                '
@@ -114,6 +122,11 @@ PROGRAM fortranlibtest
   CALL test_dset_fill(cleanup, ret_total_error)
   CALL write_test_status(ret_total_error, ' Filling dataspace elements', total_error)
 
+  ! Direct chunk IO
+  ret_total_error = 0
+  CALL test_direct_chunk_io(cleanup, ret_total_error)
+  CALL write_test_status(ret_total_error, ' Direct chunk IO', total_error)
+
 !
 !      '========================================='
 !      'Testing DATASPACE Interface             '
@@ -129,12 +142,17 @@ PROGRAM fortranlibtest
 !      '========================================='
 
   ret_total_error = 0
+  CALL v3reftest(cleanup, ret_total_error)
+  CALL write_test_status(ret_total_error, ' Version 3 references test', total_error)
+
+  ret_total_error = 0
   CALL refobjtest(cleanup, ret_total_error)
   CALL write_test_status(ret_total_error, ' Reference to object test', total_error)
 
   ret_total_error = 0
   CALL refregtest(cleanup, ret_total_error)
   CALL write_test_status(ret_total_error, ' Reference to dataset region test', total_error)
+
 
 !
 !      '========================================='
@@ -145,9 +163,8 @@ PROGRAM fortranlibtest
   CALL test_basic_select(cleanup, ret_total_error)
   CALL write_test_status(ret_total_error, ' Basic selection test', total_error)
 
-
   ret_total_error = 0
-  CALL test_select_hyperslab( cleanup, ret_total_error)
+  CALL test_select_hyperslab(cleanup, ret_total_error)
   CALL write_test_status(ret_total_error, ' Hyperslab selection test', total_error)
 
   ret_total_error = 0
@@ -165,6 +182,11 @@ PROGRAM fortranlibtest
   ret_total_error = 0
   CALL test_select_bounds(ret_total_error)
   CALL write_test_status(ret_total_error, ' Selection bounds test ', total_error)
+
+  ret_total_error = 0
+  CALL test_select_iter(cleanup, ret_total_error)
+  CALL write_test_status(ret_total_error, ' Dataspace selection iterators test', total_error)
+
 
 !
 !      '========================================='

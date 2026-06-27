@@ -18,6 +18,10 @@
 #define H5I_FRIEND /*suppress error about including H5Ipkg      */
 #include "H5Ipkg.h"
 
+/* Defines used in test_appropriate_ids */
+#define FILE_NAME "tid.h5"
+#define DSET_NAME "Dataset 1"
+
 static herr_t
 free_wrapper(void *p, void H5_ATTR_UNUSED **_ctx)
 {
@@ -380,15 +384,15 @@ test_is_valid(void)
 
     /* Check that the ID is valid */
     tri_ret = H5Iis_valid(dtype);
-    VERIFY(tri_ret, TRUE, "H5Iis_valid");
-    if (tri_ret != TRUE)
+    VERIFY(tri_ret, true, "H5Iis_valid");
+    if (tri_ret != true)
         goto out;
 
     /* Artificially manipulate the reference counts so app_count is 0, and dtype
      * appears to be an internal id.  This takes advantage of the fact that
      * H5Ipkg is included.
      */
-    ret = H5I_inc_ref(dtype, FALSE);
+    ret = H5I_inc_ref(dtype, false);
     CHECK(ret, FAIL, "H5I_inc_ref");
     if (ret < 0)
         goto out;
@@ -399,8 +403,8 @@ test_is_valid(void)
 
     /* Check that dtype is invalid */
     tri_ret = H5Iis_valid(dtype);
-    VERIFY(tri_ret, FALSE, "H5Iis_valid");
-    if (tri_ret != FALSE)
+    VERIFY(tri_ret, false, "H5Iis_valid");
+    if (tri_ret != false)
         goto out;
 
     /* Close dtype and verify that it has been closed */
@@ -419,14 +423,14 @@ test_is_valid(void)
 
     /* Check that dtype is invalid */
     tri_ret = H5Iis_valid(dtype);
-    VERIFY(tri_ret, FALSE, "H5Iis_valid");
-    if (tri_ret != FALSE)
+    VERIFY(tri_ret, false, "H5Iis_valid");
+    if (tri_ret != false)
         goto out;
 
     /* Check that an id of -1 is invalid */
-    tri_ret = H5Iis_valid((hid_t)-1);
-    VERIFY(tri_ret, FALSE, "H4Iis_valid");
-    if (tri_ret != FALSE)
+    tri_ret = H5Iis_valid((hid_t)H5I_INVALID_HID);
+    VERIFY(tri_ret, false, "H4Iis_valid");
+    if (tri_ret != false)
         goto out;
 
     return 0;
@@ -465,7 +469,7 @@ test_get_type(void)
         goto out;
 
     /* Check that the ID is correct */
-    type_ret = H5Iget_type((hid_t)-1);
+    type_ret = H5Iget_type((hid_t)H5I_INVALID_HID);
     VERIFY(type_ret, H5I_BADID, "H5Iget_type");
     if (type_ret != H5I_BADID)
         goto out;
@@ -602,7 +606,7 @@ typedef struct rct_obj_t {
     /* Whether we are currently freeing this object directly
      * through H5Idec_ref().
      */
-    hbool_t freeing;
+    bool freeing;
 
     /* Pointer to the master list of all objects */
     rct_obj_list_t *list;
@@ -638,7 +642,7 @@ rct_free_cb(void *_obj, void H5_ATTR_UNUSED **_ctx)
          * and then scanning through the list to find that nth unfreed
          * object.
          */
-        remove_nth = HDrandom() % obj->list->remaining;
+        remove_nth = rand() % obj->list->remaining;
         for (i = 0; i < obj->list->count; i++)
             if (obj->list->objects[i].nfrees == 0) {
                 if (remove_nth == 0)
@@ -660,7 +664,7 @@ rct_free_cb(void *_obj, void H5_ATTR_UNUSED **_ctx)
          * not free another object. We don't want to recursively free the
          * entire list when we free the first ID.
          */
-        obj->list->objects[i].freeing = TRUE;
+        obj->list->objects[i].freeing = true;
 
         /* Decrement the reference count on the object */
         ret = H5Idec_ref(obj->list->objects[i].id);
@@ -669,7 +673,7 @@ rct_free_cb(void *_obj, void H5_ATTR_UNUSED **_ctx)
             goto error;
 
         /* Unset the "freeing" flag */
-        obj->list->objects[i].freeing = FALSE;
+        obj->list->objects[i].freeing = false;
     }
 
     /* Verify the number of objects remaining in the master list is non-negative */
@@ -727,14 +731,14 @@ test_remove_clear_type(void)
 
         /* The number of objects used is a random number between the min and max */
         obj_list.count = obj_list.remaining =
-            RCT_MIN_NOBJS + (HDrandom() % (long)(RCT_MAX_NOBJS - RCT_MIN_NOBJS + 1));
+            RCT_MIN_NOBJS + (rand() % (long)(RCT_MAX_NOBJS - RCT_MIN_NOBJS + 1));
 
         /* Create the actual objects */
         for (j = 0; j < obj_list.count; j++) {
 
             /* Object setup */
             objects[j].nfrees  = 0;
-            objects[j].freeing = FALSE;
+            objects[j].freeing = false;
             objects[j].list    = &obj_list;
 
             /* Register an ID for it */
@@ -744,7 +748,7 @@ test_remove_clear_type(void)
                 goto error;
 
             /* Bump the reference count by 1 (to 2) 50% of the time */
-            if (HDrandom() % 2) {
+            if (rand() % 2) {
                 ret = H5Iinc_ref(objects[j].id);
                 CHECK(ret, FAIL, "H5Iinc_ref");
                 if (ret == FAIL)
@@ -753,13 +757,13 @@ test_remove_clear_type(void)
         }
 
         /******************************************
-         * Clear the type with force set to FALSE *
+         * Clear the type with force set to false *
          ******************************************/
 
-        /* Clear the type. Since force is FALSE, only
+        /* Clear the type. Since force is false, only
          * IDs with a reference count of 1 will be cleared.
          */
-        ret = H5Iclear_type(obj_type, FALSE);
+        ret = H5Iclear_type(obj_type, false);
         CHECK(ret, FAIL, "H5Iclear_type");
         if (ret == FAIL)
             goto error;
@@ -782,8 +786,8 @@ test_remove_clear_type(void)
             }
 
             /* No object should still be marked as "freeing" */
-            VERIFY(objects[j].freeing, FALSE, "object marked as freeing");
-            if (objects[j].freeing != FALSE)
+            VERIFY(objects[j].freeing, false, "object marked as freeing");
+            if (objects[j].freeing != false)
                 goto error;
         }
 
@@ -804,11 +808,11 @@ test_remove_clear_type(void)
             goto error;
 
         /*****************************************
-         * Clear the type with force set to TRUE *
+         * Clear the type with force set to true *
          *****************************************/
 
-        /* Clear the type. Since force is TRUE, all IDs will be cleared. */
-        ret = H5Iclear_type(obj_type, TRUE);
+        /* Clear the type. Since force is true, all IDs will be cleared. */
+        ret = H5Iclear_type(obj_type, true);
         CHECK(ret, FAIL, "H5Iclear_type");
         if (ret == FAIL)
             goto error;
@@ -822,8 +826,8 @@ test_remove_clear_type(void)
                 goto error;
 
             /* No object should still be marked as "freeing" */
-            VERIFY(objects[j].freeing, FALSE, "object marked as freeing");
-            if (objects[j].freeing != FALSE)
+            VERIFY(objects[j].freeing, false, "object marked as freeing");
+            if (objects[j].freeing != false)
                 goto error;
         }
 
@@ -1339,7 +1343,7 @@ test_future_ids(void)
     CHECK(ret, FAIL, "H5Pisa_class");
     if (FAIL == ret)
         goto error;
-    if (TRUE != ret)
+    if (true != ret)
         goto error;
 
     /* Verify that the application believes the ID is still a property list */
@@ -1369,11 +1373,132 @@ error:
     return -1;
 } /* end test_future_ids() */
 
+/*-------------------------------------------------------------------------
+ * Function:    test_appropriate_ids
+ *
+ * Purpose:     Tests several API functions on detecting inappropriate ID.
+ *
+ * Return:      Success:        0
+ *              Failure:        number of errors
+ *
+ *-------------------------------------------------------------------------
+ */
+static int
+test_appropriate_ids(void)
+{
+    hid_t    file_id  = H5I_INVALID_HID;
+    hid_t    fapl_id  = H5I_INVALID_HID;
+    hid_t    fcpl_id  = H5I_INVALID_HID;
+    hid_t    plist    = H5I_INVALID_HID;
+    hid_t    dset_id  = H5I_INVALID_HID;
+    hid_t    space_id = H5I_INVALID_HID;
+    hsize_t  dims     = 2;
+    hssize_t free_space;
+    herr_t   ret = SUCCEED; /* Generic return value */
+
+    /* Create file create property list */
+    fcpl_id = H5Pcreate(H5P_FILE_CREATE);
+    CHECK(fcpl_id, H5I_INVALID_HID, "H5Pcreate");
+
+    file_id = H5Fcreate(FILE_NAME, H5F_ACC_TRUNC, fcpl_id, H5P_DEFAULT);
+    CHECK(file_id, H5I_INVALID_HID, "H5Fcreate");
+
+    /* Create a dataset in the file */
+    space_id = H5Screate_simple(1, &dims, NULL);
+    CHECK(space_id, H5I_INVALID_HID, "H5Screate_simple");
+    dset_id = H5Dcreate2(file_id, DSET_NAME, H5T_NATIVE_INT, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    CHECK(dset_id, H5I_INVALID_HID, "H5Dcreate2");
+
+    /* Close IDs */
+    ret = H5Pclose(fcpl_id);
+    CHECK(ret, FAIL, "H5Pclose");
+    ret = H5Sclose(space_id);
+    CHECK(ret, FAIL, "H5Sclose");
+    ret = H5Dclose(dset_id);
+    CHECK(ret, FAIL, "H5Dclose");
+    ret = H5Fclose(file_id);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    file_id = H5Fopen(FILE_NAME, H5F_ACC_RDONLY, H5P_DEFAULT);
+    CHECK(file_id, H5I_INVALID_HID, "H5Fopen");
+
+    /* Get the file create property */
+    fcpl_id = H5Fget_create_plist(file_id);
+    CHECK(fcpl_id, H5I_INVALID_HID, "H5Fget_create_plist");
+
+    /* Get the file access property */
+    fapl_id = H5Fget_access_plist(file_id);
+    CHECK(fapl_id, H5I_INVALID_HID, "H5Fget_access_plist");
+
+    dset_id = H5Dopen2(file_id, DSET_NAME, H5P_DEFAULT);
+    CHECK(dset_id, H5I_INVALID_HID, "H5Dopen2");
+
+    /*-------------------------------------------------------------
+     * Try to call functions passing in a wrong ID
+     *-----------------------------------------------------------*/
+    H5E_BEGIN_TRY
+    {
+        plist = H5Fget_create_plist(dset_id); /* dset_id is not file ID */
+    }
+    H5E_END_TRY
+    VERIFY(plist, H5I_INVALID_HID, "H5Fget_create_plist");
+
+    H5E_BEGIN_TRY
+    {
+        plist = H5Fget_access_plist(fapl_id); /* fapl_id is not file ID */
+    }
+    H5E_END_TRY
+    VERIFY(plist, H5I_INVALID_HID, "H5Fget_access_plist");
+
+    H5E_BEGIN_TRY
+    {
+        unsigned intent;                       /* File access flags */
+        ret = H5Fget_intent(dset_id, &intent); /* dset_id is not file ID */
+    }
+    H5E_END_TRY
+    VERIFY(ret, FAIL, "H5Fget_intent");
+
+    H5E_BEGIN_TRY
+    {
+        unsigned long fileno = 0;
+        ret                  = H5Fget_fileno(dset_id, &fileno); /* dset_id is not file ID */
+    }
+    H5E_END_TRY
+    VERIFY(ret, FAIL, "H5Fget_fileno");
+
+    H5E_BEGIN_TRY
+    {
+        free_space = H5Fget_freespace(dset_id); /* dset_id is not file ID */
+    }
+    H5E_END_TRY
+    VERIFY(free_space, FAIL, "H5Fget_freespace");
+
+    H5E_BEGIN_TRY
+    {
+        void *os_file_handle = NULL;                                    /* OS file handle */
+        ret = H5Fget_vfd_handle(fapl_id, H5P_DEFAULT, &os_file_handle); /* fapl_id is not file ID */
+    }
+    H5E_END_TRY
+    VERIFY(ret, FAIL, "H5Fget_vfd_handle");
+
+    /* Close IDs */
+    ret = H5Pclose(fapl_id);
+    CHECK(ret, FAIL, "H5Pclose");
+    ret = H5Pclose(fcpl_id);
+    CHECK(ret, FAIL, "H5Pclose");
+    ret = H5Dclose(dset_id);
+    CHECK(ret, FAIL, "H5Dclose");
+    ret = H5Fclose(file_id);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    return 0;
+}
+
 void
 test_ids(void)
 {
     /* Set the random # seed */
-    HDsrandom((unsigned)HDtime(NULL));
+    srand((unsigned)time(NULL));
 
     if (basic_id_test() < 0)
         TestErrPrintf("Basic ID test failed\n");
@@ -1389,4 +1514,6 @@ test_ids(void)
         TestErrPrintf("ID remove during H5Iclear_type test failed\n");
     if (test_future_ids() < 0)
         TestErrPrintf("Future ID test failed\n");
+    if (test_appropriate_ids() < 0)
+        TestErrPrintf("Detection of inappropriate ID test failed\n");
 }

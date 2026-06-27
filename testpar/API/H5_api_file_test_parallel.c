@@ -44,7 +44,7 @@ test_create_file(void)
         return 0;
     }
 
-    if ((fapl_id = create_mpi_fapl(MPI_COMM_WORLD, MPI_INFO_NULL, TRUE)) < 0)
+    if ((fapl_id = create_mpi_fapl(MPI_COMM_WORLD, MPI_INFO_NULL, true)) < 0)
         TEST_ERROR;
 
     if ((file_id = H5Fcreate(FILE_CREATE_TEST_FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id)) < 0) {
@@ -68,7 +68,7 @@ error:
         H5Pclose(fapl_id);
         H5Fclose(file_id);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return 1;
 }
@@ -93,7 +93,7 @@ test_open_file(void)
 
     TESTING_2("test setup");
 
-    if ((fapl_id = create_mpi_fapl(MPI_COMM_WORLD, MPI_INFO_NULL, TRUE)) < 0)
+    if ((fapl_id = create_mpi_fapl(MPI_COMM_WORLD, MPI_INFO_NULL, true)) < 0)
         TEST_ERROR;
 
     PASSED();
@@ -119,7 +119,7 @@ test_open_file(void)
             {
                 H5Fclose(file_id);
             }
-            H5E_END_TRY;
+            H5E_END_TRY
             file_id = H5I_INVALID_HID;
         }
 
@@ -142,7 +142,7 @@ test_open_file(void)
             {
                 H5Fclose(file_id);
             }
-            H5E_END_TRY;
+            H5E_END_TRY
             file_id = H5I_INVALID_HID;
         }
 
@@ -167,7 +167,7 @@ error:
         H5Pclose(fapl_id);
         H5Fclose(file_id);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return 1;
 }
@@ -229,7 +229,7 @@ test_split_comm_file_access(void)
         MPI_Comm_rank(comm, &sub_mpi_rank);
 
         /* setup file access template */
-        if ((fapl_id = create_mpi_fapl(comm, info, TRUE)) < 0) {
+        if ((fapl_id = create_mpi_fapl(comm, info, true)) < 0) {
             err_occurred = 1;
             goto access_end;
         }
@@ -302,7 +302,7 @@ error:
         H5Pclose(fapl_id);
         H5Fclose(file_id);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return 1;
 }
@@ -315,7 +315,7 @@ cleanup_files(void)
 {
     hid_t fapl_id = H5I_INVALID_HID;
 
-    if ((fapl_id = create_mpi_fapl(MPI_COMM_WORLD, MPI_INFO_NULL, TRUE)) < 0) {
+    if ((fapl_id = create_mpi_fapl(MPI_COMM_WORLD, MPI_INFO_NULL, true)) < 0) {
         if (MAINPROCESS)
             printf("    failed to create FAPL for deleting test files\n");
         return;

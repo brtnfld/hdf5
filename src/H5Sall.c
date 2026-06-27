@@ -42,12 +42,12 @@
 /********************/
 
 /* Selection callbacks */
-static herr_t   H5S__all_copy(H5S_t *dst, const H5S_t *src, hbool_t share_selection);
+static herr_t   H5S__all_copy(H5S_t *dst, const H5S_t *src, bool share_selection);
 static herr_t   H5S__all_release(H5S_t *space);
 static htri_t   H5S__all_is_valid(const H5S_t *space);
 static hssize_t H5S__all_serial_size(H5S_t *space);
 static herr_t   H5S__all_serialize(H5S_t *space, uint8_t **p);
-static herr_t   H5S__all_deserialize(H5S_t **space, const uint8_t **p, const size_t p_size, hbool_t skip);
+static herr_t   H5S__all_deserialize(H5S_t **space, const uint8_t **p, const size_t p_size, bool skip);
 static herr_t   H5S__all_bounds(const H5S_t *space, hsize_t *start, hsize_t *end);
 static herr_t   H5S__all_offset(const H5S_t *space, hsize_t *off);
 static int      H5S__all_unlim_dim(const H5S_t *space);
@@ -178,7 +178,7 @@ H5S__all_iter_coords(const H5S_sel_iter_t *iter, hsize_t *coords)
 
     /* Calculate the coordinates for the current iterator offset */
     if (H5VM_array_calc(iter->u.all.elmt_offset, iter->rank, iter->dims, coords) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTGET, FAIL, "can't retrieve coordinates")
+        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTGET, FAIL, "can't retrieve coordinates");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -248,7 +248,7 @@ H5S__all_iter_nelmts(const H5S_sel_iter_t *iter)
     htri_t H5S__all_iter_has_next_block(iter)
         const H5S_sel_iter_t *iter;       IN: Pointer to selection iterator
  RETURNS
-    Non-negative (TRUE/FALSE) on success/Negative on failure
+    Non-negative (true/false) on success/Negative on failure
  DESCRIPTION
     Check if there is another block available in the selection iterator.
  GLOBAL VARIABLES
@@ -264,7 +264,7 @@ H5S__all_iter_has_next_block(const H5S_sel_iter_t H5_ATTR_UNUSED *iter)
     /* Check args */
     assert(iter);
 
-    FUNC_LEAVE_NOAPI(FALSE)
+    FUNC_LEAVE_NOAPI(false)
 } /* end H5S__all_iter_has_next_block() */
 
 /*--------------------------------------------------------------------------
@@ -466,7 +466,7 @@ H5S__all_release(H5S_t *space)
     herr_t H5S__all_copy(dst, src, share_selection)
         H5S_t *dst;  OUT: Pointer to the destination dataspace
         H5S_t *src;  IN: Pointer to the source dataspace
-        hbool_t;     IN: Whether to share the selection between the dataspaces
+        bool;     IN: Whether to share the selection between the dataspaces
  RETURNS
     Non-negative on success/Negative on failure
  DESCRIPTION
@@ -478,7 +478,7 @@ H5S__all_release(H5S_t *space)
  REVISION LOG
 --------------------------------------------------------------------------*/
 static herr_t
-H5S__all_copy(H5S_t *dst, const H5S_t H5_ATTR_UNUSED *src, hbool_t H5_ATTR_UNUSED share_selection)
+H5S__all_copy(H5S_t *dst, const H5S_t H5_ATTR_UNUSED *src, bool H5_ATTR_UNUSED share_selection)
 {
     FUNC_ENTER_PACKAGE_NOERR
 
@@ -501,7 +501,7 @@ H5S__all_copy(H5S_t *dst, const H5S_t H5_ATTR_UNUSED *src, hbool_t H5_ATTR_UNUSE
     htri_t H5S__all_is_valid(space);
         H5S_t *space;             IN: Dataspace pointer to query
  RETURNS
-    TRUE if the selection fits within the extent, FALSE if it does not and
+    true if the selection fits within the extent, false if it does not and
         Negative on an error.
  DESCRIPTION
     Determines if the current selection at the current offset fits within the
@@ -518,7 +518,7 @@ H5S__all_is_valid(const H5S_t H5_ATTR_UNUSED *space)
 
     assert(space);
 
-    FUNC_LEAVE_NOAPI(TRUE)
+    FUNC_LEAVE_NOAPI(true)
 } /* end H5S__all_is_valid() */
 
 /*--------------------------------------------------------------------------
@@ -622,7 +622,7 @@ H5S__all_serialize(H5S_t *space, uint8_t **p)
  REVISION LOG
 --------------------------------------------------------------------------*/
 static herr_t
-H5S__all_deserialize(H5S_t **space, const uint8_t **p, const size_t p_size, hbool_t skip)
+H5S__all_deserialize(H5S_t **space, const uint8_t **p, const size_t p_size, bool skip)
 {
     uint32_t version;                           /* Version number */
     H5S_t   *tmp_space = NULL;                  /* Pointer to actual dataspace to use,
@@ -642,27 +642,27 @@ H5S__all_deserialize(H5S_t **space, const uint8_t **p, const size_t p_size, hboo
     /* Allocate space if not provided */
     if (!*space) {
         if (NULL == (tmp_space = H5S_create(H5S_SIMPLE)))
-            HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCREATE, FAIL, "can't create dataspace")
+            HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCREATE, FAIL, "can't create dataspace");
     } /* end if */
     else
         tmp_space = *space;
 
     /* Decode version */
     if (H5_IS_KNOWN_BUFFER_OVERFLOW(skip, *p, sizeof(uint32_t), p_end))
-        HGOTO_ERROR(H5E_DATASPACE, H5E_OVERFLOW, FAIL, "buffer overflow while decoding selection version")
+        HGOTO_ERROR(H5E_DATASPACE, H5E_OVERFLOW, FAIL, "buffer overflow while decoding selection version");
     UINT32DECODE(*p, version);
 
     if (version < H5S_ALL_VERSION_1 || version > H5S_ALL_VERSION_LATEST)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_BADVALUE, FAIL, "bad version number for all selection")
+        HGOTO_ERROR(H5E_DATASPACE, H5E_BADVALUE, FAIL, "bad version number for all selection");
 
     /* Skip over the remainder of the header */
     if (H5_IS_KNOWN_BUFFER_OVERFLOW(skip, *p, 8, p_end))
-        HGOTO_ERROR(H5E_DATASPACE, H5E_OVERFLOW, FAIL, "buffer overflow while decoding header")
+        HGOTO_ERROR(H5E_DATASPACE, H5E_OVERFLOW, FAIL, "buffer overflow while decoding header");
     *p += 8;
 
     /* Change to "all" selection */
-    if (H5S_select_all(tmp_space, TRUE) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL, "can't change selection")
+    if (H5S_select_all(tmp_space, true) < 0)
+        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL, "can't change selection");
 
     /* Return space to the caller if allocated */
     if (!*space)
@@ -798,7 +798,7 @@ H5S__all_unlim_dim(const H5S_t H5_ATTR_UNUSED *space)
     htri_t H5S__all_is_contiguous(space)
         H5S_t *space;           IN: Dataspace pointer to check
  RETURNS
-    TRUE/FALSE/FAIL
+    true/false/FAIL
  DESCRIPTION
     Checks to see if the current selection in the dataspace is contiguous.
     This is primarily used for reading the entire selection in one swoop.
@@ -814,7 +814,7 @@ H5S__all_is_contiguous(const H5S_t H5_ATTR_UNUSED *space)
 
     assert(space);
 
-    FUNC_LEAVE_NOAPI(TRUE)
+    FUNC_LEAVE_NOAPI(true)
 } /* end H5S__all_is_contiguous() */
 
 /*--------------------------------------------------------------------------
@@ -826,7 +826,7 @@ H5S__all_is_contiguous(const H5S_t H5_ATTR_UNUSED *space)
     htri_t H5S__all_is_single(space)
         H5S_t *space;           IN: Dataspace pointer to check
  RETURNS
-    TRUE/FALSE/FAIL
+    true/false/FAIL
  DESCRIPTION
     Checks to see if the current selection in the dataspace is a single block.
     This is primarily used for reading the entire selection in one swoop.
@@ -842,7 +842,7 @@ H5S__all_is_single(const H5S_t H5_ATTR_UNUSED *space)
 
     assert(space);
 
-    FUNC_LEAVE_NOAPI(TRUE)
+    FUNC_LEAVE_NOAPI(true)
 } /* end H5S__all_is_single() */
 
 /*--------------------------------------------------------------------------
@@ -854,7 +854,7 @@ H5S__all_is_single(const H5S_t H5_ATTR_UNUSED *space)
     htri_t H5S__all_is_regular(space)
         H5S_t *space;     IN: Dataspace pointer to check
  RETURNS
-    TRUE/FALSE/FAIL
+    true/false/FAIL
  DESCRIPTION
     Checks to see if the current selection in a dataspace is the a regular
     pattern.
@@ -872,7 +872,7 @@ H5S__all_is_regular(H5S_t H5_ATTR_UNUSED *space)
     /* Check args */
     assert(space);
 
-    FUNC_LEAVE_NOAPI(TRUE)
+    FUNC_LEAVE_NOAPI(true)
 } /* end H5S__all_is_regular() */
 
 /*--------------------------------------------------------------------------
@@ -885,7 +885,7 @@ H5S__all_is_regular(H5S_t H5_ATTR_UNUSED *space)
         H5S_t *space1;           IN: First dataspace to check
         H5S_t *space2;           IN: Second dataspace to check
  RETURNS
-    TRUE / FALSE / FAIL
+    true / false / FAIL
  DESCRIPTION
     Checks to see if the current selection in each dataspace are the same
     shape.
@@ -899,7 +899,7 @@ H5S__all_shape_same(H5S_t *space1, H5S_t *space2)
 {
     int    space1_dim;       /* Current dimension in first dataspace */
     int    space2_dim;       /* Current dimension in second dataspace */
-    htri_t ret_value = TRUE; /* Return value */
+    htri_t ret_value = true; /* Return value */
 
     FUNC_ENTER_PACKAGE_NOERR
 
@@ -918,7 +918,7 @@ H5S__all_shape_same(H5S_t *space1, H5S_t *space2)
      */
     while (space2_dim >= 0) {
         if (space1->extent.size[space1_dim] != space2->extent.size[space2_dim])
-            HGOTO_DONE(FALSE);
+            HGOTO_DONE(false);
 
         space1_dim--;
         space2_dim--;
@@ -929,7 +929,7 @@ H5S__all_shape_same(H5S_t *space1, H5S_t *space2)
      */
     while (space1_dim >= 0) {
         if (space1->extent.size[space1_dim] != 1)
-            HGOTO_DONE(FALSE);
+            HGOTO_DONE(false);
 
         space1_dim--;
     } /* end while */
@@ -949,7 +949,7 @@ done:
         const hsize_t *start;   IN: Starting coordinate for block
         const hsize_t *end;     IN: Ending coordinate for block
  RETURNS
-    Non-negative TRUE / FALSE on success, negative on failure
+    Non-negative true / false on success, negative on failure
  DESCRIPTION
     Quickly detect intersections with a block
  GLOBAL VARIABLES
@@ -969,7 +969,7 @@ H5S__all_intersect_block(H5S_t H5_ATTR_UNUSED *space, const hsize_t H5_ATTR_UNUS
     assert(start);
     assert(end);
 
-    FUNC_LEAVE_NOAPI(TRUE)
+    FUNC_LEAVE_NOAPI(true)
 } /* end H5S__all_intersect_block() */
 
 /*--------------------------------------------------------------------------
@@ -1081,8 +1081,8 @@ H5S__all_project_simple(const H5S_t H5_ATTR_UNUSED *base_space, H5S_t *new_space
     assert(offset);
 
     /* Select the entire new space */
-    if (H5S_select_all(new_space, TRUE) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTSET, FAIL, "unable to set all selection")
+    if (H5S_select_all(new_space, true) < 0)
+        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTSET, FAIL, "unable to set all selection");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1096,7 +1096,7 @@ done:
  USAGE
     herr_t H5S_select_all(dsid)
         hid_t dsid;             IN: Dataspace ID of selection to modify
-        hbool_t rel_prev;      IN: Flag whether to release previous selection or not
+        bool rel_prev;      IN: Flag whether to release previous selection or not
  RETURNS
     Non-negative on success/Negative on failure
  DESCRIPTION
@@ -1107,7 +1107,7 @@ done:
  REVISION LOG
 --------------------------------------------------------------------------*/
 herr_t
-H5S_select_all(H5S_t *space, hbool_t rel_prev)
+H5S_select_all(H5S_t *space, bool rel_prev)
 {
     herr_t ret_value = SUCCEED; /* return value */
 
@@ -1119,7 +1119,7 @@ H5S_select_all(H5S_t *space, hbool_t rel_prev)
     /* Remove current selection first */
     if (rel_prev)
         if (H5S_SELECT_RELEASE(space) < 0)
-            HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL, "can't release selection")
+            HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL, "can't release selection");
 
     /* Set number of elements in selection */
     space->select.num_elem = (hsize_t)H5S_GET_EXTENT_NPOINTS(space);
@@ -1155,15 +1155,14 @@ H5Sselect_all(hid_t spaceid)
     herr_t ret_value = SUCCEED; /* return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE1("e", "i", spaceid);
 
     /* Check args */
     if (NULL == (space = (H5S_t *)H5I_object_verify(spaceid, H5I_DATASPACE)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataspace")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataspace");
 
     /* Call internal routine to do the work */
-    if (H5S_select_all(space, TRUE) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL, "can't change selection")
+    if (H5S_select_all(space, true) < 0)
+        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL, "can't change selection");
 
 done:
     FUNC_LEAVE_API(ret_value)

@@ -1,0 +1,19 @@
+Open took: (0.000001 s)
+Stat took: (0.000000 s)
+         0-         8 (         8 bytes) (H5FD_MEM_SUPER) Allocated
+         0-         7 (         8 bytes) (H5FD_MEM_SUPER) Read (0.000001s @ 345476.382578)
+Close took: (0.000000 s)
+Total number of read operations: 1
+Total number of write operations: 0
+Total number of seek operations: 0
+Total number of truncate operations: 0
+Total time in read operations: 0.000001 s
+Total time in write operations: 0.000000 s
+Total time in seek operations: 0.000000 s
+Total time in truncate operations: 0.000000 s
+Dumping write I/O information:
+	Addr          0-         7 (         8 bytes) written to   0 times
+Dumping read I/O information:
+	Addr          0-         7 (         8 bytes) read from   1 times
+Dumping I/O flavor information:
+	Addr          0-         7 (         8 bytes) flavor is H5FD_MEM_SUPER

@@ -103,10 +103,10 @@ choose_dataset(unsigned *levelp, unsigned *offsetp, hbool_t verbose)
     unsigned        offset; /* The "offset" of the dataset at that level */
 
     /* Determine level of dataset */
-    level = symbol_mapping[HDrandom() % NMAPPING];
+    level = symbol_mapping[rand() % NMAPPING];
 
     /* Determine the offset of the level */
-    offset = (unsigned)(HDrandom() % (int)symbol_count[level]);
+    offset = (unsigned)(rand() % (int)symbol_count[level]);
 
     ++ncalls;
     if ((ncalls % 1000) == 0 && verbose) {
@@ -190,7 +190,7 @@ generate_name(char *name_buf, size_t name_buf_length, unsigned level, unsigned c
 {
     assert(name_buf);
 
-    HDsnprintf(name_buf, name_buf_length, "%u-%04u", level, count);
+    snprintf(name_buf, name_buf_length, "%u-%04u", level, count);
 
     return 0;
 } /* end generate_name() */
@@ -218,7 +218,7 @@ generate_symbols(void)
             char name_buf[64];
 
             generate_name(name_buf, sizeof(name_buf), u, v);
-            symbol_info[u][v].name     = HDstrdup(name_buf);
+            symbol_info[u][v].name     = strdup(name_buf);
             symbol_info[u][v].dsid     = -1;
             symbol_info[u][v].nrecords = 0;
         } /* end for */

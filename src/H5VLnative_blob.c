@@ -73,7 +73,7 @@ H5VL__native_blob_put(void *obj, const void *buf, size_t size, void *blob_id, vo
 
     /* Write the VL information to disk (allocates space also) */
     if (H5HG_insert(f, size, buf, &hobjid) < 0)
-        HGOTO_ERROR(H5E_VOL, H5E_WRITEERROR, FAIL, "unable to write blob information")
+        HGOTO_ERROR(H5E_VOL, H5E_WRITEERROR, FAIL, "unable to write blob information");
 
     /* Encode the heap information */
     H5F_addr_encode(f, &id, hobjid.addr);
@@ -113,14 +113,17 @@ H5VL__native_blob_get(void *obj, const void *blob_id, void *buf, size_t size, vo
     UINT32DECODE(id, hobjid.idx);
 
     /* Check if this sequence actually has any data */
-    if (hobjid.addr > 0)
+    if (hobjid.addr > 0) {
+        /* Verify the size is correct */
+        if (H5HG_get_obj_size(f, &hobjid, &hobj_size) < 0)
+            HGOTO_ERROR(H5E_VOL, H5E_CANTGETSIZE, FAIL, "can't get object size");
+        if (hobj_size != size)
+            HGOTO_ERROR(H5E_VOL, H5E_BADSIZE, FAIL, "Expected global heap object size does not match");
+
         /* Read the VL information from disk */
         if (NULL == H5HG_read(f, &hobjid, buf, &hobj_size))
-            HGOTO_ERROR(H5E_VOL, H5E_READERROR, FAIL, "unable to read VL information")
-
-    /* Verify the size is correct */
-    if (hobj_size != size)
-        HGOTO_ERROR(H5E_VOL, H5E_CANTDECODE, FAIL, "Expected global heap object size does not match")
+            HGOTO_ERROR(H5E_VOL, H5E_READERROR, FAIL, "unable to read VL information");
+    }
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -156,7 +159,7 @@ H5VL__native_blob_specific(void *obj, void *blob_id, H5VL_blob_specific_args_t *
             H5F_addr_decode(f, &id, &addr);
 
             /* Check if heap address is 'nil' */
-            *args->args.is_null.isnull = (addr == 0 ? TRUE : FALSE);
+            *args->args.is_null.isnull = (addr == 0 ? true : false);
 
             break;
         }
@@ -182,13 +185,13 @@ H5VL__native_blob_specific(void *obj, void *blob_id, H5VL_blob_specific_args_t *
             /* Free heap object */
             if (hobjid.addr > 0)
                 if (H5HG_remove(f, &hobjid) < 0)
-                    HGOTO_ERROR(H5E_VOL, H5E_CANTREMOVE, FAIL, "unable to remove heap object")
+                    HGOTO_ERROR(H5E_VOL, H5E_CANTREMOVE, FAIL, "unable to remove heap object");
 
             break;
         }
 
         default:
-            HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "invalid specific operation")
+            HGOTO_ERROR(H5E_VOL, H5E_UNSUPPORTED, FAIL, "invalid specific operation");
     } /* end switch */
 
 done:

@@ -71,10 +71,10 @@
 #define NLINKEDBLOCKS_DFT 512     /* default 512 */
 #define SIZE_BLKADDR      4       /* expected sizeof blkaddr */
 #define Hgoto_error(val)                                                                                     \
-    {                                                                                                        \
+    do {                                                                                                     \
         ret_value = val;                                                                                     \
         goto done;                                                                                           \
-    }
+    } while (0)
 
 /* type declarations */
 typedef enum part_t {
@@ -142,21 +142,21 @@ parse_option(int argc, char *const argv[])
                     fprintf(stderr, "bad blocksize %s, must be a positive integer\n", optarg);
                     usage(progname_g);
                     Hgoto_error(-1);
-                };
+                }
                 break;
             case 'n': /* number of planes to write/read */
                 if ((nlinkedblock_g = atoi(optarg)) < 2) {
                     fprintf(stderr, "bad number of linked blocks %s, must be greater than 1.\n", optarg);
                     usage(progname_g);
                     Hgoto_error(-1);
-                };
+                }
                 break;
             case 'p': /* number of planes to write/read */
                 if ((part_size_g = atoi(optarg)) <= 0) {
                     fprintf(stderr, "bad partition size %s, must be a positive integer\n", optarg);
                     usage(progname_g);
                     Hgoto_error(-1);
-                };
+                }
                 break;
             case 'l': /* launch reader or writer only */
                 switch (*optarg) {
@@ -283,7 +283,7 @@ write_wo_file(void)
     } /* end for */
 
     /* write the last blkaddr in partition 0 */
-    HDlseek(write_fd_g, (HDoff_t)0, SEEK_SET);
+    HDlseek(write_fd_g, 0, SEEK_SET);
     if ((bytes_wrote = HDwrite(write_fd_g, &blkaddr_old, (size_t)sizeof(blkaddr_old))) !=
         sizeof(blkaddr_old)) {
         printf("blkaddr write failed in partition %d\n", 0);
@@ -310,7 +310,7 @@ read_wo_file(void)
 
     /* keep reading the initial block address until it is non-zero before proceeding. */
     while (blkaddr == 0) {
-        HDlseek(read_fd, (HDoff_t)0, SEEK_SET);
+        HDlseek(read_fd, 0, SEEK_SET);
         if ((bytes_read = HDread(read_fd, &blkaddr, (size_t)sizeof(blkaddr))) != sizeof(blkaddr)) {
             printf("blkaddr read failed in partition %d\n", 0);
             return -1;
@@ -379,10 +379,10 @@ main(int argc, char *argv[])
     if (launch_g == UC_READWRITE) {
         /* fork process */
         if ((childpid = fork()) < 0) {
-            HDperror("fork");
+            perror("fork");
             Hgoto_error(1);
-        };
-    };
+        }
+    }
     mypid = HDgetpid();
 
     /* ============= */
@@ -417,7 +417,7 @@ main(int argc, char *argv[])
     /* ================================================ */
     if (launch_g == UC_READWRITE) {
         if ((tmppid = waitpid(childpid, &child_status, child_wait_option)) < 0) {
-            HDperror("waitpid");
+            perror("waitpid");
             Hgoto_error(1);
         }
         if (WIFEXITED(child_status)) {

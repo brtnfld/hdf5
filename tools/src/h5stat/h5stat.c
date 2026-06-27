@@ -101,7 +101,7 @@ typedef struct iter_t {
     hsize_t        super_ext_size;                  /* superblock extension size */
     hsize_t        ublk_size;                       /* user block size (if exists) */
     H5F_fspace_strategy_t fs_strategy;              /* File space management strategy */
-    hbool_t               fs_persist;               /* Free-space persist or not */
+    bool                  fs_persist;               /* Free-space persist or not */
     hsize_t               fs_threshold;             /* Free-space section threshold */
     hsize_t               fsp_size;                 /* File space page size */
     hsize_t               free_space;               /* Amount of freespace in the file */
@@ -117,12 +117,14 @@ typedef struct iter_t {
 
 static const char *drivername = NULL;
 
+size_t page_cache = 0;
+
 #ifdef H5_HAVE_ROS3_VFD
 /* Default "anonymous" S3 configuration */
 static H5FD_ros3_fapl_ext_t ros3_fa = {
     {
         1,     /* Structure Version */
-        FALSE, /* Authenticate?     */
+        false, /* Authenticate?     */
         "",    /* AWS Region        */
         "",    /* Access Key ID     */
         "",    /* Secret Access Key */
@@ -143,22 +145,22 @@ static H5FD_hdfs_fapl_t hdfs_fa = {
 };
 #endif /* H5_HAVE_LIBHDFS */
 
-static int display_all = TRUE;
+static int display_all = true;
 
 /* Enable the printing of selected statistics */
-static int display_file            = FALSE; /* display file information */
-static int display_group           = FALSE; /* display groups information */
-static int display_dset            = FALSE; /* display datasets information */
-static int display_dset_dtype_meta = FALSE; /* display datasets' datatype information */
-static int display_attr            = FALSE; /* display attributes information */
-static int display_free_sections   = FALSE; /* display free space information */
-static int display_summary         = FALSE; /* display summary of file space information */
+static int display_file            = false; /* display file information */
+static int display_group           = false; /* display groups information */
+static int display_dset            = false; /* display datasets information */
+static int display_dset_dtype_meta = false; /* display datasets' datatype information */
+static int display_attr            = false; /* display attributes information */
+static int display_free_sections   = false; /* display free space information */
+static int display_summary         = false; /* display summary of file space information */
 
-static int display_file_metadata  = FALSE; /* display file space info for file's metadata */
-static int display_group_metadata = FALSE; /* display file space info for groups' metadata */
-static int display_dset_metadata  = FALSE; /* display file space info for datasets' metadata */
+static int display_file_metadata  = false; /* display file space info for file's metadata */
+static int display_group_metadata = false; /* display file space info for groups' metadata */
+static int display_dset_metadata  = false; /* display file space info for datasets' metadata */
 
-static int display_object = FALSE; /* not implemented yet */
+static int display_object = false; /* not implemented yet */
 
 /* Initialize threshold for small groups/datasets/attributes */
 static int sgroups_threshold = DEF_SIZE_SMALL_GROUPS;
@@ -171,7 +173,7 @@ struct handler_t {
     char **obj;
 };
 
-static const char *s_opts = "Aa:Ddm:E*FfhGgl:sSTO:Vw:H:";
+static const char *s_opts = "Aa:Ddm:E*FfhGgl:K:sSTO:Vw:H:";
 /* e.g. "filemetadata" has to precede "file"; "groupmetadata" has to precede "group" etc. */
 static struct h5_long_options l_opts[] = {{"help", no_arg, 'h'},
                                           {"filemetadata", no_arg, 'F'},
@@ -187,6 +189,7 @@ static struct h5_long_options l_opts[] = {{"help", no_arg, 'h'},
                                           {"numattrs", require_arg, 'a'},
                                           {"freespace", no_arg, 's'},
                                           {"summary", no_arg, 'S'},
+                                          {"page-buffer-size", require_arg, 'K'},
                                           {"s3-cred", require_arg, 'w'},
                                           {"hdfs-attrs", require_arg, 'H'},
                                           {NULL, 0, '\0'}};
@@ -239,6 +242,7 @@ usage(const char *prog)
     fprintf(stdout, "                           than 0.  The default threshold is 10.\n");
     fprintf(stdout, "     -s, --freespace       Print free space information\n");
     fprintf(stdout, "     -S, --summary         Print summary of file space information\n");
+    fprintf(stdout, "     --page-buffer-size=N  Set the page buffer cache size, N=non-negative integers\n");
     fprintf(stdout, "     --s3-cred=<cred>      Access file on S3, using provided credential\n");
     fprintf(stdout, "                           <cred> :: (region,id,key)\n");
     fprintf(stdout, "                           If <cred> == \"(,,)\", no authentication is used.\n");
@@ -516,10 +520,10 @@ dataset_stats(iter_t *iter, const char *name, const H5O_info2_t *oi, const H5O_n
     if ((tid = H5Dget_type(did)) < 0)
         H5TOOLS_GOTO_ERROR(FAIL, "H5Dget_type() failed");
 
-    type_found = FALSE;
+    type_found = false;
     for (u = 0; u < iter->dset_ntypes; u++)
         if (H5Tequal(iter->dset_type_info[u].tid, tid) > 0) {
-            type_found = TRUE;
+            type_found = true;
             break;
         } /* end for */
 
@@ -825,23 +829,23 @@ parse_command_line(int argc, const char *const *argv, struct handler_t **hand_re
                 break;
 
             case 'F':
-                display_all           = FALSE;
-                display_file_metadata = TRUE;
+                display_all           = false;
+                display_file_metadata = true;
                 break;
 
             case 'f':
-                display_all  = FALSE;
-                display_file = TRUE;
+                display_all  = false;
+                display_file = true;
                 break;
 
             case 'G':
-                display_all            = FALSE;
-                display_group_metadata = TRUE;
+                display_all            = false;
+                display_group_metadata = true;
                 break;
 
             case 'g':
-                display_all   = FALSE;
-                display_group = TRUE;
+                display_all   = false;
+                display_group = true;
                 break;
 
             case 'l':
@@ -858,13 +862,13 @@ parse_command_line(int argc, const char *const *argv, struct handler_t **hand_re
                 break;
 
             case 'D':
-                display_all           = FALSE;
-                display_dset_metadata = TRUE;
+                display_all           = false;
+                display_dset_metadata = true;
                 break;
 
             case 'd':
-                display_all  = FALSE;
-                display_dset = TRUE;
+                display_all  = false;
+                display_dset = true;
                 break;
 
             case 'm':
@@ -881,13 +885,13 @@ parse_command_line(int argc, const char *const *argv, struct handler_t **hand_re
                 break;
 
             case 'T':
-                display_all             = FALSE;
-                display_dset_dtype_meta = TRUE;
+                display_all             = false;
+                display_dset_dtype_meta = true;
                 break;
 
             case 'A':
-                display_all  = FALSE;
-                display_attr = TRUE;
+                display_all  = false;
+                display_attr = true;
                 break;
 
             case 'a':
@@ -904,18 +908,18 @@ parse_command_line(int argc, const char *const *argv, struct handler_t **hand_re
                 break;
 
             case 's':
-                display_all           = FALSE;
-                display_free_sections = TRUE;
+                display_all           = false;
+                display_free_sections = true;
                 break;
 
             case 'S':
-                display_all     = FALSE;
-                display_summary = TRUE;
+                display_all     = false;
+                display_summary = true;
                 break;
 
             case 'O':
-                display_all    = FALSE;
-                display_object = TRUE;
+                display_all    = false;
+                display_object = true;
 
                 /* Allocate space to hold the command line info */
                 if (NULL == (hand = (struct handler_t *)calloc((size_t)1, sizeof(struct handler_t)))) {
@@ -932,7 +936,7 @@ parse_command_line(int argc, const char *const *argv, struct handler_t **hand_re
 
                 /* Store object names */
                 for (u = 0; u < hand->obj_count; u++)
-                    if (NULL == (hand->obj[u] = HDstrdup(H5_optarg))) {
+                    if (NULL == (hand->obj[u] = strdup(H5_optarg))) {
                         error_msg("unable to allocate memory for object name\n");
                         goto error;
                     } /* end if */
@@ -947,7 +951,8 @@ parse_command_line(int argc, const char *const *argv, struct handler_t **hand_re
 
                 drivername = drivernames[ROS3_VFD_IDX];
 #else
-                error_msg("Read-Only S3 VFD not enabled.\n");
+                error_msg(
+                    "Read-Only S3 VFD is not available unless enabled when HDF5 is configured and built.\n");
                 goto error;
 #endif
                 break;
@@ -961,9 +966,13 @@ parse_command_line(int argc, const char *const *argv, struct handler_t **hand_re
 
                 drivername = drivernames[HDFS_VFD_IDX];
 #else
-                error_msg("HDFS VFD not enabled.\n");
+                error_msg("HDFS VFD is not available unless enabled when HDF5 is configured and built.\n");
                 goto error;
 #endif
+                break;
+
+            case 'K':
+                page_cache = strtoul(H5_optarg, NULL, 0);
                 break;
 
             default:
@@ -1514,17 +1523,17 @@ static void
 print_file_statistics(const iter_t *iter)
 {
     if (display_all) {
-        display_file            = TRUE;
-        display_group           = TRUE;
-        display_dset            = TRUE;
-        display_dset_dtype_meta = TRUE;
-        display_attr            = TRUE;
-        display_free_sections   = TRUE;
-        display_summary         = TRUE;
+        display_file            = true;
+        display_group           = true;
+        display_dset            = true;
+        display_dset_dtype_meta = true;
+        display_attr            = true;
+        display_free_sections   = true;
+        display_summary         = true;
 
-        display_file_metadata  = TRUE;
-        display_group_metadata = TRUE;
-        display_dset_metadata  = TRUE;
+        display_file_metadata  = true;
+        display_group_metadata = true;
+        display_dset_metadata  = true;
     }
 
     if (display_file)
@@ -1617,6 +1626,11 @@ main(int argc, char *argv[])
     /* enable error reporting if command line option */
     h5tools_error_report();
 
+    if ((fapl_id = h5tools_get_new_fapl(H5P_DEFAULT)) < 0) {
+        error_msg("unable to create FAPL for file access\n");
+        h5tools_setstatus(EXIT_FAILURE);
+        goto done;
+    }
     if (drivername) {
         h5tools_vfd_info_t vfd_info;
 
@@ -1625,16 +1639,25 @@ main(int argc, char *argv[])
         vfd_info.u.name = drivername;
 
 #ifdef H5_HAVE_ROS3_VFD
-        if (!HDstrcmp(drivername, drivernames[ROS3_VFD_IDX]))
+        if (!strcmp(drivername, drivernames[ROS3_VFD_IDX]))
             vfd_info.info = &ros3_fa;
 #endif
 #ifdef H5_HAVE_LIBHDFS
-        if (!HDstrcmp(drivername, drivernames[HDFS_VFD_IDX]))
+        if (!strcmp(drivername, drivernames[HDFS_VFD_IDX]))
             vfd_info.info = &hdfs_fa;
 #endif
 
-        if ((fapl_id = h5tools_get_fapl(H5P_DEFAULT, NULL, &vfd_info)) < 0) {
-            error_msg("Unable to create FAPL for file access\n");
+        /* Set non-default virtual file driver, if requested */
+        if (h5tools_set_fapl_vfd(fapl_id, &vfd_info) < 0) {
+            error_msg("unable to set VFD on fapl for file\n");
+            h5tools_setstatus(EXIT_FAILURE);
+            goto done;
+        }
+    }
+    if (page_cache > 0) {
+        if (H5Pset_page_buffer_size(fapl_id, page_cache, 0, 0) < 0) {
+            error_msg("unable to set page buffer cache size for file access\n");
+            h5tools_setstatus(EXIT_FAILURE);
             goto done;
         }
     }
@@ -1648,7 +1671,7 @@ main(int argc, char *argv[])
 
         printf("Filename: %s\n", fname);
 
-        fid = h5tools_fopen(fname, H5F_ACC_RDONLY, fapl_id, (fapl_id != H5P_DEFAULT), NULL, 0);
+        fid = h5tools_fopen(fname, H5F_ACC_RDONLY, fapl_id, (drivername != NULL), NULL, 0);
 
         if (fid < 0) {
             error_msg("unable to open file \"%s\"\n", fname);
@@ -1708,7 +1731,7 @@ main(int argc, char *argv[])
             unsigned u;
 
             for (u = 0; u < hand->obj_count; u++) {
-                if (h5trav_visit(fid, hand->obj[u], TRUE, TRUE, obj_stats, lnk_stats, &iter, H5O_INFO_ALL) <
+                if (h5trav_visit(fid, hand->obj[u], true, true, obj_stats, lnk_stats, &iter, H5O_INFO_ALL) <
                     0) {
                     error_msg("unable to traverse object \"%s\"\n", hand->obj[u]);
                     h5tools_setstatus(EXIT_FAILURE);
@@ -1718,7 +1741,7 @@ main(int argc, char *argv[])
             } /* end for */
         }     /* end if */
         else {
-            if (h5trav_visit(fid, "/", TRUE, TRUE, obj_stats, lnk_stats, &iter, H5O_INFO_ALL) < 0) {
+            if (h5trav_visit(fid, "/", true, true, obj_stats, lnk_stats, &iter, H5O_INFO_ALL) < 0) {
                 error_msg("unable to traverse objects/links in file \"%s\"\n", fname);
                 h5tools_setstatus(EXIT_FAILURE);
             }

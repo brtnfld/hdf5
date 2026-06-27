@@ -40,9 +40,9 @@ typedef struct {
  *            or named datatype being iterated over
  * \param[in] attr_name The name of the current object attribute
  * \param[in] ainfo The attribute's info struct
- * \param[in,out] op_data A pointer to the operator data passed in to
+ * \param[in,out] op_data A pointer to the operator data passed into
  *                H5Aiterate2() or H5Aiterate_by_name()
- * \returns The return values from an operator are:
+ * \return The return values from an operator are:
  *          \li Zero causes the iterator to continue, returning zero when
  *              all attributes have been processed.
  *          \li Positive causes the iterator to immediately return that
@@ -51,6 +51,9 @@ typedef struct {
  *          \li Negative causes the iterator to immediately return that value,
  *              indicating failure. The iterator can be restarted at the next
  *              attribute.
+ *
+ * \since 1.8.0
+ *
  */
 typedef herr_t (*H5A_operator2_t)(hid_t location_id /*in*/, const char *attr_name /*in*/,
                                   const H5A_info_t *ainfo /*in*/, void *op_data /*in,out*/);
@@ -112,7 +115,7 @@ H5_DLL herr_t H5Aclose_async(hid_t attr_id, hid_t es_id);
  * \acpl_id
  * \aapl_id
  *
- * \return \hid_tv{attribute}
+ * \return \hid_ti{attribute}
  *
  * \details H5Acreate2() creates an attribute, \p attr_name, which is attached
  *          to the object specified by the identifier \p loc_id.
@@ -122,10 +125,10 @@ H5_DLL herr_t H5Aclose_async(hid_t attr_id, hid_t es_id);
  *          The attribute is created with the specified datatype and dataspace,
  *          \p type_id and \p space_id.
  *
- *          \plist_unused{acpl}
+ *          \plist_unused{aapl_id}
  *
  *          The attribute identifier returned by this function must be released
- *          with H5Aclose() resource leaks will develop.
+ *          with H5Aclose() or resource leaks will develop.
  *
  * \note If \p loc_id is a file identifier, the attribute will be attached to
  *       that file's root group.
@@ -170,7 +173,7 @@ H5_DLL hid_t  H5Acreate_async(hid_t loc_id, const char *attr_name, hid_t type_id
  * \aapl_id
  * \lapl_id
  *
- * \return \hid_tv{attribute}
+ * \return \hid_ti{attribute}
  *
  * \details H5Acreate_by_name() creates an attribute, \p attr_name, which is
  *          attached to the object specified by \p loc_id and \p obj_name.
@@ -183,7 +186,7 @@ H5_DLL hid_t  H5Acreate_async(hid_t loc_id, const char *attr_name, hid_t type_id
  *          The attribute is created with the specified datatype and
  *          dataspace, \p type_id and \p space_id.
  *
- *          \plist_unused{aapl}
+ *          \plist_unused{aapl_id}
  *
  *          The link access property list, \p lapl_id, may provide
  *          information regarding the properties of links required to access
@@ -252,7 +255,7 @@ H5_DLL herr_t H5Adelete(hid_t loc_id, const char *attr_name);
  *
  * \return \herr_t
  *
- * \details H5Adelete_by_idx() removes an attribute, specified by its
+ * \details H5Adelete_by_idx() removes an attribute specified by its
  *          location in an index, from an object.
  *
  *          The object from which the attribute is to be removed is
@@ -386,7 +389,7 @@ H5_DLL herr_t H5Aexists_by_name_async(hid_t loc_id, const char *obj_name, const 
  *
  * \attr_id
  *
- * \return \hid_tv{attribute's creation property list}
+ * \return \hid_ti{attribute's creation property list}
  *
  * \details H5Aget_create_plist() returns an identifier for the attribute
  *          creation property list associated with the attribute specified
@@ -564,7 +567,7 @@ H5_DLL ssize_t H5Aget_name_by_idx(hid_t loc_id, const char *obj_name, H5_index_t
  *
  * \attr_id
  *
- * \return \hid_tv{attribute dataspace}
+ * \return \hid_ti{attribute dataspace}
  *
  * \details  H5Aget_space() retrieves a copy of the dataspace for an
  *           attribute. The dataspace identifier returned from this
@@ -638,7 +641,7 @@ H5_DLL hid_t H5Aget_type(hid_t attr_id);
  * \details H5Aiterate2() iterates over the attributes attached to a
  *          dataset, named datatype, or group, as specified by \p loc_id.
  *          For each attribute, user-provided data, \p op_data, with
- *          additional information as defined below, is passed to a
+ *          additional information, as defined below, is passed to a
  *          user-defined function, \p op, which operates on that
  *          attribute.
  *
@@ -697,7 +700,7 @@ H5_DLL herr_t H5Aiterate2(hid_t loc_id, H5_index_t idx_type, H5_iter_order_t ord
  * \details H5Aiterate_by_name() iterates over the attributes attached
  *          to the dataset or group specified with \p loc_id and \p obj_name.
  *          For each attribute, user-provided data, \p op_data, with
- *          additional information as defined below, is passed to a
+ *          additional information, as defined below, is passed to a
  *          user-defined function, \p op, which operates on that attribute.
  *
  *          The order of the iteration and the attributes iterated over
@@ -744,10 +747,10 @@ H5_DLL herr_t H5Aiterate_by_name(hid_t loc_id, const char *obj_name, H5_index_t 
  * \param[in]  attr_name    Name of attribute to open
  * \aapl_id
  *
- * \return \hid_tv{attribute}
+ * \return \hid_ti{attribute}
  *
  * \details H5Aopen() opens an existing attribute, \p attr_name, that is
- *          attached to object specified by an object identifier, \p obj_id.
+ *          attached to the object specified by an object identifier, \p obj_id.
  *
  *          \plist_unused{aapl_id}
  *
@@ -792,7 +795,7 @@ H5_DLL hid_t  H5Aopen_async(hid_t obj_id, const char *attr_name, hid_t aapl_id, 
  * \aapl_id
  * \lapl_id
  *
- * \return \hid_tv{attribute}
+ * \return \hid_ti{attribute}
  *
  * \details H5Aopen_by_idx() opens an existing attribute that is attached
  *          to an object specified by location and name, \p loc_id and
@@ -847,7 +850,7 @@ H5_DLL hid_t  H5Aopen_by_idx_async(hid_t loc_id, const char *obj_name, H5_index_
  * \aapl_id
  * \lapl_id
  *
- * \return \hid_tv{attribute}
+ * \return \hid_ti{attribute}
  *
  * \details H5Aopen_by_name() opens an existing attribute, \p attr_name,
  *          that is attached to an object specified by location and name,
@@ -929,7 +932,7 @@ H5_DLL herr_t H5Aread(hid_t attr_id, hid_t type_id, void *buf);
 H5_DLL herr_t H5Aread_async(const char *app_file, const char *app_func, unsigned app_line, hid_t attr_id,
                             hid_t dtype_id, void *buf, hid_t es_id);
 #else
-H5_DLL herr_t H5Aread_async(chid_t attr_id, hid_t dtype_id, void *buf, hid_t es_id);
+H5_DLL herr_t H5Aread_async(hid_t attr_id, hid_t dtype_id, void *buf, hid_t es_id);
 #endif
 /*-------------------------------------------------------------------------*/
 /**
@@ -1096,9 +1099,9 @@ H5_DLL herr_t H5Arename_by_name(hid_t loc_id, const char *obj_name, const char *
  * \param[in] location_id The identifier for the group, dataset
  *            or named datatype being iterated over
  * \param[in] attr_name The name of the current object attribute
- * \param[in,out] operator_data A pointer to the operator data passed in to
+ * \param[in,out] operator_data A pointer to the operator data passed into
  *                H5Aiterate1()
- * \returns The return values from an operator are:
+ * \return The return values from an operator are:
  *          \li Zero causes the iterator to continue, returning zero when
  *              all attributes have been processed.
  *          \li Positive causes the iterator to immediately return that
@@ -1125,7 +1128,7 @@ typedef herr_t (*H5A_operator1_t)(hid_t location_id /*in*/, const char *attr_nam
  * \space_id
  * \acpl_id
  *
- * \return \hid_tv{attribute}
+ * \return \hid_ti{attribute}
  *
  * \deprecation_note{H5Acreate2()}
  *
@@ -1177,7 +1180,7 @@ H5_DLL int H5Aget_num_attrs(hid_t loc_id);
  * \loc_id
  * \param[in,out] idx     Starting (in) and ending (out) attribute index
  * \param[in]     op      User's function to pass each attribute to
- * \param[in,out] op_data User's data to pass through to iterator operator
+ * \param[in,out] op_data User's data to pass through to the iterator operator
  *                        function
  *
  * \return \herr_t
@@ -1212,7 +1215,7 @@ H5_DLL herr_t H5Aiterate1(hid_t loc_id, unsigned *idx, H5A_operator1_t op, void 
  * \loc_id
  * \param[in] idx Index of the attribute to open
  *
- * \return \hid_tv{attribute}
+ * \return \hid_ti{attribute}
  *
  * \deprecation_note{H5Aopen_by_idx()}
  *
@@ -1220,7 +1223,7 @@ H5_DLL herr_t H5Aiterate1(hid_t loc_id, unsigned *idx, H5A_operator1_t op, void 
  *          object specified with \p loc_id. The location object may be
  *          either a group, dataset, or named datatype, all of which may
  *          have any sort of attribute. The attribute specified by the index,
- *          \p idx , indicates the attribute to access. The value of \p idx
+ *          \p idx, indicates the attribute to access. The value of \p idx
  *          is a 0-based, non-negative integer. The attribute identifier
  *          returned from this function must be released with H5Aclose()
  *          or resource leaks will develop.
@@ -1238,7 +1241,7 @@ H5_DLL hid_t H5Aopen_idx(hid_t loc_id, unsigned idx);
  * \loc_id
  * \param[in] name Attribute name
  *
- * \return \hid_tv{attribute}
+ * \return \hid_ti{attribute}
  *
  * \deprecation_note{H5Aopen_by_name()}
  *

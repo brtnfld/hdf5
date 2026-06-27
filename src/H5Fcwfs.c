@@ -104,7 +104,7 @@ H5F_cwfs_add(H5F_t *f, H5HG_heap_t *heap)
      */
     if (NULL == f->shared->cwfs) {
         if (NULL == (f->shared->cwfs = (H5HG_heap_t **)H5MM_malloc(H5F_NCWFS * sizeof(H5HG_heap_t *))))
-            HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, FAIL, "can't allocate CWFS for file")
+            HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, FAIL, "can't allocate CWFS for file");
         f->shared->cwfs[0] = heap;
         f->shared->ncwfs   = 1;
     }
@@ -143,7 +143,7 @@ herr_t
 H5F_cwfs_find_free_heap(H5F_t *f, size_t need, haddr_t *addr)
 {
     unsigned cwfsno;              /* Local index for iterating over collections */
-    hbool_t  found     = FALSE;   /* Flag to indicate a heap with enough space was found */
+    bool     found     = false;   /* Flag to indicate a heap with enough space was found */
     herr_t   ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
@@ -172,7 +172,7 @@ H5F_cwfs_find_free_heap(H5F_t *f, size_t need, haddr_t *addr)
     for (cwfsno = 0; cwfsno < f->shared->ncwfs; cwfsno++)
         if (H5HG_FREE_SIZE(f->shared->cwfs[cwfsno]) >= need) {
             *addr = H5HG_ADDR(f->shared->cwfs[cwfsno]);
-            found = TRUE;
+            found = true;
             break;
         } /* end if */
 
@@ -195,12 +195,13 @@ H5F_cwfs_find_free_heap(H5F_t *f, size_t need, haddr_t *addr)
                     H5MF_try_extend(f, H5FD_MEM_GHEAP, H5HG_ADDR(f->shared->cwfs[cwfsno]),
                                     (hsize_t)H5HG_SIZE(f->shared->cwfs[cwfsno]), (hsize_t)new_need);
                 if (was_extended < 0)
-                    HGOTO_ERROR(H5E_HEAP, H5E_CANTEXTEND, FAIL, "error trying to extend heap")
-                else if (was_extended == TRUE) {
+                    HGOTO_ERROR(H5E_HEAP, H5E_CANTEXTEND, FAIL, "error trying to extend heap");
+                else if (was_extended == true) {
                     if (H5HG_extend(f, H5HG_ADDR(f->shared->cwfs[cwfsno]), new_need) < 0)
-                        HGOTO_ERROR(H5E_HEAP, H5E_CANTRESIZE, FAIL, "unable to extend global heap collection")
+                        HGOTO_ERROR(H5E_HEAP, H5E_CANTRESIZE, FAIL,
+                                    "unable to extend global heap collection");
                     *addr = H5HG_ADDR(f->shared->cwfs[cwfsno]);
-                    found = TRUE;
+                    found = true;
                     break;
                 } /* end if */
             }     /* end if */
@@ -234,7 +235,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5F_cwfs_advance_heap(H5F_t *f, H5HG_heap_t *heap, hbool_t add_heap)
+H5F_cwfs_advance_heap(H5F_t *f, H5HG_heap_t *heap, bool add_heap)
 {
     unsigned u;                   /* Local index variable */
     herr_t   ret_value = SUCCEED; /* Return value */

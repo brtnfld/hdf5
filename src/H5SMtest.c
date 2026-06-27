@@ -24,7 +24,6 @@
 #include "H5ACprivate.h" /* Metadata cache			*/
 #include "H5Eprivate.h"  /* Error handling		  	*/
 #include "H5Fprivate.h"  /* File access                          */
-#include "H5FLprivate.h" /* Free Lists                           */
 #include "H5SMpkg.h"     /* Shared object header messages        */
 
 /****************/
@@ -84,11 +83,13 @@ H5SM__get_mesg_count_test(H5F_t *f, unsigned type_id, size_t *mesg_count)
         /* Look up the master SOHM table */
         if (NULL == (table = (H5SM_master_table_t *)H5AC_protect(f, H5AC_SOHM_TABLE, H5F_SOHM_ADDR(f),
                                                                  &cache_udata, H5AC__READ_ONLY_FLAG)))
-            HGOTO_ERROR(H5E_SOHM, H5E_CANTPROTECT, FAIL, "unable to load SOHM master table")
+            HGOTO_ERROR(H5E_SOHM, H5E_CANTPROTECT, FAIL, "unable to load SOHM master table");
 
         /* Find the correct index for this message type */
-        if ((index_num = H5SM__get_index(table, type_id)) < 0)
-            HGOTO_ERROR(H5E_SOHM, H5E_NOTFOUND, FAIL, "unable to find correct SOHM index")
+        if (H5SM__get_index(table, type_id, &index_num) < 0)
+            HGOTO_ERROR(H5E_SOHM, H5E_CANTGET, FAIL, "unable to check for SOHM index");
+        if (index_num < 0)
+            HGOTO_ERROR(H5E_SOHM, H5E_NOTFOUND, FAIL, "unable to find correct SOHM index");
         header = &(table->indexes[index_num]);
 
         /* Set the message count for the type */

@@ -58,7 +58,7 @@ H5HL_debug(H5F_t *f, haddr_t addr, FILE *stream, int indent, int fwidth)
     assert(fwidth >= 0);
 
     if (NULL == (h = (H5HL_t *)H5HL_protect(f, addr, H5AC__READ_ONLY_FLAG)))
-        HGOTO_ERROR(H5E_HEAP, H5E_CANTPROTECT, FAIL, "unable to load/protect local heap")
+        HGOTO_ERROR(H5E_HEAP, H5E_CANTPROTECT, FAIL, "unable to load/protect local heap");
 
     fprintf(stream, "%*sLocal Heap...\n", indent, "");
     fprintf(stream, "%*s%-*s %zu\n", indent, "", fwidth, "Header size (in bytes):", h->prfx_size);
@@ -70,13 +70,13 @@ H5HL_debug(H5F_t *f, haddr_t addr, FILE *stream, int indent, int fwidth)
      * the heap.
      */
     if (NULL == (marker = (uint8_t *)H5MM_calloc(h->dblk_size)))
-        HGOTO_ERROR(H5E_HEAP, H5E_CANTALLOC, FAIL, "memory allocation failed")
+        HGOTO_ERROR(H5E_HEAP, H5E_CANTALLOC, FAIL, "memory allocation failed");
 
     fprintf(stream, "%*sFree Blocks (offset, size):\n", indent, "");
     for (free_block = 0, freelist = h->freelist; freelist; freelist = freelist->next, free_block++) {
         char temp_str[32];
 
-        HDsnprintf(temp_str, sizeof(temp_str), "Block #%d:", free_block);
+        snprintf(temp_str, sizeof(temp_str), "Block #%d:", free_block);
         fprintf(stream, "%*s%-*s %8zu, %8zu\n", indent + 3, "", MAX(0, fwidth - 9), temp_str,
                 freelist->offset, freelist->size);
         if ((freelist->offset + freelist->size) > h->dblk_size)

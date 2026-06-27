@@ -12,7 +12,7 @@
 
 /*
  *  For details of the HDF libraries, see the HDF Documentation at:
- *    http://hdfgroup.org/HDF5/doc/
+ *    https://portal.hdfgroup.org/documentation/index.html
  *
  */
 
@@ -77,13 +77,11 @@ JNIEXPORT jint JNICALL
 Java_hdf_hdf5lib_H5_H5Pset_1chunk(JNIEnv *env, jclass clss, jlong plist, jint ndims, jbyteArray dim)
 {
     jboolean isCopy;
-    hsize_t *da = NULL;
-    hsize_t *lp = NULL;
-    size_t   i;
+    hsize_t *chunk_dims = NULL;
+    uint8_t *theArray_p = NULL;
     size_t   rank;
     jsize    arrLen;
     jbyte   *theArray = NULL;
-    jlong   *jlp      = NULL;
     herr_t   status   = FAIL;
 
     UNUSED(clss);
@@ -104,22 +102,29 @@ Java_hdf_hdf5lib_H5_H5Pset_1chunk(JNIEnv *env, jclass clss, jlong plist, jint nd
 
     PIN_BYTE_ARRAY(ENVONLY, dim, theArray, &isCopy, "H5Pset_chunk: dim array not pinned");
 
-    if (NULL == (da = lp = (hsize_t *)malloc(rank * sizeof(hsize_t))))
+    if (NULL == (chunk_dims = malloc(rank * sizeof(hsize_t))))
         H5_OUT_OF_MEMORY_ERROR(ENVONLY, "H5Pset_chunk: memory allocation failed");
 
-    jlp = (jlong *)theArray;
-    for (i = 0; i < rank; i++) {
-        *lp = (hsize_t)*jlp;
-        lp++;
-        jlp++;
-    } /* end if */
+    theArray_p = (uint8_t *)theArray;
+    for (size_t i = 0; i < rank; i++) {
+        jlong dim_val;
 
-    if ((status = H5Pset_chunk((hid_t)plist, (int)ndims, da)) < 0)
+        memcpy(&dim_val, theArray_p, sizeof(jlong));
+
+        if (dim_val < 0)
+            H5_BAD_ARGUMENT_ERROR(ENVONLY, "H5Pset_chunk: chunk dimensions can't be negative");
+
+        chunk_dims[i] = (hsize_t)dim_val;
+
+        theArray_p += sizeof(jlong);
+    }
+
+    if ((status = H5Pset_chunk((hid_t)plist, (int)ndims, chunk_dims)) < 0)
         H5_LIBRARY_ERROR(ENVONLY);
 
 done:
-    if (da)
-        free(da);
+    free(chunk_dims);
+
     if (theArray)
         UNPIN_BYTE_ARRAY(ENVONLY, dim, theArray, JNI_ABORT);
 
@@ -1062,7 +1067,7 @@ Java_hdf_hdf5lib_H5_H5Pset_1external(JNIEnv *env, jclass clss, jlong plist, jstr
 
     PIN_JAVA_STRING(ENVONLY, name, fileName, NULL, "H5Pset_external: file name not pinned");
 
-    if ((status = H5Pset_external((hid_t)plist, fileName, (off_t)offset, (hsize_t)size)) < 0)
+    if ((status = H5Pset_external((hid_t)plist, fileName, (HDoff_t)offset, (hsize_t)size)) < 0)
         H5_LIBRARY_ERROR(ENVONLY);
 
 done:
@@ -1084,7 +1089,7 @@ Java_hdf_hdf5lib_H5_H5Pget_1external(JNIEnv *env, jclass clss, jlong plist, jint
     jboolean isCopy;
     jstring  str;
     hsize_t  s;
-    off_t    o;
+    HDoff_t  o;
     jsize    arrLen;
     jlong   *theArray = NULL;
     char    *file     = NULL;
@@ -1106,8 +1111,8 @@ Java_hdf_hdf5lib_H5_H5Pget_1external(JNIEnv *env, jclass clss, jlong plist, jint
         if (NULL == (file = (char *)malloc(sizeof(char) * (size_t)name_size)))
             H5_OUT_OF_MEMORY_ERROR(ENVONLY, "H5Pget_external: memory allocation failed");
 
-    if ((status = H5Pget_external((hid_t)plist, (unsigned)idx, (size_t)name_size, file, (off_t *)&o,
-                                  (hsize_t *)&s)) < 0)
+    if ((status = H5Pget_external((hid_t)plist, (unsigned)idx, (size_t)name_size, file, &o, (hsize_t *)&s)) <
+        0)
         H5_LIBRARY_ERROR(ENVONLY);
 
     if (NULL != size) {

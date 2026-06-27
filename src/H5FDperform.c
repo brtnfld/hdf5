@@ -19,11 +19,10 @@
 /***********/
 /* Headers */
 /***********/
-#include "H5private.h"   /* Generic Functions                        */
-#include "H5CXprivate.h" /* API Contexts                             */
-#include "H5Eprivate.h"  /* Error handling                           */
-#include "H5FDpkg.h"     /* File Drivers                             */
-#include "H5Iprivate.h"  /* IDs                                      */
+#include "H5private.h"  /* Generic Functions                        */
+#include "H5Eprivate.h" /* Error handling                           */
+#include "H5FDpkg.h"    /* File Drivers                             */
+#include "H5Iprivate.h" /* IDs                                      */
 
 /*-------------------------------------------------------------------------
  * Function:    H5FDperform_init
@@ -41,7 +40,6 @@ H5FDperform_init(H5FD_init_t op)
     hid_t ret_value = H5I_INVALID_HID; /* Return value */
 
     FUNC_ENTER_API_NOINIT
-    /*NO TRACE*/
 
     /* It is possible that an application will evaluate an
      * `H5FD_*` symbol (`H5FD_FAMILY`, `H5FD_MULTI`, `H5FD_SEC2`, etc.
@@ -50,7 +48,7 @@ H5FDperform_init(H5FD_init_t op)
      * before `init` is run.
      */
     if (H5_init_library() < 0)
-        HGOTO_ERROR(H5E_FUNC, H5E_CANTINIT, H5I_INVALID_HID, "library initialization failed")
+        HGOTO_ERROR(H5E_FUNC, H5E_CANTINIT, H5I_INVALID_HID, "library initialization failed");
 
     ret_value = op();
 

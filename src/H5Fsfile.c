@@ -47,14 +47,17 @@ static H5F_sfile_node_t *H5F_sfile_head_s = NULL;
  *-------------------------------------------------------------------------
  */
 void
-H5F_sfile_assert_num(unsigned n)
+H5F_sfile_assert_num(unsigned H5_ATTR_NDEBUG_UNUSED n)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
+    /* The only useful work this function does is asserting so when NDEBUG
+     * is defined it's a no-op.
+     */
+#ifndef NDEBUG
     if (n == 0) {
-        /* Sanity checking */
         assert(H5F_sfile_head_s == NULL);
-    } /* end if */
+    }
     else {
         unsigned          count; /* Number of open shared files */
         H5F_sfile_node_t *curr;  /* Current shared file node */
@@ -68,11 +71,11 @@ H5F_sfile_assert_num(unsigned n)
 
             /* Advance to next shared file node */
             curr = curr->next;
-        } /* end while */
+        }
 
-        /* Sanity checking */
         assert(count == n);
-    } /* end else */
+    }
+#endif
 
     FUNC_LEAVE_NOAPI_VOID
 } /* H5F_sfile_assert_num() */
@@ -99,7 +102,7 @@ H5F__sfile_add(H5F_shared_t *shared)
 
     /* Allocate new shared file node */
     if (NULL == (new_shared = H5FL_CALLOC(H5F_sfile_node_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed");
 
     /* Set shared file value */
     new_shared->shared = shared;
@@ -180,7 +183,7 @@ H5F__sfile_remove(H5F_shared_t *shared)
 
     /* Indicate error if the node wasn't found */
     if (curr == NULL)
-        HGOTO_ERROR(H5E_FILE, H5E_NOTFOUND, FAIL, "can't find shared file info")
+        HGOTO_ERROR(H5E_FILE, H5E_NOTFOUND, FAIL, "can't find shared file info");
 
     /* Remove node found from list */
     if (last != NULL)

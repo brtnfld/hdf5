@@ -52,10 +52,10 @@ typedef struct H5FD_core_t {
     haddr_t        eoa;              /* end of allocated region              */
     haddr_t        eof;              /* current allocated size               */
     size_t         increment;        /* multiples for mem allocation         */
-    hbool_t        backing_store;    /* write to file name on flush          */
-    hbool_t        write_tracking;   /* Whether to track writes              */
+    bool           backing_store;    /* write to file name on flush          */
+    bool           write_tracking;   /* Whether to track writes              */
     size_t         bstore_page_size; /* backing store page size              */
-    hbool_t        ignore_disabled_file_locks;
+    bool           ignore_disabled_file_locks;
     int            fd; /* backing store file descriptor        */
     /* Information for determining uniqueness of a file with a backing store */
 #ifndef H5_HAVE_WIN32_API
@@ -85,22 +85,22 @@ typedef struct H5FD_core_t {
 
     HANDLE hFile; /* Native windows file handle */
 #endif                                        /* H5_HAVE_WIN32_API */
-    hbool_t                     dirty;        /* changes not saved?       */
+    bool                        dirty;        /* changes not saved?       */
     H5FD_file_image_callbacks_t fi_callbacks; /* file image callbacks     */
     H5SL_t                     *dirty_list;   /* dirty parts of the file  */
 } H5FD_core_t;
 
 /* Driver-specific file access properties */
 typedef struct H5FD_core_fapl_t {
-    size_t  increment;      /* how much to grow memory */
-    hbool_t backing_store;  /* write to file name on flush */
-    hbool_t write_tracking; /* Whether to track writes */
-    size_t  page_size;      /* Page size for tracked writes */
+    size_t increment;      /* how much to grow memory */
+    bool   backing_store;  /* write to file name on flush */
+    bool   write_tracking; /* Whether to track writes */
+    size_t page_size;      /* Page size for tracked writes */
 } H5FD_core_fapl_t;
 
 /* Allocate memory in multiples of this size by default */
 #define H5FD_CORE_INCREMENT                8192
-#define H5FD_CORE_WRITE_TRACKING_FLAG      FALSE
+#define H5FD_CORE_WRITE_TRACKING_FLAG      false
 #define H5FD_CORE_WRITE_TRACKING_PAGE_SIZE 524288
 
 /* These macros check for overflow of various quantities.  These macros
@@ -140,9 +140,9 @@ static herr_t  H5FD__core_read(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, ha
                                void *buf);
 static herr_t  H5FD__core_write(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr, size_t size,
                                 const void *buf);
-static herr_t  H5FD__core_flush(H5FD_t *_file, hid_t dxpl_id, hbool_t closing);
-static herr_t  H5FD__core_truncate(H5FD_t *_file, hid_t dxpl_id, hbool_t closing);
-static herr_t  H5FD__core_lock(H5FD_t *_file, hbool_t rw);
+static herr_t  H5FD__core_flush(H5FD_t *_file, hid_t dxpl_id, bool closing);
+static herr_t  H5FD__core_truncate(H5FD_t *_file, hid_t dxpl_id, bool closing);
+static herr_t  H5FD__core_lock(H5FD_t *_file, bool rw);
 static herr_t  H5FD__core_unlock(H5FD_t *_file);
 static herr_t  H5FD__core_delete(const char *filename, hid_t fapl_id);
 static inline const H5FD_core_fapl_t *H5FD__core_get_default_config(void);
@@ -192,8 +192,8 @@ static const H5FD_class_t H5FD_core_g = {
 
 /* Default configurations, if none provided */
 static const H5FD_core_fapl_t H5FD_core_default_config_g = {
-    (size_t)H5_MB, TRUE, H5FD_CORE_WRITE_TRACKING_FLAG, H5FD_CORE_WRITE_TRACKING_PAGE_SIZE};
-static const H5FD_core_fapl_t H5FD_core_default_paged_config_g = {(size_t)H5_MB, TRUE, TRUE, (size_t)4096};
+    (size_t)H5_MB, true, H5FD_CORE_WRITE_TRACKING_FLAG, H5FD_CORE_WRITE_TRACKING_PAGE_SIZE};
+static const H5FD_core_fapl_t H5FD_core_default_paged_config_g = {(size_t)H5_MB, true, true, (size_t)4096};
 
 /* Define a free list to manage the region type */
 H5FL_DEFINE(H5FD_core_region_t);
@@ -216,7 +216,7 @@ H5FD__core_add_dirty_region(H5FD_core_t *file, haddr_t start, haddr_t end)
     H5FD_core_region_t *item            = NULL;
     haddr_t             b_addr          = 0;
     haddr_t             a_addr          = 0;
-    hbool_t             create_new_node = TRUE;
+    bool                create_new_node = true;
     herr_t              ret_value       = SUCCEED;
 
     FUNC_ENTER_PACKAGE
@@ -257,7 +257,7 @@ H5FD__core_add_dirty_region(H5FD_core_t *file, haddr_t start, haddr_t end)
             /* We won't need to insert a new node since we can
              * just update an existing one instead.
              */
-            create_new_node = FALSE;
+            create_new_node = false;
         } /* end if */
 
     /* Remove any old nodes that are no longer needed */
@@ -287,7 +287,7 @@ H5FD__core_add_dirty_region(H5FD_core_t *file, haddr_t start, haddr_t end)
             item->end   = end;
             if (H5SL_insert(file->dirty_list, item, &item->start) < 0)
                 HGOTO_ERROR(H5E_SLIST, H5E_CANTINSERT, FAIL, "can't insert new dirty region: (%llu, %llu)\n",
-                            (unsigned long long)start, (unsigned long long)end)
+                            (unsigned long long)start, (unsigned long long)end);
         } /* end if */
         else {
             /* Store the new item endpoint if it's bigger */
@@ -330,7 +330,7 @@ H5FD__core_destroy_dirty_list(H5FD_core_t *file)
             region = H5FL_FREE(H5FD_core_region_t, region);
 
         if (H5SL_close(file->dirty_list) < 0)
-            HGOTO_ERROR(H5E_SLIST, H5E_CLOSEERROR, FAIL, "can't close core vfd dirty list")
+            HGOTO_ERROR(H5E_SLIST, H5E_CLOSEERROR, FAIL, "can't close core vfd dirty list");
         file->dirty_list = NULL;
     } /* end if */
 
@@ -362,8 +362,8 @@ H5FD__core_write_to_bstore(H5FD_core_t *file, haddr_t addr, size_t size)
 
 #ifndef H5_HAVE_PREADWRITE
     /* Seek to the correct location (if we don't have pwrite) */
-    if ((HDoff_t)addr != HDlseek(file->fd, (off_t)addr, SEEK_SET))
-        HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "error seeking in backing store")
+    if ((HDoff_t)addr != HDlseek(file->fd, (HDoff_t)addr, SEEK_SET))
+        HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "error seeking in backing store");
 #endif /* H5_HAVE_PREADWRITE */
 
     while (size > 0) {
@@ -391,15 +391,15 @@ H5FD__core_write_to_bstore(H5FD_core_t *file, haddr_t addr, size_t size)
 
         if (-1 == bytes_wrote) { /* error */
             int    myerrno = errno;
-            time_t mytime  = HDtime(NULL);
+            time_t mytime  = time(NULL);
 
-            offset = HDlseek(file->fd, (HDoff_t)0, SEEK_CUR);
+            offset = HDlseek(file->fd, 0, SEEK_CUR);
 
             HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL,
                         "write to backing store failed: time = %s, filename = '%s', file descriptor = %d, "
                         "errno = %d, error message = '%s', ptr = %p, total write size = %llu, bytes this "
                         "sub-write = %llu, bytes actually written = %llu, offset = %llu",
-                        HDctime(&mytime), file->name, file->fd, myerrno, HDstrerror(myerrno), (void *)ptr,
+                        ctime(&mytime), file->name, file->fd, myerrno, strerror(myerrno), (void *)ptr,
                         (unsigned long long)size, (unsigned long long)bytes_in,
                         (unsigned long long)bytes_wrote, (unsigned long long)offset);
         } /* end if */
@@ -430,12 +430,12 @@ done:
 static inline const H5FD_core_fapl_t *
 H5FD__core_get_default_config(void)
 {
-    char *driver = HDgetenv(HDF5_DRIVER);
+    char *driver = getenv(HDF5_DRIVER);
 
     if (driver) {
-        if (!HDstrcmp(driver, "core"))
+        if (!strcmp(driver, "core"))
             return &H5FD_core_default_config_g;
-        else if (!HDstrcmp(driver, "core_paged"))
+        else if (!strcmp(driver, "core_paged"))
             return &H5FD_core_default_paged_config_g;
     }
 
@@ -462,16 +462,16 @@ H5FD_core_init(void)
     FUNC_ENTER_NOAPI_NOERR
 
     /* Check the use disabled file locks environment variable */
-    lock_env_var = HDgetenv(HDF5_USE_FILE_LOCKING);
-    if (lock_env_var && !HDstrcmp(lock_env_var, "BEST_EFFORT"))
-        ignore_disabled_file_locks_s = TRUE; /* Override: Ignore disabled locks */
-    else if (lock_env_var && (!HDstrcmp(lock_env_var, "TRUE") || !HDstrcmp(lock_env_var, "1")))
-        ignore_disabled_file_locks_s = FALSE; /* Override: Don't ignore disabled locks */
+    lock_env_var = getenv(HDF5_USE_FILE_LOCKING);
+    if (lock_env_var && !strcmp(lock_env_var, "BEST_EFFORT"))
+        ignore_disabled_file_locks_s = true; /* Override: Ignore disabled locks */
+    else if (lock_env_var && (!strcmp(lock_env_var, "TRUE") || !strcmp(lock_env_var, "1")))
+        ignore_disabled_file_locks_s = false; /* Override: Don't ignore disabled locks */
     else
         ignore_disabled_file_locks_s = FAIL; /* Environment variable not set, or not set correctly */
 
     if (H5I_VFL != H5I_get_type(H5FD_CORE_g))
-        H5FD_CORE_g = H5FD_register(&H5FD_core_g, sizeof(H5FD_class_t), FALSE);
+        H5FD_CORE_g = H5FD_register(&H5FD_core_g, sizeof(H5FD_class_t), false);
 
     /* Set return value */
     ret_value = H5FD_CORE_g;
@@ -518,17 +518,16 @@ H5Pset_core_write_tracking(hid_t plist_id, hbool_t is_enabled, size_t page_size)
     herr_t                  ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE3("e", "ibz", plist_id, is_enabled, page_size);
 
     /* The page size cannot be zero */
     if (page_size == 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "page_size cannot be zero")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "page_size cannot be zero");
 
     /* Get the plist structure */
     if (NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
-        HGOTO_ERROR(H5E_PLIST, H5E_BADID, FAIL, "can't find object for ID")
+        HGOTO_ERROR(H5E_PLIST, H5E_BADID, FAIL, "can't find object for ID");
     if (H5FD_CORE != H5P_peek_driver(plist))
-        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "incorrect VFL driver")
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "incorrect VFL driver");
     if (NULL == (old_fa = (const H5FD_core_fapl_t *)H5P_peek_driver_info(plist)))
         old_fa = H5FD__core_get_default_config();
 
@@ -541,7 +540,7 @@ H5Pset_core_write_tracking(hid_t plist_id, hbool_t is_enabled, size_t page_size)
 
     /* Set the property values & the driver for the FAPL */
     if (H5P_set_driver(plist, H5FD_CORE, &fa, NULL) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set core VFD as driver")
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set core VFD as driver");
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -565,15 +564,14 @@ H5Pget_core_write_tracking(hid_t plist_id, hbool_t *is_enabled /*out*/, size_t *
     herr_t                  ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE3("e", "ixx", plist_id, is_enabled, page_size);
 
     /* Get the plist structure */
     if (NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
-        HGOTO_ERROR(H5E_PLIST, H5E_BADID, FAIL, "can't find object for ID")
+        HGOTO_ERROR(H5E_PLIST, H5E_BADID, FAIL, "can't find object for ID");
     if (H5FD_CORE != H5P_peek_driver(plist))
-        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "incorrect VFL driver")
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "incorrect VFL driver");
     if (NULL == (fa = (const H5FD_core_fapl_t *)H5P_peek_driver_info(plist)))
-        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "bad VFL driver info")
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "bad VFL driver info");
 
     /* Get values */
     if (is_enabled)
@@ -604,11 +602,10 @@ H5Pset_fapl_core(hid_t fapl_id, size_t increment, hbool_t backing_store)
     herr_t           ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE3("e", "izb", fapl_id, increment, backing_store);
 
     /* Check argument */
     if (NULL == (plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list");
 
     /* Set VFD info values */
     memset(&fa, 0, sizeof(H5FD_core_fapl_t));
@@ -619,7 +616,7 @@ H5Pset_fapl_core(hid_t fapl_id, size_t increment, hbool_t backing_store)
 
     /* Set the property values & the driver for the FAPL */
     if (H5P_set_driver(plist, H5FD_CORE, &fa, NULL) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set core VFD as driver")
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set core VFD as driver");
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -642,14 +639,13 @@ H5Pget_fapl_core(hid_t fapl_id, size_t *increment /*out*/, hbool_t *backing_stor
     herr_t                  ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE3("e", "ixx", fapl_id, increment, backing_store);
 
     if (NULL == (plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list");
     if (H5FD_CORE != H5P_peek_driver(plist))
-        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "incorrect VFL driver")
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "incorrect VFL driver");
     if (NULL == (fa = (const H5FD_core_fapl_t *)H5P_peek_driver_info(plist)))
-        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "bad VFL driver info")
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "bad VFL driver info");
 
     if (increment)
         *increment = fa->increment;
@@ -680,10 +676,10 @@ H5FD__core_fapl_get(H5FD_t *_file)
     FUNC_ENTER_PACKAGE
 
     if (NULL == (fa = (H5FD_core_fapl_t *)H5MM_calloc(sizeof(H5FD_core_fapl_t))))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
 
     fa->increment      = file->increment;
-    fa->backing_store  = (hbool_t)(file->fd >= 0);
+    fa->backing_store  = (bool)(file->fd >= 0);
     fa->write_tracking = file->write_tracking;
     fa->page_size      = file->bstore_page_size;
 
@@ -725,14 +721,14 @@ H5FD__core_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr
 
     /* Check arguments */
     if (!name || !*name)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "invalid file name")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "invalid file name");
     if (0 == maxaddr || HADDR_UNDEF == maxaddr)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, NULL, "bogus maxaddr")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, NULL, "bogus maxaddr");
     if (ADDR_OVERFLOW(maxaddr))
-        HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, NULL, "maxaddr overflow")
+        HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, NULL, "maxaddr overflow");
     assert(H5P_DEFAULT != fapl_id);
     if (NULL == (plist = (H5P_genplist_t *)H5I_object(fapl_id)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a file access property list")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a file access property list");
     if (NULL == (fa = (const H5FD_core_fapl_t *)H5P_peek_driver_info(plist)))
         fa = H5FD__core_get_default_config();
 
@@ -747,15 +743,17 @@ H5FD__core_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr
 
     /* Retrieve initial file image info */
     if (H5P_peek(plist, H5F_ACS_FILE_IMAGE_INFO_NAME, &file_image_info) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get initial file image info")
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get initial file image info");
 
     /* If the file image exists and this is an open, make sure the file doesn't exist */
     assert(((file_image_info.buffer != NULL) && (file_image_info.size > 0)) ||
            ((file_image_info.buffer == NULL) && (file_image_info.size == 0)));
     memset(&sb, 0, sizeof(sb));
     if ((file_image_info.buffer != NULL) && !(H5F_ACC_CREAT & flags)) {
-        if (HDopen(name, o_flags, H5_POSIX_CREATE_MODE_RW) >= 0)
-            HGOTO_ERROR(H5E_FILE, H5E_FILEEXISTS, NULL, "file already exists")
+        if ((fd = HDopen(name, o_flags, H5_POSIX_CREATE_MODE_RW)) >= 0) {
+            HDclose(fd);
+            HGOTO_ERROR(H5E_FILE, H5E_FILEEXISTS, NULL, "file already exists");
+        }
 
         /* If backing store is requested, create and stat the file
          * Note: We are forcing the O_CREAT flag here, even though this is
@@ -763,9 +761,10 @@ H5FD__core_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr
          */
         if (fa->backing_store) {
             if ((fd = HDopen(name, o_flags | O_CREAT, H5_POSIX_CREATE_MODE_RW)) < 0)
-                HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to create file")
+                HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to create file");
+            memset(&sb, 0, sizeof(h5_stat_t));
             if (HDfstat(fd, &sb) < 0)
-                HSYS_GOTO_ERROR(H5E_FILE, H5E_BADFILE, NULL, "unable to fstat file")
+                HSYS_GOTO_ERROR(H5E_FILE, H5E_BADFILE, NULL, "unable to fstat file");
         } /* end if */
     }     /* end if */
     /* Open backing store, and get stat() from file.  The only case that backing
@@ -773,14 +772,15 @@ H5FD__core_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr
      * on. */
     else if (fa->backing_store || !(H5F_ACC_CREAT & flags)) {
         if ((fd = HDopen(name, o_flags, H5_POSIX_CREATE_MODE_RW)) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file")
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file");
+        memset(&sb, 0, sizeof(h5_stat_t));
         if (HDfstat(fd, &sb) < 0)
-            HSYS_GOTO_ERROR(H5E_FILE, H5E_BADFILE, NULL, "unable to fstat file")
+            HSYS_GOTO_ERROR(H5E_FILE, H5E_BADFILE, NULL, "unable to fstat file");
     } /* end if */
 
     /* Create the new file struct */
     if (NULL == (file = (H5FD_core_t *)H5MM_calloc(sizeof(H5FD_core_t))))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "unable to allocate file struct")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "unable to allocate file struct");
     file->fd = fd;
     if (name && *name)
         file->name = H5MM_xstrdup(name);
@@ -804,7 +804,7 @@ H5FD__core_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr
     else {
         /* Use the value in the property list */
         if (H5P_get(plist, H5F_ACS_IGNORE_DISABLED_FILE_LOCKS_NAME, &file->ignore_disabled_file_locks) < 0)
-            HGOTO_ERROR(H5E_VFL, H5E_CANTGET, NULL, "can't get ignore disabled file locks property")
+            HGOTO_ERROR(H5E_VFL, H5E_CANTGET, NULL, "can't get ignore disabled file locks property");
     }
 
     if (fd >= 0) {
@@ -812,10 +812,10 @@ H5FD__core_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr
 #ifdef H5_HAVE_WIN32_API
         file->hFile = (HANDLE)_get_osfhandle(fd);
         if (INVALID_HANDLE_VALUE == file->hFile)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to get Windows file handle")
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to get Windows file handle");
 
         if (!GetFileInformationByHandle((HANDLE)file->hFile, &fileinfo))
-            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to get Windows file information")
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to get Windows file information");
 
         file->nFileIndexHigh       = fileinfo.nFileIndexHigh;
         file->nFileIndexLow        = fileinfo.nFileIndexLow;
@@ -842,11 +842,11 @@ H5FD__core_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr
             if (file->fi_callbacks.image_malloc) {
                 if (NULL == (file->mem = (unsigned char *)file->fi_callbacks.image_malloc(
                                  size, H5FD_FILE_IMAGE_OP_FILE_OPEN, file->fi_callbacks.udata)))
-                    HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, NULL, "image malloc callback failed")
+                    HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, NULL, "image malloc callback failed");
             } /* end if */
             else {
                 if (NULL == (file->mem = (unsigned char *)H5MM_malloc(size)))
-                    HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, NULL, "unable to allocate memory block")
+                    HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, NULL, "unable to allocate memory block");
             } /* end else */
 
             /* Set up data structures */
@@ -858,7 +858,7 @@ H5FD__core_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr
                     if (file->mem != file->fi_callbacks.image_memcpy(file->mem, file_image_info.buffer, size,
                                                                      H5FD_FILE_IMAGE_OP_FILE_OPEN,
                                                                      file->fi_callbacks.udata))
-                        HGOTO_ERROR(H5E_FILE, H5E_CANTCOPY, NULL, "image_memcpy callback failed")
+                        HGOTO_ERROR(H5E_FILE, H5E_CANTCOPY, NULL, "image_memcpy callback failed");
                 } /* end if */
                 else
                     H5MM_memcpy(file->mem, file_image_info.buffer, size);
@@ -869,8 +869,8 @@ H5FD__core_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr
                  * partial results, and the end of the file.
                  */
 
-                uint8_t *mem    = file->mem;  /* memory pointer for writes */
-                HDoff_t  offset = (HDoff_t)0; /* offset for reading */
+                uint8_t *mem    = file->mem; /* memory pointer for writes */
+                HDoff_t  offset = 0;         /* offset for reading */
 
                 while (size > 0) {
                     h5_posix_io_t     bytes_in   = 0;  /* # of bytes to read       */
@@ -896,16 +896,16 @@ H5FD__core_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr
 
                     if (-1 == bytes_read) { /* error */
                         int    myerrno = errno;
-                        time_t mytime  = HDtime(NULL);
+                        time_t mytime  = time(NULL);
 
-                        offset = HDlseek(file->fd, (HDoff_t)0, SEEK_CUR);
+                        offset = HDlseek(file->fd, 0, SEEK_CUR);
 
                         HGOTO_ERROR(
                             H5E_IO, H5E_READERROR, NULL,
                             "file read failed: time = %s, filename = '%s', file descriptor = %d, errno = %d, "
                             "error message = '%s', file->mem = %p, total read size = %llu, bytes this "
                             "sub-read = %llu, bytes actually read = %llu, offset = %llu",
-                            HDctime(&mytime), file->name, file->fd, myerrno, HDstrerror(myerrno),
+                            ctime(&mytime), file->name, file->fd, myerrno, strerror(myerrno),
                             (void *)file->mem, (unsigned long long)size, (unsigned long long)bytes_in,
                             (unsigned long long)bytes_read, (unsigned long long)offset);
                     } /* end if */
@@ -927,14 +927,14 @@ H5FD__core_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr
     /* Set up write tracking if the backing store is on */
     file->dirty_list = NULL;
     if (fa->backing_store) {
-        hbool_t use_write_tracking = FALSE; /* what we're actually doing */
+        bool use_write_tracking = false; /* what we're actually doing */
 
         /* default is to have write tracking OFF for create (hence the check to see
          * if the user explicitly set a page size) and ON with the default page size
          * on open (when not read-only).
          */
         /* Only use write tracking if the file is open for writing */
-        use_write_tracking = (TRUE == fa->write_tracking) /* user asked for write tracking */
+        use_write_tracking = (true == fa->write_tracking) /* user asked for write tracking */
                              && !(o_flags & O_RDONLY)     /* file is open for writing (i.e. not read-only) */
                              && (file->bstore_page_size != 0); /* page size is not zero */
 
@@ -977,13 +977,13 @@ H5FD__core_close(H5FD_t *_file)
     FUNC_ENTER_PACKAGE
 
     /* Flush any changed buffers */
-    if (H5FD__core_flush(_file, (hid_t)-1, TRUE) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTFLUSH, FAIL, "unable to flush core vfd backing store")
+    if (H5FD__core_flush(_file, (hid_t)-1, true) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_CANTFLUSH, FAIL, "unable to flush core vfd backing store");
 
     /* Destroy the dirty region list */
     if (file->dirty_list)
         if (H5FD__core_destroy_dirty_list(file) != SUCCEED)
-            HGOTO_ERROR(H5E_VFL, H5E_CANTFREE, FAIL, "unable to free core vfd dirty region list")
+            HGOTO_ERROR(H5E_VFL, H5E_CANTFREE, FAIL, "unable to free core vfd dirty region list");
 
     /* Release resources */
     if (file->fd >= 0)
@@ -995,7 +995,7 @@ H5FD__core_close(H5FD_t *_file)
         if (file->fi_callbacks.image_free) {
             if (file->fi_callbacks.image_free(file->mem, H5FD_FILE_IMAGE_OP_FILE_CLOSE,
                                               file->fi_callbacks.udata) < 0)
-                HGOTO_ERROR(H5E_FILE, H5E_CANTFREE, FAIL, "image_free callback failed")
+                HGOTO_ERROR(H5E_FILE, H5E_CANTFREE, FAIL, "image_free callback failed");
         } /* end if */
         else
             H5MM_xfree(file->mem);
@@ -1086,7 +1086,7 @@ H5FD__core_cmp(const H5FD_t *_f1, const H5FD_t *_f2)
         if (NULL == f2->name)
             HGOTO_DONE(1);
 
-        ret_value = HDstrcmp(f1->name, f2->name);
+        ret_value = strcmp(f1->name, f2->name);
     } /* end else */
 
 done:
@@ -1174,7 +1174,7 @@ H5FD__core_set_eoa(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, haddr_t addr)
     FUNC_ENTER_PACKAGE
 
     if (ADDR_OVERFLOW(addr))
-        HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL, "address overflow")
+        HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL, "address overflow");
 
     file->eoa = addr;
 
@@ -1224,7 +1224,7 @@ H5FD__core_get_handle(H5FD_t *_file, hid_t fapl, void **file_handle)
 
     /* Check args */
     if (!file_handle)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "file handle not valid")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "file handle not valid");
 
     /* Check for non-default FAPL */
     if (H5P_FILE_ACCESS_DEFAULT != fapl && H5P_DEFAULT != fapl) {
@@ -1232,18 +1232,18 @@ H5FD__core_get_handle(H5FD_t *_file, hid_t fapl, void **file_handle)
 
         /* Get the FAPL */
         if (NULL == (plist = (H5P_genplist_t *)H5I_object(fapl)))
-            HGOTO_ERROR(H5E_VFL, H5E_BADTYPE, FAIL, "not a file access property list")
+            HGOTO_ERROR(H5E_VFL, H5E_BADTYPE, FAIL, "not a file access property list");
 
         /* Check if private property for retrieving the backing store POSIX
          * file descriptor is set.  (This should not be set except within the
          * library)  QAK - 2009/12/04
          */
         if (H5P_exist_plist(plist, H5F_ACS_WANT_POSIX_FD_NAME) > 0) {
-            hbool_t want_posix_fd; /* Setting for retrieving file descriptor from core VFD */
+            bool want_posix_fd; /* Setting for retrieving file descriptor from core VFD */
 
             /* Get property */
             if (H5P_get(plist, H5F_ACS_WANT_POSIX_FD_NAME, &want_posix_fd) < 0)
-                HGOTO_ERROR(H5E_VFL, H5E_CANTGET, FAIL, "can't get property of retrieving file descriptor")
+                HGOTO_ERROR(H5E_VFL, H5E_CANTGET, FAIL, "can't get property of retrieving file descriptor");
 
             /* If property is set, pass back the file descriptor instead of the memory address */
             if (want_posix_fd)
@@ -1288,9 +1288,9 @@ H5FD__core_read(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, hid_t H5_ATTR_UNU
 
     /* Check for overflow conditions */
     if (HADDR_UNDEF == addr)
-        HGOTO_ERROR(H5E_IO, H5E_OVERFLOW, FAIL, "file address overflowed")
+        HGOTO_ERROR(H5E_IO, H5E_OVERFLOW, FAIL, "file address overflowed");
     if (REGION_OVERFLOW(addr, size))
-        HGOTO_ERROR(H5E_IO, H5E_OVERFLOW, FAIL, "file address overflowed")
+        HGOTO_ERROR(H5E_IO, H5E_OVERFLOW, FAIL, "file address overflowed");
 
     /* Read the part which is before the EOF marker */
     if (addr < file->eof) {
@@ -1344,7 +1344,7 @@ H5FD__core_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, hid_t H5_ATTR_UN
 
     /* Check for overflow conditions */
     if (REGION_OVERFLOW(addr, size))
-        HGOTO_ERROR(H5E_IO, H5E_OVERFLOW, FAIL, "file address overflowed")
+        HGOTO_ERROR(H5E_IO, H5E_OVERFLOW, FAIL, "file address overflowed");
 
     /*
      * Allocate more memory if necessary, careful of overflow. Also, if the
@@ -1367,12 +1367,12 @@ H5FD__core_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, hid_t H5_ATTR_UN
                              file->mem, new_eof, H5FD_FILE_IMAGE_OP_FILE_RESIZE, file->fi_callbacks.udata)))
                 HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL,
                             "unable to allocate memory block of %llu bytes with callback",
-                            (unsigned long long)new_eof)
+                            (unsigned long long)new_eof);
         } /* end if */
         else {
             if (NULL == (x = (unsigned char *)H5MM_realloc(file->mem, new_eof)))
                 HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL,
-                            "unable to allocate memory block of %llu bytes", (unsigned long long)new_eof)
+                            "unable to allocate memory block of %llu bytes", (unsigned long long)new_eof);
         } /* end else */
 
         memset(x + file->eof, 0, (size_t)(new_eof - file->eof));
@@ -1390,14 +1390,14 @@ H5FD__core_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, hid_t H5_ATTR_UN
             HGOTO_ERROR(
                 H5E_VFL, H5E_CANTINSERT, FAIL,
                 "unable to add core VFD dirty region during write call - addresses: start=%llu end=%llu",
-                (unsigned long long)start, (unsigned long long)end)
+                (unsigned long long)start, (unsigned long long)end);
     }
 
     /* Write from BUF to memory */
     H5MM_memcpy(file->mem + addr, buf, size);
 
     /* Mark memory buffer as modified */
-    file->dirty = TRUE;
+    file->dirty = true;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1414,7 +1414,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD__core_flush(H5FD_t *_file, hid_t H5_ATTR_UNUSED dxpl_id, hbool_t H5_ATTR_UNUSED closing)
+H5FD__core_flush(H5FD_t *_file, hid_t H5_ATTR_UNUSED dxpl_id, bool H5_ATTR_UNUSED closing)
 {
     H5FD_core_t *file      = (H5FD_core_t *)_file;
     herr_t       ret_value = SUCCEED; /* Return value */
@@ -1441,7 +1441,7 @@ H5FD__core_flush(H5FD_t *_file, hid_t H5_ATTR_UNUSED dxpl_id, hbool_t H5_ATTR_UN
                     size = (size_t)((item->end - item->start) + 1);
 
                     if (H5FD__core_write_to_bstore(file, item->start, size) != SUCCEED)
-                        HGOTO_ERROR(H5E_VFL, H5E_WRITEERROR, FAIL, "unable to write to backing store")
+                        HGOTO_ERROR(H5E_VFL, H5E_WRITEERROR, FAIL, "unable to write to backing store");
                 } /* end if */
 
                 item = H5FL_FREE(H5FD_core_region_t, item);
@@ -1451,10 +1451,10 @@ H5FD__core_flush(H5FD_t *_file, hid_t H5_ATTR_UNUSED dxpl_id, hbool_t H5_ATTR_UN
         /* Otherwise, write the entire file out at once */
         else {
             if (H5FD__core_write_to_bstore(file, (haddr_t)0, (size_t)file->eof) != SUCCEED)
-                HGOTO_ERROR(H5E_VFL, H5E_WRITEERROR, FAIL, "unable to write to backing store")
+                HGOTO_ERROR(H5E_VFL, H5E_WRITEERROR, FAIL, "unable to write to backing store");
         } /* end else */
 
-        file->dirty = FALSE;
+        file->dirty = false;
     }
 
 done:
@@ -1494,7 +1494,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD__core_truncate(H5FD_t *_file, hid_t H5_ATTR_UNUSED dxpl_id, hbool_t closing)
+H5FD__core_truncate(H5FD_t *_file, hid_t H5_ATTR_UNUSED dxpl_id, bool closing)
 {
     H5FD_core_t *file = (H5FD_core_t *)_file;
     size_t       new_eof;             /* New size of memory buffer */
@@ -1525,11 +1525,11 @@ H5FD__core_truncate(H5FD_t *_file, hid_t H5_ATTR_UNUSED dxpl_id, hbool_t closing
                     (x = (unsigned char *)file->fi_callbacks.image_realloc(
                          file->mem, new_eof, H5FD_FILE_IMAGE_OP_FILE_RESIZE, file->fi_callbacks.udata)))
                     HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL,
-                                "unable to allocate memory block with callback")
+                                "unable to allocate memory block with callback");
             } /* end if */
             else {
                 if (NULL == (x = (unsigned char *)H5MM_realloc(file->mem, new_eof)))
-                    HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL, "unable to allocate memory block")
+                    HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL, "unable to allocate memory block");
             } /* end else */
 
             if (file->eof < new_eof)
@@ -1558,15 +1558,15 @@ H5FD__core_truncate(H5FD_t *_file, hid_t H5_ATTR_UNUSED dxpl_id, hbool_t closing
                 if (INVALID_SET_FILE_POINTER == dwPtrLow) {
                     dwError = GetLastError();
                     if (dwError != NO_ERROR)
-                        HGOTO_ERROR(H5E_FILE, H5E_FILEOPEN, FAIL, "unable to set file pointer")
+                        HGOTO_ERROR(H5E_FILE, H5E_FILEOPEN, FAIL, "unable to set file pointer");
                 }
 
                 bError = SetEndOfFile(file->hFile);
                 if (0 == bError)
-                    HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to extend file properly")
+                    HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to extend file properly");
 #else  /* H5_HAVE_WIN32_API */
                 if (-1 == HDftruncate(file->fd, (HDoff_t)new_eof))
-                    HSYS_GOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to extend file properly")
+                    HSYS_GOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to extend file properly");
 #endif /* H5_HAVE_WIN32_API */
 
             } /* end if */
@@ -1585,15 +1585,15 @@ done:
  *
  * Purpose:     To place an advisory lock on a file.
  *        The lock type to apply depends on the parameter "rw":
- *            TRUE--opens for write: an exclusive lock
- *            FALSE--opens for read: a shared lock
+ *            true--opens for write: an exclusive lock
+ *            false--opens for read: a shared lock
  *
  * Return:      SUCCEED/FAIL
  *
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD__core_lock(H5FD_t *_file, hbool_t rw)
+H5FD__core_lock(H5FD_t *_file, bool rw)
 {
     H5FD_core_t *file = (H5FD_core_t *)_file; /* VFD file struct          */
     int          lock_flags;                  /* file locking flags       */
@@ -1619,7 +1619,7 @@ H5FD__core_lock(H5FD_t *_file, hbool_t rw)
                 errno = 0;
             }
             else
-                HSYS_GOTO_ERROR(H5E_FILE, H5E_BADFILE, FAIL, "unable to lock file")
+                HSYS_GOTO_ERROR(H5E_FILE, H5E_BADFILE, FAIL, "unable to lock file");
         } /* end if */
     }     /* end if */
 
@@ -1655,7 +1655,7 @@ H5FD__core_unlock(H5FD_t *_file)
                 errno = 0;
             }
             else
-                HSYS_GOTO_ERROR(H5E_FILE, H5E_BADFILE, FAIL, "unable to unlock file")
+                HSYS_GOTO_ERROR(H5E_FILE, H5E_BADFILE, FAIL, "unable to unlock file");
         }
 
 done:
@@ -1683,13 +1683,13 @@ H5FD__core_delete(const char *filename, hid_t fapl_id)
     assert(filename);
 
     if (NULL == (plist = (H5P_genplist_t *)H5I_object(fapl_id)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list");
     if (NULL == (fa = (const H5FD_core_fapl_t *)H5P_peek_driver_info(plist)))
         fa = H5FD__core_get_default_config();
 
     if (fa->backing_store)
         if (HDremove(filename) < 0)
-            HSYS_GOTO_ERROR(H5E_VFL, H5E_CANTDELETEFILE, FAIL, "unable to delete file")
+            HSYS_GOTO_ERROR(H5E_VFL, H5E_CANTDELETEFILE, FAIL, "unable to delete file");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

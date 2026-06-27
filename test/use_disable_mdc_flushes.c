@@ -35,10 +35,10 @@ static const char *progname_g = "use_disable_mdc_flushes"; /* program name */
 #define UC_RANK       3                /* use case dataset rank */
 #define Chunksize_DFT 256              /* chunksize default */
 #define Hgoto_error(val)                                                                                     \
-    {                                                                                                        \
+    do {                                                                                                     \
         ret_value = val;                                                                                     \
         goto done;                                                                                           \
-    }
+    } while (0)
 
 static char   *filename_g;
 static hsize_t nplanes_g;
@@ -112,14 +112,14 @@ parse_option(int argc, char *const argv[])
                     fprintf(stderr, "bad number of planes %s, must be a positive integer\n", optarg);
                     usage(progname_g);
                     Hgoto_error(-1);
-                };
+                }
                 break;
             case 's': /* use swmr file open mode */
                 if ((use_swmr_g = atoi(optarg)) < 0) {
                     fprintf(stderr, "swmr value should be 0(no) or 1(yes)\n");
                     usage(progname_g);
                     Hgoto_error(-1);
-                };
+                }
                 break;
             case 'y': /* Number of planes per chunk */
                 if ((chunkplanes_g = atoi(optarg)) <= 0) {
@@ -127,14 +127,14 @@ parse_option(int argc, char *const argv[])
                             optarg);
                     usage(progname_g);
                     Hgoto_error(-1);
-                };
+                }
                 break;
             case 'z': /* size of chunk=(z,z) */
                 if ((chunksize_g = atoi(optarg)) <= 0) {
                     fprintf(stderr, "bad chunksize %s, must be a positive integer\n", optarg);
                     usage(progname_g);
                     Hgoto_error(-1);
-                };
+                }
                 break;
             case '?':
                 fprintf(stderr, "getopt returned '%c'.\n", c);
@@ -149,12 +149,12 @@ parse_option(int argc, char *const argv[])
     /* set test file name if not given */
     if (!filename_g) {
         /* default data file name is <progname>.h5 */
-        if ((filename_g = (char *)malloc(HDstrlen(progname_g) + 4)) == NULL) {
+        if ((filename_g = (char *)malloc(strlen(progname_g) + 4)) == NULL) {
             fprintf(stderr, "malloc: failed\n");
             Hgoto_error(-1);
-        };
-        HDstrcpy(filename_g, progname_g);
-        HDstrcat(filename_g, ".h5");
+        }
+        strcpy(filename_g, progname_g);
+        strcat(filename_g, ".h5");
     }
 
 done:
@@ -308,7 +308,7 @@ write_file(void)
     hsize_t   dims[3];                        /* Dataspace dimensions */
     hsize_t   memdims[3];                     /* Memory space dimensions */
     hsize_t   start[3] = {0, 0, 0}, count[3]; /* Hyperslab selection values */
-    hbool_t   disabled;                       /* Object's disabled status */
+    bool      disabled;                       /* Object's disabled status */
     hsize_t   i, j, k;
 
     name = filename_g;
@@ -375,7 +375,7 @@ write_file(void)
     if ((buffer = (UC_CTYPE *)malloc((size_t)memdims[1] * (size_t)memdims[2] * sizeof(UC_CTYPE))) == NULL) {
         fprintf(stderr, "malloc: failed\n");
         return -1;
-    };
+    }
 
     /*
      * Get dataset rank and dimension.
@@ -403,7 +403,7 @@ write_file(void)
     if ((m_sid = H5Screate_simple(rank, memdims, NULL)) < 0) {
         fprintf(stderr, "H5Screate_simple for memory failed\n");
         return -1;
-    };
+    }
 
     /* write planes */
     count[0] = 1;
