@@ -121,7 +121,7 @@ H5_DLL herr_t H5FD__subfiling_unregister(void);
 
 /* Testing functions */
 #ifdef H5FD_TESTING
-H5_DLL bool   H5FD__supports_swmr_test(const char *vfd_name);
+H5_DLL bool H5FD__supports_swmr_test(const char *vfd_name);
 H5_DLL herr_t H5FD__vfd_swmr_reader_md_test(H5FD_t *file, unsigned num_entries,
                                             H5FD_vfd_swmr_idx_entry_t index[]);
 #endif /* H5FD_TESTING */

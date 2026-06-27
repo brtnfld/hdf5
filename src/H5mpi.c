@@ -811,9 +811,9 @@ H5_mpio_get_file_sync_required(MPI_File fh, bool *file_sync_required)
 
     /* Force setting the flag via env variable (temp solution before the flag is implemented in MPI) */
     sync_env_var = getenv("HDF5_DO_MPI_FILE_SYNC");
-    if (sync_env_var && (!strcmp(sync_env_var, "true") || !strcmp(sync_env_var, "1")))
+    if (sync_env_var && (!strcmp(sync_env_var, "TRUE") || !strcmp(sync_env_var, "1")))
         *file_sync_required = true;
-    if (sync_env_var && (!strcmp(sync_env_var, "false") || !strcmp(sync_env_var, "0")))
+    if (sync_env_var && (!strcmp(sync_env_var, "FALSE") || !strcmp(sync_env_var, "0")))
         *file_sync_required = false;
 
 done:

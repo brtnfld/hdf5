@@ -183,7 +183,7 @@ const H5D_chunk_ops_t H5D_COPS_BT2[1] = {{
     H5D__bt2_idx_size,           /* size */
     H5D__bt2_idx_reset,          /* reset */
     H5D__bt2_idx_dump,           /* dump */
-    H5D__bt2_idx_dest,           /* destroy */
+    H5D__bt2_idx_dest            /* destroy */
 }};
 
 /*****************************/

@@ -91,11 +91,11 @@ H5_trace_args_bool(H5RS_str_t *rs, bool val)
     /* FUNC_ENTER() should not be called */
 
     if (true == val)
-        H5RS_acat(rs, "true");
+        H5RS_acat(rs, "TRUE");
     else if (!val)
-        H5RS_acat(rs, "false");
+        H5RS_acat(rs, "FALSE");
     else
-        H5RS_asprintf_cat(rs, "true(%u)", (unsigned)val);
+        H5RS_asprintf_cat(rs, "TRUE(%u)", (unsigned)val);
 
     return SUCCEED;
 } /* end H5_trace_args_bool() */
@@ -2638,9 +2638,9 @@ H5_trace_args(H5RS_str_t *rs, const char *type, va_list ap)
                     htri_t tri_var = va_arg(ap, htri_t);
 
                     if (tri_var > 0)
-                        H5RS_acat(rs, "true");
+                        H5RS_acat(rs, "TRUE");
                     else if (!tri_var)
-                        H5RS_acat(rs, "false");
+                        H5RS_acat(rs, "FALSE");
                     else
                         H5RS_asprintf_cat(rs, "FAIL(%d)", (int)tri_var);
                 } /* end block */

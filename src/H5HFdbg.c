@@ -238,11 +238,11 @@ H5HF_hdr_print(const H5HF_hdr_t *hdr, bool dump_internal, FILE *stream, int inde
     fprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
             "Heap is:", hdr->man_dtable.curr_root_rows > 0 ? "Indirect" : "Direct");
     fprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
-            "Objects stored in 'debugging' format:", hdr->debug_objs ? "true" : "false");
+            "Objects stored in 'debugging' format:", hdr->debug_objs ? "TRUE" : "FALSE");
     fprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
-            "'Write once' flag:", hdr->write_once ? "true" : "false");
+            "'Write once' flag:", hdr->write_once ? "TRUE" : "FALSE");
     fprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
-            "'Huge' object IDs have wrapped:", hdr->huge_ids_wrapped ? "true" : "false");
+            "'Huge' object IDs have wrapped:", hdr->huge_ids_wrapped ? "TRUE" : "FALSE");
     fprintf(stream, "%*s%-*s %" PRIuHSIZE " \n", indent, "", fwidth,
             "Free space in managed blocks:", hdr->total_man_free);
     fprintf(stream, "%*s%-*s %" PRIuHSIZE " \n", indent, "", fwidth,

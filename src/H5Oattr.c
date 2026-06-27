@@ -850,7 +850,7 @@ H5O__attr_debug(H5F_t *f, const void *_mesg, FILE *stream, int indent, int fwidt
     } /* end switch */
     fprintf(stream, "%*s%-*s %s\n", indent, "", fwidth, "Character Set of Name:", s);
     fprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
-            "Object opened:", mesg->obj_opened ? "true" : "false");
+            "Object opened:", mesg->obj_opened ? "TRUE" : "FALSE");
     fprintf(stream, "%*s%-*s %" PRIuHADDR "\n", indent, "", fwidth, "Object:", mesg->oloc.addr);
 
     /* Check for attribute creation order index on the attribute */

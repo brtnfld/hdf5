@@ -537,9 +537,9 @@ H5O__linfo_debug(H5F_t H5_ATTR_UNUSED *f, const void *_mesg, FILE *stream, int i
     assert(fwidth >= 0);
 
     fprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
-            "Track creation order of links:", linfo->track_corder ? "true" : "false");
+            "Track creation order of links:", linfo->track_corder ? "TRUE" : "FALSE");
     fprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
-            "Index creation order of links:", linfo->index_corder ? "true" : "false");
+            "Index creation order of links:", linfo->index_corder ? "TRUE" : "FALSE");
     fprintf(stream, "%*s%-*s %" PRIuHSIZE "\n", indent, "", fwidth, "Number of links:", linfo->nlinks);
     fprintf(stream, "%*s%-*s %" PRId64 "\n", indent, "", fwidth,
             "Max. creation order value:", linfo->max_corder);

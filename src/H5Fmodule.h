@@ -2089,7 +2089,7 @@
  *
  *     void *image_memcpy)(void *dest, const void *src, size_t size,
  *             H5FD_file_image_op_t file_image_op, void *udata) {
- *         assert(false); // Should never be invoked in this scenario.
+ *         assert(FALSE); // Should never be invoked in this scenario.
  *         return(NULL); // always fails
  *     }
  *
@@ -2160,7 +2160,7 @@
  *     }
  *
  *     void *image_memcpy)(void *dest, const void *src, size_t size, H5FD_file_image_op_t file_image_op, void
- * *udata) { assert(false); // Should never be invoked in this scenario. return(NULL); // always fails
+ * *udata) { assert(FALSE); // Should never be invoked in this scenario. return(NULL); // always fails
  *     }
  *
  *     void *image_realloc(void *ptr, size_t size, H5FD_file_image_op_t file_image_op, void *udata) {
@@ -2343,7 +2343,7 @@
  *         int vfd_ref_count;
  *     } udata = {NULL, 0, 0, NULL, 0, 0};
  *
- *     boolean initial_file_open = true;
+ *     boolean initial_file_open = TRUE;
  *     void *image_malloc(size_t size, H5FD_file_image_op_t file_image_op, void *udata) {
  *         void * return_value = NULL;
  *
@@ -2384,7 +2384,7 @@
  *                 break;
  *
  *             default:
- *                 assert(false);
+ *                 assert(FALSE);
  *         }
  *         return(return_value);
  *     }
@@ -2405,7 +2405,7 @@
  *                 break;
  *
  *             default:
- *                 assert(false);
+ *                 assert(FALSE);
  *                 break;
  *         }
  *         return(dest); // if we get here, we must have been successful
@@ -2434,7 +2434,7 @@
  *                 break;
  *
  *             default:
- *                 assert(false);
+ *                 assert(FALSE);
  *                 break;
  *         }
  *         return(0); // if we get here, we must have been successful
@@ -2456,7 +2456,7 @@
  *
  *     H5Pset_file_image_callbacks(fapl_id, &callbacks);
  *     if ( initial_file_open ) {
- *         initial_file_open = false;
+ *         initial_file_open = FALSE;
  *     }
  *     else {
  *         assert(udata.vfd_image_ptr != NULL);

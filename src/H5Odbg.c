@@ -309,7 +309,7 @@ H5O__debug_real(H5F_t *f, H5O_t *oh, haddr_t addr, FILE *stream, int indent, int
     /* debug */
     fprintf(stream, "%*sObject Header...\n", indent, "");
 
-    fprintf(stream, "%*s%-*s %s\n", indent, "", fwidth, "Dirty:", oh->cache_info.is_dirty ? "true" : "false");
+    fprintf(stream, "%*s%-*s %s\n", indent, "", fwidth, "Dirty:", oh->cache_info.is_dirty ? "TRUE" : "FALSE");
     fprintf(stream, "%*s%-*s %u\n", indent, "", fwidth, "Version:", oh->version);
     fprintf(stream, "%*s%-*s %u\n", indent, "", fwidth,
             "Header size (in bytes):", (unsigned)H5O_SIZEOF_HDR(oh));
@@ -405,7 +405,7 @@ H5O__debug_real(H5F_t *f, H5O_t *oh, haddr_t addr, FILE *stream, int indent, int
                 "Message ID (sequence number):", (unsigned)(oh->mesg[i].type->id), oh->mesg[i].type->name,
                 sequence[oh->mesg[i].type->id]++);
         fprintf(stream, "%*s%-*s %s\n", indent + 3, "", MAX(0, fwidth - 3),
-                "Dirty:", oh->mesg[i].dirty ? "true" : "false");
+                "Dirty:", oh->mesg[i].dirty ? "TRUE" : "FALSE");
         fprintf(stream, "%*s%-*s ", indent + 3, "", MAX(0, fwidth - 3), "Message flags:");
         if (oh->mesg[i].flags) {
             bool flag_printed = false;

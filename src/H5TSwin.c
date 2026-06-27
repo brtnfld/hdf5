@@ -70,20 +70,20 @@ static herr_t H5TS__win32_thread_exit(void);
  *
  * Purpose:     Per-process setup on Windows when using Win32 threads.
  *
- * Returns:     true on success, false on failure
+ * Returns:     TRUE on success, FALSE on failure
  *
  *--------------------------------------------------------------------------
  */
 H5_DLL BOOL CALLBACK
 H5TS__win32_process_enter(PINIT_ONCE InitOnce, PVOID Parameter, PVOID *lpContex)
 {
-    BOOL ret_value = true;
+    BOOL ret_value = TRUE;
 
     FUNC_ENTER_PACKAGE_NAMECHECK_ONLY
 
     /* Initialize H5TS package */
     if (H5_UNLIKELY(H5TS__init_package() < 0))
-        HGOTO_DONE(false);
+        HGOTO_DONE(FALSE);
 
 done:
     FUNC_LEAVE_NOAPI_NAMECHECK_ONLY(ret_value)

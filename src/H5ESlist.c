@@ -84,8 +84,6 @@ H5ES__list_append(H5ES_event_list_t *el, H5ES_event_t *ev)
 
     ev->next = NULL;
 
-    ev->next = NULL;
-
     /* Append event onto the event list */
     if (NULL == el->tail)
         el->head = el->tail = ev;

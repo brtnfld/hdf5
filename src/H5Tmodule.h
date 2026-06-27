@@ -2461,7 +2461,7 @@ filled according to the value of this property. The padding can be:
  *   ! with compound datatype.
  *   !
  *   CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
- *   CALL h5pset_preserve_f(plist_id, .true., error)
+ *   CALL h5pset_preserve_f(plist_id, .TRUE., error)
  *
  *   ...
  *
