@@ -5064,7 +5064,7 @@ error:
  * Verify that the VFD SWMR property list setup function detects and reports 
  * errors as expected.
  * Specifically, test that H5F_load_swmr_config_from_string() errors when
- * create_file parameter is TRUE but writer parameter is FALSE.
+ * create_file parameter is true but writer parameter is false.
  *
  *                                              Cody S. -- 4/30/26
  *
@@ -5321,7 +5321,7 @@ vfd_swmr_load_string_config_err_check_2(void)
     }
 #if VERIFY_ERROR_STACK_SUPPORTED    
     else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                "file_space_strategy_config and file_space_page_size must both be configured if create_file is TRUE",
+                "file_space_strategy_config and file_space_page_size must both be configured if create_file is true",
                 verbose) )
     {
         TEST_ERROR;
@@ -7134,7 +7134,7 @@ vfd_swmr_config_check_err_check_1(void)
     }
 #if VERIFY_ERROR_STACK_SUPPORTED    
     else if ( 0 != cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, 
-                                              "either maintain_metadata_file or generate_updater_files must be TRUE",
+                                              "either maintain_metadata_file or generate_updater_files must be true",
                                               verbose) )
     {
         TEST_ERROR;

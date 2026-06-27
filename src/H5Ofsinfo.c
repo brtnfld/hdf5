@@ -392,7 +392,7 @@ H5O__fsinfo_debug(H5F_t H5_ATTR_UNUSED *f, const void *_mesg, FILE *stream, int 
     } /* end switch */
 
     fprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
-            "Free-space persist:", fsinfo->persist ? "TRUE" : "FALSE");
+            "Free-space persist:", fsinfo->persist ? "true" : "false");
 
     fprintf(stream, "%*s%-*s %" PRIuHSIZE "\n", indent, "", fwidth,
             "Free-space section threshold:", fsinfo->threshold);

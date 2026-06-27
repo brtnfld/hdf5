@@ -2022,7 +2022,7 @@ h5_check_file_locking_env_var(htri_t *use_locks, htri_t *ignore_disabled_locks)
     assert(ignore_disabled_locks);
 
     lock_env_var = getenv(HDF5_USE_FILE_LOCKING);
-    if (lock_env_var && (!strcmp(lock_env_var, "FALSE") || !strcmp(lock_env_var, "0"))) {
+    if (lock_env_var && (!strcmp(lock_env_var, "false") || !strcmp(lock_env_var, "0"))) {
         *use_locks             = false; /* Override: Never use locks */
         *ignore_disabled_locks = FAIL;
     }
@@ -2030,7 +2030,7 @@ h5_check_file_locking_env_var(htri_t *use_locks, htri_t *ignore_disabled_locks)
         *use_locks             = true; /* Override: Always use locks */
         *ignore_disabled_locks = true; /* Override: Ignore disabled locks */
     }
-    else if (lock_env_var && (!strcmp(lock_env_var, "TRUE") || !strcmp(lock_env_var, "1"))) {
+    else if (lock_env_var && (!strcmp(lock_env_var, "true") || !strcmp(lock_env_var, "1"))) {
         *use_locks             = true;  /* Override: Always use locks */
         *ignore_disabled_locks = false; /* Override: Don't ignore disabled locks */
     }

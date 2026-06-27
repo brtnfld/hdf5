@@ -72,7 +72,7 @@
         assert(cache_ptr);                                                                   \
         assert((cache_ptr)->curr_io_type);                                                   \
         (cache_ptr)->curr_io_type          = NULL;                                           \
-        (cache_ptr)->curr_read_speculative = FALSE;                                          \
+        (cache_ptr)->curr_read_speculative = false;                                          \
     } /* H5C__RESET_PB_READ_HINTS() */
 
 

@@ -309,13 +309,13 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
     s->filetype          = H5T_NATIVE_UINT32;
     s->update_interval   = READER_WAIT_TICKS;
     s->csteps            = 1;
-    s->use_communication = TRUE;
-    s->use_vfd_swmr      = TRUE;
-    s->flush_raw_data    = TRUE;
-    s->compact           = FALSE;
-    s->compact_write     = FALSE;
+    s->use_communication = true;
+    s->use_vfd_swmr      = true;
+    s->flush_raw_data    = true;
+    s->compact           = false;
+    s->compact_write     = false;
     s->compact_elmts     = MAX_COMPACT_ELMS;
-    s->contig            = FALSE;
+    s->contig            = false;
     s->rows              = 10;
     s->cols              = 5;
     s->swrites           = 0;
@@ -323,8 +323,8 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
     s->lwrites           = 0;
     s->wwrites           = 0;
     s->lastwrite         = 0;
-    s->obj_ref           = FALSE;
-    s->reg_ref           = FALSE;
+    s->obj_ref           = false;
+    s->reg_ref           = false;
 
     HDmemset(s->filename, 0, PATH_MAX);
     HDmemset(s->progname, 0, PATH_MAX);
@@ -550,13 +550,13 @@ state_init(state_t *s, int argc, char **argv)
     s->filetype          = H5T_NATIVE_UINT32;
     s->update_interval   = READER_WAIT_TICKS;
     s->csteps            = 1;
-    s->use_communication = TRUE;
-    s->use_vfd_swmr      = TRUE;
-    s->flush_raw_data    = TRUE;
-    s->compact           = FALSE;
-    s->compact_write     = FALSE;
+    s->use_communication = true;
+    s->use_vfd_swmr      = true;
+    s->flush_raw_data    = true;
+    s->compact           = false;
+    s->compact_write     = false;
     s->compact_elmts     = MAX_COMPACT_ELMS;
-    s->contig            = FALSE;
+    s->contig            = false;
     s->rows              = 10;
     s->cols              = 5;
     s->swrites           = 0;
@@ -564,8 +564,8 @@ state_init(state_t *s, int argc, char **argv)
     s->lwrites           = 0;
     s->wwrites           = 0;
     s->lastwrite         = 0;
-    s->obj_ref           = FALSE;
-    s->reg_ref           = FALSE;
+    s->obj_ref           = false;
+    s->reg_ref           = false;
 
     HDmemset(s->filename, 0, PATH_MAX);
     HDmemset(s->progname, 0, PATH_MAX);
@@ -2699,7 +2699,7 @@ main(int argc, char **argv)
 {
     hid_t                  fapl   = H5I_INVALID_HID;
     hid_t                  fcpl   = H5I_INVALID_HID;
-    bool                   writer = FALSE;
+    bool                   writer = false;
     state_t *              s      = NULL;
     const char *           personality;
     H5F_vfd_swmr_config_t *config = NULL;
@@ -2740,7 +2740,7 @@ main(int argc, char **argv)
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
      * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
      * md_file_path, md_file_name, updater_file_path */
-    init_vfd_swmr_config(config, 4, 7, FALSE, writer, TRUE, FALSE, s->flush_raw_data, 128, "./",
+    init_vfd_swmr_config(config, 4, 7, false, writer, true, false, s->flush_raw_data, 128, "./",
                          "dsetops-shadow", NULL);
 
     /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */
@@ -3181,7 +3181,7 @@ main(int argc, char **argv)
 {
     hid_t                  fapl   = H5I_INVALID_HID;
     hid_t                  fcpl   = H5I_INVALID_HID;
-    bool                   writer = FALSE;
+    bool                   writer = false;
     state_t *              s      = NULL;
     const char *           personality;
     H5F_vfd_swmr_config_t *config = NULL;
@@ -3212,7 +3212,7 @@ main(int argc, char **argv)
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
      * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
      * md_file_path, md_file_name, updater_file_path */
-    init_vfd_swmr_config(config, 4, 7, FALSE, writer, TRUE, FALSE, s->flush_raw_data, 128, "./",
+    init_vfd_swmr_config(config, 4, 7, false, writer, true, false, s->flush_raw_data, 128, "./",
                          "dsetops-shadow", NULL);
 
     /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */

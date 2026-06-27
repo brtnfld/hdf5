@@ -70,9 +70,9 @@ static hbool_t
 file_has_no_path(hid_t fid, const char *path)
 {
     switch (H5Lexists(fid, path, H5P_DEFAULT)) {
-        case FALSE:
+        case false:
             return true;
-        case TRUE:
+        case true:
             failure_mssg = "H5Lexists unexpectedly true.";
             return false;
         default:
@@ -242,8 +242,8 @@ vrfy_ns_grp_0(hid_t fid, const char *group_name)
         failure_mssg = "vrfy_ns_grp_0: 0 != grp_info.max_corder";
         return false;
     }
-    else if (FALSE != grp_info.mounted) {
-        failure_mssg = "vrfy_ns_grp_0: FALSE != grp_info.mounted";
+    else if (false != grp_info.mounted) {
+        failure_mssg = "vrfy_ns_grp_0: false != grp_info.mounted";
         return false;
     }
 
@@ -460,8 +460,8 @@ vrfy_ns_grp_c(hid_t fid, const char *group_name, unsigned nlinks)
         failure_mssg = "vrfy_ns_grp_c: nlinks != grp_info.max_corder";
         return false;
     }
-    else if (FALSE != grp_info.mounted) {
-        failure_mssg = "vrfy_ns_grp_c: FALSE != grp_info.mounted";
+    else if (false != grp_info.mounted) {
+        failure_mssg = "vrfy_ns_grp_c: false != grp_info.mounted";
         return false;
     }
 
@@ -485,8 +485,8 @@ vrfy_ns_grp_c(hid_t fid, const char *group_name, unsigned nlinks)
             failure_mssg = "vrfy_ns_grp_c: H5Lget_info() failed";
             return false;
         }
-        else if (TRUE != lnk_info.corder_valid) {
-            failure_mssg = "vrfy_ns_grp_c: TRUE != lnk_info.corder_valid";
+        else if (true != lnk_info.corder_valid) {
+            failure_mssg = "vrfy_ns_grp_c: true != lnk_info.corder_valid";
             return false;
         }
         else if (u != lnk_info.corder) {
@@ -810,8 +810,8 @@ vrfy_ns_grp_d(hid_t fid, const char *group_name, unsigned nlinks)
         failure_mssg = "vrfy_ns_grp_d: nlinks != grp_info.max_corder";
         return false;
     }
-    else if (FALSE != grp_info.mounted) {
-        failure_mssg = "vrfy_ns_grp_d: FALSE != grp_info.mounted";
+    else if (false != grp_info.mounted) {
+        failure_mssg = "vrfy_ns_grp_d: false != grp_info.mounted";
         return false;
     }
 
@@ -835,8 +835,8 @@ vrfy_ns_grp_d(hid_t fid, const char *group_name, unsigned nlinks)
             failure_mssg = "vrfy_ns_grp_d: H5Lget_info() failed.";
             return false;
         }
-        else if (TRUE != lnk_info.corder_valid) {
-            failure_mssg = "vrfy_ns_grp_d: TRUE != lnk_info.corder_valid";
+        else if (true != lnk_info.corder_valid) {
+            failure_mssg = "vrfy_ns_grp_d: true != lnk_info.corder_valid";
             return false;
         }
         else if (u != lnk_info.corder) {
@@ -1121,8 +1121,8 @@ vrfy_os_grp_0(hid_t fid, const char *group_name)
         failure_mssg = "vrfy_os_grp_0: 0 != grp_info.max_corder";
         return false;
     }
-    else if (FALSE != grp_info.mounted) {
-        failure_mssg = "vrfy_os_grp_0: FALSE != grp_info.mounted";
+    else if (false != grp_info.mounted) {
+        failure_mssg = "vrfy_os_grp_0: false != grp_info.mounted";
         return false;
     }
 
@@ -1326,8 +1326,8 @@ vrfy_os_grp_n(hid_t fid, const char *group_name, int proc_num, unsigned nlinks)
         failure_mssg = "vrfy_os_grp_n: 0 != grp_info.max_corder";
         return false;
     }
-    else if (FALSE != grp_info.mounted) {
-        failure_mssg = "vrfy_os_grp_n: FALSE != grp_info.mounted";
+    else if (false != grp_info.mounted) {
+        failure_mssg = "vrfy_os_grp_n: false != grp_info.mounted";
         return false;
     }
 
@@ -1352,8 +1352,8 @@ vrfy_os_grp_n(hid_t fid, const char *group_name, int proc_num, unsigned nlinks)
             failure_mssg = "vrfy_os_grp_n: H5Lget_info() failed";
             return false;
         }
-        else if (FALSE != lnk_info.corder_valid) {
-            failure_mssg = "vrfy_os_grp_n: FALSE != lnk_info.corder_valid";
+        else if (false != lnk_info.corder_valid) {
+            failure_mssg = "vrfy_os_grp_n: false != lnk_info.corder_valid";
             return false;
         }
         else if (H5T_CSET_ASCII != lnk_info.cset) {
@@ -2727,18 +2727,18 @@ tend_zoo(hid_t fid, const char *base_path, struct timespec *lastmsgtime, zoo_con
     int              i, nwritten;
     size_t           j;
     char *           leafp;
-    hbool_t          ok = TRUE;
+    hbool_t          ok = true;
     static const char *last_failure_mssg = "";
 
     nwritten = snprintf(full_path, sizeof(full_path), "%s/*", base_path);
     if (nwritten < 0 || (size_t)nwritten >= sizeof(full_path)) {
         failure_mssg = "tend_zoo: snprintf failed";
-        return FALSE;
+        return false;
     }
 
     if ((leafp = strrchr(full_path, '*')) == NULL) {
         failure_mssg = "tend_zoo: strrchr failed";
-        return FALSE;
+        return false;
     }
 
     for (i = 0; ok; i++) {

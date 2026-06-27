@@ -43,9 +43,9 @@ static inline hbool_t
 H5__retry_decrement(struct h5_retry_t *r)
 {
     if (r->tries == 0)
-        return FALSE;
+        return false;
     --r->tries;
-    return TRUE;
+    return true;
 }
 
 /* Establish state for a retry loop in `r`.  The loop will retry no
@@ -90,7 +90,7 @@ H5_retry_next(h5_retry_t *r)
     uint64_t ival;
 
     if (!H5__retry_decrement(r))
-        return FALSE;
+        return false;
     ival = r->ival;
     if (r->maxival < ival)
         ival = r->maxival;
@@ -99,7 +99,7 @@ H5_retry_next(h5_retry_t *r)
 
     H5_nanosleep(ival);
 
-    return TRUE;
+    return true;
 }
 
 /* Return the number of tries performed since `h5_retry_init()`

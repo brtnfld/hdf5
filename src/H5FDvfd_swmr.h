@@ -16,8 +16,10 @@
 #ifndef H5FDvfd_swmr_H
 #define H5FDvfd_swmr_H
 
-#define H5FD_VFD_SWMR       (H5FDperform_init(H5FD_vfd_swmr_init))
+#define H5FD_VFD_SWMR       (H5OPEN H5FD_VFD_SWMR_id_g)
 #define H5FD_VFD_SWMR_VALUE H5_VFD_SWMR
+
+H5_DLLVAR hid_t H5FD_VFD_SWMR_id_g;
 
 /* Semi-unique constant used to help identify structure pointers */
 #define H5FD_VFD_SWMR_READER_MAGIC 0xABC123

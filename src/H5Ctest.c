@@ -162,7 +162,7 @@ done:
  *              client.
  *
  *              This function does this by setting cache_ptr->curr_io_type
- *              to H5AC_EARRAY_DBLK_PAGE if set_splitable is TRUE, and to
+ *              to H5AC_EARRAY_DBLK_PAGE if set_splitable is true, and to
  *              NULL otherwise.
  *
  *              Needless to say, this is purely a testing function, and

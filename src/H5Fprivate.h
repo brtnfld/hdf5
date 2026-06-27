@@ -293,11 +293,11 @@ typedef struct H5F_t H5F_t;
         /* int32_t    version                 = */ 0,                                                        \
         /* int32_t    tick_len                = */ 0,                                                        \
         /* int32_t    max_lag                 = */ 0,                                                        \
-        /* hbool_t    presume_posix_semantics = */ FALSE,                                                    \
-        /* hbool_t    vfd_swmr_writer         = */ FALSE,                                                    \
-        /* hbool_t    maintain_metadata_file  = */ FALSE,                                                    \
-        /* hbool_t    generate_updater_files  = */ FALSE,                                                    \
-        /* hbool_t    flush_raw_data          = */ FALSE,                                                    \
+        /* hbool_t    presume_posix_semantics = */ false,                                                    \
+        /* hbool_t    vfd_swmr_writer         = */ false,                                                    \
+        /* hbool_t    maintain_metadata_file  = */ false,                                                    \
+        /* hbool_t    generate_updater_files  = */ false,                                                    \
+        /* hbool_t    flush_raw_data          = */ false,                                                    \
         /* int32_t    md_pages_reserved       = */ 0,                                                        \
         /* int32_t    pb_expansion_threshold  = */ 0,                                                        \
         /* char       md_file_path[]          = */ "",                                                       \
@@ -589,7 +589,7 @@ struct H5FD_vfd_swmr_idx_entry_t;
  *  of files opened in either VFD SWMR write or VFD SWMR read mode.
  *
  *  vfd_swmr_file: Pointer to the H5F_t instance for the associated file.
- *  vfd_swmr_writer: TRUE if opened in VFD SWMR writer mode.
+ *  vfd_swmr_writer: true if opened in VFD SWMR writer mode.
  *  tick_num: Number of the current tick.
  *  end_of_tick: Expiration time of the current tick.
  *  link: Linkage for the EOT queue.

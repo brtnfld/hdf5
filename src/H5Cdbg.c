@@ -879,7 +879,7 @@ H5C__dump_parents(H5C_t *cache_ptr, const H5C_cache_entry_t *entry_ptr, const ch
     unsigned u;
 
     for (u = 0; u < entry_ptr->flush_dep_nparents; u++)
-        H5C__dump_entry(cache_ptr, entry_ptr->flush_dep_parent[u], TRUE, prefix, indent + 2);
+        H5C__dump_entry(cache_ptr, entry_ptr->flush_dep_parent[u], true, prefix, indent + 2);
 }
 
 typedef struct H5C__dump_child_ctx_t {
@@ -920,7 +920,7 @@ H5C__dump_children(H5C_t *cache_ptr, const H5C_cache_entry_t *entry_ptr, hbool_t
     ctx.dump_parents = dump_parents;
     ctx.prefix       = prefix;
     ctx.indent       = indent;
-    H5C__iter_tagged_entries(cache_ptr, entry_ptr->tag_info->tag, FALSE, H5C__dump_children_cb, &ctx);
+    H5C__iter_tagged_entries(cache_ptr, entry_ptr->tag_info->tag, false, H5C__dump_children_cb, &ctx);
 } /* end H5C__dump_children() */
 
 void
@@ -938,7 +938,7 @@ H5C__dump_entry(H5C_t *cache_ptr, const H5C_cache_entry_t *entry_ptr, hbool_t du
     if (dump_parents && entry_ptr->flush_dep_nparents)
         H5C__dump_parents(cache_ptr, entry_ptr, "Parent", indent);
     if (entry_ptr->flush_dep_nchildren)
-        H5C__dump_children(cache_ptr, entry_ptr, FALSE, "Child", indent);
+        H5C__dump_children(cache_ptr, entry_ptr, false, "Child", indent);
 } /* end H5C__dump_entry() */
 
 /*-------------------------------------------------------------------------

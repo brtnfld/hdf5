@@ -196,14 +196,14 @@ typedef struct timer_params_t {
 } timer_params_t;
 
 pthread_mutex_t timer_mutex;
-hbool_t         timer_stop = FALSE;
+hbool_t         timer_stop = false;
 
 static void *
 timer_function(void *arg)
 {
     timer_params_t *params = (timer_params_t *)arg;
     sigset_t        sleepset;
-    hbool_t         done = FALSE;
+    hbool_t         done = false;
 
     /* Ignore any signals */
     sigfillset(&sleepset);
@@ -284,7 +284,7 @@ await_signal(hid_t fid)
         if (rc != -1) {
             fprintf(stderr, "Received signal, wrapping things up.\n");
             pthread_mutex_lock(&timer_mutex);
-            timer_stop = TRUE;
+            timer_stop = true;
             pthread_mutex_unlock(&timer_mutex);
             pthread_join(timer, NULL);
         }

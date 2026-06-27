@@ -128,12 +128,12 @@ gen_skeleton(const char *filename, hbool_t verbose, hbool_t vfd_swmr_write, int 
         /* config, tick_len, max_lag, presume_posix_semantics, writer,
          * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
          * md_file_path, md_file_name, updater_file_path */
-        init_vfd_swmr_config(config, 4, 10, FALSE, vfd_swmr_write, TRUE, FALSE, TRUE, 128, NULL,
+        init_vfd_swmr_config(config, 4, 10, false, vfd_swmr_write, true, false, true, 128, NULL,
                              "generator-shadow", NULL);
     }
 
     /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */
-    if ((fapl = vfd_swmr_create_fapl(TRUE, vfd_swmr_write, FALSE, 4096, config)) < 0)
+    if ((fapl = vfd_swmr_create_fapl(true, vfd_swmr_write, false, 4096, config)) < 0)
         return -1;
 
     /* Set fs_strategy (file space strategy) and fs_page_size (file space page size) */
@@ -205,7 +205,7 @@ gen_skeleton(const char *filename, hbool_t verbose, hbool_t vfd_swmr_write, int 
             hid_t   dsid; /* Dataset ID */
             char    name_buf[64];
             hbool_t move_dataspace_message =
-                FALSE; /* Whether to move the dataspace message out of object header chunk #0 */
+                false; /* Whether to move the dataspace message out of object header chunk #0 */
 
             generate_name(name_buf, sizeof(name_buf), u, v);
             if ((dsid = H5Dcreate2(fid, name_buf, tid, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
@@ -213,7 +213,7 @@ gen_skeleton(const char *filename, hbool_t verbose, hbool_t vfd_swmr_write, int 
 
             /* Determine if the dataspace message for this dataset should be
              * moved out of chunk #0 of the object header
-             * (Set to TRUE for every fourth dataset)
+             * (Set to true for every fourth dataset)
              */
             move_dataspace_message = !(HDrandom() % 4);
             if (move_dataspace_message) {
@@ -287,10 +287,10 @@ int
 main(int argc, const char *argv[])
 {
     int         comp_level     = -1;    /* Compression level (-1 is no compression) */
-    hbool_t     verbose        = TRUE;  /* Whether to emit some informational messages */
-    hbool_t     vfd_swmr_write = FALSE; /* Whether to create file with VFD SWMR access */
+    hbool_t     verbose        = true;  /* Whether to emit some informational messages */
+    hbool_t     vfd_swmr_write = false; /* Whether to create file with VFD SWMR access */
     const char *index_type     = "b1";  /* Chunk index type */
-    hbool_t     use_seed       = FALSE; /* Set to TRUE if a seed was set on the command line */
+    hbool_t     use_seed       = false; /* Set to true if a seed was set on the command line */
     unsigned    random_seed    = 0;     /* Random # seed */
     unsigned    u;                      /* Local index variables */
     int         temp;
@@ -319,7 +319,7 @@ main(int argc, const char *argv[])
 
                     /* Random # seed */
                     case 'r':
-                        use_seed = TRUE;
+                        use_seed = true;
                         temp     = HDatoi(argv[u + 1]);
                         if (temp < 0)
                             usage();
@@ -330,13 +330,13 @@ main(int argc, const char *argv[])
 
                     /* Be quiet */
                     case 'q':
-                        verbose = FALSE;
+                        verbose = false;
                         u++;
                         break;
 
                     /* Run with SWMR_WRITE */
                     case 's':
-                        vfd_swmr_write = TRUE;
+                        vfd_swmr_write = true;
                         u++;
                         break;
 

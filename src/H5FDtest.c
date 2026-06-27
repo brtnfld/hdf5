@@ -130,7 +130,7 @@ H5FD__vfd_swmr_reader_md_test(H5FD_t *file, unsigned num_entries, H5FD_vfd_swmr_
 
     /* Retrieve index from VFD SWMR driver */
     /* Initial call to get # of entries */
-    if (H5FD_vfd_swmr_get_tick_and_idx(file, TRUE, NULL, &vfd_num_entries, vfd_index) < 0)
+    if (H5FD_vfd_swmr_get_tick_and_idx(file, true, NULL, &vfd_num_entries, vfd_index) < 0)
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "Error in retrieving index from driver");
     /* Verify number of index entries */
     if (vfd_num_entries != num_entries)
@@ -140,7 +140,7 @@ H5FD__vfd_swmr_reader_md_test(H5FD_t *file, unsigned num_entries, H5FD_vfd_swmr_
         if (NULL == (vfd_index = H5FL_SEQ_MALLOC(H5FD_vfd_swmr_idx_entry_t, vfd_num_entries)))
             HGOTO_ERROR(H5E_VFL, H5E_CANTALLOC, FAIL, "memory allocation failed for index entries");
         /* Second call to retrieve the index */
-        if (H5FD_vfd_swmr_get_tick_and_idx(file, FALSE, NULL, &vfd_num_entries, vfd_index) < 0)
+        if (H5FD_vfd_swmr_get_tick_and_idx(file, false, NULL, &vfd_num_entries, vfd_index) < 0)
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "Error in retrieving index from driver");
         /* Verify index entries */
         for (i = 0; i < vfd_num_entries; i++) {

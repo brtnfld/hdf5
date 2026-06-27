@@ -25,8 +25,8 @@
 
 typedef enum _step { CREATE = 0, LENGTHEN, SHORTEN, DELETE, NSTEPS } step_t;
 
-static hbool_t caught_out_of_bounds = FALSE;
-static hbool_t read_null            = FALSE;
+static hbool_t caught_out_of_bounds = false;
+static hbool_t read_null            = false;
 
 static hbool_t
 read_vl_dset(hid_t dset, hid_t type, char **data)
@@ -37,8 +37,8 @@ read_vl_dset(hid_t dset, hid_t type, char **data)
     es      = disable_estack();
     success = H5Dread(dset, type, H5S_ALL, H5S_ALL, H5P_DEFAULT, data) >= 0;
     if (*data == NULL) {
-        read_null = TRUE;
-        return FALSE;
+        read_null = true;
+        return false;
     }
     restore_estack(es);
 
@@ -69,7 +69,7 @@ main(int argc, char **argv)
     int                    opt;
     int                    ntimes = 100;
     unsigned long          tmp;
-    hbool_t                use_vfd_swmr = TRUE;
+    hbool_t                use_vfd_swmr = true;
     char *                 end;
     const uint64_t         delay_ns = 1100 * 1000; /* 1.1 ms */
     testsel_t              sel      = TEST_NONE;
@@ -85,7 +85,7 @@ main(int argc, char **argv)
     while ((opt = H5_get_option(argc, (const char *const *)argv, s_opts, l_opts)) != EOF) {
         switch (opt) {
             case 'S':
-                use_vfd_swmr = FALSE;
+                use_vfd_swmr = false;
                 break;
             case 'n':
                 errno = 0;
@@ -132,10 +132,10 @@ main(int argc, char **argv)
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
      * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
      * md_file_path, md_file_name, updater_file_path */
-    init_vfd_swmr_config(config, 4, 7, FALSE, false, TRUE, FALSE, TRUE, 128, "./", "vlstr-shadow", NULL);
+    init_vfd_swmr_config(config, 4, 7, false, false, true, false, true, 128, "./", "vlstr-shadow", NULL);
 
     /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */
-    if ((fapl = vfd_swmr_create_fapl(TRUE, use_vfd_swmr, sel == TEST_OOB, 4096, config)) < 0)
+    if ((fapl = vfd_swmr_create_fapl(true, use_vfd_swmr, sel == TEST_OOB, 4096, config)) < 0)
         STACK_ERROR;
 
     if ((fid = H5Fopen("vfd_swmr_vlstr.h5", H5F_ACC_RDONLY, fapl)) < 0)

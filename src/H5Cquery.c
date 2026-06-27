@@ -446,7 +446,7 @@ H5C_get_curr_io_client_type(H5C_t *cache_ptr)
  *              Note that this value is only defined during a read generated
  *              by the metadatat cache.  At all other times, the return
  *              value undefined (although the current implementation
- *              returns FALSE in such cases).
+ *              returns false in such cases).
  *
  *              Note also that this function exists to provide hints to the
  *              page buffer, which for now at least, is only available in
@@ -474,7 +474,7 @@ H5C_get_curr_io_client_type(H5C_t *cache_ptr)
 hbool_t
 H5C_get_curr_read_speculative(H5C_t *cache_ptr)
 {
-    hbool_t ret_value = FALSE; /* Return value */
+    hbool_t ret_value = false; /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 

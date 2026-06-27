@@ -89,10 +89,10 @@ open_skeleton(const char *filename, unsigned verbose, unsigned old H5_ATTR_UNUSE
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
      * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
      * md_file_path, md_file_name, updater_file_path */
-    init_vfd_swmr_config(config, 4, 5, FALSE, TRUE, TRUE, TRUE, TRUE, 128, NULL, "rw-shadow", "remove-updater");
+    init_vfd_swmr_config(config, 4, 5, false, true, true, true, true, 128, NULL, "rw-shadow", "remove-updater");
 
     /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */
-    if ((fapl = vfd_swmr_create_fapl(TRUE, TRUE, FALSE, 4096, config)) < 0)
+    if ((fapl = vfd_swmr_create_fapl(true, true, false, 4096, config)) < 0)
         goto error;
 
     /* Open the file */
@@ -265,7 +265,7 @@ main(int argc, const char *argv[])
     unsigned old             = 0;    /* Whether to use non-latest-format when opening file */
     unsigned use_seed        = 0;    /* Set to 1 if a seed was set on the command line */
     unsigned random_seed     = 0;    /* Random # seed */
-    bool     wait_for_signal = TRUE; /* Whether to wait for the signal */
+    bool     wait_for_signal = true; /* Whether to wait for the signal */
     unsigned u;                      /* Local index variable */
     int      temp;
 
@@ -295,7 +295,7 @@ main(int argc, const char *argv[])
 
                     /* Do not wait for signal */
                     case 'W':
-                        wait_for_signal = FALSE;
+                        wait_for_signal = false;
                         u++;
                         break;
 

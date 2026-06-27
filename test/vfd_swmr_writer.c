@@ -78,7 +78,7 @@ open_skeleton(const char *filename, hbool_t verbose, FILE *verbose_file, unsigne
     hid_t                  fid;                 /* File ID for new HDF5 file */
     hid_t                  fapl;                /* File access property list */
     unsigned               u, v;                /* Local index variable */
-    hbool_t                use_log_vfd = FALSE; /* Use the log VFD (set this manually) */
+    hbool_t                use_log_vfd = false; /* Use the log VFD (set this manually) */
     H5F_vfd_swmr_config_t *config      = NULL;  /* Configuration for VFD SWMR */
 
     HDassert(filename);
@@ -90,10 +90,10 @@ open_skeleton(const char *filename, hbool_t verbose, FILE *verbose_file, unsigne
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
      * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
      * md_file_path, md_file_name, updater_file_path */
-    init_vfd_swmr_config(config, 4, 5, FALSE, TRUE, TRUE, TRUE, TRUE, 128, NULL, "rw-shadow", "rw-updater");
+    init_vfd_swmr_config(config, 4, 5, false, true, true, true, true, 128, NULL, "rw-shadow", "rw-updater");
 
     /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */
-    if ((fapl = vfd_swmr_create_fapl(TRUE, TRUE, FALSE, 4096, config)) < 0)
+    if ((fapl = vfd_swmr_create_fapl(true, true, false, 4096, config)) < 0)
         return -1;
 
     if (use_log_vfd) {
@@ -279,11 +279,11 @@ main(int argc, char *const *argv)
     hid_t                  fid;                     /* File ID for file opened */
     long                   nrecords        = 0;     /* # of records to append */
     long                   flush_count     = 10000; /* # of records to write between flushing file */
-    hbool_t                verbose         = TRUE;  /* Whether to emit some informational messages */
+    hbool_t                verbose         = true;  /* Whether to emit some informational messages */
     FILE *                 verbose_file    = NULL;  /* File handle for verbose output */
-    hbool_t                old             = FALSE; /* Whether to use non-latest-format when opening file */
-    hbool_t                use_seed        = FALSE; /* Set to TRUE if a seed was set on the command line */
-    hbool_t                wait_for_signal = TRUE;
+    hbool_t                old             = false; /* Whether to use non-latest-format when opening file */
+    hbool_t                use_seed        = false; /* Set to true if a seed was set on the command line */
+    hbool_t                wait_for_signal = true;
     unsigned               random_seed     = 0; /* Random # seed */
     int                    opt, temp;
     const char *           s_opts   = "Wf:qr:o";
@@ -302,23 +302,23 @@ main(int argc, char *const *argv)
 
             /* Be quiet */
             case 'q':
-                verbose = FALSE;
+                verbose = false;
                 break;
 
             /* Random # seed */
             case 'r':
-                use_seed    = TRUE;
+                use_seed    = true;
                 temp        = HDatoi(H5_optarg);
                 random_seed = (unsigned)temp;
                 break;
 
             case 'W':
-                wait_for_signal = FALSE;
+                wait_for_signal = false;
                 break;
 
             /* Use non-latest-format when opening file */
             case 'o':
-                old = TRUE;
+                old = true;
                 break;
 
             default:

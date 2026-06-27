@@ -162,7 +162,7 @@ H5_DLL void H5F__post_vfd_swmr_log_entry(H5F_t *f, int entry_type_code, const ch
     do {                                                                                                     \
         if (fp != NULL) {                                                                                    \
             if (fp->shared != NULL) {                                                                        \
-                if (fp->shared->vfd_swmr_log_on == TRUE) {                                                   \
+                if (fp->shared->vfd_swmr_log_on == true) {                                                   \
                     H5F__post_vfd_swmr_log_entry(fp, entry_type_code, log_info);                             \
                 }                                                                                            \
             }                                                                                                \

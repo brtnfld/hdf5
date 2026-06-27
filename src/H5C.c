@@ -711,11 +711,11 @@ H5C_evict_or_refresh_all_entries_in_page(H5F_t *f, uint64_t page, uint32_t lengt
 
                     assert(!(entry_ptr->tag_info->corked));
 
-                    /* passing TRUE for the match_global parameter.  Look
+                    /* passing true for the match_global parameter.  Look
                      * into this and verify that it is the right thing to
                      * do.
                      */
-                    if (H5C_evict_tagged_entries(f, tag, TRUE) < 0)
+                    if (H5C_evict_tagged_entries(f, tag, true) < 0)
 
                         HGOTO_ERROR(H5E_CACHE, H5E_CANTEXPUNGE, FAIL, "can't evict pinned and tagged entries");
                     /* Both follow_ptr and entry_ptr may have been removed.
@@ -768,7 +768,7 @@ H5C_evict_or_refresh_all_entries_in_page(H5F_t *f, uint64_t page, uint32_t lengt
                     memcpy(image_ptr + image_len, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
 #endif /* H5C_DO_MEMORY_SANITY_CHECKS */
 
-                    H5C__SET_PB_READ_HINTS(cache_ptr, entry_ptr->type, TRUE)
+                    H5C__SET_PB_READ_HINTS(cache_ptr, entry_ptr->type, true)
 
                     if (H5F_block_read(f, entry_ptr->type->mem_type, entry_ptr->addr, image_len, image_ptr) <
                         0) {
@@ -801,7 +801,7 @@ H5C_evict_or_refresh_all_entries_in_page(H5F_t *f, uint64_t page, uint32_t lengt
                         memcpy(image_ptr + image_len, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
 #endif /* H5C_DO_MEMORY_SANITY_CHECKS */
 
-                        H5C__SET_PB_READ_HINTS(cache_ptr, entry_ptr->type, TRUE)
+                        H5C__SET_PB_READ_HINTS(cache_ptr, entry_ptr->type, true)
 
                         if (H5F_block_read(f, entry_ptr->type->mem_type, entry_ptr->addr, image_len,
                                            image_ptr) < 0) {
@@ -850,7 +850,7 @@ H5C_evict_or_refresh_all_entries_in_page(H5F_t *f, uint64_t page, uint32_t lengt
                      * This should be un-reachable. If it is reached, we
                      * probably have another refresh callback to write.
                      */
-                    assert(FALSE);
+                    assert(false);
                 }
             }
             else { /* simply evict the entry */

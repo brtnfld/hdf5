@@ -554,10 +554,11 @@ static const uint64_t H5F_def_rfic_flags_g = H5F_ACS_RFIC_FLAGS_DEF; /* Default 
 /* The VFD SWMR struct contains multiple large strings and triggers size
  * warnings. We'll disable this for now and revisit later.
  */
-H5_GCC_CLANG_DIAG_OFF("larger-than=")
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wlarger-than="
 static const H5F_vfd_swmr_config_t H5F_def_vfd_swmr_config_g =
     H5F_ACS_VFD_SWMR_CONFIG_DEF; /* Default vfd swmr configuration */
-H5_GCC_CLANG_DIAG_ON("larger-than=")
+#pragma GCC diagnostic pop
 /* For VFD SWMR testing only: Default to generate checksum for metadata file */
 static const H5F_generate_md_ck_cb_t H5F_def_generate_md_ck_cb_g = H5F_ACS_GENERATE_MD_CK_CB_DEF;
 
@@ -6489,11 +6490,11 @@ H5P_check_vfd_swmr_config(H5F_vfd_swmr_config_t *config_ptr)
     /* This field must be in the range [0, 100] */
     if (config_ptr->pb_expansion_threshold > H5F__MAX_PB_EXPANSION_THRESHOLD)
         HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "pb_expansion_threshold out of range");
-    /* If writer is TRUE, at least one of maintain_metadata_file and generate_updater_files must be TRUE */
+    /* If writer is true, at least one of maintain_metadata_file and generate_updater_files must be true */
     if (config_ptr->writer) {
         if (!config_ptr->maintain_metadata_file && !config_ptr->generate_updater_files)
             HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL,
-                        "either maintain_metadata_file or generate_updater_files must be TRUE");
+                        "either maintain_metadata_file or generate_updater_files must be true");
     }
 
     /* md_file_path can be "" or a name (+"/")*/
@@ -6535,7 +6536,7 @@ H5Pset_vfd_swmr_config(hid_t plist_id, H5F_vfd_swmr_config_t *config_ptr)
     FUNC_ENTER_API(FAIL)
 
     /* Get the plist structure */
-    if (NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
+    if (NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS, false)))
         HGOTO_ERROR(H5E_ID, H5E_BADID, FAIL, "can't find object for ID");
     /* Validate the input configuration */
     if (H5P_check_vfd_swmr_config(config_ptr) < 0)
@@ -6567,7 +6568,7 @@ H5Pget_vfd_swmr_config(hid_t plist_id, H5F_vfd_swmr_config_t *config_ptr)
     FUNC_ENTER_API(FAIL)
 
     /* Get the plist structure */
-    if (NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
+    if (NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS, false)))
         HGOTO_ERROR(H5E_ID, H5E_BADID, FAIL, "can't find object for ID");
     /* Validate the config_ptr */
     if (config_ptr == NULL)

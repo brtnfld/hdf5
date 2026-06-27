@@ -174,7 +174,7 @@ H5MV__sect_free(H5FS_section_info_t *_sect)
  *
  * Note:        Second section must be "after" first section
  *
- * Return:	    Success:	non-negative (TRUE/FALSE)
+ * Return:	    Success:	non-negative (true/false)
  *		        Failure:	negative
  *
  *-------------------------------------------------------------------------
@@ -244,7 +244,7 @@ done:
  *
  * Purpose:	    Can this section shrink the container?
  *
- * Return:	    Success:	non-negative (TRUE/FALSE)
+ * Return:	    Success:	non-negative (true/false)
  *		        Failure:	negative
  *
  *-------------------------------------------------------------------------
@@ -257,7 +257,7 @@ H5MV__sect_can_shrink(const H5FS_section_info_t *_sect, void *_udata)
     H5F_shared_t *             shared = f->shared;
     haddr_t                    eoa;               /* End of address space in the file */
     haddr_t                    end;               /* End of section to extend */
-    htri_t                     ret_value = FALSE; /* Return value */
+    htri_t                     ret_value = false; /* Return value */
 
     FUNC_ENTER_PACKAGE
 
@@ -273,7 +273,7 @@ H5MV__sect_can_shrink(const H5FS_section_info_t *_sect, void *_udata)
     /* Check if the section is exactly at the end of the allocated space in the file */
     if (H5_addr_eq(end, eoa))
         /* Indicate shrinking can occur */
-        ret_value = TRUE;
+        ret_value = true;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

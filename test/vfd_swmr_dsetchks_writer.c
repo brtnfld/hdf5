@@ -256,15 +256,15 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
     s->filetype          = H5T_NATIVE_UINT32;
     s->update_interval   = READER_WAIT_TICKS;
     s->csteps            = 1;
-    s->use_communication = TRUE;
-    s->use_vfd_swmr      = TRUE;
-    s->use_filter        = FALSE;
-    s->flush_raw_data    = TRUE;
-    s->single_index      = FALSE;
-    s->implicit_index    = FALSE;
-    s->fa_index          = FALSE;
-    s->ea_index          = FALSE;
-    s->bt2_index         = FALSE;
+    s->use_communication = true;
+    s->use_vfd_swmr      = true;
+    s->use_filter        = false;
+    s->flush_raw_data    = true;
+    s->single_index      = false;
+    s->implicit_index    = false;
+    s->fa_index          = false;
+    s->ea_index          = false;
+    s->bt2_index         = false;
     s->rows              = 10;
     s->cols              = 5;
     s->gwrites           = 0;
@@ -2252,7 +2252,7 @@ main(int argc, char **argv)
         /* config, tick_len, max_lag, presume_posix_semantics, writer,
         * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
         * md_file_path, md_file_name, updater_file_path */
-        init_vfd_swmr_config(config, 4, 7, FALSE, writer, TRUE, FALSE, s->flush_raw_data, 128, "./",
+        init_vfd_swmr_config(config, 4, 7, false, writer, true, false, s->flush_raw_data, 128, "./",
                             "dsetchks-shadow", NULL);
 
         /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */
@@ -2297,7 +2297,7 @@ main(int argc, char **argv)
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
      * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
      * md_file_path, md_file_name, updater_file_path */
-    init_vfd_swmr_config(config, 4, 7, FALSE, writer, TRUE, FALSE, s->flush_raw_data, 128, "./",
+    init_vfd_swmr_config(config, 4, 7, false, writer, true, false, s->flush_raw_data, 128, "./",
                          "dsetchks-shadow", NULL);
 
     /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */

@@ -77,6 +77,9 @@ H5_DLL htri_t  H5MV__try_extend_md(H5F_shared_t *, haddr_t, hsize_t);
 /* Package Variables */
 /*********************/
 
+/* Package initialization variable */
+bool H5_PKG_INIT_VAR = false;
+
 /*****************************/
 /* Library Private Variables */
 /*****************************/
@@ -180,8 +183,8 @@ done:
  *              to fulfill the request.
  *		        If found, re-add the left-over space back to the manager.
  *
- * Return:	    TRUE if a section is found to fulfill the request
- *		        FALSE if not
+ * Return:	    true if a section is found to fulfill the request
+ *		        false if not
  *
  *-------------------------------------------------------------------------
  */
@@ -389,8 +392,8 @@ done:
  *
  * Purpose:	    Extend a block at EOA in the file if possible.
  *
- * Return:	    Success:	TRUE(1)  -  Block was extended
- *                          FALSE(0) -  Block could not be extended
+ * Return:	    Success:	true(1)  -  Block was extended
+ *                          false(0) -  Block could not be extended
  * 		        Failure:	FAIL
  *
  *-------------------------------------------------------------------------
@@ -400,7 +403,7 @@ H5MV_try_extend(H5F_t *f, haddr_t addr, hsize_t size, hsize_t extra_requested)
 {
     H5F_shared_t *shared = f->shared;
     haddr_t       end;               /* End of block to extend */
-    htri_t        ret_value = FALSE; /* Return value */
+    htri_t        ret_value = false; /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 #ifdef H5MV_VFD_SWMR_DEBUG
@@ -423,7 +426,7 @@ H5MV_try_extend(H5F_t *f, haddr_t addr, hsize_t size, hsize_t extra_requested)
 #endif
 
     /* If no extension so far, try to extend into a free-space section */
-    if (ret_value == FALSE) {
+    if (ret_value == false) {
 
         /* Try to extend the block into a free-space section */
         if (shared->fs_man_md) {
@@ -459,7 +462,7 @@ H5MV_try_shrink(H5F_t *f, haddr_t addr, hsize_t size)
 {
     H5F_shared_t *       shared    = f->shared;
     H5MV_free_section_t *node      = NULL;  /* Free space section pointer */
-    htri_t               ret_value = FALSE; /* Return value */
+    htri_t               ret_value = false; /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 #ifdef H5MV_VFD_SWMR_DEBUG
@@ -578,7 +581,7 @@ done:
 htri_t
 H5MV__try_extend_md(H5F_shared_t *shared, haddr_t blk_end, hsize_t extra_requested)
 {
-    htri_t ret_value = FALSE; /* Return value */
+    htri_t ret_value = false; /* Return value */
 
     FUNC_ENTER_PACKAGE
 
@@ -593,7 +596,7 @@ H5MV__try_extend_md(H5F_shared_t *shared, haddr_t blk_end, hsize_t extra_request
         if (HADDR_UNDEF == H5MV__extend_md(shared, extra_requested))
             HGOTO_ERROR(H5E_FILE, H5E_CANTEXTEND, FAIL, "driver extend request failed");
         /* Indicate success */
-        ret_value = TRUE;
+        ret_value = true;
     }
 
 done:

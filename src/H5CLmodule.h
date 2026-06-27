@@ -21,8 +21,9 @@
  *      reporting macros.
  */
 #define H5CL_MODULE
-#define H5_MY_PKG     H5CL
-#define H5_MY_PKG_ERR H5E_VFL
+#define H5_MY_PKG      H5CL
+#define H5_MY_PKG_ERR  H5E_VFL
+#define H5_MY_PKG_INIT NO
 /**
  * \defgroup H5VFD Virtual File Driver Configuration Language Features
  *
