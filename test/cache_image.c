@@ -7678,7 +7678,6 @@ evict_on_close_test(bool H5_ATTR_PARALLEL_UNUSED single_file_vfd)
     if (verbose) {
 
         assert(cache_ptr);
-        assert(cache_ptr->magic == H5C__H5C_T_MAGIC);
 
         fprintf(stdout, "index size / index dirty size = %lld / %lld\n", (long long)(cache_ptr->index_size),
                 (long long)(cache_ptr->dirty_index_size));

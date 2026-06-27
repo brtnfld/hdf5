@@ -595,9 +595,7 @@ H5_DLL herr_t H5F__vfd_swmr_writer_md_test(hid_t file_id, unsigned num_entries,
                                            struct H5FD_vfd_swmr_idx_entry_t *index, unsigned nshadow_defrees);
 #endif /* H5F_TESTING */
 
-/* VFD SWMR functions (used from other modules) */
-H5_DLL herr_t H5F_update_vfd_swmr_metadata_file(H5F_t *f, uint32_t num_entries,
-                                                H5FD_vfd_swmr_idx_entry_t *index);
+/* VFD SWMR functions (used from H5F module only) */
 H5_DLL herr_t H5F__vfd_swmr_end_tick(H5F_t *f);
 H5_DLL herr_t H5F__vfd_swmr_disable_end_of_tick(H5F_t *f);
 H5_DLL herr_t H5F__vfd_swmr_enable_end_of_tick(H5F_t *f);

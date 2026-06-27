@@ -203,7 +203,7 @@ H5F_vfd_swmr_init(H5F_t *f, hbool_t file_create)
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    assert(H5F_SHARED_VFD_SWMR_CONFIG(shared));
+    assert(shared->vfd_swmr_config.version >= H5F__CURR_VFD_SWMR_CONFIG_VERSION);
 
     shared->vfd_swmr = true;
 
@@ -230,7 +230,7 @@ H5F_vfd_swmr_init(H5F_t *f, hbool_t file_create)
 
         if ((hdr_addr = H5MV_alloc(f, md_size)) == HADDR_UNDEF)
             HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "error allocating shadow-file header");
-        assert(H5F_addr_eq(hdr_addr, H5FD_MD_HEADER_OFF));
+        assert(H5_addr_eq(hdr_addr, H5FD_MD_HEADER_OFF));
 
         shared->writer_index_offset = H5FD_MD_HEADER_SIZE;
         shared->vfd_swmr_md_eoa     = (haddr_t)md_size;

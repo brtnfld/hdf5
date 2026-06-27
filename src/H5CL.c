@@ -392,7 +392,7 @@ done:
  *                      To simplify the function, this value is currently limited to 8,
  *                      and the function will through an error if this value is exceeded.
  *                      If you encounter this error, just modify the initialization
- *                      of max_num_configs and recompile.
+ *                      of H5CL_MAX_NUM_CONFIGS and recompile.
  *
  *              configs[]: an array of instances of H5CL_config_spec of length num_configs
  *                      containing the names, max number of parameters, and a pointer to
@@ -430,9 +430,9 @@ H5CL_parse_config_group(const char *input_str_ptr, char *config_group_name_ptr, 
 {
     int             i;
     int             j;
-    int             max_num_configs = 8;
+#define H5CL_MAX_NUM_CONFIGS 8
     H5CL_nv_pair_t  top_pair;
-    H5CL_nv_pair_t  configs_mv_pairs[max_num_configs];
+    H5CL_nv_pair_t  configs_mv_pairs[H5CL_MAX_NUM_CONFIGS];
     H5CL_lex_vars_t lex_vars = {/* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
                                 /* input_str_ptr     = */ NULL,
                                 /* next_char_ptr     = */ NULL,
@@ -456,9 +456,9 @@ H5CL_parse_config_group(const char *input_str_ptr, char *config_group_name_ptr, 
     assert(input_str_ptr);
     assert(config_group_name_ptr);
     assert(num_configs >= 0);
-    assert(num_configs <= max_num_configs);
+    assert(num_configs <= H5CL_MAX_NUM_CONFIGS);
 
-    if (num_configs > max_num_configs)
+    if (num_configs > H5CL_MAX_NUM_CONFIGS)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "num_configs is too large.");
 
     top_pair.struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
@@ -2112,10 +2112,10 @@ H5CL_load_config_string_from_file(const char *file_path, char **cfg_str_ptr_ptr)
 
     /* Not using realpath() now. Should be fine in UNIX type OS's, not sure about others */
 
-    if (stat(file_path, &st) != 0)
+    if (HDstat(file_path, &st) != 0)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "could not stat file");
 
-    if (!S_ISREG(st.st_mode))
+    if ((st.st_mode & S_IFMT) != S_IFREG)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "not a regular file");
 
     if (st.st_size <= 0)

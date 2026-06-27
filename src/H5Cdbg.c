@@ -331,12 +331,9 @@ H5C_dump_coll_write_list(H5C_t *cache_ptr, char *calling_fcn)
     FUNC_ENTER_NOAPI_NOERR
 
     HDassert(cache_ptr != NULL);
-    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
     HDassert(cache_ptr->aux_ptr);
 
     aux_ptr = (H5AC_aux_t *)cache_ptr->aux_ptr;
-
-    HDassert(aux_ptr->magic == H5AC__H5AC_AUX_T_MAGIC);
 
     HDassert(calling_fcn != NULL);
 
