@@ -15,16 +15,16 @@ cmake_policy(SET CMP0007 NEW)
 cmake_policy(SET CMP0053 NEW)
 
 # arguments checking
-if (NOT TEST_PROGRAM)
+if (NOT TEST_PROGRAM) #the program to be run
   message (FATAL_ERROR "Require TEST_PROGRAM to be defined")
 endif ()
-if (NOT TEST_FOLDER)
+if (NOT TEST_FOLDER) # this is the folder where the test program is run
   message (FATAL_ERROR "Require TEST_FOLDER to be defined")
 endif ()
-if (NOT TEST_OUTPUT)
+if (NOT TEST_OUTPUT) # the output file to capture the test program output
   message (FATAL_ERROR "Require TEST_OUTPUT to be defined")
 endif ()
-if (NOT TEST_EXPECT)
+if (NOT DEFINED TEST_EXPECT)
   message (VERBOSE "Optional TEST_EXPECT is not defined")
 endif ()
 
@@ -42,6 +42,7 @@ EXECUTE_TEST (TEST_FOLDER ${TEST_FOLDER}
                TEST_LIBRARY_DIRECTORY ${TEST_LIBRARY_DIRECTORY}
                TEST_ENV_VAR ${TEST_ENV_VAR}
                TEST_ENV_VALUE ${TEST_ENV_VALUE}
+               TEST_KEYSTORE_DIR ${TEST_KEYSTORE_DIR}
                TEST_INPUT ${TEST_INPUT}
                TEST_CLASSPATH ${TEST_CLASSPATH}
                TEST_NOERRDISPLAY ${TEST_NOERRDISPLAY}
@@ -88,22 +89,6 @@ if (NOT DEFINED ENV{HDF5_NOCLEANUP})
 
   if (EXISTS "${TEST_FOLDER}/${TEST_OUTPUT}.err")
     file (REMOVE ${TEST_FOLDER}/${TEST_OUTPUT}.err)
-  endif ()
-
-  if (EXISTS "${FILTERED_OUTPUT}")
-    file (REMOVE ${FILTERED_OUTPUT})
-  endif ()
-
-  if (EXISTS "${FILTERED_REFERENCE}")
-    file (REMOVE ${FILTERED_REFERENCE})
-  endif ()
-
-  if (EXISTS "${FILTERED_ERR}")
-    file (REMOVE ${FILTERED_ERR})
-  endif ()
-
-  if (EXISTS "${FILTERED_ERRREF}")
-    file (REMOVE ${FILTERED_ERRREF})
   endif ()
 
   if (TEST_DELETE_LIST)

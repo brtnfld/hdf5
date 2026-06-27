@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.18)
+cmake_minimum_required (VERSION 3.26)
 project(H5_API_TEST_DRIVER CXX)
 
 if (NOT KWSYS_USE_LOCALCONTENT)
@@ -30,5 +30,5 @@ endif()
 
 include_directories(${hdf5_kwsys_BINARY_DIR})
 
-add_executable(h5_api_test_driver h5_api_test_driver.cxx)
+add_executable(h5_api_test_driver h5_api_test_driver.cpp)
 target_link_libraries(h5_api_test_driver h5_api_test_sys)

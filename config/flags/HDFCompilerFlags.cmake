@@ -32,6 +32,7 @@ endif ()
 # Option to allow the user to disable compiler warnings
 #-----------------------------------------------------------------------------
 option (HDF5_DISABLE_COMPILER_WARNINGS "Disable compiler warnings" OFF)
+mark_as_advanced (HDF5_DISABLE_COMPILER_WARNINGS)
 if (HDF5_DISABLE_COMPILER_WARNINGS)
   message (STATUS "....Compiler warnings are suppressed")
   # MSVC uses /w to suppress warnings.  It also complains if another
@@ -89,6 +90,7 @@ endif ()
 # our control (MPI, HDFS, etc.) can also raise warnings.
 #-----------------------------------------------------------------------------
 option (HDF5_ENABLE_WARNINGS_AS_ERRORS "Interpret some warnings as errors" OFF)
+mark_as_advanced (HDF5_ENABLE_WARNINGS_AS_ERRORS)
 if (HDF5_ENABLE_WARNINGS_AS_ERRORS)
   message (STATUS "...some warnings will be interpreted as errors")
 endif ()
@@ -116,6 +118,7 @@ endif ()
 # Developer warnings (suggestions from gcc, not code problems)
 #-----------------------------------------------------------------------------
 option (HDF5_ENABLE_DEV_WARNINGS "Enable HDF5 developer group warnings" OFF)
+mark_as_advanced (HDF5_ENABLE_DEV_WARNINGS)
 if (${HDF_CFG_NAME} MATCHES "Developer")
   # Developer build modes should always have these types of warnings enabled
   set (HDF5_ENABLE_DEV_WARNINGS ON CACHE BOOL "Enable HDF5 developer group warnings" FORCE)
@@ -145,6 +148,7 @@ endif ()
 # Option to allow the user to enable all warnings
 #-----------------------------------------------------------------------------
 option (HDF5_ENABLE_ALL_WARNINGS "Enable all warnings" ON)
+mark_as_advanced (HDF5_ENABLE_ALL_WARNINGS)
 if (HDF5_ENABLE_ALL_WARNINGS)
   message (STATUS "....All Warnings are enabled")
   if (MSVC)
@@ -161,7 +165,6 @@ if (HDF5_ENABLE_ALL_WARNINGS)
 endif ()
 
 #-----------------------------------------------------------------------------
-# Option for --enable-asserts
 # By default, CMake adds NDEBUG to CMAKE_${lang}_FLAGS for Release build types
 # This option will force/override the default setting for all configurations
 #-----------------------------------------------------------------------------
@@ -173,36 +176,33 @@ if (HDF5_ENABLE_ASSERTS MATCHES "YES")
 elseif (HDF5_ENABLE_ASSERTS MATCHES "NO")
   add_compile_options ("-DNDEBUG")
 endif ()
-MARK_AS_ADVANCED (HDF5_ENABLE_ASSERTS)
+mark_as_advanced (HDF5_ENABLE_ASSERTS)
 
 #-----------------------------------------------------------------------------
-# Option for --enable-symbols
 # This option will force/override the default setting for all configurations
 #-----------------------------------------------------------------------------
 #option (HDF5_ENABLE_SYMBOLS "Add debug symbols to the library independent of the build mode and optimization level." OFF)
 set (HDF5_ENABLE_SYMBOLS "OFF" CACHE STRING "Add debug symbols to the library independent of the build mode and optimization level (OFF NO YES)")
 set_property (CACHE HDF5_ENABLE_SYMBOLS PROPERTY STRINGS OFF NO YES)
-MARK_AS_ADVANCED (HDF5_ENABLE_SYMBOLS)
+mark_as_advanced (HDF5_ENABLE_SYMBOLS)
 
 #-----------------------------------------------------------------------------
-# Option for --enable-profiling
 # This option will force/override the default setting for all configurations
 #-----------------------------------------------------------------------------
 option (HDF5_ENABLE_PROFILING "Enable profiling flags independently from the build mode." OFF)
 if (HDF5_ENABLE_PROFILING)
   list (APPEND HDF5_CMAKE_C_FLAGS "${PROFILE_CFLAGS}")
 endif ()
-MARK_AS_ADVANCED (HDF5_ENABLE_PROFILING)
+mark_as_advanced (HDF5_ENABLE_PROFILING)
 
 #-----------------------------------------------------------------------------
-# Option for --enable-optimization
 # This option will force/override the default setting for all configurations
 #-----------------------------------------------------------------------------
 option (HDF5_ENABLE_OPTIMIZATION "Enable optimization flags/settings independently from the build mode" OFF)
 if (HDF5_ENABLE_OPTIMIZATION)
   list (APPEND HDF5_CMAKE_C_FLAGS "${OPTIMIZE_CFLAGS}")
 endif ()
-MARK_AS_ADVANCED (HDF5_ENABLE_OPTIMIZATION)
+mark_as_advanced (HDF5_ENABLE_OPTIMIZATION)
 
 #-----------------------------------------------------------------------------
 # The build mode flags are not added to CMAKE_C_FLAGS, so create a separate

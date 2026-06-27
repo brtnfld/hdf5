@@ -9,7 +9,7 @@
 # If you do not have access to either file, you may request a copy from
 # help@hdfgroup.org.
 #
-cmake_minimum_required (VERSION 3.18)
+cmake_minimum_required (VERSION 3.26)
 ########################################################
 # For any comments please contact help@hdfgroup.org
 #
@@ -17,38 +17,40 @@ cmake_minimum_required (VERSION 3.18)
 # -----------------------------------------------------------
 # -- Get environment
 # -----------------------------------------------------------
-if (NOT SITE_OS_NAME)
-  ## machine name not provided - attempt to discover with uname
-  ## -- set hostname
-  ## --------------------------
-  find_program (HOSTNAME_CMD NAMES hostname)
-  execute_process (COMMAND ${HOSTNAME_CMD} OUTPUT_VARIABLE HOSTNAME OUTPUT_STRIP_TRAILING_WHITESPACE)
-  set (CTEST_SITE  "${HOSTNAME}${CTEST_SITE_EXT}")
-  find_program (UNAME NAMES uname)
-  macro (getuname name flag)
-    execute_process (COMMAND "${UNAME}" "${flag}" OUTPUT_VARIABLE "${name}" OUTPUT_STRIP_TRAILING_WHITESPACE)
-  endmacro ()
+if (NOT CTEST_BUILD_NAME) # Note! if CTEST_BUILD_NAME is set CTEST_SITE must also be set  
+  if (NOT SITE_OS_NAME)
+    ## machine name not provided - attempt to discover with uname
+    ## -- set hostname
+    ## --------------------------
+    find_program (HOSTNAME_CMD NAMES hostname)
+    execute_process (COMMAND ${HOSTNAME_CMD} OUTPUT_VARIABLE HOSTNAME OUTPUT_STRIP_TRAILING_WHITESPACE)
+    set (CTEST_SITE  "${HOSTNAME}${CTEST_SITE_EXT}")
+    find_program (UNAME NAMES uname)
+    macro (getuname name flag)
+      execute_process (COMMAND "${UNAME}" "${flag}" OUTPUT_VARIABLE "${name}" OUTPUT_STRIP_TRAILING_WHITESPACE)
+    endmacro ()
 
-  getuname (osname -s)
-  string(STRIP ${osname} osname)
-  getuname (osrel  -r)
-  string(STRIP ${osrel} osrel)
-  getuname (cpu    -m)
-  string(STRIP ${cpu} cpu)
-  message (STATUS "Dashboard script uname output: ${osname}-${osrel}-${cpu}\n")
+    getuname (osname -s)
+    string(STRIP ${osname} osname)
+    getuname (osrel  -r)
+    string(STRIP ${osrel} osrel)
+    getuname (cpu    -m)
+    string(STRIP ${cpu} cpu)
+    message (STATUS "Dashboard script uname output: ${osname}-${osrel}-${cpu}\n")
 
-  set (CTEST_BUILD_NAME  "${osname}-${osrel}-${cpu}")
-else ()
-  ## machine name provided
-  ## --------------------------
-  if (CMAKE_HOST_UNIX)
-    set (CTEST_BUILD_NAME "${SITE_OS_NAME}-${SITE_OS_VERSION}-${SITE_OS_BITS}-${SITE_COMPILER_NAME}-${SITE_COMPILER_VERSION}")
+    set (CTEST_BUILD_NAME  "${osname}-${osrel}-${cpu}")
   else ()
-    set (CTEST_BUILD_NAME "${SITE_OS_NAME}-${SITE_OS_VERSION}-${SITE_COMPILER_NAME}")
+    ## machine name provided
+    ## --------------------------
+    if (CMAKE_HOST_UNIX)
+      set (CTEST_BUILD_NAME "${SITE_OS_NAME}-${SITE_OS_VERSION}-${SITE_OS_BITS}-${SITE_COMPILER_NAME}-${SITE_COMPILER_VERSION}")
+    else ()
+      set (CTEST_BUILD_NAME "${SITE_OS_NAME}-${SITE_OS_VERSION}-${SITE_COMPILER_NAME}")
+    endif ()
   endif ()
-endif ()
-if (SITE_BUILDNAME_SUFFIX)
-  set (CTEST_BUILD_NAME  "${SITE_BUILDNAME_SUFFIX}-${CTEST_BUILD_NAME}")
+  if (SITE_BUILDNAME_SUFFIX)
+    set (CTEST_BUILD_NAME  "${SITE_BUILDNAME_SUFFIX}-${CTEST_BUILD_NAME}")
+  endif ()
 endif ()
 set (BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DSITE:STRING=${CTEST_SITE} -DBUILDNAME:STRING=${CTEST_BUILD_NAME}")
 
@@ -192,7 +194,7 @@ if (LOCAL_MEMCHECK_TEST)
     find_program(CTEST_MEMORYCHECK_COMMAND NAMES valgrind)
   endif()
   set (CTEST_CONFIGURE_COMMAND
-      "${CTEST_CMAKE_COMMAND} -C \"${CTEST_SOURCE_DIRECTORY}/config/cmake/mccacheinit.cmake\" -DCMAKE_BUILD_TYPE:STRING=${CTEST_CONFIGURATION_TYPE} ${BUILD_OPTIONS} \"-G${CTEST_CMAKE_GENERATOR}\" ${CTEST_CONFIGURE_ARCHITECTURE} ${CTEST_CONFIGURE_TOOLSET} \"${CTEST_SOURCE_DIRECTORY}\""
+      "${CTEST_CMAKE_COMMAND} -C \"${CTEST_SOURCE_DIRECTORY}/config/cmake/MemcheckCacheinit.cmake\" -DCMAKE_BUILD_TYPE:STRING=${CTEST_CONFIGURATION_TYPE} ${BUILD_OPTIONS} \"-G${CTEST_CMAKE_GENERATOR}\" ${CTEST_CONFIGURE_ARCHITECTURE} ${CTEST_CONFIGURE_TOOLSET} \"${CTEST_SOURCE_DIRECTORY}\""
   )
 else ()
   if (LOCAL_COVERAGE_TEST)
@@ -262,15 +264,6 @@ set (ENV{CI_MODEL} ${MODEL})
     file (APPEND ${CTEST_SCRIPT_DIRECTORY}/FailedCTest.txt "Failed Configure: ${res}\n")
   endif ()
 
-  # On Cray XC40, configuring fails in the Fortran section when using the craype-mic-knl module.
-  # When the configure phase is done with the craype-haswell module and the build phase is done
-  # with the craype-mic-knl module, configure succeeds and tests pass on the knl compute nodes
-  # for Intel, Cray, GCC and Clang compilers.  If the variables aren't set or if not
-  # cross compiling, the module switch will not occur.
-  if (CMAKE_CROSSCOMPILING AND COMPILENODE_HWCOMPILE_MODULE AND COMPUTENODE_HWCOMPILE_MODULE)
-      execute_process (COMMAND module switch ${COMPILENODE_HWCOMPILE_MODULE} ${COMPUTENODE_HWCOMPILE_MODULE})
-  endif ()
-
   ctest_build (BUILD "${CTEST_BINARY_DIRECTORY}" APPEND RETURN_VALUE res NUMBER_ERRORS errval)
   if (LOCAL_SUBMIT)
     ctest_submit (PARTS Build)
@@ -285,15 +278,11 @@ set (ENV{CI_MODEL} ${MODEL})
         ctest_test (BUILD "${CTEST_BINARY_DIRECTORY}" APPEND ${ctest_test_args} RETURN_VALUE res)
       else ()
         file(STRINGS ${CTEST_BINARY_DIRECTORY}/Testing/TAG TAG_CONTENTS REGEX "^2([0-9]+)[-]([0-9]+)$")
-        if (LOCAL_BATCH_SCRIPT_COMMAND STREQUAL "raybsub")
-          execute_process (COMMAND ${CTEST_BINARY_DIRECTORY}/${LOCAL_BATCH_SCRIPT_COMMAND} ${LOCAL_BATCH_SCRIPT_ARGS} ${CTEST_BINARY_DIRECTORY}/${LOCAL_BATCH_SCRIPT_NAME})
+        if (LOCAL_BATCH_SCRIPT_COMMAND STREQUAL "qsub")
+          execute_process (COMMAND ${CTEST_BINARY_DIRECTORY}/${LOCAL_BATCH_SCRIPT_NAME} ctestS.out)
         else ()
-          if (LOCAL_BATCH_SCRIPT_COMMAND STREQUAL "qsub")
-            execute_process (COMMAND ${CTEST_BINARY_DIRECTORY}/${LOCAL_BATCH_SCRIPT_NAME} ctestS.out)
-          else ()
-            execute_process (COMMAND ${LOCAL_BATCH_SCRIPT_COMMAND} ${LOCAL_BATCH_SCRIPT_ARGS} ${CTEST_BINARY_DIRECTORY}/${LOCAL_BATCH_SCRIPT_NAME})
-          endif()
-        endif ()
+          execute_process (COMMAND ${LOCAL_BATCH_SCRIPT_COMMAND} ${LOCAL_BATCH_SCRIPT_ARGS} ${CTEST_BINARY_DIRECTORY}/${LOCAL_BATCH_SCRIPT_NAME})
+        endif()
         message(STATUS "Check for existence of ${CTEST_BINARY_DIRECTORY}/ctestS.done")
         execute_process(COMMAND ls ${CTEST_BINARY_DIRECTORY}/ctestS.done RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
         while(result)
@@ -306,14 +295,10 @@ set (ENV{CI_MODEL} ${MODEL})
         endif ()
         if (LOCAL_BATCH_SCRIPT_PARALLEL_NAME)
           unset(result CACHE)
-          if (LOCAL_BATCH_SCRIPT_COMMAND STREQUAL "raybsub")
-            execute_process (COMMAND ${CTEST_BINARY_DIRECTORY}/${LOCAL_BATCH_SCRIPT_COMMAND} ${LOCAL_BATCH_SCRIPT_ARGS} ${CTEST_BINARY_DIRECTORY}/${LOCAL_BATCH_SCRIPT_PARALLEL_NAME})
+          if (LOCAL_BATCH_SCRIPT_COMMAND STREQUAL "qsub")
+            execute_process (COMMAND ${CTEST_BINARY_DIRECTORY}/${LOCAL_BATCH_SCRIPT_NAME} ctestP.out)
           else ()
-            if (LOCAL_BATCH_SCRIPT_COMMAND STREQUAL "qsub")
-              execute_process (COMMAND ${CTEST_BINARY_DIRECTORY}/${LOCAL_BATCH_SCRIPT_NAME} ctestP.out)
-            else ()
-              execute_process (COMMAND ${LOCAL_BATCH_SCRIPT_COMMAND} ${LOCAL_BATCH_SCRIPT_ARGS} ${CTEST_BINARY_DIRECTORY}/${LOCAL_BATCH_SCRIPT_PARALLEL_NAME})
-            endif ()
+            execute_process (COMMAND ${LOCAL_BATCH_SCRIPT_COMMAND} ${LOCAL_BATCH_SCRIPT_ARGS} ${CTEST_BINARY_DIRECTORY}/${LOCAL_BATCH_SCRIPT_PARALLEL_NAME})
           endif ()
           message(STATUS "Check for existence of ${CTEST_BINARY_DIRECTORY}/ctestP.done")
           execute_process(COMMAND ls ${CTEST_BINARY_DIRECTORY}/ctestP.done RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)

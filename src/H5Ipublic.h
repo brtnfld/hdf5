@@ -64,14 +64,10 @@ typedef int64_t hid_t;
 #define PRIXHID PRIX64
 #define PRIoHID PRIo64
 
-/**
- * The size of identifiers
- */
+/** The size of identifiers \since 1.8.0 */
 #define H5_SIZEOF_HID_T H5_SIZEOF_INT64_T
 
-/**
- * An invalid object ID. This is also negative for error return.
- */
+/** An invalid object ID. This is also negative for error return. \since 1.6.0 */
 #define H5I_INVALID_HID (-1)
 
 /**
@@ -443,7 +439,7 @@ H5_DLL H5I_type_t H5Iregister_type2(unsigned reserved, H5I_free_t free_func);
  * \since 1.8.0
  *
  */
-H5_DLL herr_t H5Iclear_type(H5I_type_t type, hbool_t force);
+H5_DLL herr_t H5Iclear_type(H5I_type_t type, bool force);
 /**
  * \ingroup H5IUD
  *

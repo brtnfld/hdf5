@@ -1191,7 +1191,7 @@ done:
  *--------------------------------------------------------------------------*/
 herr_t
 H5Lexists_async(const char *app_file, const char *app_func, unsigned app_line, hid_t loc_id, const char *name,
-                hbool_t *exists, hid_t lapl_id, hid_t es_id)
+                bool *exists, hid_t lapl_id, hid_t es_id)
 {
     H5VL_object_t *vol_obj   = NULL;            /* Object for loc_id */
     void          *token     = NULL;            /* Request token for async operation        */
@@ -1477,6 +1477,10 @@ H5Lget_name_by_idx(hid_t loc_id, const char *group_name, H5_index_t idx_type, H5
     ssize_t              ret_value     = -1; /* Return value */
 
     FUNC_ENTER_API((-1))
+
+    /* If name size is zero, treat as length query and do not write, even a '\0' */
+    if (name && size == 0)
+        name = NULL;
 
     /* Check arguments */
     if (!group_name || !*group_name)

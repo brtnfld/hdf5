@@ -80,7 +80,7 @@ test_file_create()
     H5File *file1 = NULL;
     try {
         // Create file FILE1
-        file1 = new H5File(FILE1, H5F_ACC_EXCL);
+        file1 = new H5File(FILE1, H5F_ACC_TRUNC);
 
         // Try to create the same file with H5F_ACC_TRUNC. This should fail
         // because file1 is the same file and is currently open.
@@ -842,13 +842,15 @@ test_file_info()
     SUBTEST("File general information");
 
     hsize_t out_threshold = 0;     // Free space section threshold to get
-    hbool_t out_persist   = false; // Persist free-space read
+    bool    out_persist   = false; // Persist free-space read
     // File space handling strategy
     H5F_fspace_strategy_t out_strategy = H5F_FSPACE_STRATEGY_FSM_AGGR;
 
     try {
-        // Create a file using default properties.
-        H5File tempfile(FILE7, H5F_ACC_TRUNC);
+        // Create a file using the earliest format.
+        FileAccPropList fapl;
+        fapl.setLibverBounds(H5F_LIBVER_EARLIEST, H5F_LIBVER_LATEST);
+        H5File tempfile(FILE7, H5F_ACC_TRUNC, FileCreatPropList::DEFAULT, fapl);
 
         // Get the file's version information.
         H5F_info2_t finfo;
@@ -884,7 +886,7 @@ test_file_info()
         fcpl.setIstorek(F2_ISTORE);
 
         hsize_t               threshold = 5;    // Free space section threshold to set
-        hbool_t               persist   = true; // Persist free-space to set
+        bool                  persist   = true; // Persist free-space to set
         H5F_fspace_strategy_t strategy  = H5F_FSPACE_STRATEGY_PAGE;
 
         fcpl.setFileSpaceStrategy(strategy, persist, threshold);

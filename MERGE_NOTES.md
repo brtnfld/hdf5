@@ -153,7 +153,13 @@ Merge base: `33c0016` (2020-08-02). `develop` @ `ee8507bdb9`.
 - vfd_swmr/swmr: 5/5 passed.
 
 ### M6 — develop HEAD (`ee8507bdb9`)
-- status: pending
+- status: COMMITTED
+- Conflicts (14): doxygen/FileFormatSpec.dox (rename/delete), doc/* files moved to release_docs/ (VFD SWMR design docs preserved), docs/doxygen/dox/high_level/high_level.dox (file location), src/H5VLnative.h (content)
+- Build fix: src/H5MV.c — H5FS_sect_add gained new bool *merged_or_shrunk 6th parameter; passed NULL in 3 call sites
+- H5VLnative.h conflict: kept VFD SWMR-specific native ops (DISABLE_EOT=29, ENABLE_EOT=30, END_TICK=31) alongside develop's updated POST_OPEN=28 doxygen comment
+- doc/ → release_docs/ rename: VFD SWMR design docs (RFC, user guide, sketches) accepted in develop's new location
+- Tests: 2803/2804 (H5TEST-err_compat pre-existing develop regression — same ERROR_APPEND issue as M5)
+- vfd_swmr/swmr: 5/5 passed.
 
 ## vfd_swmr-semantic decisions (for reviewer audit)
 

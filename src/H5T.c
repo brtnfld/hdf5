@@ -143,6 +143,103 @@
         H5T_INIT_TYPE_FLOAT16_COMMON(H5T_ORDER_BE)                                                           \
     }
 
+/* Define the code templates for standard 16-bit bfloat16 floats for the "GUTS" in the H5T_INIT_TYPE macro */
+#define H5T_INIT_TYPE_BFLOAT16_COMMON(ENDIANNESS)                                                            \
+    {                                                                                                        \
+        H5T_INIT_TYPE_NUM_COMMON(ENDIANNESS)                                                                 \
+        dt->shared->u.atomic.u.f.sign  = 15;                                                                 \
+        dt->shared->u.atomic.u.f.epos  = 7;                                                                  \
+        dt->shared->u.atomic.u.f.esize = 8;                                                                  \
+        dt->shared->u.atomic.u.f.ebias = 0x7f;                                                               \
+        dt->shared->u.atomic.u.f.mpos  = 0;                                                                  \
+        dt->shared->u.atomic.u.f.msize = 7;                                                                  \
+        dt->shared->u.atomic.u.f.norm  = H5T_NORM_IMPLIED;                                                   \
+        dt->shared->u.atomic.u.f.pad   = H5T_PAD_ZERO;                                                       \
+    }
+
+#define H5T_INIT_TYPE_BFLOAT16LE_CORE                                                                        \
+    {                                                                                                        \
+        H5T_INIT_TYPE_BFLOAT16_COMMON(H5T_ORDER_LE)                                                          \
+    }
+
+#define H5T_INIT_TYPE_BFLOAT16BE_CORE                                                                        \
+    {                                                                                                        \
+        H5T_INIT_TYPE_BFLOAT16_COMMON(H5T_ORDER_BE)                                                          \
+    }
+
+/* Define the code templates for standard FP8 E4M3 8-bit floats for the "GUTS" in the H5T_INIT_TYPE macro */
+#define H5T_INIT_TYPE_FLOAT8E4M3_CORE                                                                        \
+    {                                                                                                        \
+        H5T_INIT_TYPE_NUM_COMMON(H5T_ORDER_LE) /* Simply pick LE here */                                     \
+        dt->shared->u.atomic.u.f.sign  = 7;                                                                  \
+        dt->shared->u.atomic.u.f.epos  = 3;                                                                  \
+        dt->shared->u.atomic.u.f.esize = 4;                                                                  \
+        dt->shared->u.atomic.u.f.ebias = 0x7;                                                                \
+        dt->shared->u.atomic.u.f.mpos  = 0;                                                                  \
+        dt->shared->u.atomic.u.f.msize = 3;                                                                  \
+        dt->shared->u.atomic.u.f.norm  = H5T_NORM_IMPLIED;                                                   \
+        dt->shared->u.atomic.u.f.pad   = H5T_PAD_ZERO;                                                       \
+    }
+
+/* Define the code templates for standard FP8 E5M2 8-bit floats for the "GUTS" in the H5T_INIT_TYPE macro */
+#define H5T_INIT_TYPE_FLOAT8E5M2_CORE                                                                        \
+    {                                                                                                        \
+        H5T_INIT_TYPE_NUM_COMMON(H5T_ORDER_LE) /* Simply pick LE here */                                     \
+        dt->shared->u.atomic.u.f.sign  = 7;                                                                  \
+        dt->shared->u.atomic.u.f.epos  = 2;                                                                  \
+        dt->shared->u.atomic.u.f.esize = 5;                                                                  \
+        dt->shared->u.atomic.u.f.ebias = 0xf;                                                                \
+        dt->shared->u.atomic.u.f.mpos  = 0;                                                                  \
+        dt->shared->u.atomic.u.f.msize = 2;                                                                  \
+        dt->shared->u.atomic.u.f.norm  = H5T_NORM_IMPLIED;                                                   \
+        dt->shared->u.atomic.u.f.pad   = H5T_PAD_ZERO;                                                       \
+    }
+
+/* Define the code templates for standard FP6 E2M3 6-bit floats for the "GUTS" in the H5T_INIT_TYPE macro */
+#define H5T_INIT_TYPE_FLOAT6E2M3_CORE                                                                        \
+    {                                                                                                        \
+        H5T_INIT_TYPE_NUM_COMMON(H5T_ORDER_LE) /* Simply pick LE here */                                     \
+        dt->shared->u.atomic.prec      = 6;                                                                  \
+        dt->shared->u.atomic.u.f.sign  = 5;                                                                  \
+        dt->shared->u.atomic.u.f.epos  = 3;                                                                  \
+        dt->shared->u.atomic.u.f.esize = 2;                                                                  \
+        dt->shared->u.atomic.u.f.ebias = 0x1;                                                                \
+        dt->shared->u.atomic.u.f.mpos  = 0;                                                                  \
+        dt->shared->u.atomic.u.f.msize = 3;                                                                  \
+        dt->shared->u.atomic.u.f.norm  = H5T_NORM_IMPLIED;                                                   \
+        dt->shared->u.atomic.u.f.pad   = H5T_PAD_ZERO;                                                       \
+    }
+
+/* Define the code templates for standard FP6 E3M2 6-bit floats for the "GUTS" in the H5T_INIT_TYPE macro */
+#define H5T_INIT_TYPE_FLOAT6E3M2_CORE                                                                        \
+    {                                                                                                        \
+        H5T_INIT_TYPE_NUM_COMMON(H5T_ORDER_LE) /* Simply pick LE here */                                     \
+        dt->shared->u.atomic.prec      = 6;                                                                  \
+        dt->shared->u.atomic.u.f.sign  = 5;                                                                  \
+        dt->shared->u.atomic.u.f.epos  = 2;                                                                  \
+        dt->shared->u.atomic.u.f.esize = 3;                                                                  \
+        dt->shared->u.atomic.u.f.ebias = 0x3;                                                                \
+        dt->shared->u.atomic.u.f.mpos  = 0;                                                                  \
+        dt->shared->u.atomic.u.f.msize = 2;                                                                  \
+        dt->shared->u.atomic.u.f.norm  = H5T_NORM_IMPLIED;                                                   \
+        dt->shared->u.atomic.u.f.pad   = H5T_PAD_ZERO;                                                       \
+    }
+
+/* Define the code templates for standard FP4 E2M1 4-bit floats for the "GUTS" in the H5T_INIT_TYPE macro */
+#define H5T_INIT_TYPE_FLOAT4E2M1_CORE                                                                        \
+    {                                                                                                        \
+        H5T_INIT_TYPE_NUM_COMMON(H5T_ORDER_LE) /* Simply pick LE here */                                     \
+        dt->shared->u.atomic.prec      = 4;                                                                  \
+        dt->shared->u.atomic.u.f.sign  = 3;                                                                  \
+        dt->shared->u.atomic.u.f.epos  = 1;                                                                  \
+        dt->shared->u.atomic.u.f.esize = 2;                                                                  \
+        dt->shared->u.atomic.u.f.ebias = 0x1;                                                                \
+        dt->shared->u.atomic.u.f.mpos  = 0;                                                                  \
+        dt->shared->u.atomic.u.f.msize = 1;                                                                  \
+        dt->shared->u.atomic.u.f.norm  = H5T_NORM_IMPLIED;                                                   \
+        dt->shared->u.atomic.u.f.pad   = H5T_PAD_ZERO;                                                       \
+    }
+
 /* Define the code templates for standard floats for the "GUTS" in the H5T_INIT_TYPE macro */
 #define H5T_INIT_TYPE_FLOAT_COMMON(ENDIANNESS)                                                               \
     {                                                                                                        \
@@ -388,7 +485,7 @@ static herr_t H5T__register_int(H5T_pers_t pers, const char *name, H5T_t *src, H
 static herr_t H5T__register(H5T_pers_t pers, const char *name, H5T_t *src, H5T_t *dst, H5T_conv_func_t *conv);
 static htri_t H5T__compiler_conv(H5T_t *src, H5T_t *dst);
 static herr_t H5T__set_size(H5T_t *dt, size_t size);
-static herr_t H5T__close_cb(H5T_t *dt, void **request);
+static herr_t H5T__close_cb(void *dt, void **request);
 static herr_t H5T__init_path_table(void);
 static bool   H5T__path_table_search(const H5T_t *src, const H5T_t *dst, int *idx, int *last_cmp);
 static H5T_path_t *H5T__path_find_real(const H5T_t *src, const H5T_t *dst, const char *name,
@@ -432,6 +529,14 @@ hid_t H5T_IEEE_F32BE_g = H5I_INVALID_HID;
 hid_t H5T_IEEE_F32LE_g = H5I_INVALID_HID;
 hid_t H5T_IEEE_F64BE_g = H5I_INVALID_HID;
 hid_t H5T_IEEE_F64LE_g = H5I_INVALID_HID;
+
+hid_t H5T_FLOAT_BFLOAT16BE_g = H5I_INVALID_HID;
+hid_t H5T_FLOAT_BFLOAT16LE_g = H5I_INVALID_HID;
+hid_t H5T_FLOAT_F8E4M3_g     = H5I_INVALID_HID;
+hid_t H5T_FLOAT_F8E5M2_g     = H5I_INVALID_HID;
+hid_t H5T_FLOAT_F6E2M3_g     = H5I_INVALID_HID;
+hid_t H5T_FLOAT_F6E3M2_g     = H5I_INVALID_HID;
+hid_t H5T_FLOAT_F4E2M1_g     = H5I_INVALID_HID;
 
 hid_t H5T_COMPLEX_IEEE_F16BE_g = H5I_INVALID_HID;
 hid_t H5T_COMPLEX_IEEE_F16LE_g = H5I_INVALID_HID;
@@ -678,10 +783,10 @@ H5FL_DEFINE_STATIC(H5T_path_t);
 
 /* Datatype ID class */
 static const H5I_class_t H5I_DATATYPE_CLS[1] = {{
-    H5I_DATATYPE,             /* ID class value */
-    0,                        /* Class flags    */
-    8,                        /* # of reserved IDs for class */
-    (H5I_free_t)H5T__close_cb /* Callback routine for closing objects of this class */
+    H5I_DATATYPE, /* ID class value */
+    0,            /* Class flags    */
+    8,            /* # of reserved IDs for class */
+    H5T__close_cb /* Callback routine for closing objects of this class */
 }};
 
 /* Flag indicating "top" of interface has been initialized */
@@ -1102,6 +1207,32 @@ H5T__init_package(void)
 
     /* IEEE 8-byte big-endian float */
     H5T_INIT_TYPE(DOUBLEBE, H5T_IEEE_F64BE_g, COPY, native_double, SET, 8)
+
+    /*------------------------------------------------------------
+     * Alternative floating-point types
+     *------------------------------------------------------------
+     */
+
+    /* 2-byte little-endian bfloat16 float type */
+    H5T_INIT_TYPE(BFLOAT16LE, H5T_FLOAT_BFLOAT16LE_g, COPY, native_double, SET, 2)
+
+    /* 2-byte big-endian bfloat16 float type */
+    H5T_INIT_TYPE(BFLOAT16BE, H5T_FLOAT_BFLOAT16BE_g, COPY, native_double, SET, 2)
+
+    /* 8-bit FP8 E4M3 float type */
+    H5T_INIT_TYPE(FLOAT8E4M3, H5T_FLOAT_F8E4M3_g, COPY, native_double, SET, 1)
+
+    /* 8-bit FP8 E5M2 float type */
+    H5T_INIT_TYPE(FLOAT8E5M2, H5T_FLOAT_F8E5M2_g, COPY, native_double, SET, 1)
+
+    /* 6-bit FP6 E2M3 float type */
+    H5T_INIT_TYPE(FLOAT6E2M3, H5T_FLOAT_F6E2M3_g, COPY, native_double, SET, 1)
+
+    /* 6-bit FP6 E3M2 float type */
+    H5T_INIT_TYPE(FLOAT6E3M2, H5T_FLOAT_F6E3M2_g, COPY, native_double, SET, 1)
+
+    /* 4-bit FP4 E2M1 float type */
+    H5T_INIT_TYPE(FLOAT4E2M1, H5T_FLOAT_F4E2M1_g, COPY, native_double, SET, 1)
 
     /*------------------------------------------------------------
      * VAX Types
@@ -2198,6 +2329,14 @@ H5T_top_term_package(void)
             H5T_IEEE_F64BE_g = H5I_INVALID_HID;
             H5T_IEEE_F64LE_g = H5I_INVALID_HID;
 
+            H5T_FLOAT_BFLOAT16BE_g = H5I_INVALID_HID;
+            H5T_FLOAT_BFLOAT16LE_g = H5I_INVALID_HID;
+            H5T_FLOAT_F8E4M3_g     = H5I_INVALID_HID;
+            H5T_FLOAT_F8E5M2_g     = H5I_INVALID_HID;
+            H5T_FLOAT_F6E2M3_g     = H5I_INVALID_HID;
+            H5T_FLOAT_F6E3M2_g     = H5I_INVALID_HID;
+            H5T_FLOAT_F4E2M1_g     = H5I_INVALID_HID;
+
             H5T_COMPLEX_IEEE_F16BE_g = H5I_INVALID_HID;
             H5T_COMPLEX_IEEE_F16LE_g = H5I_INVALID_HID;
             H5T_COMPLEX_IEEE_F32BE_g = H5I_INVALID_HID;
@@ -2357,31 +2496,32 @@ H5T_term_package(void)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5T__close_cb(H5T_t *dt, void **request)
+H5T__close_cb(void *dt, void **request)
 {
+    H5T_t *dt_p      = (H5T_t *)dt;
     herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    assert(dt);
+    assert(dt_p);
 
     /* If this datatype is VOL-managed (i.e.: has a VOL object),
      * close it through the VOL connector.
      */
-    if (NULL != dt->vol_obj) {
+    if (NULL != dt_p->vol_obj) {
         /* Close the connector-managed datatype data */
-        if (H5VL_datatype_close(dt->vol_obj, H5P_DATASET_XFER_DEFAULT, request) < 0)
+        if (H5VL_datatype_close(dt_p->vol_obj, H5P_DATASET_XFER_DEFAULT, request) < 0)
             HGOTO_ERROR(H5E_DATATYPE, H5E_CLOSEERROR, FAIL, "unable to close datatype");
 
         /* Free the VOL object */
-        if (H5VL_free_object(dt->vol_obj) < 0)
-            HGOTO_ERROR(H5E_ATTR, H5E_CANTDEC, FAIL, "unable to free VOL object");
-        dt->vol_obj = NULL;
+        if (H5VL_free_object(dt_p->vol_obj) < 0)
+            HGOTO_ERROR(H5E_DATATYPE, H5E_CANTDEC, FAIL, "unable to free VOL object");
+        dt_p->vol_obj = NULL;
     } /* end if */
 
     /* Close the datatype */
-    if (H5T_close(dt) < 0)
+    if (H5T_close(dt_p) < 0)
         HGOTO_ERROR(H5E_DATATYPE, H5E_CLOSEERROR, FAIL, "unable to close datatype");
 
 done:
@@ -6889,6 +7029,11 @@ H5T_set_loc(H5T_t *dt, H5VL_object_t *file, H5T_loc_t loc)
                     if (changed > 0)
                         ret_value = changed;
                 } /* end if */
+
+                /* Validate file pointer for disk-based VL types */
+                if (loc == H5T_LOC_DISK && NULL == file)
+                    HGOTO_ERROR(H5E_DATATYPE, H5E_BADVALUE, FAIL,
+                                "NULL file pointer for disk-based VL datatype");
 
                 /* Mark this VL sequence */
                 if ((changed = H5T__vlen_set_loc(dt, file, loc)) < 0)

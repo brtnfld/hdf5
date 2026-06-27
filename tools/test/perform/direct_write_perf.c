@@ -25,7 +25,7 @@
 #include H5_ZLIB_HEADER /* "zlib.h" */
 #endif
 
-#if !defined(WIN32) && !defined(__MINGW32__)
+#if !defined(WIN32) && !defined(__MINGW32__) && !defined(_WIN32)
 
 #include <errno.h>
 #include <fcntl.h>
@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <sys/types.h>
 
 #ifdef H5_HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -40,10 +41,6 @@
 
 #ifdef H5_HAVE_SYS_TIME_H
 #include <sys/time.h>
-#endif
-
-#ifdef H5_HAVE_SYS_TYPES_H
-#include <sys/types.h>
 #endif
 
 #ifdef H5_HAVE_UNISTD_H
@@ -248,7 +245,9 @@ create_file(hid_t fapl_id)
 
         /* Perform compression from the source to the destination buffer */
 #if defined(H5_HAVE_ZLIBNG_H)
-        ret = zng_compress2(z_dst, &z_dst_nbytes, z_src, z_src_nbytes, aggression);
+        size_t z_dst_nbytes_sz = (size_t)z_dst_nbytes;
+        ret                    = zng_compress2(z_dst, &z_dst_nbytes_sz, z_src, z_src_nbytes, aggression);
+        z_dst_nbytes           = (uLongf)z_dst_nbytes_sz;
 #else
         ret = compress2(z_dst, &z_dst_nbytes, z_src, z_src_nbytes, aggression);
 #endif

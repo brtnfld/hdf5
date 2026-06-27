@@ -9,6 +9,28 @@
 # If you do not have access to either file, you may request a copy from
 # help@hdfgroup.org.
 #
+# -----------------------------------------------------------------------------
+# HDF5 ConfigureChecks.cmake
+#
+# This CMake module performs platform, compiler, and feature checks required
+# for building HDF5. It sets up system-specific flags, checks for headers,
+# libraries, types, and functions, and configures HDF5 build options based on
+# system capabilities. It also handles feature detection for advanced types
+# (e.g., _Float16, __float128), file locking, and VFD (Virtual File Driver)
+# support. The results are used to generate configuration headers and control
+# conditional compilation throughout the HDF5 codebase.
+#
+# Main sections:
+#   - Include CMake check modules
+#   - Platform and compiler detection (Windows, Darwin, Linux, etc.)
+#   - Header/library/function/type checks
+#   - Platform-specific flags and definitions
+#   - Type size checks for C99 and system types
+#   - Feature checks (complex numbers, _Float16, __float128, VFDs, etc.)
+#   - Options for strict format checks, file locking, and non-standard features
+#   - Macros for reusable check logic
+# -----------------------------------------------------------------------------
+
 #-----------------------------------------------------------------------------
 # Include all the necessary files for macros
 #-----------------------------------------------------------------------------
@@ -112,8 +134,6 @@ CHECK_INCLUDE_FILE_CONCAT ("sys/resource.h"  ${HDF_PREFIX}_HAVE_SYS_RESOURCE_H)
 CHECK_INCLUDE_FILE_CONCAT ("sys/socket.h"    ${HDF_PREFIX}_HAVE_SYS_SOCKET_H)
 CHECK_INCLUDE_FILE_CONCAT ("sys/stat.h"      ${HDF_PREFIX}_HAVE_SYS_STAT_H)
 CHECK_INCLUDE_FILE_CONCAT ("sys/time.h"      ${HDF_PREFIX}_HAVE_SYS_TIME_H)
-CHECK_INCLUDE_FILE_CONCAT ("sys/types.h"     ${HDF_PREFIX}_HAVE_SYS_TYPES_H)
-CHECK_INCLUDE_FILE_CONCAT ("features.h"      ${HDF_PREFIX}_HAVE_FEATURES_H)
 CHECK_INCLUDE_FILE_CONCAT ("dirent.h"        ${HDF_PREFIX}_HAVE_DIRENT_H)
 CHECK_INCLUDE_FILE_CONCAT ("unistd.h"        ${HDF_PREFIX}_HAVE_UNISTD_H)
 CHECK_INCLUDE_FILE_CONCAT ("pwd.h"           ${HDF_PREFIX}_HAVE_PWD_H)
@@ -133,12 +153,12 @@ endif ()
 # gcc puts symbols like FLT128_DIG in quadmath.h instead of float.h, so
 # check for that. This is only used by the build system and doesn't need
 # to be exported to H5pubconf.h.
-CHECK_INCLUDE_FILES("quadmath.h" INCLUDE_QUADMATH_H)
+CHECK_INCLUDE_FILES ("quadmath.h" INCLUDE_QUADMATH_H)
 # Convert TRUE/FALSE to 0/1 for preprocessor values in test code, below
 if (${INCLUDE_QUADMATH_H})
-  set(C_INCLUDE_QUADMATH_H 1)
+  set (C_INCLUDE_QUADMATH_H 1)
 else ()
-  set(C_INCLUDE_QUADMATH_H 0)
+  set (C_INCLUDE_QUADMATH_H 0)
 endif ()
 
 if (MINGW OR CYGWIN)
@@ -175,7 +195,6 @@ macro (HDF_FUNCTION_TEST OTHER_TEST)
     foreach (def
         HAVE_SYS_TIME_H
         HAVE_UNISTD_H
-        HAVE_SYS_TYPES_H
         HAVE_SYS_SOCKET_H
     )
       if ("${${HDF_PREFIX}_${def}}")
@@ -263,7 +282,7 @@ endif ()
 # MinGW and Cygwin
 if (MINGW OR CYGWIN)
   set (CMAKE_REQUIRED_DEFINITIONS
-    "${CURRENT_TEST_DEFINITIONS} -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
+      "${CMAKE_REQUIRED_DEFINITIONS} -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
   )
 endif ()
 
@@ -331,7 +350,11 @@ if (MINGW OR NOT WINDOWS)
   HDF_CHECK_TYPE_SIZE (ptrdiff_t    ${HDF_PREFIX}_SIZEOF_PTRDIFF_T)
 endif ()
 
-HDF_CHECK_TYPE_SIZE (off_t          ${HDF_PREFIX}_SIZEOF_OFF_T)
+if (NOT MINGW)
+  HDF_CHECK_TYPE_SIZE (off_t        ${HDF_PREFIX}_SIZEOF_OFF_T)
+else ()
+  set (${HDF_PREFIX}_SIZEOF_OFF_T   4)
+endif ()
 HDF_CHECK_TYPE_SIZE (time_t         ${HDF_PREFIX}_SIZEOF_TIME_T)
 
 #-----------------------------------------------------------------------------
@@ -343,11 +366,6 @@ set (CMAKE_EXTRA_INCLUDE_FILES stdbool.h)
 HDF_CHECK_TYPE_SIZE (_Bool        ${HDF_PREFIX}_SIZEOF_BOOL)
 
 if (MINGW OR NOT WINDOWS)
-  #-----------------------------------------------------------------------------
-  # Check if the dev_t type is a scalar type
-  #-----------------------------------------------------------------------------
-  HDF_FUNCTION_TEST (DEV_T_IS_SCALAR)
-
   # ----------------------------------------------------------------------
   # Check for MONOTONIC_TIMER support (used in clock_gettime).  This has
   # to be done after any POSIX/BSD defines to ensure that the test gets
@@ -357,12 +375,12 @@ if (MINGW OR NOT WINDOWS)
   #-----------------------------------------------------------------------------
   # Check a bunch of time functions
   #-----------------------------------------------------------------------------
-  CHECK_STRUCT_HAS_MEMBER("struct tm" tm_gmtoff "time.h" ${HDF_PREFIX}_HAVE_TM_GMTOFF)
-  CHECK_STRUCT_HAS_MEMBER("struct tm" __tm_gmtoff "time.h" ${HDF_PREFIX}_HAVE___TM_GMTOFF)
+  CHECK_STRUCT_HAS_MEMBER ("struct tm" tm_gmtoff "time.h" ${HDF_PREFIX}_HAVE_TM_GMTOFF)
+  CHECK_STRUCT_HAS_MEMBER ("struct tm" __tm_gmtoff "time.h" ${HDF_PREFIX}_HAVE___TM_GMTOFF)
   if (${HDF_PREFIX}_HAVE_SYS_TIME_H)
-    CHECK_STRUCT_HAS_MEMBER("struct tm" tz_minuteswest "sys/types.h;sys/time.h;time.h" ${HDF_PREFIX}_HAVE_STRUCT_TIMEZONE)
+    CHECK_STRUCT_HAS_MEMBER ("struct tm" tz_minuteswest "sys/types.h;sys/time.h;time.h" ${HDF_PREFIX}_HAVE_STRUCT_TIMEZONE)
   else ()
-    CHECK_STRUCT_HAS_MEMBER("struct tm" tz_minuteswest "sys/types.h;time.h" ${HDF_PREFIX}_HAVE_STRUCT_TIMEZONE)
+    CHECK_STRUCT_HAS_MEMBER ("struct tm" tz_minuteswest "sys/types.h;time.h" ${HDF_PREFIX}_HAVE_STRUCT_TIMEZONE)
   endif ()
   CHECK_FUNCTION_EXISTS (gettimeofday      ${HDF_PREFIX}_HAVE_GETTIMEOFDAY)
   foreach (time_test
@@ -425,6 +443,13 @@ CHECK_FUNCTION_EXISTS (asprintf          ${HDF_PREFIX}_HAVE_ASPRINTF)
 CHECK_FUNCTION_EXISTS (vasprintf         ${HDF_PREFIX}_HAVE_VASPRINTF)
 CHECK_FUNCTION_EXISTS (waitpid           ${HDF_PREFIX}_HAVE_WAITPID)
 
+# Check for reentrant qsort variants (qsort_r on Unix/BSD, qsort_s on Windows)
+CHECK_FUNCTION_EXISTS (qsort_r _HAVE_QSORT_R_TMP)
+CHECK_FUNCTION_EXISTS (qsort_s _HAVE_QSORT_S_TMP)
+if (_HAVE_QSORT_R_TMP OR _HAVE_QSORT_S_TMP)
+  set (${HDF_PREFIX}_HAVE_QSORT_REENTRANT 1)
+endif ()
+
 #-----------------------------------------------------------------------------
 # sigsetjmp is special; may actually be a macro
 #-----------------------------------------------------------------------------
@@ -443,7 +468,7 @@ foreach (other_test
     HAVE_BUILTIN_EXPECT
     PTHREAD_BARRIER
     HAVE_SOCKLEN_T
-  )
+)
   HDF_FUNCTION_TEST (${other_test})
 endforeach ()
 
@@ -465,14 +490,13 @@ if (HDF5_ENABLE_USING_MEMCHECKER)
 endif ()
 
 #-----------------------------------------------------------------------------
-# Option for --enable-strict-format-checks
+# Option for strict file format checks
 #-----------------------------------------------------------------------------
 option (HDF5_STRICT_FORMAT_CHECKS "Whether to perform strict file format checks" OFF)
 mark_as_advanced (HDF5_STRICT_FORMAT_CHECKS)
 if (HDF5_STRICT_FORMAT_CHECKS)
   set (${HDF_PREFIX}_STRICT_FORMAT_CHECKS 1)
 endif ()
-MARK_AS_ADVANCED (HDF5_STRICT_FORMAT_CHECKS)
 
 # ----------------------------------------------------------------------
 # Decide whether the data accuracy has higher priority during data
@@ -485,7 +509,6 @@ mark_as_advanced (HDF5_WANT_DATA_ACCURACY)
 if (HDF5_WANT_DATA_ACCURACY)
   set (${HDF_PREFIX}_WANT_DATA_ACCURACY 1)
 endif ()
-MARK_AS_ADVANCED (HDF5_WANT_DATA_ACCURACY)
 
 # ----------------------------------------------------------------------
 # Decide whether the presence of user's exception handling functions is
@@ -498,7 +521,6 @@ mark_as_advanced (HDF5_WANT_DCONV_EXCEPTION)
 if (HDF5_WANT_DCONV_EXCEPTION)
   set (${HDF_PREFIX}_WANT_DCONV_EXCEPTION 1)
 endif ()
-MARK_AS_ADVANCED (HDF5_WANT_DCONV_EXCEPTION)
 
 # ----------------------------------------------------------------------
 # Check if they would like to show all warnings (not suppressed internally)
@@ -509,12 +531,12 @@ if (HDF5_SHOW_ALL_WARNINGS)
   message (STATUS "....All warnings will be displayed")
   set (${HDF_PREFIX}_SHOW_ALL_WARNINGS 1)
 endif ()
-MARK_AS_ADVANCED (HDF5_SHOW_ALL_WARNINGS)
 
 # ----------------------------------------------------------------------
 # Check if they would like to use file locking by default
 #-----------------------------------------------------------------------------
 option (HDF5_USE_FILE_LOCKING "Use file locking by default (mainly for SWMR)" ON)
+mark_as_advanced (HDF5_USE_FILE_LOCKING)
 if (HDF5_USE_FILE_LOCKING)
   set (${HDF_PREFIX}_USE_FILE_LOCKING 1)
 endif ()
@@ -523,6 +545,7 @@ endif ()
 # Check if they would like to ignore file locks when disabled on a file system
 #-----------------------------------------------------------------------------
 option (HDF5_IGNORE_DISABLED_FILE_LOCKS "Ignore file locks when disabled on file system" ON)
+mark_as_advanced (HDF5_IGNORE_DISABLED_FILE_LOCKS)
 if (HDF5_IGNORE_DISABLED_FILE_LOCKS)
   set (${HDF_PREFIX}_IGNORE_DISABLED_FILE_LOCKS 1)
 endif ()
@@ -612,7 +635,7 @@ endif ()
 option (HDF5_ENABLE_ROS3_VFD "Build the ROS3 Virtual File Driver" OFF)
 if (HDF5_ENABLE_ROS3_VFD)
   # The ROS3 VFD requires the aws-c-s3 library
-  find_package (aws-c-s3 REQUIRED)
+  find_package (aws-c-s3 REQUIRED CONFIG)
 
   if (${aws-c-s3_FOUND})
     if (NOT TARGET AWS::aws-c-s3)
@@ -622,9 +645,39 @@ if (HDF5_ENABLE_ROS3_VFD)
     list (APPEND LINK_LIBS AWS::aws-c-s3)
 
     set (${HDF_PREFIX}_HAVE_ROS3_VFD 1)
+
+    option (HDF5_ENABLE_ROS3_VFD_DOCKER_PROXY "Use docker for ROS3 VFD S3proxy testing" OFF)
+    if (HDF5_ENABLE_ROS3_VFD_DOCKER_PROXY)
+      # check if docker is available
+      find_program (DOCKER_EXECUTABLE docker)
+      if (DOCKER_EXECUTABLE)
+        execute_process (
+            COMMAND ${DOCKER_EXECUTABLE} info
+            RESULT_VARIABLE DOCKER_CHECK_RESULT
+            OUTPUT_VARIABLE DOCKER_CHECK_OUTPUT
+            ERROR_VARIABLE DOCKER_CHECK_ERROR
+        )
+        if (DOCKER_CHECK_RESULT EQUAL 0)
+          message (VERBOSE "Docker is installed and running.")
+        else()
+          set (HDF5_ENABLE_ROS3_VFD_DOCKER_PROXY OFF CACHE BOOL "Use docker for ROS3 VFD S3proxy testing" FORCE)
+          message (FATAL_ERROR "Docker is installed but not running or accessible: ${DOCKER_CHECK_ERROR}")
+        endif ()
+      else ()
+        set (HDF5_ENABLE_ROS3_VFD_DOCKER_PROXY OFF CACHE BOOL "Use docker for ROS3 VFD S3proxy testing" FORCE)
+        message (FATAL_ERROR "Docker is not installed.")
+      endif ()
+
+      # check if aws-cli is available
+      find_program (AWS_CLI_EXECUTABLE aws)
+      if (NOT AWS_CLI_EXECUTABLE)
+        set (HDF5_ENABLE_ROS3_VFD_DOCKER_PROXY OFF CACHE BOOL "Use docker for ROS3 VFD S3proxy testing" FORCE)
+        message (FATAL_ERROR "AWS cli is required for ROS3 VFD S3proxy testing, but could not be found.")
+      endif()
+    endif ()
   else ()
     set (HDF5_ENABLE_ROS3_VFD OFF CACHE BOOL "Build the ROS3 Virtual File Driver" FORCE)
-    message (WARNING "The Read-Only S3 VFD was requested but cannot be built. Please check that the aws-c-s3 library is available on your system, and/or re-configure without option HDF5_ENABLE_ROS3_VFD.")
+    message (FATAL_ERROR "The Read-Only S3 VFD was requested but cannot be built. Please check that the aws-c-s3 library is available on your system, and/or re-configure without option HDF5_ENABLE_ROS3_VFD.")
   endif ()
 endif ()
 
@@ -633,17 +686,17 @@ endif ()
 # ----------------------------------------------------------------------
 option (HDF5_ENABLE_MIRROR_VFD "Build the Mirror Virtual File Driver" OFF)
 if (HDF5_ENABLE_MIRROR_VFD)
-  if ( ${HDF_PREFIX}_HAVE_NETINET_IN_H AND
-       ${HDF_PREFIX}_HAVE_NETDB_H      AND
-       ${HDF_PREFIX}_HAVE_ARPA_INET_H  AND
-       ${HDF_PREFIX}_HAVE_SYS_SOCKET_H AND
-       ${HDF_PREFIX}_HAVE_FORK)
-      set (${HDF_PREFIX}_HAVE_MIRROR_VFD 1)
-  else()
-      set (HDF5_ENABLE_MIRROR_VFD OFF CACHE BOOL "Build the Mirror Virtual File Driver" FORCE)
-      message(WARNING "The socket-based Mirror VFD was requested but cannot be built. System prerequisites are not met.")
-  endif()
-endif()
+  if (${HDF_PREFIX}_HAVE_NETINET_IN_H AND
+      ${HDF_PREFIX}_HAVE_NETDB_H      AND
+      ${HDF_PREFIX}_HAVE_ARPA_INET_H  AND
+      ${HDF_PREFIX}_HAVE_SYS_SOCKET_H AND
+      ${HDF_PREFIX}_HAVE_FORK)
+    set (${HDF_PREFIX}_HAVE_MIRROR_VFD 1)
+  else ()
+    set (HDF5_ENABLE_MIRROR_VFD OFF CACHE BOOL "Build the Mirror Virtual File Driver" FORCE)
+    message (WARNING "The socket-based Mirror VFD was requested but cannot be built. System prerequisites are not met.")
+  endif ()
+endif ()
 
 #-----------------------------------------------------------------------------
 # Check if C has __float128 extension (used for Fortran only)
@@ -682,7 +735,7 @@ if (HDF5_BUILD_FORTRAN)
   # Get the max decimal precision in C, checking both long double and
   # __float128 (if available)
   #-----------------------------------------------------------------------------
-  if (NOT CMAKE_CROSSCOMPILING)
+  if (NOT CMAKE_CROSSCOMPILING OR (CMAKE_CROSSCOMPILING AND CMAKE_CROSSCOMPILING_EMULATOR))
     #-----------------------------------------------------------------------------
     # The provided CMake C macros don't provide a general compile/run function
     # so this one is used.
@@ -694,16 +747,10 @@ if (HDF5_BUILD_FORTRAN)
             ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/testCCompiler1.c
             ${SOURCE_CODE}
         )
-        if (CMAKE_VERSION VERSION_LESS 3.25)
-          set (_RUN_OUTPUT_VARIABLE "RUN_OUTPUT_VARIABLE")
-        else ()
-          set (_RUN_OUTPUT_VARIABLE  "RUN_OUTPUT_STDOUT_VARIABLE")
-        endif()
-        TRY_RUN (RUN_RESULT_VAR COMPILE_RESULT_VAR
-            ${CMAKE_BINARY_DIR}
-            ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/testCCompiler1.c
+        try_run (RUN_RESULT_VAR COMPILE_RESULT_VAR
+            SOURCES ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/testCCompiler1.c
             COMPILE_OUTPUT_VARIABLE COMPILEOUT
-            ${_RUN_OUTPUT_VARIABLE} OUTPUT_VAR
+            RUN_OUTPUT_STDOUT_VARIABLE OUTPUT_VAR
         )
 
         set (${RETURN_OUTPUT_VAR} ${OUTPUT_VAR})
@@ -791,7 +838,7 @@ endif()
 #-----------------------------------------------------------------------------
 macro (H5ConversionTests TEST def msg)
   if (NOT DEFINED ${TEST})
-    if (NOT CMAKE_CROSSCOMPILING)
+    if (NOT CMAKE_CROSSCOMPILING OR (CMAKE_CROSSCOMPILING AND CMAKE_CROSSCOMPILING_EMULATOR))
       # Build and run the test code if not cross-compiling
       TRY_RUN (${TEST}_RUN   ${TEST}_COMPILE
           ${CMAKE_BINARY_DIR}
@@ -838,65 +885,82 @@ endmacro ()
 # Check for complex number support
 #-----------------------------------------------------------------------------
 message (STATUS "Checking if complex number support is available")
-CHECK_INCLUDE_FILE (complex.h ${HDF_PREFIX}_HAVE_COMPLEX_H)
-if (${HDF_PREFIX}_HAVE_COMPLEX_H)
-  set (H5_HAVE_C99_COMPLEX_NUMBERS 1)
 
-  HDF_CHECK_TYPE_SIZE ("float _Complex" ${HDF_PREFIX}_SIZEOF_FLOAT_COMPLEX)
-  HDF_CHECK_TYPE_SIZE ("double _Complex" ${HDF_PREFIX}_SIZEOF_DOUBLE_COMPLEX)
-  HDF_CHECK_TYPE_SIZE ("long double _Complex" ${HDF_PREFIX}_SIZEOF_LONG_DOUBLE_COMPLEX)
+# Check if __STDC_NO_COMPLEX__ macro is defined, in which case complex number
+# support is not available
+HDF_FUNCTION_TEST (HAVE_STDC_NO_COMPLEX)
+if (NOT H5_HAVE_STDC_NO_COMPLEX)
+  CHECK_INCLUDE_FILE (complex.h ${HDF_PREFIX}_HAVE_COMPLEX_H)
+  if (${HDF_PREFIX}_HAVE_COMPLEX_H)
+    # Check for C99 complex number types first
+    HDF_CHECK_TYPE_SIZE ("float _Complex" ${HDF_PREFIX}_SIZEOF_C99_FLOAT_COMPLEX)
+    HDF_CHECK_TYPE_SIZE ("double _Complex" ${HDF_PREFIX}_SIZEOF_C99_DOUBLE_COMPLEX)
+    HDF_CHECK_TYPE_SIZE ("long double _Complex" ${HDF_PREFIX}_SIZEOF_C99_LONG_DOUBLE_COMPLEX)
 
-  if (MSVC AND NOT ${HDF_PREFIX}_SIZEOF_FLOAT_COMPLEX AND NOT ${HDF_PREFIX}_SIZEOF_DOUBLE_COMPLEX
-      AND NOT ${HDF_PREFIX}_SIZEOF_LONG_DOUBLE_COMPLEX)
-    # If using MSVC, the _Complex types (if available) are _Fcomplex, _Dcomplex and _Lcomplex.
-    # The standard types are checked for first in case MSVC uses them in the future or in case
-    # the compiler used is simulating MSVC and uses the standard types.
-    cmake_push_check_state()
-    list (APPEND CMAKE_EXTRA_INCLUDE_FILES complex.h)
-    HDF_CHECK_TYPE_SIZE ("_Fcomplex" ${HDF_PREFIX}_SIZEOF__FCOMPLEX)
-    HDF_CHECK_TYPE_SIZE ("_Dcomplex" ${HDF_PREFIX}_SIZEOF__DCOMPLEX)
-    HDF_CHECK_TYPE_SIZE ("_Lcomplex" ${HDF_PREFIX}_SIZEOF__LCOMPLEX)
-    cmake_pop_check_state()
-    if (${HDF_PREFIX}_SIZEOF__FCOMPLEX AND ${HDF_PREFIX}_SIZEOF__DCOMPLEX AND
-        ${HDF_PREFIX}_SIZEOF__FCOMPLEX)
-      set (${HDF_PREFIX}_SIZEOF_FLOAT_COMPLEX ${${HDF_PREFIX}_SIZEOF__FCOMPLEX}
-           CACHE INTERNAL "SizeOf for float _Complex" FORCE)
-      set (${HDF_PREFIX}_SIZEOF_DOUBLE_COMPLEX ${${HDF_PREFIX}_SIZEOF__DCOMPLEX}
-           CACHE INTERNAL "SizeOf for double _Complex" FORCE)
-      set (${HDF_PREFIX}_SIZEOF_LONG_DOUBLE_COMPLEX ${${HDF_PREFIX}_SIZEOF__LCOMPLEX}
-           CACHE INTERNAL "SizeOf for long double _Complex" FORCE)
-
-      unset (H5_HAVE_C99_COMPLEX_NUMBERS)
+    if (${HDF_PREFIX}_SIZEOF_C99_FLOAT_COMPLEX AND
+        ${HDF_PREFIX}_SIZEOF_C99_DOUBLE_COMPLEX AND
+        ${HDF_PREFIX}_SIZEOF_C99_LONG_DOUBLE_COMPLEX)
+      set (h5_have_c99_complex_numbers 1)
     endif ()
-  endif ()
 
-  if (${HDF_PREFIX}_SIZEOF_FLOAT_COMPLEX AND ${HDF_PREFIX}_SIZEOF_DOUBLE_COMPLEX AND
-      ${HDF_PREFIX}_SIZEOF_LONG_DOUBLE_COMPLEX)
-    # Check if __STDC_NO_COMPLEX__ macro is defined, in which case complex number
-    # support is not available
-    HDF_FUNCTION_TEST (HAVE_STDC_NO_COMPLEX)
+    # If using MSVC, the _Complex types (if available) are currently _Fcomplex,
+    # _Dcomplex and _Lcomplex. The standard types are checked for first in case
+    # MSVC uses them in the future or in case the compiler used is simulating
+    # MSVC and uses the standard types.
+    if (MSVC AND NOT h5_have_c99_complex_numbers)
+      cmake_push_check_state ()
+      list (APPEND CMAKE_EXTRA_INCLUDE_FILES complex.h)
+      HDF_CHECK_TYPE_SIZE ("_Fcomplex" ${HDF_PREFIX}_SIZEOF__FCOMPLEX)
+      HDF_CHECK_TYPE_SIZE ("_Dcomplex" ${HDF_PREFIX}_SIZEOF__DCOMPLEX)
+      HDF_CHECK_TYPE_SIZE ("_Lcomplex" ${HDF_PREFIX}_SIZEOF__LCOMPLEX)
+      cmake_pop_check_state ()
 
-    if (NOT H5_HAVE_STDC_NO_COMPLEX)
+      if (${HDF_PREFIX}_SIZEOF__FCOMPLEX AND
+          ${HDF_PREFIX}_SIZEOF__DCOMPLEX AND
+          ${HDF_PREFIX}_SIZEOF__LCOMPLEX)
+        set (h5_have_msvc_complex_numbers 1)
+      endif ()
+    endif ()
+
+    if (h5_have_c99_complex_numbers OR h5_have_msvc_complex_numbers)
       # Compile simple test program with complex numbers
       HDF_FUNCTION_TEST (HAVE_COMPLEX_NUMBERS)
 
       if (H5_HAVE_COMPLEX_NUMBERS)
-        if (H5_HAVE_C99_COMPLEX_NUMBERS)
+        # Set values for macros used by HDF5
+        if (h5_have_c99_complex_numbers)
+          # Note here that the public macro is all-caps
+          set (H5_HAVE_C99_COMPLEX_NUMBERS 1)
+
+          set (${HDF_PREFIX}_SIZEOF_FLOAT_COMPLEX ${${HDF_PREFIX}_SIZEOF_C99_FLOAT_COMPLEX}
+               CACHE INTERNAL "SizeOf for float _Complex" FORCE)
+          set (${HDF_PREFIX}_SIZEOF_DOUBLE_COMPLEX ${${HDF_PREFIX}_SIZEOF_C99_DOUBLE_COMPLEX}
+               CACHE INTERNAL "SizeOf for double _Complex" FORCE)
+          set (${HDF_PREFIX}_SIZEOF_LONG_DOUBLE_COMPLEX ${${HDF_PREFIX}_SIZEOF_C99_LONG_DOUBLE_COMPLEX}
+               CACHE INTERNAL "SizeOf for long double _Complex" FORCE)
+
           message (STATUS "Using C99 complex number types")
         else ()
+          set (${HDF_PREFIX}_SIZEOF_FLOAT_COMPLEX ${${HDF_PREFIX}_SIZEOF__FCOMPLEX}
+               CACHE INTERNAL "SizeOf for float _Complex" FORCE)
+          set (${HDF_PREFIX}_SIZEOF_DOUBLE_COMPLEX ${${HDF_PREFIX}_SIZEOF__DCOMPLEX}
+               CACHE INTERNAL "SizeOf for double _Complex" FORCE)
+          set (${HDF_PREFIX}_SIZEOF_LONG_DOUBLE_COMPLEX ${${HDF_PREFIX}_SIZEOF__LCOMPLEX}
+               CACHE INTERNAL "SizeOf for long double _Complex" FORCE)
+
           message (STATUS "Using MSVC complex number types")
         endif ()
       else ()
         message (STATUS "Complex number support has been disabled since a simple test program couldn't be compiled and linked")
       endif ()
     else ()
-      message (STATUS "Complex number support has been disabled since __STDC_NO_COMPLEX__ is defined")
+      message (STATUS "Complex number support has been disabled since the C types were not found")
     endif ()
   else ()
-    message (STATUS "Complex number support has been disabled since the C types were not found")
+    message (STATUS "Complex number support has been disabled since the complex.h header was not found")
   endif ()
 else ()
-  message (STATUS "Complex number support has been disabled since the complex.h header was not found")
+  message (STATUS "Complex number support has been disabled since __STDC_NO_COMPLEX__ is defined")
 endif ()
 
 #-----------------------------------------------------------------------------
@@ -957,8 +1021,13 @@ H5ConversionTests (${HDF_PREFIX}_DISABLE_SOME_LDOUBLE_CONV FALSE "Checking IF th
 # Option to enable or disable all non-standard features. Specific features can
 # be enabled or disabled with their respective options below
 option (HDF5_ENABLE_NONSTANDARD_FEATURES "Enable support for non-standard programming language features" ON)
+mark_as_advanced (HDF5_ENABLE_NONSTANDARD_FEATURES)
 # Options for enabling or disabling individual features
-option (HDF5_ENABLE_NONSTANDARD_FEATURE_FLOAT16 "Enable support for _Float16 C datatype" ${HDF5_ENABLE_NONSTANDARD_FEATURES})
+option (HDF5_ENABLE_NONSTANDARD_FEATURE_FLOAT16 "Enable support for _Float16 C datatype" ON)
+mark_as_advanced (HDF5_ENABLE_NONSTANDARD_FEATURE_FLOAT16)
+if (NOT HDF5_ENABLE_NONSTANDARD_FEATURES)
+  set (HDF5_ENABLE_NONSTANDARD_FEATURE_FLOAT16 OFF CACHE BOOL "Enable support for _Float16 C datatype" FORCE)
+endif ()
 
 #-----------------------------------------------------------------------------
 # Check if _Float16 type is available
@@ -1071,3 +1140,14 @@ endif ()
 if (NOT ${HDF_PREFIX}_HAVE__FLOAT16)
   set (HDF5_ENABLE_NONSTANDARD_FEATURE_FLOAT16 OFF CACHE BOOL "Enable support for _Float16 C datatype" FORCE)
 endif ()
+
+#-----------------------------------------------------------------------------
+# Check if the platform has pkg-config support
+find_package (PkgConfig)
+if (PKG_CONFIG_FOUND)
+  set (${HDF_PREFIX}_HAVE_PKGCONFIG 1)
+else ()
+  set (${HDF_PREFIX}_HAVE_PKGCONFIG 0)
+endif ()
+
+#-----------------------------------------------------------------------------

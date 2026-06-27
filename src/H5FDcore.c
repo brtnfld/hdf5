@@ -387,16 +387,17 @@ H5FD__core_write_to_bstore(H5FD_core_t *file, haddr_t addr, size_t size)
         } while (-1 == bytes_wrote && EINTR == errno);
 
         if (-1 == bytes_wrote) { /* error */
-            int    myerrno = errno;
-            time_t mytime  = time(NULL);
+            int  myerrno = errno;
+            char time_str[32];
 
+            H5_get_localtime_str(time_str, sizeof(time_str));
             offset = HDlseek(file->fd, 0, SEEK_CUR);
 
             HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL,
                         "write to backing store failed: time = %s, filename = '%s', file descriptor = %d, "
                         "errno = %d, error message = '%s', ptr = %p, total write size = %llu, bytes this "
                         "sub-write = %llu, bytes actually written = %llu, offset = %llu",
-                        ctime(&mytime), file->name, file->fd, myerrno, strerror(myerrno), (void *)ptr,
+                        time_str, file->name, file->fd, myerrno, strerror(myerrno), (void *)ptr,
                         (unsigned long long)size, (unsigned long long)bytes_in,
                         (unsigned long long)bytes_wrote, (unsigned long long)offset);
         } /* end if */
@@ -494,7 +495,7 @@ H5FD__core_unregister(void)
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Pset_core_write_tracking(hid_t plist_id, hbool_t is_enabled, size_t page_size)
+H5Pset_core_write_tracking(hid_t plist_id, bool is_enabled, size_t page_size)
 {
     H5P_genplist_t         *plist;               /* Property list pointer */
     H5FD_core_fapl_t        fa;                  /* Core VFD info */
@@ -541,7 +542,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Pget_core_write_tracking(hid_t plist_id, hbool_t *is_enabled /*out*/, size_t *page_size /*out*/)
+H5Pget_core_write_tracking(hid_t plist_id, bool *is_enabled /*out*/, size_t *page_size /*out*/)
 {
     H5P_genplist_t         *plist;               /* Property list pointer */
     const H5FD_core_fapl_t *fa;                  /* Core VFD info */
@@ -579,7 +580,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Pset_fapl_core(hid_t fapl_id, size_t increment, hbool_t backing_store)
+H5Pset_fapl_core(hid_t fapl_id, size_t increment, bool backing_store)
 {
     H5P_genplist_t  *plist;               /* Property list pointer */
     H5FD_core_fapl_t fa;                  /* Core VFD info */
@@ -616,7 +617,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Pget_fapl_core(hid_t fapl_id, size_t *increment /*out*/, hbool_t *backing_store /*out*/)
+H5Pget_fapl_core(hid_t fapl_id, size_t *increment /*out*/, bool *backing_store /*out*/)
 {
     H5P_genplist_t         *plist;               /* Property list pointer */
     const H5FD_core_fapl_t *fa;                  /* Core VFD info */
@@ -893,9 +894,10 @@ H5FD__core_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr
                     } while (-1 == bytes_read && EINTR == errno);
 
                     if (-1 == bytes_read) { /* error */
-                        int    myerrno = errno;
-                        time_t mytime  = time(NULL);
+                        int  myerrno = errno;
+                        char time_str[32];
 
+                        H5_get_localtime_str(time_str, sizeof(time_str));
                         offset = HDlseek(file->fd, 0, SEEK_CUR);
 
                         HGOTO_ERROR(
@@ -903,8 +905,8 @@ H5FD__core_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr
                             "file read failed: time = %s, filename = '%s', file descriptor = %d, errno = %d, "
                             "error message = '%s', file->mem = %p, total read size = %llu, bytes this "
                             "sub-read = %llu, bytes actually read = %llu, offset = %llu",
-                            ctime(&mytime), file->name, file->fd, myerrno, strerror(myerrno),
-                            (void *)file->mem, (unsigned long long)size, (unsigned long long)bytes_in,
+                            time_str, file->name, file->fd, myerrno, strerror(myerrno), (void *)file->mem,
+                            (unsigned long long)size, (unsigned long long)bytes_in,
                             (unsigned long long)bytes_read, (unsigned long long)offset);
                     } /* end if */
 
@@ -1053,21 +1055,10 @@ H5FD__core_cmp(const H5FD_t *_f1, const H5FD_t *_f2)
             HGOTO_DONE(1);
 
 #else
-#ifdef H5_DEV_T_IS_SCALAR
         if (f1->device < f2->device)
             HGOTO_DONE(-1);
         if (f1->device > f2->device)
             HGOTO_DONE(1);
-#else  /* H5_DEV_T_IS_SCALAR */
-        /* If dev_t isn't a scalar value on this system, just use memcmp to
-         * determine if the values are the same or not.  The actual return value
-         * shouldn't really matter...
-         */
-        if (memcmp(&(f1->device), &(f2->device), sizeof(dev_t)) < 0)
-            HGOTO_DONE(-1);
-        if (memcmp(&(f1->device), &(f2->device), sizeof(dev_t)) > 0)
-            HGOTO_DONE(1);
-#endif /* H5_DEV_T_IS_SCALAR */
 
         if (f1->inode < f2->inode)
             HGOTO_DONE(-1);

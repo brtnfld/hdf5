@@ -1889,13 +1889,18 @@ H5LTtext_to_dtype(const char *text, H5LT_lang_t lang_type)
 
     input_len = strlen(text);
     myinput   = strdup(text);
+    if (!myinput) {
+        H5Epush_ret(__func__, H5E_ERR_CLS, H5E_RESOURCE, H5E_NOSPACE, "memory allocation failed", -1);
+    }
 
     if ((type_id = H5LTyyparse()) < 0) {
         free(myinput);
+        myinput = NULL;
         goto out;
     }
 
     free(myinput);
+    myinput   = NULL;
     input_len = 0;
 
     return type_id;
@@ -1909,7 +1914,27 @@ out:
  *
  * Purpose:     Expand the buffer and append a string to it.
  *
- * Return:      void
+ * Parameters:
+ *   _no_user_buf: Operating mode flag
+ *                 - true:  Library-managed buffer (can reallocate)
+ *                 - false: User-provided buffer (fixed size, no realloc)
+ *   len:         Pointer to current buffer size (updated if reallocated)
+ *   buf:         Buffer to append to. If NULL, returns NULL immediately.
+ *   str_to_add:  String to append. If NULL:
+ *                  - Library-managed mode: reallocates to ensure extra space, no append
+ *                  - User-provided mode: no-op, returns buf unchanged (space cannot be ensured)
+ *
+ * Return:      Updated buffer pointer on success, NULL on failure
+ *
+ * Note:        Failure is signaled solely through the NULL return value; buf is
+ *              a value parameter so the caller's variable is never written by
+ *              this function.  In library-managed mode the original buf is freed
+ *              on failure, so callers must not access or free it after a NULL
+ *              return.  The safe idiom is direct assignment:
+ *                  buf = realloc_and_append(...);
+ *                  if (!buf) goto out;   - buf is now NULL; original already freed
+ *              Use a temporary only when additional resources must be released
+ *              before the NULL check (e.g. freeing a scratch buffer).
  *
  *-------------------------------------------------------------------------
  */
@@ -1918,11 +1943,12 @@ realloc_and_append(bool _no_user_buf, size_t *len, char *buf, const char *str_to
 {
     size_t size_str_to_add, size_str;
 
+    if (!buf)
+        goto out;
+
+    /* Mode 1: Library-managed buffer - can reallocate as needed */
     if (_no_user_buf) {
         char *tmp_realloc;
-
-        if (!buf)
-            goto out;
 
         /* If the buffer isn't big enough, reallocate it.  Otherwise, go to do strcat. */
         if (str_to_add && ((ssize_t)(*len - (strlen(buf) + strlen(str_to_add) + 1)) < LIMIT)) {
@@ -1938,9 +1964,12 @@ realloc_and_append(bool _no_user_buf, size_t *len, char *buf, const char *str_to
             buf = NULL;
             goto out;
         }
-        else
-            buf = tmp_realloc;
+
+        /* The function cannot fail after this point */
+        buf = tmp_realloc;
     }
+    /* Mode 2: User-provided buffer - fixed size, no reallocation
+     * (else case is implicit - no action needed) */
 
     if (str_to_add) {
         /* find the size of the buffer to add */
@@ -2172,6 +2201,58 @@ out:
 }
 
 /*-------------------------------------------------------------------------
+ * Function:    append_dtype_super_text
+ *
+ * Purpose:     Helper function to get super type text and append it to dt_str.
+ *              This encapsulates the common pattern of: allocate buffer,
+ *              convert dtype to text, append to string, free buffer.
+ *
+ * Return:      Success: updated dt_str pointer, Failure: NULL
+ *
+ *-------------------------------------------------------------------------
+ */
+static char *
+append_dtype_super_text(hid_t super, char *dt_str, H5LT_lang_t lang, size_t *slen, bool no_user_buf)
+{
+    size_t super_len;
+    char  *stmp = NULL;
+
+    /* Get required buffer size for super type text */
+    if (H5LTdtype_to_text(super, NULL, lang, &super_len) < 0)
+        return NULL;
+    /* Treat zero-length result as failure rather than calling calloc(0,...) */
+    if (super_len == 0)
+        return NULL;
+
+    /* Allocate buffer for super type text */
+    stmp = (char *)calloc(super_len, sizeof(char));
+    if (!stmp) {
+        H5Epush_ret(__func__, H5E_ERR_CLS, H5E_RESOURCE, H5E_NOSPACE, "memory allocation failed", NULL);
+    }
+
+    /* Convert super type to text */
+    if (H5LTdtype_to_text(super, stmp, lang, &super_len) < 0) {
+        free(stmp);
+        return NULL;
+    }
+
+    /* Append super type text to dt_str.  Use a temporary pointer so that
+     * dt_str is not overwritten before we confirm success.  Note:
+     * realloc_and_append frees dt_str itself on failure in library-managed
+     * mode, so on the failure path dt_str must not be used. */
+    {
+        char *tmp = realloc_and_append(no_user_buf, slen, dt_str, stmp);
+        free(stmp);
+        stmp = NULL;
+        if (!tmp)
+            return NULL;
+        dt_str = tmp;
+    }
+
+    return dt_str;
+}
+
+/*-------------------------------------------------------------------------
  * Function:    H5LT_dtype_to_text
  *
  * Purpose:     Private function to convert HDF5 data type to DDL description.
@@ -2304,6 +2385,27 @@ H5LT_dtype_to_text(hid_t dtype, char *dt_str, H5LT_lang_t lang, size_t *slen, bo
             }
             else if (H5Tequal(dtype, H5T_IEEE_F64LE)) {
                 snprintf(dt_str, *slen, "H5T_IEEE_F64LE");
+            }
+            else if (H5Tequal(dtype, H5T_FLOAT_BFLOAT16BE)) {
+                snprintf(dt_str, *slen, "H5T_FLOAT_BFLOAT16BE");
+            }
+            else if (H5Tequal(dtype, H5T_FLOAT_BFLOAT16LE)) {
+                snprintf(dt_str, *slen, "H5T_FLOAT_BFLOAT16LE");
+            }
+            else if (H5Tequal(dtype, H5T_FLOAT_F8E4M3)) {
+                snprintf(dt_str, *slen, "H5T_FLOAT_F8E4M3");
+            }
+            else if (H5Tequal(dtype, H5T_FLOAT_F8E5M2)) {
+                snprintf(dt_str, *slen, "H5T_FLOAT_F8E5M2");
+            }
+            else if (H5Tequal(dtype, H5T_FLOAT_F6E2M3)) {
+                snprintf(dt_str, *slen, "H5T_FLOAT_F6E2M3");
+            }
+            else if (H5Tequal(dtype, H5T_FLOAT_F6E3M2)) {
+                snprintf(dt_str, *slen, "H5T_FLOAT_F6E3M2");
+            }
+            else if (H5Tequal(dtype, H5T_FLOAT_F4E2M1)) {
+                snprintf(dt_str, *slen, "H5T_FLOAT_F4E2M1");
             }
 #ifdef H5_HAVE__FLOAT16
             else if (H5Tequal(dtype, H5T_NATIVE_FLOAT16)) {
@@ -2515,8 +2617,7 @@ next:
             tag = H5Tget_tag(dtype);
             if (tag) {
                 snprintf(tmp_str, TMP_LEN, "OPQ_TAG \"%s\";\n", tag);
-                if (tag)
-                    H5free_memory(tag);
+                H5free_memory(tag);
                 tag = NULL;
             }
             else
@@ -2535,9 +2636,7 @@ next:
             break;
         }
         case H5T_ENUM: {
-            hid_t  super;
-            size_t super_len;
-            char  *stmp = NULL;
+            hid_t super;
 
             /* Print lead-in */
             snprintf(dt_str, *slen, "H5T_ENUM {\n");
@@ -2545,28 +2644,22 @@ next:
             if (!(dt_str = indentation(indent + COL, dt_str, no_user_buf, slen)))
                 goto out;
 
+            /* Get super type and append its text representation */
             if ((super = H5Tget_super(dtype)) < 0)
                 goto out;
-            if (H5LTdtype_to_text(super, NULL, lang, &super_len) < 0)
-                goto out;
-            stmp = (char *)calloc(super_len, sizeof(char));
-            if (H5LTdtype_to_text(super, stmp, lang, &super_len) < 0) {
-                free(stmp);
-                goto out;
+            {
+                char *tmp = append_dtype_super_text(super, dt_str, lang, slen, no_user_buf);
+                H5Tclose(super);
+                if (!tmp) {
+                    dt_str = NULL; /* freed by callee's realloc_and_append on failure */
+                    goto out;
+                }
+                dt_str = tmp;
             }
-            if (!(dt_str = realloc_and_append(no_user_buf, slen, dt_str, stmp))) {
-                free(stmp);
-                goto out;
-            }
-
-            if (stmp)
-                free(stmp);
-            stmp = NULL;
 
             snprintf(tmp_str, TMP_LEN, ";\n");
             if (!(dt_str = realloc_and_append(no_user_buf, slen, dt_str, tmp_str)))
                 goto out;
-            H5Tclose(super);
 
             if (!(dt_str = print_enum(dtype, dt_str, slen, no_user_buf, indent)))
                 goto out;
@@ -2582,9 +2675,7 @@ next:
             break;
         }
         case H5T_VLEN: {
-            hid_t  super;
-            size_t super_len;
-            char  *stmp = NULL;
+            hid_t super;
 
             /* Print lead-in */
             snprintf(dt_str, *slen, "H5T_VLEN {\n");
@@ -2592,27 +2683,22 @@ next:
             if (!(dt_str = indentation(indent + COL, dt_str, no_user_buf, slen)))
                 goto out;
 
+            /* Get super type and append its text representation */
             if ((super = H5Tget_super(dtype)) < 0)
                 goto out;
-            if (H5LTdtype_to_text(super, NULL, lang, &super_len) < 0)
-                goto out;
-            stmp = (char *)calloc(super_len, sizeof(char));
-            if (H5LTdtype_to_text(super, stmp, lang, &super_len) < 0) {
-                free(stmp);
-                goto out;
-            }
-            if (!(dt_str = realloc_and_append(no_user_buf, slen, dt_str, stmp))) {
-                free(stmp);
-                goto out;
+            {
+                char *tmp = append_dtype_super_text(super, dt_str, lang, slen, no_user_buf);
+                H5Tclose(super);
+                if (!tmp) {
+                    dt_str = NULL; /* freed by callee's realloc_and_append on failure */
+                    goto out;
+                }
+                dt_str = tmp;
             }
 
-            if (stmp)
-                free(stmp);
-            stmp = NULL;
             snprintf(tmp_str, TMP_LEN, "\n");
             if (!(dt_str = realloc_and_append(no_user_buf, slen, dt_str, tmp_str)))
                 goto out;
-            H5Tclose(super);
 
             /* Print closing */
             indent -= COL;
@@ -2626,8 +2712,6 @@ next:
         }
         case H5T_ARRAY: {
             hid_t   super;
-            size_t  super_len;
-            char   *stmp = NULL;
             hsize_t dims[H5S_MAX_RANK];
             int     ndims;
 
@@ -2653,26 +2737,22 @@ next:
             if (!(dt_str = realloc_and_append(no_user_buf, slen, dt_str, tmp_str)))
                 goto out;
 
+            /* Get super type and append its text representation */
             if ((super = H5Tget_super(dtype)) < 0)
                 goto out;
-            if (H5LTdtype_to_text(super, NULL, lang, &super_len) < 0)
-                goto out;
-            stmp = (char *)calloc(super_len, sizeof(char));
-            if (H5LTdtype_to_text(super, stmp, lang, &super_len) < 0) {
-                free(stmp);
-                goto out;
+            {
+                char *tmp = append_dtype_super_text(super, dt_str, lang, slen, no_user_buf);
+                H5Tclose(super);
+                if (!tmp) {
+                    dt_str = NULL; /* freed by callee's realloc_and_append on failure */
+                    goto out;
+                }
+                dt_str = tmp;
             }
-            if (!(dt_str = realloc_and_append(no_user_buf, slen, dt_str, stmp))) {
-                free(stmp);
-                goto out;
-            }
-            if (stmp)
-                free(stmp);
-            stmp = NULL;
+
             snprintf(tmp_str, TMP_LEN, "\n");
             if (!(dt_str = realloc_and_append(no_user_buf, slen, dt_str, tmp_str)))
                 goto out;
-            H5Tclose(super);
 
             /* Print closing */
             indent -= COL;
@@ -2754,9 +2834,7 @@ next:
             break;
         }
         case H5T_COMPLEX: {
-            hid_t  super;
-            size_t super_len;
-            char  *stmp = NULL;
+            hid_t super;
 
             /* Print lead-in */
             snprintf(dt_str, *slen, "H5T_COMPLEX {\n");
@@ -2764,27 +2842,22 @@ next:
             if (!(dt_str = indentation(indent + COL, dt_str, no_user_buf, slen)))
                 goto out;
 
+            /* Get super type and append its text representation */
             if ((super = H5Tget_super(dtype)) < 0)
                 goto out;
-            if (H5LTdtype_to_text(super, NULL, lang, &super_len) < 0)
-                goto out;
-            stmp = (char *)calloc(super_len, sizeof(char));
-            if (H5LTdtype_to_text(super, stmp, lang, &super_len) < 0) {
-                free(stmp);
-                goto out;
-            }
-            if (!(dt_str = realloc_and_append(no_user_buf, slen, dt_str, stmp))) {
-                free(stmp);
-                goto out;
+            {
+                char *tmp = append_dtype_super_text(super, dt_str, lang, slen, no_user_buf);
+                H5Tclose(super);
+                if (!tmp) {
+                    dt_str = NULL; /* freed by callee's realloc_and_append on failure */
+                    goto out;
+                }
+                dt_str = tmp;
             }
 
-            if (stmp)
-                free(stmp);
-            stmp = NULL;
             snprintf(tmp_str, TMP_LEN, "\n");
             if (!(dt_str = realloc_and_append(no_user_buf, slen, dt_str, tmp_str)))
                 goto out;
-            H5Tclose(super);
 
             /* Print closing */
             indent -= COL;
@@ -3327,7 +3400,7 @@ out:
 }
 
 htri_t
-H5LTpath_valid(hid_t loc_id, const char *path, hbool_t check_object_valid)
+H5LTpath_valid(hid_t loc_id, const char *path, bool check_object_valid)
 {
     char      *tmp_path = NULL; /* Temporary copy of the path */
     char      *curr_name;       /* Pointer to current component of path name */

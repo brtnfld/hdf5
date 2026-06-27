@@ -371,7 +371,7 @@
  * Only needed where ssize_t isn't a thing (e.g., Windows)
  */
 #ifndef SSIZE_MAX
-#define SSIZE_MAX ((ssize_t)(((size_t)1 << (8 * sizeof(ssize_t) - 1)) - 1))
+#define SSIZE_MAX SSIZE_T_MAX
 #endif
 
 /*
@@ -418,13 +418,16 @@
 #define H5_POSIX_MAX_IO_BYTES SSIZE_MAX
 #endif
 
-/* POSIX I/O mode used as the third parameter to open/_open
+/* POSIX I/O modes used as the third parameter to open/_open
  * when creating a new file (O_CREAT is set).
  */
 #if defined(H5_HAVE_WIN32_API)
-#define H5_POSIX_CREATE_MODE_RW (_S_IREAD | _S_IWRITE)
+#define H5_POSIX_CREATE_MODE_RW      (_S_IREAD | _S_IWRITE)
+#define H5_POSIX_CREATE_MODE_URWGROR (_S_IREAD | _S_IWRITE)
 #else
-#define H5_POSIX_CREATE_MODE_RW 0666
+#define H5_POSIX_CREATE_MODE_RW      0666
+/* User R/W, Group R, Other R */
+#define H5_POSIX_CREATE_MODE_URWGROR (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
 #endif
 
 /* Represents an empty asynchronous request handle.
@@ -649,6 +652,16 @@ H5_DLL H5_ATTR_CONST int Nflock(int fd, int operation);
 
 #endif /* HDflock */
 
+#if defined(H5_HAVE_WIN32_API) || defined(H5_HAVE_DARWIN) || (defined(__FreeBSD__) && __FreeBSD__ < 14)
+H5_DLL herr_t HDqsort_context(void *base, size_t nel, size_t size,
+                              int (*compar)(const void *, const void *, void *), void *arg);
+#endif
+
+#ifndef H5_HAVE_QSORT_REENTRANT
+H5_DLL herr_t HDqsort_fallback(void *base, size_t nel, size_t size,
+                               int (*compar)(const void *, const void *, void *), void *arg);
+#endif
+
 #ifndef HDfseek
 #define HDfseek(F, O, W) fseeko(F, O, W)
 #endif
@@ -687,6 +700,12 @@ H5_DLL H5_ATTR_CONST int Nflock(int fd, int operation);
 #endif
 #ifndef HDlstat
 #define HDlstat(S, B) lstat(S, B)
+#endif
+#ifndef HDgmtime_r
+#define HDgmtime_r(T, R) gmtime_r(T, R)
+#endif
+#ifndef HDlocaltime_r
+#define HDlocaltime_r(T, R) localtime_r(T, R)
 #endif
 #ifndef HDmkdir
 #define HDmkdir(S, M) mkdir(S, M)
@@ -764,7 +783,20 @@ H5_DLL H5_ATTR_CONST int Nflock(int fd, int operation);
 #ifndef HDunsetenv
 #define HDunsetenv(S) unsetenv(S)
 #endif
-
+#ifndef HDqsort_r
+#ifdef H5_HAVE_QSORT_REENTRANT
+#if defined(H5_HAVE_DARWIN) || (defined(__FreeBSD__) && __FreeBSD__ < 14)
+/* Darwin and FreeBSD < 14 use BSD-style qsort_r with different signature/argument order */
+#define HDqsort_r(B, N, S, C, A) HDqsort_context(B, N, S, C, A)
+#else
+/* Wrap native GNU qsort_r to vacuously return success */
+#define HDqsort_r(B, N, S, C, A) (qsort_r(B, N, S, C, A), SUCCEED)
+#endif
+#else
+/* No native qsort_r/qsort_s available - use fallback implementation */
+#define HDqsort_r(B, N, S, C, A) HDqsort_fallback(B, N, S, C, A)
+#endif
+#endif
 #ifndef HDvasprintf
 #ifdef H5_HAVE_VASPRINTF
 #define HDvasprintf(RET, FMT, A) vasprintf(RET, FMT, A)
@@ -900,12 +932,13 @@ H5_DLL int HDvasprintf(char **bufp, const char *fmt, va_list _ap);
 #if defined(H5_HAVE_WINDOW_PATH)
 
 /* directory delimiter for Windows: slash and backslash are acceptable on Windows */
-#define H5_DIR_SLASH_SEPC        '/'
-#define H5_DIR_SEPC              '\\'
-#define H5_DIR_SEPS              "\\"
-#define H5_CHECK_DELIMITER(SS)   ((SS == H5_DIR_SEPC) || (SS == H5_DIR_SLASH_SEPC))
-#define H5_CHECK_ABSOLUTE(NAME)  ((isalpha(NAME[0])) && (NAME[1] == ':') && (H5_CHECK_DELIMITER(NAME[2])))
-#define H5_CHECK_ABS_DRIVE(NAME) ((isalpha(NAME[0])) && (NAME[1] == ':'))
+#define H5_DIR_SLASH_SEPC      '/'
+#define H5_DIR_SEPC            '\\'
+#define H5_DIR_SEPS            "\\"
+#define H5_CHECK_DELIMITER(SS) ((SS == H5_DIR_SEPC) || (SS == H5_DIR_SLASH_SEPC))
+#define H5_CHECK_ABSOLUTE(NAME)                                                                              \
+    ((isalpha((unsigned char)NAME[0])) && (NAME[1] == ':') && (H5_CHECK_DELIMITER(NAME[2])))
+#define H5_CHECK_ABS_DRIVE(NAME) ((isalpha((unsigned char)NAME[0])) && (NAME[1] == ':'))
 #define H5_CHECK_ABS_PATH(NAME)  (H5_CHECK_DELIMITER(NAME[0]))
 
 #define H5_GET_LAST_DELIMITER(NAME, ptr)                                                                     \
@@ -960,6 +993,7 @@ typedef enum {
     H5_PKG_MM, /* Core memory management   */
     H5_PKG_O,  /* Object headers           */
     H5_PKG_P,  /* Property lists           */
+    H5_PKG_PL, /* Plugins                  */
     H5_PKG_S,  /* Dataspaces               */
     H5_PKG_T,  /* Datatypes                */
     H5_PKG_V,  /* Vector functions         */
@@ -1796,6 +1830,7 @@ H5_DLL uint32_t H5_hash_string(const char *str);
 H5_DLL time_t H5_make_time(struct tm *tm);
 H5_DLL void   H5_nanosleep(uint64_t nanosec);
 H5_DLL double H5_get_time(void);
+H5_DLL void   H5_get_localtime_str(char *buf, size_t buf_size);
 
 /* Functions for building paths, etc. */
 H5_DLL herr_t H5_build_extpath(const char *name, char **extpath /*out*/);

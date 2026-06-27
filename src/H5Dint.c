@@ -84,7 +84,7 @@ static herr_t H5D__build_file_prefix(const H5D_t *dset, H5F_prefix_open_t prefix
 static herr_t H5D__open_oid(H5D_t *dataset, hid_t dapl_id);
 static herr_t H5D__init_storage(H5D_t *dset, bool full_overwrite, hsize_t old_dim[]);
 static herr_t H5D__append_flush_setup(H5D_t *dset, hid_t dapl_id);
-static herr_t H5D__close_cb(H5VL_object_t *dset_vol_obj, void **request);
+static herr_t H5D__close_cb(void *dset_vol_obj, void **request);
 static herr_t H5D__use_minimized_dset_headers(H5F_t *file, bool *minimize);
 static herr_t H5D__prepare_minimized_oh(H5F_t *file, H5D_t *dset, H5O_loc_t *oloc);
 static size_t H5D__calculate_minimum_header_size(H5F_t *file, H5D_t *dset, H5O_t *ohdr);
@@ -133,10 +133,10 @@ H5_WARN_LARGE_STACK_OBJECTS_ON
 
 /* Dataset ID class */
 static const H5I_class_t H5I_DATASET_CLS[1] = {{
-    H5I_DATASET,              /* ID class value */
-    0,                        /* Class flags */
-    0,                        /* # of reserved IDs for class */
-    (H5I_free_t)H5D__close_cb /* Callback routine for closing objects of this class */
+    H5I_DATASET,  /* ID class value */
+    0,            /* Class flags */
+    0,            /* # of reserved IDs for class */
+    H5D__close_cb /* Callback routine for closing objects of this class */
 }};
 
 /* Flag indicating "top" of interface has been initialized */
@@ -201,6 +201,8 @@ H5D__init_package(void)
     H5D_def_dset.type_id = H5I_INVALID_HID;
     H5D_def_dset.dapl_id = H5I_INVALID_HID;
     H5D_def_dset.dcpl_id = H5I_INVALID_HID;
+    /* By default, do not copy layout immediately */
+    H5D_def_dset.layout_copied_to_dcpl = false;
 
     /* Get the default dataset creation property list values and initialize the
      * default dataset with them.
@@ -330,22 +332,23 @@ H5D_term_package(void)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5D__close_cb(H5VL_object_t *dset_vol_obj, void **request)
+H5D__close_cb(void *dset_vol_obj, void **request)
 {
-    herr_t ret_value = SUCCEED; /* Return value */
+    H5VL_object_t *dset_vol_obj_p = (H5VL_object_t *)dset_vol_obj;
+    herr_t         ret_value      = SUCCEED; /* Return value */
 
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    assert(dset_vol_obj);
+    assert(dset_vol_obj_p);
 
     /* Close the dataset */
-    if (H5VL_dataset_close(dset_vol_obj, H5P_DATASET_XFER_DEFAULT, request) < 0)
+    if (H5VL_dataset_close(dset_vol_obj_p, H5P_DATASET_XFER_DEFAULT, request) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to close dataset");
 
 done:
     /* Free the VOL object */
-    if (H5VL_free_object(dset_vol_obj) < 0)
+    if (H5VL_free_object(dset_vol_obj_p) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTDEC, FAIL, "unable to free VOL object");
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -485,6 +488,8 @@ H5D__new(hid_t dcpl_id, hid_t dapl_id, bool creating, bool vl_type)
         if (H5I_inc_ref(dcpl_id, false) < 0)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINC, NULL, "can't increment default DCPL ID");
         new_dset->dcpl_id = dcpl_id;
+
+        new_dset->layout_copied_to_dcpl = true;
     } /* end if */
     else {
         /* Get the property list */
@@ -492,6 +497,10 @@ H5D__new(hid_t dcpl_id, hid_t dapl_id, bool creating, bool vl_type)
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a property list");
 
         new_dset->dcpl_id = H5P_copy_plist(plist, false);
+
+        /* If a specific DCPL was provided, then the dset's internal DCPL now has an accurate layout */
+        if (creating)
+            new_dset->layout_copied_to_dcpl = true;
     } /* end else */
 
     if (!vl_type && creating && dapl_id == H5P_DATASET_ACCESS_DEFAULT) {
@@ -1257,10 +1266,13 @@ H5D__create(H5F_t *file, hid_t type_id, const H5S_t *space, hid_t dcpl_id, hid_t
         H5O_efl_t    *efl;                    /* Dataset's external file list info */
         htri_t        ignore_filters = false; /* Ignore optional filters or not */
 
-        if ((ignore_filters = H5Z_ignore_filters(new_dset->shared->dcpl_id, dt, space)) < 0)
+        if ((ignore_filters = H5Z_ignore_filters(new_dset->shared->dcpl_id, space)) < 0)
             HGOTO_ERROR(H5E_ARGS, H5E_CANTINIT, NULL, "H5Z_has_optional_filter() failed");
 
         if (false == ignore_filters) {
+            /* Layout only exists on DCPL at this point in dset creation */
+            assert(new_dset->shared->layout_copied_to_dcpl);
+
             /* Check if the filters in the DCPL can be applied to this dataset */
             if (H5Z_can_apply(new_dset->shared->dcpl_id, new_dset->shared->type_id) < 0)
                 HGOTO_ERROR(H5E_ARGS, H5E_CANTINIT, NULL, "I/O filters can't operate on this dataset");
@@ -1315,16 +1327,18 @@ H5D__create(H5F_t *file, hid_t type_id, const H5S_t *space, hid_t dcpl_id, hid_t
     if (H5O_fill_set_version(file, &new_dset->shared->dcpl_cache.fill) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, NULL, "can't set latest version of fill value");
 
-    /* Set the latest version for the layout message */
-    if (H5D__layout_set_version(file, &new_dset->shared->layout) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, NULL, "can't set latest version of layout");
+    /* Set the dataset's I/O operations */
+    if (H5D__layout_set_io_ops(new_dset) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, NULL, "unable to initialize I/O operations");
 
-    if (new_dset->shared->layout.version >= H5O_LAYOUT_VERSION_4) {
-        /* Use latest indexing type for layout message version >= 4 */
-        if (H5D__layout_set_latest_indexing(&new_dset->shared->layout, new_dset->shared->space,
-                                            &new_dset->shared->dcpl_cache) < 0)
-            HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, NULL, "can't set latest indexing");
-    } /* end if */
+    /* Create the layout information for the new dataset */
+    if (new_dset->shared->layout.ops->construct &&
+        (new_dset->shared->layout.ops->construct)(file, new_dset) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, NULL, "unable to construct layout information");
+
+    /* Check if the layout version is above the high bound for the file */
+    if (new_dset->shared->layout.version > H5O_layout_ver_bounds[H5F_HIGH_BOUND(file)])
+        HGOTO_ERROR(H5E_DATASET, H5E_BADRANGE, NULL, "layout version out of bounds");
 
     /* Check if the file driver would like to force early space allocation */
     if (H5F_HAS_FEATURE(file, H5FD_FEAT_ALLOCATE_EARLY))
@@ -1338,15 +1352,6 @@ H5D__create(H5F_t *file, hid_t type_id, const H5S_t *space, hid_t dcpl_id, hid_t
      */
     if (H5F_HAS_FEATURE(file, H5FD_FEAT_HAS_MPI) && (new_dset->shared->dcpl_cache.pline.nused == 0))
         new_dset->shared->dcpl_cache.fill.alloc_time = H5D_ALLOC_TIME_EARLY;
-
-    /* Set the dataset's I/O operations */
-    if (H5D__layout_set_io_ops(new_dset) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, NULL, "unable to initialize I/O operations");
-
-    /* Create the layout information for the new dataset */
-    if (new_dset->shared->layout.ops->construct &&
-        (new_dset->shared->layout.ops->construct)(file, new_dset) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, NULL, "unable to construct layout information");
 
     /* Update the dataset's object header info. */
     if (H5D__update_oh_info(file, new_dset, new_dset->shared->dapl_id) < 0)
@@ -1958,13 +1963,15 @@ H5D_close(H5D_t *dataset)
          */
         dataset->shared->closing = true;
 
+        /* Free the data sieve buffer, if it's been allocated */
+        if (dataset->shared->cache.sieve.sieve_buf)
+            dataset->shared->cache.sieve.sieve_buf =
+                (unsigned char *)H5FL_BLK_FREE(sieve_buf, dataset->shared->cache.sieve.sieve_buf);
+
         /* Free cached information for each kind of dataset */
         switch (dataset->shared->layout.type) {
             case H5D_CONTIGUOUS:
-                /* Free the data sieve buffer, if it's been allocated */
-                if (dataset->shared->cache.contig.sieve_buf)
-                    dataset->shared->cache.contig.sieve_buf =
-                        (unsigned char *)H5FL_BLK_FREE(sieve_buf, dataset->shared->cache.contig.sieve_buf);
+                /* Nothing special to do */
                 break;
 
             case H5D_CHUNKED:
@@ -1987,6 +1994,7 @@ H5D_close(H5D_t *dataset)
                         H5FL_FREE(H5D_piece_info_t, dataset->shared->cache.chunk.single_piece_info);
                     dataset->shared->cache.chunk.single_piece_info = NULL;
                 } /* end if */
+
                 break;
 
             case H5D_COMPACT:
@@ -2152,15 +2160,13 @@ H5D_mult_refresh_close(hid_t dset_id)
     assert(dataset->shared->fo_count > 0);
 
     if (dataset->shared->fo_count > 1) {
+        /* Free the data sieve buffer, if it's been allocated */
+        if (dataset->shared->cache.sieve.sieve_buf)
+            dataset->shared->cache.sieve.sieve_buf =
+                (unsigned char *)H5FL_BLK_FREE(sieve_buf, dataset->shared->cache.sieve.sieve_buf);
+
         /* Free cached information for each kind of dataset */
         switch (dataset->shared->layout.type) {
-            case H5D_CONTIGUOUS:
-                /* Free the data sieve buffer, if it's been allocated */
-                if (dataset->shared->cache.contig.sieve_buf)
-                    dataset->shared->cache.contig.sieve_buf =
-                        (unsigned char *)H5FL_BLK_FREE(sieve_buf, dataset->shared->cache.contig.sieve_buf);
-                break;
-
             case H5D_CHUNKED:
                 /* Check for skip list for iterating over chunks during I/O to close */
                 if (dataset->shared->cache.chunk.sel_chunks) {
@@ -2183,6 +2189,7 @@ H5D_mult_refresh_close(hid_t dset_id)
                 } /* end if */
                 break;
 
+            case H5D_CONTIGUOUS:
             case H5D_COMPACT:
             case H5D_VIRTUAL:
                 /* Nothing special to do (info freed in the layout destroy) */
@@ -3020,6 +3027,10 @@ H5D__check_filters(H5D_t *dataset)
         if (fill_status == H5D_FILL_VALUE_DEFAULT || fill_status == H5D_FILL_VALUE_USER_DEFINED) {
             if (fill->fill_time == H5D_FILL_TIME_ALLOC ||
                 (fill->fill_time == H5D_FILL_TIME_IFSET && fill_status == H5D_FILL_VALUE_USER_DEFINED)) {
+                /* Flush layout to DCPL before reading */
+                if (H5D_flush_layout_to_dcpl(dataset) < 0)
+                    HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, FAIL, "unable to flush layout");
+
                 /* Filters must have encoding enabled. Ensure that all filters can be applied */
                 if (H5Z_can_apply(dataset->shared->dcpl_id, dataset->shared->type_id) < 0)
                     HGOTO_ERROR(H5E_PLINE, H5E_CANAPPLY, FAIL, "can't apply filters");
@@ -3242,18 +3253,18 @@ H5D__flush_sieve_buf(H5D_t *dataset)
     assert(dataset);
 
     /* Flush the raw data buffer, if we have a dirty one */
-    if (dataset->shared->cache.contig.sieve_buf && dataset->shared->cache.contig.sieve_dirty) {
+    if (dataset->shared->cache.sieve.sieve_buf && dataset->shared->cache.sieve.sieve_dirty) {
         assert(dataset->shared->layout.type !=
                H5D_COMPACT); /* We should never have a sieve buffer for compact storage */
 
         /* Write dirty data sieve buffer to file */
         if (H5F_shared_block_write(
-                H5F_SHARED(dataset->oloc.file), H5FD_MEM_DRAW, dataset->shared->cache.contig.sieve_loc,
-                dataset->shared->cache.contig.sieve_size, dataset->shared->cache.contig.sieve_buf) < 0)
+                H5F_SHARED(dataset->oloc.file), H5FD_MEM_DRAW, dataset->shared->cache.sieve.sieve_loc,
+                dataset->shared->cache.sieve.sieve_size, dataset->shared->cache.sieve.sieve_buf) < 0)
             HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "block write failed");
 
         /* Reset sieve buffer dirty flag */
-        dataset->shared->cache.contig.sieve_dirty = false;
+        dataset->shared->cache.sieve.sieve_dirty = false;
     } /* end if */
 
 done:
@@ -3361,10 +3372,9 @@ H5D__format_convert(H5D_t *dataset)
                 HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "unable to allocate buffer");
 
             /* Set up the current index info */
-            idx_info.f       = dataset->oloc.file;
-            idx_info.pline   = &dataset->shared->dcpl_cache.pline;
-            idx_info.layout  = &dataset->shared->layout.u.chunk;
-            idx_info.storage = &dataset->shared->layout.storage.u.chunk;
+            idx_info.f      = dataset->oloc.file;
+            idx_info.pline  = &dataset->shared->dcpl_cache.pline;
+            idx_info.layout = &dataset->shared->layout;
 
             /* Copy the current layout info to the new layout */
             H5MM_memcpy(newlayout, &dataset->shared->layout, sizeof(H5O_layout_t));
@@ -3377,23 +3387,22 @@ H5D__format_convert(H5D_t *dataset)
             newlayout->storage.u.chunk.u.btree.shared = NULL;
 
             /* Set up the index info to version 1 B-tree */
-            new_idx_info.f       = dataset->oloc.file;
-            new_idx_info.pline   = &dataset->shared->dcpl_cache.pline;
-            new_idx_info.layout  = &(newlayout->u).chunk;
-            new_idx_info.storage = &(newlayout->storage).u.chunk;
+            new_idx_info.f      = dataset->oloc.file;
+            new_idx_info.pline  = &dataset->shared->dcpl_cache.pline;
+            new_idx_info.layout = newlayout;
 
             /* Initialize version 1 B-tree */
-            if (new_idx_info.storage->ops->init &&
-                (new_idx_info.storage->ops->init)(&new_idx_info, dataset->shared->space, dataset->oloc.addr) <
-                    0)
+            if (new_idx_info.layout->storage.u.chunk.ops->init &&
+                (new_idx_info.layout->storage.u.chunk.ops->init)(&new_idx_info, dataset->shared->space,
+                                                                 dataset->oloc.addr) < 0)
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "can't initialize indexing information");
             init_new_index = true;
 
             /* If the current chunk index exists */
-            if (H5_addr_defined(idx_info.storage->idx_addr)) {
+            if (H5_addr_defined(idx_info.layout->storage.u.chunk.idx_addr)) {
 
                 /* Create v1 B-tree chunk index */
-                if ((new_idx_info.storage->ops->create)(&new_idx_info) < 0)
+                if ((new_idx_info.layout->storage.u.chunk.ops->create)(&new_idx_info) < 0)
                     HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "can't create chunk index");
 
                 /* Iterate over the chunks in the current index and insert the chunk addresses
@@ -3416,7 +3425,8 @@ H5D__format_convert(H5D_t *dataset)
             add_new_layout = true;
 
             /* Release the old (current) chunk index */
-            if (idx_info.storage->ops->dest && (idx_info.storage->ops->dest)(&idx_info) < 0)
+            if (idx_info.layout->storage.u.chunk.ops->dest &&
+                (idx_info.layout->storage.u.chunk.ops->dest)(&idx_info) < 0)
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTFREE, FAIL, "unable to release chunk index info");
 
             /* Copy the new layout to the dataset's layout */
@@ -3459,7 +3469,7 @@ done:
 
         /* Clean up v1 b-tree chunk index */
         if (init_new_index) {
-            if (H5_addr_defined(new_idx_info.storage->idx_addr)) {
+            if (H5_addr_defined(new_idx_info.layout->storage.u.chunk.idx_addr)) {
                 /* Check for valid address i.e. tag */
                 if (!H5_addr_defined(dataset->oloc.addr))
                     HDONE_ERROR(H5E_DATASET, H5E_BADVALUE, FAIL, "address undefined");
@@ -3471,7 +3481,8 @@ done:
             } /* end if */
 
             /* Delete v1 B-tree chunk index */
-            if (new_idx_info.storage->ops->dest && (new_idx_info.storage->ops->dest)(&new_idx_info) < 0)
+            if (new_idx_info.layout->storage.u.chunk.ops->dest &&
+                (new_idx_info.layout->storage.u.chunk.ops->dest)(&new_idx_info) < 0)
                 HDONE_ERROR(H5E_DATASET, H5E_CANTFREE, FAIL, "unable to release chunk index info");
         } /* end if */
     }     /* end if */
@@ -3630,6 +3641,11 @@ H5D_get_create_plist(const H5D_t *dset)
     /* Check args */
     if (NULL == (dcpl_plist = (H5P_genplist_t *)H5I_object(dset->shared->dcpl_id)))
         HGOTO_ERROR(H5E_DATASET, H5E_BADTYPE, FAIL, "can't get property list");
+
+    /* If necessary, flush virtual layout changes to the DCPL before copying */
+    if (H5D_flush_layout_to_dcpl(dset) < 0) {
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, FAIL, "can't flush layout to DCPL");
+    }
 
     /* Copy the creation property list */
     if ((new_dcpl_id = H5P_copy_plist(dcpl_plist, true)) < 0)
@@ -4057,3 +4073,55 @@ H5D_get_dcpl_id(const H5D_obj_create_t *d)
 
     FUNC_LEAVE_NOAPI(d->dcpl_id);
 } /* end H5D_get_dcpl_id() */
+
+/*-------------------------------------------------------------------------
+ * Function: H5D_flush_layout_to_dcpl
+ *
+ * Purpose:  Copy the dataset's creation-time layout to the internal DCPL,
+ *           if this has not yet been done.
+ *
+ * Return:   Success:    non-negative
+ *
+ *           Failure:    negative
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5D_flush_layout_to_dcpl(const H5D_t *dset)
+{
+    herr_t          ret_value      = SUCCEED;
+    H5P_genplist_t *dcpl           = NULL;
+    bool            ndims_modified = false;
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    if ((dcpl = H5P_object_verify(dset->shared->dcpl_id, H5P_DATASET_CREATE, true)) == NULL) {
+        HGOTO_ERROR(H5E_DATASET, H5E_BADID, FAIL, "invalid DCPL ID");
+    }
+
+    if (!dset->shared->layout_copied_to_dcpl) {
+        /* Don't modify default DCPL; short-circuit success */
+        if (H5P_is_default_plist(dset->shared->dcpl_id)) {
+            HGOTO_DONE(ret_value);
+        }
+
+        /* Adjust chunk dimensions to omit datatype size (in last dimension) for creation property */
+        if (H5D_CHUNKED == dset->shared->layout.type) {
+            dset->shared->layout.u.chunk.ndims--;
+            ndims_modified = true;
+        }
+
+        /* Copy layout property to DCPL from dataset */
+        if (H5P_set(dcpl, H5D_CRT_LAYOUT_NAME, (void *)&dset->shared->layout) < 0) {
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, FAIL, "can't set layout property");
+        }
+    }
+
+done:
+    if (ret_value == SUCCEED)
+        dset->shared->layout_copied_to_dcpl = true;
+
+    if (ndims_modified)
+        dset->shared->layout.u.chunk.ndims++;
+
+    FUNC_LEAVE_NOAPI(ret_value);
+} /* end H5D_flush_layout_to_dcpl() */

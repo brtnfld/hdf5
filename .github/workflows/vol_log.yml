@@ -4,12 +4,15 @@ on:
   workflow_call:
     inputs:
       build_mode:
-        description: "CMake Build type"
+        description: "Build type"
         required: true
         type: string
 
 permissions:
   contents: read
+
+env:
+  CTEST_OUTPUT_ON_FAILURE: 1
 
 jobs:
   build_and_test:
@@ -23,7 +26,7 @@ jobs:
           #mpich
 
       - name: Checkout HDF5
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           path: hdf5
 
@@ -56,7 +59,7 @@ jobs:
           echo "PATH=${{ runner.workspace }}/hdf5_build/bin:${PATH}" >> $GITHUB_ENV
 
       - name: Checkout Log-based VOL
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           repository: HDFGroup/vol-log-based
           path: vol-log-based
@@ -86,4 +89,4 @@ jobs:
         # in the future.
         if: false
         run: |
-          ctest --build-config ${{ inputs.build_mode }} -VV -R "h5_api" -E "parallel" .
+          ctest --build-config ${{ inputs.build_mode }} -R "h5_api" -E "parallel" .

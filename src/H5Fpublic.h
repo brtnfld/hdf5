@@ -25,30 +25,35 @@
  * H5Fcreate() and H5Fopen(). Use the bit-wise OR operator (|) to combine
  * them as needed.
  */
-#define H5F_ACC_RDONLY (0x0000u) /**< Absence of RDWR: read-only */
-#define H5F_ACC_RDWR   (0x0001u) /**< Open for read and write    */
-#define H5F_ACC_TRUNC  (0x0002u) /**< Overwrite existing files   */
-#define H5F_ACC_EXCL   (0x0004u) /**< Fail if file already exists*/
+#define H5F_ACC_RDONLY (0x0000u) /**< Absence of RDWR: read-only \since 1.0.0  */
+#define H5F_ACC_RDWR   (0x0001u) /**< Open for read and write \since 1.0.0     */
+#define H5F_ACC_TRUNC  (0x0002u) /**< Overwrite existing files \since 1.0.0    */
+#define H5F_ACC_EXCL   (0x0004u) /**< Fail if file already exists \since 1.0.0 */
 /* NOTE: 0x0008u was H5F_ACC_DEBUG, now deprecated */
-#define H5F_ACC_CREAT (0x0010u) /**< Create non-existing files  */
-#define H5F_ACC_SWMR_WRITE                                                                                   \
-    (0x0020u) /**< Indicates that this file is open for writing in a                                         \
-               *   single-writer/multi-reader (SWMR)  scenario.                                              \
-               *   Note that the process(es) opening the file for reading                                    \
-               *   must open the file with #H5F_ACC_RDONLY and use the                                       \
-               *   #H5F_ACC_SWMR_READ access flag. */
-#define H5F_ACC_SWMR_READ                                                                                    \
-    (0x0040u) /**< Indicates that this file is open for reading in a                                         \
-               * single-writer/multi-reader (SWMR) scenario. Note that                                       \
-               * the process(es) opening the file for SWMR reading must                                      \
-               * also open the file with the #H5F_ACC_RDONLY flag.  */
+#define H5F_ACC_CREAT (0x0010u) /**< Create non-existing files \since 1.4.0    */
+
+/**
+ * Indicates that this file is open for writing in a single-writer/multi-reader
+ * (SWMR) scenario. Note that the process(es) opening the file for reading must
+ * open the file with #H5F_ACC_RDONLY and use the #H5F_ACC_SWMR_READ access flag.
+ * \since 1.10.0
+ */
+#define H5F_ACC_SWMR_WRITE (0x0020u)
+
+/**
+ * Indicates that this file is open for reading in a single-writer/multi-reader
+ * (SWMR) scenario. Note that the process(es) opening the file for SWMR reading
+ * must also open the file with the #H5F_ACC_RDONLY flag.
+ * \since 1.10.0
+ */
+#define H5F_ACC_SWMR_READ (0x0040u)
 
 /**
  * Default file access
+ * \since 1.8.3
  *
  * \internal Value passed to H5Pset_elink_acc_flags to cause flags to be taken from the parent file.
  * \internal ignore setting on lapl
- * \since 1.8.3
  */
 #define H5F_ACC_DEFAULT (0xffffu)
 
@@ -63,7 +68,9 @@
 
 /**
  * Restrict search to objects opened through current file ID (as opposed to
- * objects opened through any file ID accessing this file) \since 1.6.5 */
+ * objects opened through any file ID accessing this file)
+ * \since 1.6.5
+ */
 #define H5F_OBJ_LOCAL (0x0020u)
 
 /**
@@ -71,12 +78,15 @@
  * member is unknown \since 1.8.0 */
 #define H5F_FAMILY_DEFAULT 0 /* (hsize_t) */
 
+/** Macro used to "unset" the page buffer size in a FAPL \since 2.0.0 */
+#define H5F_PAGE_BUFFER_SIZE_DEFAULT SIZE_MAX
+
 #ifdef H5_HAVE_PARALLEL
 /**
  * Use this constant string as the MPI_Info key to set H5Fmpio debug flags.
  * To turn on H5Fmpio debug flags, set the MPI_Info value with this key to
  * have the value of a string consisting of the characters that turn on the
- * desired flags.
+ * desired flags. \since 1.0.0
  */
 #define H5F_MPIO_DEBUG_KEY "H5F_mpio_debug_key"
 #endif /* H5_HAVE_PARALLEL */
@@ -90,9 +100,7 @@ typedef enum H5F_scope_t {
     H5F_SCOPE_GLOBAL = 1  /**< The entire virtual file        */
 } H5F_scope_t;
 
-/**
- * Unlimited file size for H5Pset_external()
- */
+/** Unlimited file size for H5Pset_external() \since 1.0.0 */
 #define H5F_UNLIMITED HSIZE_UNDEF
 
 /**
@@ -234,15 +242,19 @@ typedef herr_t (*H5F_flush_cb_t)(hid_t object_id, void *udata);
  * H5Pset_relax_file_integrity_checks(). Use the bit-wise OR operator (|) to
  * combine them as needed.
  */
-#define H5F_RFIC_UNUSUAL_NUM_UNUSED_NUMERIC_BITS                                                             \
-    (0x0001u) /**< Suppress errors for numeric datatypes with an unusually                                   \
-               *   high number of unused bits.  See documentation for                                        \
-               *   H5Pset_relax_file_integrity_checks() for details. */
-#define H5F_RFIC_ALL                                                                                         \
-    (H5F_RFIC_UNUSUAL_NUM_UNUSED_NUMERIC_BITS) /**< Suppress all format integrity check                      \
-                                                * errors.  See documentation for                             \
-                                                * H5Pset_relax_file_integrity_checks()                       \
-                                                * for details. */
+
+/**
+ * Suppress errors for numeric datatypes with an unusually high number of
+ * unused bits. See documentation for H5Pset_relax_file_integrity_checks()
+ * for details. \since 1.14.4
+ */
+#define H5F_RFIC_UNUSUAL_NUM_UNUSED_NUMERIC_BITS (0x0001u)
+
+/**
+ * Suppress all format integrity check errors. See documentation for
+ * H5Pset_relax_file_integrity_checks() for details. \since 1.14.4
+ */
+#define H5F_RFIC_ALL (H5F_RFIC_UNUSUAL_NUM_UNUSED_NUMERIC_BITS)
 
 /* VFD SWMR configuration data used by H5Pset/get_vfd_swmr_config */
 #define H5F__CURR_VFD_SWMR_CONFIG_VERSION 1
@@ -288,9 +300,15 @@ extern "C" {
  *          container_name can be opened with the file access property list
  *          \p fapl_id.
  *
+ * \parblock
  * \note The H5Fis_accessible() function enables files to be checked with a
  *       given file access property list, unlike H5Fis_hdf5(), which only uses
  *       the default file driver when opening a file.
+ * \endparblock
+ *
+ * \parblock
+ * \unicode_filename_note
+ * \endparblock
  *
  * \since 1.12.0
  *
@@ -339,13 +357,21 @@ H5_DLL htri_t H5Fis_accessible(const char *container_name, hid_t fapl_id);
  * \par Example
  * \snippet H5F_examples.c minimal
  *
+ * \parblock
  * \note  #H5F_ACC_TRUNC and #H5F_ACC_EXCL are mutually exclusive; use
  *        exactly one.
+ * \endparblock
  *
+ * \parblock
  * \note An additional flag, #H5F_ACC_DEBUG, prints debug information. This
  *       flag can be combined with one of the above values using the bit-wise
  *       OR operator (\c |), but it is used only by HDF5 library developers;
  *       \Emph{it is neither tested nor supported for use in applications}.
+ * \endparblock
+ *
+ * \parblock
+ * \unicode_filename_note
+ * \endparblock
  *
  * \attention \Bold{Special case — File creation in the case of an already-open file:}
  *            If a file being created is already opened, by either a previous
@@ -439,8 +465,14 @@ H5_DLL hid_t H5Fcreate_async(const char *filename, unsigned flags, hid_t fcpl_id
  * \par Example
  * \snippet H5F_examples.c open
  *
+ * \parblock
  * \note  #H5F_ACC_RDWR and #H5F_ACC_RDONLY are mutually exclusive; use
  *        exactly one.
+ * \endparblock
+ *
+ * \parblock
+ * \unicode_filename_note
+ * \endparblock
  *
  * \attention \Bold{Special cases — Multiple opens:} A file can often be opened
  *            with a new H5Fopen() call without closing an already-open
@@ -684,6 +716,10 @@ H5_DLL herr_t H5Fclose_async(hid_t file_id, hid_t es_id);
  *          For all implementations, H5Fdelete() will first check if the file
  *          is an HDF5 file via H5Fis_accessible(). This is done to ensure that
  *          H5Fdelete() cannot be used as an arbitrary file deletion call.
+ *
+ * \parblock
+ * \unicode_filename_note
+ * \endparblock
  *
  * \since 1.12.0
  *
@@ -1634,7 +1670,7 @@ H5_DLL herr_t H5Fstop_mdc_logging(hid_t file_id);
  *
  * \since 1.10.0
  */
-H5_DLL herr_t H5Fget_mdc_logging_status(hid_t file_id, hbool_t *is_enabled, hbool_t *is_currently_logging);
+H5_DLL herr_t H5Fget_mdc_logging_status(hid_t file_id, bool *is_enabled, bool *is_currently_logging);
 /**
  * \ingroup H5F
  *
@@ -1733,7 +1769,7 @@ H5_DLL herr_t H5Fget_mdc_image_info(hid_t file_id, haddr_t *image_addr, hsize_t 
  * \since 1.10.5
  *
  */
-H5_DLL herr_t H5Fget_dset_no_attrs_hint(hid_t file_id, hbool_t *minimize);
+H5_DLL herr_t H5Fget_dset_no_attrs_hint(hid_t file_id, bool *minimize);
 /**
  * \ingroup H5F
  *
@@ -1764,7 +1800,7 @@ H5_DLL herr_t H5Fget_dset_no_attrs_hint(hid_t file_id, hbool_t *minimize);
  * \since 1.10.5
  *
  */
-H5_DLL herr_t H5Fset_dset_no_attrs_hint(hid_t file_id, hbool_t minimize);
+H5_DLL herr_t H5Fset_dset_no_attrs_hint(hid_t file_id, bool minimize);
 
 #ifdef H5_HAVE_PARALLEL
 /**
@@ -1797,7 +1833,7 @@ H5_DLL herr_t H5Fset_dset_no_attrs_hint(hid_t file_id, hbool_t minimize);
  * pass the same values for \p file_id and \p flag.
  *
  * This function is available only when the HDF5 library is configured with parallel support
- * (\TText{--enable-parallel | HDF5_ENABLE_PARALLEL}). It is useful only when used with the #H5FD_MPIO driver
+ * (\TText{HDF5_ENABLE_PARALLEL}). It is useful only when used with the #H5FD_MPIO driver
  * (see H5Pset_fapl_mpio()).
  * \endparblock
  *
@@ -1831,7 +1867,7 @@ H5_DLL herr_t H5Fset_dset_no_attrs_hint(hid_t file_id, hbool_t minimize);
  * \since 1.8.9
  *
  */
-H5_DLL herr_t H5Fset_mpi_atomicity(hid_t file_id, hbool_t flag);
+H5_DLL herr_t H5Fset_mpi_atomicity(hid_t file_id, bool flag);
 /**
  * \ingroup PH5F
  *
@@ -1854,7 +1890,7 @@ H5_DLL herr_t H5Fset_mpi_atomicity(hid_t file_id, hbool_t flag);
  * \since 1.8.9
  *
  */
-H5_DLL herr_t H5Fget_mpi_atomicity(hid_t file_id, hbool_t *flag);
+H5_DLL herr_t H5Fget_mpi_atomicity(hid_t file_id, bool *flag);
 #endif /* H5_HAVE_PARALLEL */
 
 /// \cond DEV
@@ -1891,7 +1927,7 @@ H5_DLL herr_t H5Fformat_convert(hid_t fid);
 #ifndef H5_NO_DEPRECATED_SYMBOLS
 
 /* Macros */
-#define H5F_ACC_DEBUG (0x0000u) /**< Print debug info \deprecated In which version? */
+#define H5F_ACC_DEBUG (0x0000u) /**< Print debug info \deprecated 1.8.16 */
 
 /* Typedefs */
 
@@ -1965,7 +2001,7 @@ H5_DLL herr_t H5Fget_info1(hid_t obj_id, H5F_info1_t *file_info);
  * \deprecated 1.10.2 Deprecated in favor of the function H5Fset_libver_bounds()
  *
  */
-H5_DLL herr_t H5Fset_latest_format(hid_t file_id, hbool_t latest_format);
+H5_DLL herr_t H5Fset_latest_format(hid_t file_id, bool latest_format);
 /**
  * \ingroup H5F
  *
@@ -1976,6 +2012,10 @@ H5_DLL herr_t H5Fset_latest_format(hid_t file_id, hbool_t latest_format);
  * \return \htri_t
  *
  * \details H5Fis_hdf5() determines whether a file is in the HDF5 format.
+ *
+ * \parblock
+ * \unicode_filename_note
+ * \endparblock
  *
  * \since 1.0.0
  * \deprecated 1.12.0 Deprecated in favor of the function H5Fis_accessible()

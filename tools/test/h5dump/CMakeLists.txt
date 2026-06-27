@@ -1,4 +1,9 @@
-cmake_minimum_required (VERSION 3.18)
+# CMake configuration for building and testing the h5dump tool
+# Configures dynamic plugin library for h5dump if shared builds are enabled
+# Sets up include directories, linking, and formatting for plugin targets
+# Includes test scripts for h5dump, PBITS, VDS, and XML if test tools and serial tests are enabled
+
+cmake_minimum_required (VERSION 3.26)
 project (HDF5_TOOLS_TEST_H5DUMP C)
 
 #-----------------------------------------------------------------------------
@@ -35,6 +40,11 @@ if (BUILD_SHARED_LIBS)
             "$<TARGET_FILE:${H5DUMP_TOOL_PLUGIN_LIB_TARGET}>"
             "${CMAKE_BINARY_DIR}/plugins/$<TARGET_FILE_NAME:${H5DUMP_TOOL_PLUGIN_LIB_TARGET}>"
   )
+
+  #-----------------------------------------------------------------------------
+  # Sign the plugin if signature verification is enabled
+  #-----------------------------------------------------------------------------
+  sign_plugin_target(${H5DUMP_TOOL_PLUGIN_LIB_TARGET} "${CMAKE_BINARY_DIR}/plugins")
 endif ()
 
 if (HDF5_TEST_TOOLS AND HDF5_TEST_SERIAL)

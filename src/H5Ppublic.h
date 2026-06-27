@@ -492,37 +492,39 @@ typedef enum H5D_mpio_no_collective_cause_t {
 /**
  * Causes for H5Pget_no_selection_io_cause() property
  */
-#define H5D_SEL_IO_DISABLE_BY_API                                                                            \
-    (0x0001u) /**< Selection I/O was not performed because                                                   \
-                 the feature was disabled by the API */
-#define H5D_SEL_IO_NOT_CONTIGUOUS_OR_CHUNKED_DATASET                                                         \
-    (0x0002u) /**< Selection I/O was not performed because the                                               \
-                 dataset was neither contiguous nor chunked */
-#define H5D_SEL_IO_CONTIGUOUS_SIEVE_BUFFER                                                                   \
-    (0x0004u) /**< Selection I/O was not performed because of                                                \
-                 sieve buffer for contiguous dataset */
-#define H5D_SEL_IO_NO_VECTOR_OR_SELECTION_IO_CB                                                              \
-    (0x0008u) /**< Selection I/O was not performed because the VFD                                           \
-                 does not have vector or selection I/O callback */
-#define H5D_SEL_IO_PAGE_BUFFER                                                                               \
-    (0x0010u) /**< Selection I/O was not performed because of                                                \
-                 page buffer */
-#define H5D_SEL_IO_DATASET_FILTER                                                                            \
-    (0x0020u) /**< Selection I/O was not performed because of                                                \
-                 dataset filters */
-#define H5D_SEL_IO_CHUNK_CACHE                                                                               \
-    (0x0040u) /**< Selection I/O was not performed because of                                                \
-                 chunk cache */
-#define H5D_SEL_IO_TCONV_BUF_TOO_SMALL                                                                       \
-    (0x0080u) /**< Selection I/O was not performed because the                                               \
-                 type conversion buffer is too small */
-#define H5D_SEL_IO_BKG_BUF_TOO_SMALL                                                                         \
-    (0x0100u) /**< Selection I/O was not performed because the                                               \
-                 type conversion background buffer is too small */
-#define H5D_SEL_IO_DEFAULT_OFF                                                                               \
-    (0x0200u) /**< Selection I/O was not performed because the                                               \
-                   selection I/O mode is DEFAULT and the library                                             \
-                   chose it to be off for this case */
+
+/** Selection I/O was not performed because the feature was disabled by the API */
+#define H5D_SEL_IO_DISABLE_BY_API (0x0001u)
+
+/** Selection I/O was not performed because the dataset was neither contiguous nor chunked */
+#define H5D_SEL_IO_NOT_CONTIGUOUS_OR_CHUNKED_DATASET (0x0002u)
+
+/** Selection I/O was not performed because of sieve buffer for contiguous dataset */
+#define H5D_SEL_IO_CONTIGUOUS_SIEVE_BUFFER (0x0004u)
+
+/** Selection I/O was not performed because the VFD does not have vector or selection I/O callback */
+#define H5D_SEL_IO_NO_VECTOR_OR_SELECTION_IO_CB (0x0008u)
+
+/** Selection I/O was not performed because of page buffer */
+#define H5D_SEL_IO_PAGE_BUFFER (0x0010u)
+
+/** Selection I/O was not performed because of dataset filters */
+#define H5D_SEL_IO_DATASET_FILTER (0x0020u)
+
+/** Selection I/O was not performed because of chunk cache */
+#define H5D_SEL_IO_CHUNK_CACHE (0x0040u)
+
+/** Selection I/O was not performed because the type conversion buffer is too small */
+#define H5D_SEL_IO_TCONV_BUF_TOO_SMALL (0x0080u)
+
+/** Selection I/O was not performed because the type conversion background buffer is too small */
+#define H5D_SEL_IO_BKG_BUF_TOO_SMALL (0x0100u)
+
+/**
+ * Selection I/O was not performed because the selection I/O mode is DEFAULT
+ * and the library chose it to be off for this case
+ */
+#define H5D_SEL_IO_DEFAULT_OFF (0x0200u)
 
 /* Causes for H5D_MPIO_NO_SELECTION_IO */
 #define H5D_MPIO_NO_SELECTION_IO_CAUSES                                                                      \
@@ -928,9 +930,9 @@ H5_DLL hid_t H5Pdecode(const void *buf);
  *          control the encoding via the \a libver_bounds property
  *          (see H5Pset_libver_bounds()). If the \a libver_bounds
  *          property is missing, H5Pencode2() proceeds as if the \a
- *          libver_bounds property were set to (#H5F_LIBVER_EARLIEST,
+ *          libver_bounds property were set to (#H5F_LIBVER_V18,
  *          #H5F_LIBVER_LATEST). (Functionally, H5Pencode1() is identical to
- *          H5Pencode2() with \a libver_bounds set to (#H5F_LIBVER_EARLIEST,
+ *          H5Pencode2() with \a libver_bounds set to (#H5F_LIBVER_V18,
  *          #H5F_LIBVER_LATEST).)
  *          Properties that do not have encode callbacks will be skipped.
  *          There is currently no mechanism to register an encode callback for
@@ -2239,7 +2241,7 @@ H5_DLL int H5Pget_nfilters(hid_t plist_id);
  * \since 1.8.0
  *
  */
-H5_DLL herr_t H5Pget_obj_track_times(hid_t plist_id, hbool_t *track_times);
+H5_DLL herr_t H5Pget_obj_track_times(hid_t plist_id, bool *track_times);
 /**
  * \ingroup OCPL
  *
@@ -2820,7 +2822,7 @@ H5_DLL herr_t H5Pset_fletcher32(hid_t plist_id);
  * \since 1.8.0
  *
  */
-H5_DLL herr_t H5Pset_obj_track_times(hid_t plist_id, hbool_t track_times);
+H5_DLL herr_t H5Pset_obj_track_times(hid_t plist_id, bool track_times);
 
 /* File creation property list (FCPL) routines */
 /**
@@ -2873,7 +2875,7 @@ H5_DLL herr_t H5Pget_file_space_page_size(hid_t plist_id, hsize_t *fsp_size);
  * \since 1.10.1
  *
  */
-H5_DLL herr_t H5Pget_file_space_strategy(hid_t plist_id, H5F_fspace_strategy_t *strategy, hbool_t *persist,
+H5_DLL herr_t H5Pget_file_space_strategy(hid_t plist_id, H5F_fspace_strategy_t *strategy, bool *persist,
                                          hsize_t *threshold);
 /**
  * \ingroup FCPL
@@ -3121,7 +3123,7 @@ H5_DLL herr_t H5Pset_file_space_page_size(hid_t plist_id, hsize_t fsp_size);
  * \since 1.10.1
  *
  */
-H5_DLL herr_t H5Pset_file_space_strategy(hid_t plist_id, H5F_fspace_strategy_t strategy, hbool_t persist,
+H5_DLL herr_t H5Pset_file_space_strategy(hid_t plist_id, H5F_fspace_strategy_t strategy, bool persist,
                                          hsize_t threshold);
 /**
  * \ingroup FCPL
@@ -3471,7 +3473,7 @@ H5_DLL herr_t H5Pget_cache(hid_t plist_id, int *mdc_nelmts, /* out */
  * \since 1.8.13
  *
  */
-H5_DLL herr_t H5Pget_core_write_tracking(hid_t fapl_id, hbool_t *is_enabled, size_t *page_size);
+H5_DLL herr_t H5Pget_core_write_tracking(hid_t fapl_id, bool *is_enabled, size_t *page_size);
 /**
  * \ingroup FAPL
  *
@@ -3613,7 +3615,7 @@ H5_DLL herr_t H5Pget_elink_file_cache_size(hid_t plist_id, unsigned *efc_size);
  * \since 1.10.1
  *
  */
-H5_DLL herr_t H5Pget_evict_on_close(hid_t fapl_id, hbool_t *evict_on_close);
+H5_DLL herr_t H5Pget_evict_on_close(hid_t fapl_id, bool *evict_on_close);
 /**
  * \ingroup FAPL
  *
@@ -3761,7 +3763,7 @@ H5_DLL herr_t H5Pget_file_image_callbacks(hid_t fapl_id, H5FD_file_image_callbac
  * \since 1.10.7
  *
  */
-H5_DLL herr_t H5Pget_file_locking(hid_t fapl_id, hbool_t *use_file_locking, hbool_t *ignore_when_disabled);
+H5_DLL herr_t H5Pget_file_locking(hid_t fapl_id, bool *use_file_locking, bool *ignore_when_disabled);
 /**
  * \ingroup FAPL
  *
@@ -3917,8 +3919,8 @@ H5_DLL herr_t H5Pget_mdc_image_config(hid_t plist_id, H5AC_cache_image_config_t 
  *
  * \since 1.10.0
  */
-H5_DLL herr_t H5Pget_mdc_log_options(hid_t plist_id, hbool_t *is_enabled, char *location,
-                                     size_t *location_size, hbool_t *start_on_access);
+H5_DLL herr_t H5Pget_mdc_log_options(hid_t plist_id, bool *is_enabled, char *location, size_t *location_size,
+                                     bool *start_on_access);
 /**
  * \ingroup FAPL
  *
@@ -4241,9 +4243,9 @@ H5_DLL herr_t H5Pset_alignment(hid_t fapl_id, hsize_t threshold, hsize_t alignme
  *                        that can fit in \p rdcc_nbytes bytes. For
  *                        maximum performance, this value should be set
  *                        approximately 100 times that number of chunks.
- *                        The default value is 521.
+ *                        The default value is 8191.
  * \param[in] rdcc_nbytes Total size of the raw data chunk cache in bytes.
- *                        The default size is 1 MB per dataset.
+ *                        The default size is 8 MiB per dataset.
  * \param[in] rdcc_w0     The chunk preemption policy for all datasets.
  *                        This must be between 0 and 1 inclusive and
  *                        indicates the weighting according to which chunks
@@ -4375,7 +4377,7 @@ H5_DLL herr_t H5Pset_cache(hid_t plist_id, int mdc_nelmts, size_t rdcc_nslots, s
  * \since 1.8.13
  *
  */
-H5_DLL herr_t H5Pset_core_write_tracking(hid_t fapl_id, hbool_t is_enabled, size_t page_size);
+H5_DLL herr_t H5Pset_core_write_tracking(hid_t fapl_id, bool is_enabled, size_t page_size);
 /**
  * \ingroup FAPL
  *
@@ -4559,7 +4561,7 @@ H5_DLL herr_t H5Pset_elink_file_cache_size(hid_t plist_id, unsigned efc_size);
  * \since 1.10.1
  *
  */
-H5_DLL herr_t H5Pset_evict_on_close(hid_t fapl_id, hbool_t evict_on_close);
+H5_DLL herr_t H5Pset_evict_on_close(hid_t fapl_id, bool evict_on_close);
 /**
  * \ingroup FAPL
  *
@@ -4768,7 +4770,7 @@ H5_DLL herr_t H5Pset_file_image(hid_t fapl_id, void *buf_ptr, size_t buf_len);
  *          The callbacks and their parameters, along with a struct and
  *          an \c ENUM required for their use, are described below.
  *
- *          <b>Callback struct and \c ENUM:</b>
+ *          <b>Callback struct and \TText{ENUM:}</b>
  *
  *          The callback functions set up by H5Pset_file_image_callbacks() use
  *          a struct and an \c ENUM that are defined as follows
@@ -4892,7 +4894,7 @@ H5_DLL herr_t H5Pset_file_image_callbacks(hid_t fapl_id, H5FD_file_image_callbac
  * \since 1.10.7
  *
  */
-H5_DLL herr_t H5Pset_file_locking(hid_t fapl_id, hbool_t use_file_locking, hbool_t ignore_when_disabled);
+H5_DLL herr_t H5Pset_file_locking(hid_t fapl_id, bool use_file_locking, bool ignore_when_disabled);
 /**
  * \ingroup FAPL
  *
@@ -5116,12 +5118,16 @@ H5_DLL herr_t H5Pset_gc_references(hid_t fapl_id, unsigned gc_ref);
  *           </tr>
  *          </table>
  *
+ *          The default settings are \p low=#H5F_LIBVER_V18, \p high=#H5F_LIBVER_LATEST.
+ *
  * \note *H5F_LIBVER_LATEST*:<br />
  *                 Since 2.0.x is also #H5F_LIBVER_LATEST, there is no upper
  *                 limit on the format versions to use.  That is, if a
  *                 newer format version is required to support a feature
  *                 in 2.0.x series, this setting will allow the object to be
  *                 created.
+ *
+ * \version 2.0.0  Default setting for \p low changed to #H5F_LIBVER_V18
  *
  * \version 1.10.2 #H5F_LIBVER_V18 added to the enumerated defines in
  *                 #H5F_libver_t.
@@ -5207,8 +5213,8 @@ H5_DLL herr_t H5Pset_mdc_config(hid_t plist_id, H5AC_cache_config_t *config_ptr)
  * \since 1.10.0
  *
  */
-H5_DLL herr_t H5Pset_mdc_log_options(hid_t plist_id, hbool_t is_enabled, const char *location,
-                                     hbool_t start_on_access);
+H5_DLL herr_t H5Pset_mdc_log_options(hid_t plist_id, bool is_enabled, const char *location,
+                                     bool start_on_access);
 /**
  * \ingroup FAPL
  *
@@ -5399,8 +5405,8 @@ H5_DLL herr_t H5Pset_object_flush_cb(hid_t plist_id, H5F_flush_cb_t func, void *
  *          the dataset being read in for hyperslab selections boosts
  *          performance by quite a bit.
  *
- *          The default value is set to 64KB, indicating that file I/O for raw
- *          data reads and writes will occur in at least 64KB blocks. Setting
+ *          The default value is set to 64KiB, indicating that file I/O for raw
+ *          data reads and writes will occur in at least 64KiB blocks. Setting
  *          the value to zero (\TText{0}) with this API function will turn off
  *          the data sieving, even if the VFL driver attempts to use that
  *          strategy.
@@ -5570,7 +5576,7 @@ H5_DLL herr_t H5Pget_vol_cap_flags(hid_t plist_id, uint64_t *cap_flags);
  *
  * \since 1.10.0
  */
-H5_DLL herr_t H5Pset_all_coll_metadata_ops(hid_t plist_id, hbool_t is_collective);
+H5_DLL herr_t H5Pset_all_coll_metadata_ops(hid_t plist_id, bool is_collective);
 /**
  * \ingroup GAPL
  *
@@ -5590,7 +5596,7 @@ H5_DLL herr_t H5Pset_all_coll_metadata_ops(hid_t plist_id, hbool_t is_collective
  *
  * \since 1.10.0
  */
-H5_DLL herr_t H5Pget_all_coll_metadata_ops(hid_t plist_id, hbool_t *is_collective);
+H5_DLL herr_t H5Pget_all_coll_metadata_ops(hid_t plist_id, bool *is_collective);
 /**
  * \ingroup FAPL
  *
@@ -5619,7 +5625,7 @@ H5_DLL herr_t H5Pget_all_coll_metadata_ops(hid_t plist_id, hbool_t *is_collectiv
  *
  * \since 1.10.0
  */
-H5_DLL herr_t H5Pset_coll_metadata_write(hid_t plist_id, hbool_t is_collective);
+H5_DLL herr_t H5Pset_coll_metadata_write(hid_t plist_id, bool is_collective);
 /**
  * \ingroup FAPL
  *
@@ -5638,7 +5644,7 @@ H5_DLL herr_t H5Pset_coll_metadata_write(hid_t plist_id, hbool_t is_collective);
  *
  * \since 1.10.0
  */
-H5_DLL herr_t H5Pget_coll_metadata_write(hid_t plist_id, hbool_t *is_collective);
+H5_DLL herr_t H5Pget_coll_metadata_write(hid_t plist_id, bool *is_collective);
 
 /**
  * \ingroup FAPL
@@ -5769,6 +5775,14 @@ H5_DLL herr_t H5Pset_mdc_image_config(hid_t plist_id, H5AC_cache_image_config_t 
  *          The function also allows setting the minimum percentage of pages for
  *          metadata and raw data to prevent a certain type of data to evict hot
  *          data of the other type.
+ *
+ * \note    As of HDF5 2.0.0, the default page buffer size (0) may be overridden
+ *          in some circumstances, such as when using the ROS3 file driver. To
+ *          forcibly disable the page buffer, call this function with
+ *          buf_size set to 0. To return this setting to the overridable
+ *          default, call this function with buf_size set to
+ *          H5F_PAGE_BUFFER_SIZE_DEFAULT. This macro is only available in HDF5
+ *          2.0.0 and later.
  *
  * \since 1.10.1
  *
@@ -6001,7 +6015,41 @@ H5_DLL herr_t H5Pget_chunk_opts(hid_t plist_id, unsigned *opts);
  * \since 1.10.5
  *
  */
-H5_DLL herr_t H5Pget_dset_no_attrs_hint(hid_t dcpl_id, hbool_t *minimize);
+H5_DLL herr_t H5Pget_dset_no_attrs_hint(hid_t dcpl_id, bool *minimize);
+/**
+ * \ingroup DCPL
+ *
+ * \brief Retrieves the setting for whether or not to use a spatial tree
+ *        for VDS mappings
+ *
+ * \dcpl_id
+ * \param[out] use_tree  Flag indicating whether the dataset will or
+ *                       will not use a spatial tree
+ *
+ * \return \herr_t
+ *
+ * \details H5Pget_virtual_spatial_tree() retrieves the
+ *          <i>use spatial tree</i> flag setting for the dataset
+ *          creation property list \p dcpl_id. This setting determines
+ *          whether a dataset created with the dataset creation
+ *          property list \p dcpl_id will construct a spatial tree
+ *          and use it in an attempt to optimize certain operations.
+ *          The setting value is returned in the boolean pointer
+ *          \p use_tree.
+ *
+ *          Use of a spatial tree will accelerate the process of searching through mappings
+ *          to determine which contain intersections with the user's selection region.
+ *          With the tree disabled, all mappings will simply be iterated through and
+ *          checked directly.
+ *
+ *          Certain workflows may find that tree creation overhead outweighs the time saved
+ *          on reads. In this case, disabling this property will lead to a performance improvement,
+ *          though it is expected that almost all cases will benefit from the tree on net.
+ *
+ * \since 2.0.0
+ *
+ */
+H5_DLL herr_t H5Pget_virtual_spatial_tree(hid_t dcpl_id, bool *use_tree);
 /**
  * \ingroup DCPL
  *
@@ -6403,14 +6451,21 @@ H5_DLL herr_t H5Pset_alloc_time(hid_t plist_id, H5D_alloc_time_t alloc_time);
  *
  * \note Chunk size cannot exceed the size of a fixed-size dataset. For
  *       example, a dataset consisting of a 5x4 fixed-size array cannot be
- *       defined with 10x10 chunks. Chunk maximums:
- *       - The maximum number of elements in a chunk is 2<sup>32</sup>-1 which
- *         is equal to 4,294,967,295. If the number of elements in a chunk is
- *         set via H5Pset_chunk() to a value greater than 2<sup>32</sup>-1,
- *         then H5Pset_chunk() will fail.
- *       - The maximum size for any chunk is 4GB. If a chunk that is larger
- *         than 4GB attempts to be written with H5Dwrite(), then H5Dwrite()
- *         will fail.
+ *       defined with 10x10 chunks.
+ *
+ * \note With HDF5 version 2.0.0, creation of datasets with chunks larger than
+ *       4 GiB is now supported. However, doing so will upgrade the file format
+ *       and prevent earlier versions of the library from being able to open the
+ *       dataset. Users must also be aware that some operations will require the
+ *       entire chunk be brought into memory, such as when there is a fill value
+ *       or data filter set. These operations will not work on 32 bit systems
+ *       when using chunks with size >= 4 GiB. The file format will be upgraded
+ *       when the size of an unfiltered chunk is greater than 2<sup>32</sup>-1
+ *       which is equal to 4,294,967,295. If a filter grows a chunk from below
+ *       this value to above it, the write may fail since the file format was
+ *       not automatically upgraded. To fix this, users can call
+ *       H5Pset_libver_bounds() with #H5F_LIBVER_V200 as the low bound. With the
+ *       new file format, chunk sizes are now limited to 2<sup>64</sup>-1.
  *
  * \see H5Pset_layout(), H5Dwrite()
  *
@@ -6484,7 +6539,38 @@ H5_DLL herr_t H5Pset_chunk_opts(hid_t plist_id, unsigned opts);
  * \since 1.10.5
  *
  */
-H5_DLL herr_t H5Pset_dset_no_attrs_hint(hid_t dcpl_id, hbool_t minimize);
+H5_DLL herr_t H5Pset_dset_no_attrs_hint(hid_t dcpl_id, bool minimize);
+/**
+ * \ingroup DCPL
+ *
+ * \brief Sets the flag to use a spatial tree for mappings
+ *
+ * \dcpl_id
+ * \param[in] use_tree Flag for indicating whether or not a dataset
+ *                     should use a spatial tree for mappings
+ *
+ * \return \herr_t
+ *
+ * \details H5Pset_virtual_spatial_tree() sets the use-tree flag
+ *          for the dataset creation property list \p dcpl_id.
+ *          Datasets created with the dataset creation property
+ *          list \p dcpl_id will construct a spatial tree and use
+ *          it in an attempt to optimize intersection-check
+ *          operations on mappings when \p use_tree is set to true.
+ *
+ *          Use of a spatial tree will accelerate the process of searching through mappings
+ *          to determine which contain intersections with the user's selection region.
+ *          With the tree disabled, all mappings will simply be iterated through and
+ *          checked directly.
+ *
+ *          Certain workflows may find that tree creation overhead outweighs the time saved
+ *          on reads. In this case, disabling this property will lead to a performance improvement,
+ *          though it is expected that almost all cases will benefit from the tree on net.
+ *
+ * \since 2.0.0
+ *
+ */
+H5_DLL herr_t H5Pset_virtual_spatial_tree(hid_t dcpl_id, bool use_tree);
 /**
  * \ingroup DCPL
  *
@@ -7070,7 +7156,7 @@ H5_DLL herr_t H5Pset_szip(hid_t plist_id, unsigned options_mask, unsigned pixels
  * \param[in] vspace_id The dataspace identifier with the selection within the
  *            virtual dataset applied, possibly an unlimited selection
  * \param[in] src_file_name The name of the HDF5 file where the source dataset is
- *            located or a \TText{"."} (period) for a source dataset in the same
+ *            located or a \TText{.} (period) for a source dataset in the same
  *            file. The file might not exist yet. The name can be specified using
  *            a C-style \c printf statement as described below.
  * \param[in] src_dset_name The path to the HDF5 dataset in the file specified by
@@ -7093,14 +7179,14 @@ H5_DLL herr_t H5Pset_szip(hid_t plist_id, unsigned options_mask, unsigned pixels
  *      treated as literals except for the following substitutions:
  *      <table>
  *      <tr>
- *      <td>\TText{"%%"}</td>
- *      <td>Replaced with a single \TText{"%"} (percent) character.</td>
+ *      <td>\TText{%%}</td>
+ *      <td>Replaced with a single \TText{%} (percent) character.</td>
  *      </tr>
  *      <tr>
- *      <td><code>"%<d>b"</code></td>
- *      <td>Where <code>"<d>"</code> is the virtual dataset dimension axis (0-based)
- *          and \TText{"b"} indicates that the block count of the selection in that
- *          dimension should be used. The full expression (for example, \TText{"%0b"})
+ *      <td><code>%\<d\>b</code></td>
+ *      <td>Where <code>\<d\></code> is the virtual dataset dimension axis (0-based)
+ *          and \TText{b} indicates that the block count of the selection in that
+ *          dimension should be used. The full expression (for example, \TText{%0b})
  *          is replaced with a single numeric value when the mapping is evaluated at
  *          VDS access time. Example code for many source and virtual dataset mappings
  *          is available in the "Examples of Source to Virtual Dataset Mapping"
@@ -7113,11 +7199,21 @@ H5_DLL herr_t H5Pset_szip(hid_t plist_id, unsigned options_mask, unsigned pixels
  *      If the printf form is used for the source file or dataset names, the
  *      selection in the source dataset's dataspace must be fixed-size.
  *
+ *      If the family driver is used for the source files of a \c printf
+ *      mapping, special care must be taken. In this case the VDS code expands
+ *      the file name with \c snprintf first, then the family driver second. This
+ *      means that, while the format specifier for the VDS block number is
+ *      inserted normally, the format specifier for the family file driver
+ *      member number must be escaped such that it is only recognized as a
+ *      format specifier the second time it is run through \c snprintf. As an
+ *      example one may use \TText{%%06d} as the member file number format
+ *      specifier in the source file name.
+ *
  * \par Source File Resolutions:
  *      When a source dataset residing in a different file is accessed, the
  *      library will search for the source file \p src_file_name as described
  *      below:
- *      \li If \p src_file_name is a \TText{"."} (period) then it refers to the
+ *      \li If \p src_file_name is a \TText{.} (period) then it refers to the
  *          file containing the virtual dataset.
  *      \li If \p src_file_name is a relative pathname, the following steps are
  *          performed:
@@ -7198,10 +7294,10 @@ H5_DLL herr_t H5Pset_virtual(hid_t dcpl_id, hid_t vspace_id, const char *src_fil
  *        the dataset access property list
  *
  * \dapl_id
- * \param[in] dims     The number of elements for \p boundary
- * \param[in] boundary The dimension sizes used to determine the boundary
- * \param[in] func     The user-defined callback function
- * \param[in] udata    The user-defined input data
+ * \param[in] dims      The number of elements for \p boundary
+ * \param[out] boundary The dimension sizes used to determine the boundary
+ * \param[out] func     The user-defined callback function
+ * \param[out] udata    The user-defined input data
  *
  * \return \herr_t
  *
@@ -7469,7 +7565,7 @@ H5_DLL herr_t H5Pset_append_flush(hid_t dapl_id, unsigned ndims, const hsize_t b
  *                        that can fit in \p rdcc_nbytes bytes. For maximum
  *                        performance, this value should be set
  *                        approximately 100 times that number of chunks.
- *                        The default value is 521. If the value passed is
+ *                        The default value is 8191. If the value passed is
  *                        #H5D_CHUNK_CACHE_NSLOTS_DEFAULT, then the
  *                        property will not be set on \p dapl_id and the
  *                        parameter will come from the file access
@@ -7478,7 +7574,7 @@ H5_DLL herr_t H5Pset_append_flush(hid_t dapl_id, unsigned ndims, const hsize_t b
  *                        this dataset. In most cases increasing this
  *                        number will improve performance, as long as
  *                        you have enough free memory.
- *                        The default size is 1 MB. If the value passed is
+ *                        The default size is 8 MiB. If the value passed is
  *                        #H5D_CHUNK_CACHE_NBYTES_DEFAULT, then the
  *                        property will not be set on \p dapl_id and the
  *                        parameter will come from the file access
@@ -7533,7 +7629,7 @@ H5_DLL herr_t H5Pset_append_flush(hid_t dapl_id, unsigned ndims, const hsize_t b
  *
  *      \b Example \b Usage: The following code sets the chunk cache to
  *       use a hash table with 12421 elements and a maximum size of
- *       16 MB, while using the preemption policy specified for the
+ *       16 MiB, while using the preemption policy specified for the
  *       entire file:
  *       \TText{
  *       H5Pset_chunk_cache(dapl_id, 12421, 16*1024*1024,
@@ -7560,7 +7656,7 @@ H5_DLL herr_t H5Pset_append_flush(hid_t dapl_id, unsigned ndims, const hsize_t b
  *       set by H5Pset_chunk_cache().
  *
  *       In the absence of any cache settings, H5Dopen() will
- *       by default create a 1 MB chunk cache for the opened
+ *       by default create an 8 MiB chunk cache for the opened
  *       dataset. If this size happens to be appropriate, no
  *       call will be needed to either function to set the
  *       chunk cache size.
@@ -8200,7 +8296,7 @@ H5_DLL herr_t H5Pset_hyper_vector_size(hid_t plist_id, size_t size);
  * \version 1.8.2 Deprecated.
  *
  */
-H5_DLL herr_t H5Pset_preserve(hid_t plist_id, hbool_t status);
+H5_DLL herr_t H5Pset_preserve(hid_t plist_id, bool status);
 
 /**
  * \ingroup DXPL
@@ -8669,7 +8765,7 @@ H5_DLL herr_t H5Pget_actual_selection_io_mode(hid_t plist_id, uint32_t *actual_s
  * \since 1.14.1
  *
  */
-H5_DLL herr_t H5Pset_modify_write_buf(hid_t plist_id, hbool_t modify_write_buf);
+H5_DLL herr_t H5Pset_modify_write_buf(hid_t plist_id, bool modify_write_buf);
 
 /**
  *
@@ -8691,7 +8787,7 @@ H5_DLL herr_t H5Pset_modify_write_buf(hid_t plist_id, hbool_t modify_write_buf);
  * \since 1.14.1
  *
  */
-H5_DLL herr_t H5Pget_modify_write_buf(hid_t plist_id, hbool_t *modify_write_buf);
+H5_DLL herr_t H5Pget_modify_write_buf(hid_t plist_id, bool *modify_write_buf);
 
 /**
  * \ingroup LCPL

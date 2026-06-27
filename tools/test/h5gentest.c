@@ -22,6 +22,7 @@
 #include "h5repackgentest.h"
 #include "h5statgentest.h"
 #include "h5repartgentest.h"
+#include "h5lsgentest.h"
 
 static int
 gen_h5copy_files(void)
@@ -150,27 +151,26 @@ static int
 gen_h5dump_files(void)
 {
     int nerrors = 0;
-
     gent_group();
     gent_attribute();
     gent_softlink();
-    nerrors += (gent_softlink2() < 0 ? 1 : 0);
+    nerrors += (gent_softlink2(false) < 0 ? 1 : 0);
     gent_dataset();
     gent_hardlink();
     gent_extlink();
-    gent_udlink();
     gent_compound_dt();
     gent_all();
     gent_loop();
     gent_dataset2();
     gent_compound_dt2();
+
     gent_loop2();
     gent_many();
     gent_str();
     gent_str2();
     gent_enum();
     gent_objref();
-    gent_datareg();
+    gent_datareg(false);
     gent_attrreg();
     gent_nestcomp();
     gent_opaque();
@@ -204,9 +204,9 @@ gen_h5dump_files(void)
     gent_named_dtype_attr();
     gent_null_space();
     gent_zero_dim_size();
-
     gent_filters();
     gent_fvalues();
+    gent_udlink();
     gent_fcontents();
     gent_string();
     gent_aindices();
@@ -225,17 +225,19 @@ gen_h5dump_files(void)
     gent_dataset_idx();
     gent_attr_intsize();
     gent_charsets();
+
     gent_compound_intsizes();
     gent_compound_attr_intsizes();
 
-    gent_nested_compound_dt();
-    gent_intscalars();
+    nerrors += (gent_nested_compound_dt() < 0 ? 1 : 0);
+    nerrors += (gent_intscalars() < 0 ? 1 : 0);
     gent_attr_intscalars();
     gent_string_scalars();
     gent_compound_int_array();
     gent_compound_ints();
     gent_intattrscalars();
     gent_intsattrs();
+
     gent_floatsattrs();
     gent_bitnopaquefields();
     gent_nodata();
@@ -261,6 +263,27 @@ gen_h5dump_files(void)
     gent_complex();
     gent_complex_be();
 #endif
+
+    gent_bfloat16();
+    gent_bfloat16_be();
+
+    gent_float8();
+    gent_float6();
+    gent_float4();
+
+    gent_trefer_attr();
+    gent_tattr4_be();
+    gent_tno_subset();
+    gent_trefer_compat();
+    gent_trefer_grp();
+    gent_trefer_obj_del();
+    gent_trefer_obj();
+    gent_trefer_param();
+    gent_trefer_reg();
+    gent_trefer_reg_1d();
+
+    nerrors += gent_test_reference_external();
+    nerrors += (gent_tvms() < 0 ? 1 : 0);
 
     return nerrors;
 }
@@ -328,6 +351,25 @@ gen_h5repack_files(void)
         nerrors += (generate_f32le(external) < 0 ? 1 : 0);
     } /* end for external data storage or not */
 
+    Test_Extlink_Copy();
+
+    gent_group_creation_order();
+
+    gent_extlink();
+    gent_extlinks();
+    gent_softlink2(true);
+    gent_attrreg();
+    gent_datareg(true);
+    gent_family();
+
+    nerrors += (gent_onion_1d_dset() < 0 ? 1 : 0);
+    nerrors += (gent_onion_create_delete_objects() < 0 ? 1 : 0);
+    nerrors += (gent_onion_dset_extension() < 0 ? 1 : 0);
+
+    nerrors += (make_h5repack_testfiles() < 0 ? 1 : 0);
+    nerrors += (gen_filespaces() < 0 ? 1 : 0);
+
+    nerrors += (test_attributes(H5DIFF_FILE5, 0) < 0 ? 1 : 0);
     return nerrors;
 }
 
@@ -379,6 +421,54 @@ gen_h5repart_files(void)
     return EXIT_SUCCESS;
 }
 
+static int
+gen_h5ls_files(void)
+{
+    int nerrors = 0;
+
+    gent_udfilter(H5LS_UDFILTER_FILE);
+
+    gent_all();
+    gent_group();
+    gent_dataset();
+    gent_softlink();
+    gent_softlink2(false);
+    gent_str();
+
+    gent_vldatatypes();
+    gent_compound_dt();
+    gent_datareg(false);
+    gent_empty();
+    gent_hardlink();
+    gent_loop();
+    gent_nestcomp();
+
+    gent_group_comments();
+    gent_array1();
+    gent_attr_all();
+    gent_attrreg();
+
+    gent_extlink();
+    gent_extlinks();
+    gent_null_space_group();
+
+    gent_udlink();
+
+#ifdef H5_HAVE__FLOAT16
+    gent_float16();
+    gent_float16_be();
+#endif
+#ifdef H5_HAVE_COMPLEX_NUMBERS
+    gent_complex();
+    gent_complex_be();
+#endif
+
+    nerrors += (gent_tdset() < 0 ? 1 : 0);
+    gent_dataset_idx();
+
+    return nerrors;
+}
+
 /*-------------------------------------------------------------------------
  * Function: usage
  *
@@ -404,6 +494,7 @@ usage(void)
     printf("  --h5repack      Generate h5repack test files\n");
     printf("  --h5stat        Generate h5stat test files\n");
     printf("  --h5repart      Generate h5repart test files\n");
+    printf("  --h5ls          Generate h5ls test files\n");
     return;
 }
 
@@ -414,29 +505,24 @@ int
 main(int argc, char *argv[])
 {
     /* command-line options: short and long-named parameters */
-    static const char            *s_opts   = "hacdufjrsp";
-    static struct h5_long_options l_opts[] = {{"help", no_arg, 'h'},
-                                              {"all", no_arg, 'a'},
-                                              {"h5copy", no_arg, 'c'},
-                                              {"h5diff", no_arg, 'd'},
-                                              {"h5dump", no_arg, 'u'},
-                                              {"h5fc", no_arg, 'f'},
-                                              {"h5jam", no_arg, 'j'},
-                                              {"h5repack", no_arg, 'r'},
-                                              {"h5stat", no_arg, 's'},
-                                              {"h5repart", no_arg, 'p'},
-                                              {NULL, 0, 0}};
-    int                           i;
-    int                           opt;
-    bool                          run_all      = false;
-    bool                          run_h5copy   = false;
-    bool                          run_h5diff   = false;
-    bool                          run_h5dump   = false;
-    bool                          run_h5fc     = false;
-    bool                          run_h5jam    = false;
-    bool                          run_h5repack = false;
-    bool                          run_h5stat   = false;
-    bool                          run_h5repart = false;
+    static const char            *s_opts   = "hacdufjrspl";
+    static struct h5_long_options l_opts[] = {
+        {"help", no_arg, 'h'},     {"all", no_arg, 'a'},      {"h5copy", no_arg, 'c'},
+        {"h5diff", no_arg, 'd'},   {"h5dump", no_arg, 'u'},   {"h5fc", no_arg, 'f'},
+        {"h5jam", no_arg, 'j'},    {"h5repack", no_arg, 'r'}, {"h5stat", no_arg, 's'},
+        {"h5repart", no_arg, 'p'}, {"h5ls", no_arg, 'l'},     {NULL, 0, 0}};
+    int  i;
+    int  opt;
+    bool run_all      = false;
+    bool run_h5copy   = false;
+    bool run_h5diff   = false;
+    bool run_h5dump   = false;
+    bool run_h5fc     = false;
+    bool run_h5jam    = false;
+    bool run_h5repack = false;
+    bool run_h5stat   = false;
+    bool run_h5repart = false;
+    bool run_h5ls     = false;
 
     /* Check for no command line parameters */
     if (argc == 1) {
@@ -476,6 +562,9 @@ main(int argc, char *argv[])
                 case 'p':
                     run_h5repart = true;
                     break;
+                case 'l':
+                    run_h5ls = true;
+                    break;
                 default:
                     continue;
             }
@@ -483,7 +572,7 @@ main(int argc, char *argv[])
     }
 
     if (!run_all && !run_h5copy && !run_h5diff && !run_h5dump && !run_h5fc && !run_h5jam && !run_h5repack &&
-        !run_h5stat && !run_h5repart) {
+        !run_h5stat && !run_h5repart && !run_h5ls) {
         usage();
         return EXIT_FAILURE;
     }
@@ -498,6 +587,7 @@ main(int argc, char *argv[])
         gen_h5repack_files();
         gen_h5stat_files();
         gen_h5repart_files();
+        gen_h5ls_files();
     }
     else {
         if (run_h5copy) {
@@ -523,6 +613,9 @@ main(int argc, char *argv[])
         }
         if (run_h5repart) {
             gen_h5repart_files();
+        }
+        if (run_h5ls) {
+            gen_h5ls_files();
         }
     }
 

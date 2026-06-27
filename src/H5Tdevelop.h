@@ -39,7 +39,7 @@ typedef enum H5T_cmd_t {
 } H5T_cmd_t;
 
 /**
- * How is the `bkg' buffer used by the conversion function?
+ * How is the `bkg` buffer used by the conversion function?
  */
 typedef enum H5T_bkg_t {
     H5T_BKG_NO   = 0, /**< background buffer is not needed, send NULL */
@@ -54,7 +54,7 @@ typedef enum H5T_bkg_t {
 typedef struct H5T_cdata_t {
     H5T_cmd_t command;  /**< what should the conversion function do?    */
     H5T_bkg_t need_bkg; /**< is the background buffer needed?	     */
-    hbool_t   recalc;   /**< recalculate private data		     */
+    bool      recalc;   /**< recalculate private data		     */
     void     *priv;     /**< private data				     */
 } H5T_cdata_t;
 //! <!-- [H5T_cdata_t_snip] -->

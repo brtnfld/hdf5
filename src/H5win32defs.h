@@ -43,6 +43,9 @@ struct timezone {
 #define HDlstat(S, B)        _lstati64(S, B)
 #define HDmkdir(S, M)        _mkdir(S)
 
+/* Windows has a variant of qsort_r with a different signature */
+#define HDqsort_r(B, N, S, C, A) HDqsort_context(B, N, S, C, A)
+
 /* We only support the standards conformant preprocessor */
 #define HDopen(S, F, ...) Wopen(S, F, ##__VA_ARGS__)
 
@@ -56,6 +59,28 @@ struct timezone {
 #define HDstrndup(S, N)       H5_strndup(S, N)
 #define HDstrtok_r(X, Y, Z)   strtok_s(X, Y, Z)
 #define HDunsetenv(N)         Wsetenv(N, "", 1)
+
+/* Windows localtime_s/gmtime_s have reversed parameter order and return
+ * errno_t instead of struct tm*.  Inline wrappers adapt the POSIX signature.
+ *
+ * The #define macros are required because H5private.h uses #ifndef HDgmtime_r
+ * to decide whether to define its own passthrough macro.  Without these
+ * #defines the inline functions alone would not prevent that fallback, and
+ * the POSIX gmtime_r/localtime_r (which MSVC does not provide) would be
+ * referenced, causing LNK2019 unresolved-external errors on Windows. */
+static __inline struct tm *
+H5_gmtime_r(const time_t *timep, struct tm *result)
+{
+    return gmtime_s(result, timep) == 0 ? result : NULL;
+}
+#define HDgmtime_r(T, R) H5_gmtime_r(T, R)
+
+static __inline struct tm *
+H5_localtime_r(const time_t *timep, struct tm *result)
+{
+    return localtime_s(result, timep) == 0 ? result : NULL;
+}
+#define HDlocaltime_r(T, R) H5_localtime_r(T, R)
 
 #ifndef H5_HAVE_MINGW
 #define HDftruncate(F, L) _chsize_s(F, L)
@@ -83,16 +108,16 @@ typedef _Lcomplex H5_ldouble_complex;
 #ifdef __cplusplus
 extern "C" {
 #endif
-H5_DLL int      Wgettimeofday(struct timeval *tv, struct timezone *tz);
-H5_DLL int      Wsetenv(const char *name, const char *value, int overwrite);
-H5_DLL int      Wflock(int fd, int operation);
-H5_DLL herr_t   H5_expand_windows_env_vars(char **env_var);
-H5_DLL wchar_t *H5_get_utf16_str(const char *s);
-H5_DLL int      Wopen(const char *path, int oflag, ...);
-H5_DLL int      Wremove(const char *path);
-H5_DLL int      H5_get_win32_times(H5_timevals_t *tvs);
-H5_DLL char    *H5_strndup(const char *s, size_t n);
-H5_DLL char    *Wstrcasestr_wrap(const char *haystack, const char *needle);
+H5_DLL int    Wgettimeofday(struct timeval *tv, struct timezone *tz);
+H5_DLL int    Wsetenv(const char *name, const char *value, int overwrite);
+H5_DLL int    Wflock(int fd, int operation);
+H5_DLL herr_t H5_expand_windows_env_vars(char **env_var);
+H5_DLL herr_t H5_get_utf16_str(const char *s, wchar_t **wstring, uint32_t *win_error);
+H5_DLL int    Wopen(const char *path, int oflag, ...);
+H5_DLL int    Wremove(const char *path);
+H5_DLL int    H5_get_win32_times(H5_timevals_t *tvs);
+H5_DLL char  *H5_strndup(const char *s, size_t n);
+H5_DLL char  *Wstrcasestr_wrap(const char *haystack, const char *needle);
 #ifdef __cplusplus
 }
 #endif

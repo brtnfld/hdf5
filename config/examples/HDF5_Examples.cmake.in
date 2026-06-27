@@ -9,7 +9,7 @@
 # If you do not have access to either file, you may request a copy from
 # help@hdfgroup.org.
 #
-cmake_minimum_required (VERSION 3.18)
+cmake_minimum_required (VERSION 3.26)
 ###############################################################################################################
 # This script will build and run the examples from a folder
 # Execute from a command line:
@@ -82,9 +82,7 @@ endif()
 set(ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DSITE:STRING=${CTEST_SITE} -DBUILDNAME:STRING=${CTEST_BUILD_NAME}")
 
 #TAR_SOURCE - name of tarfile
-#if(NOT DEFINED TAR_SOURCE)
-#  set(CTEST_USE_TAR_SOURCE "HDF5Examples-2.0.1-Source")
-#endif()
+#  set(CTEST_USE_TAR_SOURCE "HDF5Examples-@HDF5_PACKAGE_VERSION@-Source")
 
 ###############################################################################################################
 set(ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DHDF5_ROOT:PATH=${INSTALLDIR}")

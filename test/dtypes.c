@@ -76,7 +76,8 @@
 
 static const char *FILENAME[] = {"dtypes0",  "dtypes1",  "dtypes2",  "dtypes3",  "dtypes4",  "dtypes5",
                                  "dtypes6",  "dtypes7",  "dtypes8",  "dtypes9",  "dtypes10", "dtypes11",
-                                 "dtypes12", "dtypes13", "dtypes14", "dtypes15", NULL};
+                                 "dtypes12", "dtypes13", "dtypes14", "dtypes15", "dtypes16", "dtypes17",
+                                 "dtypes18", "dtypes19", NULL};
 
 #define TESTFILE "bad_compound.h5"
 
@@ -6341,14 +6342,14 @@ test__Float16(void)
     const char *driver_name;
     hsize_t     dims[1];
     htri_t      is_little_endian;
-    H5T_t      *native_dtype = NULL;
-    H5T_t      *tmp_dtype    = NULL;
-    hid_t       fid          = H5I_INVALID_HID;
-    hid_t       space_id     = H5I_INVALID_HID;
-    hid_t       dset_id      = H5I_INVALID_HID;
-    hid_t       dcpl_id      = H5I_INVALID_HID;
-    hid_t       native_type  = H5I_INVALID_HID;
-    char        filename[256];
+    H5T_t      *native_dtype  = NULL;
+    H5T_t      *tmp_dtype     = NULL;
+    hid_t       fid           = H5I_INVALID_HID;
+    hid_t       space_id      = H5I_INVALID_HID;
+    hid_t       dset_id       = H5I_INVALID_HID;
+    hid_t       dcpl_id       = H5I_INVALID_HID;
+    hid_t       native_type   = H5I_INVALID_HID;
+    char        filename[256] = {0};
 
     TESTING("_Float16 datatype");
 
@@ -6731,6 +6732,7 @@ error:
         H5Sclose(space_id);
         H5Dclose(dset_id);
         H5Fclose(fid);
+        H5Fdelete(filename, H5P_DEFAULT);
     }
     H5E_END_TRY
 
@@ -6754,6 +6756,1517 @@ error:
 
     return 0;
 #endif
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    test_bfloat16
+ *
+ * Purpose:     Tests the bfloat16 datatypes.
+ *
+ * Return:      Success:    0
+ *              Failure:    number of errors
+ *-------------------------------------------------------------------------
+ */
+static int
+test_bfloat16(void)
+{
+    H5T_class_t type_class;
+    H5T_order_t type_order;
+    H5T_norm_t  type_norm;
+    H5T_pad_t   lsb_pad;
+    H5T_pad_t   msb_pad;
+    H5T_pad_t   inpad;
+    hsize_t     dims[1];
+    size_t      type_size;
+    size_t      type_prec;
+    size_t      sign_pos;
+    size_t      expo_pos;
+    size_t      mant_pos;
+    size_t      expo_size;
+    size_t      mant_size;
+    size_t      expo_bias;
+    hid_t       fid           = H5I_INVALID_HID;
+    hid_t       space_id      = H5I_INVALID_HID;
+    hid_t       dset_id       = H5I_INVALID_HID;
+    hid_t       dcpl_id       = H5I_INVALID_HID;
+    char        filename[256] = {0};
+    int         type_offset;
+
+    TESTING("bfloat16 datatypes");
+
+    /* Check characteristics of the predefined types */
+
+    if ((type_class = H5Tget_class(H5T_FLOAT_BFLOAT16LE)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype class for H5T_FLOAT_BFLOAT16LE\n");
+        goto error;
+    }
+
+    if (H5T_FLOAT != type_class) {
+        H5_FAILED();
+        printf("Datatype class for H5T_FLOAT_BFLOAT16LE wasn't H5T_FLOAT\n");
+        goto error;
+    }
+
+    if ((type_class = H5Tget_class(H5T_FLOAT_BFLOAT16BE)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype class for H5T_FLOAT_BFLOAT16BE\n");
+        goto error;
+    }
+
+    if (H5T_FLOAT != type_class) {
+        H5_FAILED();
+        printf("Datatype class for H5T_FLOAT_BFLOAT16BE wasn't H5T_FLOAT\n");
+        goto error;
+    }
+
+    if ((type_size = H5Tget_size(H5T_FLOAT_BFLOAT16LE)) == 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype size for H5T_FLOAT_BFLOAT16LE\n");
+        goto error;
+    }
+
+    if (type_size != 2) {
+        H5_FAILED();
+        printf("Datatype size for H5T_FLOAT_BFLOAT16LE was incorrect (expected 2, got %zu)\n", type_size);
+        goto error;
+    }
+
+    if ((type_size = H5Tget_size(H5T_FLOAT_BFLOAT16BE)) == 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype size for H5T_FLOAT_BFLOAT16BE\n");
+        goto error;
+    }
+
+    if (type_size != 2) {
+        H5_FAILED();
+        printf("Datatype size for H5T_FLOAT_BFLOAT16BE was incorrect (expected 2, got %zu)\n", type_size);
+        goto error;
+    }
+
+    if ((type_order = H5Tget_order(H5T_FLOAT_BFLOAT16LE)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype order for H5T_FLOAT_BFLOAT16LE\n");
+        goto error;
+    }
+
+    if (type_order != H5T_ORDER_LE) {
+        H5_FAILED();
+        printf("Datatype order for H5T_FLOAT_BFLOAT16LE wasn't H5T_ORDER_LE\n");
+        goto error;
+    }
+
+    if ((type_order = H5Tget_order(H5T_FLOAT_BFLOAT16BE)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype order for H5T_FLOAT_BFLOAT16BE\n");
+        goto error;
+    }
+
+    if (type_order != H5T_ORDER_BE) {
+        H5_FAILED();
+        printf("Datatype order for H5T_FLOAT_BFLOAT16BE wasn't H5T_ORDER_BE\n");
+        goto error;
+    }
+
+    if ((type_prec = H5Tget_precision(H5T_FLOAT_BFLOAT16LE)) == 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype precision for H5T_FLOAT_BFLOAT16LE\n");
+        goto error;
+    }
+
+    if (type_prec != 16) {
+        H5_FAILED();
+        printf("Datatype precision for H5T_FLOAT_BFLOAT16LE was incorrect (expected 16, got %zu)\n",
+               type_prec);
+        goto error;
+    }
+
+    if ((type_prec = H5Tget_precision(H5T_FLOAT_BFLOAT16BE)) == 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype precision for H5T_FLOAT_BFLOAT16BE\n");
+        goto error;
+    }
+
+    if (type_prec != 16) {
+        H5_FAILED();
+        printf("Datatype precision for H5T_FLOAT_BFLOAT16BE was incorrect (expected 16, got %zu)\n",
+               type_prec);
+        goto error;
+    }
+
+    if ((type_offset = H5Tget_offset(H5T_FLOAT_BFLOAT16LE)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype offset for H5T_FLOAT_BFLOAT16LE\n");
+        goto error;
+    }
+
+    if (type_offset != 0) {
+        H5_FAILED();
+        printf("Datatype offset for H5T_FLOAT_BFLOAT16LE was incorrect (expected 0, got %d)\n", type_offset);
+        goto error;
+    }
+
+    if ((type_offset = H5Tget_offset(H5T_FLOAT_BFLOAT16BE)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype offset for H5T_FLOAT_BFLOAT16BE\n");
+        goto error;
+    }
+
+    if (type_offset != 0) {
+        H5_FAILED();
+        printf("Datatype offset for H5T_FLOAT_BFLOAT16BE was incorrect (expected 0, got %d)\n", type_offset);
+        goto error;
+    }
+
+    if (H5Tget_pad(H5T_FLOAT_BFLOAT16LE, &lsb_pad, &msb_pad) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype padding type for H5T_FLOAT_BFLOAT16LE\n");
+        goto error;
+    }
+
+    if (lsb_pad != H5T_PAD_ZERO || msb_pad != H5T_PAD_ZERO) {
+        H5_FAILED();
+        printf("Datatype padding type for H5T_FLOAT_BFLOAT16LE was incorrect (expected H5T_PAD_ZERO, got lsb "
+               "pad "
+               "type %d, msb pad type %d)\n",
+               lsb_pad, msb_pad);
+        goto error;
+    }
+
+    if (H5Tget_pad(H5T_FLOAT_BFLOAT16BE, &lsb_pad, &msb_pad) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype padding type for H5T_FLOAT_BFLOAT16BE\n");
+        goto error;
+    }
+
+    if (lsb_pad != H5T_PAD_ZERO || msb_pad != H5T_PAD_ZERO) {
+        H5_FAILED();
+        printf("Datatype padding type for H5T_FLOAT_BFLOAT16BE was incorrect (expected H5T_PAD_ZERO, got lsb "
+               "pad "
+               "type %d, msb pad type %d)\n",
+               lsb_pad, msb_pad);
+        goto error;
+    }
+
+    if (H5Tget_fields(H5T_FLOAT_BFLOAT16LE, &sign_pos, &expo_pos, &expo_size, &mant_pos, &mant_size) < 0) {
+        H5_FAILED();
+        printf("Couldn't get floating-point bit field information for H5T_FLOAT_BFLOAT16LE\n");
+        goto error;
+    }
+
+    if (sign_pos != 15 || expo_pos != 7 || mant_pos != 0 || expo_size != 8 || mant_size != 7) {
+        H5_FAILED();
+        printf("H5T_FLOAT_BFLOAT16LE didn't match bfloat16 specification "
+               "(expected spos=15, epos=7, esize=8, mpos=0, msize=7, "
+               "got spos=%zu, epos=%zu, esize=%zu, mpos=%zu, msize=%zu",
+               sign_pos, expo_pos, expo_size, mant_pos, mant_size);
+        goto error;
+    }
+
+    if (H5Tget_fields(H5T_FLOAT_BFLOAT16BE, &sign_pos, &expo_pos, &expo_size, &mant_pos, &mant_size) < 0) {
+        H5_FAILED();
+        printf("Couldn't get floating-point bit field information for H5T_FLOAT_BFLOAT16BE\n");
+        goto error;
+    }
+
+    if (sign_pos != 15 || expo_pos != 7 || mant_pos != 0 || expo_size != 8 || mant_size != 7) {
+        H5_FAILED();
+        printf("H5T_FLOAT_BFLOAT16BE didn't match bfloat16 specification "
+               "(expected spos=15, epos=7, esize=8, mpos=0, msize=7, "
+               "got spos=%zu, epos=%zu, esize=%zu, mpos=%zu, msize=%zu",
+               sign_pos, expo_pos, expo_size, mant_pos, mant_size);
+        goto error;
+    }
+
+    if ((expo_bias = H5Tget_ebias(H5T_FLOAT_BFLOAT16LE)) == 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype exponent bias for H5T_FLOAT_BFLOAT16LE\n");
+        goto error;
+    }
+
+    if (expo_bias != 127) {
+        H5_FAILED();
+        printf("Datatype exponent bias for H5T_FLOAT_BFLOAT16LE was incorrect (expected 127, got %zu)\n",
+               expo_bias);
+        goto error;
+    }
+
+    if ((expo_bias = H5Tget_ebias(H5T_FLOAT_BFLOAT16BE)) == 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype exponent bias for H5T_FLOAT_BFLOAT16BE\n");
+        goto error;
+    }
+
+    if (expo_bias != 127) {
+        H5_FAILED();
+        printf("Datatype exponent bias for H5T_FLOAT_BFLOAT16BE was incorrect (expected 127, got %zu)\n",
+               expo_bias);
+        goto error;
+    }
+
+    if ((type_norm = H5Tget_norm(H5T_FLOAT_BFLOAT16LE)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype mantissa normalization type for H5T_FLOAT_BFLOAT16LE\n");
+        goto error;
+    }
+
+    if (type_norm != H5T_NORM_IMPLIED) {
+        H5_FAILED();
+        printf("Datatype mantissa normalization type for H5T_FLOAT_BFLOAT16LE wasn't H5T_NORM_IMPLIED\n");
+        goto error;
+    }
+
+    if ((type_norm = H5Tget_norm(H5T_FLOAT_BFLOAT16BE)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype mantissa normalization type for H5T_FLOAT_BFLOAT16BE\n");
+        goto error;
+    }
+
+    if (type_norm != H5T_NORM_IMPLIED) {
+        H5_FAILED();
+        printf("Datatype mantissa normalization type for H5T_FLOAT_BFLOAT16BE wasn't H5T_NORM_IMPLIED\n");
+        goto error;
+    }
+
+    if ((inpad = H5Tget_inpad(H5T_FLOAT_BFLOAT16LE)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype unused bits padding type for H5T_FLOAT_BFLOAT16LE\n");
+        goto error;
+    }
+
+    if (inpad != H5T_PAD_ZERO) {
+        H5_FAILED();
+        printf("Datatype unused bits padding type for H5T_FLOAT_BFLOAT16LE was incorrect (expected "
+               "H5T_PAD_ZERO, "
+               "got pad type %d)\n",
+               inpad);
+        goto error;
+    }
+
+    if ((inpad = H5Tget_inpad(H5T_FLOAT_BFLOAT16BE)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype unused bits padding type for H5T_FLOAT_BFLOAT16BE\n");
+        goto error;
+    }
+
+    if (inpad != H5T_PAD_ZERO) {
+        H5_FAILED();
+        printf("Datatype unused bits padding type for H5T_FLOAT_BFLOAT16BE was incorrect (expected "
+               "H5T_PAD_ZERO, "
+               "got pad type %d)\n",
+               inpad);
+        goto error;
+    }
+
+    /*
+     * Ensure that some random conversions on the bfloat16 datatypes
+     * are currently covered by general software routines rather
+     * than compiler conversions.
+     */
+
+    if (H5Tcompiler_conv(H5T_FLOAT_BFLOAT16LE, H5T_IEEE_F32LE) != false) {
+        H5_FAILED();
+        printf("Conversion path for H5T_FLOAT_BFLOAT16LE -> H5T_IEEE_F32LE was not a software conversion\n");
+        goto error;
+    }
+
+    if (H5Tcompiler_conv(H5T_FLOAT_BFLOAT16LE, H5T_NATIVE_INT) != false) {
+        H5_FAILED();
+        printf("Conversion path for H5T_FLOAT_BFLOAT16LE -> H5T_NATIVE_INT was not a software conversion\n");
+        goto error;
+    }
+
+    if (H5Tcompiler_conv(H5T_FLOAT_BFLOAT16BE, H5T_IEEE_F64BE) != false) {
+        H5_FAILED();
+        printf("Conversion path for H5T_FLOAT_BFLOAT16BE -> H5T_IEEE_F64BE was not a software conversion\n");
+        goto error;
+    }
+
+    if (H5Tcompiler_conv(H5T_FLOAT_BFLOAT16BE, H5T_STD_I64LE) != false) {
+        H5_FAILED();
+        printf("Conversion path for H5T_FLOAT_BFLOAT16BE -> H5T_STD_I64LE was not a software conversion\n");
+        goto error;
+    }
+
+    /*
+     * Create a dataset with the little-endian bfloat16 datatype and
+     * check the dataset raw data storage size
+     */
+    h5_fixname(FILENAME[16], H5P_DEFAULT, filename, sizeof filename);
+
+    if ((fid = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
+        H5_FAILED();
+        AT();
+        printf("Can't create file!\n");
+        goto error;
+    }
+
+    dims[0] = 10000;
+    if ((space_id = H5Screate_simple(1, dims, NULL)) < 0) {
+        H5_FAILED();
+        AT();
+        printf("Can't create dataspace\n");
+        goto error;
+    }
+
+    if ((dcpl_id = H5Pcreate(H5P_DATASET_CREATE)) < 0) {
+        H5_FAILED();
+        AT();
+        printf("Can't create DCPL\n");
+        goto error;
+    }
+
+    if (H5Pset_alloc_time(dcpl_id, H5D_ALLOC_TIME_EARLY) < 0) {
+        H5_FAILED();
+        AT();
+        printf("Can't set alloc time\n");
+        goto error;
+    }
+
+    if ((dset_id = H5Dcreate2(fid, "Dataset", H5T_FLOAT_BFLOAT16LE, space_id, H5P_DEFAULT, dcpl_id,
+                              H5P_DEFAULT)) < 0) {
+        H5_FAILED();
+        AT();
+        printf("Can't create dataset\n");
+        goto error;
+    }
+
+    if (H5Dget_storage_size(dset_id) != dims[0] * 2 /* 2 byte datatype */) {
+        H5_FAILED();
+        AT();
+        printf("Incorrect dataset raw data storage size allocated in file\n");
+        goto error;
+    }
+
+    if (H5Pclose(dcpl_id) < 0)
+        TEST_ERROR;
+    if (H5Sclose(space_id) < 0)
+        TEST_ERROR;
+    if (H5Dclose(dset_id) < 0)
+        TEST_ERROR;
+    if (H5Fclose(fid) < 0)
+        TEST_ERROR;
+    if (H5Fdelete(filename, H5P_DEFAULT) < 0)
+        TEST_ERROR;
+
+    PASSED();
+
+    return 0;
+
+error:
+    H5E_BEGIN_TRY
+    {
+        H5Pclose(dcpl_id);
+        H5Sclose(space_id);
+        H5Dclose(dset_id);
+        H5Fclose(fid);
+        H5Fdelete(filename, H5P_DEFAULT);
+    }
+    H5E_END_TRY
+
+    return 1;
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    test_fp8
+ *
+ * Purpose:     Tests the FP8 datatypes.
+ *
+ * Return:      Success:    0
+ *              Failure:    number of errors
+ *-------------------------------------------------------------------------
+ */
+static int
+test_fp8(void)
+{
+    H5T_class_t type_class;
+    H5T_order_t type_order;
+    H5T_norm_t  type_norm;
+    H5T_pad_t   lsb_pad;
+    H5T_pad_t   msb_pad;
+    H5T_pad_t   inpad;
+    hsize_t     dims[1];
+    size_t      type_size;
+    size_t      type_prec;
+    size_t      sign_pos;
+    size_t      expo_pos;
+    size_t      mant_pos;
+    size_t      expo_size;
+    size_t      mant_size;
+    size_t      expo_bias;
+    hid_t       fid           = H5I_INVALID_HID;
+    hid_t       space_id      = H5I_INVALID_HID;
+    hid_t       dset_id       = H5I_INVALID_HID;
+    hid_t       dcpl_id       = H5I_INVALID_HID;
+    char        filename[256] = {0};
+    int         type_offset;
+
+    TESTING("FP8 datatypes");
+
+    /* Check characteristics of the predefined types */
+
+    if ((type_class = H5Tget_class(H5T_FLOAT_F8E4M3)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype class for H5T_FLOAT_F8E4M3\n");
+        goto error;
+    }
+
+    if (H5T_FLOAT != type_class) {
+        H5_FAILED();
+        printf("Datatype class for H5T_FLOAT_F8E4M3 wasn't H5T_FLOAT\n");
+        goto error;
+    }
+
+    if ((type_class = H5Tget_class(H5T_FLOAT_F8E5M2)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype class for H5T_FLOAT_F8E5M2\n");
+        goto error;
+    }
+
+    if (H5T_FLOAT != type_class) {
+        H5_FAILED();
+        printf("Datatype class for H5T_FLOAT_F8E5M2 wasn't H5T_FLOAT\n");
+        goto error;
+    }
+
+    if ((type_size = H5Tget_size(H5T_FLOAT_F8E4M3)) == 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype size for H5T_FLOAT_F8E4M3\n");
+        goto error;
+    }
+
+    if (type_size != 1) {
+        H5_FAILED();
+        printf("Datatype size for H5T_FLOAT_F8E4M3 was incorrect (expected 1, got %zu)\n", type_size);
+        goto error;
+    }
+
+    if ((type_size = H5Tget_size(H5T_FLOAT_F8E5M2)) == 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype size for H5T_FLOAT_F8E5M2\n");
+        goto error;
+    }
+
+    if (type_size != 1) {
+        H5_FAILED();
+        printf("Datatype size for H5T_FLOAT_F8E5M2 was incorrect (expected 1, got %zu)\n", type_size);
+        goto error;
+    }
+
+    if ((type_order = H5Tget_order(H5T_FLOAT_F8E4M3)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype order for H5T_FLOAT_F8E4M3\n");
+        goto error;
+    }
+
+    if (type_order != H5T_ORDER_LE) {
+        H5_FAILED();
+        printf("Datatype order for H5T_FLOAT_F8E4M3 wasn't H5T_ORDER_LE\n");
+        goto error;
+    }
+
+    if ((type_order = H5Tget_order(H5T_FLOAT_F8E5M2)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype order for H5T_FLOAT_F8E5M2\n");
+        goto error;
+    }
+
+    if (type_order != H5T_ORDER_LE) {
+        H5_FAILED();
+        printf("Datatype order for H5T_FLOAT_F8E5M2 wasn't H5T_ORDER_LE\n");
+        goto error;
+    }
+
+    if ((type_prec = H5Tget_precision(H5T_FLOAT_F8E4M3)) == 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype precision for H5T_FLOAT_F8E4M3\n");
+        goto error;
+    }
+
+    if (type_prec != 8) {
+        H5_FAILED();
+        printf("Datatype precision for H5T_FLOAT_F8E4M3 was incorrect (expected 8, got %zu)\n", type_prec);
+        goto error;
+    }
+
+    if ((type_prec = H5Tget_precision(H5T_FLOAT_F8E5M2)) == 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype precision for H5T_FLOAT_F8E5M2\n");
+        goto error;
+    }
+
+    if (type_prec != 8) {
+        H5_FAILED();
+        printf("Datatype precision for H5T_FLOAT_F8E5M2 was incorrect (expected 8, got %zu)\n", type_prec);
+        goto error;
+    }
+
+    if ((type_offset = H5Tget_offset(H5T_FLOAT_F8E4M3)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype offset for H5T_FLOAT_F8E4M3\n");
+        goto error;
+    }
+
+    if (type_offset != 0) {
+        H5_FAILED();
+        printf("Datatype offset for H5T_FLOAT_F8E4M3 was incorrect (expected 0, got %d)\n", type_offset);
+        goto error;
+    }
+
+    if ((type_offset = H5Tget_offset(H5T_FLOAT_F8E5M2)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype offset for H5T_FLOAT_F8E5M2\n");
+        goto error;
+    }
+
+    if (type_offset != 0) {
+        H5_FAILED();
+        printf("Datatype offset for H5T_FLOAT_F8E5M2 was incorrect (expected 0, got %d)\n", type_offset);
+        goto error;
+    }
+
+    if (H5Tget_pad(H5T_FLOAT_F8E4M3, &lsb_pad, &msb_pad) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype padding type for H5T_FLOAT_F8E4M3\n");
+        goto error;
+    }
+
+    if (lsb_pad != H5T_PAD_ZERO || msb_pad != H5T_PAD_ZERO) {
+        H5_FAILED();
+        printf("Datatype padding type for H5T_FLOAT_F8E4M3 was incorrect (expected H5T_PAD_ZERO, got lsb pad "
+               "type %d, msb pad type %d)\n",
+               lsb_pad, msb_pad);
+        goto error;
+    }
+
+    if (H5Tget_pad(H5T_FLOAT_F8E5M2, &lsb_pad, &msb_pad) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype padding type for H5T_FLOAT_F8E5M2\n");
+        goto error;
+    }
+
+    if (lsb_pad != H5T_PAD_ZERO || msb_pad != H5T_PAD_ZERO) {
+        H5_FAILED();
+        printf("Datatype padding type for H5T_FLOAT_F8E5M2 was incorrect (expected H5T_PAD_ZERO, got lsb pad "
+               "type %d, msb pad type %d)\n",
+               lsb_pad, msb_pad);
+        goto error;
+    }
+
+    if (H5Tget_fields(H5T_FLOAT_F8E4M3, &sign_pos, &expo_pos, &expo_size, &mant_pos, &mant_size) < 0) {
+        H5_FAILED();
+        printf("Couldn't get floating-point bit field information for H5T_FLOAT_F8E4M3\n");
+        goto error;
+    }
+
+    if (sign_pos != 7 || expo_pos != 3 || mant_pos != 0 || expo_size != 4 || mant_size != 3) {
+        H5_FAILED();
+        printf("H5T_FLOAT_F8E4M3 didn't match FP8 E4M3 specification "
+               "(expected spos=7, epos=3, esize=4, mpos=0, msize=3, "
+               "got spos=%zu, epos=%zu, esize=%zu, mpos=%zu, msize=%zu)\n",
+               sign_pos, expo_pos, expo_size, mant_pos, mant_size);
+        goto error;
+    }
+
+    if (H5Tget_fields(H5T_FLOAT_F8E5M2, &sign_pos, &expo_pos, &expo_size, &mant_pos, &mant_size) < 0) {
+        H5_FAILED();
+        printf("Couldn't get floating-point bit field information for H5T_FLOAT_F8E5M2\n");
+        goto error;
+    }
+
+    if (sign_pos != 7 || expo_pos != 2 || mant_pos != 0 || expo_size != 5 || mant_size != 2) {
+        H5_FAILED();
+        printf("H5T_FLOAT_F8E5M2 didn't match FP8 E5M2 specification "
+               "(expected spos=7, epos=2, esize=5, mpos=0, msize=2, "
+               "got spos=%zu, epos=%zu, esize=%zu, mpos=%zu, msize=%zu)\n",
+               sign_pos, expo_pos, expo_size, mant_pos, mant_size);
+        goto error;
+    }
+
+    if ((expo_bias = H5Tget_ebias(H5T_FLOAT_F8E4M3)) == 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype exponent bias for H5T_FLOAT_F8E4M3\n");
+        goto error;
+    }
+
+    if (expo_bias != 7) {
+        H5_FAILED();
+        printf("Datatype exponent bias for H5T_FLOAT_F8E4M3 was incorrect (expected 7, got %zu)\n",
+               expo_bias);
+        goto error;
+    }
+
+    if ((expo_bias = H5Tget_ebias(H5T_FLOAT_F8E5M2)) == 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype exponent bias for H5T_FLOAT_F8E5M2\n");
+        goto error;
+    }
+
+    if (expo_bias != 15) {
+        H5_FAILED();
+        printf("Datatype exponent bias for H5T_FLOAT_F8E5M2 was incorrect (expected 15, got %zu)\n",
+               expo_bias);
+        goto error;
+    }
+
+    if ((type_norm = H5Tget_norm(H5T_FLOAT_F8E4M3)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype mantissa normalization type for H5T_FLOAT_F8E4M3\n");
+        goto error;
+    }
+
+    if (type_norm != H5T_NORM_IMPLIED) {
+        H5_FAILED();
+        printf("Datatype mantissa normalization type for H5T_FLOAT_F8E4M3 wasn't H5T_NORM_IMPLIED\n");
+        goto error;
+    }
+
+    if ((type_norm = H5Tget_norm(H5T_FLOAT_F8E5M2)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype mantissa normalization type for H5T_FLOAT_F8E5M2\n");
+        goto error;
+    }
+
+    if (type_norm != H5T_NORM_IMPLIED) {
+        H5_FAILED();
+        printf("Datatype mantissa normalization type for H5T_FLOAT_F8E5M2 wasn't H5T_NORM_IMPLIED\n");
+        goto error;
+    }
+
+    if ((inpad = H5Tget_inpad(H5T_FLOAT_F8E4M3)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype unused bits padding type for H5T_FLOAT_F8E4M3\n");
+        goto error;
+    }
+
+    if (inpad != H5T_PAD_ZERO) {
+        H5_FAILED();
+        printf("Datatype unused bits padding type for H5T_FLOAT_F8E4M3 was incorrect (expected H5T_PAD_ZERO, "
+               "got pad type %d)\n",
+               inpad);
+        goto error;
+    }
+
+    if ((inpad = H5Tget_inpad(H5T_FLOAT_F8E5M2)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype unused bits padding type for H5T_FLOAT_F8E5M2\n");
+        goto error;
+    }
+
+    if (inpad != H5T_PAD_ZERO) {
+        H5_FAILED();
+        printf("Datatype unused bits padding type for H5T_FLOAT_F8E5M2 was incorrect (expected H5T_PAD_ZERO, "
+               "got pad type %d)\n",
+               inpad);
+        goto error;
+    }
+
+    /*
+     * Ensure that some random conversions on the FP8 datatypes
+     * are currently covered by general software routines rather
+     * than compiler conversions.
+     */
+
+    if (H5Tcompiler_conv(H5T_FLOAT_F8E4M3, H5T_IEEE_F16LE) != false) {
+        H5_FAILED();
+        printf("Conversion path for H5T_FLOAT_F8E4M3 -> H5T_IEEE_F16LE was not a software conversion\n");
+        goto error;
+    }
+
+    if (H5Tcompiler_conv(H5T_FLOAT_F8E4M3, H5T_NATIVE_INT) != false) {
+        H5_FAILED();
+        printf("Conversion path for H5T_FLOAT_F8E4M3 -> H5T_NATIVE_INT was not a software conversion\n");
+        goto error;
+    }
+
+    if (H5Tcompiler_conv(H5T_FLOAT_F8E5M2, H5T_IEEE_F16LE) != false) {
+        H5_FAILED();
+        printf("Conversion path for H5T_FLOAT_F8E5M2 -> H5T_IEEE_F16LE was not a software conversion\n");
+        goto error;
+    }
+
+    if (H5Tcompiler_conv(H5T_FLOAT_F8E5M2, H5T_NATIVE_INT) != false) {
+        H5_FAILED();
+        printf("Conversion path for H5T_FLOAT_F8E5M2 -> H5T_NATIVE_INT was not a software conversion\n");
+        goto error;
+    }
+
+    /*
+     * Create datasets with the FP8 datatypes and check the dataset raw data storage size
+     */
+    h5_fixname(FILENAME[17], H5P_DEFAULT, filename, sizeof filename);
+
+    if ((fid = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
+        H5_FAILED();
+        AT();
+        printf("Can't create file!\n");
+        goto error;
+    }
+
+    dims[0] = 10000;
+    if ((space_id = H5Screate_simple(1, dims, NULL)) < 0) {
+        H5_FAILED();
+        AT();
+        printf("Can't create dataspace\n");
+        goto error;
+    }
+
+    if ((dcpl_id = H5Pcreate(H5P_DATASET_CREATE)) < 0) {
+        H5_FAILED();
+        AT();
+        printf("Can't create DCPL\n");
+        goto error;
+    }
+
+    if (H5Pset_alloc_time(dcpl_id, H5D_ALLOC_TIME_EARLY) < 0) {
+        H5_FAILED();
+        AT();
+        printf("Can't set alloc time\n");
+        goto error;
+    }
+
+    if ((dset_id = H5Dcreate2(fid, "DatasetE4M3", H5T_FLOAT_F8E4M3, space_id, H5P_DEFAULT, dcpl_id,
+                              H5P_DEFAULT)) < 0) {
+        H5_FAILED();
+        AT();
+        printf("Can't create dataset\n");
+        goto error;
+    }
+
+    if (H5Dget_storage_size(dset_id) != dims[0] /* 1 byte datatype */) {
+        H5_FAILED();
+        AT();
+        printf("Incorrect dataset raw data storage size allocated in file\n");
+        goto error;
+    }
+
+    if (H5Dclose(dset_id) < 0)
+        TEST_ERROR;
+
+    if ((dset_id = H5Dcreate2(fid, "DatasetE5M2", H5T_FLOAT_F8E5M2, space_id, H5P_DEFAULT, dcpl_id,
+                              H5P_DEFAULT)) < 0) {
+        H5_FAILED();
+        AT();
+        printf("Can't create dataset\n");
+        goto error;
+    }
+
+    if (H5Dget_storage_size(dset_id) != dims[0] /* 1 byte datatype */) {
+        H5_FAILED();
+        AT();
+        printf("Incorrect dataset raw data storage size allocated in file\n");
+        goto error;
+    }
+
+    if (H5Pclose(dcpl_id) < 0)
+        TEST_ERROR;
+    if (H5Sclose(space_id) < 0)
+        TEST_ERROR;
+    if (H5Dclose(dset_id) < 0)
+        TEST_ERROR;
+    if (H5Fclose(fid) < 0)
+        TEST_ERROR;
+    if (H5Fdelete(filename, H5P_DEFAULT) < 0)
+        TEST_ERROR;
+
+    PASSED();
+
+    return 0;
+
+error:
+    H5E_BEGIN_TRY
+    {
+        H5Pclose(dcpl_id);
+        H5Sclose(space_id);
+        H5Dclose(dset_id);
+        H5Fclose(fid);
+        H5Fdelete(filename, H5P_DEFAULT);
+    }
+    H5E_END_TRY
+
+    return 1;
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    test_fp6
+ *
+ * Purpose:     Tests the FP6 datatypes.
+ *
+ * Return:      Success:    0
+ *              Failure:    number of errors
+ *-------------------------------------------------------------------------
+ */
+static int
+test_fp6(void)
+{
+    H5T_class_t type_class;
+    H5T_order_t type_order;
+    H5T_norm_t  type_norm;
+    H5T_pad_t   lsb_pad;
+    H5T_pad_t   msb_pad;
+    H5T_pad_t   inpad;
+    hsize_t     dims[1];
+    size_t      type_size;
+    size_t      type_prec;
+    size_t      sign_pos;
+    size_t      expo_pos;
+    size_t      mant_pos;
+    size_t      expo_size;
+    size_t      mant_size;
+    size_t      expo_bias;
+    hid_t       fid           = H5I_INVALID_HID;
+    hid_t       space_id      = H5I_INVALID_HID;
+    hid_t       dset_id       = H5I_INVALID_HID;
+    hid_t       dcpl_id       = H5I_INVALID_HID;
+    char        filename[256] = {0};
+    int         type_offset;
+
+    TESTING("FP6 datatypes");
+
+    /* Check characteristics of the predefined types */
+
+    if ((type_class = H5Tget_class(H5T_FLOAT_F6E2M3)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype class for H5T_FLOAT_F6E2M3\n");
+        goto error;
+    }
+
+    if (H5T_FLOAT != type_class) {
+        H5_FAILED();
+        printf("Datatype class for H5T_FLOAT_F6E2M3 wasn't H5T_FLOAT\n");
+        goto error;
+    }
+
+    if ((type_class = H5Tget_class(H5T_FLOAT_F6E3M2)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype class for H5T_FLOAT_F6E3M2\n");
+        goto error;
+    }
+
+    if (H5T_FLOAT != type_class) {
+        H5_FAILED();
+        printf("Datatype class for H5T_FLOAT_F6E3M2 wasn't H5T_FLOAT\n");
+        goto error;
+    }
+
+    if ((type_size = H5Tget_size(H5T_FLOAT_F6E2M3)) == 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype size for H5T_FLOAT_F6E2M3\n");
+        goto error;
+    }
+
+    if (type_size != 1) {
+        H5_FAILED();
+        printf("Datatype size for H5T_FLOAT_F6E2M3 was incorrect (expected 1, got %zu)\n", type_size);
+        goto error;
+    }
+
+    if ((type_size = H5Tget_size(H5T_FLOAT_F6E3M2)) == 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype size for H5T_FLOAT_F6E3M2\n");
+        goto error;
+    }
+
+    if (type_size != 1) {
+        H5_FAILED();
+        printf("Datatype size for H5T_FLOAT_F6E3M2 was incorrect (expected 1, got %zu)\n", type_size);
+        goto error;
+    }
+
+    if ((type_order = H5Tget_order(H5T_FLOAT_F6E2M3)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype order for H5T_FLOAT_F6E2M3\n");
+        goto error;
+    }
+
+    if (type_order != H5T_ORDER_LE) {
+        H5_FAILED();
+        printf("Datatype order for H5T_FLOAT_F6E2M3 wasn't H5T_ORDER_LE\n");
+        goto error;
+    }
+
+    if ((type_order = H5Tget_order(H5T_FLOAT_F6E3M2)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype order for H5T_FLOAT_F6E3M2\n");
+        goto error;
+    }
+
+    if (type_order != H5T_ORDER_LE) {
+        H5_FAILED();
+        printf("Datatype order for H5T_FLOAT_F6E3M2 wasn't H5T_ORDER_LE\n");
+        goto error;
+    }
+
+    if ((type_prec = H5Tget_precision(H5T_FLOAT_F6E2M3)) == 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype precision for H5T_FLOAT_F6E2M3\n");
+        goto error;
+    }
+
+    if (type_prec != 6) {
+        H5_FAILED();
+        printf("Datatype precision for H5T_FLOAT_F6E2M3 was incorrect (expected 6, got %zu)\n", type_prec);
+        goto error;
+    }
+
+    if ((type_prec = H5Tget_precision(H5T_FLOAT_F6E3M2)) == 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype precision for H5T_FLOAT_F6E3M2\n");
+        goto error;
+    }
+
+    if (type_prec != 6) {
+        H5_FAILED();
+        printf("Datatype precision for H5T_FLOAT_F6E3M2 was incorrect (expected 6, got %zu)\n", type_prec);
+        goto error;
+    }
+
+    if ((type_offset = H5Tget_offset(H5T_FLOAT_F6E2M3)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype offset for H5T_FLOAT_F6E2M3\n");
+        goto error;
+    }
+
+    if (type_offset != 0) {
+        H5_FAILED();
+        printf("Datatype offset for H5T_FLOAT_F6E2M3 was incorrect (expected 0, got %d)\n", type_offset);
+        goto error;
+    }
+
+    if ((type_offset = H5Tget_offset(H5T_FLOAT_F6E3M2)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype offset for H5T_FLOAT_F6E3M2\n");
+        goto error;
+    }
+
+    if (type_offset != 0) {
+        H5_FAILED();
+        printf("Datatype offset for H5T_FLOAT_F6E3M2 was incorrect (expected 0, got %d)\n", type_offset);
+        goto error;
+    }
+
+    if (H5Tget_pad(H5T_FLOAT_F6E2M3, &lsb_pad, &msb_pad) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype padding type for H5T_FLOAT_F6E2M3\n");
+        goto error;
+    }
+
+    if (lsb_pad != H5T_PAD_ZERO || msb_pad != H5T_PAD_ZERO) {
+        H5_FAILED();
+        printf("Datatype padding type for H5T_FLOAT_F6E2M3 was incorrect (expected H5T_PAD_ZERO, got lsb pad "
+               "type %d, msb pad type %d)\n",
+               lsb_pad, msb_pad);
+        goto error;
+    }
+
+    if (H5Tget_pad(H5T_FLOAT_F6E3M2, &lsb_pad, &msb_pad) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype padding type for H5T_FLOAT_F6E3M2\n");
+        goto error;
+    }
+
+    if (lsb_pad != H5T_PAD_ZERO || msb_pad != H5T_PAD_ZERO) {
+        H5_FAILED();
+        printf("Datatype padding type for H5T_FLOAT_F6E3M2 was incorrect (expected H5T_PAD_ZERO, got lsb pad "
+               "type %d, msb pad type %d)\n",
+               lsb_pad, msb_pad);
+        goto error;
+    }
+
+    if (H5Tget_fields(H5T_FLOAT_F6E2M3, &sign_pos, &expo_pos, &expo_size, &mant_pos, &mant_size) < 0) {
+        H5_FAILED();
+        printf("Couldn't get floating-point bit field information for H5T_FLOAT_F6E2M3\n");
+        goto error;
+    }
+
+    if (sign_pos != 5 || expo_pos != 3 || mant_pos != 0 || expo_size != 2 || mant_size != 3) {
+        H5_FAILED();
+        printf("H5T_FLOAT_F6E2M3 didn't match FP6 E2M3 specification "
+               "(expected spos=5, epos=3, esize=2, mpos=0, msize=3, "
+               "got spos=%zu, epos=%zu, esize=%zu, mpos=%zu, msize=%zu)\n",
+               sign_pos, expo_pos, expo_size, mant_pos, mant_size);
+        goto error;
+    }
+
+    if (H5Tget_fields(H5T_FLOAT_F6E3M2, &sign_pos, &expo_pos, &expo_size, &mant_pos, &mant_size) < 0) {
+        H5_FAILED();
+        printf("Couldn't get floating-point bit field information for H5T_FLOAT_F6E3M2\n");
+        goto error;
+    }
+
+    if (sign_pos != 5 || expo_pos != 2 || mant_pos != 0 || expo_size != 3 || mant_size != 2) {
+        H5_FAILED();
+        printf("H5T_FLOAT_F6E3M2 didn't match FP6 E3M2 specification "
+               "(expected spos=5, epos=2, esize=3, mpos=0, msize=2, "
+               "got spos=%zu, epos=%zu, esize=%zu, mpos=%zu, msize=%zu)\n",
+               sign_pos, expo_pos, expo_size, mant_pos, mant_size);
+        goto error;
+    }
+
+    if ((expo_bias = H5Tget_ebias(H5T_FLOAT_F6E2M3)) == 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype exponent bias for H5T_FLOAT_F6E2M3\n");
+        goto error;
+    }
+
+    if (expo_bias != 1) {
+        H5_FAILED();
+        printf("Datatype exponent bias for H5T_FLOAT_F6E2M3 was incorrect (expected 1, got %zu)\n",
+               expo_bias);
+        goto error;
+    }
+
+    if ((expo_bias = H5Tget_ebias(H5T_FLOAT_F6E3M2)) == 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype exponent bias for H5T_FLOAT_F6E3M2\n");
+        goto error;
+    }
+
+    if (expo_bias != 3) {
+        H5_FAILED();
+        printf("Datatype exponent bias for H5T_FLOAT_F6E3M2 was incorrect (expected 3, got %zu)\n",
+               expo_bias);
+        goto error;
+    }
+
+    if ((type_norm = H5Tget_norm(H5T_FLOAT_F6E2M3)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype mantissa normalization type for H5T_FLOAT_F6E2M3\n");
+        goto error;
+    }
+
+    if (type_norm != H5T_NORM_IMPLIED) {
+        H5_FAILED();
+        printf("Datatype mantissa normalization type for H5T_FLOAT_F6E2M3 wasn't H5T_NORM_IMPLIED\n");
+        goto error;
+    }
+
+    if ((type_norm = H5Tget_norm(H5T_FLOAT_F6E3M2)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype mantissa normalization type for H5T_FLOAT_F6E3M2\n");
+        goto error;
+    }
+
+    if (type_norm != H5T_NORM_IMPLIED) {
+        H5_FAILED();
+        printf("Datatype mantissa normalization type for H5T_FLOAT_F6E3M2 wasn't H5T_NORM_IMPLIED\n");
+        goto error;
+    }
+
+    if ((inpad = H5Tget_inpad(H5T_FLOAT_F6E2M3)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype unused bits padding type for H5T_FLOAT_F6E2M3\n");
+        goto error;
+    }
+
+    if (inpad != H5T_PAD_ZERO) {
+        H5_FAILED();
+        printf("Datatype unused bits padding type for H5T_FLOAT_F6E2M3 was incorrect (expected H5T_PAD_ZERO, "
+               "got pad type %d)\n",
+               inpad);
+        goto error;
+    }
+
+    if ((inpad = H5Tget_inpad(H5T_FLOAT_F6E3M2)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype unused bits padding type for H5T_FLOAT_F6E3M2\n");
+        goto error;
+    }
+
+    if (inpad != H5T_PAD_ZERO) {
+        H5_FAILED();
+        printf("Datatype unused bits padding type for H5T_FLOAT_F6E3M2 was incorrect (expected H5T_PAD_ZERO, "
+               "got pad type %d)\n",
+               inpad);
+        goto error;
+    }
+
+    /*
+     * Ensure that some random conversions on the FP6 datatypes
+     * are currently covered by general software routines rather
+     * than compiler conversions.
+     */
+
+    if (H5Tcompiler_conv(H5T_FLOAT_F6E2M3, H5T_IEEE_F16LE) != false) {
+        H5_FAILED();
+        printf("Conversion path for H5T_FLOAT_F6E2M3 -> H5T_IEEE_F16LE was not a software conversion\n");
+        goto error;
+    }
+
+    if (H5Tcompiler_conv(H5T_FLOAT_F6E2M3, H5T_NATIVE_INT) != false) {
+        H5_FAILED();
+        printf("Conversion path for H5T_FLOAT_F6E2M3 -> H5T_NATIVE_INT was not a software conversion\n");
+        goto error;
+    }
+
+    if (H5Tcompiler_conv(H5T_FLOAT_F6E3M2, H5T_IEEE_F16LE) != false) {
+        H5_FAILED();
+        printf("Conversion path for H5T_FLOAT_F6E3M2 -> H5T_IEEE_F16LE was not a software conversion\n");
+        goto error;
+    }
+
+    if (H5Tcompiler_conv(H5T_FLOAT_F6E3M2, H5T_NATIVE_INT) != false) {
+        H5_FAILED();
+        printf("Conversion path for H5T_FLOAT_F6E3M2 -> H5T_NATIVE_INT was not a software conversion\n");
+        goto error;
+    }
+
+    /*
+     * Create datasets with the FP6 datatypes and check the dataset raw data storage size
+     */
+    h5_fixname(FILENAME[18], H5P_DEFAULT, filename, sizeof filename);
+
+    if ((fid = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
+        H5_FAILED();
+        AT();
+        printf("Can't create file!\n");
+        goto error;
+    }
+
+    dims[0] = 10000;
+    if ((space_id = H5Screate_simple(1, dims, NULL)) < 0) {
+        H5_FAILED();
+        AT();
+        printf("Can't create dataspace\n");
+        goto error;
+    }
+
+    if ((dcpl_id = H5Pcreate(H5P_DATASET_CREATE)) < 0) {
+        H5_FAILED();
+        AT();
+        printf("Can't create DCPL\n");
+        goto error;
+    }
+
+    if (H5Pset_alloc_time(dcpl_id, H5D_ALLOC_TIME_EARLY) < 0) {
+        H5_FAILED();
+        AT();
+        printf("Can't set alloc time\n");
+        goto error;
+    }
+
+    if ((dset_id = H5Dcreate2(fid, "DatasetE2M3", H5T_FLOAT_F6E2M3, space_id, H5P_DEFAULT, dcpl_id,
+                              H5P_DEFAULT)) < 0) {
+        H5_FAILED();
+        AT();
+        printf("Can't create dataset\n");
+        goto error;
+    }
+
+    if (H5Dget_storage_size(dset_id) != dims[0] /* 1 byte datatype */) {
+        H5_FAILED();
+        AT();
+        printf("Incorrect dataset raw data storage size allocated in file\n");
+        goto error;
+    }
+
+    if (H5Dclose(dset_id) < 0)
+        TEST_ERROR;
+
+    if ((dset_id = H5Dcreate2(fid, "DatasetE3M2", H5T_FLOAT_F6E3M2, space_id, H5P_DEFAULT, dcpl_id,
+                              H5P_DEFAULT)) < 0) {
+        H5_FAILED();
+        AT();
+        printf("Can't create dataset\n");
+        goto error;
+    }
+
+    if (H5Dget_storage_size(dset_id) != dims[0] /* 1 byte datatype */) {
+        H5_FAILED();
+        AT();
+        printf("Incorrect dataset raw data storage size allocated in file\n");
+        goto error;
+    }
+
+    if (H5Pclose(dcpl_id) < 0)
+        TEST_ERROR;
+    if (H5Sclose(space_id) < 0)
+        TEST_ERROR;
+    if (H5Dclose(dset_id) < 0)
+        TEST_ERROR;
+    if (H5Fclose(fid) < 0)
+        TEST_ERROR;
+    if (H5Fdelete(filename, H5P_DEFAULT) < 0)
+        TEST_ERROR;
+
+    PASSED();
+
+    return 0;
+
+error:
+    H5E_BEGIN_TRY
+    {
+        H5Pclose(dcpl_id);
+        H5Sclose(space_id);
+        H5Dclose(dset_id);
+        H5Fclose(fid);
+        H5Fdelete(filename, H5P_DEFAULT);
+    }
+    H5E_END_TRY
+
+    return 1;
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    test_fp4
+ *
+ * Purpose:     Tests the FP4 datatype.
+ *
+ * Return:      Success:    0
+ *              Failure:    number of errors
+ *-------------------------------------------------------------------------
+ */
+static int
+test_fp4(void)
+{
+    H5T_class_t type_class;
+    H5T_order_t type_order;
+    H5T_norm_t  type_norm;
+    H5T_pad_t   lsb_pad;
+    H5T_pad_t   msb_pad;
+    H5T_pad_t   inpad;
+    hsize_t     dims[1];
+    size_t      type_size;
+    size_t      type_prec;
+    size_t      sign_pos;
+    size_t      expo_pos;
+    size_t      mant_pos;
+    size_t      expo_size;
+    size_t      mant_size;
+    size_t      expo_bias;
+    hid_t       fid           = H5I_INVALID_HID;
+    hid_t       space_id      = H5I_INVALID_HID;
+    hid_t       dset_id       = H5I_INVALID_HID;
+    hid_t       dcpl_id       = H5I_INVALID_HID;
+    char        filename[256] = {0};
+    int         type_offset;
+
+    TESTING("FP4 datatypes");
+
+    /* Check characteristics of the predefined type */
+
+    if ((type_class = H5Tget_class(H5T_FLOAT_F4E2M1)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype class for H5T_FLOAT_F4E2M1\n");
+        goto error;
+    }
+
+    if (H5T_FLOAT != type_class) {
+        H5_FAILED();
+        printf("Datatype class for H5T_FLOAT_F4E2M1 wasn't H5T_FLOAT\n");
+        goto error;
+    }
+
+    if ((type_size = H5Tget_size(H5T_FLOAT_F4E2M1)) == 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype size for H5T_FLOAT_F4E2M1\n");
+        goto error;
+    }
+
+    if (type_size != 1) {
+        H5_FAILED();
+        printf("Datatype size for H5T_FLOAT_F4E2M1 was incorrect (expected 1, got %zu)\n", type_size);
+        goto error;
+    }
+
+    if ((type_order = H5Tget_order(H5T_FLOAT_F4E2M1)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype order for H5T_FLOAT_F4E2M1\n");
+        goto error;
+    }
+
+    if (type_order != H5T_ORDER_LE) {
+        H5_FAILED();
+        printf("Datatype order for H5T_FLOAT_F4E2M1 wasn't H5T_ORDER_LE\n");
+        goto error;
+    }
+
+    if ((type_prec = H5Tget_precision(H5T_FLOAT_F4E2M1)) == 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype precision for H5T_FLOAT_F4E2M1\n");
+        goto error;
+    }
+
+    if (type_prec != 4) {
+        H5_FAILED();
+        printf("Datatype precision for H5T_FLOAT_F4E2M1 was incorrect (expected 4, got %zu)\n", type_prec);
+        goto error;
+    }
+
+    if ((type_offset = H5Tget_offset(H5T_FLOAT_F4E2M1)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype offset for H5T_FLOAT_F4E2M1\n");
+        goto error;
+    }
+
+    if (type_offset != 0) {
+        H5_FAILED();
+        printf("Datatype offset for H5T_FLOAT_F4E2M1 was incorrect (expected 0, got %d)\n", type_offset);
+        goto error;
+    }
+
+    if (H5Tget_pad(H5T_FLOAT_F4E2M1, &lsb_pad, &msb_pad) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype padding type for H5T_FLOAT_F4E2M1\n");
+        goto error;
+    }
+
+    if (lsb_pad != H5T_PAD_ZERO || msb_pad != H5T_PAD_ZERO) {
+        H5_FAILED();
+        printf("Datatype padding type for H5T_FLOAT_F4E2M1 was incorrect (expected H5T_PAD_ZERO, got lsb pad "
+               "type %d, msb pad type %d)\n",
+               lsb_pad, msb_pad);
+        goto error;
+    }
+
+    if (H5Tget_fields(H5T_FLOAT_F4E2M1, &sign_pos, &expo_pos, &expo_size, &mant_pos, &mant_size) < 0) {
+        H5_FAILED();
+        printf("Couldn't get floating-point bit field information for H5T_FLOAT_F4E2M1\n");
+        goto error;
+    }
+
+    if (sign_pos != 3 || expo_pos != 1 || mant_pos != 0 || expo_size != 2 || mant_size != 1) {
+        H5_FAILED();
+        printf("H5T_FLOAT_F4E2M1 didn't match FP4 E2M1 specification "
+               "(expected spos=3, epos=1, esize=2, mpos=0, msize=1, "
+               "got spos=%zu, epos=%zu, esize=%zu, mpos=%zu, msize=%zu)\n",
+               sign_pos, expo_pos, expo_size, mant_pos, mant_size);
+        goto error;
+    }
+
+    if ((expo_bias = H5Tget_ebias(H5T_FLOAT_F4E2M1)) == 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype exponent bias for H5T_FLOAT_F4E2M1\n");
+        goto error;
+    }
+
+    if (expo_bias != 1) {
+        H5_FAILED();
+        printf("Datatype exponent bias for H5T_FLOAT_F4E2M1 was incorrect (expected 1, got %zu)\n",
+               expo_bias);
+        goto error;
+    }
+
+    if ((type_norm = H5Tget_norm(H5T_FLOAT_F4E2M1)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype mantissa normalization type for H5T_FLOAT_F4E2M1\n");
+        goto error;
+    }
+
+    if (type_norm != H5T_NORM_IMPLIED) {
+        H5_FAILED();
+        printf("Datatype mantissa normalization type for H5T_FLOAT_F4E2M1 wasn't H5T_NORM_IMPLIED\n");
+        goto error;
+    }
+
+    if ((inpad = H5Tget_inpad(H5T_FLOAT_F4E2M1)) < 0) {
+        H5_FAILED();
+        printf("Couldn't get datatype unused bits padding type for H5T_FLOAT_F4E2M1\n");
+        goto error;
+    }
+
+    if (inpad != H5T_PAD_ZERO) {
+        H5_FAILED();
+        printf("Datatype unused bits padding type for H5T_FLOAT_F4E2M1 was incorrect (expected H5T_PAD_ZERO, "
+               "got pad type %d)\n",
+               inpad);
+        goto error;
+    }
+
+    /*
+     * Ensure that some random conversions on the FP4 datatype
+     * are currently covered by general software routines rather
+     * than compiler conversions.
+     */
+
+    if (H5Tcompiler_conv(H5T_FLOAT_F4E2M1, H5T_IEEE_F16LE) != false) {
+        H5_FAILED();
+        printf("Conversion path for H5T_FLOAT_F4E2M1 -> H5T_IEEE_F16LE was not a software conversion\n");
+        goto error;
+    }
+
+    if (H5Tcompiler_conv(H5T_FLOAT_F4E2M1, H5T_NATIVE_INT) != false) {
+        H5_FAILED();
+        printf("Conversion path for H5T_FLOAT_F4E2M1 -> H5T_NATIVE_INT was not a software conversion\n");
+        goto error;
+    }
+
+    /*
+     * Create datasets with the FP4 datatype and check the dataset raw data storage size
+     */
+    h5_fixname(FILENAME[19], H5P_DEFAULT, filename, sizeof filename);
+
+    if ((fid = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
+        H5_FAILED();
+        AT();
+        printf("Can't create file!\n");
+        goto error;
+    }
+
+    dims[0] = 10000;
+    if ((space_id = H5Screate_simple(1, dims, NULL)) < 0) {
+        H5_FAILED();
+        AT();
+        printf("Can't create dataspace\n");
+        goto error;
+    }
+
+    if ((dcpl_id = H5Pcreate(H5P_DATASET_CREATE)) < 0) {
+        H5_FAILED();
+        AT();
+        printf("Can't create DCPL\n");
+        goto error;
+    }
+
+    if (H5Pset_alloc_time(dcpl_id, H5D_ALLOC_TIME_EARLY) < 0) {
+        H5_FAILED();
+        AT();
+        printf("Can't set alloc time\n");
+        goto error;
+    }
+
+    if ((dset_id = H5Dcreate2(fid, "DatasetE2M1", H5T_FLOAT_F4E2M1, space_id, H5P_DEFAULT, dcpl_id,
+                              H5P_DEFAULT)) < 0) {
+        H5_FAILED();
+        AT();
+        printf("Can't create dataset\n");
+        goto error;
+    }
+
+    if (H5Dget_storage_size(dset_id) != dims[0] /* 1 byte datatype */) {
+        H5_FAILED();
+        AT();
+        printf("Incorrect dataset raw data storage size allocated in file\n");
+        goto error;
+    }
+
+    if (H5Pclose(dcpl_id) < 0)
+        TEST_ERROR;
+    if (H5Sclose(space_id) < 0)
+        TEST_ERROR;
+    if (H5Dclose(dset_id) < 0)
+        TEST_ERROR;
+    if (H5Fclose(fid) < 0)
+        TEST_ERROR;
+    if (H5Fdelete(filename, H5P_DEFAULT) < 0)
+        TEST_ERROR;
+
+    PASSED();
+
+    return 0;
+
+error:
+    H5E_BEGIN_TRY
+    {
+        H5Pclose(dcpl_id);
+        H5Sclose(space_id);
+        H5Dclose(dset_id);
+        H5Fclose(fid);
+        H5Fdelete(filename, H5P_DEFAULT);
+    }
+    H5E_END_TRY
+
+    return 1;
 }
 
 /*-------------------------------------------------------------------------
@@ -9598,9 +11111,15 @@ test_latest(void)
     if (H5Tinsert(tid1, "d", HOFFSET(struct s1, d), H5T_NATIVE_DOUBLE) < 0)
         FAIL_STACK_ERROR;
 
-    /* Create file using default FAPL */
-    h5_fixname(FILENAME[5], H5P_DEFAULT, filename, sizeof filename);
-    if ((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+    /* Set the 'use the earliest format' bounds in the FAPL */
+    if ((fapl = H5Pcreate(H5P_FILE_ACCESS)) < 0)
+        FAIL_STACK_ERROR;
+    if (H5Pset_libver_bounds(fapl, H5F_LIBVER_EARLIEST, H5F_LIBVER_LATEST) < 0)
+        FAIL_STACK_ERROR;
+
+    /* Create file using earliest version of the file format */
+    h5_fixname(FILENAME[5], fapl, filename, sizeof filename);
+    if ((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
         FAIL_STACK_ERROR;
 
     /* Make a copy of the datatype, to commit */
@@ -9653,8 +11172,6 @@ test_latest(void)
         FAIL_STACK_ERROR;
 
     /* Set the 'use the latest format' bounds in the FAPL */
-    if ((fapl = H5Pcreate(H5P_FILE_ACCESS)) < 0)
-        FAIL_STACK_ERROR;
     if (H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0)
         FAIL_STACK_ERROR;
 
@@ -12951,6 +14468,10 @@ main(void)
     nerrors += test_set_size_invalid();
 
     nerrors += test__Float16();
+    nerrors += test_bfloat16();
+    nerrors += test_fp8();
+    nerrors += test_fp6();
+    nerrors += test_fp4();
     nerrors += test_complex_type();
 #ifdef H5_HAVE_COMPLEX_NUMBERS
     nerrors += test_complex_type_conv_funcs();

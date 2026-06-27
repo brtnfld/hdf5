@@ -131,7 +131,11 @@ main(int argc, char *argv[])
 
             case 1: /* counting input files */
                 if (opt->fcount < 29) {
-                    (void)strcpy(opt->infiles[opt->fcount].datafile, argv[i]);
+                    if (snprintf(opt->infiles[opt->fcount].datafile, MAX_PATH_NAME_LENGTH, "%s", argv[i]) >=
+                        MAX_PATH_NAME_LENGTH) {
+                        (void)fprintf(rawerrorstream, err10, argv[i]);
+                        goto err;
+                    }
                     in                               = &(opt->infiles[opt->fcount].in);
                     opt->infiles[opt->fcount].config = 0;
                     setDefaultValues(in, opt->fcount);
@@ -148,7 +152,11 @@ main(int argc, char *argv[])
                 break;
 
             case 3: /* get configfile name */
-                (void)strcpy(opt->infiles[opt->fcount - 1].configfile, argv[i]);
+                if (snprintf(opt->infiles[opt->fcount - 1].configfile, MAX_PATH_NAME_LENGTH, "%s", argv[i]) >=
+                    MAX_PATH_NAME_LENGTH) {
+                    (void)fprintf(rawerrorstream, err10, argv[i]);
+                    goto err;
+                }
                 opt->infiles[opt->fcount - 1].config = 1;
                 break;
 
@@ -160,7 +168,7 @@ main(int argc, char *argv[])
                     (void)fprintf(rawerrorstream, err10, argv[i]);
                     goto err;
                 }
-                (void)strcpy(opt->outfile, argv[i]);
+                snprintf(opt->outfile, MAX_PATH_NAME_LENGTH, "%s", argv[i]);
                 outfile_named = true;
                 break;
 
@@ -586,7 +594,7 @@ readIntegerData(FILE *strm, struct Input *in)
             switch (in->inputClass) {
                 case 0: /* TEXTIN */
                     for (i = 0; i < len; i++, in64++) {
-                        if (fscanf(strm, "%s", buffer) < 1) {
+                        if (fscanf(strm, "%255s", buffer) < 1) {
                             (void)fprintf(rawerrorstream, "%s", err1);
                             return (-1);
                         }
@@ -753,7 +761,7 @@ readUIntegerData(FILE *strm, struct Input *in)
             switch (in->inputClass) {
                 case 6: /* TEXTUIN */
                     for (i = 0; i < len; i++, in64++) {
-                        if (fscanf(strm, "%s", buffer) < 1) {
+                        if (fscanf(strm, "%255s", buffer) < 1) {
                             (void)fprintf(rawerrorstream, "%s", err1);
                             return (-1);
                         }
@@ -2436,9 +2444,13 @@ validateConfigurationParameters(struct Input *in)
         "Cannot specify chunking or compression or extendible data sets with the external file option.\n";
     const char *err3 =
         "Cannot specify the compression or the extendible data sets without the chunking option.\n";
-    const char *err4a = "OUTPUT-ARCHITECTURE cannot be STD if OUTPUT-CLASS is floating point (FP).\n";
-    const char *err4b = "OUTPUT-ARCHITECTURE cannot be IEEE if OUTPUT-CLASS is integer (IN).\n";
-    const char *err5  = "For OUTPUT-CLASS FP, valid values for OUTPUT-SIZE are (32, 64) .\n";
+    const char *err4a      = "OUTPUT-ARCHITECTURE cannot be STD if OUTPUT-CLASS is floating point (FP).\n";
+    const char *err4b      = "OUTPUT-ARCHITECTURE cannot be IEEE if OUTPUT-CLASS is integer (IN).\n";
+    const char *err5       = "For OUTPUT-CLASS FP, valid values for OUTPUT-SIZE are (32, 64) .\n";
+    const char *err6       = "Cannot get OUTPUT-ARCHITECTUREs for validation.\n";
+    int         std_index  = -1;
+    int         ieee_index = -1;
+    int         flt_index  = -1;
 
     /* for class STR other parameters are ignored */
     if (in->inputClass == 5) /* STR */
@@ -2464,15 +2476,24 @@ validateConfigurationParameters(struct Input *in)
         }
     }
 
+    /* Obtain index values for type arch to be checked */
+    std_index  = OutputArchStrToInt("STD");
+    ieee_index = OutputArchStrToInt("IEEE");
+    flt_index  = OutputArchStrToInt("FLOAT");
+    if (std_index == -1 || ieee_index == -1 || flt_index == -1) {
+        (void)fprintf(stderr, "%s", err6);
+        return -1;
+    }
+
     /* Arch can't be STD if O/p class is FP */
-    if (in->outputArchitecture == 1)
+    if (in->outputArchitecture == std_index)
         if (in->outputClass == 1) {
             (void)fprintf(rawerrorstream, "%s", err4a);
             return (-1);
         }
 
-    /* Arch can't be IEEE if O/p class is IN */
-    if (in->outputArchitecture == 2)
+    /* Arch can't be IEEE or FLOAT if O/p class is IN */
+    if (in->outputArchitecture == ieee_index || in->outputArchitecture == flt_index)
         if (in->outputClass == 0) {
             (void)fprintf(rawerrorstream, "%s", err4b);
             return (-1);
@@ -2511,7 +2532,7 @@ parsePathInfo(struct path_info *path, char *temp)
         (void)fprintf(rawerrorstream, "%s", err1);
         return (-1);
     }
-    strcpy(path->group[i++], token);
+    snprintf(path->group[i++], MAX_PATH_NAME_LENGTH, "%s", token);
 
     while (1) {
         token = strtok(NULL, delimiter);
@@ -2521,7 +2542,7 @@ parsePathInfo(struct path_info *path, char *temp)
             (void)fprintf(rawerrorstream, "%s", err1);
             return (-1);
         }
-        strcpy(path->group[i++], token);
+        snprintf(path->group[i++], MAX_PATH_NAME_LENGTH, "%s", token);
     }
     path->count = i;
     return (0);
@@ -3228,6 +3249,153 @@ getInputClassType(struct Input *in, char *buffer)
 
         kindex = 3;
     }
+    else if (!strcmp(buffer, "H5T_FLOAT_BFLOAT16BE")) {
+        in->inputSize                      = 16;
+        in->configOptionVector[INPUT_SIZE] = 1;
+
+        if ((kindex = OutputArchStrToInt("FLOAT")) == -1) {
+            (void)fprintf(stderr, "%s", err2);
+            return (-1);
+        }
+        in->outputArchitecture = kindex;
+
+        if ((kindex = OutputByteOrderStrToInt("BE")) == -1) {
+            (void)fprintf(stderr, "%s", err3);
+            return (-1);
+        }
+        in->outputByteOrder = kindex;
+#ifdef H5DEBUGIMPORT
+        printf("h5dump inputByteOrder %d\n", in->inputByteOrder);
+#endif
+
+        kindex = 3;
+    }
+    else if (!strcmp(buffer, "H5T_FLOAT_BFLOAT16LE")) {
+        in->inputSize                      = 16;
+        in->configOptionVector[INPUT_SIZE] = 1;
+
+        if ((kindex = OutputArchStrToInt("FLOAT")) == -1) {
+            (void)fprintf(stderr, "%s", err2);
+            return (-1);
+        }
+        in->outputArchitecture = kindex;
+
+        if ((kindex = OutputByteOrderStrToInt("LE")) == -1) {
+            (void)fprintf(stderr, "%s", err3);
+            return (-1);
+        }
+        in->outputByteOrder = kindex;
+#ifdef H5DEBUGIMPORT
+        printf("h5dump inputByteOrder %d\n", in->inputByteOrder);
+#endif
+
+        kindex = 3;
+    }
+    else if (!strcmp(buffer, "H5T_FLOAT_F8E4M3")) {
+        in->inputSize                      = 8;
+        in->configOptionVector[INPUT_SIZE] = 1;
+
+        if ((kindex = OutputArchStrToInt("FLOAT")) == -1) {
+            (void)fprintf(stderr, "%s", err2);
+            return (-1);
+        }
+        in->outputArchitecture = kindex;
+
+        if ((kindex = OutputByteOrderStrToInt("LE")) == -1) {
+            (void)fprintf(stderr, "%s", err3);
+            return (-1);
+        }
+        in->outputByteOrder = kindex;
+#ifdef H5DEBUGIMPORT
+        printf("h5dump inputByteOrder %d\n", in->inputByteOrder);
+#endif
+
+        kindex = 3;
+    }
+    else if (!strcmp(buffer, "H5T_FLOAT_F8E5M2")) {
+        in->inputSize                      = 8;
+        in->configOptionVector[INPUT_SIZE] = 1;
+
+        if ((kindex = OutputArchStrToInt("FLOAT")) == -1) {
+            (void)fprintf(stderr, "%s", err2);
+            return (-1);
+        }
+        in->outputArchitecture = kindex;
+
+        if ((kindex = OutputByteOrderStrToInt("LE")) == -1) {
+            (void)fprintf(stderr, "%s", err3);
+            return (-1);
+        }
+        in->outputByteOrder = kindex;
+#ifdef H5DEBUGIMPORT
+        printf("h5dump inputByteOrder %d\n", in->inputByteOrder);
+#endif
+
+        kindex = 3;
+    }
+    else if (!strcmp(buffer, "H5T_FLOAT_F6E2M3")) {
+        in->inputSize                      = 6;
+        in->configOptionVector[INPUT_SIZE] = 1;
+
+        if ((kindex = OutputArchStrToInt("FLOAT")) == -1) {
+            (void)fprintf(stderr, "%s", err2);
+            return (-1);
+        }
+        in->outputArchitecture = kindex;
+
+        if ((kindex = OutputByteOrderStrToInt("LE")) == -1) {
+            (void)fprintf(stderr, "%s", err3);
+            return (-1);
+        }
+        in->outputByteOrder = kindex;
+#ifdef H5DEBUGIMPORT
+        printf("h5dump inputByteOrder %d\n", in->inputByteOrder);
+#endif
+
+        kindex = 3;
+    }
+    else if (!strcmp(buffer, "H5T_FLOAT_F6E3M2")) {
+        in->inputSize                      = 6;
+        in->configOptionVector[INPUT_SIZE] = 1;
+
+        if ((kindex = OutputArchStrToInt("FLOAT")) == -1) {
+            (void)fprintf(stderr, "%s", err2);
+            return (-1);
+        }
+        in->outputArchitecture = kindex;
+
+        if ((kindex = OutputByteOrderStrToInt("LE")) == -1) {
+            (void)fprintf(stderr, "%s", err3);
+            return (-1);
+        }
+        in->outputByteOrder = kindex;
+#ifdef H5DEBUGIMPORT
+        printf("h5dump inputByteOrder %d\n", in->inputByteOrder);
+#endif
+
+        kindex = 3;
+    }
+    else if (!strcmp(buffer, "H5T_FLOAT_F4E2M1")) {
+        in->inputSize                      = 4;
+        in->configOptionVector[INPUT_SIZE] = 1;
+
+        if ((kindex = OutputArchStrToInt("FLOAT")) == -1) {
+            (void)fprintf(stderr, "%s", err2);
+            return (-1);
+        }
+        in->outputArchitecture = kindex;
+
+        if ((kindex = OutputByteOrderStrToInt("LE")) == -1) {
+            (void)fprintf(stderr, "%s", err3);
+            return (-1);
+        }
+        in->outputByteOrder = kindex;
+#ifdef H5DEBUGIMPORT
+        printf("h5dump inputByteOrder %d\n", in->inputByteOrder);
+#endif
+
+        kindex = 3;
+    }
     else if (!strcmp(buffer, "H5T_VAX_F32")) {
         in->inputSize                      = 32;
         in->configOptionVector[INPUT_SIZE] = 1;
@@ -3690,8 +3858,9 @@ static int
 OutputArchStrToInt(const char *temp)
 {
     int  i;
-    char outputArchKeywordTable[8][15] = {"NATIVE", "STD", "IEEE", "INTEL", "CRAY", "MIPS", "ALPHA", "UNIX"};
-    for (i = 0; i < 8; i++)
+    char outputArchKeywordTable[9][15] = {"NATIVE", "STD",   "IEEE", "INTEL", "CRAY",
+                                          "MIPS",   "ALPHA", "UNIX", "FLOAT"};
+    for (i = 0; i < 9; i++)
         if (!strcmp(outputArchKeywordTable[i], temp))
             return i;
     return -1;
@@ -3812,8 +3981,7 @@ getExternalFilename(struct Input *in, FILE *strm)
 
     temp_len           = strlen(temp);
     in->externFilename = (char *)malloc((temp_len + 1) * sizeof(char));
-    (void)strcpy(in->externFilename, temp);
-    in->externFilename[temp_len] = '\0';
+    snprintf(in->externFilename, temp_len + 1, "%s", temp);
     return (0);
 }
 
@@ -4078,6 +4246,102 @@ createOutputDataType(struct Input *in)
 
                         default:
                             (void)fprintf(rawerrorstream, "%s", err2);
+                            return (-1);
+                    }
+                    break;
+
+                case 8:
+                    switch (in->outputSize) {
+                        case 4:
+                            switch (in->outputByteOrder) {
+                                case -1:
+                                case 0:
+                                    new_type = H5Tcopy(H5T_FLOAT_F4E2M1);
+                                    /* Though not very useful, set order to BE as expected */
+                                    H5Tset_order(new_type, H5T_ORDER_BE);
+                                    break;
+
+                                case 1:
+                                    new_type = H5Tcopy(H5T_FLOAT_F4E2M1);
+                                    break;
+
+                                default:
+                                    (void)fprintf(stderr, "%s", err3);
+                                    return (-1);
+                            }
+                            break;
+
+                        case 6:
+                            /*
+                             * NOTE: h5import does not currently have a way to specify
+                             * which FP6 format to use for output. E3M2 is arbitrarily
+                             * chosen here, but this can be problematic for data that
+                             * is intended to be in another format, such as the E2M3
+                             * format.
+                             */
+                            switch (in->outputByteOrder) {
+                                case -1:
+                                case 0:
+                                    new_type = H5Tcopy(H5T_FLOAT_F6E3M2);
+                                    /* Though not very useful, set order to BE as expected */
+                                    H5Tset_order(new_type, H5T_ORDER_BE);
+                                    break;
+
+                                case 1:
+                                    new_type = H5Tcopy(H5T_FLOAT_F6E3M2);
+                                    break;
+
+                                default:
+                                    (void)fprintf(stderr, "%s", err3);
+                                    return (-1);
+                            }
+                            break;
+
+                        case 8:
+                            /*
+                             * NOTE: h5import does not currently have a way to specify
+                             * which FP8 format to use for output. E4M3 is arbitrarily
+                             * chosen here, but this can be problematic for data that
+                             * is intended to be in another format, such as the E5M2
+                             * format.
+                             */
+                            switch (in->outputByteOrder) {
+                                case -1:
+                                case 0:
+                                    new_type = H5Tcopy(H5T_FLOAT_F8E4M3);
+                                    /* Though not very useful, set order to BE as expected */
+                                    H5Tset_order(new_type, H5T_ORDER_BE);
+                                    break;
+
+                                case 1:
+                                    new_type = H5Tcopy(H5T_FLOAT_F8E4M3);
+                                    break;
+
+                                default:
+                                    (void)fprintf(stderr, "%s", err3);
+                                    return (-1);
+                            }
+                            break;
+
+                        case 16:
+                            switch (in->outputByteOrder) {
+                                case -1:
+                                case 0:
+                                    new_type = H5Tcopy(H5T_FLOAT_BFLOAT16BE);
+                                    break;
+
+                                case 1:
+                                    new_type = H5Tcopy(H5T_FLOAT_BFLOAT16LE);
+                                    break;
+
+                                default:
+                                    (void)fprintf(stderr, "%s", err3);
+                                    return (-1);
+                            }
+                            break;
+
+                        default:
+                            (void)fprintf(stderr, "%s", err2);
                             return (-1);
                     }
                     break;
@@ -4456,6 +4720,87 @@ createInputDataType(struct Input *in)
 
                             default:
                                 (void)fprintf(rawerrorstream, "%s", err2);
+                                return (-1);
+                        }
+                        break;
+
+                    case 8:
+                        switch (in->inputSize) {
+                            case 4:
+                                switch (in->outputByteOrder) {
+                                    case -1:
+                                    case 0:
+                                    case 1:
+                                        new_type = H5Tcopy(H5T_FLOAT_F4E2M1);
+                                        break;
+
+                                    default:
+                                        (void)fprintf(stderr, "%s", err3);
+                                        return (-1);
+                                }
+                                break;
+
+                            case 6:
+                                /*
+                                 * NOTE: h5import does not currently have a way to specify
+                                 * which FP6 format to use for output. E3M2 is arbitrarily
+                                 * chosen here, but this can be problematic for data that
+                                 * is intended to be in another format, such as the E2M3
+                                 * format.
+                                 */
+                                switch (in->outputByteOrder) {
+                                    case -1:
+                                    case 0:
+                                    case 1:
+                                        new_type = H5Tcopy(H5T_FLOAT_F6E3M2);
+                                        break;
+
+                                    default:
+                                        (void)fprintf(stderr, "%s", err3);
+                                        return (-1);
+                                }
+                                break;
+
+                            case 8:
+                                /*
+                                 * NOTE: h5import does not currently have a way to specify
+                                 * which FP8 format to use for input. E4M3 is arbitrarily
+                                 * chosen here, but this can be problematic for data that
+                                 * is intended to be in another format, such as the E5M2
+                                 * format.
+                                 */
+                                switch (in->inputByteOrder) {
+                                    case -1:
+                                    case 0:
+                                    case 1:
+                                        new_type = H5Tcopy(H5T_FLOAT_F8E4M3);
+                                        break;
+
+                                    default:
+                                        (void)fprintf(stderr, "%s", err3);
+                                        return (-1);
+                                }
+                                break;
+
+                            case 16:
+                                switch (in->inputByteOrder) {
+                                    case -1:
+                                    case 0:
+                                        new_type = H5Tcopy(H5T_FLOAT_BFLOAT16BE);
+                                        break;
+
+                                    case 1:
+                                        new_type = H5Tcopy(H5T_FLOAT_BFLOAT16LE);
+                                        break;
+
+                                    default:
+                                        (void)fprintf(stderr, "%s", err3);
+                                        return (-1);
+                                }
+                                break;
+
+                            default:
+                                (void)fprintf(stderr, "%s", err2);
                                 return (-1);
                         }
                         break;

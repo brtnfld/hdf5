@@ -235,7 +235,7 @@ H5MV__find_sect(H5F_t *f, hsize_t size, H5FS_t *fspace, haddr_t *addr)
 #endif
 
             /* Re-add the section to the free-space manager */
-            if (H5FS_sect_add(f, fspace, &node->sect_info, H5FS_ADD_RETURNED_SPACE, f) < 0)
+            if (H5FS_sect_add(f, fspace, &node->sect_info, H5FS_ADD_RETURNED_SPACE, f, NULL) < 0)
                 HGOTO_ERROR(H5E_RESOURCE, H5E_CANTINSERT, FAIL, "can't re-add section to file free space");        } /* end else */
     }     /* end if */
 
@@ -303,7 +303,7 @@ H5MV_alloc(H5F_t *f, hsize_t size)
             if (NULL == (node = H5MV__sect_new(eoa, frag_size)))
                 HGOTO_ERROR(H5E_RESOURCE, H5E_CANTINIT, HADDR_UNDEF, "can't initialize free space section");
             /* Add the section */
-            if (H5FS_sect_add(f, shared->fs_man_md, &node->sect_info, H5FS_ADD_RETURNED_SPACE, f) < 0)
+            if (H5FS_sect_add(f, shared->fs_man_md, &node->sect_info, H5FS_ADD_RETURNED_SPACE, f, NULL) < 0)
                 HGOTO_ERROR(H5E_RESOURCE, H5E_CANTINSERT, HADDR_UNDEF,
                             "can't re-add section to file free space");
             node = NULL;
@@ -375,7 +375,7 @@ H5MV_free(H5F_t *f, haddr_t addr, hsize_t size)
     assert(shared->fs_man_md);
 
     /* Add the section */
-    if (H5FS_sect_add(f, shared->fs_man_md, &node->sect_info, H5FS_ADD_RETURNED_SPACE, f) < 0)
+    if (H5FS_sect_add(f, shared->fs_man_md, &node->sect_info, H5FS_ADD_RETURNED_SPACE, f, NULL) < 0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTINSERT, FAIL, "can't re-add section to file free space");
     node = NULL;
 

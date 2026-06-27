@@ -56,7 +56,7 @@ MODULE H5LIB
   !
   ! H5F flags declaration
   !
-  INTEGER, PARAMETER :: H5F_FLAGS_LEN = 31
+  INTEGER, PARAMETER :: H5F_FLAGS_LEN = 33
   INTEGER, DIMENSION(1:H5F_FLAGS_LEN) :: H5F_flags
   !
   ! H5generic flags declaration
@@ -287,10 +287,19 @@ CONTAINS
     H5T_NATIVE_B64                = predef_types(18)
     H5T_NATIVE_FLOAT_128          = predef_types(19)
 
-    H5T_IEEE_F32BE = floating_types(1)
-    H5T_IEEE_F32LE = floating_types(2)
-    H5T_IEEE_F64BE = floating_types(3)
-    H5T_IEEE_F64LE = floating_types(4)
+    H5T_IEEE_F32BE       = floating_types(1)
+    H5T_IEEE_F32LE       = floating_types(2)
+    H5T_IEEE_F64BE       = floating_types(3)
+    H5T_IEEE_F64LE       = floating_types(4)
+    H5T_IEEE_F16BE       = floating_types(5)
+    H5T_IEEE_F16LE       = floating_types(6)
+    H5T_FLOAT_BFLOAT16BE = floating_types(7)
+    H5T_FLOAT_BFLOAT16LE = floating_types(8)
+    H5T_FLOAT_F8E4M3     = floating_types(9)
+    H5T_FLOAT_F8E5M2     = floating_types(10)
+    H5T_FLOAT_F6E2M3     = floating_types(11)
+    H5T_FLOAT_F6E3M2     = floating_types(12)
+    H5T_FLOAT_F4E2M1     = floating_types(13)
 
     H5T_STD_I8BE   = integer_types(1)
     H5T_STD_I8LE   = integer_types(2)
@@ -380,6 +389,8 @@ CONTAINS
     H5F_LIBVER_V112_F              = H5F_flags(29)
     H5F_LIBVER_V114_F              = H5F_flags(30)
     H5F_LIBVER_V200_F              = H5F_flags(31)
+    H5F_ACC_SWMR_READ_F            = H5F_flags(32)
+    H5F_ACC_SWMR_WRITE_F           = H5F_flags(33)
     !
     ! H5generic flags
     !
@@ -986,7 +997,7 @@ CONTAINS
     INTEGER, INTENT(IN) :: flag
     INTEGER :: i
 
-!#if H5_HAVE_Fortran_INTEGER_SIZEOF_16!=0
+!#ifdef H5_HAVE_Fortran_INTEGER_SIZEOF_16
 !    ! (1) The array index assumes INTEGER*16 the last integer in the series, and
 !    ! (2) it should map to INTEGER*16 on most modern processors
 !    H5T_NATIVE_INTEGER_KIND(H5_FORTRAN_NUM_INTEGER_KINDS)=SELECTED_INT_KIND(36)
@@ -1005,7 +1016,7 @@ CONTAINS
           h5_type = H5T_NATIVE_REAL_C_FLOAT
        ELSE IF(ikind.EQ.KIND(1.0_C_DOUBLE))THEN
           h5_type = H5T_NATIVE_REAL_C_DOUBLE
-#if H5_FORTRAN_C_LONG_DOUBLE_IS_UNIQUE!=0
+#ifdef H5_FORTRAN_C_LONG_DOUBLE_IS_UNIQUE
        ELSE IF(ikind.EQ.KIND(1.0_C_LONG_DOUBLE))THEN
           h5_type = H5T_NATIVE_REAL_C_LONG_DOUBLE
 #endif

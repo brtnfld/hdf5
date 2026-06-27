@@ -92,6 +92,14 @@ class H5CPP_DLL PredType : public AtomType {
     static const PredType &IEEE_F64BE;
     static const PredType &IEEE_F64LE;
 
+    static const PredType &FLOAT_BFLOAT16BE;
+    static const PredType &FLOAT_BFLOAT16LE;
+    static const PredType &FLOAT_F8E4M3;
+    static const PredType &FLOAT_F8E5M2;
+    static const PredType &FLOAT_F6E2M3;
+    static const PredType &FLOAT_F6E3M2;
+    static const PredType &FLOAT_F4E2M1;
+
     static const PredType &UNIX_D32BE;
     static const PredType &UNIX_D32LE;
     static const PredType &UNIX_D64BE;
@@ -261,6 +269,14 @@ class H5CPP_DLL PredType : public AtomType {
     static PredType *IEEE_F32LE_;
     static PredType *IEEE_F64BE_;
     static PredType *IEEE_F64LE_;
+
+    static PredType *FLOAT_BFLOAT16BE_;
+    static PredType *FLOAT_BFLOAT16LE_;
+    static PredType *FLOAT_F8E4M3_;
+    static PredType *FLOAT_F8E5M2_;
+    static PredType *FLOAT_F6E2M3_;
+    static PredType *FLOAT_F6E3M2_;
+    static PredType *FLOAT_F4E2M1_;
 
     static PredType *UNIX_D32BE_;
     static PredType *UNIX_D32LE_;

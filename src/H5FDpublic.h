@@ -78,8 +78,8 @@
  * Defining H5FD_FEAT_DATA_SIEVE for a VFL driver means that
  * the library will attempt to cache raw data as it is read from/written to
  * a file in a "data sieve" buffer.  See Rajeev Thakur's papers:
- *  http://www.mcs.anl.gov/~thakur/papers/romio-coll.ps.gz
- *  http://www.mcs.anl.gov/~thakur/papers/mpio-high-perf.ps.gz
+ *  https://web.cels.anl.gov/~thakur/papers/romio-coll.pdf
+ *  https://web.cels.anl.gov/~thakur/papers/users-guide.pdf
  */
 #define H5FD_FEAT_DATA_SIEVE 0x00000008
 /*
@@ -184,12 +184,15 @@
 #define H5FD_FEAT_SUPPORTS_VFD_SWMR 0x00020000
 
 /* ctl function definitions: */
-#define H5FD_CTL_OPC_RESERVED 512 /* Opcodes below this value are reserved for library use */
-#define H5FD_CTL_OPC_EXPER_MIN                                                                               \
-    H5FD_CTL_OPC_RESERVED /* Minimum opcode value available for experimental use                             \
-                           */
-#define H5FD_CTL_OPC_EXPER_MAX                                                                               \
-    (H5FD_CTL_OPC_RESERVED + 511) /* Maximum opcode value available for experimental use */
+
+/** Opcodes below this value are reserved for library use */
+#define H5FD_CTL_OPC_RESERVED 512
+
+/** Minimum opcode value available for experimental use */
+#define H5FD_CTL_OPC_EXPER_MIN H5FD_CTL_OPC_RESERVED
+
+/** Maximum opcode value available for experimental use */
+#define H5FD_CTL_OPC_EXPER_MAX (H5FD_CTL_OPC_RESERVED + 511)
 
 /* ctl function op codes: */
 #define H5FD_CTL_INVALID_OPCODE              0

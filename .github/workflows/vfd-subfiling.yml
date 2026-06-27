@@ -4,12 +4,15 @@ on:
   workflow_call:
     inputs:
       build_mode:
-        description: "CMake build type (CMAKE_BUILD_TYPE)"
+        description: "Build type (CMAKE_BUILD_TYPE)"
         required: true
         type: string
 
 permissions:
   contents: read
+
+env:
+  CTEST_OUTPUT_ON_FAILURE: 1
 
 jobs:
   build_and_test:
@@ -36,7 +39,7 @@ jobs:
 #            mpi_lib: "MPICH"
 
     # Sets the job's name from the properties
-    name: "Test HDF5 Subfiling VFD (CMake ${{ inputs.build_mode }}) on ${{ matrix.os_name }} with ${{ matrix.mpi_lib }}"
+    name: "Test HDF5 Subfiling VFD (${{ inputs.build_mode }}) on ${{ matrix.os_name }} with ${{ matrix.mpi_lib }}"
 
     runs-on: ${{ matrix.os }}
 
@@ -65,7 +68,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' && matrix.mpi_lib == 'MPICH' }}
 
       - name: Checkout HDF5
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Configure HDF5 with Subfiling VFD
         shell: bash
@@ -95,5 +98,5 @@ jobs:
           # For now, just run the tests directly setup for use with the
           # Subfiling VFD. We can expand on this once the library's tests
           # are better separated into categories for VFD testing.
-          ctest --build-config ${{ inputs.build_mode }} -VV \
+          ctest --build-config ${{ inputs.build_mode }} \
               -R "MPI_TEST_t_subfiling_vfd|MPI_TEST_t_vfd|H5_ph5_subfiling"

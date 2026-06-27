@@ -157,11 +157,11 @@ static int without_hardware_g = 0;
             }                                                                                                \
                                                                                                              \
             if (n < SRC_PREC - 2) {                                                                          \
-                value1 = (TYPE)(value1 << 1);                                                                \
+                value1 = (TYPE)((uint64_t)value1 << 1);                                                      \
                 value2 = (TYPE)((value1 - 1) | value1);                                                      \
             }                                                                                                \
             else if (n == SRC_PREC - 2) { /*to avoid overflow of negative values for signed integer*/        \
-                value1 = (TYPE)(value1 << 1);                                                                \
+                value1 = (TYPE)((uint64_t)value1 << 1);                                                      \
                 value2 = (TYPE)((~value1) | value1);                                                         \
             }                                                                                                \
         }                                                                                                    \
@@ -176,7 +176,7 @@ static int without_hardware_g = 0;
                 saved_p += SRC_SIZE;                                                                         \
             }                                                                                                \
             if (n < SRC_PREC - 1)                                                                            \
-                value2 = (TYPE)(value2 << 1);                                                                \
+                value2 = (TYPE)((uint64_t)value2 << 1);                                                      \
         }                                                                                                    \
     } while (0)
 
@@ -2029,6 +2029,533 @@ error:
     reset_hdf5();
 
     return MAX((int)fails_this_test, 1);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    test_bfloat16
+ *
+ * Purpose:     Tests special values for bfloat16 datatypes
+ *
+ * Return:      Success:    0
+ *              Failure:    number of errors
+ *
+ *-------------------------------------------------------------------------
+ */
+static int
+test_bfloat16(void)
+{
+    const unsigned char *buf_ptr;
+    H5T_order_t          native_type_order;
+    uint16_t             bf16_val;
+    uint16_t             bf16_convval;
+    size_t               float_spos;
+    size_t               float_mpos;
+    size_t               float_epos;
+    size_t               float_msize;
+    size_t               float_esize;
+    hid_t                src_bf16_type;
+    float                val_buf;
+
+    TESTING("bfloat16 datatype special values");
+
+    buf_ptr = (const unsigned char *)&val_buf;
+
+    if ((native_type_order = H5Tget_order(H5T_NATIVE_FLOAT)) < 0) {
+        H5_FAILED();
+        printf("Can't check endian-ness of native float type\n");
+        goto error;
+    }
+
+    /* Just test on little- or big-endian systems */
+    if (native_type_order != H5T_ORDER_LE && native_type_order != H5T_ORDER_BE) {
+        SKIPPED();
+        return 0;
+    }
+
+    src_bf16_type = (native_type_order == H5T_ORDER_LE) ? H5T_FLOAT_BFLOAT16LE : H5T_FLOAT_BFLOAT16BE;
+
+    if (H5Tget_fields(H5T_NATIVE_FLOAT, &float_spos, &float_epos, &float_esize, &float_mpos, &float_msize) <
+        0) {
+        H5_FAILED();
+        printf("Can't get floating-point bit field information for native float type\n");
+        goto error;
+    }
+
+    /* Until native support for bfloat16 type is added, use uint16_t
+     * to represent initial value, then check properties after using
+     * H5T to convert to float
+     */
+
+    bf16_val = 0x7F80; /* +Inf */
+    memcpy(&val_buf, &bf16_val, 2);
+    if (H5Tconvert(src_bf16_type, H5T_NATIVE_FLOAT, 1, &val_buf, NULL, H5P_DEFAULT) < 0) {
+        H5_FAILED();
+        printf("Couldn't convert bfloat16 value to float\n");
+        goto error;
+    }
+
+    if (0 == my_isinf((int)native_type_order, buf_ptr, sizeof(float), float_mpos, float_msize, float_epos,
+                      float_esize)) {
+        H5_FAILED();
+        printf("bfloat16 positive infinity value wasn't infinity after conversion\n");
+        goto error;
+    }
+
+    if (1 == my_isnan(FLT_FLOAT, &val_buf)) {
+        H5_FAILED();
+        printf("bfloat16 positive infinity value matched NaN\n");
+        goto error;
+    }
+
+    /* Convert value back and check */
+    if (H5Tconvert(H5T_NATIVE_FLOAT, src_bf16_type, 1, &val_buf, NULL, H5P_DEFAULT) < 0) {
+        H5_FAILED();
+        printf("Couldn't convert float value to bfloat16\n");
+        goto error;
+    }
+
+    memcpy(&bf16_convval, &val_buf, 2);
+    if (0 != memcmp(&bf16_convval, &bf16_val, 2)) {
+        H5_FAILED();
+        printf("bfloat16 value wasn't preserved between conversions\n");
+        goto error;
+    }
+
+    bf16_val = 0xFF80; /* -Inf */
+    memcpy(&val_buf, &bf16_val, 2);
+    if (H5Tconvert(src_bf16_type, H5T_NATIVE_FLOAT, 1, &val_buf, NULL, H5P_DEFAULT) < 0) {
+        H5_FAILED();
+        printf("Couldn't convert bfloat16 value to float\n");
+        goto error;
+    }
+
+    if (0 == my_isinf((int)native_type_order, buf_ptr, sizeof(float), float_mpos, float_msize, float_epos,
+                      float_esize)) {
+        H5_FAILED();
+        printf("bfloat16 negative infinity value wasn't infinity after conversion\n");
+        goto error;
+    }
+
+    if (1 == my_isnan(FLT_FLOAT, &val_buf)) {
+        H5_FAILED();
+        printf("bfloat16 negative infinity value matched NaN\n");
+        goto error;
+    }
+
+    /* Convert value back and check */
+    if (H5Tconvert(H5T_NATIVE_FLOAT, src_bf16_type, 1, &val_buf, NULL, H5P_DEFAULT) < 0) {
+        H5_FAILED();
+        printf("Couldn't convert float value to bfloat16\n");
+        goto error;
+    }
+
+    memcpy(&bf16_convval, &val_buf, 2);
+    if (0 != memcmp(&bf16_convval, &bf16_val, 2)) {
+        H5_FAILED();
+        printf("bfloat16 value wasn't preserved between conversions\n");
+        goto error;
+    }
+
+    /*
+     * For NaN values, don't bother checking the value after converting
+     * back. The library sets all bits in the significand to 1 when a
+     * NaN is encountered, so the values won't match. Note that at least
+     * on x86 and ARM CPUs this should convert the NaNs into quiet NaNs.
+     * However, this may convert the NaNs to signaling NaNs on some CPUs
+     * which could be problematic if the buffer is used in almost any
+     * fashion. The my_isnan() function might attempt to print the value
+     * into a buffer to compare against NaN strings, which could cause
+     * a floating-point exception for some values. So far, this hasn't
+     * been an issue in practice, but may need some exception handling
+     * here if it becomes an issue.
+     */
+
+    bf16_val = 0xffc1; /* One of many qNaN values */
+    memcpy(&val_buf, &bf16_val, 2);
+    if (H5Tconvert(src_bf16_type, H5T_NATIVE_FLOAT, 1, &val_buf, NULL, H5P_DEFAULT) < 0) {
+        H5_FAILED();
+        printf("Couldn't convert bfloat16 value to float\n");
+        goto error;
+    }
+
+    if (1 == my_isinf((int)native_type_order, buf_ptr, sizeof(float), float_mpos, float_msize, float_epos,
+                      float_esize)) {
+        H5_FAILED();
+        printf("bfloat16 qNaN value was an infinity value after conversion\n");
+        goto error;
+    }
+
+    if (0 == my_isnan(FLT_FLOAT, &val_buf)) {
+        H5_FAILED();
+        printf("bfloat16 qNaN value wasn't a NaN value after conversion\n");
+        goto error;
+    }
+
+    bf16_val = 0xff81; /* One of many sNaN values */
+    memcpy(&val_buf, &bf16_val, 2);
+    if (H5Tconvert(src_bf16_type, H5T_NATIVE_FLOAT, 1, &val_buf, NULL, H5P_DEFAULT) < 0) {
+        H5_FAILED();
+        printf("Couldn't convert bfloat16 value to float\n");
+        goto error;
+    }
+
+    if (1 == my_isinf((int)native_type_order, buf_ptr, sizeof(float), float_mpos, float_msize, float_epos,
+                      float_esize)) {
+        H5_FAILED();
+        printf("bfloat16 sNaN value was an infinity value after conversion\n");
+        goto error;
+    }
+
+    if (0 == my_isnan(FLT_FLOAT, &val_buf)) {
+        H5_FAILED();
+        printf("bfloat16 sNaN value wasn't a NaN value after conversion\n");
+        goto error;
+    }
+
+    PASSED();
+
+    return 0;
+
+error:
+    return 1;
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    test_fp8
+ *
+ * Purpose:     Tests special values for FP8 datatypes
+ *
+ * Return:      Success:    0
+ *              Failure:    number of errors
+ *
+ *-------------------------------------------------------------------------
+ */
+static int
+test_fp8(void)
+{
+    const unsigned char *buf_ptr;
+    H5T_order_t          native_type_order;
+    uint8_t              fp8_val;
+    uint8_t              fp8_convval;
+    size_t               float_spos;
+    size_t               float_mpos;
+    size_t               float_epos;
+    size_t               float_msize;
+    size_t               float_esize;
+    hid_t                src_fp8_type;
+    float                val_buf;
+
+    TESTING("FP8 datatype special values");
+
+    /* Until native support for FP8 type is added, use uint8_t to
+     * represent initial value, then check properties after using
+     * H5T to convert to float.
+     */
+    buf_ptr = (const unsigned char *)&val_buf;
+
+    if ((native_type_order = H5Tget_order(H5T_NATIVE_FLOAT)) < 0) {
+        H5_FAILED();
+        printf("Can't check endian-ness of native float type\n");
+        goto error;
+    }
+
+    /* Just test on little- or big-endian systems */
+    if (native_type_order != H5T_ORDER_LE && native_type_order != H5T_ORDER_BE) {
+        SKIPPED();
+        return 0;
+    }
+
+    if (H5Tget_fields(H5T_NATIVE_FLOAT, &float_spos, &float_epos, &float_esize, &float_mpos, &float_msize) <
+        0) {
+        H5_FAILED();
+        printf("Can't get floating-point bit field information for native float type\n");
+        goto error;
+    }
+
+    /*
+     * Check E4M3 special values
+     */
+    src_fp8_type = H5T_FLOAT_F8E4M3;
+
+    /* FP8 E4M3 doesn't have infinities, but the library converts some
+     * of the larger values into infinities due to trying to interpret
+     * the values according to the IEEE standard. So, just check NaN
+     * values here. For NaN values, don't bother checking the value
+     * after converting back. The library sets all bits in the significand
+     * to 1 when a NaN is encountered, so the values won't match. Note
+     * that at least on x86 and ARM CPUs this should convert the NaNs
+     * into quiet NaNs. However, this may convert the NaNs to signaling
+     * NaNs on some CPUs which could be problematic if the buffer is
+     * used in almost any fashion. The my_isnan() function might attempt
+     * to print the value into a buffer to compare against NaN strings,
+     * which could cause a floating-point exception for some values. So
+     * far, this hasn't been an issue in practice, but may need some
+     * exception handling here if it becomes an issue.
+     */
+
+    fp8_val = 0x7f; /* One of the two NaN values */
+    memcpy(&val_buf, &fp8_val, 1);
+    if (H5Tconvert(src_fp8_type, H5T_NATIVE_FLOAT, 1, &val_buf, NULL, H5P_DEFAULT) < 0) {
+        H5_FAILED();
+        printf("Couldn't convert FP8 E4M3 value to float\n");
+        goto error;
+    }
+
+    if (1 == my_isinf((int)native_type_order, buf_ptr, sizeof(float), float_mpos, float_msize, float_epos,
+                      float_esize)) {
+        H5_FAILED();
+        printf("FP8 E4M3 NaN value was an infinity value after conversion\n");
+        goto error;
+    }
+
+    if (0 == my_isnan(FLT_FLOAT, &val_buf)) {
+        H5_FAILED();
+        printf("FP8 E4M3 NaN value wasn't a NaN value after conversion\n");
+        goto error;
+    }
+
+    fp8_val = 0xff; /* The other NaN value */
+    memcpy(&val_buf, &fp8_val, 1);
+    if (H5Tconvert(src_fp8_type, H5T_NATIVE_FLOAT, 1, &val_buf, NULL, H5P_DEFAULT) < 0) {
+        H5_FAILED();
+        printf("Couldn't convert FP8 E4M3 value to float\n");
+        goto error;
+    }
+
+    if (1 == my_isinf((int)native_type_order, buf_ptr, sizeof(float), float_mpos, float_msize, float_epos,
+                      float_esize)) {
+        H5_FAILED();
+        printf("FP8 E4M3 NaN value was an infinity value after conversion\n");
+        goto error;
+    }
+
+    if (0 == my_isnan(FLT_FLOAT, &val_buf)) {
+        H5_FAILED();
+        printf("FP8 E4M3 NaN value wasn't a NaN value after conversion\n");
+        goto error;
+    }
+
+    /*
+     * Check E5M2 special values
+     */
+    src_fp8_type = H5T_FLOAT_F8E5M2;
+
+    fp8_val = 0x7c; /* +Inf */
+    memcpy(&val_buf, &fp8_val, 1);
+    if (H5Tconvert(src_fp8_type, H5T_NATIVE_FLOAT, 1, &val_buf, NULL, H5P_DEFAULT) < 0) {
+        H5_FAILED();
+        printf("Couldn't convert FP8 E5M2 value to float\n");
+        goto error;
+    }
+
+    if (0 == my_isinf((int)native_type_order, buf_ptr, sizeof(float), float_mpos, float_msize, float_epos,
+                      float_esize)) {
+        H5_FAILED();
+        printf("FP8 E5M2 positive infinity value wasn't infinity after conversion\n");
+        goto error;
+    }
+
+    if (1 == my_isnan(FLT_FLOAT, &val_buf)) {
+        H5_FAILED();
+        printf("FP8 E5M2 positive infinity value matched NaN\n");
+        goto error;
+    }
+
+    /* Convert value back and check */
+    if (H5Tconvert(H5T_NATIVE_FLOAT, src_fp8_type, 1, &val_buf, NULL, H5P_DEFAULT) < 0) {
+        H5_FAILED();
+        printf("Couldn't convert float value to FP8 E5M2 value\n");
+        goto error;
+    }
+
+    memcpy(&fp8_convval, &val_buf, 1);
+    if (0 != memcmp(&fp8_convval, &fp8_val, 1)) {
+        H5_FAILED();
+        printf("FP8 E5M2 value wasn't preserved between conversions\n");
+        goto error;
+    }
+
+    fp8_val = 0xfc; /* -Inf */
+    memcpy(&val_buf, &fp8_val, 1);
+    if (H5Tconvert(src_fp8_type, H5T_NATIVE_FLOAT, 1, &val_buf, NULL, H5P_DEFAULT) < 0) {
+        H5_FAILED();
+        printf("Couldn't convert FP8 E5M2 value to float\n");
+        goto error;
+    }
+
+    if (0 == my_isinf((int)native_type_order, buf_ptr, sizeof(float), float_mpos, float_msize, float_epos,
+                      float_esize)) {
+        H5_FAILED();
+        printf("FP8 E5M2 negative infinity value wasn't infinity after conversion\n");
+        goto error;
+    }
+
+    if (1 == my_isnan(FLT_FLOAT, &val_buf)) {
+        H5_FAILED();
+        printf("FP8 E5M2 negative infinity value matched NaN\n");
+        goto error;
+    }
+
+    /* Convert value back and check */
+    if (H5Tconvert(H5T_NATIVE_FLOAT, src_fp8_type, 1, &val_buf, NULL, H5P_DEFAULT) < 0) {
+        H5_FAILED();
+        printf("Couldn't convert float value to FP8 E5M2 value\n");
+        goto error;
+    }
+
+    memcpy(&fp8_convval, &val_buf, 1);
+    if (0 != memcmp(&fp8_convval, &fp8_val, 1)) {
+        H5_FAILED();
+        printf("FP8 E5M2 value wasn't preserved between conversions\n");
+        goto error;
+    }
+
+    /*
+     * For NaN values, don't bother checking the value after converting
+     * back. The library sets all bits in the significand to 1 when a
+     * NaN is encountered, so the values won't match. Note that at least
+     * on x86 and ARM CPUs this should convert the NaNs into quiet NaNs.
+     * However, this may convert the NaNs to signaling NaNs on some CPUs
+     * which could be problematic if the buffer is used in almost any
+     * fashion. The my_isnan() function might attempt to print the value
+     * into a buffer to compare against NaN strings, which could cause
+     * a floating-point exception for some values. So far, this hasn't
+     * been an issue in practice, but may need some exception handling
+     * here if it becomes an issue.
+     */
+
+    fp8_val = 0x7d; /* One of the three positive NaN values */
+    memcpy(&val_buf, &fp8_val, 1);
+    if (H5Tconvert(src_fp8_type, H5T_NATIVE_FLOAT, 1, &val_buf, NULL, H5P_DEFAULT) < 0) {
+        H5_FAILED();
+        printf("Couldn't convert FP8 E5M2 value to float\n");
+        goto error;
+    }
+
+    if (1 == my_isinf((int)native_type_order, buf_ptr, sizeof(float), float_mpos, float_msize, float_epos,
+                      float_esize)) {
+        H5_FAILED();
+        printf("FP8 E5M2 NaN value was an infinity value after conversion\n");
+        goto error;
+    }
+
+    if (0 == my_isnan(FLT_FLOAT, &val_buf)) {
+        H5_FAILED();
+        printf("FP8 E5M2 NaN value wasn't a NaN value after conversion\n");
+        goto error;
+    }
+
+    fp8_val = 0x7e; /* Another of the three positive NaN values */
+    memcpy(&val_buf, &fp8_val, 1);
+    if (H5Tconvert(src_fp8_type, H5T_NATIVE_FLOAT, 1, &val_buf, NULL, H5P_DEFAULT) < 0) {
+        H5_FAILED();
+        printf("Couldn't convert FP8 E5M2 value to float\n");
+        goto error;
+    }
+
+    if (1 == my_isinf((int)native_type_order, buf_ptr, sizeof(float), float_mpos, float_msize, float_epos,
+                      float_esize)) {
+        H5_FAILED();
+        printf("FP8 E5M2 NaN value was an infinity value after conversion\n");
+        goto error;
+    }
+
+    if (0 == my_isnan(FLT_FLOAT, &val_buf)) {
+        H5_FAILED();
+        printf("FP8 E5M2 NaN value wasn't a NaN value after conversion\n");
+        goto error;
+    }
+
+    fp8_val = 0x7f; /* Last of the three positive NaN values */
+    memcpy(&val_buf, &fp8_val, 1);
+    if (H5Tconvert(src_fp8_type, H5T_NATIVE_FLOAT, 1, &val_buf, NULL, H5P_DEFAULT) < 0) {
+        H5_FAILED();
+        printf("Couldn't convert FP8 E5M2 value to float\n");
+        goto error;
+    }
+
+    if (1 == my_isinf((int)native_type_order, buf_ptr, sizeof(float), float_mpos, float_msize, float_epos,
+                      float_esize)) {
+        H5_FAILED();
+        printf("FP8 E5M2 NaN value was an infinity value after conversion\n");
+        goto error;
+    }
+
+    if (0 == my_isnan(FLT_FLOAT, &val_buf)) {
+        H5_FAILED();
+        printf("FP8 E5M2 NaN value wasn't a NaN value after conversion\n");
+        goto error;
+    }
+
+    fp8_val = 0xfd; /* One of the three negative NaN values */
+    memcpy(&val_buf, &fp8_val, 1);
+    if (H5Tconvert(src_fp8_type, H5T_NATIVE_FLOAT, 1, &val_buf, NULL, H5P_DEFAULT) < 0) {
+        H5_FAILED();
+        printf("Couldn't convert FP8 E5M2 value to float\n");
+        goto error;
+    }
+
+    if (1 == my_isinf((int)native_type_order, buf_ptr, sizeof(float), float_mpos, float_msize, float_epos,
+                      float_esize)) {
+        H5_FAILED();
+        printf("FP8 E5M2 NaN value was an infinity value after conversion\n");
+        goto error;
+    }
+
+    if (0 == my_isnan(FLT_FLOAT, &val_buf)) {
+        H5_FAILED();
+        printf("FP8 E5M2 NaN value wasn't a NaN value after conversion\n");
+        goto error;
+    }
+
+    fp8_val = 0xfe; /* Another of the three negative NaN values */
+    memcpy(&val_buf, &fp8_val, 1);
+    if (H5Tconvert(src_fp8_type, H5T_NATIVE_FLOAT, 1, &val_buf, NULL, H5P_DEFAULT) < 0) {
+        H5_FAILED();
+        printf("Couldn't convert FP8 E5M2 value to float\n");
+        goto error;
+    }
+
+    if (1 == my_isinf((int)native_type_order, buf_ptr, sizeof(float), float_mpos, float_msize, float_epos,
+                      float_esize)) {
+        H5_FAILED();
+        printf("FP8 E5M2 NaN value was an infinity value after conversion\n");
+        goto error;
+    }
+
+    if (0 == my_isnan(FLT_FLOAT, &val_buf)) {
+        H5_FAILED();
+        printf("FP8 E5M2 NaN value wasn't a NaN value after conversion\n");
+        goto error;
+    }
+
+    fp8_val = 0xff; /* Last of the three negative NaN values */
+    memcpy(&val_buf, &fp8_val, 1);
+    if (H5Tconvert(src_fp8_type, H5T_NATIVE_FLOAT, 1, &val_buf, NULL, H5P_DEFAULT) < 0) {
+        H5_FAILED();
+        printf("Couldn't convert FP8 E5M2 value to float\n");
+        goto error;
+    }
+
+    if (1 == my_isinf((int)native_type_order, buf_ptr, sizeof(float), float_mpos, float_msize, float_epos,
+                      float_esize)) {
+        H5_FAILED();
+        printf("FP8 E5M2 NaN value was an infinity value after conversion\n");
+        goto error;
+    }
+
+    if (0 == my_isnan(FLT_FLOAT, &val_buf)) {
+        H5_FAILED();
+        printf("FP8 E5M2 NaN value wasn't a NaN value after conversion\n");
+        goto error;
+    }
+
+    PASSED();
+
+    return 0;
+
+error:
+    return 1;
 }
 
 /*-------------------------------------------------------------------------
@@ -9984,6 +10511,12 @@ main(void)
     /* Test user-defined, query functions and software conversion
      * for user-defined complex number types */
     nerrors += (unsigned long)test_derived_complex();
+
+    /* Test bfloat16 special values */
+    nerrors += (unsigned long)test_bfloat16();
+
+    /* Test fp8 special values */
+    nerrors += (unsigned long)test_fp8();
 
     /* Test degenerate cases */
     nerrors += (unsigned long)run_fp_tests("noop");

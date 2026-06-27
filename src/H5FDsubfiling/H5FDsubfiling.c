@@ -564,6 +564,116 @@ done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5Pget_fapl_subfiling() */
 
+herr_t
+H5FDsubfiling_get_file_mapping(hid_t file_id, char ***filenames, size_t *len)
+{
+    subfiling_context_t *sf_context    = NULL;
+    H5FD_t              *driver        = NULL;
+    H5F_t               *file_ptr      = NULL;
+    char               **filenames_arr = NULL;
+    char                *filepath      = NULL;
+    char                *subfile_dir   = NULL;
+    char                *base          = NULL;
+    int                  num_subfiles  = 0;
+    int                  num_digits    = 0;
+    herr_t               ret_value     = SUCCEED;
+
+    FUNC_ENTER_API(FAIL)
+
+    if (file_id < 0)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid file ID");
+    if (!filenames)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "`filenames` was NULL");
+    if (!len)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "`len` was NULL");
+
+    *filenames = NULL;
+    *len       = 0;
+
+    if (NULL == (file_ptr = H5VL_object(file_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid file ID");
+
+    if (H5FD_SUBFILING != H5F_get_driver_id(file_ptr))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "file is not using Subfiling VFD");
+
+    if (H5F_shared_get_file_driver(H5F_SHARED(file_ptr), &driver) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get driver structure from file ID");
+
+    if (NULL == (sf_context = H5FD__subfiling_get_object(((H5FD_subfiling_t *)driver)->context_id)))
+        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get subfiling context from ID");
+
+    if (!sf_context->topology)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                    "application topology hasn't been initialized yet for this file");
+
+    assert(sf_context->h5_file_id != UINT64_MAX);
+    assert(sf_context->h5_filename);
+    assert(sf_context->sf_num_subfiles > 0);
+    assert(sf_context->topology);
+
+    if (sf_context->topology->rank_is_ioc) {
+        assert(sf_context->sf_fids);
+        assert(sf_context->sf_num_fids > 0);
+
+        /* Get the basename of the full HDF5 filename */
+        if (H5_basename(sf_context->h5_filename, &base) < 0)
+            HGOTO_ERROR(H5E_VFL, H5E_CANTALLOC, FAIL, "can't get HDF5 file basename");
+
+        /*
+         * Get the directory prefix where subfiles will be placed.
+         * Under normal circumstances, the subfiles are co-located
+         * with the HDF5 file, but users may specify a different
+         * directory name.
+         */
+        if (sf_context->subfile_prefix) {
+            if (NULL == (subfile_dir = H5MM_strdup(sf_context->subfile_prefix)))
+                HGOTO_ERROR(H5E_VFL, H5E_CANTALLOC, FAIL, "couldn't copy subfile prefix");
+        }
+        else {
+            if (H5_dirname(sf_context->h5_filename, &subfile_dir) < 0)
+                HGOTO_ERROR(H5E_VFL, H5E_CANTALLOC, FAIL, "couldn't get HDF5 file dirname");
+        }
+
+        num_subfiles = sf_context->sf_num_subfiles;
+        num_digits   = (int)(log10(num_subfiles) + 1);
+
+        if (NULL == (filenames_arr = calloc((size_t)sf_context->sf_num_fids, sizeof(char *))))
+            HGOTO_ERROR(H5E_VFL, H5E_CANTALLOC, FAIL, "couldn't allocate filenames array");
+
+        for (int i = 0; i < sf_context->sf_num_fids; i++) {
+            int subfile_idx;
+
+            if (NULL == (filepath = malloc(PATH_MAX)))
+                HGOTO_ERROR(H5E_VFL, H5E_CANTALLOC, FAIL, "couldn't allocate space for subfile filename");
+
+            subfile_idx = (i * sf_context->topology->n_io_concentrators) + sf_context->topology->ioc_idx + 1;
+
+            snprintf(filepath, PATH_MAX, "%s/" H5FD_SUBFILING_FILENAME_TEMPLATE, subfile_dir, base,
+                     sf_context->h5_file_id, num_digits, subfile_idx, num_subfiles);
+
+            filenames_arr[i] = filepath;
+            filepath         = NULL;
+        }
+
+        *filenames = filenames_arr;
+        *len       = (size_t)sf_context->sf_num_fids;
+    }
+
+done:
+    if (ret_value < 0) {
+        if (filenames_arr) {
+            for (int i = 0; i < sf_context->sf_num_fids; i++) {
+                free(filenames_arr[i]);
+            }
+        }
+        free(filenames_arr);
+    }
+    H5MM_free(base);
+    H5MM_free(subfile_dir);
+
+    FUNC_LEAVE_API(ret_value);
+}
+
 static herr_t
 H5FD__subfiling_get_default_config(hid_t fapl_id, H5FD_subfiling_config_t *config_out)
 {
@@ -1741,12 +1851,10 @@ H5FD__subfiling_truncate(H5FD_t *_file, hid_t H5_ATTR_UNUSED dxpl_id, bool H5_AT
         if (H5FD__subfiling__truncate_sub_files(file->context_id, eoa, file->comm) < 0)
             HGOTO_ERROR(H5E_VFL, H5E_CANTUPDATE, FAIL, "subfile truncate request failed");
 
-#if 0 /* TODO: Should be truncated only to size of superblock metadata */
         /* Truncate the HDF5 stub file */
         if (file->mpi_rank == 0)
             if (H5FD_truncate(file->stub_file, closing) < 0)
                 HGOTO_ERROR(H5E_VFL, H5E_CANTUPDATE, FAIL, "stub file truncate request failed");
-#endif
 
         /* Reset last file I/O information */
         file->pos = HADDR_UNDEF;
@@ -2008,8 +2116,9 @@ H5FD__subfiling_io_helper(H5FD_subfiling_t *file, size_t io_count, H5FD_mem_t ty
                 HGOTO_ERROR(H5E_VFL, H5E_WRITEERROR, FAIL, "write to subfile failed");
 
             /*
-             * Mirror superblock writes to the stub file so that legacy HDF5
-             * applications can check what type of file they are reading
+             * Mirror superblock and object header writes to the stub file
+             * so that legacy HDF5 applications can check what type of file
+             * they are reading
              */
             if (H5FD__subfiling_mirror_writes_to_stub(file, u32_io_count, types, addrs, sizes,
                                                       (const void **)bufs) < 0)
@@ -2118,8 +2227,9 @@ H5FD__subfiling_io_helper(H5FD_subfiling_t *file, size_t io_count, H5FD_mem_t ty
                     HGOTO_ERROR(H5E_VFL, H5E_WRITEERROR, FAIL, "write to subfile failed");
 
                 /*
-                 * Mirror superblock writes to the stub file so that legacy HDF5
-                 * applications can check what type of file they are reading
+                 * Mirror superblock and object header writes to the stub file
+                 * so that legacy HDF5 applications can check what type of file
+                 * they are reading
                  */
                 if (H5FD__subfiling_mirror_writes_to_stub(file, final_vec_len, io_types_ptr, io_addrs_ptr,
                                                           io_sizes_ptr, (const void **)io_bufs_ptr) < 0)
@@ -2174,13 +2284,13 @@ done:
  *
  * Purpose:     Mirrors write calls to the Subfiling stub file so that
  *              legacy HDF5 applications can check what type of file they
- *              are reading. Only superblock I/O is mirrored to the stub
- *              file and only if that I/O comes from MPI rank 0. This
- *              means that file metadata could be missed if it comes from
- *              other MPI ranks (such as when using a distributed metadata
- *              write strategy), but, at least currently, we generally only
- *              care about the first few bytes of the file being properly
- *              written to the stub file.
+ *              are reading. Only superblock and object header I/O is
+ *              mirrored to the stub file and only if that I/O comes from
+ *              MPI rank 0. This means that file metadata could be missed
+ *              if it comes from other MPI ranks (such as when using a
+ *              distributed metadata write strategy), but, at least
+ *              currently, we generally only care about the first few bytes
+ *              of the file being properly written to the stub file.
  *
  * Return:      SUCCEED/FAIL
  *
@@ -2190,18 +2300,18 @@ static herr_t
 H5FD__subfiling_mirror_writes_to_stub(H5FD_subfiling_t *file, uint32_t count, H5FD_mem_t types[],
                                       haddr_t addrs[], size_t sizes[], const void *bufs[])
 {
-    const void **copied_bufs       = NULL;
-    H5FD_mem_t  *copied_types      = NULL;
-    haddr_t     *copied_addrs      = NULL;
-    size_t      *copied_sizes      = NULL;
-    H5FD_mem_t   type              = H5FD_MEM_DEFAULT;
-    size_t       io_size           = 0;
-    bool         all_super_writes  = true;
-    bool         some_super_writes = false;
-    uint32_t     super_count       = 0;
-    bool         extend_types      = false;
-    bool         extend_sizes      = false;
-    herr_t       ret_value         = SUCCEED;
+    const void **copied_bufs               = NULL;
+    H5FD_mem_t  *copied_types              = NULL;
+    haddr_t     *copied_addrs              = NULL;
+    size_t      *copied_sizes              = NULL;
+    H5FD_mem_t   type                      = H5FD_MEM_DEFAULT;
+    size_t       io_size                   = 0;
+    bool         all_super_or_ohdr_writes  = true;
+    bool         some_super_or_ohdr_writes = false;
+    uint32_t     super_count               = 0;
+    bool         extend_types              = false;
+    bool         extend_sizes              = false;
+    herr_t       ret_value                 = SUCCEED;
 
     FUNC_ENTER_PACKAGE
 
@@ -2222,29 +2332,30 @@ H5FD__subfiling_mirror_writes_to_stub(H5FD_subfiling_t *file, uint32_t count, H5
                 type = types[i];
         }
 
-        if (type == H5FD_MEM_SUPER) {
-            some_super_writes = true;
+        if (type == H5FD_MEM_SUPER || type == H5FD_MEM_OHDR) {
+            some_super_or_ohdr_writes = true;
             super_count++;
         }
         else
-            all_super_writes = false;
+            all_super_or_ohdr_writes = false;
 
         /* If we find H5FD_MEM_NOLIST, we can stop looking at array entries */
         if (extend_types) {
-            if (type == H5FD_MEM_SUPER)
+            if (type == H5FD_MEM_SUPER || type == H5FD_MEM_OHDR)
                 super_count += (count - (uint32_t)i) - 1; /* Account for remaining elements */
             break;
         }
     }
 
-    if (all_super_writes) {
+    if (all_super_or_ohdr_writes) {
         if (H5FD_write_vector(file->stub_file, count, types, addrs, sizes, bufs) < 0)
-            HGOTO_ERROR(H5E_VFL, H5E_WRITEERROR, FAIL, "couldn't write superblock information to stub file");
+            HGOTO_ERROR(H5E_VFL, H5E_WRITEERROR, FAIL,
+                        "couldn't write superblock/object header information to stub file");
     }
-    else if (some_super_writes) {
+    else if (some_super_or_ohdr_writes) {
         uint32_t vec_len = 0;
 
-        /* Copy I/O vectors and strip out non-superblock I/O */
+        /* Copy I/O vectors and strip out non-superblock and non-object header I/O */
 
         if (NULL == (copied_types = H5MM_malloc(super_count * sizeof(*copied_types))))
             HGOTO_ERROR(H5E_VFL, H5E_CANTALLOC, FAIL, "can't allocate copy of I/O types array");
@@ -2262,8 +2373,8 @@ H5FD__subfiling_mirror_writes_to_stub(H5FD_subfiling_t *file, uint32_t count, H5
                 if (i > 0 && types[i] == H5FD_MEM_NOLIST) {
                     extend_types = true;
 
-                    /* End early if none of the remaining memory types are H5FD_MEM_SUPER */
-                    if (type != H5FD_MEM_SUPER)
+                    /* End early if none of the remaining memory types are H5FD_MEM_SUPER or H5FD_MEM_OHDR */
+                    if (type != H5FD_MEM_SUPER && type != H5FD_MEM_OHDR)
                         break;
                 }
                 else
@@ -2277,7 +2388,7 @@ H5FD__subfiling_mirror_writes_to_stub(H5FD_subfiling_t *file, uint32_t count, H5
                     io_size = sizes[i];
             }
 
-            if (type != H5FD_MEM_SUPER)
+            if (type != H5FD_MEM_SUPER && type != H5FD_MEM_OHDR)
                 continue;
 
             copied_types[vec_len] = type;
@@ -2291,7 +2402,8 @@ H5FD__subfiling_mirror_writes_to_stub(H5FD_subfiling_t *file, uint32_t count, H5
 
         if (H5FD_write_vector(file->stub_file, vec_len, copied_types, copied_addrs, copied_sizes,
                               copied_bufs) < 0)
-            HGOTO_ERROR(H5E_VFL, H5E_WRITEERROR, FAIL, "couldn't write superblock information to stub file");
+            HGOTO_ERROR(H5E_VFL, H5E_WRITEERROR, FAIL,
+                        "couldn't write superblock/object header information to stub file");
     }
 
 done:

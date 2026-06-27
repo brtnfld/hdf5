@@ -43,12 +43,24 @@
 
 #define S3_TEST_RESOURCE_TEXT_RESTRICTED "t8.shakespeare.txt"
 #define S3_TEST_RESOURCE_TEXT_PUBLIC     "Poe_Raven.txt"
-#define S3_TEST_RESOURCE_H5_PUBLIC       "GMODO-SVM01.h5"
+#define S3_TEST_RESOURCE_H5_PUBLIC       "charsets.h5"
 #define S3_TEST_RESOURCE_MISSING         "missing.csv"
+
+/* Object key containing characters ('=', '+') that must be URI-encoded
+ * when request paths are built and signed; mimics Hive-style "key=value"
+ * partition naming
+ */
+#define S3_TEST_RESOURCE_H5_HIVE_KEY "src=h5test/fmt=hive+style@cloud/charsets.h5"
+
+#define S3_TEST_RESOURCE_TEXT_RESTRICTED_SIZE 5458199
+#define S3_TEST_RESOURCE_TEXT_PUBLIC_SIZE     6464
+#define S3_TEST_RESOURCE_TEXT_PUBLIC_SIZEOVER 6400
+#define S3_TEST_RESOURCE_TEXT_PUBLIC_SIZEQUOT 5691
 
 static char url_text_restricted[S3_TEST_MAX_URL_SIZE] = "";
 static char url_text_public[S3_TEST_MAX_URL_SIZE]     = "";
 static char url_h5_public[S3_TEST_MAX_URL_SIZE]       = "";
+static char url_h5_hive_key[S3_TEST_MAX_URL_SIZE]     = "";
 static char url_missing[S3_TEST_MAX_URL_SIZE]         = "";
 static char s3_test_bucket_url[S3_TEST_MAX_URL_SIZE]  = "";
 static bool s3_test_bucket_defined                    = false;
@@ -73,8 +85,8 @@ H5FD_ros3_fapl_t restricted_access_fa = {H5FD_CURR_ROS3_FAPL_T_VERSION, /* fapl 
 
 H5FD_ros3_fapl_t anonymous_fa = {H5FD_CURR_ROS3_FAPL_T_VERSION, false, S3_TEST_DEFAULT_REGION, "", ""};
 
-H5FD_ros3_fapl_t empty_auth_fa   = {H5FD_CURR_ROS3_FAPL_T_VERSION, true, "", "", ""};
-H5FD_ros3_fapl_t empty_id_fa     = {H5FD_CURR_ROS3_FAPL_T_VERSION, true, "where", "", ""};
+H5FD_ros3_fapl_t empty_auth_fa   = {H5FD_CURR_ROS3_FAPL_T_VERSION, true, S3_TEST_DEFAULT_REGION, "", ""};
+H5FD_ros3_fapl_t empty_id_fa     = {H5FD_CURR_ROS3_FAPL_T_VERSION, true, S3_TEST_DEFAULT_REGION, "", ""};
 H5FD_ros3_fapl_t empty_region_fa = {H5FD_CURR_ROS3_FAPL_T_VERSION, true, "", "me", ""};
 
 /*---------------------------------------------------------------------------
@@ -508,7 +520,7 @@ error:
 static int
 test_eof_eoa(void)
 {
-    const haddr_t INITIAL_ADDR = 5458199; /* Fragile! */
+    const haddr_t INITIAL_ADDR = S3_TEST_RESOURCE_TEXT_RESTRICTED_SIZE;
     const haddr_t LOWER_ADDR   = INITIAL_ADDR - (1024 * 1024);
     const haddr_t HIGHER_ADDR  = INITIAL_ADDR + (1024 * 1024);
     H5FD_t       *fd           = NULL;
@@ -608,8 +620,8 @@ test_vfl_read(void)
     struct testcase tests[] = {
         {
             "successful range-get",
-            6464,
-            5691,
+            S3_TEST_RESOURCE_TEXT_PUBLIC_SIZE,
+            S3_TEST_RESOURCE_TEXT_PUBLIC_SIZEQUOT,
             32, /* fancy quotes are three bytes each(?) */
             SUCCEED,
             "Quoth the Raven “Nevermore.”",
@@ -632,7 +644,7 @@ test_vfl_read(void)
         },
         {
             "read past EOA/EOF fails ((EOA==EOF) < addr)",
-            6464,
+            S3_TEST_RESOURCE_TEXT_PUBLIC_SIZE,
             7000,
             100,
             FAIL,
@@ -640,8 +652,8 @@ test_vfl_read(void)
         },
         {
             "read overlapping EOA/EOF fails (addr < (EOA==EOF) < (addr+len))",
-            6464,
-            6400,
+            S3_TEST_RESOURCE_TEXT_PUBLIC_SIZE,
+            S3_TEST_RESOURCE_TEXT_PUBLIC_SIZEOVER,
             100,
             FAIL,
             NULL,
@@ -686,7 +698,7 @@ test_vfl_read(void)
 
     if (NULL == (fd = H5FDopen(url_text_public, H5F_ACC_RDONLY, fapl_id, HADDR_UNDEF)))
         TEST_ERROR;
-    if (6464 != H5FDget_eof(fd, H5FD_MEM_DEFAULT))
+    if (S3_TEST_RESOURCE_TEXT_PUBLIC_SIZE != H5FDget_eof(fd, H5FD_MEM_DEFAULT))
         FAIL_PUTS_ERROR("incorrect EOF (fragile - make sure the file size didn't change)");
 
     for (int i = 0; i < TESTCASE_COUNT; i++) {
@@ -708,7 +720,6 @@ test_vfl_read(void)
             ret = H5FDread(fd, H5FD_MEM_DRAW, H5P_DEFAULT, tests[i].addr, tests[i].len, buffer);
         }
         H5E_END_TRY
-
         if (tests[i].success != ret)
             FAIL_PUTS_ERROR(tests[i].message);
         if (ret == SUCCEED)
@@ -1064,6 +1075,75 @@ error:
     return 1;
 
 } /* end test_ros3_access_modes() */
+
+/*---------------------------------------------------------------------------
+ * Function:    test_hive_style_object_key
+ *
+ * Purpose:     Test opening a file whose object key contains characters,
+ *              such as the '=' in Hive-style "key=value" partition names,
+ *              that must be URI-encoded when request paths are built.
+ *              If the key is not URI-encoded exactly once, S3 rejects
+ *              the requests with HTTP 403 (SignatureDoesNotMatch).
+ *
+ * Return:      PASS : 0
+ *              FAIL : 1
+ *---------------------------------------------------------------------------
+ */
+static int
+test_hive_style_object_key(void)
+{
+    hid_t fid     = H5I_INVALID_HID;
+    hid_t fapl_id = H5I_INVALID_HID;
+
+    TESTING("ros3 object keys with characters requiring URI encoding");
+
+    if (s3_test_credentials_loaded == 0) {
+        SKIPPED();
+        puts("    s3 credentials are not loaded");
+        fflush(stdout);
+        return 0;
+    }
+
+    if (false == s3_test_bucket_defined) {
+        SKIPPED();
+        puts("    environment variable HDF5_ROS3_TEST_BUCKET_URL not defined");
+        fflush(stdout);
+        return 0;
+    }
+
+    if ((fapl_id = H5Pcreate(H5P_FILE_ACCESS)) < 0)
+        TEST_ERROR;
+    if (H5Pset_fapl_ros3(fapl_id, &restricted_access_fa) < 0)
+        TEST_ERROR;
+    if (*s3_test_aws_session_token != '\0')
+        if (H5Pset_fapl_ros3_token(fapl_id, s3_test_aws_session_token) < 0)
+            TEST_ERROR;
+
+    /* The object is not public, so all of the requests made when opening
+     * and reading the file must be signed
+     */
+    if ((fid = H5Fopen(url_h5_hive_key, H5F_ACC_RDONLY, fapl_id)) < 0)
+        TEST_ERROR;
+
+    if (H5Fclose(fid) < 0)
+        TEST_ERROR;
+    if (H5Pclose(fapl_id) < 0)
+        TEST_ERROR;
+
+    PASSED();
+    return 0;
+
+error:
+    H5E_BEGIN_TRY
+    {
+        H5Fclose(fid);
+        H5Pclose(fapl_id);
+    }
+    H5E_END_TRY
+
+    return 1;
+
+} /* end test_hive_style_object_key() */
 #endif /* H5_HAVE_ROS3_VFD */
 
 /*-------------------------------------------------------------------------
@@ -1126,6 +1206,13 @@ main(void)
         ret_value = EXIT_FAILURE;
         goto done;
     }
+    if (S3_TEST_MAX_URL_SIZE < snprintf(url_h5_hive_key, (size_t)S3_TEST_MAX_URL_SIZE, "%s/%s",
+                                        (const char *)s3_test_bucket_url,
+                                        (const char *)S3_TEST_RESOURCE_H5_HIVE_KEY)) {
+        printf("* ros3 setup failed (h5_hive_key) ! *\n");
+        ret_value = EXIT_FAILURE;
+        goto done;
+    }
     if (S3_TEST_MAX_URL_SIZE < snprintf(url_missing, S3_TEST_MAX_URL_SIZE, "%s/%s",
                                         (const char *)s3_test_bucket_url,
                                         (const char *)S3_TEST_RESOURCE_MISSING)) {
@@ -1143,7 +1230,7 @@ main(void)
     s3_test_aws_secret_access_key[0] = '\0';
     s3_test_aws_region[0]            = '\0';
 
-    if (NULL == (s3_test_aws_session_token = malloc(S3_TEST_SESSION_TOKEN_SIZE))) {
+    if (NULL == (s3_test_aws_session_token = calloc(1, S3_TEST_SESSION_TOKEN_SIZE))) {
         fprintf(stderr, "couldn't allocate buffer for session token\n");
         ret_value = EXIT_FAILURE;
         goto done;
@@ -1227,6 +1314,7 @@ main(void)
         nerrors += test_noops_and_autofails();
         nerrors += test_cmp();
         nerrors += test_ros3_access_modes();
+        nerrors += test_hive_style_object_key();
     }
 
     if (H5FD__s3comms_term() < 0) {

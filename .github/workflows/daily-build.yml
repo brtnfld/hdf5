@@ -28,6 +28,9 @@ on:
 permissions:
   contents: read
 
+env:
+  CTEST_OUTPUT_ON_FAILURE: 1
+
 jobs:
   get-old-names:
     runs-on: ubuntu-latest
@@ -36,10 +39,10 @@ jobs:
       run-ignore: ${{ steps.getinputs.outputs.INPUTS_IGNORE }}
 
     steps:
-    - uses: actions/checkout@v4.1.7
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
     - name: Get hdf5 release base name
-      uses: dsaltares/fetch-gh-release-asset@master
+      uses: dsaltares/fetch-gh-release-asset@aa2ab1243d6e0d5b405b973c89fa4d06a2d0fff7 # master
       with:
         version: 'tags/snapshot'
         file: 'last-file.txt'
@@ -66,27 +69,40 @@ jobs:
       use_tag: snapshot
       use_environ: snapshots
 
+  call-aws-c-s3-build:
+    needs: call-workflow-tarball
+    name: "Build aws-c-s3 library"
+    uses: ./.github/workflows/build-aws-c-s3.yml
+    with:
+      build_mode: "Release"
+      # Use latest release for building from source on Ubuntu
+      # until a package is available to install
+      aws_c_s3_tag: "v0.8.0"
+    if: ${{ ((needs.call-workflow-tarball.outputs.has_changes == 'true') || (needs.get-old-names.outputs.run-ignore == 'ignore')) }}
+
   call-release-cmake-cygwin:
     needs: [get-old-names, call-workflow-tarball]
-    name: "CMake Cygwin Workflows"
-    uses: ./.github/workflows/cygwin-cmake.yml
+    name: "Cygwin Workflows"
+    uses: ./.github/workflows/cygwin.yml
     with:
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
       use_environ: snapshots
     if: ${{ ((needs.call-workflow-tarball.outputs.has_changes == 'true') || (needs.get-old-names.outputs.run-ignore == 'ignore')) }}
 
   call-workflow-c-script:
-    needs: [get-old-names, call-workflow-tarball]
-    uses: ./.github/workflows/cmake-script.yml
+    needs: [get-old-names, call-workflow-tarball, call-aws-c-s3-build]
+    uses: ./.github/workflows/script.yml
     with:
+      cmake_version: "latest"
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
       use_environ: snapshots
     if: ${{ ((needs.call-workflow-tarball.outputs.has_changes == 'true') || (needs.get-old-names.outputs.run-ignore == 'ignore')) }}
 
   call-workflow-par-script:
     needs: [get-old-names, call-workflow-tarball]
-    uses: ./.github/workflows/cmake-par-script.yml
+    uses: ./.github/workflows/par-script.yml
     with:
+      cmake_version: "latest"
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
       use_environ: snapshots
       build_mode: "Release"
@@ -94,8 +110,9 @@ jobs:
 
   call-workflow-par-source:
     needs: [get-old-names, call-workflow-tarball]
-    uses: ./.github/workflows/cmake-par-source.yml
+    uses: ./.github/workflows/par-source.yml
     with:
+      cmake_version: "latest"
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
       use_environ: snapshots
       build_mode: "Release"
@@ -103,24 +120,25 @@ jobs:
 
   call-developer-cmake:
     needs: [get-old-names, call-workflow-tarball]
-    name: "CMake Developer Workflows"
-    uses: ./.github/workflows/dev-cmake.yml
+    name: "Developer Workflows"
+    uses: ./.github/workflows/dev.yml
     with:
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
     if: ${{ ((needs.call-workflow-tarball.outputs.has_changes == 'true') || (needs.get-old-names.outputs.run-ignore == 'ignore')) }}
 
   call-workflow-sanitizers:
     needs: [get-old-names, call-workflow-tarball]
-    uses: ./.github/workflows/cmake-analysis.yml
+    uses: ./.github/workflows/analysis.yml
     with:
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
       use_environ: snapshots
     if: ${{ ((needs.call-workflow-tarball.outputs.has_changes == 'true') || (needs.get-old-names.outputs.run-ignore == 'ignore')) }}
 
   call-workflow-ctest:
-    needs: [get-old-names, call-workflow-tarball]
-    uses: ./.github/workflows/cmake-ctest.yml
+    needs: [get-old-names, call-workflow-tarball, call-aws-c-s3-build]
+    uses: ./.github/workflows/ctest.yml
     with:
+      cmake_version: 'latest'
       preset_name: ci-StdShar
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
 #      use_tag: snapshot
@@ -141,7 +159,8 @@ jobs:
     needs: [get-old-names, call-workflow-tarball, call-workflow-ctest]
     uses: ./.github/workflows/abi-report.yml
     with:
-      file_ref: '1.14.5'
+      # previous release version
+      file_ref: '2.0.0'
       file_base: ${{ needs.call-workflow-tarball.outputs.file_base }}
       use_tag: snapshot
       use_environ: snapshots

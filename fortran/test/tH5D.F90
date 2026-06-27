@@ -32,7 +32,6 @@
 
 #include <H5config_f.inc>
 
-!
 MODULE TH5D
 
   USE HDF5 ! This module contains all necessary modules
@@ -646,7 +645,7 @@ CONTAINS
     INTEGER(KIND=int_kind_16), TARGET :: data0_i16 = 4
     INTEGER, DIMENSION(1:DIM0) :: data_int
     INTEGER, TARGET :: data0_int = 4
-#if H5_HAVE_Fortran_INTEGER_SIZEOF_16!=0
+#ifdef H5_HAVE_Fortran_INTEGER_SIZEOF_16
     INTEGER, PARAMETER :: int_kind_32 = SELECTED_INT_KIND(36) !should map to INTEGER*16 on most modern processors
     INTEGER(KIND=int_kind_32), DIMENSION(1:DIM0), TARGET :: data_i32
     INTEGER(KIND=int_kind_32), TARGET :: data0_i32 = 4
@@ -657,7 +656,7 @@ CONTAINS
     REAL(KIND=real_kind_8), DIMENSION(1:DIM0), TARGET :: data_r8
     REAL(KIND=real_kind_4) , TARGET :: data0_r4 = 4.0
     REAL(KIND=real_kind_8), TARGET :: data0_r8 = 4.0
-#if H5_FORTRAN_C_LONG_DOUBLE_IS_UNIQUE!=0
+#ifdef H5_FORTRAN_C_LONG_DOUBLE_IS_UNIQUE
     INTEGER, PARAMETER :: real_kind_16 = C_LONG_DOUBLE
     REAL(KIND=real_kind_16) , DIMENSION(1:DIM0), TARGET :: data_r16
     REAL(KIND=real_kind_16) , TARGET :: data0_r16 = 4.0
@@ -680,12 +679,12 @@ CONTAINS
     data_i4  = -2
     data_i16 = -2
     data_int = -2
-#if H5_HAVE_Fortran_INTEGER_SIZEOF_16!=0
+#ifdef H5_HAVE_Fortran_INTEGER_SIZEOF_16
     data_i32 = -2
 #endif
     data_r4  = -2.0_real_kind_4
     data_r8 = -2.0_real_kind_8
-#if H5_FORTRAN_C_LONG_DOUBLE_IS_UNIQUE!=0
+#ifdef H5_FORTRAN_C_LONG_DOUBLE_IS_UNIQUE
     data_r16 = -2.0_real_kind_16
 #endif
     data_chr = "H"
@@ -768,7 +767,7 @@ CONTAINS
        ENDIF
     ENDDO
 
-#if H5_FORTRAN_C_LONG_DOUBLE_IS_UNIQUE!=0
+#ifdef H5_FORTRAN_C_LONG_DOUBLE_IS_UNIQUE
     CALL h5dfill_f(data0_r16, space_id, data_r16, error)
     CALL check("h5dfill_f", error, total_error)
     DO i = 1, DIM0
@@ -793,7 +792,7 @@ CONTAINS
     data_i1  = -2
     data_i4  = -2
     data_i16 = -2
-#if H5_HAVE_Fortran_INTEGER_SIZEOF_16!=0
+#ifdef H5_HAVE_Fortran_INTEGER_SIZEOF_16
     data_i32 = -2
 #endif
     data_r4  = -2.0_real_kind_4
@@ -868,7 +867,7 @@ CONTAINS
        ENDIF
     ENDDO
 
-#if H5_HAVE_Fortran_INTEGER_SIZEOF_16!=0
+#ifdef H5_HAVE_Fortran_INTEGER_SIZEOF_16
 
     f_ptr1 = C_LOC(data0_i32)
     f_ptr2 = C_LOC(data_i32(1))
@@ -937,7 +936,7 @@ CONTAINS
        ENDIF
     ENDDO
 
-#if H5_FORTRAN_C_LONG_DOUBLE_IS_UNIQUE!=0
+#ifdef H5_FORTRAN_C_LONG_DOUBLE_IS_UNIQUE
     f_ptr1 = C_LOC(data0_r16)
     f_ptr2 = C_LOC(data_r16(1))
 
@@ -1013,6 +1012,7 @@ CONTAINS
     INTEGER(HSIZE_T), DIMENSION(2) :: offset
     INTEGER(HSIZE_T), DIMENSION(2) :: dims = (/DIM0,DIM1/)
     INTEGER, DIMENSION(CHUNK0,CHUNK1), TARGET :: wdata1, rdata1, wdata2, rdata2
+    INTEGER, DIMENSION(:), ALLOCATABLE, TARGET :: buf_alloc
     INTEGER(HSIZE_T), DIMENSION(2) :: chunk = (/CHUNK0, CHUNK1/)
     INTEGER :: i, j, n
     INTEGER :: error
@@ -1020,6 +1020,7 @@ CONTAINS
     INTEGER :: filters
     INTEGER(SIZE_T) :: sizeINT
     INTEGER(HID_T) :: dxpl
+    INTEGER(SIZE_T) :: buf_size
 
     !
     !Create a new file using default properties.
@@ -1107,6 +1108,9 @@ CONTAINS
     filters = 99
     offset(1:2) = (/0, 0/)
     CALL H5Dread_chunk_f(dset_id, offset, filters, f_ptr, error)
+#ifdef H5_NO_DEPRECATED_SYMBOLS
+    CALL VERIFY("H5Dread_chunk_f",error,-1,total_error)
+#else
     CALL check("H5Dread_chunk_f",error,total_error)
 
     ! Verify that the data read was correct.
@@ -1118,10 +1122,14 @@ CONTAINS
     ENDDO
 
     CALL VERIFY("H5Dread_chunk_f",filters, 0, total_error)
+#endif
 
     f_ptr = C_LOC(rdata2)
     offset(1:2) = (/0, 16/)
     CALL H5Dread_chunk_f(dset_id, offset, filters, f_ptr, error, dxpl)
+#ifdef H5_NO_DEPRECATED_SYMBOLS
+    CALL VERIFY("H5Dread_chunk_f",error,-1,total_error)
+#else
     CALL check("H5Dread_chunk_f",error,total_error)
 
     ! Verify that the data read was correct.
@@ -1133,6 +1141,33 @@ CONTAINS
     ENDDO
 
     CALL VERIFY("H5Dread_chunk_f",filters, 0, total_error)
+#endif
+
+    !
+    ! check version of H5Dread_chunk_f with buf_size parameter
+    !
+    offset(1:2) = (/0, 16/)
+
+    CALL H5Dread_chunk_f(dset_id, offset, filters, C_NULL_PTR, buf_size, error, dxpl)
+    CALL check("H5Dread_chunk_f",error,total_error)
+    CALL VERIFY("H5Dread_chunk_f", buf_size, 256_SIZE_T, total_error)
+
+    ALLOCATE(buf_alloc(1:buf_size/sizeINT))
+    f_ptr = C_LOC(buf_alloc(1))
+
+    CALL H5Dread_chunk_f(dset_id, offset, filters, f_ptr, buf_size, error, dxpl)
+    CALL check("H5Dread_chunk_f",error,total_error)
+    CALL VERIFY("H5Dread_chunk_f", buf_size, 256_SIZE_T, total_error)
+
+    rdata2 = RESHAPE(buf_alloc,(/CHUNK0, CHUNK1/))
+    DO i = 1, CHUNK0
+       DO j = 1, CHUNK1
+          CALL VERIFY("H5Dread_chunk_f", rdata2(i,j), wdata2(i,j), total_error)
+          IF(total_error.NE.0) EXIT
+       ENDDO
+    ENDDO
+
+    DEALLOCATE(buf_alloc)
 
     CALL h5dclose_f(dset_id, error)
     CALL check("h5dclose_f",error,total_error)

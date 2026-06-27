@@ -42,9 +42,9 @@ set (HL_REFERENCE_TEST_FILES
 #-- Copy the necessary files.
 # --------------------------------------------------------------------
 foreach (h5_file ${HL_REFERENCE_TEST_FILES})
-  HDFTEST_COPY_FILE("${PROJECT_SOURCE_DIR}/testfiles/${h5_file}" "${HDF5_HL_TEST_BINARY_DIR}/testfiles/${h5_file}" "hl_test_files")
+  HDFTEST_COPY_FILE ("${PROJECT_SOURCE_DIR}/testfiles/${h5_file}" "${HDF5_HL_TEST_BINARY_DIR}/testfiles/${h5_file}" "hl_test_files")
 endforeach ()
-add_custom_target(hl_test_files ALL COMMENT "Copying files needed by hl_test tests" DEPENDS ${hl_test_files_list})
+add_custom_target (hl_test_files ALL COMMENT "Copying files needed by hl_test tests" DEPENDS ${hl_test_files_list})
 
 # Remove any output file left over from previous test run
 set (test_hl_CLEANFILES
@@ -65,14 +65,18 @@ set (test_hl_CLEANFILES
     test_ds8.h5
     test_ds9.h5
     test_ds10.h5
+    test_ds_class_prefix.h5
+    test_ds_reserved_prefix.h5
     test_image1.h5
     test_image2.h5
     test_image3.h5
+    test_image_class_prefix.h5
     test_lite1.h5
     test_lite2.h5
     test_lite3.h5
     test_lite4.h5
     test_packet_compress.h5
+    test_boundary.h5
     test_packet_table.h5
     test_packet_table_vlen.h5
     testfl_packet_table_vlen.h5
@@ -101,10 +105,9 @@ set_tests_properties (HL_test-clean-objects PROPERTIES
 macro (HL_ADD_TEST hl_name)
   set (current_test_name "HL_${hl_name}")
   if (HDF5_ENABLE_USING_MEMCHECKER)
-    add_test (NAME HL_${hl_name} COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:hl_${hl_name}>)
+    add_test (NAME HL_${hl_name} COMMAND $<TARGET_FILE:hl_${hl_name}>)
   else ()
     add_test (NAME HL_${hl_name} COMMAND "${CMAKE_COMMAND}"
-        -D "TEST_EMULATOR=${CMAKE_CROSSCOMPILING_EMULATOR}"
         -D "TEST_PROGRAM=$<TARGET_FILE:hl_${hl_name}>"
         -D "TEST_ARGS:STRING="
         -D "TEST_EXPECT=0"
@@ -118,7 +121,6 @@ macro (HL_ADD_TEST hl_name)
       add_test (
           NAME H5DUMP-HL_${hl_name}
           COMMAND "${CMAKE_COMMAND}"
-              -D "TEST_EMULATOR=${CMAKE_CROSSCOMPILING_EMULATOR}"
               -D "TEST_PROGRAM=$<TARGET_FILE:h5dump>"
               -D "TEST_ARGS:STRING=--enable-error-stack;${hl_name}.h5"
               -D "TEST_FOLDER=${HDF5_HL_TEST_BINARY_DIR}"

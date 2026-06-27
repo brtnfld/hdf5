@@ -1,4 +1,9 @@
-cmake_minimum_required (VERSION 3.18)
+#-----------------------------------------------------------------------------
+# CMake configuration for HDF5 parallel test library and test executables
+# This file sets up the build, formatting, and installation rules for the HDF5 parallel test library (static/shared) and its test executables.
+# It handles source/header definitions, compiler options, linking, export, and test configuration for parallel HDF5 testing.
+#-----------------------------------------------------------------------------
+cmake_minimum_required (VERSION 3.26)
 project (HDF5_TEST_PAR C)
 
 #################################################################################
@@ -48,7 +53,7 @@ if (BUILD_STATIC_LIBS)
   add_library (${HDF5_TEST_PAR_LIB_TARGET} STATIC ${TEST_PAR_LIB_SOURCES} ${TEST_PAR_LIB_HEADERS})
   target_include_directories (${HDF5_TEST_PAR_LIB_TARGET}
       PRIVATE "${HDF5_SRC_INCLUDE_DIRS};${HDF5_TEST_SRC_DIR};${HDF5_SRC_BINARY_DIR};${HDF5_TEST_PAR_BINARY_DIR};${MPI_C_INCLUDE_DIRS}"
-      INTERFACE "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>"
+      INTERFACE "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${HDF5_INSTALL_INCLUDE_DIR}>"
   )
   target_compile_options(${HDF5_TEST_PAR_LIB_TARGET} PRIVATE "${HDF5_CMAKE_C_FLAGS}")
   target_compile_definitions(${HDF5_TEST_PAR_LIB_TARGET}
@@ -86,7 +91,7 @@ if (BUILD_SHARED_LIBS)
   add_library (${HDF5_TEST_PAR_LIBSH_TARGET} SHARED ${TEST_PAR_LIB_SOURCES} ${TEST_PAR_LIB_HEADERS})
   target_include_directories (${HDF5_TEST_PAR_LIBSH_TARGET}
       PRIVATE "${HDF5_SRC_INCLUDE_DIRS};${HDF5_TEST_SRC_DIR};${HDF5_SRC_BINARY_DIR};${HDF5_TEST_PAR_BINARY_DIR};${MPI_C_INCLUDE_DIRS}"
-      INTERFACE "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>"
+      INTERFACE "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${HDF5_INSTALL_INCLUDE_DIR}>"
   )
   target_compile_options(${HDF5_TEST_PAR_LIBSH_TARGET} PRIVATE "${HDF5_CMAKE_C_FLAGS}")
   target_compile_definitions(${HDF5_TEST_PAR_LIBSH_TARGET}
