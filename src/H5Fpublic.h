@@ -1435,6 +1435,12 @@ H5_DLL herr_t H5Fget_metadata_read_retry_info(hid_t file_id, H5F_retry_info_t *i
  *
  */
 H5_DLL herr_t H5Fstart_swmr_write(hid_t file_id);
+
+/* VFD SWMR end-of-tick control */
+H5_DLL herr_t H5Fvfd_swmr_end_tick(hid_t file_id);
+H5_DLL herr_t H5Fvfd_swmr_disable_end_of_tick(hid_t file_id);
+H5_DLL herr_t H5Fvfd_swmr_enable_end_of_tick(hid_t file_id);
+
 /**
  * \ingroup H5F
  *
