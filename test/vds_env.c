@@ -45,12 +45,12 @@ static int
 test_vds_prefix_second(unsigned config, hid_t fapl)
 {
     const char *srcfilenamepct_map_orig = "vds%%%%_src";
-    char *      srcfilename             = NULL;
-    char *      srcfilename_map         = NULL;
-    char *      vfilename               = NULL;
-    char *      vfilename2              = NULL;
-    char *      srcfilenamepct          = NULL;
-    char *      srcfilenamepct_map      = NULL;
+    char       *srcfilename             = NULL;
+    char       *srcfilename_map         = NULL;
+    char       *vfilename               = NULL;
+    char       *vfilename2              = NULL;
+    char       *srcfilenamepct          = NULL;
+    char       *srcfilenamepct_map      = NULL;
     hid_t       srcfile[4]              = {-1, -1, -1, -1}; /* Files with source dsets */
     hid_t       vfile                   = -1;               /* File with virtual dset */
     hid_t       dcpl                    = -1;               /* Dataset creation property list */
@@ -58,7 +58,7 @@ test_vds_prefix_second(unsigned config, hid_t fapl)
     hid_t       srcspace[4]             = {-1, -1, -1, -1}; /* Source dataspaces */
     hid_t       vspace[4]               = {-1, -1, -1, -1}; /* Virtual dset dataspaces */
     hid_t       memspace                = -1;               /* Memory dataspace */
-    hid_t       srcdset[4]              = {-1, -1, -1, -1}; /* Source datsets */
+    hid_t       srcdset[4]              = {-1, -1, -1, -1}; /* Source datasets */
     hid_t       vdset                   = -1;               /* Virtual dataset */
     hsize_t     dims[4]                 = {10, 26, 0, 0};   /* Data space current size */
     int         buf[10][26];                                /* Write and expected read buffer */
@@ -326,26 +326,30 @@ main(void)
     hid_t        fapl, my_fapl;
     unsigned     bit_config;
     H5F_libver_t low, high;   /* Low and high bounds */
-    const char * env_h5_drvr; /* File Driver value from environment */
+    const char  *env_h5_drvr; /* File Driver value from environment */
+    hbool_t      driver_is_parallel;
     int          nerrors = 0;
 
     env_h5_drvr = HDgetenv(HDF5_DRIVER);
     if (env_h5_drvr == NULL)
         env_h5_drvr = "nomatch";
 
+    /* Testing setup */
+    h5_reset();
+    fapl = h5_fileaccess();
+
+    if (h5_using_parallel_driver(fapl, &driver_is_parallel) < 0)
+        TEST_ERROR;
+
     /*
      * Skip VDS tests for parallel-enabled and splitter VFDs. VDS currently
      * doesn't support parallel reads and the splitter VFD has external
      * link-related bugs.
      */
-    if (h5_using_parallel_driver(env_h5_drvr) || !HDstrcmp(env_h5_drvr, "splitter")) {
+    if (driver_is_parallel || !HDstrcmp(env_h5_drvr, "splitter")) {
         HDputs(" -- SKIPPED for incompatible VFD --");
         HDexit(EXIT_SUCCESS);
     }
-
-    /* Testing setup */
-    h5_reset();
-    fapl = h5_fileaccess();
 
     /* Set to use the latest file format */
     if ((my_fapl = H5Pcopy(fapl)) < 0)
@@ -373,8 +377,9 @@ main(void)
             /* Display testing info */
             low_string  = h5_get_version_string(low);
             high_string = h5_get_version_string(high);
-            HDsprintf(msg, "Testing virtual dataset with file version bounds: (%s, %s):", low_string,
-                      high_string);
+            HDsnprintf(msg, sizeof(msg),
+                       "Testing virtual dataset with file version bounds: (%s, %s):", low_string,
+                       high_string);
             HDputs(msg);
 
             for (bit_config = 0; bit_config < TEST_IO_NTESTS; bit_config++) {

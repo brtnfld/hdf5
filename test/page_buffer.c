@@ -219,7 +219,7 @@ create_file(char *filename, hid_t fcpl, hid_t fapl)
     hid_t   grp_id    = -1;
     hid_t   filespace = -1;
     hsize_t dimsf[2]  = {NX, NY}; /* dataset dimensions */
-    int *   data      = NULL;     /* pointer to data buffer to write */
+    int    *data      = NULL;     /* pointer to data buffer to write */
     hid_t   dcpl      = -1;
     int     i;
     int     num_elements;
@@ -357,7 +357,7 @@ open_file(char *filename, hid_t fapl, hsize_t page_size, size_t page_buffer_size
     hid_t  file_id = -1;
     hid_t  dset_id = -1;
     hid_t  grp_id  = -1;
-    int *  data    = NULL; /* pointer to data buffer to write */
+    int   *data    = NULL; /* pointer to data buffer to write */
     int    i;
     int    j;
     int    num_elements;
@@ -440,7 +440,7 @@ set_multi_split(const char *env_h5_drvr, hid_t fapl, hsize_t pagesize)
     hbool_t    multi = FALSE;
     H5FD_mem_t memb_map[H5FD_MEM_NTYPES];
     hid_t      memb_fapl_arr[H5FD_MEM_NTYPES];
-    char *     memb_name[H5FD_MEM_NTYPES];
+    char      *memb_name[H5FD_MEM_NTYPES];
     haddr_t    memb_addr[H5FD_MEM_NTYPES];
     hbool_t    relax;
     H5FD_mem_t mt;
@@ -682,6 +682,10 @@ error:
  *              check that it appears *immediately* after max_lag + 1
  *              ticks, since the LRU list does not hold onto MPMDEs.
  *
+ *              Any data mis-matches or failures reported by the HDF5
+ *              library result in test failure.
+ *
+
  * Return:      0 if test is successful
  *              1 if test fails
  *
@@ -1487,8 +1491,8 @@ test_lru_processing(hid_t orig_fapl, const char *env_h5_drvr)
     int     num_elements = 2000;
     haddr_t addr         = HADDR_UNDEF;
     haddr_t search_addr  = HADDR_UNDEF;
-    int *   data         = NULL;
-    H5F_t * f            = NULL;
+    int    *data         = NULL;
+    H5F_t  *f            = NULL;
 
     TESTING("LRU Processing");
 
@@ -1756,8 +1760,8 @@ test_min_threshold(hid_t orig_fapl, const char *env_h5_drvr)
     H5PB_t *page_buf;
     haddr_t meta_addr = HADDR_UNDEF;
     haddr_t raw_addr  = HADDR_UNDEF;
-    int *   data      = NULL;
-    H5F_t * f         = NULL;
+    int    *data      = NULL;
+    H5F_t  *f         = NULL;
 
     TESTING("Minimum Metadata threshold Processing");
     HDprintf("\n");
@@ -2412,8 +2416,8 @@ test_stats_collection(hid_t orig_fapl, const char *env_h5_drvr)
     int64_t base_meta_cnt = 0;
     haddr_t meta_addr     = HADDR_UNDEF;
     haddr_t raw_addr      = HADDR_UNDEF;
-    int *   data          = NULL;
-    H5F_t * f             = NULL;
+    int    *data          = NULL;
+    H5F_t  *f             = NULL;
 
     TESTING("Statistics Collection");
 
@@ -4123,7 +4127,7 @@ main(void)
     h5_reset();
 
     /* Get the VFD to use */
-    env_h5_drvr = HDgetenv("HDF5_DRIVER");
+    env_h5_drvr = HDgetenv(HDF5_DRIVER);
     if (env_h5_drvr == NULL)
         env_h5_drvr = "nomatch";
 
@@ -4134,7 +4138,7 @@ main(void)
      */
     if ((0 == HDstrcmp(env_h5_drvr, "multi")) || (0 == HDstrcmp(env_h5_drvr, "split"))) {
 
-        SKIPPED()
+        SKIPPED();
         HDputs("Skip page buffering test because paged aggregation is disabled for multi/split drivers");
         HDputs("Furthermore, VFD SWMR is not (yet) expected to work with multi/split drivers");
         HDexit(EXIT_SUCCESS);

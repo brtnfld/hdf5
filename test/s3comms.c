@@ -244,7 +244,7 @@ jserr_str(const char *expected, const char *actual, const char *reason)
     }
 
 #ifdef JSVERIFY_EXP_ACT
-/* VERIFY rountines with paramter order (<expected>, <actual> [, <msg> ])
+/* VERIFY routines with parameter order (<expected>, <actual> [, <msg> ])
  */
 
 /*----------------------------------------------------------------------------
@@ -459,10 +459,10 @@ test_aws_canonical_request(void)
     };
 
     struct testcase {
-        const char *  exp_request;
-        const char *  exp_headers;
-        const char *  verb;
-        const char *  resource;
+        const char   *exp_request;
+        const char   *exp_headers;
+        const char   *verb;
+        const char   *resource;
         unsigned int  listsize;
         struct header list[5];
     };
@@ -512,10 +512,10 @@ test_aws_canonical_request(void)
     }; /* struct testcase cases[] */
     struct testcase *C = NULL;
     char             cr_dest[512];   /* canonical request */
-    hrb_t *          hrb     = NULL; /* http request buffer object */
+    hrb_t           *hrb     = NULL; /* http request buffer object */
     unsigned int     i       = 0;    /* looping/indexing */
     unsigned int     j       = 0;    /* looping/indexing */
-    hrb_node_t *     node    = NULL; /* http headers list pointer */
+    hrb_node_t      *node    = NULL; /* http headers list pointer */
     unsigned int     n_cases = 3;
     char             sh_dest[64]; /* signed headers */
 
@@ -730,7 +730,7 @@ test_hrb_init_request(void)
             FALSE,
         },
         {
-            "null verb substitues to GET",
+            "null verb substitutes to GET",
             NULL,
             "/MYPATH/MYFILE.tiff",
             "/MYPATH/MYFILE.tiff",
@@ -765,7 +765,7 @@ test_hrb_init_request(void)
     struct testcase *C      = NULL;
     unsigned int     i      = 0;
     unsigned int     ncases = 5;
-    hrb_t *          req    = NULL;
+    hrb_t           *req    = NULL;
 
     TESTING("hrb_init_request");
 
@@ -1135,7 +1135,7 @@ test_hrb_node_set(void)
 
     for (test_i = 0; test_i < testcases_count; test_i++) {
         const hrb_node_t *node   = NULL;
-        const testcase *  test   = &(cases[test_i]);
+        const testcase   *test   = &(cases[test_i]);
         unsigned          mock_i = 0;
 
         /*********
@@ -1143,10 +1143,10 @@ test_hrb_node_set(void)
          *********/
 
         for (mock_i = 0; test->given[mock_i] != NULL; mock_i += 2) {
-            const char *name = test->given[mock_i];
-            const char *valu = test->given[mock_i + 1];
+            const char *name  = test->given[mock_i];
+            const char *value = test->given[mock_i + 1];
 
-            FAIL_IF(SUCCEED != H5FD_s3comms_hrb_node_set(&list, name, valu))
+            FAIL_IF(SUCCEED != H5FD_s3comms_hrb_node_set(&list, name, value))
         }
         /********
          * TEST *
@@ -1162,11 +1162,11 @@ test_hrb_node_set(void)
         node   = list;
         mock_i = 0;
         while (test->expected[mock_i] != NULL && node != NULL) {
-            const char *name = test->expected[mock_i];
-            const char *valu = test->expected[mock_i + 1];
+            const char *name  = test->expected[mock_i];
+            const char *value = test->expected[mock_i + 1];
 
             JSVERIFY_STR(name, node->name, NULL)
-            JSVERIFY_STR(valu, node->value, NULL)
+            JSVERIFY_STR(value, node->value, NULL)
 
             mock_i += 2;
             node = node->next;
@@ -1220,9 +1220,9 @@ test_HMAC_SHA256(void)
         herr_t              ret; /* SUCCEED/FAIL expected from call */
         const unsigned char key[SHA256_DIGEST_LENGTH];
         size_t              key_len;
-        const char *        msg;
+        const char         *msg;
         size_t              msg_len;
-        const char *        exp;       /* not used if ret == FAIL */
+        const char         *exp;       /* not used if ret == FAIL */
         size_t              dest_size; /* if 0, `dest` is not malloc'd */
     };
 
@@ -1418,14 +1418,14 @@ test_parse_url(void)
         herr_t      exp_ret; /* expected return;              */
                              /* if FAIL, `expected` is unused */
         const_purl_t expected;
-        const char * msg;
+        const char  *msg;
     };
 
     /************************
      * test-local variables *
      ************************/
 
-    parsed_url_t *  purl    = NULL;
+    parsed_url_t   *purl    = NULL;
     unsigned int    i       = 0;
     unsigned int    ncases  = 15;
     struct testcase cases[] = {
@@ -1830,9 +1830,9 @@ test_s3r_open(void)
     char          url_raven_badport[S3_TEST_MAX_URL_SIZE];
     char          url_shakespeare[S3_TEST_MAX_URL_SIZE];
     unsigned char signing_key[SHA256_DIGEST_LENGTH];
-    struct tm *   now = NULL;
+    struct tm    *now = NULL;
     char          iso8601now[ISO8601_SIZE];
-    s3r_t *       handle     = NULL;
+    s3r_t        *handle     = NULL;
     hbool_t       curl_ready = FALSE;
     parsed_url_t *purl       = NULL;
 
@@ -2033,7 +2033,7 @@ test_s3r_read(void)
 
     char         url_raven[S3_TEST_MAX_URL_SIZE];
     char         buffer[S3COMMS_TEST_BUFFER_SIZE];
-    s3r_t *      handle     = NULL;
+    s3r_t       *handle     = NULL;
     hbool_t      curl_ready = FALSE;
     unsigned int i          = 0;
 
@@ -2194,9 +2194,9 @@ test_signing_key(void)
      *************************/
 
     struct testcase {
-        const char *  region;
-        const char *  secret_key;
-        const char *  when;
+        const char   *region;
+        const char   *secret_key;
+        const char   *when;
         unsigned char exp[SHA256_DIGEST_LENGTH];
     };
 
@@ -2298,11 +2298,11 @@ test_tostringtosign(void)
      * test-local variables *
      ************************/
 
-    const char canonreq[] = "GET\n/"
-                            "test.txt\n\nhost:examplebucket.s3.amazonaws.com\nrange:bytes=0-9\nx-amz-content-"
-                            "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\nx-amz-"
-                            "date:20130524T000000Z\n\nhost;range;x-amz-content-sha256;x-amz-"
-                            "date\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+    const char canonreq[]   = "GET\n/"
+                              "test.txt\n\nhost:examplebucket.s3.amazonaws.com\nrange:bytes=0-9\nx-amz-content-"
+                              "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\nx-amz-"
+                              "date:20130524T000000Z\n\nhost;range;x-amz-content-sha256;x-amz-"
+                              "date\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
     const char iso8601now[] = "20130524T000000Z";
     const char region[]     = "us-east-1";
     char       s2s[512];
@@ -2398,7 +2398,7 @@ test_trim(void)
     size_t dest_len = 0;
     int    i        = 0;
     int    n_cases  = 5;
-    char * str      = NULL;
+    char  *str      = NULL;
 
     TESTING("s3comms trim");
 
@@ -2508,13 +2508,13 @@ test_uriencode(void)
                                    "",
 
                                }};
-    char *          dest         = NULL;
+    char           *dest         = NULL;
     size_t          dest_written = 0;
     int             i            = 0;
     int             ncases       = 6;
     size_t          str_len      = 0;
 
-    TESTING("s3comms uriencode")
+    TESTING("s3comms uriencode");
 
     for (i = 0; i < ncases; i++) {
         str_len = cases[i].s_len;
@@ -2610,7 +2610,7 @@ main(void)
 
     bucket_url_env = HDgetenv("HDF5_ROS3_TEST_BUCKET_URL");
     if (bucket_url_env == NULL || bucket_url_env[0] == '\0') {
-        HDprintf("WARNING: S3 bucket url is not defined in enviornment "
+        HDprintf("WARNING: S3 bucket url is not defined in environment "
                  "variable 'HDF5_ROS3_TEST_BUCKET_URL'!\n");
     }
     else {

@@ -618,6 +618,13 @@ if test "X$HDF_FORTRAN" = "Xyes"; then
   AC_PROG_FC([PAC_FC_SEARCH_LIST],)
   AC_F9X_MODS
 
+  ## Allow setting the fortran module install dir
+  AC_ARG_WITH([fmoddir],
+    [AS_HELP_STRING([--with-fmoddir=DIR], [Fortran module install directory])],
+    [fmoddir=$withval],
+    [fmoddir="\${includedir}"])
+  AC_SUBST([fmoddir], [$fmoddir])
+￼
   ## Change to the Fortran 90 language
   AC_LANG_PUSH(Fortran)
 
@@ -1129,6 +1136,32 @@ AC_SUBST([H5_TEST_BUILDDIR])
 H5_TEST_BUILDDIR='test'
 
 ## ----------------------------------------------------------------------
+## Check what level of testing should be enabled
+##
+
+## Default is quickest testing
+TEST_EXPRESS_LEVEL_DEFAULT=3
+
+AC_MSG_CHECKING([if HDF5 testing intensity level is set])
+
+AC_ARG_ENABLE([test-express],
+              [AS_HELP_STRING([--enable-test-express=(0-3)],
+                              [Set HDF5 testing intensity level (0-3) [0 = exhaustive testing; 3 = quicker testing; default=3] Set environment variable HDF5TestExpress to override configured setting])],
+              [TEST_EXPRESS_LEVEL_DEFAULT=$enableval])
+
+case "X-$TEST_EXPRESS_LEVEL_DEFAULT" in
+  X-0|X-1|X-2|X-3)
+    AC_MSG_RESULT([$TEST_EXPRESS_LEVEL_DEFAULT])
+    ;;
+  *)
+    AC_MSG_RESULT([error])
+    AC_MSG_ERROR([$TEST_EXPRESS_LEVEL_DEFAULT is not a valid test express level])
+    ;;
+esac
+
+AC_DEFINE_UNQUOTED([TEST_EXPRESS_LEVEL_DEFAULT], [$TEST_EXPRESS_LEVEL_DEFAULT], [HDF5 testing intensity level])
+
+## ----------------------------------------------------------------------
 ## Check if they would like to disable building tools
 ##
 
@@ -1226,83 +1259,6 @@ if test "X$HDF5_DOXYGEN" = "Xyes"; then
   DOXYGEN_PREDEFINED='H5_HAVE_DIRECT H5_HAVE_LIBHDFS H5_HAVE_MAP_API H5_HAVE_PARALLEL H5_HAVE_ROS3_VFD'
 
   DX_INIT_DOXYGEN([HDF5], [./doxygen/Doxyfile], [hdf5lib_docs])
-fi
-
-
-## ----------------------------------------------------------------------
-## Check if they would like to enable building doxygen files
-##
-
-## This needs to be exposed for the library info file.
-AC_SUBST([HDF5_DOXYGEN])
-
-## Default is to not build DOXYGEN
-HDF5_DOXYGEN=no
-
-AC_MSG_CHECKING([if building doxygen is enabled])
-
-AC_ARG_ENABLE([doxygen],
-              [AS_HELP_STRING([--enable-doxygen],
-                              [Compile the HDF5 doxygen files [default=no]])],
-              [HDF5_DOXYGEN=$enableval])
-
-if test "X$HDF5_DOXYGEN" = "Xyes"; then
-  AC_MSG_RESULT([yes])
-  DX_DOXYGEN_FEATURE(ON)
-  DX_DOT_FEATURE(OFF)
-  DX_HTML_FEATURE(ON)
-  DX_CHM_FEATURE(OFF)
-  DX_CHI_FEATURE(OFF)
-  DX_MAN_FEATURE(ON)
-  DX_RTF_FEATURE(OFF)
-  DX_XML_FEATURE(OFF)
-  DX_PDF_FEATURE(OFF)
-  DX_PS_FEATURE(OFF)
-
-  AC_SUBST([DOXYGEN_PACKAGE])
-  AC_SUBST([DOXYGEN_VERSION_STRING])
-  AC_SUBST([DOXYGEN_INCLUDE_ALIASES])
-  AC_SUBST([DOXYGEN_PROJECT_LOGO])
-  AC_SUBST([DOXYGEN_PROJECT_BRIEF])
-  AC_SUBST([DOXYGEN_INPUT_DIRECTORY])
-  AC_SUBST([DOXYGEN_OPTIMIZE_OUTPUT_FOR_C])
-  AC_SUBST([DOXYGEN_MACRO_EXPANSION])
-  AC_SUBST([DOXYGEN_OUTPUT_DIRECTORY])
-  AC_SUBST([DOXYGEN_EXAMPLES_DIRECTORY])
-  AC_SUBST([DOXYGEN_LAYOUT_FILE])
-  AC_SUBST([DOXYGEN_HTML_HEADER])
-  AC_SUBST([DOXYGEN_HTML_FOOTER])
-  AC_SUBST([DOXYGEN_HTML_EXTRA_STYLESHEET])
-  AC_SUBST([DOXYGEN_HTML_EXTRA_FILES])
-  AC_SUBST([DOXYGEN_SERVER_BASED_SEARCH])
-  AC_SUBST([DOXYGEN_EXTERNAL_SEARCH])
-  AC_SUBST([DOXYGEN_SEARCHENGINE_URL])
-
-# SRCDIR Environment variables used inside doxygen macro for the source location:
-  DOXYGEN_PACKAGE=${PACKAGE_NAME}
-  DOXYGEN_VERSION_STRING=${PACKAGE_VERSION}
-  DOXYGEN_INCLUDE_ALIASES='$(SRCDIR)/doxygen/aliases'
-  DOXYGEN_PROJECT_LOGO='$(SRCDIR)/doxygen/img/HDFG-logo.png'
-  DOXYGEN_PROJECT_BRIEF=
-  DOXYGEN_INPUT_DIRECTORY='$(SRCDIR) $(SRCDIR)/doxygen/dox'
-  DOXYGEN_OPTIMIZE_OUTPUT_FOR_C=YES
-  DOXYGEN_MACRO_EXPANSION=YES
-  DOXYGEN_OUTPUT_DIRECTORY=hdf5lib_docs
-  DOXYGEN_EXAMPLES_DIRECTORY='$(SRCDIR)/doxygen/examples $(SRCDIR)/src $(SRCDIR)/examples $(SRCDIR)/test'
-  DOXYGEN_LAYOUT_FILE='$(SRCDIR)/doxygen/hdf5doxy_layout.xml'
-  DOXYGEN_HTML_HEADER='$(SRCDIR)/doxygen/hdf5_header.html'
-  DOXYGEN_HTML_FOOTER='$(SRCDIR)/doxygen/hdf5_footer.html'
-  DOXYGEN_HTML_EXTRA_STYLESHEET='$(SRCDIR)/doxygen/hdf5doxy.css'
-  DOXYGEN_HTML_EXTRA_FILES='$(SRCDIR)/doxygen/hdf5_navtree_hacks.js $(SRCDIR)/doxygen/img/ftv2node.png $(SRCDIR)/doxygen/img/ftv2pnode.png'
-  DOXYGEN_SERVER_BASED_SEARCH=NO
-  DOXYGEN_EXTERNAL_SEARCH=NO
-  DOXYGEN_SEARCHENGINE_URL=
-
-  DX_INIT_DOXYGEN([HDF5], [./doxygen/Doxyfile], [hdf5lib_docs])
-
-else
-  AC_MSG_RESULT([no])
-  echo "Doxygen support is disabled"
 fi
 
 
@@ -1653,6 +1609,7 @@ case "X-$withval" in
 esac
 
 
+
 ## ----------------------------------------------------------------------
 ## Make the external filters list available to *.in files
 ## At this point it's unset (no external filters by default) but it
@@ -1966,78 +1923,84 @@ esac
 
 if test "X$THREADSAFE" = "Xyes"; then
     AC_DEFINE([HAVE_THREADSAFE], [1], [Define if we have thread safe support])
-fi
 
-## ----------------------------------------------------------------------
-## Is the Pthreads library present?  It has a header file `pthread.h' and
-## a library `-lpthread' and their locations might be specified with the
-## `--with-pthread' command-line switch.  The value is an include path
-## and/or a library path.  If the library path is specified then it must
-## be preceded by a comma.
-AC_SUBST([HAVE_PTHREAD])
+    ## ----------------------------------------------------------------------
+    ## Is the Pthreads library present?  It has a header file `pthread.h' and
+    ## a library `-lpthread' and their locations might be specified with the
+    ## `--with-pthread' command-line switch.  The value is an include path
+    ## and/or a library path.  If the library path is specified then it must
+    ## be preceded by a comma.
+    ##
+    ## Thread-safety in HDF5 only uses Pthreads via configure, so the
+    ## default is "check", though this only has an effect when
+    ## --enable-threadsafe is specified.
+    AC_SUBST([HAVE_PTHREAD]) HAVE_PTHREAD=yes
+    AC_ARG_WITH([pthread],
+                [AS_HELP_STRING([--with-pthread=DIR],
+                                [Specify alternative path to Pthreads library when
+                                thread-safe capability is built.])],,
+                [withval=check])
 
-AC_ARG_WITH([pthread],
-            [AS_HELP_STRING([--with-pthread=DIR],
-                            [Specify alternative path to Pthreads library when
-                            thread-safe capability is built.])],,
-            [withval=check])
-
-case "$withval" in
-  check | yes)
-    AC_CHECK_HEADERS([pthread.h],,)
-    AC_CHECK_LIB([pthread], [pthread_self])
-    ;;
-  no)
-    AC_MSG_RESULT([suppressed])
-    ;;
-  *)
     case "$withval" in
-      *,*)
-        pthread_inc="`echo $withval | cut -f1 -d,`"
-        pthread_lib="`echo $withval | cut -f2 -d, -s`"
+      check | yes)
+        AC_CHECK_HEADERS([pthread.h],, [unset HAVE_PTHREAD])
+        if test "x$HAVE_PTHREAD" = "xyes"; then
+          AC_CHECK_LIB([pthread], [pthread_self],, [unset HAVE_PTHREAD])
+        fi
+        ;;
+      no)
+        AC_MSG_ERROR([Must use Pthreads with thread safety])
         ;;
       *)
-        if test -n "$withval"; then
-          pthread_inc="$withval/include"
-          pthread_lib="$withval/lib"
+        case "$withval" in
+          *,*)
+            pthread_inc="`echo $withval | cut -f1 -d,`"
+            pthread_lib="`echo $withval | cut -f2 -d, -s`"
+            ;;
+          *)
+            if test -n "$withval"; then
+              pthread_inc="$withval/include"
+              pthread_lib="$withval/lib"
+            fi
+            ;;
+        esac
+
+        if test -n "$pthread_inc"; then
+          saved_CPPFLAGS="$CPPFLAGS"
+          saved_AM_CPPFLAGS="$AM_CPPFLAGS"
+          CPPFLAGS="$CPPFLAGS -I$pthread_inc"
+          AM_CPPFLAGS="$AM_CPPFLAGS -I$pthread_inc"
+          AC_CHECK_HEADERS([pthread.h],, [CPPFLAGS="$saved_CPPFLAGS"; AM_CPPFLAGS="$saved_AM_CPPFLAGS"; unset HAVE_PTHREAD])
+        else
+          AC_CHECK_HEADERS([pthread.h],, [unset HAVE_PTHREAD])
+        fi
+
+        if test "x$HAVE_PTHREAD" = "xyes"; then
+          if test -n "$pthread_lib"; then
+            saved_LDFLAGS="$LDFLAGS"
+            saved_AM_LDFLAGS="$AM_LDFLAGS"
+            LDFLAGS="$LDFLAGS -L$pthread_lib"
+            AM_LDFLAGS="$AM_LDFLAGS -L$pthread_lib"
+            AC_CHECK_LIB([pthread], [pthread_self],,
+                         [LDFLAGS="$saved_LDFLAGS"; AM_LDFLAGS="$saved_AM_LDFLAGS"; unset HAVE_PTHREAD])
+          else
+            AC_CHECK_LIB([pthread], [pthread_self],, [unset HAVE_PTHREAD])
+          fi
         fi
         ;;
     esac
 
-    if test -n "$pthread_inc"; then
-      saved_CPPFLAGS="$CPPFLAGS"
-      saved_AM_CPPFLAGS="$AM_CPPFLAGS"
-      CPPFLAGS="$CPPFLAGS -I$pthread_inc"
-      AM_CPPFLAGS="$AM_CPPFLAGS -I$pthread_inc"
-      AC_CHECK_HEADERS([pthread.h],,[CPPFLAGS="$saved_CPPFLAGS"; AM_CPPFLAGS="$saved_AM_CPPFLAGS";])
-    else
-      AC_CHECK_HEADERS([pthread.h])
-    fi
-
-    if test -n "$pthread_lib"; then
-      saved_LDFLAGS="$LDFLAGS"
-      saved_AM_LDFLAGS="$AM_LDFLAGS"
-      LDFLAGS="$LDFLAGS -L$pthread_lib"
-      AM_LDFLAGS="$AM_LDFLAGS -L$pthread_lib"
-      AC_CHECK_LIB([pthread], [pthread_self],,[LDFLAGS="$saved_LDFLAGS"; AM_LDFLAGS="$saved_AM_LDFLAGS";])
-    else
-      AC_CHECK_LIB([pthread], [pthread_self])
-    fi
-    ;;
-esac
-
-## ----------------------------------------------------------------------
-## Check if pthread_attr_setscope(&attribute, PTHREAD_SCOPE_SYSTEM)
-## is supported on this system
-##
-## Unfortunately, this probably needs to be an AC_RUN_IFELSE since
-## it's impossible to determine if PTHREAD_SCOPE_SYSTEM is
-## supported a priori. POSIX.1-2001 requires that a conformant
-## system need only support one of SYSTEM or PROCESS scopes.
-##
-## For cross-compiling, we've added a pessimistic 'no'. You can
-## hand-hack the config file if you know otherwise.
-if test "x$HAVE_PTHREAD" = "xyes"; then
+    ## ----------------------------------------------------------------------
+    ## Check if pthread_attr_setscope(&attribute, PTHREAD_SCOPE_SYSTEM)
+    ## is supported on this system
+    ##
+    ## Unfortunately, this probably needs to be an AC_RUN_IFELSE since
+    ## it's impossible to determine if PTHREAD_SCOPE_SYSTEM is
+    ## supported a priori. POSIX.1-2001 requires that a conformant
+    ## system need only support one of SYSTEM or PROCESS scopes.
+    ##
+    ## For cross-compiling, we've added a pessimistic 'no'. You can
+    ## hand-hack the config file if you know otherwise.
     AC_MSG_CHECKING([Pthreads supports system scope])
     AC_CACHE_VAL([hdf5_cv_system_scope_threads],
       [AC_RUN_IFELSE(
@@ -2175,9 +2138,6 @@ AC_CHECK_FUNCS([siglongjmp sigsetjmp sigprocmask])
 AC_CHECK_FUNCS([srandom strdup symlink])
 AC_CHECK_FUNCS([tmpfile vasprintf waitpid])
 
-## VFD SWMR (move to main CHECK_FUNCS section at merge time)
-AC_CHECK_FUNCS([sigtimedwait timespeccmp])
-
 ## ----------------------------------------------------------------------
 ## Check compiler characteristics
 ##
@@ -2187,48 +2147,6 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]],[[int __attribute__((unused)) x]])],
                          [Define if the __attribute__(()) extension is present])
                  AC_MSG_RESULT([yes])],
                [AC_MSG_RESULT([no])])
-
-AC_MSG_CHECKING([for C99 designated initialization support])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[
-                typedef struct {
-                    int x;
-                    union {
-                        int i;
-                        double d;
-                    } u;
-                } di_struct_t;
-                di_struct_t x = {0, { .d = 0.0}}; ]])],
-               [AC_DEFINE([HAVE_C99_DESIGNATED_INITIALIZER], [1],
-                         [Define if the compiler understands C99 designated initialization of structs and unions])
-                 AC_MSG_RESULT([yes])],
-               [AC_MSG_RESULT([no])])
-
-## ----------------------------------------------------------------------
-## Try to figure out how to print `long long'.  Some machines use `%lld'
-## and others use `%qd'.  There may be more!  The final `l' is a
-## default in case none of the others work.
-##
-AC_MSG_CHECKING([how to print long long])
-AC_CACHE_VAL([hdf5_cv_printf_ll], [
-
-for hdf5_cv_printf_ll in ll l L q unknown; do
-   AC_RUN_IFELSE(
-        [AC_LANG_PROGRAM([
-            #include <stdio.h>
-            #include <stdlib.h>
-            #include <string.h>
-        ],[[
-            char *s = malloc(128);
-            long long x = (long long)1048576 * (long long)1048576;
-            sprintf(s,"%${hdf5_cv_printf_ll}d",x);
-            exit(strcmp(s,"1099511627776"));
-        ]])]
-   , [break],,[continue])
-done])
-
-AC_MSG_RESULT([%${hdf5_cv_printf_ll}d and %${hdf5_cv_printf_ll}u])
-AC_DEFINE_UNQUOTED([PRINTF_LL_WIDTH], ["$hdf5_cv_printf_ll"],
-                   [Width for printf() for type `long long' or `__int64', use `ll'])
 
 ## ----------------------------------------------------------------------
 ## Remove old ways of determining debug/production build.
@@ -2422,45 +2340,6 @@ case "X-$DEV_WARNINGS" in
     ;;
   *)
     AC_MSG_ERROR([Unrecognized value: $DEV_WARNINGS])
-    ;;
-esac
-
-## ----------------------------------------------------------------------
-## Check if we should consider certain compiler warnings as errors
-##
-## These should NOT be on by default as the risk of breakage is high
-## when compiling HDF5 on new (or new versions) of platforms and
-## compilers. It can also cause failures when header files we have no
-## control over (e.g. MPI, HDFS) raise warnings.
-##
-AC_MSG_CHECKING([enable warnings as errors])
-AC_ARG_ENABLE([warnings-as-errors],
-              [AS_HELP_STRING([--enable-warnings-as-errors],
-                              [Determines whether certain warnings will be
-                               considered errors. This is mainly for use
-                               by HDF5 library developers.
-                               [default=no]
-                               ])],
-              [WARNINGS_AS_ERRORS=$enableval])
-
-## Set default
-if test "X-$WARNINGS_AS_ERRORS" = X- ; then
-  WARNINGS_AS_ERRORS=no
-fi
-
-case "X-$WARNINGS_AS_ERRORS" in
-  X-yes)
-    H5_CFLAGS="$H5_CFLAGS $H5_ECFLAGS"
-    H5_CXXFLAGS="$H5_CXXFLAGS $H5_ECXXFLAGS"
-    AC_MSG_RESULT([yes])
-    ;;
-  X-no)
-    H5_CFLAGS="$H5_CFLAGS $H5_NECFLAGS"
-    H5_CXXFLAGS="$H5_CXXFLAGS $H5_NECXXFLAGS"
-    AC_MSG_RESULT([no])
-    ;;
-  *)
-    AC_MSG_ERROR([Unrecognized value: $WARNINGS_AS_ERRORS])
     ;;
 esac
 
@@ -3144,6 +3023,7 @@ if test -n "$PARALLEL"; then
 fi
 
 ## ----------------------------------------------------------------------
+
 ## Build parallel tools if parallel tools, parallel, and build tools options
 ## are all enabled.
 ##
@@ -3302,6 +3182,69 @@ else
 fi
 
 ## ----------------------------------------------------------------------
+## Check if Subfiling I/O driver is enabled by --enable-subfiling-vfd
+##
+AC_SUBST([SUBFILING_VFD])
+AC_SUBST([HAVE_MERCURY])
+
+## Default is no subfiling VFD
+SUBFILING_VFD=no
+HAVE_MERCURY="no"
+
+## Always include subfiling directory so public header files are available
+CPPFLAGS="$CPPFLAGS -I$ac_abs_confdir/src/H5FDsubfiling"
+AM_CPPFLAGS="$AM_CPPFLAGS -I$ac_abs_confdir/src/H5FDsubfiling"
+
+AC_MSG_CHECKING([if the subfiling I/O virtual file driver (VFD) is enabled])
+
+AC_ARG_ENABLE([subfiling-vfd],
+              [AS_HELP_STRING([--enable-subfiling-vfd],
+                              [Build the subfiling I/O virtual file driver (VFD). Requires --enable-parallel.
+                               [default=no]])],
+              [SUBFILING_VFD=$enableval], [SUBFILING_VFD=no])
+
+if test "X$SUBFILING_VFD" = "Xyes"; then
+    AC_MSG_RESULT([yes])
+    AC_DEFINE([HAVE_SUBFILING_VFD], [1],
+            [Define if the subfiling I/O virtual file driver (VFD) should be compiled])
+    AC_DEFINE([HAVE_IOC_VFD], [1],
+            [Define if the I/O Concentrator virtual file driver (VFD) should be compiled])
+
+    # Set-up mercury
+    HAVE_MERCURY="yes"
+    mercury_dir="$ac_abs_confdir/src/H5FDsubfiling/mercury"
+    mercury_inc="$mercury_dir/src/util"
+
+    CPPFLAGS="$CPPFLAGS -I$mercury_inc"
+    AM_CPPFLAGS="$AM_CPPFLAGS -I$mercury_inc"
+
+    if test "X${PARALLEL}" != "Xyes"; then
+      AC_MSG_ERROR([--enable-parallel is required for --enable-subfiling-vfd])
+    fi
+
+    HAVE_STDATOMIC_H="yes"
+    AC_CHECK_HEADERS([stdatomic.h],,[HAVE_STDATOMIC_H="no"])
+    if test "x$HAVE_STDATOMIC_H" = "xno"; then
+      AC_MSG_ERROR([Subfiling VFD requires atomic operations support. C11 stdatomic.h NOT available.])
+    fi
+
+# Checks for libraries.
+    AC_SEARCH_LIBS([shm_open], [rt])
+    AC_CHECK_LIB([pthread], [pthread_self],[], [echo "Error: Required library pthread not found." && exit 1])
+
+else
+    AC_MSG_RESULT([no])
+fi
+
+## Subfiling and IOC VFD files are not built if not required.
+AM_CONDITIONAL([SUBFILING_VFD_CONDITIONAL], [test "X$SUBFILING_VFD" = "Xyes"])
+# IOC VFD is currently only built when subfiling is enabled
+AM_CONDITIONAL([IOC_VFD_CONDITIONAL], [test "X$SUBFILING_VFD" = "Xyes"])
+# Mercury is currently only needed if  subfiling is enabled
+AM_CONDITIONAL([HAVE_MERCURY_CONDITIONAL], [test "X$HAVE_MERCURY" = "Xyes"])
+
+
+## ----------------------------------------------------------------------
 ## Check if Direct I/O driver is enabled by --enable-direct-vfd
 ##
 AC_SUBST([DIRECT_VFD])
@@ -3343,31 +3286,6 @@ fi
 
 ## Direct VFD files are not built if not required.
 AM_CONDITIONAL([DIRECT_VFD_CONDITIONAL], [test "X$DIRECT_VFD" = "Xyes"])
-
-## Checkpoint the cache
-AC_CACHE_SAVE
-
-## ----------------------------------------------------------------------
-## Use custom examples path.
-##
-AC_MSG_CHECKING([for custom examples path definition])
-AC_ARG_WITH([examplesdir],
-            [AS_HELP_STRING([--with-examplesdir=location],
-                            [Specify path for examples
-                            [default="DATAROOTDIR/hdf5_examples"]])],,
-            withval="${datarootdir}/hdf5_examples")
-
-if test "X$withval" = "X"; then
-    AC_MSG_RESULT([default])
-    examplesdir="${datarootdir}/hdf5_examples"
-else
-    AC_MSG_RESULT([$withval])
-    examplesdir=$withval
-fi
-
-AC_SUBST([examplesdir])
-AC_DEFINE_UNQUOTED([EXAMPLESDIR], ["$examplesdir"],
-            [Define the examples directory])
 
 ## ----------------------------------------------------------------------
 ## Check whether the Mirror VFD can be built.
@@ -3412,33 +3330,6 @@ fi
 
 ## Mirror VFD files built only if able.
 AM_CONDITIONAL([MIRROR_VFD_CONDITIONAL], [test "X$MIRROR_VFD" = "Xyes"])
-
-## ----------------------------------------------------------------------
-## Check whether the auxiliary process for the VFD SWMR should be built.
-##
-AC_SUBST([AUX_PROCESS])
-
-## Default is no auxiliary process
-AUX_PROCESS=no
-
-AC_MSG_CHECKING([if the auxiliary process is enabled])
-
-AC_ARG_ENABLE([aux-process],
-              [AS_HELP_STRING([--enable-aux-process],
-                              [Build the auxiliary process for VFD SWMR.
-                               [default=no]])],
-              [AUX_PROCESS=$enableval], [AUX_PROCESS=no])
-
-if test "X$AUX_PROCESS" = "Xyes"; then
-    AC_MSG_RESULT([yes])
-    AC_DEFINE([HAVE_AUX_PROCESS], [1],
-            [Define whether the auxiliary process is compiled])
-else
-    AC_MSG_RESULT([no])
-fi
-
-## Aux process files built only if able.
-AM_CONDITIONAL([AUX_PROCESS_CONDITIONAL], [test "X$AUX_PROCESS" = "Xyes"])
 
 ## ----------------------------------------------------------------------
 ## Check if Read-Only S3 virtual file driver is enabled by --enable-ros3-vfd
@@ -4303,7 +4194,6 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  test/test_use_cases.sh
                  test/test_vds_env.sh
                  test/test_vds_swmr.sh
-                 test/test_vfd_swmr.sh
                  testpar/Makefile
                  testpar/testpflush.sh
                  utils/Makefile
@@ -4315,7 +4205,6 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  utils/tools/test/h5dwalk/Makefile
                  utils/tools/test/h5dwalk/copy_demo_files.sh
                  utils/tools/test/h5dwalk/testh5dwalk.sh
-                 utils/vfd_swmr/Makefile
                  tools/Makefile
                  tools/lib/Makefile
                  tools/libtest/Makefile
@@ -4422,6 +4311,8 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  hl/fortran/test/Makefile
                  hl/fortran/examples/Makefile
                  hl/fortran/examples/run-hlfortran-ex.sh])
+
+AC_CONFIG_FILES([utils/subfiling_vfd/h5fuse.sh], [chmod +x utils/subfiling_vfd/h5fuse.sh])
 
 AC_CONFIG_COMMANDS([.classes], [], [$MKDIR_P java/src/.classes;
                 $MKDIR_P java/test/.classes;

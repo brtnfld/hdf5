@@ -83,7 +83,7 @@ static int maxbits = XV_BITS;         /* user settable max # bits/code */
 static int maxcode;                   /* maximum code, given n_bits */
 static int maxmaxcode = 1 << XV_BITS; /* NEVER generate this */
 
-static count_int *     htab;
+static count_int      *htab;
 static unsigned short *codetab;
 
 #define HashTabOf(i) htab[i]
@@ -188,13 +188,13 @@ hdfWriteGIF(FILE *fp, byte *pic, int ptype, int w, int h, const byte *rmap, cons
 static void
 compress(int init_bits, FILE *outfile, byte *data, int len)
 {
-    register long fcode;
-    register int  i = 0;
-    register int  c;
-    register int  ent;
-    register int  disp;
-    register int  hsize_reg;
-    register int  hshift;
+    long fcode;
+    int  i = 0;
+    int  c;
+    int  ent;
+    int  disp;
+    int  hsize_reg;
+    int  hshift;
 
     /*
      * Set up the globals:  g_init_bits - initial number of bits g_outfile -

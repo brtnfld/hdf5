@@ -446,18 +446,27 @@ GetTestExpress(void)
 
     /* set it here for now.  Should be done in something like h5test_init(). */
     if (TestExpress == -1) {
-        env_val = HDgetenv("HDF5TestExpress");
+        int express_val = 1;
 
-        if (env_val == NULL)
-            SetTestExpress(1);
-        else if (HDstrcmp(env_val, "0") == 0)
-            SetTestExpress(0);
-        else if (HDstrcmp(env_val, "1") == 0)
-            SetTestExpress(1);
-        else if (HDstrcmp(env_val, "2") == 0)
-            SetTestExpress(2);
-        else
-            SetTestExpress(3);
+        /* Check if a default test express level is defined (e.g., by build system) */
+#ifdef H5_TEST_EXPRESS_LEVEL_DEFAULT
+        express_val = H5_TEST_EXPRESS_LEVEL_DEFAULT;
+#endif
+
+        /* Check if HDF5TestExpress is set to override the default level */
+        env_val = HDgetenv("HDF5TestExpress");
+        if (env_val) {
+            if (HDstrcmp(env_val, "0") == 0)
+                express_val = 0;
+            else if (HDstrcmp(env_val, "1") == 0)
+                express_val = 1;
+            else if (HDstrcmp(env_val, "2") == 0)
+                express_val = 2;
+            else
+                express_val = 3;
+        }
+
+        SetTestExpress(express_val);
     }
 
     return (TestExpress);
@@ -633,7 +642,7 @@ void
 TestAlarmOn(void)
 {
 #ifdef H5_HAVE_ALARM
-    char *        env_val   = HDgetenv("HDF5_ALARM_SECONDS"); /* Alarm environment */
+    char         *env_val   = HDgetenv("HDF5_ALARM_SECONDS"); /* Alarm environment */
     unsigned long alarm_sec = H5_ALARM_SEC;                   /* Number of seconds before alarm goes off */
 
     /* Get the alarm value from the environment variable, if set */

@@ -59,14 +59,15 @@ public class H5Ex_T_ObjectReferenceAttribute {
         public static H5G_obj get(int code) { return lookup.get(code); }
     }
 
-    private static void CreateDataset() {
-        long file_id = HDF5Constants.H5I_INVALID_HID;
-        long dataspace_id = HDF5Constants.H5I_INVALID_HID;
-        long group_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id = HDF5Constants.H5I_INVALID_HID;
-        long attribute_id = HDF5Constants.H5I_INVALID_HID;
-        long[] dims = { DIM0 };
-        byte[][] dset_data = new byte[DIM0][8];
+    private static void CreateDataset()
+    {
+        long file_id       = HDF5Constants.H5I_INVALID_HID;
+        long dataspace_id  = HDF5Constants.H5I_INVALID_HID;
+        long group_id      = HDF5Constants.H5I_INVALID_HID;
+        long dataset_id    = HDF5Constants.H5I_INVALID_HID;
+        long attribute_id  = HDF5Constants.H5I_INVALID_HID;
+        long[] dims        = {DIM0};
+        byte[][] dset_data = new byte[DIM0][HDF5Constants.H5R_REF_BUF_SIZE];
 
         // Create a new file using default properties.
         try {
@@ -125,157 +126,8 @@ public class H5Ex_T_ObjectReferenceAttribute {
                 }
             }
 
-        // Create dataset with a scalar dataspace to serve as the parent
-        // for the attribute.
-        try {
-            dataspace_id = H5.H5Screate(HDF5Constants.H5S_SCALAR);
-            if (dataspace_id >= 0) {
-                dataset_id = H5.H5Dcreate(file_id, DATASETNAME, HDF5Constants.H5T_STD_I32LE, dataspace_id,
-                        HDF5Constants.H5P_DEFAULT, HDF5Constants.H5P_DEFAULT, HDF5Constants.H5P_DEFAULT);
-                H5.H5Sclose(dataspace_id);
-                dataspace_id = HDF5Constants.H5I_INVALID_HID;
-            }
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        // Create dataspace. Setting maximum size to NULL sets the maximum
-        // size to be the current size.
-        try {
-            dataspace_id = H5.H5Screate_simple(RANK, dims, null);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        // Create the attribute and write the array data to it.
-        try {
-            if ((dataset_id >= 0) && (dataspace_id >= 0))
-                attribute_id = H5.H5Acreate(dataset_id, ATTRIBUTENAME, HDF5Constants.H5T_STD_REF_OBJ, dataspace_id,
-                        HDF5Constants.H5P_DEFAULT, HDF5Constants.H5P_DEFAULT);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        // Write the dataset.
-        try {
-            if (attribute_id >= 0)
-                H5.H5Awrite(attribute_id, HDF5Constants.H5T_STD_REF_OBJ, dset_data);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        // End access to the dataset and release resources used by it.
-        try {
-            if (attribute_id >= 0)
-                H5.H5Aclose(attribute_id);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        try {
-            if (dataset_id >= 0)
-                H5.H5Dclose(dataset_id);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        // Terminate access to the data space.
-        try {
-            if (dataspace_id >= 0)
-                H5.H5Sclose(dataspace_id);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        // Close the file.
-        try {
-            if (file_id >= 0)
-                H5.H5Fclose(file_id);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-
-    }
-
-    private static void ReadDataset() {
-        long file_id = HDF5Constants.H5I_INVALID_HID;
-        long dataspace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id = HDF5Constants.H5I_INVALID_HID;
-        long attribute_id = HDF5Constants.H5I_INVALID_HID;
-        int object_type = -1;
-        long object_id = HDF5Constants.H5I_INVALID_HID;
-        long[] dims = { DIM0 };
-        byte[][] dset_data;
-
-        // Open an existing file.
-        try {
-            file_id = H5.H5Fopen(FILENAME, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        // Open an existing dataset.
-        try {
-            if (file_id >= 0)
-                dataset_id = H5.H5Dopen(file_id, DATASETNAME, HDF5Constants.H5P_DEFAULT);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        try {
-            if (dataset_id >= 0)
-                attribute_id = H5.H5Aopen_by_name(dataset_id, ".", ATTRIBUTENAME, HDF5Constants.H5P_DEFAULT,
-                        HDF5Constants.H5P_DEFAULT);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        // Get dataspace and allocate memory for read buffer.
-        try {
-            if (attribute_id >= 0)
-                dataspace_id = H5.H5Aget_space(attribute_id);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        try {
-            if (dataspace_id >= 0)
-                H5.H5Sget_simple_extent_dims(dataspace_id, dims, null);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        // Allocate array of pointers to two-dimensional arrays (the
-        // elements of the dataset.
-        dset_data = new byte[(int) dims[0]][8];
-
-        // Read data.
-        try {
-            if (attribute_id >= 0)
-                H5.H5Aread(attribute_id, HDF5Constants.H5T_STD_REF_OBJ, dset_data);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        // Output the data to the screen.
-        for (int indx = 0; indx < dims[0]; indx++) {
-            System.out.println(ATTRIBUTENAME + "[" + indx + "]:");
-            System.out.print("  ->");
-            // Open the referenced object, get its name and type.
+            // Create dataset with a scalar dataspace to serve as the parent
+            // for the attribute.
             try {
                 dataspace_id = H5.H5Screate(HDF5Constants.H5S_SCALAR);
                 if (dataspace_id >= 0) {

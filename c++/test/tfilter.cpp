@@ -30,7 +30,8 @@ using namespace H5;
 #ifdef H5_HAVE_FILTER_SZIP
 #define DSET_DIM1 100
 #define DSET_DIM2 200
-#endif#define FILTER_CHUNK_DIM1 2
+#endif
+#define FILTER_CHUNK_DIM1 2
 #define FILTER_CHUNK_DIM2 25
 
 // will do this function later or use it as guideline - BMR - 2007/01/26

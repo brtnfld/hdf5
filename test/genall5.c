@@ -2723,11 +2723,12 @@ static hbool_t
 tend_zoo(hid_t fid, const char *base_path, struct timespec *lastmsgtime, zoo_config_t config,
          const phase_t *phase, size_t nphases)
 {
-    char    full_path[1024];
-    int     i, nwritten;
-    size_t  j;
-    char *  leafp;
-    hbool_t ok = TRUE;
+    char             full_path[1024];
+    int              i, nwritten;
+    size_t           j;
+    char *           leafp;
+    hbool_t          ok = TRUE;
+    static const char *last_failure_mssg = "";
 
     nwritten = HDsnprintf(full_path, sizeof(full_path), "%s/*", base_path);
     if (nwritten < 0 || (size_t)nwritten >= sizeof(full_path)) {

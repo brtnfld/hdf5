@@ -62,7 +62,7 @@ if (NOT MSVC AND NOT MINGW)
   # General flags
   if (CMAKE_Fortran_COMPILER_ID STREQUAL "Intel")
     ADD_H5_FLAGS (HDF5_CMAKE_Fortran_FLAGS "${HDF5_SOURCE_DIR}/config/intel-warnings/ifort-general")
-    list (APPEND HDF5_CMAKE_Fortran_FLAGS "-stand f03" "-free")
+    list (APPEND HDF5_CMAKE_Fortran_FLAGS "-free")
   elseif (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
     ADD_H5_FLAGS (HDF5_CMAKE_Fortran_FLAGS "${HDF5_SOURCE_DIR}/config/gnu-warnings/gfort-general")
     list (APPEND HDF5_CMAKE_Fortran_FLAGS "-ffree-form" "-fimplicit-none")
@@ -79,7 +79,6 @@ if (NOT MSVC AND NOT MINGW)
   endif ()
 
   if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
-
     # Append more extra warning flags that only gcc 4.8+ knows about
     if (NOT CMAKE_Fortran_COMPILER_VERSION VERSION_LESS 4.8)
       ADD_H5_FLAGS (HDF5_CMAKE_Fortran_FLAGS "${HDF5_SOURCE_DIR}/config/gnu-warnings/gfort-4.8")

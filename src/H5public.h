@@ -84,15 +84,15 @@
 /**
  * For tweaks, bug-fixes, or development
  */
-#define H5_VERS_RELEASE 0
+#define H5_VERS_RELEASE 2
 /**
  * For pre-releases like \c snap0. Empty string for official releases.
  */
-#define H5_VERS_SUBRELEASE ""
+#define H5_VERS_SUBRELEASE "1"
 /**
  * Full version string
  */
-#define H5_VERS_INFO "HDF5 library version: 1.13.0"
+#define H5_VERS_INFO "HDF5 library version: 1.13.2-1"
 
 #define H5check() H5check_version(H5_VERS_MAJOR, H5_VERS_MINOR, H5_VERS_RELEASE)
 
@@ -236,11 +236,17 @@
 typedef int herr_t;
 
 /**
- * Boolean type.  Successful return values are zero (false) or positive
- * (true). The typical true value is 1 but don't bet on it.  Boolean
- * functions cannot fail.  Functions that return #htri_t however return zero
- * (false), positive (true), or negative (failure). The proper way to test
- * for truth from a #htri_t function is:
+ * C99-style Boolean type. Successful return values are zero (false) or positive
+ * (true). The typical true value is 1 but don't bet on it.
+ * \attention Boolean functions cannot fail.
+ */
+#include <stdbool.h>
+typedef bool hbool_t;
+/**
+ * Three-valued Boolean type. Functions that return #htri_t however return zero
+ * (false), positive (true), or negative (failure).
+ *
+ * The proper way to test for truth from a #htri_t function is:
  * \code
  * if ((retval = H5Tcommitted(type)) > 0) {
  *     printf("data type is committed\n");
@@ -251,8 +257,7 @@ typedef int herr_t;
  * }
  * \endcode
  */
-typedef bool hbool_t;
-typedef int  htri_t;
+typedef int htri_t;
 
 /* The signed version of size_t
  *

@@ -75,7 +75,7 @@ typedef struct H5AC_slist_entry_t {
 /* User data for address list building callbacks */
 typedef struct H5AC_addr_list_ud_t {
     H5AC_aux_t *aux_ptr;      /* 'Auxiliary' parallel cache info */
-    haddr_t *   addr_buf_ptr; /* Array to store addresses */
+    haddr_t    *addr_buf_ptr; /* Array to store addresses */
     unsigned    u;            /* Counter for position in array */
 } H5AC_addr_list_ud_t;
 
@@ -207,7 +207,7 @@ H5AC__set_write_done_callback(H5C_t *cache_ptr, H5AC_write_done_cb_t write_done)
 herr_t
 H5AC_add_candidate(H5AC_t *cache_ptr, haddr_t addr)
 {
-    H5AC_aux_t *        aux_ptr;
+    H5AC_aux_t         *aux_ptr;
     H5AC_slist_entry_t *slist_entry_ptr = NULL;
     herr_t              ret_value       = SUCCEED; /* Return value */
 
@@ -268,7 +268,7 @@ static herr_t
 H5AC__broadcast_candidate_list(H5AC_t *cache_ptr, unsigned *num_entries_ptr, haddr_t **haddr_buf_ptr_ptr)
 {
     H5AC_aux_t *aux_ptr       = NULL;
-    haddr_t *   haddr_buf_ptr = NULL;
+    haddr_t    *haddr_buf_ptr = NULL;
     int         mpi_result;
     unsigned    num_entries;
     herr_t      ret_value = SUCCEED; /* Return value */
@@ -304,8 +304,10 @@ H5AC__broadcast_candidate_list(H5AC_t *cache_ptr, unsigned *num_entries_ptr, had
          * are used to receiving from process 0, and also load it
          * into a buffer for transmission.
          */
-        if (H5AC__copy_candidate_list_to_buffer(cache_ptr, &chk_num_entries, &haddr_buf_ptr) < 0)
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't construct candidate buffer.")
+        if (H5AC__copy_candidate_list_to_buffer(cache_ptr, &chk_num_entries, &haddr_buf_ptr) < 0) {
+            /* Push an error, but still participate in following MPI_Bcast */
+            HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't construct candidate buffer.")
+        }
         HDassert(chk_num_entries == num_entries);
         HDassert(haddr_buf_ptr != NULL);
 
@@ -347,7 +349,7 @@ done:
 static herr_t
 H5AC__broadcast_clean_list_cb(void *_item, void H5_ATTR_UNUSED *_key, void *_udata)
 {
-    H5AC_slist_entry_t * slist_entry_ptr = (H5AC_slist_entry_t *)_item;   /* Address of item */
+    H5AC_slist_entry_t  *slist_entry_ptr = (H5AC_slist_entry_t *)_item;   /* Address of item */
     H5AC_addr_list_ud_t *udata           = (H5AC_addr_list_ud_t *)_udata; /* Context for callback */
     haddr_t              addr;
 
@@ -398,7 +400,7 @@ H5AC__broadcast_clean_list_cb(void *_item, void H5_ATTR_UNUSED *_key, void *_uda
 static herr_t
 H5AC__broadcast_clean_list(H5AC_t *cache_ptr)
 {
-    haddr_t *   addr_buf_ptr = NULL;
+    haddr_t    *addr_buf_ptr = NULL;
     H5AC_aux_t *aux_ptr;
     int         mpi_result;
     unsigned    num_entries = 0;
@@ -428,18 +430,23 @@ H5AC__broadcast_clean_list(H5AC_t *cache_ptr)
 
         /* allocate a buffer to store the list of entry base addresses in */
         buf_size = sizeof(haddr_t) * num_entries;
-        if (NULL == (addr_buf_ptr = (haddr_t *)H5MM_malloc(buf_size)))
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "memory allocation failed for addr buffer")
+        if (NULL == (addr_buf_ptr = (haddr_t *)H5MM_malloc(buf_size))) {
+            /* Push an error, but still participate in following MPI_Bcast */
+            HDONE_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "memory allocation failed for addr buffer")
+        }
+        else {
+            /* Set up user data for callback */
+            udata.aux_ptr      = aux_ptr;
+            udata.addr_buf_ptr = addr_buf_ptr;
+            udata.u            = 0;
 
-        /* Set up user data for callback */
-        udata.aux_ptr      = aux_ptr;
-        udata.addr_buf_ptr = addr_buf_ptr;
-        udata.u            = 0;
-
-        /* Free all the clean list entries, building the address list in the callback */
-        /* (Callback also removes the matching entries from the dirtied list) */
-        if (H5SL_free(aux_ptr->c_slist_ptr, H5AC__broadcast_clean_list_cb, &udata) < 0)
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTFREE, FAIL, "Can't build address list for clean entries")
+            /* Free all the clean list entries, building the address list in the callback */
+            /* (Callback also removes the matching entries from the dirtied list) */
+            if (H5SL_free(aux_ptr->c_slist_ptr, H5AC__broadcast_clean_list_cb, &udata) < 0) {
+                /* Push an error, but still participate in following MPI_Bcast */
+                HDONE_ERROR(H5E_CACHE, H5E_CANTFREE, FAIL, "Can't build address list for clean entries")
+            }
+        }
 
         /* Now broadcast the list of cleaned entries */
         if (MPI_SUCCESS !=
@@ -539,7 +546,7 @@ done:
 static herr_t
 H5AC__copy_candidate_list_to_buffer_cb(void *_item, void H5_ATTR_UNUSED *_key, void *_udata)
 {
-    H5AC_slist_entry_t * slist_entry_ptr = (H5AC_slist_entry_t *)_item;   /* Address of item */
+    H5AC_slist_entry_t  *slist_entry_ptr = (H5AC_slist_entry_t *)_item;   /* Address of item */
     H5AC_addr_list_ud_t *udata           = (H5AC_addr_list_ud_t *)_udata; /* Context for callback */
 
     FUNC_ENTER_PACKAGE_NOERR
@@ -593,9 +600,9 @@ static herr_t
 H5AC__copy_candidate_list_to_buffer(const H5AC_t *cache_ptr, unsigned *num_entries_ptr,
                                     haddr_t **haddr_buf_ptr_ptr)
 {
-    H5AC_aux_t *        aux_ptr = NULL;
+    H5AC_aux_t         *aux_ptr = NULL;
     H5AC_addr_list_ud_t udata;
-    haddr_t *           haddr_buf_ptr = NULL;
+    haddr_t            *haddr_buf_ptr = NULL;
     size_t              buf_size;
     unsigned            num_entries = 0;
     herr_t              ret_value   = SUCCEED; /* Return value */
@@ -667,8 +674,8 @@ done:
 herr_t
 H5AC__log_deleted_entry(const H5AC_info_t *entry_ptr)
 {
-    H5AC_t *            cache_ptr;
-    H5AC_aux_t *        aux_ptr;
+    H5AC_t             *cache_ptr;
+    H5AC_aux_t         *aux_ptr;
     H5AC_slist_entry_t *slist_entry_ptr = NULL;
     haddr_t             addr;
 
@@ -721,7 +728,7 @@ H5AC__log_deleted_entry(const H5AC_info_t *entry_ptr)
 herr_t
 H5AC__log_dirtied_entry(const H5AC_info_t *entry_ptr)
 {
-    H5AC_t *    cache_ptr;
+    H5AC_t     *cache_ptr;
     H5AC_aux_t *aux_ptr;
     herr_t      ret_value = SUCCEED; /* Return value */
 
@@ -799,7 +806,7 @@ done:
 herr_t
 H5AC__log_cleaned_entry(const H5AC_info_t *entry_ptr)
 {
-    H5AC_t *    cache_ptr;
+    H5AC_t     *cache_ptr;
     H5AC_aux_t *aux_ptr;
 
     FUNC_ENTER_PACKAGE_NOERR
@@ -862,7 +869,7 @@ herr_t
 H5AC__log_flushed_entry(H5C_t *cache_ptr, haddr_t addr, hbool_t was_dirty, unsigned flags)
 {
     hbool_t             cleared;
-    H5AC_aux_t *        aux_ptr;
+    H5AC_aux_t         *aux_ptr;
     H5AC_slist_entry_t *slist_entry_ptr = NULL;
     herr_t              ret_value       = SUCCEED; /* Return value */
 
@@ -929,7 +936,7 @@ done:
 herr_t
 H5AC__log_inserted_entry(const H5AC_info_t *entry_ptr)
 {
-    H5AC_t *    cache_ptr;
+    H5AC_t     *cache_ptr;
     H5AC_aux_t *aux_ptr;
     herr_t      ret_value = SUCCEED; /* Return value */
 
@@ -1027,7 +1034,7 @@ done:
 herr_t
 H5AC__log_moved_entry(const H5F_t *f, haddr_t old_addr, haddr_t new_addr)
 {
-    H5AC_t *    cache_ptr;
+    H5AC_t     *cache_ptr;
     H5AC_aux_t *aux_ptr;
     hbool_t     entry_in_cache;
     hbool_t     entry_dirty;
@@ -1207,9 +1214,9 @@ done:
 static herr_t
 H5AC__propagate_and_apply_candidate_list(H5F_t *f)
 {
-    H5AC_t *    cache_ptr;
+    H5AC_t     *cache_ptr;
     H5AC_aux_t *aux_ptr;
-    haddr_t *   candidates_list_ptr = NULL;
+    haddr_t    *candidates_list_ptr = NULL;
     int         mpi_result;
     unsigned    num_candidates = 0;
     herr_t      ret_value      = SUCCEED; /* Return value */
@@ -1373,7 +1380,7 @@ done:
 static herr_t
 H5AC__propagate_flushed_and_still_clean_entries_list(H5F_t *f)
 {
-    H5AC_t *    cache_ptr;
+    H5AC_t     *cache_ptr;
     H5AC_aux_t *aux_ptr;
     herr_t      ret_value = SUCCEED; /* Return value */
 
@@ -1448,8 +1455,10 @@ H5AC__receive_haddr_list(MPI_Comm mpi_comm, unsigned *num_entries_ptr, haddr_t *
 
         /* allocate buffers to store the list of entry base addresses in */
         buf_size = sizeof(haddr_t) * num_entries;
-        if (NULL == (haddr_buf_ptr = (haddr_t *)H5MM_malloc(buf_size)))
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "memory allocation failed for haddr buffer")
+        if (NULL == (haddr_buf_ptr = (haddr_t *)H5MM_malloc(buf_size))) {
+            /* Push an error, but still participate in following MPI_Bcast */
+            HDONE_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "memory allocation failed for haddr buffer")
+        }
 
         /* Now receive the list of candidate entries */
         if (MPI_SUCCESS !=
@@ -1492,9 +1501,9 @@ done:
 static herr_t
 H5AC__receive_and_apply_clean_list(H5F_t *f)
 {
-    H5AC_t *    cache_ptr;
+    H5AC_t     *cache_ptr;
     H5AC_aux_t *aux_ptr;
-    haddr_t *   haddr_buf_ptr = NULL;
+    haddr_t    *haddr_buf_ptr = NULL;
     unsigned    num_entries   = 0;
     herr_t      ret_value     = SUCCEED; /* Return value */
 
@@ -1632,9 +1641,9 @@ done:
 static herr_t
 H5AC__rsp__dist_md_write__flush(H5F_t *f)
 {
-    H5AC_t *    cache_ptr;
+    H5AC_t     *cache_ptr;
     H5AC_aux_t *aux_ptr;
-    haddr_t *   haddr_buf_ptr = NULL;
+    haddr_t    *haddr_buf_ptr = NULL;
     int         mpi_result;
     unsigned    num_entries = 0;
     herr_t      ret_value   = SUCCEED; /* Return value */
@@ -1778,7 +1787,7 @@ done:
 static herr_t
 H5AC__rsp__dist_md_write__flush_to_min_clean(H5F_t *f)
 {
-    H5AC_t *    cache_ptr;
+    H5AC_t     *cache_ptr;
     H5AC_aux_t *aux_ptr;
     hbool_t     evictions_enabled;
     herr_t      ret_value = SUCCEED; /* Return value */
@@ -1800,10 +1809,14 @@ H5AC__rsp__dist_md_write__flush_to_min_clean(H5F_t *f)
 
     if (evictions_enabled) {
         /* construct candidate list -- process 0 only */
-        if (aux_ptr->mpi_rank == 0)
+        if (aux_ptr->mpi_rank == 0) {
+            /* If constructing candidate list fails, push an error but still participate
+             * in collective operations during following candidate list propagation
+             */
             if (H5AC__construct_candidate_list(cache_ptr, aux_ptr, H5AC_SYNC_POINT_OP__FLUSH_TO_MIN_CLEAN) <
                 0)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't construct candidate list.")
+                HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't construct candidate list.")
+        }
 
         /* propagate and apply candidate list -- all processes */
         if (H5AC__propagate_and_apply_candidate_list(f) < 0)
@@ -1855,7 +1868,7 @@ done:
 static herr_t
 H5AC__rsp__p0_only__flush(H5F_t *f)
 {
-    H5AC_t *    cache_ptr;
+    H5AC_t     *cache_ptr;
     H5AC_aux_t *aux_ptr;
     int         mpi_result;
     herr_t      ret_value = SUCCEED; /* Return value */
@@ -1899,15 +1912,21 @@ H5AC__rsp__p0_only__flush(H5F_t *f)
         aux_ptr->write_permitted = FALSE;
 
         /* Check for error on the write operation */
-        if (result < 0)
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't flush.")
-
-        /* this code exists primarily for the test bed -- it allows us to
-         * enforce POSIX semantics on the server that pretends to be a
-         * file system in our parallel tests.
-         */
-        if (aux_ptr->write_done)
-            (aux_ptr->write_done)();
+        if (result < 0) {
+            /* If write operation fails, push an error but still participate
+             * in collective operations during following cache entry
+             * propagation
+             */
+            HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't flush.")
+        }
+        else {
+            /* this code exists primarily for the test bed -- it allows us to
+             * enforce POSIX semantics on the server that pretends to be a
+             * file system in our parallel tests.
+             */
+            if (aux_ptr->write_done)
+                (aux_ptr->write_done)();
+        }
     } /* end if */
 
     /* Propagate cleaned entries to other ranks. */
@@ -1963,7 +1982,7 @@ done:
 static herr_t
 H5AC__rsp__p0_only__flush_to_min_clean(H5F_t *f)
 {
-    H5AC_t *    cache_ptr;
+    H5AC_t     *cache_ptr;
     H5AC_aux_t *aux_ptr;
     hbool_t     evictions_enabled;
     herr_t      ret_value = SUCCEED; /* Return value */
@@ -2019,15 +2038,21 @@ H5AC__rsp__p0_only__flush_to_min_clean(H5F_t *f)
             aux_ptr->write_permitted = FALSE;
 
             /* Check for error on the write operation */
-            if (result < 0)
-                HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5C_flush_to_min_clean() failed.")
-
-            /* this call exists primarily for the test code -- it is used
-             * to enforce POSIX semantics on the process used to simulate
-             * reads and writes in t_cache.c.
-             */
-            if (aux_ptr->write_done)
-                (aux_ptr->write_done)();
+            if (result < 0) {
+                /* If write operation fails, push an error but still participate
+                 * in collective operations during following cache entry
+                 * propagation
+                 */
+                HDONE_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5C_flush_to_min_clean() failed.")
+            }
+            else {
+                /* this call exists primarily for the test code -- it is used
+                 * to enforce POSIX semantics on the process used to simulate
+                 * reads and writes in t_cache.c.
+                 */
+                if (aux_ptr->write_done)
+                    (aux_ptr->write_done)();
+            }
         } /* end if */
 
         if (H5AC__propagate_flushed_and_still_clean_entries_list(f) < 0)
@@ -2072,7 +2097,7 @@ done:
 herr_t
 H5AC__run_sync_point(H5F_t *f, int sync_point_op)
 {
-    H5AC_t *    cache_ptr;
+    H5AC_t     *cache_ptr;
     H5AC_aux_t *aux_ptr;
     herr_t      ret_value = SUCCEED; /* Return value */
 
@@ -2093,11 +2118,11 @@ H5AC__run_sync_point(H5F_t *f, int sync_point_op)
              (sync_point_op == H5AC_METADATA_WRITE_STRATEGY__DISTRIBUTED));
 
 #if H5AC_DEBUG_DIRTY_BYTES_CREATION
-    HDfprintf(stdout, "%d:H5AC_propagate...:%u: (u/uu/i/iu/r/ru) = %zu/%u/%zu/%u/%zu/%u\n", aux_ptr->mpi_rank,
+    HDfprintf(stdout, "%d:H5AC_propagate...:%u: (u/uu/i/iu/m/mu) = %zu/%u/%zu/%u/%zu/%u\n", aux_ptr->mpi_rank,
               aux_ptr->dirty_bytes_propagations, aux_ptr->unprotect_dirty_bytes,
               aux_ptr->unprotect_dirty_bytes_updates, aux_ptr->insert_dirty_bytes,
-              aux_ptr->insert_dirty_bytes_updates, aux_ptr->rename_dirty_bytes,
-              aux_ptr->rename_dirty_bytes_updates);
+              aux_ptr->insert_dirty_bytes_updates, aux_ptr->move_dirty_bytes,
+              aux_ptr->move_dirty_bytes_updates);
 #endif /* H5AC_DEBUG_DIRTY_BYTES_CREATION */
 
     /* clear collective access flag on half of the entries in the

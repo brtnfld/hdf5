@@ -25,8 +25,9 @@ public class H5_CreateGroupAbsoluteRelative {
     private static String GROUPNAME_A = "GroupA";
     private static String GROUPNAME_B = "GroupB";
 
-    private static void CreateGroupAbsoluteAndRelative() {
-        long file_id = HDF5Constants.H5I_INVALID_HID;
+    private static void CreateGroupAbsoluteAndRelative()
+    {
+        long file_id   = HDF5Constants.H5I_INVALID_HID;
         long group1_id = HDF5Constants.H5I_INVALID_HID;
         long group2_id = HDF5Constants.H5I_INVALID_HID;
         long group3_id = HDF5Constants.H5I_INVALID_HID;

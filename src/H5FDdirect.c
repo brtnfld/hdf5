@@ -122,8 +122,8 @@ typedef struct H5FD_direct_t {
 static herr_t  H5FD__direct_term(void);
 static herr_t  H5FD__direct_populate_config(size_t boundary, size_t block_size, size_t cbuf_size,
                                             H5FD_direct_fapl_t *fa_out);
-static void *  H5FD__direct_fapl_get(H5FD_t *file);
-static void *  H5FD__direct_fapl_copy(const void *_old_fa);
+static void   *H5FD__direct_fapl_get(H5FD_t *file);
+static void   *H5FD__direct_fapl_copy(const void *_old_fa);
 static H5FD_t *H5FD__direct_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr);
 static herr_t  H5FD__direct_close(H5FD_t *_file);
 static int     H5FD__direct_cmp(const H5FD_t *_f1, const H5FD_t *_f2);
@@ -140,8 +140,6 @@ static herr_t  H5FD__direct_truncate(H5FD_t *_file, hid_t dxpl_id, hbool_t closi
 static herr_t  H5FD__direct_lock(H5FD_t *_file, hbool_t rw);
 static herr_t  H5FD__direct_unlock(H5FD_t *_file);
 static herr_t  H5FD__direct_delete(const char *filename, hid_t fapl_id);
-static herr_t  H5FD__direct_ctl(H5FD_t *_file, uint64_t op_code, uint64_t flags, const void *input,
-                                void **output);
 
 static const H5FD_class_t H5FD_direct_g = {
     H5FD_CLASS_VERSION,         /* struct version       */
@@ -182,7 +180,7 @@ static const H5FD_class_t H5FD_direct_g = {
     H5FD__direct_lock,          /* lock                 */
     H5FD__direct_unlock,        /* unlock               */
     H5FD__direct_delete,        /* del                  */
-    H5FD__direct_ctl,           /* ctl                  */
+    NULL,                       /* ctl                  */
     H5FD_FLMAP_DICHOTOMY        /* fl_map               */
 };
 
@@ -273,7 +271,7 @@ H5FD__direct_term(void)
 herr_t
 H5Pset_fapl_direct(hid_t fapl_id, size_t boundary, size_t block_size, size_t cbuf_size)
 {
-    H5P_genplist_t *   plist; /* Property list pointer */
+    H5P_genplist_t    *plist; /* Property list pointer */
     H5FD_direct_fapl_t fa;
     herr_t             ret_value;
 
@@ -311,7 +309,7 @@ herr_t
 H5Pget_fapl_direct(hid_t fapl_id, size_t *boundary /*out*/, size_t *block_size /*out*/,
                    size_t *cbuf_size /*out*/)
 {
-    H5P_genplist_t *          plist; /* Property list pointer */
+    H5P_genplist_t           *plist; /* Property list pointer */
     const H5FD_direct_fapl_t *fa;
     herr_t                    ret_value = SUCCEED; /* Return value */
 
@@ -403,7 +401,7 @@ static void *
 H5FD__direct_fapl_get(H5FD_t *_file)
 {
     H5FD_direct_t *file      = (H5FD_direct_t *)_file;
-    void *         ret_value = NULL; /* Return value */
+    void          *ret_value = NULL; /* Return value */
 
     FUNC_ENTER_PACKAGE_NOERR
 
@@ -431,7 +429,7 @@ static void *
 H5FD__direct_fapl_copy(const void *_old_fa)
 {
     const H5FD_direct_fapl_t *old_fa = (const H5FD_direct_fapl_t *)_old_fa;
-    H5FD_direct_fapl_t *      new_fa = H5MM_calloc(sizeof(H5FD_direct_fapl_t));
+    H5FD_direct_fapl_t       *new_fa = H5MM_calloc(sizeof(H5FD_direct_fapl_t));
 
     FUNC_ENTER_PACKAGE_NOERR
 
@@ -464,7 +462,7 @@ H5FD__direct_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxad
 {
     int                       o_flags;
     int                       fd   = (-1);
-    H5FD_direct_t *           file = NULL;
+    H5FD_direct_t            *file = NULL;
     const H5FD_direct_fapl_t *fa;
     H5FD_direct_fapl_t        default_fa;
 #ifdef H5_HAVE_WIN32_API
@@ -473,8 +471,8 @@ H5FD__direct_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxad
 #endif
     h5_stat_t       sb;
     H5P_genplist_t *plist; /* Property list */
-    void *          buf1, *buf2;
-    H5FD_t *        ret_value = NULL;
+    void           *buf1, *buf2;
+    H5FD_t         *ret_value = NULL;
 
     FUNC_ENTER_PACKAGE
 
@@ -875,7 +873,7 @@ H5FD__direct_read(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, hid_t H5_ATTR_U
     hbool_t        _must_align = TRUE;
     herr_t         ret_value   = SUCCEED; /* Return value */
     size_t         alloc_size;
-    void *         copy_buf = NULL, *p2;
+    void          *copy_buf = NULL, *p2;
     size_t         _boundary;
     size_t         _fbsize;
     size_t         _cbsize;
@@ -1055,8 +1053,8 @@ H5FD__direct_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, hid_t H5_ATTR_
     hbool_t        _must_align = TRUE;
     herr_t         ret_value   = SUCCEED; /* Return value */
     size_t         alloc_size;
-    void *         copy_buf = NULL, *p1;
-    const void *   p3;
+    void          *copy_buf = NULL, *p1;
+    const void    *p3;
     size_t         _boundary;
     size_t         _fbsize;
     size_t         _cbsize;
@@ -1427,58 +1425,5 @@ H5FD__direct_delete(const char *filename, hid_t H5_ATTR_UNUSED fapl_id)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FD__direct_delete() */
-
-/*-------------------------------------------------------------------------
- * Function:    H5FD__direct_ctl
- *
- * Purpose:     Direct VFD version of the ctl callback.
- *
- *              The desired operation is specified by the op_code
- *              parameter.
- *
- *              The flags parameter controls management of op_codes that
- *              are unknown to the callback
- *
- *              The input and output parameters allow op_code specific
- *              input and output
- *
- *              At present, the only op code supported is
- *              H5FD_CTL_GET_TERMINAL_VFD, which is used to obtain the
- *              instance of H5FD_t associated with the terminal
- *              VFD.  This allows comparison of files whose terminal
- *              VFD may have overlying pass through VFDs.
- *
- * Return:      Non-negative on success/Negative on failure
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5FD__direct_ctl(H5FD_t *_file, uint64_t op_code, uint64_t flags, const void H5_ATTR_UNUSED *input,
-                 void **output)
-{
-    H5FD_direct_t *file      = (H5FD_direct_t *)_file;
-    herr_t         ret_value = SUCCEED;
-
-    FUNC_ENTER_PACKAGE
-
-    /* Sanity checks */
-    HDassert(file);
-
-    switch (op_code) {
-
-        case H5FD_CTL_GET_TERMINAL_VFD:
-            HDassert(output);
-            *output = (void *)(file);
-            break;
-
-        /* Unknown op code */
-        default:
-            if (flags & H5FD_CTL_FAIL_IF_UNKNOWN_FLAG)
-                HGOTO_ERROR(H5E_VFL, H5E_FCNTL, FAIL, "unknown op_code and fail if unknown flag is set")
-            break;
-    }
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5FD__direct_ctl() */
 
 #endif /* H5_HAVE_DIRECT */

@@ -13,14 +13,18 @@
 #ifndef PIO_PERF_H
 #define PIO_PERF_H
 
-#ifndef STANDALONE
 #include "io_timer.h"
 #include "H5private.h"
 #include "h5tools.h"
 #include "h5tools_utils.h"
-#else
-#include "io_timer.h"
-#include "pio_standalone.h"
+
+#ifdef H5_HAVE_PARALLEL
+extern MPI_Info h5_io_info_g; /* MPI INFO object for IO */
+#endif
+
+#ifdef H5_HAVE_PARALLEL
+int  h5_set_info_object(void);
+void h5_dump_info_object(MPI_Info info);
 #endif
 
 #ifdef H5_HAVE_PARALLEL
@@ -76,7 +80,7 @@ typedef struct results_ {
 #define FAIL -1
 #endif /* !FAIL */
 
-extern FILE *     output;              /* output file                          */
+extern FILE      *output;              /* output file                          */
 extern io_time_t *timer_g;             /* timer: global for stub functions     */
 extern int        comm_world_rank_g;   /* my rank in MPI_COMM_RANK             */
 extern int        comm_world_nprocs_g; /* num. of processes of MPI_COMM_WORLD  */

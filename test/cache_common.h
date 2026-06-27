@@ -264,7 +264,7 @@ typedef struct test_entry_t {
                                    * sanity checking.
                                    */
     test_entry_action_t action;   /* Action being performed on a test entry */
-    H5F_t *             file_ptr; /* pointer to the file in which the
+    H5F_t              *file_ptr; /* pointer to the file in which the
                                    * entry resides, or NULL if the entry
                                    * is not in a file.
                                    */
@@ -393,7 +393,7 @@ typedef struct test_entry_t {
     unsigned flush_dep_npar;                         /* Number of flush dependency parents */
     unsigned flush_dep_nchd;                         /* Number of flush dependency children */
     unsigned
-             flush_dep_ndirty_chd; /* Number of dirty flush dependency children (including grandchildren, etc.) */
+        flush_dep_ndirty_chd; /* Number of dirty flush dependency children (including grandchildren, etc.) */
     hbool_t  pinned_from_client; /* entry was pinned by client call */
     hbool_t  pinned_from_cache;  /* entry was pinned by cache internally */
     unsigned flush_order;        /* Order that entry was flushed in */
@@ -549,7 +549,6 @@ struct expected_entry_status {
 /* global variable externs: */
 H5TEST_DLLVAR hbool_t     pass; /* set to false on error */
 H5TEST_DLLVAR const char *failure_mssg;
-H5TEST_DLLVAR const char *last_failure_mssg;
 
 H5TEST_DLLVAR test_entry_t *entries[NUMBER_OF_ENTRY_TYPES];
 H5TEST_DLLVAR const int32_t max_indices[NUMBER_OF_ENTRY_TYPES];

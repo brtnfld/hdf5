@@ -96,6 +96,7 @@ struct attr4_struct {
 const H5std_string ATTR5_NAME("Attr5");
 const int          ATTR5_RANK = 0;
 float              attr_data5 = -5.123F; // Test data for 5th attribute
+
 /* Info for another attribute */
 const H5std_string ATTR1A_NAME("Attr1_a");
 int                attr_data1a[ATTR1_DIM1] = {256, 11945, -22107};
@@ -296,7 +297,7 @@ test_attr_getname()
 
         // 1. With arbitrary buf_size that is larger than the name size
         size_t buf_size    = FATTR1_NAME.length() + 10;
-        char * fattr1_name = new char[buf_size + 1];
+        char  *fattr1_name = new char[buf_size + 1];
         HDmemset(fattr1_name, 0, buf_size + 1);
         ssize_t name_size = 0; // actual length of attribute name
         name_size         = fattr1.getName(fattr1_name, buf_size + 1);
@@ -726,13 +727,12 @@ test_attr_compound_read()
 
         // Verify that the fields have the same names as when the type
         // was created
-        int j;
-        for (j = 0; j < fields; j++) {
-            H5std_string fieldname = datatype.getMemberName(j);
+        for (int j = 0; j < fields; j++) {
+            H5std_string fieldname = datatype.getMemberName(static_cast<unsigned>(j));
             if (!((fieldname == ATTR4_FIELDNAME1) || (fieldname == ATTR4_FIELDNAME2) ||
                   (fieldname == ATTR4_FIELDNAME3)))
                 TestErrPrintf("%d:invalid field name for field #%d: %s\n", __LINE__, j, fieldname.c_str());
-        } /* end for */
+        }
 
         offset = datatype.getMemberOffset(0);
         verify_val(offset, attr4_field1_off, "DataType::getMemberOffset", __LINE__, __FILE__);
@@ -1585,7 +1585,7 @@ test_string_attr()
         // Read and verify the attribute string as a string of chars; buffer
         // is dynamically allocated.
         size_t attr_size = gr_flattr1.getInMemDataSize();
-        char * fl_dyn_string_att_check;
+        char  *fl_dyn_string_att_check;
         fl_dyn_string_att_check = new char[attr_size + 1];
         gr_flattr1.read(fls_type, fl_dyn_string_att_check);
         if (HDstrcmp(fl_dyn_string_att_check, ATTRSTR_DATA.c_str()) != 0)
@@ -1680,12 +1680,14 @@ test_attr_exists()
 
         // Check for existence of attribute
         bool attr_exists = fid1.attrExists(ATTR1_FL_STR_NAME);
-        if (!attr_exists)            throw InvalidActionException("H5File::attrExists",
+        if (!attr_exists)
+            throw InvalidActionException("H5File::attrExists",
                                          "fid1, ATTR1_FL_STR_NAMEAttribute should exist but does not");
 
         // Check for existence of attribute
         attr_exists = fid1.attrExists(FATTR1_NAME);
-        if (!attr_exists)            throw InvalidActionException("H5File::attrExists",
+        if (!attr_exists)
+            throw InvalidActionException("H5File::attrExists",
                                          "fid1,FATTR2_NAMEAttribute should exist but does not");
 
         // Open a group.
@@ -1693,7 +1695,8 @@ test_attr_exists()
 
         // Check for existence of attribute
         attr_exists = group.attrExists(ATTR2_NAME);
-        if (!attr_exists)            throw InvalidActionException("H5File::attrExists",
+        if (!attr_exists)
+            throw InvalidActionException("H5File::attrExists",
                                          "group, ATTR2_NAMEAttribute should exist but does not");
 
         PASSED();

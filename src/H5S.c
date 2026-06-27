@@ -93,9 +93,6 @@ static const H5I_class_t H5I_SPACE_SEL_ITER_CLS[1] = {{
     (H5I_free_t)H5S__sel_iter_close_cb /* Callback routine for closing objects of this class */
 }};
 
-/* Flag indicating "top" of interface has been initialized */
-static hbool_t H5S_top_package_initialize_s = FALSE;
-
 /*-------------------------------------------------------------------------
  * Function: H5S_init
  *
@@ -105,28 +102,6 @@ static hbool_t H5S_top_package_initialize_s = FALSE;
  *           Failure:    negative
  *-------------------------------------------------------------------------
  */
-herr_t
-H5S_init(void)
-{
-    herr_t ret_value = SUCCEED; /* Return value */
-
-    FUNC_ENTER_NOAPI(FAIL)
-    /* FUNC_ENTER() does all the work */
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5S_init() */
-
-/*--------------------------------------------------------------------------
-NAME
-   H5S__init_package -- Initialize interface-specific information
-USAGE
-    herr_t H5S__init_package()
-RETURNS
-    Non-negative on success/Negative on failure
-DESCRIPTION
-    Initializes any interface-specific data or routines.
---------------------------------------------------------------------------*/
 herr_t
 H5S_init(void)
 {
@@ -172,21 +147,14 @@ H5S_top_term_package(void)
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-    if (H5S_top_package_initialize_s) {
-        if (H5I_nmembers(H5I_DATASPACE) > 0) {
-            (void)H5I_clear_type(H5I_DATASPACE, FALSE, FALSE);
-            n++; /*H5I*/
-        }        /* end if */
-
-        if (H5I_nmembers(H5I_SPACE_SEL_ITER) > 0) {
-            (void)H5I_clear_type(H5I_SPACE_SEL_ITER, FALSE, FALSE);
-            n++; /*H5I*/
-        }        /* end if */
-
-        /* Mark "top" of interface as closed */
-        if (0 == n)
-            H5S_top_package_initialize_s = FALSE;
-    } /* end if */
+    if (H5I_nmembers(H5I_DATASPACE) > 0) {
+        (void)H5I_clear_type(H5I_DATASPACE, FALSE, FALSE);
+        n++;
+    }
+    if (H5I_nmembers(H5I_SPACE_SEL_ITER) > 0) {
+        (void)H5I_clear_type(H5I_SPACE_SEL_ITER, FALSE, FALSE);
+        n++;
+    }
 
     FUNC_LEAVE_NOAPI(n)
 } /* end H5S_top_term_package() */
@@ -218,11 +186,9 @@ H5S_term_package(void)
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-    if (H5_PKG_INIT_VAR) {
-        /* Sanity checks */
-        HDassert(0 == H5I_nmembers(H5I_DATASPACE));
-        HDassert(0 == H5I_nmembers(H5I_SPACE_SEL_ITER));
-        HDassert(FALSE == H5S_top_package_initialize_s);
+    /* Sanity checks */
+    HDassert(0 == H5I_nmembers(H5I_DATASPACE));
+    HDassert(0 == H5I_nmembers(H5I_SPACE_SEL_ITER));
 
     /* Destroy the dataspace object id group */
     n += (H5I_dec_type_ref(H5I_DATASPACE) > 0);
@@ -775,7 +741,7 @@ H5S_get_simple_extent_npoints(const H5S_t *ds)
 hssize_t
 H5Sget_simple_extent_npoints(hid_t space_id)
 {
-    H5S_t *  ds;
+    H5S_t   *ds;
     hssize_t ret_value;
 
     FUNC_ENTER_API(FAIL)
@@ -1526,7 +1492,7 @@ done:
 herr_t
 H5S_encode(H5S_t *obj, unsigned char **p, size_t *nalloc)
 {
-    H5F_t *  f = NULL;            /* Fake file structure*/
+    H5F_t   *f = NULL;            /* Fake file structure*/
     size_t   extent_size;         /* Size of serialized dataspace extent */
     hssize_t sselect_size;        /* Signed size of serialized dataspace selection */
     size_t   select_size;         /* Size of serialized dataspace selection */
@@ -1641,13 +1607,13 @@ done:
 H5S_t *
 H5S_decode(const unsigned char **p)
 {
-    H5F_t *              f = NULL;         /* Fake file structure*/
-    H5S_t *              ds;               /* Decoded dataspace */
-    H5S_extent_t *       extent;           /* Entent of decoded dataspace */
+    H5F_t               *f = NULL;         /* Fake file structure*/
+    H5S_t               *ds;               /* Decoded dataspace */
+    H5S_extent_t        *extent;           /* Entent of decoded dataspace */
     const unsigned char *pp = (*p);        /* Local pointer for decoding */
     size_t               extent_size;      /* size of the extent message*/
     uint8_t              sizeof_size;      /* 'Size of sizes' for file */
-    H5S_t *              ret_value = NULL; /* Return value */
+    H5S_t               *ret_value = NULL; /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
 
@@ -1754,7 +1720,7 @@ H5S_get_simple_extent_type(const H5S_t *space)
 H5S_class_t
 H5Sget_simple_extent_type(hid_t sid)
 {
-    H5S_t *     space;
+    H5S_t      *space;
     H5S_class_t ret_value; /* Return value */
 
     FUNC_ENTER_API(H5S_NO_CLASS)

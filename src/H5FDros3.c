@@ -195,7 +195,7 @@ typedef struct H5FD_ros3_t {
     H5FD_t           pub;
     H5FD_ros3_fapl_t fa;
     haddr_t          eoa;
-    s3r_t *          s3r_handle;
+    s3r_t           *s3r_handle;
 #if ROS3_STATS
     ros3_statsbin meta[ROS3_STATS_BIN_COUNT + 1];
     ros3_statsbin raw[ROS3_STATS_BIN_COUNT + 1];
@@ -217,8 +217,8 @@ typedef struct H5FD_ros3_t {
 
 /* Prototypes */
 static herr_t  H5FD__ros3_term(void);
-static void *  H5FD__ros3_fapl_get(H5FD_t *_file);
-static void *  H5FD__ros3_fapl_copy(const void *_old_fa);
+static void   *H5FD__ros3_fapl_get(H5FD_t *_file);
+static void   *H5FD__ros3_fapl_copy(const void *_old_fa);
 static herr_t  H5FD__ros3_fapl_free(void *_fa);
 static H5FD_t *H5FD__ros3_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr);
 static herr_t  H5FD__ros3_close(H5FD_t *_file);
@@ -233,8 +233,6 @@ static herr_t  H5FD__ros3_read(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, ha
 static herr_t  H5FD__ros3_write(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr, size_t size,
                                 const void *buf);
 static herr_t  H5FD__ros3_truncate(H5FD_t *_file, hid_t dxpl_id, hbool_t closing);
-static herr_t  H5FD__ros3_ctl(H5FD_t *_file, uint64_t op_code, uint64_t flags, const void *input,
-                              void **output);
 
 static herr_t H5FD__ros3_validate_config(const H5FD_ros3_fapl_t *fa);
 
@@ -277,37 +275,12 @@ static const H5FD_class_t H5FD_ros3_g = {
     NULL,                     /* lock                 */
     NULL,                     /* unlock               */
     NULL,                     /* del                  */
-    H5FD__ros3_ctl,           /* ctl                  */
+    NULL,                     /* ctl                  */
     H5FD_FLMAP_DICHOTOMY      /* fl_map               */
 };
 
 /* Declare a free list to manage the H5FD_ros3_t struct */
 H5FL_DEFINE_STATIC(H5FD_ros3_t);
-
-/*-------------------------------------------------------------------------
- * Function:    H5FD__init_package
- *
- * Purpose:     Initializes any interface-specific data or routines.
- *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Jacob Smith 2017
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5FD__init_package(void)
-{
-    herr_t ret_value = SUCCEED;
-
-    FUNC_ENTER_STATIC
-
-    if (H5FD_ros3_init() < 0)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, FAIL, "unable to initialize ros3 VFD")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5FD__init_package() */
 
 /*-------------------------------------------------------------------------
  * Function:    H5FD_ros3_init
@@ -489,7 +462,7 @@ herr_t
 H5Pget_fapl_ros3(hid_t fapl_id, H5FD_ros3_fapl_t *fa_dst /*out*/)
 {
     const H5FD_ros3_fapl_t *fa_src    = NULL;
-    H5P_genplist_t *        plist     = NULL;
+    H5P_genplist_t         *plist     = NULL;
     herr_t                  ret_value = SUCCEED;
 
     FUNC_ENTER_API(FAIL)
@@ -538,9 +511,9 @@ done:
 static void *
 H5FD__ros3_fapl_get(H5FD_t *_file)
 {
-    H5FD_ros3_t *     file      = (H5FD_ros3_t *)_file;
+    H5FD_ros3_t      *file      = (H5FD_ros3_t *)_file;
     H5FD_ros3_fapl_t *fa        = NULL;
-    void *            ret_value = NULL;
+    void             *ret_value = NULL;
 
     FUNC_ENTER_PACKAGE
 
@@ -580,8 +553,8 @@ static void *
 H5FD__ros3_fapl_copy(const void *_old_fa)
 {
     const H5FD_ros3_fapl_t *old_fa    = (const H5FD_ros3_fapl_t *)_old_fa;
-    H5FD_ros3_fapl_t *      new_fa    = NULL;
-    void *                  ret_value = NULL;
+    H5FD_ros3_fapl_t       *new_fa    = NULL;
+    void                   *ret_value = NULL;
 
     FUNC_ENTER_PACKAGE
 
@@ -714,13 +687,13 @@ done:
 static H5FD_t *
 H5FD__ros3_open(const char *url, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
 {
-    H5FD_ros3_t *    file = NULL;
-    struct tm *      now  = NULL;
+    H5FD_ros3_t     *file = NULL;
+    struct tm       *now  = NULL;
     char             iso8601now[ISO8601_SIZE];
     unsigned char    signing_key[SHA256_DIGEST_LENGTH];
-    s3r_t *          handle = NULL;
+    s3r_t           *handle = NULL;
     H5FD_ros3_fapl_t fa;
-    H5FD_t *         ret_value = NULL;
+    H5FD_t          *ret_value = NULL;
 
     FUNC_ENTER_PACKAGE
 
@@ -863,7 +836,7 @@ static herr_t
 ros3_fprint_stats(FILE *stream, const H5FD_ros3_t *file)
 {
     herr_t             ret_value    = SUCCEED;
-    parsed_url_t *     purl         = NULL;
+    parsed_url_t      *purl         = NULL;
     unsigned           i            = 0;
     unsigned long      count_meta   = 0;
     unsigned long      count_raw    = 0;
@@ -1170,8 +1143,8 @@ done:
 static int
 H5FD__ros3_cmp(const H5FD_t *_f1, const H5FD_t *_f2)
 {
-    const H5FD_ros3_t * f1        = (const H5FD_ros3_t *)_f1;
-    const H5FD_ros3_t * f2        = (const H5FD_ros3_t *)_f2;
+    const H5FD_ros3_t  *f1        = (const H5FD_ros3_t *)_f1;
+    const H5FD_ros3_t  *f2        = (const H5FD_ros3_t *)_f2;
     const parsed_url_t *purl1     = NULL;
     const parsed_url_t *purl2     = NULL;
     int                 ret_value = 0;
@@ -1594,58 +1567,5 @@ H5FD__ros3_truncate(H5FD_t H5_ATTR_UNUSED *_file, hid_t H5_ATTR_UNUSED dxpl_id,
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FD__ros3_truncate() */
-
-/*-------------------------------------------------------------------------
- * Function:    H5FD__ros3_ctl
- *
- * Purpose:     ROS3 VFD version of the ctl callback.
- *
- *              The desired operation is specified by the op_code
- *              parameter.
- *
- *              The flags parameter controls management of op_codes that
- *              are unknown to the callback
- *
- *              The input and output parameters allow op_code specific
- *              input and output
- *
- *              At present, the only op code supported is
- *              H5FD_CTL_GET_TERMINAL_VFD, which is used to obtain the
- *              instance of H5FD_t associated with the terminal
- *              VFD.  This allows comparison of files whose terminal
- *              VFD may have overlying pass through VFDs.
- *
- * Return:      Non-negative on success/Negative on failure
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5FD__ros3_ctl(H5FD_t *_file, uint64_t op_code, uint64_t flags, const void H5_ATTR_UNUSED *input,
-               void **output)
-{
-    H5FD_ros3_t *file      = (H5FD_ros3_t *)_file;
-    herr_t       ret_value = SUCCEED;
-
-    FUNC_ENTER_PACKAGE
-
-    /* Sanity checks */
-    HDassert(file);
-
-    switch (op_code) {
-
-        case H5FD_CTL_GET_TERMINAL_VFD:
-            HDassert(output);
-            *output = (void *)(file);
-            break;
-
-        /* Unknown op code */
-        default:
-            if (flags & H5FD_CTL_FAIL_IF_UNKNOWN_FLAG)
-                HGOTO_ERROR(H5E_VFL, H5E_FCNTL, FAIL, "unknown op_code and fail if unknown flag is set")
-            break;
-    }
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5FD__ros3_ctl() */
 
 #endif /* H5_HAVE_ROS3_VFD */

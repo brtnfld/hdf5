@@ -26,14 +26,15 @@ public class H5_CreateAttribute {
     private static final int DIM_Y         = 6;
     private static String DATASETATTRIBUTE = "Units";
 
-    private static void CreateDatasetAttribute() {
-        long file_id = HDF5Constants.H5I_INVALID_HID;
+    private static void CreateDatasetAttribute()
+    {
+        long file_id      = HDF5Constants.H5I_INVALID_HID;
         long dataspace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id = HDF5Constants.H5I_INVALID_HID;
+        long dataset_id   = HDF5Constants.H5I_INVALID_HID;
         long attribute_id = HDF5Constants.H5I_INVALID_HID;
-        long[] dims1 = { DIM_X, DIM_Y };
-        long[] dims = { 2 };
-        int[] attr_data = { 100, 200 };
+        long[] dims1      = {DIM_X, DIM_Y};
+        long[] dims       = {2};
+        int[] attr_data   = {100, 200};
 
         // Create a new file using default properties.
         try {

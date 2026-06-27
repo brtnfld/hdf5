@@ -31,10 +31,10 @@
 #include "H5Opkg.h"      /* Object headers       */
 
 /* PRIVATE PROTOTYPES */
-static void * H5O__fsinfo_decode(H5F_t *f, H5O_t *open_oh, unsigned mesg_flags, unsigned *ioflags,
+static void  *H5O__fsinfo_decode(H5F_t *f, H5O_t *open_oh, unsigned mesg_flags, unsigned *ioflags,
                                  size_t p_size, const uint8_t *p);
 static herr_t H5O__fsinfo_encode(H5F_t *f, hbool_t disable_shared, uint8_t *p, const void *_mesg);
-static void * H5O__fsinfo_copy(const void *_mesg, void *_dest);
+static void  *H5O__fsinfo_copy(const void *_mesg, void *_dest);
 static size_t H5O__fsinfo_size(const H5F_t *f, hbool_t disable_shared, const void *_mesg);
 static herr_t H5O__fsinfo_free(void *mesg);
 static herr_t H5O__fsinfo_debug(H5F_t *f, const void *_mesg, FILE *stream, int indent, int fwidth);
@@ -91,14 +91,15 @@ H5FL_DEFINE_STATIC(H5O_fsinfo_t);
  */
 static void *
 H5O__fsinfo_decode(H5F_t *f, H5O_t H5_ATTR_UNUSED *open_oh, unsigned H5_ATTR_UNUSED mesg_flags,
-                   unsigned H5_ATTR_UNUSED *ioflags, size_t H5_ATTR_UNUSED p_size, const uint8_t *p)
+                   unsigned H5_ATTR_UNUSED *ioflags, size_t p_size, const uint8_t *p)
 {
-    H5O_fsinfo_t * fsinfo = NULL;    /* File space info message */
-    H5F_mem_page_t ptype;            /* Memory type for iteration */
-    unsigned       vers;             /* message version */
-    void *         ret_value = NULL; /* Return value */
+    H5O_fsinfo_t  *fsinfo = NULL; /* File space info message */
+    H5F_mem_page_t ptype;         /* Memory type for iteration */
+    unsigned       vers;          /* message version */
+    const uint8_t *p_end     = p + p_size;
+    void          *ret_value = NULL; /* Return value */
 
-    FUNC_ENTER_STATIC
+    FUNC_ENTER_PACKAGE
 
     /* check args */
     HDassert(f);
@@ -136,8 +137,12 @@ H5O__fsinfo_decode(H5F_t *f, H5O_t H5_ATTR_UNUSED *open_oh, unsigned H5_ATTR_UNU
                 fsinfo->threshold = threshold;
                 if (HADDR_UNDEF == (fsinfo->eoa_pre_fsm_fsalloc = H5F_get_eoa(f, H5FD_MEM_DEFAULT)))
                     HGOTO_ERROR(H5E_FILE, H5E_CANTGET, NULL, "unable to get file size")
-                for (type = H5FD_MEM_SUPER; type < H5FD_MEM_NTYPES; type++)
+                for (type = H5FD_MEM_SUPER; type < H5FD_MEM_NTYPES; type++) {
+                    if (p + H5_SIZEOF_HADDR_T > p_end)
+                        HGOTO_ERROR(H5E_FILE, H5E_CANTDECODE, NULL,
+                                    "ran off end of input buffer while decoding")
                     H5F_addr_decode(f, &p, &(fsinfo->fs_addr[type - 1]));
+                }
                 break;
 
             case H5F_FILE_SPACE_ALL:
@@ -252,8 +257,8 @@ static void *
 H5O__fsinfo_copy(const void *_mesg, void *_dest)
 {
     const H5O_fsinfo_t *fsinfo    = (const H5O_fsinfo_t *)_mesg;
-    H5O_fsinfo_t *      dest      = (H5O_fsinfo_t *)_dest;
-    void *              ret_value = NULL; /* Return value */
+    H5O_fsinfo_t       *dest      = (H5O_fsinfo_t *)_dest;
+    void               *ret_value = NULL; /* Return value */
 
     FUNC_ENTER_PACKAGE
 

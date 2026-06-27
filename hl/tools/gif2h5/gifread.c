@@ -54,11 +54,11 @@ GetByte(const GIFBYTE *MemGif)
  *           otherwise 0 if no error occurred.
  */
 int
-ReadGifHeader(GIFHEAD * GifHead, /* Pointer to GIF header structure  */
+ReadGifHeader(GIFHEAD  *GifHead, /* Pointer to GIF header structure  */
               GIFBYTE **MemGif2) /* GIF image file input FILE stream */
 {
     GIFWORD i;         /* Loop counter                                */
-    GIFWORD tableSize; /* Number of entires in the Global Color Table */
+    GIFWORD tableSize; /* Number of entries in the Global Color Table */
 
     GifHead->TableSize = 0;
     for (i = 0; i < 6; i++) {
@@ -103,7 +103,7 @@ ReadGifHeader(GIFHEAD * GifHead, /* Pointer to GIF header structure  */
         return -1;
 #endif /* 0 */
 
-    return 0; /* No FILE stream error occured */
+    return 0; /* No FILE stream error occurred */
 }
 
 /*
@@ -121,7 +121,7 @@ ReadGifHeader(GIFHEAD * GifHead, /* Pointer to GIF header structure  */
 */
 int
 ReadGifImageDesc(GIFIMAGEDESC *GifImageDesc, /* Pointer to GIF image descriptor structure  */
-                 GIFBYTE **    MemGif2       /* GIF image file input FILE stream           */
+                 GIFBYTE     **MemGif2       /* GIF image file input FILE stream           */
 )
 {
     GIFWORD i;               /* Loop counter                               */
@@ -196,7 +196,7 @@ ReadGifImageDesc(GIFIMAGEDESC *GifImageDesc, /* Pointer to GIF image descriptor 
             *TempPtr++ = *(*MemGif2)++;
     } while (ch1);
 
-    return (0); /* No FILE stream error occured */
+    return (0); /* No FILE stream error occurred */
 }
 
 /*
@@ -210,7 +210,7 @@ ReadGifImageDesc(GIFIMAGEDESC *GifImageDesc, /* Pointer to GIF image descriptor 
 */
 int
 ReadGifGraphicControl(GIFGRAPHICCONTROL *GifGraphicControl, /* Pointer to GC Extension structure */
-                      GIFBYTE **         MemGif2            /* GIF image file input FILE stream  */
+                      GIFBYTE          **MemGif2            /* GIF image file input FILE stream  */
 )
 {
     int i;
@@ -219,7 +219,7 @@ ReadGifGraphicControl(GIFGRAPHICCONTROL *GifGraphicControl, /* Pointer to GC Ext
         GifGraphicControl->GCEDump[i] = *(*MemGif2)++;
     }
 
-    return (0); /* No FILE stream error occured */
+    return (0); /* No FILE stream error occurred */
 }
 
 /*
@@ -233,7 +233,7 @@ ReadGifGraphicControl(GIFGRAPHICCONTROL *GifGraphicControl, /* Pointer to GC Ext
 */
 int
 ReadGifPlainText(GIFPLAINTEXT *GifPlainText, /* Pointer to Plain Text Extension structure */
-                 GIFBYTE **    MemGif2       /* GIF image file input FILE stream          */
+                 GIFBYTE     **MemGif2       /* GIF image file input FILE stream          */
 )
 {
     int i;
@@ -256,7 +256,7 @@ ReadGifPlainText(GIFPLAINTEXT *GifPlainText, /* Pointer to Plain Text Extension 
            return(-1);
     */
 
-    return (0); /* No FILE stream error occured */
+    return (0); /* No FILE stream error occurred */
 }
 
 /*
@@ -270,7 +270,7 @@ ReadGifPlainText(GIFPLAINTEXT *GifPlainText, /* Pointer to Plain Text Extension 
 */
 int
 ReadGifApplication(GIFAPPLICATION *GifApplication, /* Pointer to Application Extension structure */
-                   GIFBYTE **      MemGif2         /* GIF image file input FILE stream           */
+                   GIFBYTE       **MemGif2         /* GIF image file input FILE stream           */
 )
 {
     int i;
@@ -292,7 +292,7 @@ ReadGifApplication(GIFAPPLICATION *GifApplication, /* Pointer to Application Ext
            return(-1);
     */
 
-    return (0); /* No FILE stream error occured */
+    return (0); /* No FILE stream error occurred */
 }
 
 /*
@@ -306,7 +306,7 @@ ReadGifApplication(GIFAPPLICATION *GifApplication, /* Pointer to Application Ext
 */
 int
 ReadGifComment(GIFCOMMENT *GifComment, /* Pointer to GIF Comment Extension structure */
-               GIFBYTE **  MemGif2     /* GIF image file input FILE stream           */
+               GIFBYTE   **MemGif2     /* GIF image file input FILE stream           */
 )
 {
 
@@ -316,7 +316,7 @@ ReadGifComment(GIFCOMMENT *GifComment, /* Pointer to GIF Comment Extension struc
 
     GifComment->Terminator = 0;
 
-    return (0); /* No FILE stream error occured */
+    return (0); /* No FILE stream error occurred */
 }
 
 /*
@@ -331,7 +331,7 @@ ReadGifComment(GIFCOMMENT *GifComment, /* Pointer to GIF Comment Extension struc
 */
 static GIFBYTE *
 ReadDataSubBlocks(GIFBYTE **MemGif2, /* GIF image file input FILE stream              */
-                  GIFWORD * DSize)
+                  GIFWORD  *DSize)
 {
     GIFBYTE *ptr1;     /* Pointer used to "walk the heap"               */
     GIFBYTE *ptr2;     /* Pointer used to mark the top of the heap      */
@@ -364,7 +364,7 @@ ReadDataSubBlocks(GIFBYTE **MemGif2, /* GIF image file input FILE stream        
         if ((dataSize = *(*MemGif2)++) == 0)
             break; /* Block Terminator encountered */
 
-        /* Increase the buffer size to accomodate the next sub-block */
+        /* Increase the buffer size to accommodate the next sub-block */
         if (!(ptr1 = ptr2 = (GIFBYTE *)realloc(ptr2, bufSize + dataSize + 1)))
             return ((GIFBYTE *)NULL);
 

@@ -147,7 +147,7 @@ H5FA__dblk_page_create(H5FA_hdr_t *hdr, haddr_t addr, size_t nelmts)
     FUNC_ENTER_PACKAGE
 
 #ifdef H5FA_DEBUG
-    HDfprintf(stderr, "%s: Called, addr = %a\n", __func__, addr);
+    HDfprintf(stderr, "%s: Called, addr = %" PRIuHADDR "\n", __func__, addr);
 #endif /* H5FA_DEBUG */
 
     /* Sanity check */
@@ -216,9 +216,9 @@ done:
 H5FA_dblk_page_t *
 H5FA__dblk_page_protect(H5FA_hdr_t *hdr, haddr_t dblk_page_addr, size_t dblk_page_nelmts, unsigned flags)
 {
-    H5FA_dblk_page_t *        dblk_page = NULL; /* Fixed array data block page */
+    H5FA_dblk_page_t         *dblk_page = NULL; /* Fixed array data block page */
     H5FA_dblk_page_cache_ud_t udata;            /* Information needed for loading data block page */
-    H5FA_dblk_page_t *        ret_value = NULL;
+    H5FA_dblk_page_t         *ret_value = NULL;
 
     FUNC_ENTER_PACKAGE
 

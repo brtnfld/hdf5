@@ -457,10 +457,10 @@ gent_dataset(void)
 {
     hid_t    fid, dataset, space;
     hsize_t  dims[2];
-    int **   dset1      = NULL;
-    int *    dset1_data = NULL;
+    int    **dset1      = NULL;
+    int     *dset1_data = NULL;
     double **dset2      = NULL;
-    double * dset2_data = NULL;
+    double  *dset2_data = NULL;
     int      i, j;
 
     /* Set up data arrays */
@@ -582,7 +582,7 @@ gent_attribute(void)
     dims[0] = 24;
     space   = H5Screate_simple(1, dims, NULL);
     attr    = H5Acreate2(root, "/attr1", H5T_STD_I8BE, space, H5P_DEFAULT, H5P_DEFAULT);
-    HDsprintf(buf, "attribute of root group");
+    HDsnprintf(buf, sizeof(buf), "attribute of root group");
     H5Awrite(attr, H5T_NATIVE_SCHAR, buf);
     H5Sclose(space);
     H5Aclose(attr);
@@ -1382,7 +1382,7 @@ gent_all(void)
     dims[0] = 10;
     space   = H5Screate_simple(1, dims, NULL);
     attr    = H5Acreate2(group, "attr1", H5T_STD_I8BE, space, H5P_DEFAULT, H5P_DEFAULT);
-    HDsprintf(buf, "abcdefghi");
+    HDsnprintf(buf, sizeof(buf), "abcdefghi");
     H5Awrite(attr, H5T_NATIVE_SCHAR, buf);
     H5Sclose(space);
     H5Aclose(attr);
@@ -1418,7 +1418,7 @@ gent_all(void)
     dims[0] = 27;
     space   = H5Screate_simple(1, dims, NULL);
     attr    = H5Acreate2(dataset, "attr1", H5T_STD_I8BE, space, H5P_DEFAULT, H5P_DEFAULT);
-    HDsprintf(buf, "1st attribute of dset1.1.1");
+    HDsnprintf(buf, sizeof(buf), "1st attribute of dset1.1.1");
     H5Awrite(attr, H5T_NATIVE_SCHAR, buf);
     H5Sclose(space);
     H5Aclose(attr);
@@ -1426,7 +1426,7 @@ gent_all(void)
     dims[0] = 27;
     space   = H5Screate_simple(1, dims, NULL);
     attr    = H5Acreate2(dataset, "attr2", H5T_STD_I8BE, space, H5P_DEFAULT, H5P_DEFAULT);
-    HDsprintf(buf, "2nd attribute of dset1.1.1");
+    HDsnprintf(buf, sizeof(buf), "2nd attribute of dset1.1.1");
     H5Awrite(attr, H5T_NATIVE_SCHAR, buf);
     H5Sclose(space);
     H5Aclose(attr);
@@ -1625,7 +1625,7 @@ gent_many(void)
     dims[0] = 10;
     space2  = H5Screate_simple(1, dims, NULL);
     attr    = H5Acreate2(dataset, "attr1", H5T_STD_I8BE, space2, H5P_DEFAULT, H5P_DEFAULT);
-    HDsprintf(buf, "abcdefghi");
+    HDsnprintf(buf, sizeof(buf), "abcdefghi");
     H5Awrite(attr, H5T_NATIVE_CHAR, buf);
     H5Sclose(space2);
     H5Aclose(attr);
@@ -1798,7 +1798,7 @@ gent_str(void)
     } compound_t;
 
     compound_t **comp1      = NULL;
-    compound_t * comp1_data = NULL;
+    compound_t  *comp1_data = NULL;
     hsize_t      mdims[2];
 
     /* Set up data array */
@@ -1963,9 +1963,9 @@ gent_str2(void)
     dims[0] = 3;
     space2  = H5Screate_simple(1, dims, NULL);
     attr    = H5Acreate2(dataset, "attr1", fxdlenstr2, space2, H5P_DEFAULT, H5P_DEFAULT);
-    HDsprintf(&(buf2[0 * LENSTR2]), "0123456789");
-    HDsprintf(&(buf2[1 * LENSTR2]), "abcdefghij");
-    HDsprintf(&(buf2[2 * LENSTR2]), "ABCDEFGHIJ");
+    HDsnprintf(&(buf2[0 * LENSTR2]), LENSTR2, "0123456789");
+    HDsnprintf(&(buf2[1 * LENSTR2]), LENSTR2, "abcdefghij");
+    HDsnprintf(&(buf2[2 * LENSTR2]), LENSTR2, "ABCDEFGHIJ");
     H5Awrite(attr, fxdlenstr2, buf2);
     H5Sclose(space2);
     H5Tclose(fxdlenstr2);
@@ -1977,7 +1977,7 @@ gent_str2(void)
 
     for (i = 0; (hsize_t)i < sdim; i++) {
         start[0] = (hsize_t)i;
-        HDsprintf(buf, "This is row %1d of type H5T_STR_NULLTERM of", i);
+        HDsnprintf(buf, sizeof(buf), "This is row %1d of type H5T_STR_NULLTERM of", i);
         H5Tset_size(memtype, HDstrlen(buf) + 1);
         H5Sselect_hyperslab(hyper_space, H5S_SELECT_SET, start, stride, count, block);
         H5Dwrite(dataset, memtype, mem_space, hyper_space, H5P_DEFAULT, buf);
@@ -1990,7 +1990,7 @@ gent_str2(void)
 
     for (i = 0; (hsize_t)i < sdim; i++) {
         start[0] = (hsize_t)i;
-        HDsprintf(buf, "This is row %1d of type H5T_STR_NULLTERM of string array", i);
+        HDsnprintf(buf, sizeof(buf), "This is row %1d of type H5T_STR_NULLTERM of string array", i);
         H5Tset_size(memtype, HDstrlen(buf) + 1);
         H5Sselect_hyperslab(hyper_space, H5S_SELECT_SET, start, stride, count, block);
         H5Dwrite(dataset, memtype, mem_space, hyper_space, H5P_DEFAULT, buf);
@@ -2009,7 +2009,7 @@ gent_str2(void)
 
     for (i = 0; (hsize_t)i < sdim; i++) {
         start[0] = (hsize_t)i;
-        HDsprintf(buf, "This is row %1d of type H5T_STR_NULLPAD of", i);
+        HDsnprintf(buf, sizeof(buf), "This is row %1d of type H5T_STR_NULLPAD of", i);
         H5Tset_size(memtype, HDstrlen(buf) + 1);
         H5Sselect_hyperslab(hyper_space, H5S_SELECT_SET, start, stride, count, block);
         H5Dwrite(dataset, memtype, mem_space, hyper_space, H5P_DEFAULT, buf);
@@ -2022,7 +2022,7 @@ gent_str2(void)
 
     for (i = 0; (hsize_t)i < sdim; i++) {
         start[0] = (hsize_t)i;
-        HDsprintf(buf, "This is row %1d of type H5T_STR_NULLPAD of string array", i);
+        HDsnprintf(buf, sizeof(buf), "This is row %1d of type H5T_STR_NULLPAD of string array", i);
         H5Tset_size(memtype, HDstrlen(buf) + 1);
         H5Sselect_hyperslab(hyper_space, H5S_SELECT_SET, start, stride, count, block);
         H5Dwrite(dataset, memtype, mem_space, hyper_space, H5P_DEFAULT, buf);
@@ -2114,7 +2114,7 @@ gent_objref(void)
     hobj_ref_t *wbuf,                       /* buffer to write to disk */
         *rbuf,                              /* buffer read from disk */
         *tbuf;                              /* temp. buffer read from disk */
-    uint32_t *  tu32;                       /* Temporary pointer to uint32 data */
+    uint32_t   *tu32;                       /* Temporary pointer to uint32 data */
     int         i;                          /* counting variables */
     const char *write_comment     = "Foo!"; /* Comments for group */
     uint64_t    supports_comments = 0;
@@ -2352,9 +2352,9 @@ gent_attrreg(void)
     hsize_t          coord1[POINT1_NPOINTS][SPACE2_RANK]; /* Coordinates for point selection */
     hdset_reg_ref_t *wbuf;                                /* buffer to write to disk */
     hdset_reg_ref_t *rbuf;                                /* buffer read from disk */
-    uint8_t *        dwbuf;                               /* Buffer for writing numeric data to disk */
-    uint8_t *        drbuf;                               /* Buffer for reading numeric data from disk */
-    uint8_t *        tu8;                                 /* Temporary pointer to uint8 data */
+    uint8_t         *dwbuf;                               /* Buffer for writing numeric data to disk */
+    uint8_t         *drbuf;                               /* Buffer for reading numeric data from disk */
+    uint8_t         *tu8;                                 /* Temporary pointer to uint8 data */
     int              i;                                   /* counting variables */
 
     /* Allocate write & read buffers */
@@ -2567,44 +2567,45 @@ gent_nestcomp(void)
     H5Fclose(file);
 }
 
+#define N_OPAQUE_BYTES_PER_ELEMENT ((uint8_t)100)
+#define N_OPAQUE_ELEMENTS          2
+
 static void
 gent_opaque(void)
 {
-    hid_t   file, type, dataset, space;
-    char    test[100][2];
-    int     x;
-    hsize_t dim = 2;
+    hid_t file    = H5I_INVALID_HID;
+    hid_t type    = H5I_INVALID_HID;
+    hid_t dataset = H5I_INVALID_HID;
+    hid_t space   = H5I_INVALID_HID;
 
-    for (x = 0; x < 100; x++) {
-        test[x][0] = (char)x;
-        test[x][1] = (char)(99 - x);
-    }
+    /* The dataset contains N_ELEMENTS elements of OPAQUE_NBYTES bytes */
+    uint8_t data[N_OPAQUE_BYTES_PER_ELEMENT][N_OPAQUE_ELEMENTS];
+    hsize_t dim = N_OPAQUE_ELEMENTS;
 
-    /*
-     * Create the data space.
-     */
-    space = H5Screate_simple(1, &dim, NULL);
-
-    /*
-     * Create the file.
-     */
     file = H5Fcreate(FILE19, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
-    /*
-     * Create the memory datatype.
-     */
-    type = H5Tcreate(H5T_OPAQUE, sizeof(char) * 100 * 2);
+    /* The opaque datatype is OPAQUE_NBYTES bytes in size */
+    type = H5Tcreate(H5T_OPAQUE, sizeof(uint8_t) * N_OPAQUE_BYTES_PER_ELEMENT);
     H5Tset_tag(type, "test opaque type");
 
-    /*
-     * Create the dataset.
-     */
+    space   = H5Screate_simple(1, &dim, NULL);
     dataset = H5Dcreate2(file, "opaque test", type, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
-    /*
-     * Write data to the dataset;
+    /* Given the data fill algorithm, make sure that the number of bytes
+     * in the opaque type isn't so big that i or (OPAQUE_NBYTES - 1) - i
+     * don't fit in a uint8_t value..
      */
-    H5Dwrite(dataset, type, H5S_ALL, H5S_ALL, H5P_DEFAULT, test);
+    HDcompile_assert(N_OPAQUE_BYTES_PER_ELEMENT < UINT8_MAX);
+
+    /* Write out two opaque data elements with predictable data to
+     * the file.
+     */
+    for (uint8_t i = 0; i < N_OPAQUE_BYTES_PER_ELEMENT; i++) {
+        data[i][0] = i;
+        data[i][1] = (N_OPAQUE_BYTES_PER_ELEMENT - 1) - i;
+    }
+
+    H5Dwrite(dataset, type, H5S_ALL, H5S_ALL, H5P_DEFAULT, data);
 
     H5Tclose(type);
     H5Sclose(space);
@@ -2768,7 +2769,7 @@ static void
 gent_vldatatypes2(void)
 {
     hvl_t                        wdata[SPACE1_DIM1]; /* Information to write */
-    hvl_t *                      t1;                 /* Temporary pointer to VL information */
+    hvl_t                       *t1;                 /* Temporary pointer to VL information */
     hid_t                        fid1;               /* HDF5 File IDs  */
     hid_t                        dataset;            /* Dataset ID   */
     hid_t                        sid1;               /* Dataspace ID   */
@@ -3046,7 +3047,7 @@ gent_vldatatypes5(void)
 static void
 gent_array1_big(void)
 {
-    int *                        wdata;   /* Information to write */
+    int                         *wdata;   /* Information to write */
     hid_t                        fid1;    /* HDF5 File IDs  */
     hid_t                        dataset; /* Dataset ID   */
     hid_t                        sid1;    /* Dataspace ID   */
@@ -3566,7 +3567,7 @@ gent_array8(void)
     herr_t H5_ATTR_NDEBUG_UNUSED status   = -1;
     hsize_t                      sdims[]  = {F64_DIM0};
     hsize_t                      tdims[]  = {F64_DIM1};
-    int *                        wdata; /* Write buffer */
+    int                         *wdata; /* Write buffer */
     unsigned int                 i;
 
     /* Allocate data buffer */
@@ -3858,8 +3859,8 @@ gent_multi(void)
     H5FD_mem_t  mt, memb_map[H5FD_MEM_NTYPES];
     hid_t       memb_fapl[H5FD_MEM_NTYPES];
     const char *memb_name[H5FD_MEM_NTYPES];
-    char **     sv      = NULL;
-    char *      sv_data = NULL;
+    char      **sv      = NULL;
+    char       *sv_data = NULL;
     haddr_t     memb_addr[H5FD_MEM_NTYPES];
 
     sv_data = (char *)HDcalloc(H5FD_MEM_NTYPES * 1024, sizeof(char));
@@ -3923,7 +3924,7 @@ gent_large_objname(void)
     group = H5Gcreate2(fid, "this_is_a_large_group_name", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     for (i = 0; i < 50; ++i) {
-        HDsprintf(grp_name, "this_is_a_large_group_name%d", i);
+        HDsnprintf(grp_name, sizeof(grp_name), "this_is_a_large_group_name%d", i);
         group2 = H5Gcreate2(group, grp_name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         H5Gclose(group2);
     }
@@ -3989,10 +3990,10 @@ gent_char(void)
                         "men are created equal. Now we are engaged in a great "
                         "civil war, testing whether that nation or any nation "
                         "so conceived and so dedicated can long endure.";
-    hid_t   fid1;    /* HDF5 File IDs    */
-    hid_t   dataset; /* Dataset ID       */
-    hid_t   sid1;    /* Dataspace ID     */
-    hsize_t dims1[1];
+    hid_t       fid1;    /* HDF5 File IDs    */
+    hid_t       dataset; /* Dataset ID       */
+    hid_t       sid1;    /* Dataspace ID     */
+    hsize_t     dims1[1];
 
     dims1[0] = HDstrlen(wdata);
 
@@ -6257,7 +6258,7 @@ gent_longlinks(void)
     hid_t                       fid     = (-1); /* File ID */
     hid_t                       gid     = (-1); /* Group ID */
     hid_t H5_ATTR_NDEBUG_UNUSED gid2    = (-1); /* Datatype ID */
-    char *                      objname = NULL; /* Name of object [Long] */
+    char                       *objname = NULL; /* Name of object [Long] */
     size_t                      u;              /* Local index variable */
 
     /* Create files */
@@ -6479,7 +6480,7 @@ gent_bigdims(void)
     hsize_t                   hs_size[1]; /* hyperslab dimensions */
     size_t                    size;
     char                      fillvalue = 0;
-    char *                    buf       = NULL;
+    char                     *buf       = NULL;
     hsize_t                   i;
     char                      c;
     size_t                    nelmts;
@@ -7264,15 +7265,33 @@ gent_packedbits(void)
     hid_t   space   = H5I_INVALID_HID;
     hsize_t dims[2];
 
-    uint8_t ** dsetu8  = NULL;
-    uint16_t **dsetu16 = NULL;
-    uint32_t **dsetu32 = NULL;
-    uint64_t **dsetu64 = NULL;
-    int8_t **  dset8   = NULL;
-    int16_t ** dset16  = NULL;
-    int32_t ** dset32  = NULL;
-    int64_t ** dset64  = NULL;
-    double **  dsetdbl = NULL;
+    struct {
+        uint8_t arr[F66_XDIM][F66_YDIM8];
+    } * dsetu8;
+    struct {
+        uint16_t arr[F66_XDIM][F66_YDIM16];
+    } * dsetu16;
+    struct {
+        uint32_t arr[F66_XDIM][F66_YDIM32];
+    } * dsetu32;
+    struct {
+        uint64_t arr[F66_XDIM][F66_YDIM64];
+    } * dsetu64;
+    struct {
+        int8_t arr[F66_XDIM][F66_YDIM8];
+    } * dset8;
+    struct {
+        int16_t arr[F66_XDIM][F66_YDIM16];
+    } * dset16;
+    struct {
+        int32_t arr[F66_XDIM][F66_YDIM32];
+    } * dset32;
+    struct {
+        int64_t arr[F66_XDIM][F66_YDIM64];
+    } * dset64;
+    struct {
+        double arr[F66_XDIM][F66_YDIM8];
+    } * dsetdbl;
 
     uint8_t  valu8bits;
     uint16_t valu16bits;
@@ -7489,15 +7508,33 @@ gent_attr_intsize(void)
     hid_t   root  = H5I_INVALID_HID;
     hsize_t dims[2];
 
-    uint8_t ** dsetu8  = NULL;
-    uint16_t **dsetu16 = NULL;
-    uint32_t **dsetu32 = NULL;
-    uint64_t **dsetu64 = NULL;
-    int8_t **  dset8   = NULL;
-    int16_t ** dset16  = NULL;
-    int32_t ** dset32  = NULL;
-    int64_t ** dset64  = NULL;
-    double **  dsetdbl = NULL;
+    struct {
+        uint8_t arr[F66_XDIM][F66_YDIM8];
+    } * dsetu8;
+    struct {
+        uint16_t arr[F66_XDIM][F66_YDIM16];
+    } * dsetu16;
+    struct {
+        uint32_t arr[F66_XDIM][F66_YDIM32];
+    } * dsetu32;
+    struct {
+        uint64_t arr[F66_XDIM][F66_YDIM64];
+    } * dsetu64;
+    struct {
+        int8_t arr[F66_XDIM][F66_YDIM8];
+    } * dset8;
+    struct {
+        int16_t arr[F66_XDIM][F66_YDIM16];
+    } * dset16;
+    struct {
+        int32_t arr[F66_XDIM][F66_YDIM64];
+    } * dset32;
+    struct {
+        int64_t arr[F66_XDIM][F66_YDIM64];
+    } * dset64;
+    struct {
+        double arr[F66_XDIM][F66_YDIM8];
+    } * dsetdbl;
 
     uint8_t  valu8bits;
     uint16_t valu16bits;
@@ -8586,15 +8623,33 @@ gent_intscalars(void)
     hid_t   tid     = H5I_INVALID_HID;
     hsize_t dims[2];
 
-    uint8_t ** dsetu8  = NULL;
-    uint16_t **dsetu16 = NULL;
-    uint32_t **dsetu32 = NULL;
-    uint64_t **dsetu64 = NULL;
-    int8_t **  dset8   = NULL;
-    int16_t ** dset16  = NULL;
-    int32_t ** dset32  = NULL;
-    int64_t ** dset64  = NULL;
-    double **  dsetdbl = NULL;
+    struct {
+        uint8_t arr[F73_XDIM][F73_YDIM8];
+    } * dsetu8;
+    struct {
+        uint16_t arr[F73_XDIM][F73_YDIM16];
+    } * dsetu16;
+    struct {
+        uint32_t arr[F73_XDIM][F73_YDIM32];
+    } * dsetu32;
+    struct {
+        uint64_t arr[F73_XDIM][F73_YDIM64];
+    } * dsetu64;
+    struct {
+        int8_t arr[F73_XDIM][F73_YDIM8];
+    } * dset8;
+    struct {
+        int16_t arr[F73_XDIM][F73_YDIM16];
+    } * dset16;
+    struct {
+        int32_t arr[F73_XDIM][F73_YDIM32];
+    } * dset32;
+    struct {
+        int64_t arr[F73_XDIM][F73_YDIM64];
+    } * dset64;
+    struct {
+        double arr[F73_XDIM][F73_YDIM8];
+    } * dsetdbl;
 
     uint8_t  valu8bits;
     uint16_t valu16bits;
@@ -8829,15 +8884,33 @@ gent_attr_intscalars(void)
     hid_t   tid   = H5I_INVALID_HID;
     hsize_t dims[2];
 
-    uint8_t ** dsetu8  = NULL;
-    uint16_t **dsetu16 = NULL;
-    uint32_t **dsetu32 = NULL;
-    uint64_t **dsetu64 = NULL;
-    int8_t **  dset8   = NULL;
-    int16_t ** dset16  = NULL;
-    int32_t ** dset32  = NULL;
-    int64_t ** dset64  = NULL;
-    double **  dsetdbl = NULL;
+    struct {
+        uint8_t arr[F73_XDIM][F73_YDIM8];
+    } * dsetu8;
+    struct {
+        uint16_t arr[F73_XDIM][F73_YDIM16];
+    } * dsetu16;
+    struct {
+        uint32_t arr[F73_XDIM][F73_YDIM32];
+    } * dsetu32;
+    struct {
+        uint64_t arr[F73_XDIM][F73_YDIM64];
+    } * dsetu64;
+    struct {
+        int8_t arr[F73_XDIM][F73_YDIM8];
+    } * dset8;
+    struct {
+        int16_t arr[F73_XDIM][F73_YDIM16];
+    } * dset16;
+    struct {
+        int32_t arr[F73_XDIM][F73_YDIM32];
+    } * dset32;
+    struct {
+        int64_t arr[F73_XDIM][F73_YDIM64];
+    } * dset64;
+    struct {
+        double arr[F73_XDIM][F73_YDIM8];
+    } * dsetdbl;
 
     uint8_t  valu8bits;
     uint16_t valu16bits;
@@ -9914,25 +9987,43 @@ gent_intsattrs(void)
     hid_t   aspace  = H5I_INVALID_HID;
     hsize_t dims[2], adims[1];
 
-    uint8_t ** dsetu8  = NULL;
-    uint16_t **dsetu16 = NULL;
-    uint32_t **dsetu32 = NULL;
-    uint64_t **dsetu64 = NULL;
-    int8_t **  dset8   = NULL;
-    int16_t ** dset16  = NULL;
-    int32_t ** dset32  = NULL;
-    int64_t ** dset64  = NULL;
-    double **  dsetdbl = NULL;
+    struct {
+        uint8_t arr[F66_XDIM][F66_YDIM8];
+    } * dsetu8;
+    struct {
+        uint16_t arr[F66_XDIM][F66_YDIM16];
+    } * dsetu16;
+    struct {
+        uint32_t arr[F66_XDIM][F66_YDIM32];
+    } * dsetu32;
+    struct {
+        uint64_t arr[F66_XDIM][F66_YDIM64];
+    } * dsetu64;
+    struct {
+        int8_t arr[F66_XDIM][F66_YDIM8];
+    } * dset8;
+    struct {
+        int16_t arr[F66_XDIM][F66_YDIM16];
+    } * dset16;
+    struct {
+        int32_t arr[F66_XDIM][F66_YDIM32];
+    } * dset32;
+    struct {
+        int64_t arr[F66_XDIM][F66_YDIM64];
+    } * dset64;
+    struct {
+        double arr[F66_XDIM][F66_YDIM8];
+    } * dsetdbl;
 
-    uint8_t * asetu8  = NULL;
+    uint8_t  *asetu8  = NULL;
     uint16_t *asetu16 = NULL;
     uint32_t *asetu32 = NULL;
     uint64_t *asetu64 = NULL;
-    int8_t *  aset8   = NULL;
-    int16_t * aset16  = NULL;
-    int32_t * aset32  = NULL;
-    int64_t * aset64  = NULL;
-    double *  asetdbl = NULL;
+    int8_t   *aset8   = NULL;
+    int16_t  *aset16  = NULL;
+    int32_t  *aset32  = NULL;
+    int64_t  *aset64  = NULL;
+    double   *asetdbl = NULL;
 
     uint8_t  valu8bits;
     uint16_t valu16bits;
@@ -10256,12 +10347,18 @@ gent_floatsattrs(void)
     hid_t   aspace  = H5I_INVALID_HID;
     hsize_t dims[2], adims[1];
 
-    float **      dset32  = NULL;
-    double **     dset64  = NULL;
-    long double **dset128 = NULL;
+    struct {
+        float arr[F89_XDIM][F89_YDIM32];
+    } * dset32;
+    struct {
+        double arr[F89_XDIM][F89_YDIM64];
+    } * dset64;
+    struct {
+        long double arr[F89_XDIM][F89_YDIM128];
+    } * dset128;
 
-    float *      aset32  = NULL;
-    double *     aset64  = NULL;
+    float       *aset32  = NULL;
+    double      *aset64  = NULL;
     long double *aset128 = NULL;
 
     float       val32bits;
@@ -10360,7 +10457,7 @@ gent_floatsattrs(void)
         val128bits -= (long double)1;
     }
 
-    H5Dwrite(dataset, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset128[0]);
+    H5Dwrite(dataset, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset128);
     /* Attribute of 128 bits long double */
     adims[0] = F89_XDIM * F89_YDIM128;
     aspace   = H5Screate_simple(1, adims, NULL);
@@ -10552,9 +10649,11 @@ gent_bitnopaquefields(void)
 static void
 gent_intsfourdims(void)
 {
-    hid_t        fid, dataset, space;
-    hsize_t      dims[F81_RANK];
-    uint32_t     dset1[F81_ZDIM][F81_YDIM][F81_XDIM][F81_WDIM];
+    hid_t   fid, dataset, space;
+    hsize_t dims[F81_RANK];
+    struct {
+        uint32_t arr[F81_ZDIM][F81_YDIM][F81_XDIM][F81_WDIM];
+    } * dset1;
     unsigned int i, j, k, l;
 
     fid = H5Fcreate(FILE81, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
@@ -11090,7 +11189,7 @@ static size_t
 H5Z_filter_dynlibud(unsigned int flags, size_t cd_nelmts, const unsigned int *cd_values, size_t nbytes,
                     size_t *buf_size, void **buf)
 {
-    char * int_ptr  = (char *)*buf; /* Pointer to the data values */
+    char  *int_ptr  = (char *)*buf; /* Pointer to the data values */
     size_t buf_left = *buf_size;    /* Amount of data buffer left to process */
 
     /* Check for the correct number of parameters */

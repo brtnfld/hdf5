@@ -83,7 +83,7 @@ main(void)
 
     for (i = 0; i < NEXTARRAYS; i++) {
         /* Create dataset */
-        HDsprintf(name, "/ExtArray%06d", i);
+        HDsnprintf(name, sizeof(name), "/ExtArray%06d", i);
         dataset_id =
             H5Dcreate2(file_id, name, H5T_NATIVE_FLOAT, dataspace_id, H5P_DEFAULT, prop_id, H5P_DEFAULT);
 
@@ -124,7 +124,7 @@ main(void)
             dataspace_id = H5Screate_simple(1, dims, maxdims);
 
             /* Create dataset */
-            HDsprintf(name, "DataArray%06d", i);
+            HDsnprintf(name, sizeof(name), "DataArray%06d", i);
             dataset_id = H5Dcreate2(group_id, name, H5T_NATIVE_FLOAT, dataspace_id, H5P_DEFAULT, H5P_DEFAULT,
                                     H5P_DEFAULT);
             if (dataset_id < 0) {

@@ -60,13 +60,14 @@ public class H5Ex_D_Alloc {
         public static H5D_space_status get(int code) { return lookup.get(code); }
     }
 
-    private static void allocation() {
-        long file_id = HDF5Constants.H5I_INVALID_HID;
+    private static void allocation()
+    {
+        long file_id      = HDF5Constants.H5I_INVALID_HID;
         long filespace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id1 = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id2 = HDF5Constants.H5I_INVALID_HID;
-        long dcpl_id = HDF5Constants.H5I_INVALID_HID;
-        long[] dims = { DIM_X, DIM_Y };
+        long dataset_id1  = HDF5Constants.H5I_INVALID_HID;
+        long dataset_id2  = HDF5Constants.H5I_INVALID_HID;
+        long dcpl_id      = HDF5Constants.H5I_INVALID_HID;
+        long[] dims       = {DIM_X, DIM_Y};
         int[][] dset_data = new int[DIM_X][DIM_Y];
         int space_status  = 0;
         long storage_size = 0;

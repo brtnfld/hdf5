@@ -118,7 +118,7 @@ COPY_LIBFILES_TO_BLDLIBDIR()
             fi
         fi
     done
-    if [ "$IS_DARWIN" = "yes" ]; then
+    if [[ "$IS_DARWIN" = "yes" ]] && [[ $COPIED_LIBHDF5_JAVA -eq 1 ]]; then
        (cd $BLDLIBDIR; \
          install_name_tool -add_rpath @loader_path libhdf5_java.dylib; \
          exist_path=` otool -l libhdf5_java.dylib | grep libhdf5 | grep -v java | awk '{print $2}'`; \

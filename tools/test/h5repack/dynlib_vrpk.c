@@ -65,7 +65,7 @@ static size_t
 H5Z_filter_dynlib4(unsigned int flags, size_t cd_nelmts, const unsigned int *cd_values, size_t nbytes,
                    size_t *buf_size, void **buf)
 {
-    int *    int_ptr  = (int *)*buf; /* Pointer to the data values */
+    int     *int_ptr  = (int *)*buf; /* Pointer to the data values */
     size_t   buf_left = *buf_size;   /* Amount of data buffer left to process */
     int      add_on   = 0;
     unsigned ver_info[3];
@@ -91,7 +91,7 @@ H5Z_filter_dynlib4(unsigned int flags, size_t cd_nelmts, const unsigned int *cd_
     add_on = (int)cd_values[0];
 
     if (flags & H5Z_FLAG_REVERSE) { /*read*/
-        /* Substract the "add on" value to all the data values */
+        /* Subtract the "add on" value to all the data values */
         while (buf_left > 0) {
             *int_ptr++ -= add_on;
             buf_left -= sizeof(int);

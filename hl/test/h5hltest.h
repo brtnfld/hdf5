@@ -29,15 +29,15 @@
 
 /* Macros used in HL tests */
 #define HL_TESTING2(WHAT)                                                                                    \
-    {                                                                                                        \
+    do {                                                                                                     \
         HDprintf("Testing %-62s", WHAT);                                                                     \
         HDfflush(stdout);                                                                                    \
-    }
+    } while (0)
 #define HL_TESTING3(WHAT)                                                                                    \
-    {                                                                                                        \
+    do {                                                                                                     \
         HDprintf("Testing %-62s", WHAT);                                                                     \
         HDfflush(stdout);                                                                                    \
-    }
+    } while (0)
 
 /* Implements verbose 'assert' with 'goto error' exit  */
 #define VERIFY(condition, string)                                                                            \

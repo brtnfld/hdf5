@@ -429,6 +429,7 @@ PredType::makePredTypes()
     NATIVE_HSSIZE_  = new PredType(H5T_NATIVE_HSSIZE);
     NATIVE_HERR_    = new PredType(H5T_NATIVE_HERR);
     NATIVE_HBOOL_   = new PredType(H5T_NATIVE_HBOOL);
+
     NATIVE_INT8_   = new PredType(H5T_NATIVE_INT8);
     NATIVE_UINT8_  = new PredType(H5T_NATIVE_UINT8);
     NATIVE_INT16_  = new PredType(H5T_NATIVE_INT16);

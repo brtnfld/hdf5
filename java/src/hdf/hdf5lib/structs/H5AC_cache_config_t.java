@@ -18,7 +18,7 @@ import java.io.Serializable;
  * Information struct for H5Pget_mdc_config/H5Pset_mdc_config
  *
  */
-public class H5AC_cache_config_t implements Serializable{
+public class H5AC_cache_config_t implements Serializable {
     private static final long serialVersionUID = -6748085696476149972L;
     // general configuration fields
     /**
@@ -213,9 +213,10 @@ public class H5AC_cache_config_t implements Serializable{
      * metadata_write_strategy: Integer field containing a code indicating the
      *    desired metadata write strategy.
      */
-    public int              metadata_write_strategy;
+    public int metadata_write_strategy;
 
-    /** H5AC_cache_config_t is a public structure intended for use in public APIs.
+    /**
+     * H5AC_cache_config_t is a public structure intended for use in public APIs.
      * At least in its initial incarnation, it is basically a copy of struct
      * H5C_auto_size_ctl_t, minus the report_fcn field, and plus the
      * dirty_bytes_threshold field.
@@ -283,16 +284,17 @@ public class H5AC_cache_config_t implements Serializable{
      *     synchronize updates between caches.
      * @param metadata_write_strategy: Integer field containing a code indicating the
      *    desired metadata write strategy.
-    */
-    public H5AC_cache_config_t (int version, boolean rpt_fcn_enabled, boolean open_trace_file,
-            boolean close_trace_file, String trace_file_name, boolean evictions_enabled,
-            boolean set_initial_size, long initial_size, double min_clean_fraction, long max_size,
-            long min_size, long epoch_length, int incr_mode, double lower_hr_threshold,
-            double increment, boolean apply_max_increment, long max_increment, int flash_incr_mode,
-            double flash_multiple, double flash_threshold, int decr_mode, double upper_hr_threshold,
-            double decrement, boolean apply_max_decrement, long max_decrement,
-            int epochs_before_eviction, boolean apply_empty_reserve, double empty_reserve,
-            long dirty_bytes_threshold, int metadata_write_strategy)
+     */
+    public H5AC_cache_config_t(int version, boolean rpt_fcn_enabled, boolean open_trace_file,
+                               boolean close_trace_file, String trace_file_name, boolean evictions_enabled,
+                               boolean set_initial_size, long initial_size, double min_clean_fraction,
+                               long max_size, long min_size, long epoch_length, int incr_mode,
+                               double lower_hr_threshold, double increment, boolean apply_max_increment,
+                               long max_increment, int flash_incr_mode, double flash_multiple,
+                               double flash_threshold, int decr_mode, double upper_hr_threshold,
+                               double decrement, boolean apply_max_decrement, long max_decrement,
+                               int epochs_before_eviction, boolean apply_empty_reserve, double empty_reserve,
+                               long dirty_bytes_threshold, int metadata_write_strategy)
     {
         this.version                 = version;
         this.rpt_fcn_enabled         = rpt_fcn_enabled;

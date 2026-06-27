@@ -63,7 +63,7 @@ typedef struct H5FD_family_t {
     unsigned amembs;       /*number of member slots allocated    */
     H5FD_t **memb;         /*dynamic array of member pointers    */
     haddr_t  eoa;          /*end of allocated addresses        */
-    char *   name;         /*name generator printf format        */
+    char    *name;         /*name generator printf format        */
     unsigned flags;        /*flags for opening additional members    */
 
     /* Information from properties set by 'h5repart' tool */
@@ -82,12 +82,12 @@ typedef struct H5FD_family_fapl_t {
 
 /* Private routines */
 static herr_t H5FD__family_get_default_config(H5FD_family_fapl_t *fa_out);
-static char * H5FD__family_get_default_printf_filename(const char *old_filename);
+static char  *H5FD__family_get_default_printf_filename(const char *old_filename);
 
 /* Callback prototypes */
 static herr_t  H5FD__family_term(void);
-static void *  H5FD__family_fapl_get(H5FD_t *_file);
-static void *  H5FD__family_fapl_copy(const void *_old_fa);
+static void   *H5FD__family_fapl_get(H5FD_t *_file);
+static void   *H5FD__family_fapl_copy(const void *_old_fa);
 static herr_t  H5FD__family_fapl_free(void *_fa);
 static hsize_t H5FD__family_sb_size(H5FD_t *_file);
 static herr_t  H5FD__family_sb_encode(H5FD_t *_file, char *name /*out*/, unsigned char *buf /*out*/);
@@ -109,8 +109,6 @@ static herr_t  H5FD__family_truncate(H5FD_t *_file, hid_t dxpl_id, hbool_t closi
 static herr_t  H5FD__family_lock(H5FD_t *_file, hbool_t rw);
 static herr_t  H5FD__family_unlock(H5FD_t *_file);
 static herr_t  H5FD__family_delete(const char *filename, hid_t fapl_id);
-static herr_t  H5FD__family_ctl(H5FD_t *_file, uint64_t op_code, uint64_t flags, const void *input,
-                                void **output);
 
 /* The class struct */
 static const H5FD_class_t H5FD_family_g = {
@@ -152,7 +150,7 @@ static const H5FD_class_t H5FD_family_g = {
     H5FD__family_lock,          /* lock                 */
     H5FD__family_unlock,        /* unlock               */
     H5FD__family_delete,        /* del                  */
-    H5FD__family_ctl,           /* ctl                  */
+    NULL,                       /* ctl                  */
     H5FD_FLMAP_DICHOTOMY        /* fl_map               */
 };
 
@@ -223,9 +221,9 @@ H5FD__family_get_default_printf_filename(const char *old_filename)
     const char *suffix           = "-%06d";
     size_t      old_filename_len = 0;
     size_t      new_filename_len = 0;
-    char *      file_extension   = NULL;
-    char *      tmp_buffer       = NULL;
-    char *      ret_value        = NULL;
+    char       *file_extension   = NULL;
+    char       *tmp_buffer       = NULL;
+    char       *ret_value        = NULL;
 
     FUNC_ENTER_PACKAGE
 
@@ -348,7 +346,7 @@ H5Pset_fapl_family(hid_t fapl_id, hsize_t msize, hid_t memb_fapl_id)
 {
     herr_t             ret_value;
     H5FD_family_fapl_t fa = {0, H5I_INVALID_HID};
-    H5P_genplist_t *   plist; /* Property list pointer */
+    H5P_genplist_t    *plist; /* Property list pointer */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE3("e", "ihi", fapl_id, msize, memb_fapl_id);
@@ -395,7 +393,7 @@ done:
 herr_t
 H5Pget_fapl_family(hid_t fapl_id, hsize_t *msize /*out*/, hid_t *memb_fapl_id /*out*/)
 {
-    H5P_genplist_t *          plist; /* Property list pointer */
+    H5P_genplist_t           *plist; /* Property list pointer */
     const H5FD_family_fapl_t *fa;
     herr_t                    ret_value = SUCCEED; /* Return value */
 
@@ -438,10 +436,10 @@ done:
 static void *
 H5FD__family_fapl_get(H5FD_t *_file)
 {
-    H5FD_family_t *     file = (H5FD_family_t *)_file;
+    H5FD_family_t      *file = (H5FD_family_t *)_file;
     H5FD_family_fapl_t *fa   = NULL;
-    H5P_genplist_t *    plist;            /* Property list pointer */
-    void *              ret_value = NULL; /* Return value */
+    H5P_genplist_t     *plist;            /* Property list pointer */
+    void               *ret_value = NULL; /* Return value */
 
     FUNC_ENTER_PACKAGE
 
@@ -482,9 +480,9 @@ static void *
 H5FD__family_fapl_copy(const void *_old_fa)
 {
     const H5FD_family_fapl_t *old_fa = (const H5FD_family_fapl_t *)_old_fa;
-    H5FD_family_fapl_t *      new_fa = NULL;
-    H5P_genplist_t *          plist;            /* Property list pointer */
-    void *                    ret_value = NULL; /* Return value */
+    H5FD_family_fapl_t       *new_fa = NULL;
+    H5P_genplist_t           *plist;            /* Property list pointer */
+    void                     *ret_value = NULL; /* Return value */
 
     FUNC_ENTER_PACKAGE
 
@@ -696,11 +694,11 @@ static H5FD_t *
 H5FD__family_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
 {
     H5FD_family_t *file      = NULL;
-    char *         memb_name = NULL, *temp = NULL;
+    char          *memb_name = NULL, *temp = NULL;
     hsize_t        eof            = HADDR_UNDEF;
     hbool_t        default_config = FALSE;
     unsigned       t_flags        = flags & ~H5F_ACC_CREAT;
-    H5FD_t *       ret_value      = NULL;
+    H5FD_t        *ret_value      = NULL;
 
     FUNC_ENTER_PACKAGE
 
@@ -728,7 +726,7 @@ H5FD__family_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxad
         default_config = TRUE;
     } /* end if */
     else {
-        H5P_genplist_t *          plist; /* Property list pointer */
+        H5P_genplist_t           *plist; /* Property list pointer */
         const H5FD_family_fapl_t *fa;
         H5FD_family_fapl_t        default_fa;
 
@@ -1043,7 +1041,7 @@ H5FD__family_set_eoa(H5FD_t *_file, H5FD_mem_t type, haddr_t abs_eoa)
 {
     H5FD_family_t *file      = (H5FD_family_t *)_file;
     haddr_t        addr      = abs_eoa;
-    char *         memb_name = NULL;
+    char          *memb_name = NULL;
     unsigned       u;                   /* Local index variable */
     herr_t         ret_value = SUCCEED; /* Return value */
 
@@ -1178,7 +1176,7 @@ H5FD__family_get_eof(const H5FD_t *_file, H5FD_mem_t type)
 static herr_t
 H5FD__family_get_handle(H5FD_t *_file, hid_t fapl, void **file_handle)
 {
-    H5FD_family_t * file = (H5FD_family_t *)_file;
+    H5FD_family_t  *file = (H5FD_family_t *)_file;
     H5P_genplist_t *plist;
     hsize_t         offset;
     int             memb;
@@ -1223,8 +1221,8 @@ static herr_t
 H5FD__family_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t size,
                   void *_buf /*out*/)
 {
-    H5FD_family_t * file = (H5FD_family_t *)_file;
-    unsigned char * buf  = (unsigned char *)_buf;
+    H5FD_family_t  *file = (H5FD_family_t *)_file;
+    unsigned char  *buf  = (unsigned char *)_buf;
     haddr_t         sub;
     size_t          req;
     hsize_t         tempreq;
@@ -1251,8 +1249,8 @@ H5FD__family_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, s
          * is 4 bytes, to prevent overflow when user application is trying to
          * write files bigger than 4GB. */
         tempreq = file->memb_size - sub;
-        if (tempreq > SIZET_MAX)
-            tempreq = SIZET_MAX;
+        if (tempreq > SIZE_MAX)
+            tempreq = SIZE_MAX;
         req = MIN(size, (size_t)tempreq);
 
         HDassert(u < file->nmembs);
@@ -1288,13 +1286,13 @@ done:
 static herr_t
 H5FD__family_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t size, const void *_buf)
 {
-    H5FD_family_t *      file = (H5FD_family_t *)_file;
+    H5FD_family_t       *file = (H5FD_family_t *)_file;
     const unsigned char *buf  = (const unsigned char *)_buf;
     haddr_t              sub;
     size_t               req;
     hsize_t              tempreq;
     unsigned             u;                   /* Local index variable */
-    H5P_genplist_t *     plist;               /* Property list pointer */
+    H5P_genplist_t      *plist;               /* Property list pointer */
     herr_t               ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_PACKAGE
@@ -1316,8 +1314,8 @@ H5FD__family_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, 
          * is 4 bytes, to prevent overflow when user application is trying to
          * write files bigger than 4GB. */
         tempreq = file->memb_size - sub;
-        if (tempreq > SIZET_MAX)
-            tempreq = SIZET_MAX;
+        if (tempreq > SIZE_MAX)
+            tempreq = SIZE_MAX;
         req = MIN(size, (size_t)tempreq);
 
         HDassert(u < file->nmembs);
@@ -1490,14 +1488,14 @@ done:
 static herr_t
 H5FD__family_delete(const char *filename, hid_t fapl_id)
 {
-    H5P_genplist_t *          plist;
+    H5P_genplist_t           *plist;
     const H5FD_family_fapl_t *fa;
     H5FD_family_fapl_t        default_fa     = {0, H5I_INVALID_HID};
     hbool_t                   default_config = FALSE;
     hid_t                     memb_fapl_id   = H5I_INVALID_HID;
     unsigned                  current_member;
-    char *                    member_name  = NULL;
-    char *                    temp         = NULL;
+    char                     *member_name  = NULL;
+    char                     *temp         = NULL;
     herr_t                    delete_error = FAIL;
     herr_t                    ret_value    = SUCCEED;
 
@@ -1533,8 +1531,11 @@ H5FD__family_delete(const char *filename, hid_t fapl_id)
         HGOTO_ERROR(H5E_VFL, H5E_CANTALLOC, FAIL, "unable to allocate temporary member name")
 
     /* Sanity check to make sure that generated names are unique */
+    H5_GCC_CLANG_DIAG_OFF("format-nonliteral")
     HDsnprintf(member_name, H5FD_FAM_MEMB_NAME_BUF_SIZE, filename, 0);
     HDsnprintf(temp, H5FD_FAM_MEMB_NAME_BUF_SIZE, filename, 1);
+    H5_GCC_CLANG_DIAG_ON("format-nonliteral")
+
     if (!HDstrcmp(member_name, temp)) {
         if (default_config) {
             temp = H5MM_xfree(temp);
@@ -1551,7 +1552,9 @@ H5FD__family_delete(const char *filename, hid_t fapl_id)
     current_member = 0;
     while (1) {
         /* Fix up the filename with the current member's number */
+        H5_GCC_CLANG_DIAG_OFF("format-nonliteral")
         HDsnprintf(member_name, H5FD_FAM_MEMB_NAME_BUF_SIZE, filename, current_member);
+        H5_GCC_CLANG_DIAG_ON("format-nonliteral")
 
         /* Attempt to delete the member files. If the first file throws an error
          * we always consider this an error. With subsequent member files, however,
@@ -1587,63 +1590,3 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FD__family_delete() */
-
-/*-------------------------------------------------------------------------
- * Function:    H5FD__family_ctl
- *
- * Purpose:     Family VFD version of the ctl callback.
- *
- *              The desired operation is specified by the op_code
- *              parameter.
- *
- *              The flags parameter controls management of op_codes that
- *              are unknown to the callback
- *
- *              The input and output parameters allow op_code specific
- *              input and output
- *
- *              At present, the only op code supported is
- *              H5FD_CTL_GET_TERMINAL_VFD, which is used to obtain the
- *              instance of H5FD_t associated with the terminal
- *              VFD.  This allows comparison of files whose terminal
- *              VFD may have overlying pass through VFDs.
- *
- * Return:      Non-negative on success/Negative on failure
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5FD__family_ctl(H5FD_t *_file, uint64_t op_code, uint64_t flags, const void H5_ATTR_UNUSED *input,
-                 void **output)
-{
-    H5FD_family_t *file      = (H5FD_family_t *)_file;
-    herr_t         ret_value = SUCCEED;
-
-    FUNC_ENTER_PACKAGE
-
-    /* Sanity checks */
-    HDassert(file);
-
-    switch (op_code) {
-
-        case H5FD_CTL_GET_TERMINAL_VFD:
-            /* On can argue as to whether the family VFD should be regarded as terminal.
-             * It is treated as such here, as it is the lowest VFD through which all I/O
-             * request pass.
-             *
-             * For now at least, this works as this is the level at which files are compared.
-             */
-            HDassert(output);
-            *output = (void *)(file);
-            break;
-
-        /* Unknown op code */
-        default:
-            if (flags & H5FD_CTL_FAIL_IF_UNKNOWN_FLAG)
-                HGOTO_ERROR(H5E_VFL, H5E_FCNTL, FAIL, "unknown op_code and fail if unknown flag is set")
-            break;
-    }
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5FD__sec2_ctl() */

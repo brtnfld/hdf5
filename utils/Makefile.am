@@ -38,13 +38,7 @@ else
    TOOLS_DIR=
 endif
 
-if AUX_PROCESS_CONDITIONAL
-   VFD_SWMR_DIR=vfd_swmr
-else
-   VFD_SWMR_DIR=
-endif
-
 # All subdirectories
-SUBDIRS=$(MIRROR_VFD_DIR) $(TESTUTIL_DIR) $(TOOLS_DIR) $(VFD_SWMR_DIR)
+SUBDIRS=$(MIRROR_VFD_DIR) $(TESTUTIL_DIR) $(TOOLS_DIR)
 
 include $(top_srcdir)/config/conclude.am

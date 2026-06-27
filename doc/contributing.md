@@ -74,7 +74,7 @@ Please make sure that you check the items applicable to your pull request:
 * Documentation
   * [ ] Was the change described in the release_docs/RELEASE.txt file?
   * [ ] Was MANIFEST updated if new files had been added to the source?
-  * [ ] Was the new function documented in the corresponding public header file using Doxygen? <<TODO: link to Doxygen instructions>>
+  * [ ] Was the new function documented in the corresponding public header file using [Doxygen](https://docs.hdfgroup.org/hdf5/develop/_r_m_t.html)?
   * [ ] Was new functionality documented for the HDF5 community (the level of documentation depends on the feature; ask us what would be appropriate)
 * Testing
   * [ ] Does the pull request have tests?
@@ -83,4 +83,3 @@ Please make sure that you check the items applicable to your pull request:
 We want as many contributions as we can get, and we are here to help. Feel free to reach out to us if you have any questions
 
 Thank you for your contribution!
-

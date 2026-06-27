@@ -38,4 +38,16 @@ showconfigure()
 
 export PKG_CONFIG_PATH=$dir/lib/pkgconfig
 
-@_PKG_CONFIG_COMPILER@ `pkg-config --define-variable=prefix=$dir --cflags --libs @_PKG_CONFIG_LIBNAME@` $@
+for arg in $@ ; do
+  case "$arg" in
+    -showconfig)
+      showconfigure
+      exit $status
+      ;;
+    *)
+      @_PKG_CONFIG_COMPILER@ $@ `pkg-config --define-variable=prefix=$dir --cflags --libs @_PKG_CONFIG_LIBNAME@`
+      status=$?
+      exit $status
+      ;;
+  esac
+done

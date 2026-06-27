@@ -46,7 +46,7 @@ h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options
     hid_t                 tid    = H5I_INVALID_HID; /* type ID */
     int                   ok     = 1;               /* step results */
     unsigned int          i;
-    trav_table_t *        travt    = NULL;
+    trav_table_t         *travt    = NULL;
     hid_t                 fcpl_in  = H5I_INVALID_HID;  /* file creation property for input file */
     hid_t                 fcpl_out = H5I_INVALID_HID;  /* file creation property for output file */
     H5F_fspace_strategy_t in_strategy, out_strategy;   /* file space handling strategy for in/output file */
@@ -60,7 +60,7 @@ h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options
         H5TOOLS_GOTO_ERROR((-1), "H5Fopen failed on <%s>", out_fname);
 
     for (i = 0; i < options->op_tbl->nelems; i++) {
-        char *       name = options->op_tbl->objs[i].path;
+        char        *name = options->op_tbl->objs[i].path;
         pack_info_t *obj  = &options->op_tbl->objs[i];
 
         /*-------------------------------------------------------------------------
@@ -378,11 +378,11 @@ h5repack_cmp_pl(const char *fname1, hid_t fname1_fapl, const char *fname2, hid_t
      *-------------------------------------------------------------------------
      */
     /* Open the files */
-    if ((fid1 = h5tools_fopen(fname1, H5F_ACC_RDONLY, fname1_fapl,
-                              (fname1_fapl == H5P_DEFAULT) ? FALSE : TRUE, NULL, 0)) < 0)
+    if ((fid1 = h5tools_fopen(fname1, H5F_ACC_RDONLY, fname1_fapl, (fname1_fapl != H5P_DEFAULT), NULL, 0)) <
+        0)
         H5TOOLS_GOTO_ERROR((-1), "h5tools_fopen failed <%s>: %s", fname1, H5FOPENERROR);
-    if ((fid2 = h5tools_fopen(fname2, H5F_ACC_RDONLY, fname2_fapl,
-                              (fname2_fapl == H5P_DEFAULT) ? FALSE : TRUE, NULL, 0)) < 0)
+    if ((fid2 = h5tools_fopen(fname2, H5F_ACC_RDONLY, fname2_fapl, (fname2_fapl != H5P_DEFAULT), NULL, 0)) <
+        0)
         H5TOOLS_GOTO_ERROR((-1), "h5tools_fopen failed <%s>: %s", fname2, H5FOPENERROR);
 
     /*-------------------------------------------------------------------------

@@ -232,10 +232,12 @@ set (HDF5_JAVA_JNI_SRC_DIR         ${HDF5_SOURCE_DIR}/java/src/jni)
 set (HDF5_JAVA_HDF5_SRC_DIR        ${HDF5_SOURCE_DIR}/java/src/hdf)
 set (HDF5_JAVA_TEST_SRC_DIR        ${HDF5_SOURCE_DIR}/java/test)
 set (HDF5_JAVA_LIB_DIR             ${HDF5_SOURCE_DIR}/java/lib)
-set (HDF5_JAVA_LOGGING_JAR         ${HDF5_SOURCE_DIR}/java/lib/slf4j-api-1.7.25.jar)
-set (HDF5_JAVA_LOGGING_NOP_JAR     ${HDF5_SOURCE_DIR}/java/lib/ext/slf4j-nop-1.7.25.jar)
-set (HDF5_JAVA_LOGGING_SIMPLE_JAR  ${HDF5_SOURCE_DIR}/java/lib/ext/slf4j-simple-1.7.25.jar)
+set (HDF5_JAVA_LOGGING_JAR         ${HDF5_SOURCE_DIR}/java/lib/slf4j-api-1.7.33.jar)
+set (HDF5_JAVA_LOGGING_NOP_JAR     ${HDF5_SOURCE_DIR}/java/lib/ext/slf4j-nop-1.7.33.jar)
+set (HDF5_JAVA_LOGGING_SIMPLE_JAR  ${HDF5_SOURCE_DIR}/java/lib/ext/slf4j-simple-1.7.33.jar)
 set (HDF5_DOXYGEN_DIR              ${HDF5_SOURCE_DIR}/doxygen)
+
+set (HDF5_SRC_INCLUDE_DIRS ${HDF5_SRC_DIR})
 
 #-----------------------------------------------------------------------------
 # parse the full version number from H5public.h and include in H5_VERS_INFO
@@ -575,20 +577,6 @@ endif ()
 # endif ()
 
 #-----------------------------------------------------------------------------
-# Option to build documentation
-#-----------------------------------------------------------------------------
-option (HDF5_BUILD_DOC "Build documentation" OFF)
-if (HDF5_BUILD_DOC AND EXISTS "${HDF5_DOXYGEN_DIR}" AND IS_DIRECTORY "${HDF5_DOXYGEN_DIR}")
-# check if Doxygen is installed
-  find_package(Doxygen)
-  if (DOXYGEN_FOUND)
-    message(STATUS "Doxygen version: ${DOXYGEN_VERSION}")
-  else ()
-    message(STATUS "Doxygen needs to be installed to generate the doxygen documentation")
-  endif ()
-endif ()
-
-#-----------------------------------------------------------------------------
 # Option to indicate using a memory checker
 #-----------------------------------------------------------------------------
 option (HDF5_ENABLE_USING_MEMCHECKER "Indicate that a memory checker is used" OFF)
@@ -759,6 +747,50 @@ if (H5_HAVE_PARALLEL)
   endif ()
 endif ()
 
+# Determine whether to build the HDF5 Subfiling VFD
+set (H5FD_SUBFILING_DIR ${HDF5_SRC_DIR}/H5FDsubfiling)
+set (HDF5_SRC_INCLUDE_DIRS
+    ${HDF5_SRC_INCLUDE_DIRS}
+    ${H5FD_SUBFILING_DIR}
+)
+option (HDF5_ENABLE_SUBFILING_VFD "Build Parallel HDF5 Subfiling VFD" OFF)
+if (HDF5_ENABLE_SUBFILING_VFD)
+  if (NOT HDF5_ENABLE_PARALLEL)
+    message (FATAL_ERROR "Subfiling VFD requires a parallel HDF5 build")
+  endif()
+
+  if (NOT DEFINED Threads_FOUND)
+    set (THREADS_PREFER_PTHREAD_FLAG ON)
+    find_package (Threads REQUIRED)
+  endif ()
+
+  # For now, make sure we're using pthreads. Once Subfiling can be
+  # supported on Windows, we should allow Win32 threads as well
+  if (NOT ${Threads_FOUND} OR NOT ${CMAKE_USE_PTHREADS_INIT})
+    message (FATAL_ERROR "Subfiling requires pthreads for system thread library")
+  endif ()
+
+  CHECK_INCLUDE_FILE("stdatomic.h" HAVE_STDATOMIC_H)
+  if (NOT HAVE_STDATOMIC_H)
+    message (FATAL_ERROR "Subfiling VFD requires atomic operations support. C11 stdatomic.h NOT available.")
+  else()
+    set (H5_HAVE_STDATOMIC_H 1)
+  endif()
+
+  set (H5_HAVE_SUBFILING_VFD 1)
+  # IOC VFD is currently only built when subfiling is enabled
+  set (H5_HAVE_IOC_VFD 1)
+
+  message (STATUS "Setting up to use Mercury components")
+  set (H5FD_SUBFILING_MERCURY_DIR ${H5FD_SUBFILING_DIR}/mercury/src/util)
+  set (HDF5_SRC_INCLUDE_DIRS
+      ${HDF5_SRC_INCLUDE_DIRS}
+      ${H5FD_SUBFILING_MERCURY_DIR}
+  )
+  set (H5_HAVE_MERCURY_H 1)
+  set (CMAKE_REQUIRED_INCLUDES "${H5FD_SUBFILING_MERCURY_DIR}")
+endif()
+
 #option (DEFAULT_API_VERSION "Enable v1.14 API (v16, v18, v110, v112, v114)" "v114")
 set (DEFAULT_API_VERSION "v114" CACHE STRING "Enable v1.14 API (v16, v18, v110, v112, v114)")
 set_property (CACHE DEFAULT_API_VERSION PROPERTY STRINGS v16 v18 v110 v112 v114)
@@ -845,15 +877,6 @@ if (HDF5_ENABLE_THREADSAFE)
     if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.15.0")
       message (VERBOSE " **** thread-safety option not supported with static library **** ")
       message (VERBOSE " **** thread-safety option will not be used building static library **** ")
-    endif ()
-  endif ()
-  if (HDF5_ENABLE_PARALLEL)
-    if (NOT ALLOW_UNSUPPORTED)
-      message (FATAL_ERROR " **** parallel and thread-safety options are not supported, override with ALLOW_UNSUPPORTED option **** ")
-    else ()
-      if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.15.0")
-        message (VERBOSE " **** Allowing unsupported parallel and thread-safety options **** ")
-      endif ()
     endif ()
   endif ()
   if (HDF5_BUILD_FORTRAN)
@@ -983,8 +1006,13 @@ if (BUILD_TESTING)
     mark_as_advanced (HDF5_TEST_FHEAP_PASSTHROUGH VOL)
   endif ()
 
-  option (HDF_TEST_EXPRESS "Control testing framework (0-3)" "0")
+  set (H5_TEST_EXPRESS_LEVEL_DEFAULT "3")
+  set (HDF_TEST_EXPRESS "${H5_TEST_EXPRESS_LEVEL_DEFAULT}"
+      CACHE STRING "Control testing framework (0-3) (0 = exhaustive testing; 3 = quicker testing)")
   mark_as_advanced (HDF_TEST_EXPRESS)
+  if (NOT "${HDF_TEST_EXPRESS}" STREQUAL "")
+    set (H5_TEST_EXPRESS_LEVEL_DEFAULT "${HDF_TEST_EXPRESS}")
+  endif ()
 
   enable_testing ()
   include (CTest)

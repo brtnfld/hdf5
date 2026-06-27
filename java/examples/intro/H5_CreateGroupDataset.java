@@ -30,13 +30,14 @@ public class H5_CreateGroupDataset {
     private static final int DIM2_X    = 2;
     private static final int DIM2_Y    = 10;
 
-    private static void h5_crtgrpd() {
-        long file_id = HDF5Constants.H5I_INVALID_HID;
-        long dataspace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id = HDF5Constants.H5I_INVALID_HID;
-        long group_id = HDF5Constants.H5I_INVALID_HID;
-        long group1_id = HDF5Constants.H5I_INVALID_HID;
-        long group2_id = HDF5Constants.H5I_INVALID_HID;
+    private static void h5_crtgrpd()
+    {
+        long file_id       = HDF5Constants.H5I_INVALID_HID;
+        long dataspace_id  = HDF5Constants.H5I_INVALID_HID;
+        long dataset_id    = HDF5Constants.H5I_INVALID_HID;
+        long group_id      = HDF5Constants.H5I_INVALID_HID;
+        long group1_id     = HDF5Constants.H5I_INVALID_HID;
+        long group2_id     = HDF5Constants.H5I_INVALID_HID;
         int[][] dset1_data = new int[DIM1_X][DIM1_Y];
         int[][] dset2_data = new int[DIM2_X][DIM2_Y];
         long[] dims1       = {DIM1_X, DIM1_Y};

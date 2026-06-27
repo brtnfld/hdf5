@@ -103,6 +103,16 @@ set (H5CS_HDRS
 IDE_GENERATED_PROPERTIES ("H5CS" "${H5CS_HDRS}" "${H5CS_SOURCES}" )
 
 
+set (H5CL_SOURCES
+    ${HDF5_SRC_DIR}/H5CL.c
+)
+set (H5CL_HDRS
+    ${HDF5_SRC_DIR}/H5CLdevelop.h
+    ${HDF5_SRC_DIR}/H5CLpublic.h
+)
+IDE_GENERATED_PROPERTIES ("H5CL" "${H5CL_HDRS}" "${H5CL_SOURCES}" )
+
+
 set (H5CX_SOURCES
     ${HDF5_SRC_DIR}/H5CX.c
 )
@@ -272,7 +282,35 @@ set (H5FD_HDRS
     ${HDF5_SRC_DIR}/H5FDstdio.h
     ${HDF5_SRC_DIR}/H5FDvfd_swmr.h
     ${HDF5_SRC_DIR}/H5FDwindows.h
+    ${H5FD_SUBFILING_DIR}/H5FDsubfiling.h
+    ${H5FD_SUBFILING_DIR}/H5FDioc.h
 )
+
+# Append Subfiling VFD and Mercury sources to H5FD interface if Subfiling VFD is built
+if (HDF5_ENABLE_SUBFILING_VFD)
+  set (MERCURY_UTIL_SOURCES
+      ${H5FD_SUBFILING_DIR}/mercury/src/util/mercury_dlog.c
+      ${H5FD_SUBFILING_DIR}/mercury/src/util/mercury_log.c
+      ${H5FD_SUBFILING_DIR}/mercury/src/util/mercury_thread.c
+      ${H5FD_SUBFILING_DIR}/mercury/src/util/mercury_thread_condition.c
+      ${H5FD_SUBFILING_DIR}/mercury/src/util/mercury_thread_pool.c
+      ${H5FD_SUBFILING_DIR}/mercury/src/util/mercury_thread_mutex.c
+      ${H5FD_SUBFILING_DIR}/mercury/src/util/mercury_util.c
+  )
+
+  set (H5FD_SUBFILING_SOURCES
+      ${H5FD_SUBFILING_DIR}/H5FDioc.c
+      ${H5FD_SUBFILING_DIR}/H5FDioc_int.c
+      ${H5FD_SUBFILING_DIR}/H5FDioc_threads.c
+      ${H5FD_SUBFILING_DIR}/H5FDsubfiling.c
+      ${H5FD_SUBFILING_DIR}/H5FDsubfile_int.c
+      ${H5FD_SUBFILING_DIR}/H5subfiling_common.c
+      ${MERCURY_UTIL_SOURCES}
+  )
+
+  list (APPEND H5FD_SOURCES ${H5FD_SUBFILING_SOURCES})
+endif()
+
 IDE_GENERATED_PROPERTIES ("H5FD" "${H5FD_HDRS}" "${H5FD_SOURCES}" )
 
 
@@ -766,6 +804,7 @@ set (common_SRCS
     ${H5B2_SOURCES}
     ${H5C_SOURCES}
     ${H5CS_SOURCES}
+    ${H5CL_SOURCES}
     ${H5CX_SOURCES}
     ${H5D_SOURCES}
     ${H5E_SOURCES}
@@ -841,6 +880,7 @@ set (H5_PUBLIC_HEADERS
     ${H5TS_HDRS}
     ${H5VL_HDRS}
     ${H5Z_HDRS}
+    ${subfile_HDRS}
 )
 
 set (H5_PRIVATE_HEADERS
@@ -1049,20 +1089,23 @@ if (LOCAL_BATCH_TEST)
   endif ()
 endif ()
 
+#### make the H5detect program
 set (lib_prog_deps)
-if (NOT EXISTS "${HDF5_GENERATED_SOURCE_DIR}/H5Tinit.c")
-  add_executable (H5detect ${HDF5_SRC_DIR}/H5detect.c)
-  target_include_directories (H5detect PRIVATE "${HDF5_SRC_DIR};${HDF5_SRC_BINARY_DIR};$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:${MPI_C_INCLUDE_DIRS}>")
-  target_compile_definitions(H5detect PUBLIC ${HDF_EXTRA_C_FLAGS} ${HDF_EXTRA_FLAGS})
-  TARGET_C_PROPERTIES (H5detect STATIC)
-  target_link_libraries (H5detect
-      PRIVATE "$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:${MPI_C_LIBRARIES}>" $<$<OR:$<PLATFORM_ID:Windows>,$<PLATFORM_ID:MinGW>>:ws2_32.lib>
-  )
-  target_compile_options(H5detect
-      PRIVATE "$<$<PLATFORM_ID:Emscripten>:-O0>"
-  )
-  set (lib_prog_deps ${lib_prog_deps} H5detect)
+add_executable (H5detect ${HDF5_SRC_DIR}/H5detect.c)
+target_include_directories (H5detect PRIVATE "${HDF5_SRC_INCLUDE_DIRS};${HDF5_SRC_BINARY_DIR};$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:${MPI_C_INCLUDE_DIRS}>")
+target_compile_definitions(H5detect PUBLIC ${HDF_EXTRA_C_FLAGS} ${HDF_EXTRA_FLAGS})
+TARGET_C_PROPERTIES (H5detect STATIC)
+target_link_libraries (H5detect
+    PRIVATE "$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:${MPI_C_LIBRARIES}>" $<$<OR:$<PLATFORM_ID:Windows>,$<PLATFORM_ID:MinGW>>:ws2_32.lib>
+)
+target_compile_options(H5detect
+    PRIVATE "$<$<PLATFORM_ID:Emscripten>:-O0>"
+)
+set (lib_prog_deps ${lib_prog_deps} H5detect)
 
+# check if a pregenerated H5Tinit.c file is present
+if (NOT EXISTS "${HDF5_GENERATED_SOURCE_DIR}/H5Tinit.c")
+  # execute the H5detect program
   if (HDF5_BATCH_H5DETECT)
     configure_file (
         ${HDF5_SOURCE_DIR}/bin/batch/${HDF5_BATCH_H5DETECT_SCRIPT}.in.cmake
@@ -1070,9 +1113,9 @@ if (NOT EXISTS "${HDF5_GENERATED_SOURCE_DIR}/H5Tinit.c")
     )
     add_custom_command (
         OUTPUT     gen_SRCS.stamp1
+        BYPRODUCTS H5Tinit.c
         COMMAND    ${HDF5_BATCH_CMD}
         ARGS       ${HDF5_BINARY_DIR}/${HDF5_BATCH_H5DETECT_SCRIPT}
-        BYPRODUCTS H5Tinit.c gen_SRCS.stamp1
         COMMAND    ${CMAKE_COMMAND}
         ARGS       -E echo "Executed batch command to create H5Tinit.c"
         COMMAND    ${CMAKE_COMMAND}
@@ -1083,31 +1126,30 @@ if (NOT EXISTS "${HDF5_GENERATED_SOURCE_DIR}/H5Tinit.c")
     add_custom_target (gen_H5Tinit
         COMMAND ${CMAKE_COMMAND} -P ${HDF5_SOURCE_DIR}/config/cmake/wait_H5Tinit.cmake
     )
-    set_source_files_properties (${HDF5_GENERATED_SOURCE_DIR}/H5Tinit.c PROPERTIES GENERATED TRUE)
   else ()
-    add_custom_command (TARGET H5detect POST_BUILD
+    add_custom_command (
+        OUTPUT     gen_SRCS.stamp1
+        BYPRODUCTS H5Tinit.c
         COMMAND    ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:H5detect>
         ARGS       H5Tinit.c
-        BYPRODUCTS H5Tinit.c gen_SRCS.stamp1
         COMMAND    ${CMAKE_COMMAND}
         ARGS       -E touch gen_SRCS.stamp1
         DEPENDS H5detect
         WORKING_DIRECTORY ${HDF5_GENERATED_SOURCE_DIR}
         COMMENT    "Create H5Tinit.c"
     )
-    set_source_files_properties (${HDF5_GENERATED_SOURCE_DIR}/H5Tinit.c PROPERTIES GENERATED TRUE)
     if (BUILD_SHARED_LIBS)
-      add_custom_command (TARGET H5detect POST_BUILD
+      add_custom_command (
+          OUTPUT     shared/shared_gen_SRCS.stamp1
+          BYPRODUCTS shared/H5Tinit.c
           COMMAND    ${CMAKE_COMMAND}
           ARGS       -E copy_if_different H5Tinit.c shared/H5Tinit.c
-          BYPRODUCTS shared/H5Tinit.c shared/shared_gen_SRCS.stamp1
           COMMAND    ${CMAKE_COMMAND}
           ARGS       -E touch shared/shared_gen_SRCS.stamp1
-          DEPENDS H5detect H5Tinit.c
+          DEPENDS H5detect gen_SRCS.stamp1
           WORKING_DIRECTORY ${HDF5_GENERATED_SOURCE_DIR}
           COMMENT    "Copy H5Tinit.c to shared folder"
       )
-      set_source_files_properties (${HDF5_GENERATED_SOURCE_DIR}/shared/H5Tinit.c PROPERTIES GENERATED TRUE)
     endif ()
   endif ()
 else ()
@@ -1123,16 +1165,15 @@ else ()
   if (BUILD_SHARED_LIBS)
     add_custom_command (
         OUTPUT     shared/shared_gen_SRCS.stamp1
+        BYPRODUCTS shared/H5Tinit.c
         COMMAND    ${CMAKE_COMMAND}
         ARGS       -E copy_if_different H5Tinit.c shared/H5Tinit.c
-        BYPRODUCTS shared/H5Tinit.c shared/shared_gen_SRCS.stamp1
         COMMAND    ${CMAKE_COMMAND}
         ARGS       -E touch shared/shared_gen_SRCS.stamp1
-        DEPENDS H5Tinit.c
+        DEPENDS H5Tinit.c gen_SRCS.stamp1
         WORKING_DIRECTORY ${HDF5_GENERATED_SOURCE_DIR}
         COMMENT    "Copy existing H5Tinit.c to shared folder"
     )
-    set_source_files_properties (${HDF5_GENERATED_SOURCE_DIR}/shared/H5Tinit.c PROPERTIES GENERATED TRUE)
   endif ()
 endif ()
 
@@ -1147,7 +1188,7 @@ endif ()
 
 # make the H5make_libsettings program
 add_executable (H5make_libsettings ${HDF5_SRC_DIR}/H5make_libsettings.c)
-target_include_directories (H5make_libsettings PRIVATE "${HDF5_SRC_DIR};${HDF5_SRC_BINARY_DIR};$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:${MPI_C_INCLUDE_DIRS}>")
+target_include_directories (H5make_libsettings PRIVATE "${HDF5_SRC_INCLUDE_DIRS};${HDF5_SRC_BINARY_DIR};$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:${MPI_C_INCLUDE_DIRS}>")
 target_compile_definitions(H5make_libsettings PUBLIC ${HDF_EXTRA_C_FLAGS} ${HDF_EXTRA_FLAGS})
 TARGET_C_PROPERTIES (H5make_libsettings STATIC)
 target_link_libraries (H5make_libsettings
@@ -1165,10 +1206,12 @@ if (HDF5_ENABLE_FORMATTERS)
   clang_format (HDF5_SRC_LIBSETTINGS_FORMAT H5make_libsettings)
 endif ()
 
-add_custom_command (TARGET H5make_libsettings POST_BUILD
+# execute the H5make_libsettings program
+add_custom_command (
+    OUTPUT     gen_SRCS.stamp2
+    BYPRODUCTS H5lib_settings.c
     COMMAND    ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:H5make_libsettings>
     ARGS       H5lib_settings.c
-    BYPRODUCTS H5lib_settings.c gen_SRCS.stamp2
     COMMAND    ${CMAKE_COMMAND}
     ARGS       -E touch gen_SRCS.stamp2
     DEPENDS H5make_libsettings
@@ -1177,17 +1220,17 @@ add_custom_command (TARGET H5make_libsettings POST_BUILD
 )
 set_source_files_properties (${HDF5_SRC_BINARY_DIR}/H5lib_settings.c PROPERTIES GENERATED TRUE)
 if (BUILD_SHARED_LIBS)
-  add_custom_command (TARGET H5make_libsettings POST_BUILD
+  add_custom_command (
+      OUTPUT     shared/shared_gen_SRCS.stamp2
+      BYPRODUCTS shared/H5lib_settings.c
       COMMAND    ${CMAKE_COMMAND}
       ARGS       -E copy_if_different H5lib_settings.c shared/H5lib_settings.c
-      BYPRODUCTS shared/H5lib_settings.c shared/shared_gen_SRCS.stamp2
       COMMAND    ${CMAKE_COMMAND}
       ARGS       -E touch shared/shared_gen_SRCS.stamp2
-      DEPENDS H5make_libsettings H5lib_settings.c
+      DEPENDS H5make_libsettings gen_SRCS.stamp2
       WORKING_DIRECTORY ${HDF5_SRC_BINARY_DIR}
       COMMENT    "Copy H5lib_settings.c to shared folder"
   )
-  set_source_files_properties (${HDF5_SRC_BINARY_DIR}/shared/H5lib_settings.c PROPERTIES GENERATED TRUE)
 endif ()
 
 ## all_packages="AC,B,B2,D,F,FA,FL,FS,HL,I,O,S,ST,T,Z"
@@ -1200,13 +1243,13 @@ option (HDF5_ENABLE_DEBUG_APIS "Turn on extra debug output in all packages" OFF)
 if (NOT ONLY_SHARED_LIBS)
   set (gen_SRCS ${HDF5_GENERATED_SOURCE_DIR}/H5Tinit.c ${HDF5_SRC_BINARY_DIR}/H5lib_settings.c)
   add_custom_target (gen_${HDF5_LIB_TARGET} ALL
-    DEPENDS ${lib_prog_deps} ${gen_SRCS} ${HDF5_GENERATED_SOURCE_DIR}/gen_SRCS.stamp1 ${HDF5_SRC_BINARY_DIR}/gen_SRCS.stamp2
+    DEPENDS ${lib_prog_deps} ${HDF5_GENERATED_SOURCE_DIR}/gen_SRCS.stamp1 ${HDF5_SRC_BINARY_DIR}/gen_SRCS.stamp2
     COMMENT "Generation target files"
   )
 
   add_library (${HDF5_LIB_TARGET} STATIC ${common_SRCS} ${gen_SRCS} ${H5_PUBLIC_HEADERS} ${H5_PRIVATE_HEADERS} ${H5_GENERATED_HEADERS} ${H5_MODULE_HEADERS})
   target_include_directories (${HDF5_LIB_TARGET}
-      PRIVATE "${HDF5_SRC_DIR};${HDF5_SRC_BINARY_DIR};$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:${MPI_C_INCLUDE_DIRS}>"
+      PRIVATE "${HDF5_SRC_INCLUDE_DIRS};${HDF5_SRC_BINARY_DIR};$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:${MPI_C_INCLUDE_DIRS}>"
       INTERFACE "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>;$<BUILD_INTERFACE:${HDF5_SRC_BINARY_DIR}>"
   )
   target_compile_options(${HDF5_LIB_TARGET} PRIVATE "${HDF5_CMAKE_C_FLAGS}")
@@ -1225,7 +1268,7 @@ if (NOT ONLY_SHARED_LIBS)
   )
   if (NOT WIN32)
     target_link_libraries (${HDF5_LIB_TARGET}
-      PRIVATE $<$<BOOL:${HDF5_ENABLE_THREADSAFE}>:Threads::Threads>
+      PRIVATE $<$<OR:$<BOOL:${HDF5_ENABLE_THREADSAFE}>,$<BOOL:${HDF5_ENABLE_SUBFILING_VFD}>>:Threads::Threads>
     )
   endif ()
   set_global_variable (HDF5_LIBRARIES_TO_EXPORT ${HDF5_LIB_TARGET})
@@ -1239,13 +1282,13 @@ endif ()
 if (BUILD_SHARED_LIBS)
   set (shared_gen_SRCS ${HDF5_GENERATED_SOURCE_DIR}/shared/H5Tinit.c ${HDF5_SRC_BINARY_DIR}/shared/H5lib_settings.c)
   add_custom_target (gen_${HDF5_LIBSH_TARGET} ALL
-    DEPENDS ${lib_prog_deps} ${shared_gen_SRCS} ${HDF5_GENERATED_SOURCE_DIR}/shared/shared_gen_SRCS.stamp1 ${HDF5_SRC_BINARY_DIR}/shared/shared_gen_SRCS.stamp2
+    DEPENDS ${lib_prog_deps} ${HDF5_GENERATED_SOURCE_DIR}/shared/shared_gen_SRCS.stamp1 ${HDF5_SRC_BINARY_DIR}/shared/shared_gen_SRCS.stamp2
     COMMENT "Shared generation target files"
   )
 
   add_library (${HDF5_LIBSH_TARGET} SHARED ${common_SRCS} ${shared_gen_SRCS} ${H5_PUBLIC_HEADERS} ${H5_PRIVATE_HEADERS} ${H5_GENERATED_HEADERS} ${H5_MODULE_HEADERS})
   target_include_directories (${HDF5_LIBSH_TARGET}
-      PRIVATE "${HDF5_SRC_DIR};${HDF5_SRC_BINARY_DIR};$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:${MPI_C_INCLUDE_DIRS}>"
+      PRIVATE "${HDF5_SRC_INCLUDE_DIRS};${HDF5_SRC_BINARY_DIR};$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:${MPI_C_INCLUDE_DIRS}>"
       PUBLIC "$<$<BOOL:${HDF5_ENABLE_HDFS}>:${HDFS_INCLUDE_DIR}>"
       INTERFACE "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>;$<BUILD_INTERFACE:${HDF5_SRC_BINARY_DIR}>"
   )
@@ -1262,7 +1305,8 @@ if (BUILD_SHARED_LIBS)
   )
   TARGET_C_PROPERTIES (${HDF5_LIBSH_TARGET} SHARED)
   target_link_libraries (${HDF5_LIBSH_TARGET}
-      PRIVATE ${LINK_LIBS} ${LINK_COMP_LIBS} "$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:${MPI_C_LIBRARIES}>" $<$<BOOL:${HDF5_ENABLE_THREADSAFE}>:Threads::Threads>
+      PRIVATE ${LINK_LIBS} ${LINK_COMP_LIBS} "$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:${MPI_C_LIBRARIES}>"
+              $<$<OR:$<BOOL:${HDF5_ENABLE_THREADSAFE}>,$<BOOL:${HDF5_ENABLE_SUBFILING_VFD}>>:Threads::Threads>
       PUBLIC $<$<NOT:$<PLATFORM_ID:Windows>>:${CMAKE_DL_LIBS}>
   )
   set_global_variable (HDF5_LIBRARIES_TO_EXPORT "${HDF5_LIBRARIES_TO_EXPORT};${HDF5_LIBSH_TARGET}")
@@ -1396,36 +1440,6 @@ endif ()
 # Option to build documentation
 #-----------------------------------------------------------------------------
 if (DOXYGEN_FOUND)
-  set (DOXYGEN_PACKAGE ${HDF5_PACKAGE_NAME})
-  set (DOXYGEN_VERSION_STRING ${HDF5_PACKAGE_VERSION_STRING})
-  set (DOXYGEN_INCLUDE_ALIASES_PATH ${HDF5_DOXYGEN_DIR})
-  set (DOXYGEN_INCLUDE_ALIASES aliases)
-  set (DOXYGEN_VERBATIM_VARS DOXYGEN_INCLUDE_ALIASES)
-  set (DOXYGEN_PROJECT_LOGO ${HDF5_DOXYGEN_DIR}/img/HDFG-logo.png)
-  set (DOXYGEN_PROJECT_BRIEF "C-API Reference")
-  set (DOXYGEN_INPUT_DIRECTORY "${HDF5_SRC_DIR} ${HDF5_DOXYGEN_DIR}/dox ${HDF5_GENERATED_SOURCE_DIR}")
-  set (DOXYGEN_OPTIMIZE_OUTPUT_FOR_C YES)
-  set (DOXYGEN_MACRO_EXPANSION YES)
-  set (DOXYGEN_OUTPUT_DIRECTORY ${HDF5_BINARY_DIR}/hdf5lib_docs)
-  set (DOXYGEN_EXAMPLES_DIRECTORY "${HDF5_DOXYGEN_DIR}/examples ${HDF5_SRC_DIR} ${HDF5_SOURCE_DIR}/examples ${HDF5_TEST_SRC_DIR}")
-  set (DOXYGEN_LAYOUT_FILE ${HDF5_DOXYGEN_DIR}/hdf5doxy_layout.xml)
-  set (DOXYGEN_HTML_HEADER ${HDF5_DOXYGEN_DIR}/hdf5_header.html)
-  set (DOXYGEN_HTML_FOOTER ${HDF5_DOXYGEN_DIR}/hdf5_footer.html)
-  set (DOXYGEN_HTML_EXTRA_STYLESHEET ${HDF5_DOXYGEN_DIR}/hdf5doxy.css)
-  set (DOXYGEN_HTML_EXTRA_FILES "${HDF5_DOXYGEN_DIR}/hdf5_navtree_hacks.js ${HDF5_DOXYGEN_DIR}/img/ftv2node.png ${HDF5_DOXYGEN_DIR}/img/ftv2pnode.png")
-  set (DOXYGEN_SERVER_BASED_SEARCH NO)
-  set (DOXYGEN_EXTERNAL_SEARCH NO)
-  set (DOXYGEN_SEARCHENGINE_URL)
-
-# This configure and custom target work together
-  # Replace variables inside @@ with the current values
-  configure_file (${HDF5_DOXYGEN_DIR}/Doxyfile.in ${HDF5_BINARY_DIR}/Doxyfile @ONLY)
-  add_custom_target (hdf5lib_doc ALL
-        COMMAND ${DOXYGEN_EXECUTABLE} ${HDF5_BINARY_DIR}/Doxyfile
-        DEPENDS ${HDF5_GENERATED_SOURCE_DIR}/H5Tinit.c ${HDF5_SRC_BINARY_DIR}/H5lib_settings.c
-        WORKING_DIRECTORY ${HDF5_SRC_DIR}
-        COMMENT "Generating HDF5 library Source API documentation with Doxygen"
-        VERBATIM )
 # This cmake function requires that the non-default doxyfile settings are provided with set (DOXYGEN_xxx) commands
 # In addition the doxyfile aliases @INCLUDE option is not supported and would need to be provided in a set (DOXYGEN_ALIASES) command.
 #  doxygen_add_docs (hdf5lib_doc
@@ -1435,11 +1449,15 @@ if (DOXYGEN_FOUND)
 #      WORKING_DIRECTORY ${HDF5_SRC_DIR}
 #      COMMENT "Generating HDF5 library Source Documentation"
 #  )
-  install (
-      DIRECTORY ${HDF5_BINARY_DIR}/hdf5lib_docs/html
-      DESTINATION ${HDF5_INSTALL_DATA_DIR}
-      COMPONENT Documents
-  )
+
+# This custom target and doxygen/configure work together
+  # Replace variables inside @@ with the current values
+  add_custom_target (hdf5lib_doc ALL
+        COMMAND ${DOXYGEN_EXECUTABLE} ${HDF5_BINARY_DIR}/Doxyfile
+        DEPENDS ${HDF5_GENERATED_SOURCE_DIR}/H5Tinit.c ${HDF5_SRC_BINARY_DIR}/H5lib_settings.c
+        WORKING_DIRECTORY ${HDF5_SRC_DIR}
+        COMMENT "Generating HDF5 library Source API documentation with Doxygen"
+        VERBATIM )
 
   if (NOT TARGET doxygen)
     add_custom_target (doxygen)

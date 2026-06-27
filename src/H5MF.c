@@ -86,7 +86,6 @@ typedef struct {
 /* Local Prototypes */
 /********************/
 
-static herr_t H5MF__xfree_impl(H5F_t *, H5FD_mem_t, haddr_t, hsize_t);
 /* Allocator routines */
 static haddr_t H5MF__alloc_pagefs(H5F_t *f, H5FD_mem_t alloc_type, hsize_t size);
 
@@ -160,7 +159,7 @@ H5MF_process_deferred_frees(H5F_t *f, const uint64_t tick_num)
     FUNC_ENTER_NOAPI_NOERR
 
     /* Have to empty the queue before processing it because we
-     * could re-enter this routine through H5MF__xfree_impl.  If
+     * could re-enter this routine through H5MF_xfree.  If
      * items were still on the queue, we would enter
      * H5MF_process_deferred_frees() recursively until the queue was empty.
      */
@@ -172,7 +171,7 @@ H5MF_process_deferred_frees(H5F_t *f, const uint64_t tick_num)
         SIMPLEQ_REMOVE_HEAD(&defrees, link);
 
         /* Record errors here, but keep trying to free */
-        if (H5MF__xfree_impl(f, df->alloc_type, df->addr, df->size) < 0)
+        if (H5MF_xfree(f, df->alloc_type, df->addr, df->size) < 0)
             ret_value = FAIL;
         H5MM_xfree(df);
     }
@@ -306,11 +305,6 @@ done:
  *
  * Programmer: Vailin Choi; Nov 2016
  *
- * Changes:     Modified function to map large (page size or larger) 
- *              allocation to two different fs_types when operating 
- *              in VFD SWMR mode.
- *                                              JRM -- 10/16/25
- *
  *-------------------------------------------------------------------------
  */
 void
@@ -332,22 +326,6 @@ H5MF__alloc_to_fs_type(H5F_shared_t *f_sh, H5FD_mem_t alloc_type, hsize_t size, 
                 else
                     *fs_type = (H5F_mem_page_t)(f_sh->fs_type_map[alloc_type] + (H5FD_MEM_NTYPES - 1));
             } /* end if */
-#if 1 /* JRM */
-            else if ( f_sh->vfd_swmr ) {
-
-                /* If running VFD SWMR, use two large space allocators.  Neet to do this 
-                 * for crash recovery using full list of updater files as we need to ensure
-                 * that pages of memory are not allocated for raw data, deallocated, and then
-                 * re-allocated as meta data, or vise versa.
-                 *
-                 * Note that this is not a complete solution -- must also ensure that space 
-                 * is not released to file until file close.
-                 */
-                *fs_type = (H5F_mem_page_t)(f_sh->fs_type_map[alloc_type] + (H5FD_MEM_NTYPES - 1));
-                assert( ( H5F_MEM_PAGE_LARGE_SUPER == *fs_type ) ||
-                        ( H5F_MEM_PAGE_LARGE_DRAW == *fs_type ) );
-            }
-#endif /* JRM */
             else
                 /* For contiguous address space, map to generic large size free-space manager */
                 *fs_type = H5F_MEM_PAGE_GENERIC; /* H5F_MEM_PAGE_SUPER */
@@ -406,25 +384,7 @@ H5MF__open_fstype(H5F_t *f, H5F_mem_page_t type)
 
     /* Set up the alignment and threshold to use depending on the manager type */
     if (H5F_PAGED_AGGR(f)) {
-#if 1 /* JRM */
-        if ( H5F_USE_VFD_SWMR(f) ) {
-
-            if ( ( type >= H5F_MEM_PAGE_LARGE_SUPER ) && ( type <= H5F_MEM_PAGE_LARGE_OHDR ) ) {
-
-                assert( ( type == H5F_MEM_PAGE_LARGE_SUPER ) || ( type == H5F_MEM_PAGE_LARGE_DRAW ) );
-                alignment = f->shared->fs_page_size;
-
-            } else {
-
-                alignment = (hsize_t)H5F_ALIGN_DEF;
-            }
-        } else {
-
         alignment = (type == H5F_MEM_PAGE_GENERIC) ? f->shared->fs_page_size : (hsize_t)H5F_ALIGN_DEF;
-        }
-#else /* JRM */
-        alignment = (type == H5F_MEM_PAGE_GENERIC) ? f->shared->fs_page_size : (hsize_t)H5F_ALIGN_DEF;
-#endif /* JRM */
         threshold = H5F_ALIGN_THRHD_DEF;
     } /* end if */
     else {
@@ -486,10 +446,6 @@ H5MF__create_fstype(H5F_t *f, H5F_mem_page_t type)
 
     FUNC_ENTER_PACKAGE
 
-#if 0 /* JRM */
-    fprintf(stderr, "\n *************************** H5MF__create_fstype(): type = %d.\n", (int)(type));
-#endif /* JRM */
-
     /*
      * Check arguments.
      */
@@ -513,25 +469,7 @@ H5MF__create_fstype(H5F_t *f, H5F_mem_page_t type)
 
     /* Set up alignment and threshold to use depending on TYPE */
     if (H5F_PAGED_AGGR(f)) {
-#if 1 /* JRM */
-        if ( H5F_USE_VFD_SWMR(f) ) {
-
-            if ( ( type >= H5F_MEM_PAGE_LARGE_SUPER ) && ( type <= H5F_MEM_PAGE_LARGE_OHDR ) ) {
-
-                assert( ( type == H5F_MEM_PAGE_LARGE_SUPER ) || ( type == H5F_MEM_PAGE_LARGE_DRAW ) );
-                alignment = f->shared->fs_page_size;
-
-            } else {
-
-                alignment = (hsize_t)H5F_ALIGN_DEF;
-            }
-        } else {
-
         alignment = (type == H5F_MEM_PAGE_GENERIC) ? f->shared->fs_page_size : (hsize_t)H5F_ALIGN_DEF;
-        }
-#else /* JRM */
-        alignment = (type == H5F_MEM_PAGE_GENERIC) ? f->shared->fs_page_size : (hsize_t)H5F_ALIGN_DEF;
-#endif /* JRM */
         threshold = H5F_ALIGN_THRHD_DEF;
     } /* end if */
     else {
@@ -907,11 +845,6 @@ H5MF_alloc(H5F_t *f, H5FD_mem_t alloc_type, hsize_t size)
     HDassert(f->shared->lf);
     HDassert(size > 0);
 
-    if (!f->shared->vfd_swmr_writer)
-        ; // not a VFD SWMR writer, do not process deferrals
-    else if (H5MF_process_deferred_frees(f, f->shared->tick_num) < 0) {
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGC, HADDR_UNDEF, "could not process deferrals")
-    }
     H5MF__alloc_to_fs_type(f->shared, alloc_type, size, &fs_type);
 
 #ifdef H5MF_ALLOC_DEBUG_MORE
@@ -1204,7 +1137,12 @@ done:
 herr_t
 H5MF_xfree(H5F_t *f, H5FD_mem_t alloc_type, haddr_t addr, hsize_t size)
 {
-    herr_t ret_value = SUCCEED; /* Return value */
+    H5F_mem_page_t       fs_type;                   /* Free space type (mapped from allocation type) */
+    H5MF_free_section_t *node = NULL;               /* Free space section pointer */
+    unsigned             ctype;                     /* section class type */
+    H5AC_ring_t          orig_ring = H5AC_RING_INV; /* Original ring value */
+    H5AC_ring_t          fsm_ring;                  /* Ring of FSM */
+    herr_t               ret_value = SUCCEED;       /* Return value */
 
     FUNC_ENTER_NOAPI_TAG(H5AC__FREESPACE_TAG, FAIL)
 #ifdef H5MF_ALLOC_DEBUG
@@ -1217,34 +1155,6 @@ H5MF_xfree(H5F_t *f, H5FD_mem_t alloc_type, haddr_t addr, hsize_t size)
     if (!H5F_addr_defined(addr) || 0 == size)
         HGOTO_DONE(SUCCEED)
     HDassert(addr != 0); /* Can't deallocate the superblock :-) */
-
-    if (!f->shared->vfd_swmr_writer || f->shared->closing || alloc_type != H5FD_MEM_DRAW) {
-        /* VFD SWMR writers defer raw-data allocations until the
-         * file starts to close.
-         */
-        ret_value = H5MF__xfree_impl(f, alloc_type, addr, size);
-    }
-    else if (H5MF__defer_free(f->shared, alloc_type, addr, size) < 0)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, "could not defer")
-    else if (H5MF_process_deferred_frees(f, f->shared->tick_num) < 0) {
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGC, FAIL, "could not process deferrals")
-    }
-
-done:
-    FUNC_LEAVE_NOAPI_TAG(ret_value)
-}
-
-static herr_t
-H5MF__xfree_inner_impl(H5F_t *f, H5FD_mem_t alloc_type, haddr_t addr, hsize_t size)
-{
-    H5F_mem_page_t       fs_type;                   /* Free space type (mapped from allocation type) */
-    H5MF_free_section_t *node = NULL;               /* Free space section pointer */
-    unsigned             ctype;                     /* section class type */
-    H5AC_ring_t          orig_ring = H5AC_RING_INV; /* Original ring value */
-    H5AC_ring_t          fsm_ring;                  /* Ring of FSM */
-    herr_t               ret_value = SUCCEED;       /* Return value */
-
-    FUNC_ENTER_PACKAGE_TAG(H5AC__FREESPACE_TAG)
 
     H5MF__alloc_to_fs_type(f->shared, alloc_type, size, &fs_type);
 
@@ -1393,56 +1303,7 @@ done:
     H5MF__sects_dump(f, stderr);
 #endif /* H5MF_ALLOC_DEBUG_DUMP */
     FUNC_LEAVE_NOAPI_TAG(ret_value)
-}
-
-static herr_t
-H5MF__xfree_impl(H5F_t *f, H5FD_mem_t alloc_type, haddr_t addr, hsize_t size)
-{
-    herr_t ret_value = SUCCEED;
-
-    FUNC_ENTER_PACKAGE_TAG(H5AC__FREESPACE_TAG)
-
-    ret_value = H5MF__xfree_inner_impl(f, alloc_type, addr, size);
-
-    /* If the page buffer is enabled, notify it so that it can remove any
-     * pages that lie in the freed region.
-     *
-     * This is necessary in normal (AKA non VFD SWMR mode) as if single large
-     * metadata entry is allocated out of the freed space, writes to the
-     * entry will by-pass the page buffer.  If a dirty intersecting
-     * entry is left in the page buffer, it could introduce corruption
-     * if it is flushed after the large metadata entry is written.
-     *
-     * Further, in the VFD SWMR case, the large metadata entry will typically
-     * be buffered in the page buffer.  If an intersecting entry is left
-     * in the page buffer, in addition to causing potential corruption in
-     * the HDF5 file, it may also result in overlapping entries in the page
-     * buffer and metadata file index.
-     *
-     * It's ok to remove the page from the PB without flushing to
-     * the shadow file or to the underlying HDF5 file because any
-     * writes to the page in this tick have not yet become visible
-     * to the reader, and any writes to the page in previous ticks are
-     * recorded in the shadow file.
-     *
-     * Note: This is not the correct place for this call, as it is
-     *       sometimes bypassed by a HGOTO_DONE earlier in the function.
-     *       This causes the assertion failure in fheap when run at
-     *       express test level 0.  Discuss with Vailin.
-     *
-     *                                    JRM -- 4/28/20
-     */
-    if (ret_value == SUCCEED && f->shared->page_buf && size >= f->shared->fs_page_size) {
-
-        HDassert(H5F_SHARED_PAGED_AGGR(f->shared));
-
-        if (H5PB_remove_entries(f->shared, addr, size) < 0) {
-            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, "can't remove entries from page buffer")
-        }
-    }
-done:
-    FUNC_LEAVE_NOAPI_TAG(ret_value)
-}
+} /* end H5MF_xfree() */
 
 /*-------------------------------------------------------------------------
  * Function:	H5MF_try_extend
@@ -1648,7 +1509,7 @@ done:
 htri_t
 H5MF_try_shrink(H5F_t *f, H5FD_mem_t alloc_type, haddr_t addr, hsize_t size)
 {
-    H5MF_free_section_t *       node = NULL;               /* Free space section pointer */
+    H5MF_free_section_t        *node = NULL;               /* Free space section pointer */
     H5MF_sect_ud_t              udata;                     /* User data for callback */
     const H5FS_section_class_t *sect_cls;                  /* Section class */
     H5AC_ring_t                 orig_ring = H5AC_RING_INV; /* Original ring value */
@@ -2331,8 +2192,9 @@ H5MF__close_shrink_eoa(H5F_t *f)
                         curr_ring = needed_ring;
                     } /* end if */
 
-                    udata.alloc_type = (H5FD_mem_t)(
-                        (H5FD_mem_t)ptype < H5FD_MEM_NTYPES ? ptype : ((ptype % H5FD_MEM_NTYPES) + 1));
+                    udata.alloc_type =
+                        (H5FD_mem_t)((H5FD_mem_t)ptype < H5FD_MEM_NTYPES ? ptype
+                                                                         : ((ptype % H5FD_MEM_NTYPES) + 1));
 
                     if ((status = H5FS_sect_try_shrink_eoa(f, f->shared->fs_man[ptype], &udata)) < 0)
                         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTSHRINK, FAIL, "can't check for shrinking eoa")
@@ -3293,10 +3155,10 @@ H5MF_settle_meta_data_fsm(H5F_t *f, hbool_t *fsm_settled)
     H5F_mem_page_t sm_fssinfo_fs_type;                        /* small fs sinfo fsm */
     H5F_mem_page_t lg_fshdr_fs_type   = H5F_MEM_PAGE_DEFAULT; /* large fs hdr fsm */
     H5F_mem_page_t lg_fssinfo_fs_type = H5F_MEM_PAGE_DEFAULT; /* large fs sinfo fsm */
-    H5FS_t *       sm_hdr_fspace      = NULL;                 /* ptr to sm FSM hdr alloc FSM */
-    H5FS_t *       sm_sinfo_fspace    = NULL;                 /* ptr to sm FSM sinfo alloc FSM */
-    H5FS_t *       lg_hdr_fspace      = NULL;                 /* ptr to lg FSM hdr alloc FSM */
-    H5FS_t *       lg_sinfo_fspace    = NULL;                 /* ptr to lg FSM sinfo alloc FSM */
+    H5FS_t        *sm_hdr_fspace      = NULL;                 /* ptr to sm FSM hdr alloc FSM */
+    H5FS_t        *sm_sinfo_fspace    = NULL;                 /* ptr to sm FSM sinfo alloc FSM */
+    H5FS_t        *lg_hdr_fspace      = NULL;                 /* ptr to lg FSM hdr alloc FSM */
+    H5FS_t        *lg_sinfo_fspace    = NULL;                 /* ptr to lg FSM sinfo alloc FSM */
     haddr_t        eoa_fsm_fsalloc;                           /* eoa after file space allocation */
                                                               /* for self referential FSMs */
     hbool_t     continue_alloc_fsm = FALSE;         /* Continue allocating addr and sect_addr for FSMs */

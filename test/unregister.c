@@ -90,8 +90,8 @@ test_unregister_filters(hid_t fapl_id)
     char          filename[FILENAME_BUF_SIZE];
     const hsize_t chunk_dims[2] = {FILTER_CHUNK_DIM1, FILTER_CHUNK_DIM2}; /* Chunk dimensions */
     hsize_t       dims[2];
-    int **        buf      = NULL;
-    int *         buf_data = NULL;
+    int         **buf      = NULL;
+    int          *buf_data = NULL;
     herr_t        ret;
 
     TESTING("Unregistering filter");
@@ -136,7 +136,7 @@ test_unregister_filters(hid_t fapl_id)
 
     /* Create multiple groups under the main group */
     for (i = 0; i < GROUP_ITERATION; i++) {
-        HDsprintf(group_name, "group_%d", i);
+        HDsnprintf(group_name, sizeof(group_name), "group_%d", i);
         if ((gid_loop = H5Gcreate2(gid, group_name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
             goto error;
         if (H5Gclose(gid_loop) < 0)

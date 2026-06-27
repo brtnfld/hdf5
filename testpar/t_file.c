@@ -106,7 +106,7 @@ test_split_comm_access(void)
 
         /* delete the test file */
         if (sub_mpi_rank == 0) {
-            mrc = MPI_File_delete((char *)filename, info);
+            mrc = MPI_File_delete(filename, info);
             /*VRFY((mrc==MPI_SUCCESS), ""); */
         }
     }
@@ -124,8 +124,8 @@ test_page_buffer_access(void)
     size_t      page_count = 0;
     int         i, num_elements = 200;
     haddr_t     raw_addr, meta_addr;
-    int *       data;
-    H5F_t *     f = NULL;
+    int        *data;
+    H5F_t      *f = NULL;
     herr_t      ret; /* generic return value */
     const char *filename;
     hbool_t     api_ctx_pushed = FALSE; /* Whether API context pushed */
@@ -440,13 +440,13 @@ create_file(const char *filename, hid_t fcpl, hid_t fapl, int metadata_write_str
     hsize_t             count[RANK];
     hsize_t             stride[RANK];
     hsize_t             block[RANK];
-    DATATYPE *          data_array = NULL;
+    DATATYPE           *data_array = NULL;
     hsize_t             dims[RANK], i;
     hsize_t             num_elements;
     int                 k;
     char                dset_name[20];
-    H5F_t *             f         = NULL;
-    H5C_t *             cache_ptr = NULL;
+    H5F_t              *f         = NULL;
+    H5C_t              *cache_ptr = NULL;
     H5AC_cache_config_t config;
     hbool_t             api_ctx_pushed = FALSE; /* Whether API context pushed */
     herr_t              ret;
@@ -514,25 +514,25 @@ create_file(const char *filename, hid_t fcpl, hid_t fapl, int metadata_write_str
     VRFY((mem_dataspace >= 0), "");
 
     for (k = 0; k < NUM_DSETS; k++) {
-        HDsprintf(dset_name, "D1dset%d", k);
+        HDsnprintf(dset_name, sizeof(dset_name), "D1dset%d", k);
         dset_id = H5Dcreate2(grp_id, dset_name, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         VRFY((dset_id >= 0), "");
         ret = H5Dclose(dset_id);
         VRFY((ret == 0), "");
 
-        HDsprintf(dset_name, "D2dset%d", k);
+        HDsnprintf(dset_name, sizeof(dset_name), "D2dset%d", k);
         dset_id = H5Dcreate2(grp_id, dset_name, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         VRFY((dset_id >= 0), "");
         ret = H5Dclose(dset_id);
         VRFY((ret == 0), "");
 
-        HDsprintf(dset_name, "D3dset%d", k);
+        HDsnprintf(dset_name, sizeof(dset_name), "D3dset%d", k);
         dset_id = H5Dcreate2(grp_id, dset_name, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         VRFY((dset_id >= 0), "");
         ret = H5Dclose(dset_id);
         VRFY((ret == 0), "");
 
-        HDsprintf(dset_name, "dset%d", k);
+        HDsnprintf(dset_name, sizeof(dset_name), "dset%d", k);
         dset_id = H5Dcreate2(grp_id, dset_name, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         VRFY((dset_id >= 0), "");
 
@@ -593,7 +593,7 @@ open_file(const char *filename, hid_t fapl, int metadata_write_strategy, hsize_t
 {
     hid_t               file_id, dset_id, grp_id, grp_id2;
     hid_t               sid, mem_dataspace;
-    DATATYPE *          data_array = NULL;
+    DATATYPE           *data_array = NULL;
     hsize_t             dims[RANK];
     hsize_t             start[RANK];
     hsize_t             count[RANK];
@@ -602,8 +602,8 @@ open_file(const char *filename, hid_t fapl, int metadata_write_strategy, hsize_t
     int                 i, k, ndims;
     hsize_t             num_elements;
     char                dset_name[20];
-    H5F_t *             f         = NULL;
-    H5C_t *             cache_ptr = NULL;
+    H5F_t              *f         = NULL;
+    H5C_t              *cache_ptr = NULL;
     H5AC_cache_config_t config;
     hbool_t             api_ctx_pushed = FALSE; /* Whether API context pushed */
     herr_t              ret;
@@ -667,7 +667,7 @@ open_file(const char *filename, hid_t fapl, int metadata_write_strategy, hsize_t
     VRFY((mem_dataspace >= 0), "");
 
     for (k = 0; k < NUM_DSETS; k++) {
-        HDsprintf(dset_name, "dset%d", k);
+        HDsnprintf(dset_name, sizeof(dset_name), "dset%d", k);
         dset_id = H5Dopen2(grp_id, dset_name, H5P_DEFAULT);
         VRFY((dset_id >= 0), "");
 

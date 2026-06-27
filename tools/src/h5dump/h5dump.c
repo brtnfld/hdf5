@@ -18,7 +18,7 @@
 /* Name of tool */
 #define PROGRAMNAME "h5dump"
 
-const char *       outfname_g    = NULL;
+const char        *outfname_g    = NULL;
 static hbool_t     doxml_g       = FALSE;
 static hbool_t     useschema_g   = TRUE;
 static const char *xml_dtd_uri_g = NULL;
@@ -70,7 +70,7 @@ static void init_prefix(char **prfx, size_t prfx_len);
 /* a structure for handling the order command-line parameters come in */
 struct handler_t {
     void (*func)(hid_t, const char *, void *, int, const char *);
-    char *           obj;
+    char            *obj;
     struct subset_t *subset_info;
 };
 
@@ -81,7 +81,7 @@ struct handler_t {
  */
 /* The following initialization makes use of C language concatenating */
 /* "xxx" "yyy" into "xxxyyy". */
-static const char *           s_opts   = "a:b*c:d:ef:g:hik:l:m:n*o*pq:rs:t:uvw:xyz:A*BCD:E*F:G:HM:N:O*RS:VX:";
+static const char            *s_opts   = "a:b*c:d:ef:g:hik:l:m:n*o*pq:rs:t:uvw:xyz:A*BCD:E*F:G:HM:N:O*RS:VX:";
 static struct h5_long_options l_opts[] = {{"attribute", require_arg, 'a'},
                                           {"binary", optional_arg, 'b'},
                                           {"count", require_arg, 'c'},
@@ -131,7 +131,6 @@ static struct h5_long_options l_opts[] = {{"attribute", require_arg, 'a'},
                                           {"vfd-value", require_arg, '4'},
                                           {"vfd-name", require_arg, '5'},
                                           {"vfd-info", require_arg, '6'},
-                                          {"swmr-config-file", require_arg, '7'},
                                           {NULL, 0, '\0'}};
 
 /*-------------------------------------------------------------------------
@@ -215,8 +214,6 @@ usage(const char *prog)
     PRINTVALSTREAM(rawoutstream,
                    "     --vfd-info           VFD-specific info to pass to the VFL driver used for\n");
     PRINTVALSTREAM(rawoutstream, "                          opening the HDF5 file specified\n");
-    PRINTVALSTREAM(rawoutstream, "     --swmr-config-file   Path to a swmr configuration file used to set VFD SWMR\n");
-    PRINTVALSTREAM(rawoutstream, "                          specific configurations to use\n");             
     PRINTVALSTREAM(rawoutstream, "--------------- Object Options ---------------\n");
     PRINTVALSTREAM(rawoutstream, "     -a P, --attribute=P  Print the specified attribute\n");
     PRINTVALSTREAM(rawoutstream,
@@ -572,8 +569,8 @@ set_sort_order(const char *form)
 static void
 parse_hsize_list(const char *h_list, subset_d *d)
 {
-    hsize_t *    p_list;
-    const char * ptr;
+    hsize_t     *p_list;
+    const char  *ptr;
     unsigned int size_count = 0;
     unsigned int i          = 0;
     unsigned int last_digit = 0;
@@ -626,7 +623,7 @@ static struct subset_t *
 parse_subset_params(const char *dset)
 {
     struct subset_t *s = NULL;
-    char *           brace;
+    char            *brace;
 
     if (!dump_opts.disable_compact_subset && ((brace = HDstrrchr(dset, '[')) != NULL)) {
         *brace++ = '\0';
@@ -681,7 +678,7 @@ parse_mask_list(const char *h_list)
     int                slength_value;
     unsigned           length_value;
     unsigned long long temp_mask;
-    const char *       ptr = NULL;
+    const char        *ptr = NULL;
 
     /* sanity check */
     if (h_list) {
@@ -1301,13 +1298,6 @@ end_collect:
                 vfd_info_g.info = (const void *)H5_optarg;
                 break;
 
-            case '7':
-                vfd_info_g.type             = VFD_BY_NAME;
-                vfd_info_g.u.name           = "swmr";
-                vfd_info_g.swmr_config_file = H5_optarg;
-                use_custom_vfd_g            = TRUE;
-                break;
-
             case '?':
             default:
                 usage(h5tools_getprogname());
@@ -1354,7 +1344,7 @@ main(int argc, char *argv[])
     struct handler_t *hand = NULL;
     int               i;
     unsigned          u;
-    char *            fname = NULL;
+    char             *fname = NULL;
 
     h5tools_setprogname(PROGRAMNAME);
     h5tools_setstatus(EXIT_SUCCESS);

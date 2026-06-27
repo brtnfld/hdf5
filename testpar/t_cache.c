@@ -41,7 +41,7 @@ const char *FILENAME[NFILENAME] = {"CacheTestDummy", NULL};
 #ifndef PATH_MAX
 #define PATH_MAX 512
 #endif /* !PATH_MAX */
-char    filenames[NFILENAME][PATH_MAX];
+char   *filenames[NFILENAME];
 hid_t   fapl;                      /* file access property list */
 haddr_t max_addr = 0;              /* used to store the end of
                                     * the address space used by
@@ -2313,7 +2313,7 @@ datum_serialize(const H5F_t *f, void H5_ATTR_NDEBUG_UNUSED *image_ptr, size_t le
 {
     herr_t             ret_value = SUCCEED;
     int                idx;
-    struct datum *     entry_ptr;
+    struct datum      *entry_ptr;
     struct H5AC_aux_t *aux_ptr;
 
     HDassert(thing_ptr);
@@ -2383,7 +2383,7 @@ datum_notify(H5C_notify_action_t action, void *thing)
 {
     hbool_t            was_dirty = FALSE;
     herr_t             ret_value = SUCCEED;
-    struct datum *     entry_ptr;
+    struct datum      *entry_ptr;
     struct H5AC_aux_t *aux_ptr;
     struct mssg_t      mssg;
     int                idx;
@@ -3260,7 +3260,7 @@ lock_and_unlock_random_entry(H5F_t *file_ptr, int min_idx, int max_idx)
 static void
 lock_entry(H5F_t *file_ptr, int32_t idx)
 {
-    struct datum *     entry_ptr;
+    struct datum      *entry_ptr;
     H5C_cache_entry_t *cache_entry_ptr;
 
     if (nerrors == 0) {
@@ -3749,8 +3749,8 @@ setup_cache_for_test(hid_t *fid_ptr, H5F_t **file_ptr_ptr, H5C_t **cache_ptr_ptr
     hid_t               fid            = -1;
     H5AC_cache_config_t config;
     H5AC_cache_config_t test_config;
-    H5F_t *             file_ptr  = NULL;
-    H5C_t *             cache_ptr = NULL;
+    H5F_t              *file_ptr  = NULL;
+    H5C_t              *cache_ptr = NULL;
     haddr_t             actual_base_addr;
 
     HDassert(fid_ptr != NULL);
@@ -5119,8 +5119,8 @@ smoke_check_1(int metadata_write_strategy)
     int           i;
     int           max_nerrors;
     hid_t         fid       = -1;
-    H5F_t *       file_ptr  = NULL;
-    H5C_t *       cache_ptr = NULL;
+    H5F_t        *file_ptr  = NULL;
+    H5C_t        *cache_ptr = NULL;
     struct mssg_t mssg;
 
     switch (metadata_write_strategy) {
@@ -5283,8 +5283,8 @@ smoke_check_2(int metadata_write_strategy)
     int           i;
     int           max_nerrors;
     hid_t         fid       = -1;
-    H5F_t *       file_ptr  = NULL;
-    H5C_t *       cache_ptr = NULL;
+    H5F_t        *file_ptr  = NULL;
+    H5C_t        *cache_ptr = NULL;
     struct mssg_t mssg;
 
     switch (metadata_write_strategy) {
@@ -5488,8 +5488,8 @@ smoke_check_3(int metadata_write_strategy)
     int           min_idx;
     int           max_idx;
     hid_t         fid       = -1;
-    H5F_t *       file_ptr  = NULL;
-    H5C_t *       cache_ptr = NULL;
+    H5F_t        *file_ptr  = NULL;
+    H5C_t        *cache_ptr = NULL;
     struct mssg_t mssg;
 
     switch (metadata_write_strategy) {
@@ -5773,8 +5773,8 @@ smoke_check_4(int metadata_write_strategy)
     int           min_idx;
     int           max_idx;
     hid_t         fid       = -1;
-    H5F_t *       file_ptr  = NULL;
-    H5C_t *       cache_ptr = NULL;
+    H5F_t        *file_ptr  = NULL;
+    H5C_t        *cache_ptr = NULL;
     struct mssg_t mssg;
 
     switch (metadata_write_strategy) {
@@ -6048,8 +6048,8 @@ smoke_check_5(int metadata_write_strategy)
     int           i;
     int           max_nerrors;
     hid_t         fid       = -1;
-    H5F_t *       file_ptr  = NULL;
-    H5C_t *       cache_ptr = NULL;
+    H5F_t        *file_ptr  = NULL;
+    H5C_t        *cache_ptr = NULL;
     struct mssg_t mssg;
 
     switch (metadata_write_strategy) {
@@ -6262,7 +6262,7 @@ trace_file_check(int metadata_write_strategy)
     hbool_t success = TRUE;
 
     const char *((*expected_output)[])      = NULL;
-    const char *        expected_output_0[] = {"### HDF5 metadata cache trace file version 1 ###\n",
+    const char         *expected_output_0[] = {"### HDF5 metadata cache trace file version 1 ###\n",
                                        "H5AC_set_cache_auto_resize_config",
                                        "H5AC_insert_entry",
                                        "H5AC_insert_entry",
@@ -6288,7 +6288,7 @@ trace_file_check(int metadata_write_strategy)
                                        "H5AC_flush",
                                        "H5AC_flush",
                                        NULL};
-    const char *        expected_output_1[] = {"### HDF5 metadata cache trace file version 1 ###\n",
+    const char         *expected_output_1[] = {"### HDF5 metadata cache trace file version 1 ###\n",
                                        "H5AC_set_cache_auto_resize_config",
                                        "H5AC_insert_entry",
                                        "H5AC_insert_entry",
@@ -6322,9 +6322,9 @@ trace_file_check(int metadata_write_strategy)
     size_t              expected_line_len;
     size_t              actual_line_len;
     hid_t               fid            = -1;
-    H5F_t *             file_ptr       = NULL;
-    H5C_t *             cache_ptr      = NULL;
-    FILE *              trace_file_ptr = NULL;
+    H5F_t              *file_ptr       = NULL;
+    H5C_t              *cache_ptr      = NULL;
+    FILE               *trace_file_ptr = NULL;
     H5AC_cache_config_t config;
     struct mssg_t       mssg;
 
@@ -6499,7 +6499,7 @@ trace_file_check(int metadata_write_strategy)
         } /* end if */
 
         if (nerrors == 0) {
-            HDsprintf(trace_file_name, "t_cache_trace.txt.%d", (int)file_mpi_rank);
+            HDsnprintf(trace_file_name, sizeof(trace_file_name), "t_cache_trace.txt.%d", (int)file_mpi_rank);
 
             if ((trace_file_ptr = HDfopen(trace_file_name, "r")) == NULL) {
 
@@ -6640,8 +6640,8 @@ smoke_check_6(int metadata_write_strategy)
     int                     i;
     int                     max_nerrors;
     hid_t                   fid       = -1;
-    H5F_t *                 file_ptr  = NULL;
-    H5C_t *                 cache_ptr = NULL;
+    H5F_t                  *file_ptr  = NULL;
+    H5C_t                  *cache_ptr = NULL;
     struct mssg_t           mssg;
 
     switch (metadata_write_strategy) {
@@ -6698,7 +6698,9 @@ smoke_check_6(int metadata_write_strategy)
         virt_num_data_entries = NUM_DATA_ENTRIES;
 
         /* insert the first half collectively */
-        H5CX_set_coll_metadata_read(TRUE);
+        md_reads_file_flag    = H5P_USER_TRUE;
+        md_reads_context_flag = TRUE;
+        H5F_set_coll_metadata_reads(file_ptr, &md_reads_file_flag, &md_reads_context_flag);
         for (i = 0; i < virt_num_data_entries / 2; i++) {
             struct datum *entry_ptr;
             entry_ptr = &(data[i]);
@@ -6721,7 +6723,9 @@ smoke_check_6(int metadata_write_strategy)
         H5F_set_coll_metadata_reads(file_ptr, &md_reads_file_flag, &md_reads_context_flag);
 
         /* insert the other half independently */
-        H5CX_set_coll_metadata_read(FALSE);
+        md_reads_file_flag    = H5P_USER_FALSE;
+        md_reads_context_flag = FALSE;
+        H5F_set_coll_metadata_reads(file_ptr, &md_reads_file_flag, &md_reads_context_flag);
         for (i = virt_num_data_entries / 2; i < virt_num_data_entries; i++) {
             struct datum *entry_ptr;
             entry_ptr = &(data[i]);
@@ -6731,7 +6735,7 @@ smoke_check_6(int metadata_write_strategy)
             if (FALSE != entry_ptr->header.coll_access) {
                 nerrors++;
                 if (verbose) {
-                    HDfprintf(stdout, "%d:%s: Entry inserted indepedently marked as collective.\n",
+                    HDfprintf(stdout, "%d:%s: Entry inserted independently marked as collective.\n",
                               world_mpi_rank, __func__);
                 }
             }
@@ -6751,7 +6755,9 @@ smoke_check_6(int metadata_write_strategy)
         }
 
         /* Protect the first half of the entries collectively */
-        H5CX_set_coll_metadata_read(TRUE);
+        md_reads_file_flag    = H5P_USER_TRUE;
+        md_reads_context_flag = TRUE;
+        H5F_set_coll_metadata_reads(file_ptr, &md_reads_file_flag, &md_reads_context_flag);
         for (i = 0; i < (virt_num_data_entries / 2); i++) {
             struct datum *entry_ptr;
             entry_ptr = &(data[i]);
@@ -6773,7 +6779,9 @@ smoke_check_6(int metadata_write_strategy)
         H5F_set_coll_metadata_reads(file_ptr, &md_reads_file_flag, &md_reads_context_flag);
 
         /* protect the other half independently */
-        H5CX_set_coll_metadata_read(FALSE);
+        md_reads_file_flag    = H5P_USER_FALSE;
+        md_reads_context_flag = FALSE;
+        H5F_set_coll_metadata_reads(file_ptr, &md_reads_file_flag, &md_reads_context_flag);
         for (i = virt_num_data_entries / 2; i < virt_num_data_entries; i++) {
             struct datum *entry_ptr;
             entry_ptr = &(data[i]);
@@ -6783,7 +6791,7 @@ smoke_check_6(int metadata_write_strategy)
             if (FALSE != entry_ptr->header.coll_access) {
                 nerrors++;
                 if (verbose) {
-                    HDfprintf(stdout, "%d:%s: Entry inserted indepedently marked as collective.\n",
+                    HDfprintf(stdout, "%d:%s: Entry inserted independently marked as collective.\n",
                               world_mpi_rank, __func__);
                 }
             }
@@ -7079,8 +7087,8 @@ finish:
     MPI_Barrier(MPI_COMM_WORLD);
     if (MAINPROCESS) { /* only process 0 reports */
         HDprintf("===================================\n");
-        if (failures) {
-            HDprintf("***metadata cache tests detected %d failures***\n", failures);
+        if (nerrors || failures) {
+            HDprintf("***metadata cache tests detected %d failures***\n", nerrors + failures);
         }
         else {
             HDprintf("metadata cache tests finished with no failures\n");

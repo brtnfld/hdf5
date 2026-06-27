@@ -22,13 +22,12 @@
  *      reporting macros.
  */
 #define H5M_MODULE
-#define H5_MY_PKG      H5M
-#define H5_MY_PKG_ERR  H5E_MAP
-#define H5_MY_PKG_INIT YES
+#define H5_MY_PKG     H5M
+#define H5_MY_PKG_ERR H5E_MAP
 
-/**
- * \defgroup H5M H5M
- * \brief Map Interface
+/**\defgroup H5M H5M
+ *
+ * \todo Describe the map life cycle.
  *
  * \details \Bold{The interface can only be used with the HDF5 VOL connectors that
  *          implement map objects.} The native HDF5 library does not support this

@@ -23,11 +23,12 @@ import hdf.hdf5lib.structs.H5G_info_t;
 public class H5Ex_G_Corder {
     private static String FILE = "H5Ex_G_Corder.h5";
 
-    private static void CreateGroup() throws Exception {
-        long file_id = HDF5Constants.H5I_INVALID_HID;
-        long group_id = HDF5Constants.H5I_INVALID_HID;
+    private static void CreateGroup() throws Exception
+    {
+        long file_id     = HDF5Constants.H5I_INVALID_HID;
+        long group_id    = HDF5Constants.H5I_INVALID_HID;
         long subgroup_id = HDF5Constants.H5I_INVALID_HID;
-        long gcpl_id = HDF5Constants.H5I_INVALID_HID;
+        long gcpl_id     = HDF5Constants.H5I_INVALID_HID;
         int status;
         H5G_info_t ginfo;
         int i;
@@ -41,7 +42,7 @@ public class H5Ex_G_Corder {
             // Create group creation property list and enable link creation order tracking.
             gcpl_id = H5.H5Pcreate(HDF5Constants.H5P_GROUP_CREATE);
             status  = H5.H5Pset_link_creation_order(gcpl_id, HDF5Constants.H5P_CRT_ORDER_TRACKED +
-                                                                HDF5Constants.H5P_CRT_ORDER_INDEXED);
+                                                                 HDF5Constants.H5P_CRT_ORDER_INDEXED);
 
             // Create primary group using the property list.
             if (status >= 0)

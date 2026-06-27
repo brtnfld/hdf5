@@ -107,7 +107,7 @@ public class TestH5 {
     {
         try {
             H5fid  = H5.H5Fcreate(H5_FILE, HDF5Constants.H5F_ACC_TRUNC, HDF5Constants.H5P_DEFAULT,
-                                 HDF5Constants.H5P_DEFAULT);
+                                  HDF5Constants.H5P_DEFAULT);
             H5dsid = H5.H5Screate_simple(2, H5dims, null);
             H5did  = _createDataset(H5fid, H5dsid, "dset", HDF5Constants.H5P_DEFAULT);
         }
@@ -527,15 +527,17 @@ public class TestH5 {
             err.printStackTrace();
             fail("read file failed: " + err);
         }
-        for(int row = 0; row < DIM_X; row++)
-            assertTrue("testH5export_region: <"+row+">"+dset_indata[row], dset_indata[row]==dset_data_expect[row]);
+        for (int row = 0; row < DIM_X; row++)
+            assertTrue("testH5export_region: <" + row + ">" + dset_indata[row],
+                       dset_indata[row] == dset_data_expect[row]);
     }
 
     @Test
-    public void testH5export_attribute() {
+    public void testH5export_attribute()
+    {
         int[] dset_data_expect = {0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11};
-        int[] dset_indata = new int[DIM_ATTR];
-        String objName = "/Dataset3";
+        int[] dset_indata      = new int[DIM_ATTR];
+        String objName         = "/Dataset3";
 
         _openH5File(H5_ATTR_FILE, objName);
 
@@ -566,18 +568,20 @@ public class TestH5 {
             err.printStackTrace();
             fail("read file failed: " + err);
         }
-        for(int row = 0; row < DIM_X; row++)
-            assertTrue("testH5export_attribute: <"+row+">"+dset_indata[row], dset_indata[row]==dset_data_expect[row]);
+        for (int row = 0; row < DIM_X; row++)
+            assertTrue("testH5export_attribute: <" + row + ">" + dset_indata[row],
+                       dset_indata[row] == dset_data_expect[row]);
     }
 
     @Test
-    public void testH5export_regdataset() {
-        int[] dset_data_expect = {66, 69, 72, 75, 78, 81, 96, 99, 102, 105, 108,
-                111, 126, 129, 132, 135, 138, 141, 156, 159, 162, 165, 168, 171,
-                186, 189, 192, 195, 198, 201, 216, 219, 222, 225, 228, 231,
-                207, 66, 252, 48, 84, 96, 12, 14, 213, 99};
-        int[] dset_indata = new int[DIM_BLKS+DIM_PNTS];
-        String objName = "/Dataset1";
+    public void testH5export_regdataset()
+    {
+        int[] dset_data_expect = {66,  69,  72,  75,  78,  81,  96,  99,  102, 105, 108, 111,
+                                  126, 129, 132, 135, 138, 141, 156, 159, 162, 165, 168, 171,
+                                  186, 189, 192, 195, 198, 201, 216, 219, 222, 225, 228, 231,
+                                  207, 66,  252, 48,  84,  96,  12,  14,  213, 99};
+        int[] dset_indata      = new int[DIM_BLKS + DIM_PNTS];
+        String objName         = "/Dataset1";
 
         _openH5File(H5_DREG_FILE, objName);
 
@@ -607,19 +611,21 @@ public class TestH5 {
             err.printStackTrace();
             fail("read file failed: " + err);
         }
-        for(int row = 0; row < DIM_X; row++)
-            assertTrue("testH5export_regdataset: <"+row+">"+dset_indata[row], dset_indata[row]==dset_data_expect[row]);
+        for (int row = 0; row < DIM_X; row++)
+            assertTrue("testH5export_regdataset: <" + row + ">" + dset_indata[row],
+                       dset_indata[row] == dset_data_expect[row]);
     }
 
     @Test
-    public void testH5export_attrdataset() {
-        int[] dset_data_expect = {66, 69, 72, 75, 78, 81, 96, 99, 102, 105, 108,
-                111, 126, 129, 132, 135, 138, 141, 156, 159, 162, 165, 168, 171,
-                186, 189, 192, 195, 198, 201, 216, 219, 222, 225, 228, 231,
-                207, 66, 252, 48, 84, 96, 12, 14, 213, 99};
-        int[] dset_indata = new int[DIM_BLKS+DIM_PNTS];
-        String dsetName = "/Dataset1";
-        String objName = "Attribute1";
+    public void testH5export_attrdataset()
+    {
+        int[] dset_data_expect = {66,  69,  72,  75,  78,  81,  96,  99,  102, 105, 108, 111,
+                                  126, 129, 132, 135, 138, 141, 156, 159, 162, 165, 168, 171,
+                                  186, 189, 192, 195, 198, 201, 216, 219, 222, 225, 228, 231,
+                                  207, 66,  252, 48,  84,  96,  12,  14,  213, 99};
+        int[] dset_indata      = new int[DIM_BLKS + DIM_PNTS];
+        String dsetName        = "/Dataset1";
+        String objName         = "Attribute1";
 
         _openH5File(H5_AREG_FILE, dsetName);
 

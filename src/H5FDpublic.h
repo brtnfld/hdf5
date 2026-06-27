@@ -31,30 +31,22 @@
 /* VFD identifier values
  * These are H5FD_class_value_t values, NOT hid_t values!
  */
-#define H5_VFD_INVALID  ((H5FD_class_value_t)(-1))
-#define H5_VFD_SEC2     ((H5FD_class_value_t)(0))
-#define H5_VFD_CORE     ((H5FD_class_value_t)(1))
-#define H5_VFD_LOG      ((H5FD_class_value_t)(2))
-#define H5_VFD_FAMILY   ((H5FD_class_value_t)(3))
-#define H5_VFD_MULTI    ((H5FD_class_value_t)(4))
-#define H5_VFD_STDIO    ((H5FD_class_value_t)(5))
-#define H5_VFD_SPLITTER ((H5FD_class_value_t)(6))
-#ifdef H5_HAVE_PARALLEL
-#define H5_VFD_MPIO ((H5FD_class_value_t)(7))
-#endif
-#ifdef H5_HAVE_DIRECT
-#define H5_VFD_DIRECT ((H5FD_class_value_t)(8))
-#endif
-#ifdef H5_HAVE_MIRROR_VFD
-#define H5_VFD_MIRROR ((H5FD_class_value_t)(9))
-#endif
-#ifdef H5_HAVE_LIBHDFS
-#define H5_VFD_HDFS ((H5FD_class_value_t)(10))
-#endif
-#ifdef H5_HAVE_ROS3_VFD
-#define H5_VFD_ROS3 ((H5FD_class_value_t)(11))
-#endif
-#define H5_VFD_SWMR ((H5FD_class_value_t)(12))
+#define H5_VFD_INVALID   ((H5FD_class_value_t)(-1))
+#define H5_VFD_SEC2      ((H5FD_class_value_t)(0))
+#define H5_VFD_CORE      ((H5FD_class_value_t)(1))
+#define H5_VFD_LOG       ((H5FD_class_value_t)(2))
+#define H5_VFD_FAMILY    ((H5FD_class_value_t)(3))
+#define H5_VFD_MULTI     ((H5FD_class_value_t)(4))
+#define H5_VFD_STDIO     ((H5FD_class_value_t)(5))
+#define H5_VFD_SPLITTER  ((H5FD_class_value_t)(6))
+#define H5_VFD_MPIO      ((H5FD_class_value_t)(7))
+#define H5_VFD_DIRECT    ((H5FD_class_value_t)(8))
+#define H5_VFD_MIRROR    ((H5FD_class_value_t)(9))
+#define H5_VFD_HDFS      ((H5FD_class_value_t)(10))
+#define H5_VFD_ROS3      ((H5FD_class_value_t)(11))
+#define H5_VFD_SUBFILING ((H5FD_class_value_t)(12))
+#define H5_VFD_IOC       ((H5FD_class_value_t)(13))
+#define H5_VFD_SWMR      ((H5FD_class_value_t)(14))
 
 /* VFD IDs below this value are reserved for library use. */
 #define H5_VFD_RESERVED 256
@@ -203,7 +195,8 @@
 #define H5FD_CTL_MEM_ALLOC                   5
 #define H5FD_CTL_MEM_FREE                    6
 #define H5FD_CTL_MEM_COPY                    7
-#define H5FD_CTL_GET_TERMINAL_VFD            8
+#define H5FD_CTL_GET_MPI_FILE_SYNC_OPCODE    8
+#define H5FD_CTL_GET_TERMINAL_VFD            9
 
 /* ctl function flags: */
 
@@ -391,7 +384,7 @@ typedef struct {
  */
 //! <!-- [H5FD_ctl_memcpy_args_t_snip] -->
 typedef struct H5FD_ctl_memcpy_args_t {
-    void *      dstbuf;  /**< Destination buffer */
+    void       *dstbuf;  /**< Destination buffer */
     hsize_t     dst_off; /**< Offset within destination buffer */
     const void *srcbuf;  /**< Source buffer */
     hsize_t     src_off; /**< Offset within source buffer */
@@ -414,6 +407,8 @@ extern "C" {
 /* Function prototypes */
 /* Allows querying a VFD ID for features before the file is opened */
 H5_DLL herr_t H5FDdriver_query(hid_t driver_id, unsigned long *flags /*out*/);
+H5_DLL htri_t H5FDis_driver_registered_by_name(const char *driver_name);
+H5_DLL htri_t H5FDis_driver_registered_by_value(H5FD_class_value_t driver_value);
 
 #ifdef __cplusplus
 }

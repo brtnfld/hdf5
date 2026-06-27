@@ -82,7 +82,7 @@ size_t H5TOOLS_MALLOCSIZE = (128 * 1024 * 1024);
 #define EXCLUDE_FILE3_2 "h5diff_exclude3-2.h5"
 /* compound type with multiple vlen string types */
 #define COMP_VL_STRS_FILE "h5diff_comp_vl_strs.h5"
-/* attribute compre with verbose level */
+/* attribute compare with verbose level */
 #define ATTR_VERBOSE_LEVEL_FILE1 "h5diff_attr_v_level1.h5"
 #define ATTR_VERBOSE_LEVEL_FILE2 "h5diff_attr_v_level2.h5"
 /* file containing valid/invalid enum value mix */
@@ -442,7 +442,6 @@ test_basic(const char *fname1, const char *fname2, const char *fname3)
         write_dset(gid1, 2, dims2, "d2", H5T_NATIVE_DOUBLE, data14);
     }
 
-#if H5_SIZEOF_LONG_DOUBLE != 0
     {
 
         /*-------------------------------------------------------------------------
@@ -465,18 +464,18 @@ test_basic(const char *fname1, const char *fname2, const char *fname3)
         float data16[6];
 
         data15[0] = (float)HDsqrt(-1.0);
-        data15[1] = 1.0F;
+        data15[1] = 1.0;
         data15[2] = (float)HDsqrt(-1.0);
-        data15[3] = 1.0F;
-        data15[4] = 1.0F;
-        data15[5] = 1.0F;
+        data15[3] = 1.0;
+        data15[4] = 1.0;
+        data15[5] = 1.0;
 
         data16[0] = (float)HDsqrt(-1.0);
         data16[1] = (float)HDsqrt(-1.0);
-        data16[2] = 1.0F;
-        data16[3] = 1.0F;
-        data16[4] = 1.0F;
-        data16[5] = 1.0F;
+        data16[2] = 1.0;
+        data16[3] = 1.0;
+        data16[4] = 1.0;
+        data16[5] = 1.0;
 
         write_dset(gid1, 1, dims1, "fp15", H5T_NATIVE_FLOAT, data15);
         write_dset(gid1, 1, dims1, "fp16", H5T_NATIVE_FLOAT, data16);
@@ -2060,7 +2059,6 @@ gen_dataset_idx(const char *file, int format)
 {
     hid_t   fid       = H5I_INVALID_HID; /* file id */
     hid_t   did       = H5I_INVALID_HID;
-    hid_t   did2      = H5I_INVALID_HID; /* dataset id */
     hid_t   sid       = H5I_INVALID_HID; /* space id */
     hid_t   fapl      = H5I_INVALID_HID; /* file access property id */
     hid_t   dcpl      = H5I_INVALID_HID; /* dataset creation property id */
@@ -2069,6 +2067,9 @@ gen_dataset_idx(const char *file, int format)
     herr_t  status;                      /* return status */
     int     buf[10];                     /* data buffer */
     int     i;                           /* local index variable */
+#if defined(H5_HAVE_FILTER_DEFLATE)
+    hid_t did2 = H5I_INVALID_HID; /* dataset id */
+#endif
 
     /* Get a copy of the file aaccess property */
     fapl = H5Pcreate(H5P_FILE_ACCESS);
@@ -3428,8 +3429,8 @@ test_comp_vlen_strings(const char *fname1, const char *grp_name, int is_file_new
 
     /* compound1 datatype */
     typedef struct comp1_t {
-        char *      str_vlen;                                                    /* vlen string */
-        char *      str_vlen_repeat;                                             /* vlen string */
+        char       *str_vlen;                                                    /* vlen string */
+        char       *str_vlen_repeat;                                             /* vlen string */
         char        str_fixlen[FIXLEN_STR_SIZE];                                 /* fixed len string */
         char        str_fixlen_repeat[FIXLEN_STR_SIZE];                          /* fixed len string */
         const char *str_array_vlen[VLEN_STR_ARRY_DIM];                           /* vlen string array */
@@ -3440,9 +3441,9 @@ test_comp_vlen_strings(const char *fname1, const char *grp_name, int is_file_new
 
     /* compound2 datatype */
     typedef struct comp2_t {
-        char *      str_vlen;                                                    /* vlen string */
+        char       *str_vlen;                                                    /* vlen string */
         char        str_fixlen[FIXLEN_STR_SIZE];                                 /* fixed len string */
-        char *      str_vlen_repeat;                                             /* vlen string */
+        char       *str_vlen_repeat;                                             /* vlen string */
         char        str_fixlen_repeat[FIXLEN_STR_SIZE];                          /* fixed len string */
         const char *str_array_vlen[VLEN_STR_ARRY_DIM];                           /* vlen string array */
         char        str_array_fixlen[FIXLEN_STR_ARRY_DIM][FIXLEN_STR_ARRY_SIZE]; /* fixed len string array */
@@ -3465,9 +3466,9 @@ test_comp_vlen_strings(const char *fname1, const char *grp_name, int is_file_new
     /* compound4 datatype */
     typedef struct comp4_t {
         char        str_fixlen[FIXLEN_STR_SIZE];                                 /* fixed len string */
-        char *      str_vlen;                                                    /* vlen string */
+        char       *str_vlen;                                                    /* vlen string */
         char        str_fixlen_repeat[FIXLEN_STR_SIZE];                          /* fixed len string */
-        char *      str_vlen_repeat;                                             /* vlen string */
+        char       *str_vlen_repeat;                                             /* vlen string */
         char        str_array_fixlen[FIXLEN_STR_ARRY_DIM][FIXLEN_STR_ARRY_SIZE]; /* fixed len string array */
         const char *str_array_vlen[VLEN_STR_ARRY_DIM];                           /* vlen string array */
         char str_fixlen_array_again[FIXLEN_STR_ARRY_DIM][FIXLEN_STR_ARRY_SIZE];  /* fixed len string array */
@@ -3506,8 +3507,8 @@ test_comp_vlen_strings(const char *fname1, const char *grp_name, int is_file_new
         const char *str_vlen_array_again[VLEN_STR_ARRY_DIM];                    /* vlen string array */
         char        str_fixlen[FIXLEN_STR_SIZE];                                /* fixed len string */
         char        str_fixlen_repeat[FIXLEN_STR_SIZE];                         /* fixed len string */
-        char *      str_vlen;                                                   /* vlen string */
-        char *      str_vlen_repeat;                                            /* vlen string */
+        char       *str_vlen;                                                   /* vlen string */
+        char       *str_vlen_repeat;                                            /* vlen string */
     } comp7_t;
 
     /* compound8 datatype */
@@ -3517,9 +3518,9 @@ test_comp_vlen_strings(const char *fname1, const char *grp_name, int is_file_new
         char str_fixlen_array_again[FIXLEN_STR_ARRY_DIM][FIXLEN_STR_ARRY_SIZE];  /* fixed len string array */
         const char *str_vlen_array_again[VLEN_STR_ARRY_DIM];                     /* vlen string array */
         char        str_fixlen[FIXLEN_STR_SIZE];                                 /* fixed len string */
-        char *      str_vlen;                                                    /* vlen string */
+        char       *str_vlen;                                                    /* vlen string */
         char        str_fixlen_repeat[FIXLEN_STR_SIZE];                          /* fixed len string */
-        char *      str_vlen_repeat;                                             /* vlen string */
+        char       *str_vlen_repeat;                                             /* vlen string */
     } comp8_t;
 
     /* compound9 datatype */
@@ -3533,9 +3534,9 @@ test_comp_vlen_strings(const char *fname1, const char *grp_name, int is_file_new
         hobj_ref_t  objref1;                            /* reference */
         char        str_fixlen_repeat[FIXLEN_STR_SIZE]; /* fixed len string */
         hobj_ref_t  objref2;                            /* reference */
-        char *      str_vlen;                           /* vlen string */
+        char       *str_vlen;                           /* vlen string */
         int         int_data2;
-        char *      str_vlen_repeat; /* vlen string */
+        char       *str_vlen_repeat; /* vlen string */
         hobj_ref_t  objref3;         /* reference */
         int         int_data3;
     } comp9_t;
@@ -4731,15 +4732,15 @@ test_data_nocomparables(const char *fname, int make_diffs)
     int     rank_attr;
     char    data1_str[DIM_ARRY][STR_SIZE] = {"ab", "cd", "ef"};
     herr_t  status                        = SUCCEED;
-    void *  dset_data_ptr1                = NULL;
-    void *  dset_data_ptr2                = NULL;
-    void *  dset_data_ptr3                = NULL;
-    void *  attr_data_ptr1                = NULL;
-    void *  attr_data_ptr2                = NULL;
-    void *  attr_data_ptr3                = NULL;
-    void *  attr_data_ptr4                = NULL;
-    void *  attr2_dim_ptr                 = NULL;
-    void *  attr3_dim_ptr                 = NULL;
+    void   *dset_data_ptr1                = NULL;
+    void   *dset_data_ptr2                = NULL;
+    void   *dset_data_ptr3                = NULL;
+    void   *attr_data_ptr1                = NULL;
+    void   *attr_data_ptr2                = NULL;
+    void   *attr_data_ptr3                = NULL;
+    void   *attr_data_ptr4                = NULL;
+    void   *attr2_dim_ptr                 = NULL;
+    void   *attr3_dim_ptr                 = NULL;
 
     /* init */
     tid_dset1      = H5Tcopy(H5T_NATIVE_INT);
@@ -5209,7 +5210,7 @@ write_attr_strings(hid_t loc_id, const char *dset_name, hid_t fid,
     /* create 1D attributes with dimension [2], 2 elements */
     hsize_t    dims[1]           = {2};
     char       buf1[2][STR_SIZE] = {"ab", "de"};     /* string */
-    char *     buf1a[2];                             /* VL string */
+    char      *buf1a[2];                             /* VL string */
     char       buf2[2] = {1, 2};                     /* bitfield, opaque */
     s_t        buf3[2] = {{1, 2.0}, {3, 4.0}};       /* compound */
     hobj_ref_t buf4[2];                              /* reference */
@@ -5218,14 +5219,14 @@ write_attr_strings(hid_t loc_id, const char *dset_name, hid_t fid,
     hsize_t    dimarray[1] = {3};                    /* array dimension */
     int        buf6[2][3]  = {{1, 2, 3}, {4, 5, 6}}; /* array */
     int        buf7[2]     = {1, 2};                 /* integer */
-    float      buf8[2]     = {1.0F, 2.0F};           /* float */
+    float      buf8[2]     = {1.0, 2.0};             /* float */
 
     /* create 2D attributes with dimension [3][2], 6 elements */
-    hsize_t dims2[2]              = {3, 2};
-    char    buf12[3][2][STR_SIZE] = {{"ab", "cd"}, {"ef", "gh"}, {"ij", "kl"}}; /* string */
-    char *  buf12a[3][2];                                                       /* VL string */
-    char    buf22[3][2] = {{1, 2}, {3, 4}, {5, 6}};                             /* bitfield, opaque */
-    s_t     buf32[6] = {{1, 2.0F}, {3, 4.0F}, {5, 6.0F}, {7, 8.0F}, {9, 10.0F}, {11, 12.0F}}; /* compound */
+    hsize_t    dims2[2]              = {3, 2};
+    char       buf12[3][2][STR_SIZE] = {{"ab", "cd"}, {"ef", "gh"}, {"ij", "kl"}}; /* string */
+    char      *buf12a[3][2];                                                       /* VL string */
+    char       buf22[3][2] = {{1, 2}, {3, 4}, {5, 6}};                             /* bitfield, opaque */
+    s_t        buf32[6]    = {{1, 2.0}, {3, 4.0}, {5, 6.0}, {7, 8.0}, {9, 10.0}, {11, 12.0}}; /* compound */
     hobj_ref_t buf42[3][2];                                                                   /* reference */
     e_t        buf452[3][2];                                                                  /* enum */
     hvl_t      buf52[3][2];                                                                   /* vlen */
@@ -5239,7 +5240,7 @@ write_attr_strings(hid_t loc_id, const char *dset_name, hid_t fid,
                                      {{"mn", "pq"}, {"rs", "tu"}, {"vw", "xz"}},
                                      {{"AB", "CD"}, {"EF", "GH"}, {"IJ", "KL"}},
                                      {{"MN", "PQ"}, {"RS", "TU"}, {"VW", "XZ"}}}; /* string */
-    char *     buf13a[4][3][2];                                                         /* VL string */
+    char      *buf13a[4][3][2];                                                         /* VL string */
     char       buf23[4][3][2];                                                          /* bitfield, opaque */
     s_t        buf33[4][3][2];                                                          /* compound */
     hobj_ref_t buf43[4][3][2];                                                          /* reference */
@@ -6198,7 +6199,7 @@ write_attr_in(hid_t loc_id, const char *dset_name, hid_t fid,
     /* create 1D attributes with dimension [2], 2 elements */
     hsize_t    dims[1]           = {2};
     char       buf1[2][STR_SIZE] = {"ab", "de"};     /* string */
-    char *     buf1a[2];                             /* VL string */
+    char      *buf1a[2];                             /* VL string */
     char       buf2[2] = {1, 2};                     /* bitfield, opaque */
     s_t        buf3[2] = {{1, 2.0}, {3, 4.0}};       /* compound */
     hobj_ref_t buf4[2];                              /* reference */
@@ -6207,14 +6208,14 @@ write_attr_in(hid_t loc_id, const char *dset_name, hid_t fid,
     hsize_t    dimarray[1] = {3};                    /* array dimension */
     int        buf6[2][3]  = {{1, 2, 3}, {4, 5, 6}}; /* array */
     int        buf7[2]     = {1, 2};                 /* integer */
-    float      buf8[2]     = {1.0F, 2.0F};           /* float */
+    float      buf8[2]     = {1.0, 2.0};             /* float */
 
     /* create 2D attributes with dimension [3][2], 6 elements */
-    hsize_t dims2[2]              = {3, 2};
-    char    buf12[3][2][STR_SIZE] = {{"ab", "cd"}, {"ef", "gh"}, {"ij", "kl"}}; /* string */
-    char *  buf12a[3][2];                                                       /* VL string */
-    char    buf22[3][2] = {{1, 2}, {3, 4}, {5, 6}};                             /* bitfield, opaque */
-    s_t     buf32[6] = {{1, 2.0F}, {3, 4.0F}, {5, 6.0F}, {7, 8.0F}, {9, 10.0F}, {11, 12.0F}}; /* compound */
+    hsize_t    dims2[2]              = {3, 2};
+    char       buf12[3][2][STR_SIZE] = {{"ab", "cd"}, {"ef", "gh"}, {"ij", "kl"}}; /* string */
+    char      *buf12a[3][2];                                                       /* VL string */
+    char       buf22[3][2] = {{1, 2}, {3, 4}, {5, 6}};                             /* bitfield, opaque */
+    s_t        buf32[6]    = {{1, 2.0}, {3, 4.0}, {5, 6.0}, {7, 8.0}, {9, 10.0}, {11, 12.0}}; /* compound */
     hobj_ref_t buf42[3][2];                                                                   /* reference */
     e_t        buf452[3][2];                                                                  /* enum */
     hvl_t      buf52[3][2];                                                                   /* vlen */
@@ -6228,7 +6229,7 @@ write_attr_in(hid_t loc_id, const char *dset_name, hid_t fid,
                                      {{"mn", "pq"}, {"rs", "tu"}, {"vw", "xz"}},
                                      {{"AB", "CD"}, {"EF", "GH"}, {"IJ", "KL"}},
                                      {{"MN", "PQ"}, {"RS", "TU"}, {"VW", "XZ"}}}; /* string */
-    char *     buf13a[4][3][2];                                                         /* VL string */
+    char      *buf13a[4][3][2];                                                         /* VL string */
     char       buf23[4][3][2];                                                          /* bitfield, opaque */
     s_t        buf33[4][3][2];                                                          /* compound */
     hobj_ref_t buf43[4][3][2];                                                          /* reference */
@@ -7190,7 +7191,7 @@ write_dset_in(hid_t loc_id, const char *dset_name, hid_t fid,
     /* create 1D attributes with dimension [2], 2 elements */
     hsize_t    dims[1]           = {2};
     char       buf1[2][STR_SIZE] = {"ab", "de"};     /* string */
-    char *     buf1a[2];                             /* VL string */
+    char      *buf1a[2];                             /* VL string */
     char       buf2[2] = {1, 2};                     /* bitfield, opaque */
     s_t        buf3[2] = {{1, 2.0}, {3, 4.0}};       /* compound */
     hobj_ref_t buf4[2];                              /* reference */
@@ -7199,19 +7200,19 @@ write_dset_in(hid_t loc_id, const char *dset_name, hid_t fid,
     hsize_t    dimarray[1] = {3};                    /* array dimension */
     int        buf6[2][3]  = {{1, 2, 3}, {4, 5, 6}}; /* array */
     int        buf7[2]     = {1, 2};                 /* integer */
-    float      buf8[2]     = {1.0F, 2.0F};           /* float */
+    float      buf8[2]     = {1.0, 2.0};             /* float */
 
     /* create 2D attributes with dimension [3][2], 6 elements */
-    hsize_t dims2[2]              = {3, 2};
-    char    buf12[3][2][STR_SIZE] = {{"ab", "cd"}, {"ef", "gh"}, {"ij", "kl"}}; /* string */
-    char *  buf12a[3][2];                                                       /* VL string */
-    char    buf22[3][2] = {{1, 2}, {3, 4}, {5, 6}};                             /* bitfield, opaque */
-    s_t     buf32[6] = {{1, 2.0F}, {3, 4.0F}, {5, 6.0F}, {7, 8.0F}, {9, 10.0F}, {11, 12.0F}}; /* compound */
+    hsize_t    dims2[2]              = {3, 2};
+    char       buf12[3][2][STR_SIZE] = {{"ab", "cd"}, {"ef", "gh"}, {"ij", "kl"}}; /* string */
+    char      *buf12a[3][2];                                                       /* VL string */
+    char       buf22[3][2] = {{1, 2}, {3, 4}, {5, 6}};                             /* bitfield, opaque */
+    s_t        buf32[6]    = {{1, 2.0}, {3, 4.0}, {5, 6.0}, {7, 8.0}, {9, 10.0}, {11, 12.0}}; /* compound */
     hobj_ref_t buf42[3][2];                                                                   /* reference */
     hvl_t      buf52[3][2];                                                                   /* vlen */
     int buf62[6][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {10, 11, 12}, {13, 14, 15}, {16, 17, 18}}; /* array */
-    int buf72[3][2] = {{1, 2}, {3, 4}, {5, 6}};                     /* integer */
-    float buf82[3][2] = {{1.0F, 2.0F}, {3.0F, 4.0F}, {5.0F, 6.0F}}; /* float */
+    int buf72[3][2] = {{1, 2}, {3, 4}, {5, 6}};               /* integer */
+    float buf82[3][2] = {{1.0, 2.0}, {3.0, 4.0}, {5.0, 6.0}}; /* float */
 
     /* create 3D attributes with dimension [4][3][2], 24 elements */
     hsize_t    dims3[3]                 = {4, 3, 2};
@@ -7219,7 +7220,7 @@ write_dset_in(hid_t loc_id, const char *dset_name, hid_t fid,
                                      {{"mn", "pq"}, {"rs", "tu"}, {"vw", "xz"}},
                                      {{"AB", "CD"}, {"EF", "GH"}, {"IJ", "KL"}},
                                      {{"MN", "PQ"}, {"RS", "TU"}, {"VW", "XZ"}}}; /* string */
-    char *     buf13a[4][3][2];                                                         /* VL string */
+    char      *buf13a[4][3][2];                                                         /* VL string */
     char       buf23[4][3][2];                                                          /* bitfield, opaque */
     s_t        buf33[4][3][2];                                                          /* compound */
     hobj_ref_t buf43[4][3][2];                                                          /* reference */
@@ -7806,12 +7807,12 @@ gen_datareg(hid_t fid, int make_diffs /* flag to modify data buffers */)
     hid_t   did1     = H5I_INVALID_HID; /* dataset ID   */
     hid_t   sid1     = H5I_INVALID_HID; /* dataspace ID  */
     hsize_t dims1[2] = {10, 10};        /* dimensions */
-    int *   buf;                        /* dataset buffer */
+    int    *buf;                        /* dataset buffer */
     /* reference dataset */
     hid_t                        did2    = H5I_INVALID_HID; /* dataset ID   */
     hid_t                        sid2    = H5I_INVALID_HID; /* dataspace ID  */
     hsize_t                      dims2[] = {2};             /* 2 references */
-    hdset_reg_ref_t *            rbuf;                      /* buffer for write the references  */
+    hdset_reg_ref_t             *rbuf;                      /* buffer for write the references  */
     hsize_t                      start[10];                 /* starting location of hyperslab */
     hsize_t                      count[10];                 /* element count of hyperslab */
     hsize_t                      coord[5][2];               /* coordinates for point selection */
@@ -7926,7 +7927,7 @@ test_hyperslab(const char *fname, int make_diffs /* flag to modify data buffers 
     size_t  size;
     size_t  nelmts    = (size_t)GBLL / (1024 * 1024); /* elements in each hyperslab */
     char    fillvalue = -1;
-    char *  buf       = NULL;
+    char   *buf       = NULL;
     int     i, j, s;
     char    c;
 

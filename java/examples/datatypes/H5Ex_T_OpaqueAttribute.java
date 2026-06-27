@@ -31,15 +31,16 @@ public class H5Ex_T_OpaqueAttribute {
     private static final int LEN        = 7;
     private static final int RANK       = 1;
 
-    private static void CreateDataset() {
-        long file_id = HDF5Constants.H5I_INVALID_HID;
+    private static void CreateDataset()
+    {
+        long file_id      = HDF5Constants.H5I_INVALID_HID;
         long dataspace_id = HDF5Constants.H5I_INVALID_HID;
-        long datatype_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id = HDF5Constants.H5I_INVALID_HID;
+        long datatype_id  = HDF5Constants.H5I_INVALID_HID;
+        long dataset_id   = HDF5Constants.H5I_INVALID_HID;
         long attribute_id = HDF5Constants.H5I_INVALID_HID;
-        long[] dims = { DIM0 };
-        byte[] dset_data = new byte[DIM0 * LEN];
-        byte[] str_data = { 'O', 'P', 'A', 'Q', 'U', 'E' };
+        long[] dims       = {DIM0};
+        byte[] dset_data  = new byte[DIM0 * LEN];
+        byte[] str_data   = {'O', 'P', 'A', 'Q', 'U', 'E'};
 
         // Initialize data.
         for (int indx = 0; indx < DIM0; indx++) {
@@ -156,14 +157,15 @@ public class H5Ex_T_OpaqueAttribute {
         }
     }
 
-    private static void ReadDataset() {
-        long file_id = HDF5Constants.H5I_INVALID_HID;
-        long datatype_id = HDF5Constants.H5I_INVALID_HID;
+    private static void ReadDataset()
+    {
+        long file_id      = HDF5Constants.H5I_INVALID_HID;
+        long datatype_id  = HDF5Constants.H5I_INVALID_HID;
         long dataspace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id = HDF5Constants.H5I_INVALID_HID;
+        long dataset_id   = HDF5Constants.H5I_INVALID_HID;
         long attribute_id = HDF5Constants.H5I_INVALID_HID;
-        long type_len = -1;
-        long[] dims = { DIM0 };
+        long type_len     = -1;
+        long[] dims       = {DIM0};
         byte[] dset_data;
         String tag_name = null;
 

@@ -260,13 +260,6 @@ H5FD_vfd_swmr_pageno_to_mdf_idx_entry(H5FD_vfd_swmr_idx_entry_t *idx, uint32_t n
 /* Definitions for file MPI type property */
 #define H5FD_MPI_XFER_FILE_MPI_TYPE_NAME "H5FD_mpi_file_mpi_type"
 
-/* Sub-class the H5FD_class_t to add more specific functions for MPI-based VFDs */
-typedef struct H5FD_class_mpi_t {
-    H5FD_class_t super;                       /* Superclass information & methods */
-    int (*get_rank)(const H5FD_t *file);      /* Get the MPI rank of a process */
-    int (*get_size)(const H5FD_t *file);      /* Get the MPI size of a communicator */
-    MPI_Comm (*get_comm)(const H5FD_t *file); /* Get the communicator for a file */
-} H5FD_class_mpi_t;
 #endif
 
 /****************************/
@@ -282,7 +275,7 @@ typedef enum {
 
 /* Define structure to hold initial file image and other relevant information */
 typedef struct {
-    void *                      buffer;
+    void                       *buffer;
     size_t                      size;
     H5FD_file_image_callbacks_t callbacks;
 } H5FD_file_image_info_t;
@@ -316,6 +309,10 @@ typedef enum H5FD_get_driver_kind_t {
     H5FD_GET_DRIVER_BY_VALUE /* Value field is set */
 } H5FD_get_driver_kind_t;
 
+/* Forward declarations for prototype arguments */
+struct H5S_t;
+
+
 /*****************************/
 /* Library Private Variables */
 /*****************************/
@@ -326,24 +323,23 @@ typedef enum H5FD_get_driver_kind_t {
 
 /* Forward declarations for prototype arguments */
 struct H5F_t;
-struct H5S_t;
 union H5PL_key_t;
 
-H5_DLL int    H5FD_term_interface(void);
-H5_DLL herr_t H5FD_locate_signature(H5FD_t *file, haddr_t *sig_addr);
+H5_DLL int           H5FD_term_interface(void);
+H5_DLL herr_t        H5FD_locate_signature(H5FD_t *file, haddr_t *sig_addr);
 H5_DLL H5FD_class_t *H5FD_get_class(hid_t id);
 H5_DLL hsize_t       H5FD_sb_size(H5FD_t *file);
 H5_DLL herr_t        H5FD_sb_encode(H5FD_t *file, char *name /*out*/, uint8_t *buf);
 H5_DLL herr_t        H5FD_sb_load(H5FD_t *file, const char *name, const uint8_t *buf);
-H5_DLL void *        H5FD_fapl_get(H5FD_t *file);
+H5_DLL void         *H5FD_fapl_get(H5FD_t *file);
 H5_DLL herr_t        H5FD_free_driver_info(hid_t driver_id, const void *driver_info);
 H5_DLL hid_t         H5FD_register(const void *cls, size_t size, hbool_t app_ref);
 H5_DLL hid_t         H5FD_register_driver_by_name(const char *name, hbool_t app_ref);
 H5_DLL hid_t         H5FD_register_driver_by_value(H5FD_class_value_t value, hbool_t app_ref);
 H5_DLL htri_t        H5FD_is_driver_registered_by_name(const char *driver_name, hid_t *registered_id);
-H5_DLL htri_t H5FD_is_driver_registered_by_value(H5FD_class_value_t driver_value, hid_t *registered_id);
-H5_DLL hid_t  H5FD_get_driver_id_by_name(const char *name, hbool_t is_api);
-H5_DLL hid_t  H5FD_get_driver_id_by_value(H5FD_class_value_t value, hbool_t is_api);
+H5_DLL htri_t  H5FD_is_driver_registered_by_value(H5FD_class_value_t driver_value, hid_t *registered_id);
+H5_DLL hid_t   H5FD_get_driver_id_by_name(const char *name, hbool_t is_api);
+H5_DLL hid_t   H5FD_get_driver_id_by_value(H5FD_class_value_t value, hbool_t is_api);
 H5_DLL H5FD_t *H5FD_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr);
 H5_DLL herr_t  H5FD_close(H5FD_t *file);
 H5_DLL int     H5FD_cmp(const H5FD_t *f1, const H5FD_t *f2);
@@ -409,6 +405,7 @@ H5_DLL void    H5FD_vfd_swmr_set_make_believe(H5FD_t *_file, hbool_t make_believ
 H5_DLL htri_t  H5FD_vfd_swmr_assess_make_believe(H5FD_t *_file);
 H5_DLL H5FD_t *H5FD_vfd_swmr_dedup(H5FD_t *_self, H5FD_t *_other, hid_t fapl_id);
 
+
 /* Function prototypes for MPI based VFDs*/
 #ifdef H5_HAVE_PARALLEL
 /* General routines */
@@ -425,6 +422,7 @@ H5_DLL herr_t H5FD_get_mpio_atomicity(H5FD_t *file, hbool_t *flag);
 H5_DLL int      H5FD_mpi_get_rank(H5FD_t *file);
 H5_DLL int      H5FD_mpi_get_size(H5FD_t *file);
 H5_DLL MPI_Comm H5FD_mpi_get_comm(H5FD_t *file);
+H5_DLL herr_t   H5FD_mpi_get_file_sync_required(H5FD_t *file, hbool_t *file_sync_required);
 #endif /* H5_HAVE_PARALLEL */
 
 #endif /* H5FDprivate_H */

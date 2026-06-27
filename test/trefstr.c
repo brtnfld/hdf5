@@ -309,7 +309,7 @@ test_refstr_asprintf_cat(void)
     /* Get pointer to raw string in ref-counted string */
     s = H5RS_get_str(rs);
     CHECK_PTR(s, "H5RS_get_str");
-    HDsprintf(buf, "%d-%s", (int)10, "foo");
+    HDsnprintf(buf, sizeof(buf), "%d-%s", (int)10, "foo");
     cmp = HDstrcmp(s, buf);
     VERIFY(cmp, 0, "HDstrcmp");
 
@@ -320,7 +320,7 @@ test_refstr_asprintf_cat(void)
     /* Get pointer to raw string in ref-counted string */
     s = H5RS_get_str(rs);
     CHECK_PTR(s, "H5RS_get_str");
-    HDsprintf(buf, "%d-%s-%f", (int)10, "foo", (double)20.0);
+    HDsnprintf(buf, sizeof(buf), "%d-%s-%f", (int)10, "foo", (double)20.0);
     cmp = HDstrcmp(s, buf);
     VERIFY(cmp, 0, "HDstrcmp");
 
@@ -342,7 +342,7 @@ test_refstr_acat(void)
     H5RS_str_t *rs;                     /* Ref-counted string created */
     const char *s;                      /* Pointer to raw string in ref-counted string */
     char        buf[256];               /* Buffer to compare against */
-    char *      large_str, *large_str2; /* Large strings to append */
+    char       *large_str, *large_str2; /* Large strings to append */
     int         cmp;                    /* Comparison value */
     herr_t      ret;                    /* Generic return value */
 
@@ -360,7 +360,7 @@ test_refstr_acat(void)
     /* Get pointer to raw string in ref-counted string */
     s = H5RS_get_str(rs);
     CHECK_PTR(s, "H5RS_get_str");
-    HDsprintf(buf, "%s", "foo");
+    HDsnprintf(buf, sizeof(buf), "%s", "foo");
     cmp = HDstrcmp(s, buf);
     VERIFY(cmp, 0, "HDstrcmp");
 
@@ -371,7 +371,7 @@ test_refstr_acat(void)
     /* Get pointer to raw string in ref-counted string */
     s = H5RS_get_str(rs);
     CHECK_PTR(s, "H5RS_get_str");
-    HDsprintf(buf, "%s", "foobar");
+    HDsnprintf(buf, sizeof(buf), "%s", "foobar");
     cmp = HDstrcmp(s, buf);
     VERIFY(cmp, 0, "HDstrcmp");
 
@@ -386,7 +386,7 @@ test_refstr_acat(void)
     /* Get pointer to raw string in ref-counted string */
     s = H5RS_get_str(rs);
     CHECK_PTR(s, "H5RS_get_str");
-    HDsprintf(buf, "%s", "foobar");
+    HDsnprintf(buf, sizeof(buf), "%s", "foobar");
     large_str2 = HDmalloc(1024 + 6);
     CHECK_PTR(large_str2, "HDmalloc");
     HDstrcpy(large_str2, "foobar");

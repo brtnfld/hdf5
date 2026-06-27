@@ -56,7 +56,7 @@
     {                                                                                                        \
         if (VERBOSE_HI) {                                                                                    \
             print_func("   Call to routine: %15s at line %4d in %s returned %p\n", (where), (int)__LINE__,   \
-                       __FILE__, (ret));                                                                     \
+                       __FILE__, ((const void *)ret));                                                       \
         }                                                                                                    \
         if (!(ret)) {                                                                                        \
             TestErrPrintf("*** UNEXPECTED RETURN from %s is NULL line %4d in %s\n", (where), (int)__LINE__,  \
@@ -70,7 +70,7 @@
     {                                                                                                        \
         if (VERBOSE_HI) {                                                                                    \
             print_func("   Call to routine: %15s at line %4d in %s returned %p\n", (where), (int)__LINE__,   \
-                       __FILE__, (ret));                                                                     \
+                       __FILE__, ((const void *)ret));                                                       \
         }                                                                                                    \
         if (ret) {                                                                                           \
             TestErrPrintf("*** UNEXPECTED RETURN from %s is not NULL line %4d in %s\n", (where),             \
@@ -136,7 +136,7 @@
                        "%s \n",                                                                              \
                        (where), (int)__LINE__, __FILE__, x);                                                 \
         }                                                                                                    \
-        if (HDstrcmp(x, val)) {                                                                              \
+        if (HDstrcmp(x, val) != 0) {                                                                         \
             TestErrPrintf("*** UNEXPECTED VALUE from %s should be %s, but is %s at line %4d "                \
                           "in %s\n",                                                                         \
                           where, val, x, (int)__LINE__, __FILE__);                                           \
@@ -203,7 +203,6 @@ extern "C" {
 /* Prototypes for the test routines */
 void test_metadata(void);
 void test_checksum(void);
-void test_heap(void);
 void test_refstr(void);
 void test_file(void);
 void test_h5o(void);

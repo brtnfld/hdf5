@@ -344,6 +344,9 @@ macro (HDF_DIR_PATHS package_prefix)
   if (NOT ${package_prefix}_INSTALL_INCLUDE_DIR)
     set (${package_prefix}_INSTALL_INCLUDE_DIR include)
   endif ()
+  if (NOT ${package_prefix}_INSTALL_MODULE_DIR)
+    set (${package_prefix}_INSTALL_MODULE_DIR mod)
+  endif ()
   if (NOT ${package_prefix}_INSTALL_DATA_DIR)
     if (NOT MSVC)
       if (APPLE)
@@ -360,7 +363,7 @@ macro (HDF_DIR_PATHS package_prefix)
     endif ()
   endif ()
   if (NOT ${package_prefix}_INSTALL_CMAKE_DIR)
-    set (${package_prefix}_INSTALL_CMAKE_DIR share/cmake)
+    set (${package_prefix}_INSTALL_CMAKE_DIR cmake)
   endif ()
 
   # Always use full RPATH, i.e. don't skip the full RPATH for the build tree
@@ -412,7 +415,7 @@ macro (HDF_DIR_PATHS package_prefix)
         ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all static libraries."
     )
     set (CMAKE_Fortran_MODULE_DIRECTORY
-        ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all fortran modules."
+        ${PROJECT_BINARY_DIR}/mod CACHE PATH "Single Directory for all fortran modules."
     )
     get_property(_isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
     if(_isMultiConfig)
@@ -431,7 +434,7 @@ macro (HDF_DIR_PATHS package_prefix)
     endif ()
   endif ()
 
-  if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  if (NOT ${package_prefix}_EXTERNALLY_CONFIGURED AND CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     if (CMAKE_HOST_UNIX)
       set (CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/HDF_Group/${HDF5_PACKAGE_NAME}/${HDF5_PACKAGE_VERSION}"
         CACHE PATH "Install path prefix, prepended onto install directories." FORCE)

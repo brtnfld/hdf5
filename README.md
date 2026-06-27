@@ -84,8 +84,8 @@ are tentative.
 
 | Release | New Features |
 | ------- | ------------ |
-| 1.13.2 | VFD SWMR, Onion VFD, Selection I/O |
-| 1.13.3 | Subfiling, Multi-Dataset I/O |
+| 1.13.2 | VFD SWMR, Onion VFD, Selection I/O, Subfiling |
+| 1.13.3 | Multi-Dataset I/O |
 
 This list of feature release versions is also tentative, and the specific release
 in which a feature is introduced may change.
@@ -104,3 +104,4 @@ Source packages for current and previous releases are located at:
 Development code is available at our Github location:
     
    https://github.com/HDFGroup/hdf5.git
+

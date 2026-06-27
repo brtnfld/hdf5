@@ -34,11 +34,12 @@ public class H5Ex_T_Float {
     private static final int DIM1     = 7;
     private static final int RANK     = 2;
 
-    private static void CreateDataset() {
-        long file_id = HDF5Constants.H5I_INVALID_HID;
-        long dataspace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id = HDF5Constants.H5I_INVALID_HID;
-        long[] dims = { DIM0, DIM1 };
+    private static void CreateDataset()
+    {
+        long file_id         = HDF5Constants.H5I_INVALID_HID;
+        long dataspace_id    = HDF5Constants.H5I_INVALID_HID;
+        long dataset_id      = HDF5Constants.H5I_INVALID_HID;
+        long[] dims          = {DIM0, DIM1};
         double[][] dset_data = new double[DIM0][DIM1];
 
         // Initialize data.
@@ -118,11 +119,12 @@ public class H5Ex_T_Float {
         }
     }
 
-    private static void ReadDataset() {
-        long file_id = HDF5Constants.H5I_INVALID_HID;
+    private static void ReadDataset()
+    {
+        long file_id      = HDF5Constants.H5I_INVALID_HID;
         long dataspace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id = HDF5Constants.H5I_INVALID_HID;
-        long[] dims = { DIM0, DIM1 };
+        long dataset_id   = HDF5Constants.H5I_INVALID_HID;
+        long[] dims       = {DIM0, DIM1};
         double[][] dset_data;
 
         // Open an existing file.

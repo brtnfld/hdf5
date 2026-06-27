@@ -138,7 +138,7 @@ static void mark_flush_dep_clean(test_entry_t *entry_ptr);
 static herr_t get_initial_load_size(void *udata_ptr, size_t *image_len_ptr, int32_t entry_type);
 static herr_t get_final_load_size(const void *image, size_t image_len, void *udata, size_t *actual_len,
                                   int32_t entry_type);
-static void * deserialize(const void *image_ptr, size_t len, void *udata_ptr, hbool_t *dirty_ptr,
+static void  *deserialize(const void *image_ptr, size_t len, void *udata_ptr, hbool_t *dirty_ptr,
                           int32_t entry_type);
 static herr_t image_len(const void *thing, size_t *image_len_ptr, int32_t entry_type);
 static herr_t pre_serialize(H5F_t *f, void *thing, haddr_t addr, size_t len, haddr_t *new_addr_ptr,
@@ -1817,8 +1817,8 @@ hbool_t
 entry_in_cache(H5C_t *cache_ptr, int32_t type, int32_t idx)
 {
     hbool_t            in_cache = FALSE; /* will set to TRUE if necessary */
-    test_entry_t *     base_addr;
-    test_entry_t *     entry_ptr;
+    test_entry_t      *base_addr;
+    test_entry_t      *entry_ptr;
     H5C_cache_entry_t *test_ptr = NULL;
 
     HDassert(cache_ptr);
@@ -2329,8 +2329,8 @@ verify_clean(void)
 void
 verify_entry_status(H5C_t *cache_ptr, int tag, int num_entries, struct expected_entry_status expected[])
 {
-    static char msg[256];
-    int         i;
+    char msg[256];
+    int  i;
 
     i = 0;
     while ((pass) && (i < num_entries)) {
@@ -2342,14 +2342,15 @@ verify_entry_status(H5C_t *cache_ptr, int tag, int num_entries, struct expected_
         if ((!expected[i].in_cache) && ((expected[i].is_protected) || (expected[i].is_pinned))) {
 
             pass = FALSE;
-            HDsprintf(msg, "%d: Contradictory data in expected[%d].\n", tag, i);
+            HDsnprintf(msg, sizeof(msg), "%d: Contradictory data in expected[%d].\n", tag, i);
             failure_mssg = msg;
         }
 
         if ((!expected[i].in_cache) && (expected[i].is_dirty) && (!entry_ptr->expunged)) {
 
             pass = FALSE;
-            HDsprintf(msg, "%d: expected[%d] specs non-expunged, dirty, non-resident.\n", tag, i);
+            HDsnprintf(msg, sizeof(msg), "%d: expected[%d] specs non-expunged, dirty, non-resident.\n", tag,
+                       i);
             failure_mssg = msg;
         }
 
@@ -2360,9 +2361,9 @@ verify_entry_status(H5C_t *cache_ptr, int tag, int num_entries, struct expected_
             if (in_cache != expected[i].in_cache) {
 
                 pass = FALSE;
-                HDsprintf(msg, "%d entry (%d, %d) in cache actual/expected = %d/%d.\n", tag,
-                          (int)expected[i].entry_type, (int)expected[i].entry_index, (int)in_cache,
-                          (int)expected[i].in_cache);
+                HDsnprintf(msg, sizeof(msg), "%d entry (%d, %d) in cache actual/expected = %d/%d.\n", tag,
+                           (int)expected[i].entry_type, (int)expected[i].entry_index, (int)in_cache,
+                           (int)expected[i].in_cache);
                 failure_mssg = msg;
             }
         }
@@ -2372,9 +2373,9 @@ verify_entry_status(H5C_t *cache_ptr, int tag, int num_entries, struct expected_
             if (entry_ptr->size != expected[i].size) {
 
                 pass = FALSE;
-                HDsprintf(msg, "%d entry (%d, %d) size actual/expected = %ld/%ld.\n", tag,
-                          (int)expected[i].entry_type, (int)expected[i].entry_index, (long)(entry_ptr->size),
-                          (long)expected[i].size);
+                HDsnprintf(msg, sizeof(msg), "%d entry (%d, %d) size actual/expected = %ld/%ld.\n", tag,
+                           (int)expected[i].entry_type, (int)expected[i].entry_index, (long)(entry_ptr->size),
+                           (long)expected[i].size);
                 failure_mssg = msg;
             }
         }
@@ -2384,9 +2385,9 @@ verify_entry_status(H5C_t *cache_ptr, int tag, int num_entries, struct expected_
             if (entry_ptr->header.size != expected[i].size) {
 
                 pass = FALSE;
-                HDsprintf(msg, "%d entry (%d, %d) header size actual/expected = %ld/%ld.\n", tag,
-                          (int)expected[i].entry_type, (int)expected[i].entry_index,
-                          (long)(entry_ptr->header.size), (long)expected[i].size);
+                HDsnprintf(msg, sizeof(msg), "%d entry (%d, %d) header size actual/expected = %ld/%ld.\n",
+                           tag, (int)expected[i].entry_type, (int)expected[i].entry_index,
+                           (long)(entry_ptr->header.size), (long)expected[i].size);
                 failure_mssg = msg;
             }
         }
@@ -2396,9 +2397,9 @@ verify_entry_status(H5C_t *cache_ptr, int tag, int num_entries, struct expected_
             if (entry_ptr->at_main_addr != expected[i].at_main_addr) {
 
                 pass = FALSE;
-                HDsprintf(msg, "%d entry (%d, %d) at main addr actual/expected = %d/%d.\n", tag,
-                          (int)expected[i].entry_type, (int)expected[i].entry_index,
-                          (int)(entry_ptr->at_main_addr), (int)expected[i].at_main_addr);
+                HDsnprintf(msg, sizeof(msg), "%d entry (%d, %d) at main addr actual/expected = %d/%d.\n", tag,
+                           (int)expected[i].entry_type, (int)expected[i].entry_index,
+                           (int)(entry_ptr->at_main_addr), (int)expected[i].at_main_addr);
                 failure_mssg = msg;
             }
         }
@@ -2408,9 +2409,9 @@ verify_entry_status(H5C_t *cache_ptr, int tag, int num_entries, struct expected_
             if (entry_ptr->is_dirty != expected[i].is_dirty) {
 
                 pass = FALSE;
-                HDsprintf(msg, "%d entry (%d, %d) is_dirty actual/expected = %d/%d.\n", tag,
-                          (int)expected[i].entry_type, (int)expected[i].entry_index,
-                          (int)(entry_ptr->is_dirty), (int)expected[i].is_dirty);
+                HDsnprintf(msg, sizeof(msg), "%d entry (%d, %d) is_dirty actual/expected = %d/%d.\n", tag,
+                           (int)expected[i].entry_type, (int)expected[i].entry_index,
+                           (int)(entry_ptr->is_dirty), (int)expected[i].is_dirty);
                 failure_mssg = msg;
             }
         }
@@ -2420,9 +2421,9 @@ verify_entry_status(H5C_t *cache_ptr, int tag, int num_entries, struct expected_
             if (entry_ptr->header.is_dirty != expected[i].is_dirty) {
 
                 pass = FALSE;
-                HDsprintf(msg, "%d entry (%d, %d) header is_dirty actual/expected = %d/%d.\n", tag,
-                          (int)expected[i].entry_type, (int)expected[i].entry_index,
-                          (int)(entry_ptr->header.is_dirty), (int)expected[i].is_dirty);
+                HDsnprintf(msg, sizeof(msg), "%d entry (%d, %d) header is_dirty actual/expected = %d/%d.\n",
+                           tag, (int)expected[i].entry_type, (int)expected[i].entry_index,
+                           (int)(entry_ptr->header.is_dirty), (int)expected[i].is_dirty);
                 failure_mssg = msg;
             }
         }
@@ -2432,9 +2433,9 @@ verify_entry_status(H5C_t *cache_ptr, int tag, int num_entries, struct expected_
             if (entry_ptr->is_protected != expected[i].is_protected) {
 
                 pass = FALSE;
-                HDsprintf(msg, "%d entry (%d, %d) is_protected actual/expected = %d/%d.\n", tag,
-                          (int)expected[i].entry_type, (int)expected[i].entry_index,
-                          (int)(entry_ptr->is_protected), (int)expected[i].is_protected);
+                HDsnprintf(msg, sizeof(msg), "%d entry (%d, %d) is_protected actual/expected = %d/%d.\n", tag,
+                           (int)expected[i].entry_type, (int)expected[i].entry_index,
+                           (int)(entry_ptr->is_protected), (int)expected[i].is_protected);
                 failure_mssg = msg;
             }
         }
@@ -2444,9 +2445,10 @@ verify_entry_status(H5C_t *cache_ptr, int tag, int num_entries, struct expected_
             if (entry_ptr->header.is_protected != expected[i].is_protected) {
 
                 pass = FALSE;
-                HDsprintf(msg, "%d entry (%d, %d) header is_protected actual/expected = %d/%d.\n", tag,
-                          (int)expected[i].entry_type, (int)expected[i].entry_index,
-                          (int)(entry_ptr->header.is_protected), (int)expected[i].is_protected);
+                HDsnprintf(msg, sizeof(msg),
+                           "%d entry (%d, %d) header is_protected actual/expected = %d/%d.\n", tag,
+                           (int)expected[i].entry_type, (int)expected[i].entry_index,
+                           (int)(entry_ptr->header.is_protected), (int)expected[i].is_protected);
                 failure_mssg = msg;
             }
         }
@@ -2456,9 +2458,9 @@ verify_entry_status(H5C_t *cache_ptr, int tag, int num_entries, struct expected_
             if (entry_ptr->is_pinned != expected[i].is_pinned) {
 
                 pass = FALSE;
-                HDsprintf(msg, "%d entry (%d, %d) is_pinned actual/expected = %d/%d.\n", tag,
-                          (int)expected[i].entry_type, (int)expected[i].entry_index,
-                          (int)(entry_ptr->is_pinned), (int)expected[i].is_pinned);
+                HDsnprintf(msg, sizeof(msg), "%d entry (%d, %d) is_pinned actual/expected = %d/%d.\n", tag,
+                           (int)expected[i].entry_type, (int)expected[i].entry_index,
+                           (int)(entry_ptr->is_pinned), (int)expected[i].is_pinned);
                 failure_mssg = msg;
             }
         }
@@ -2468,9 +2470,9 @@ verify_entry_status(H5C_t *cache_ptr, int tag, int num_entries, struct expected_
             if (entry_ptr->is_corked != expected[i].is_corked) {
 
                 pass = FALSE;
-                HDsprintf(msg, "%d entry (%d, %d) is_corked actual/expected = %d/%d.\n", tag,
-                          (int)expected[i].entry_type, (int)expected[i].entry_index,
-                          (int)(entry_ptr->is_corked), (int)expected[i].is_corked);
+                HDsnprintf(msg, sizeof(msg), "%d entry (%d, %d) is_corked actual/expected = %d/%d.\n", tag,
+                           (int)expected[i].entry_type, (int)expected[i].entry_index,
+                           (int)(entry_ptr->is_corked), (int)expected[i].is_corked);
                 failure_mssg = msg;
             }
         }
@@ -2480,9 +2482,9 @@ verify_entry_status(H5C_t *cache_ptr, int tag, int num_entries, struct expected_
             if (entry_ptr->header.is_pinned != expected[i].is_pinned) {
 
                 pass = FALSE;
-                HDsprintf(msg, "%d entry (%d, %d) header is_pinned actual/expected = %d/%d.\n", tag,
-                          (int)expected[i].entry_type, (int)expected[i].entry_index,
-                          (int)(entry_ptr->header.is_pinned), (int)expected[i].is_pinned);
+                HDsnprintf(msg, sizeof(msg), "%d entry (%d, %d) header is_pinned actual/expected = %d/%d.\n",
+                           tag, (int)expected[i].entry_type, (int)expected[i].entry_index,
+                           (int)(entry_ptr->header.is_pinned), (int)expected[i].is_pinned);
                 failure_mssg = msg;
             }
         }
@@ -2494,11 +2496,12 @@ verify_entry_status(H5C_t *cache_ptr, int tag, int num_entries, struct expected_
                 (entry_ptr->destroyed != expected[i].destroyed)) {
 
                 pass = FALSE;
-                HDsprintf(msg, "%d entry (%d,%d) deserialized = %d(%d), serialized = %d(%d), dest = %d(%d)\n",
-                          tag, (int)expected[i].entry_type, (int)expected[i].entry_index,
-                          (int)(entry_ptr->deserialized), (int)(expected[i].deserialized),
-                          (int)(entry_ptr->serialized), (int)(expected[i].serialized),
-                          (int)(entry_ptr->destroyed), (int)(expected[i].destroyed));
+                HDsnprintf(msg, sizeof(msg),
+                           "%d entry (%d,%d) deserialized = %d(%d), serialized = %d(%d), dest = %d(%d)\n",
+                           tag, (int)expected[i].entry_type, (int)expected[i].entry_index,
+                           (int)(entry_ptr->deserialized), (int)(expected[i].deserialized),
+                           (int)(entry_ptr->serialized), (int)(expected[i].serialized),
+                           (int)(entry_ptr->destroyed), (int)(expected[i].destroyed));
                 failure_mssg = msg;
             }
         }
@@ -2509,18 +2512,19 @@ verify_entry_status(H5C_t *cache_ptr, int tag, int num_entries, struct expected_
         if (pass) {
             if (entry_ptr->flush_dep_npar != expected[i].flush_dep_npar) {
                 pass = FALSE;
-                HDsprintf(msg, "%d entry (%d, %d) flush_dep_npar actual/expected = %u/%u.\n", tag,
-                          expected[i].entry_type, expected[i].entry_index, entry_ptr->flush_dep_npar,
-                          expected[i].flush_dep_npar);
+                HDsnprintf(msg, sizeof(msg), "%d entry (%d, %d) flush_dep_npar actual/expected = %u/%u.\n",
+                           tag, expected[i].entry_type, expected[i].entry_index, entry_ptr->flush_dep_npar,
+                           expected[i].flush_dep_npar);
                 failure_mssg = msg;
             } /* end if */
         }     /* end if */
         if ((pass) && (in_cache)) {
             if (entry_ptr->header.flush_dep_nparents != expected[i].flush_dep_npar) {
                 pass = FALSE;
-                HDsprintf(msg, "%d entry (%d, %d) header flush_dep_nparents actual/expected = %u/%u.\n", tag,
-                          expected[i].entry_type, expected[i].entry_index,
-                          entry_ptr->header.flush_dep_nparents, expected[i].flush_dep_npar);
+                HDsnprintf(msg, sizeof(msg),
+                           "%d entry (%d, %d) header flush_dep_nparents actual/expected = %u/%u.\n", tag,
+                           expected[i].entry_type, expected[i].entry_index,
+                           entry_ptr->header.flush_dep_nparents, expected[i].flush_dep_npar);
                 failure_mssg = msg;
             } /* end if */
         }     /* end if */
@@ -2531,9 +2535,10 @@ verify_entry_status(H5C_t *cache_ptr, int tag, int num_entries, struct expected_
             for (u = 0; u < entry_ptr->flush_dep_npar; u++) {
                 if (entry_ptr->flush_dep_par_type[u] != expected[i].flush_dep_par_type[u]) {
                     pass = FALSE;
-                    HDsprintf(msg, "%d entry (%d, %d) flush_dep_par_type[%u] actual/expected = %d/%d.\n", tag,
-                              expected[i].entry_type, expected[i].entry_index, u,
-                              entry_ptr->flush_dep_par_type[u], expected[i].flush_dep_par_type[u]);
+                    HDsnprintf(msg, sizeof(msg),
+                               "%d entry (%d, %d) flush_dep_par_type[%u] actual/expected = %d/%d.\n", tag,
+                               expected[i].entry_type, expected[i].entry_index, u,
+                               entry_ptr->flush_dep_par_type[u], expected[i].flush_dep_par_type[u]);
                     failure_mssg = msg;
                 } /* end if */
             }     /* end for */
@@ -2542,9 +2547,10 @@ verify_entry_status(H5C_t *cache_ptr, int tag, int num_entries, struct expected_
             for (u = 0; u < entry_ptr->flush_dep_npar; u++) {
                 if (entry_ptr->flush_dep_par_idx[u] != expected[i].flush_dep_par_idx[u]) {
                     pass = FALSE;
-                    HDsprintf(msg, "%d entry (%d, %d) flush_dep_par_idx[%u] actual/expected = %d/%d.\n", tag,
-                              expected[i].entry_type, expected[i].entry_index, u,
-                              entry_ptr->flush_dep_par_idx[u], expected[i].flush_dep_par_idx[u]);
+                    HDsnprintf(msg, sizeof(msg),
+                               "%d entry (%d, %d) flush_dep_par_idx[%u] actual/expected = %d/%d.\n", tag,
+                               expected[i].entry_type, expected[i].entry_index, u,
+                               entry_ptr->flush_dep_par_idx[u], expected[i].flush_dep_par_idx[u]);
                     failure_mssg = msg;
                 } /* end if */
             }     /* end for */
@@ -2554,37 +2560,39 @@ verify_entry_status(H5C_t *cache_ptr, int tag, int num_entries, struct expected_
         if (pass) {
             if (entry_ptr->flush_dep_nchd != expected[i].flush_dep_nchd) {
                 pass = FALSE;
-                HDsprintf(msg, "%d entry (%d, %d) flush_dep_nchd actual/expected = %u/%u.\n", tag,
-                          expected[i].entry_type, expected[i].entry_index, entry_ptr->flush_dep_nchd,
-                          expected[i].flush_dep_nchd);
+                HDsnprintf(msg, sizeof(msg), "%d entry (%d, %d) flush_dep_nchd actual/expected = %u/%u.\n",
+                           tag, expected[i].entry_type, expected[i].entry_index, entry_ptr->flush_dep_nchd,
+                           expected[i].flush_dep_nchd);
                 failure_mssg = msg;
             } /* end if */
         }     /* end if */
         if ((pass) && (in_cache)) {
             if (entry_ptr->header.flush_dep_nchildren != expected[i].flush_dep_nchd) {
                 pass = FALSE;
-                HDsprintf(msg, "%d entry (%d, %d) header flush_dep_nchildren actual/expected = %u/%u.\n", tag,
-                          expected[i].entry_type, expected[i].entry_index,
-                          entry_ptr->header.flush_dep_nchildren, expected[i].flush_dep_nchd);
+                HDsnprintf(msg, sizeof(msg),
+                           "%d entry (%d, %d) header flush_dep_nchildren actual/expected = %u/%u.\n", tag,
+                           expected[i].entry_type, expected[i].entry_index,
+                           entry_ptr->header.flush_dep_nchildren, expected[i].flush_dep_nchd);
                 failure_mssg = msg;
             } /* end if */
         }     /* end if */
         if (pass) {
             if (entry_ptr->flush_dep_ndirty_chd != expected[i].flush_dep_ndirty_chd) {
                 pass = FALSE;
-                HDsprintf(msg, "%d entry (%d, %d) flush_dep_ndirty_chd actual/expected = %u/%u.\n", tag,
-                          expected[i].entry_type, expected[i].entry_index, entry_ptr->flush_dep_ndirty_chd,
-                          expected[i].flush_dep_ndirty_chd);
+                HDsnprintf(msg, sizeof(msg),
+                           "%d entry (%d, %d) flush_dep_ndirty_chd actual/expected = %u/%u.\n", tag,
+                           expected[i].entry_type, expected[i].entry_index, entry_ptr->flush_dep_ndirty_chd,
+                           expected[i].flush_dep_ndirty_chd);
                 failure_mssg = msg;
             } /* end if */
         }     /* end if */
         if ((pass) && (in_cache)) {
             if (entry_ptr->header.flush_dep_ndirty_children != expected[i].flush_dep_ndirty_chd) {
                 pass = FALSE;
-                HDsprintf(msg,
-                          "%d entry (%d, %d) header flush_dep_ndirty_children actual/expected = %u/%u.\n",
-                          tag, expected[i].entry_type, expected[i].entry_index,
-                          entry_ptr->header.flush_dep_ndirty_children, expected[i].flush_dep_ndirty_chd);
+                HDsnprintf(msg, sizeof(msg),
+                           "%d entry (%d, %d) header flush_dep_ndirty_children actual/expected = %u/%u.\n",
+                           tag, expected[i].entry_type, expected[i].entry_index,
+                           entry_ptr->header.flush_dep_ndirty_children, expected[i].flush_dep_ndirty_chd);
                 failure_mssg = msg;
             } /* end if */
         }     /* end if */
@@ -2593,9 +2601,9 @@ verify_entry_status(H5C_t *cache_ptr, int tag, int num_entries, struct expected_
         if (pass) {
             if (expected[i].flush_order >= 0 && entry_ptr->flush_order != (unsigned)expected[i].flush_order) {
                 pass = FALSE;
-                HDsprintf(msg, "%d entry (%d, %d) flush_order actual/expected = %u/%d.\n", tag,
-                          expected[i].entry_type, expected[i].entry_index, entry_ptr->flush_order,
-                          expected[i].flush_order);
+                HDsnprintf(msg, sizeof(msg), "%d entry (%d, %d) flush_order actual/expected = %u/%d.\n", tag,
+                           expected[i].entry_type, expected[i].entry_index, entry_ptr->flush_order,
+                           expected[i].flush_order);
                 failure_mssg = msg;
             } /* end if */
         }     /* end if */
@@ -2811,7 +2819,7 @@ void
 cork_entry_type(H5F_t *file_ptr, int32_t type)
 {
     if (pass) {
-        H5C_t * cache_ptr;
+        H5C_t  *cache_ptr;
         haddr_t baddrs;
 
         cache_ptr = file_ptr->shared->cache;
@@ -2846,7 +2854,7 @@ void
 uncork_entry_type(H5F_t *file_ptr, int32_t type)
 {
     if (pass) {
-        H5C_t * cache_ptr;
+        H5C_t  *cache_ptr;
         haddr_t baddrs;
 
         cache_ptr = file_ptr->shared->cache;
@@ -2881,7 +2889,7 @@ uncork_entry_type(H5F_t *file_ptr, int32_t type)
 void
 insert_entry(H5F_t *file_ptr, int32_t type, int32_t idx, unsigned int flags)
 {
-    H5C_t *       cache_ptr;
+    H5C_t        *cache_ptr;
     herr_t        result;
     hbool_t       insert_pinned;
     test_entry_t *base_addr;
@@ -3134,9 +3142,9 @@ move_entry(H5C_t *cache_ptr, int32_t type, int32_t idx, hbool_t main_addr)
 void
 protect_entry(H5F_t *file_ptr, int32_t type, int32_t idx)
 {
-    H5C_t *            cache_ptr;
-    test_entry_t *     base_addr;
-    test_entry_t *     entry_ptr;
+    H5C_t             *cache_ptr;
+    test_entry_t      *base_addr;
+    test_entry_t      *entry_ptr;
     haddr_t            baddrs;
     H5C_cache_entry_t *cache_entry_ptr;
 
@@ -3234,9 +3242,9 @@ protect_entry(H5F_t *file_ptr, int32_t type, int32_t idx)
 void
 protect_entry_ro(H5F_t *file_ptr, int32_t type, int32_t idx)
 {
-    H5C_t *            cache_ptr;
-    test_entry_t *     base_addr;
-    test_entry_t *     entry_ptr;
+    H5C_t             *cache_ptr;
+    test_entry_t      *base_addr;
+    test_entry_t      *entry_ptr;
     H5C_cache_entry_t *cache_entry_ptr;
 
     if (pass) {
@@ -3530,7 +3538,7 @@ row_major_scan_forward(H5F_t *file_ptr, int32_t max_index, int32_t lag, hbool_t 
                        hbool_t do_moves, hbool_t move_to_main_addr, hbool_t do_destroys,
                        hbool_t do_mult_ro_protects, int dirty_destroys, int dirty_unprotects)
 {
-    H5C_t * cache_ptr = NULL;
+    H5C_t  *cache_ptr = NULL;
     int32_t type      = 0;
     int32_t idx;
     int32_t local_max_index;
@@ -3860,7 +3868,7 @@ void
 hl_row_major_scan_forward(H5F_t *file_ptr, int32_t max_index, hbool_t verbose, hbool_t reset_stats,
                           hbool_t display_stats, hbool_t display_detailed_stats, hbool_t do_inserts)
 {
-    H5C_t * cache_ptr = NULL;
+    H5C_t  *cache_ptr = NULL;
     int32_t type      = 0;
     int32_t idx;
     int32_t i;
@@ -3954,7 +3962,7 @@ row_major_scan_backward(H5F_t *file_ptr, int32_t max_index, int32_t lag, hbool_t
                         hbool_t do_moves, hbool_t move_to_main_addr, hbool_t do_destroys,
                         hbool_t do_mult_ro_protects, int dirty_destroys, int dirty_unprotects)
 {
-    H5C_t * cache_ptr = NULL;
+    H5C_t  *cache_ptr = NULL;
     int32_t type      = NUMBER_OF_ENTRY_TYPES - 1;
     int32_t idx;
     int32_t local_max_index;
@@ -4212,7 +4220,7 @@ void
 hl_row_major_scan_backward(H5F_t *file_ptr, int32_t max_index, hbool_t verbose, hbool_t reset_stats,
                            hbool_t display_stats, hbool_t display_detailed_stats, hbool_t do_inserts)
 {
-    H5C_t * cache_ptr = NULL;
+    H5C_t  *cache_ptr = NULL;
     int32_t type      = NUMBER_OF_ENTRY_TYPES - 1;
     int32_t idx;
     int32_t i;
@@ -4305,7 +4313,7 @@ col_major_scan_forward(H5F_t *file_ptr, int32_t max_index, int32_t lag, hbool_t 
                        hbool_t display_stats, hbool_t display_detailed_stats, hbool_t do_inserts,
                        int dirty_unprotects)
 {
-    H5C_t * cache_ptr = NULL;
+    H5C_t  *cache_ptr = NULL;
     int32_t type      = 0;
     int32_t idx;
     int32_t local_max_index[NUMBER_OF_ENTRY_TYPES];
@@ -4397,7 +4405,7 @@ hl_col_major_scan_forward(H5F_t *file_ptr, int32_t max_index, hbool_t verbose, h
                           hbool_t display_stats, hbool_t display_detailed_stats, hbool_t do_inserts,
                           int dirty_unprotects)
 {
-    H5C_t * cache_ptr = NULL;
+    H5C_t  *cache_ptr = NULL;
     int32_t type      = 0;
     int32_t idx;
     int32_t lag = 200;
@@ -4500,7 +4508,7 @@ col_major_scan_backward(H5F_t *file_ptr, int32_t max_index, int32_t lag, hbool_t
                         hbool_t display_stats, hbool_t display_detailed_stats, hbool_t do_inserts,
                         int dirty_unprotects)
 {
-    H5C_t * cache_ptr  = NULL;
+    H5C_t  *cache_ptr  = NULL;
     int     mile_stone = 1;
     int32_t type;
     int32_t idx;
@@ -4604,7 +4612,7 @@ hl_col_major_scan_backward(H5F_t *file_ptr, int32_t max_index, hbool_t verbose, 
                            hbool_t display_stats, hbool_t display_detailed_stats, hbool_t do_inserts,
                            int dirty_unprotects)
 {
-    H5C_t * cache_ptr = NULL;
+    H5C_t  *cache_ptr = NULL;
     int32_t type      = 0;
     int32_t idx       = -1;
     int32_t lag       = 50;
@@ -4965,8 +4973,8 @@ check_and_validate_cache_hit_rate(hid_t file_id, double *hit_rate_ptr, hbool_t d
     int64_t cache_accesses = 0;
     double  expected_hit_rate;
     double  hit_rate;
-    H5F_t * file_ptr  = NULL;
-    H5C_t * cache_ptr = NULL;
+    H5F_t  *file_ptr  = NULL;
+    H5C_t  *cache_ptr = NULL;
 
     /* get a pointer to the files internal data structure */
     if (pass) {
@@ -4981,13 +4989,17 @@ check_and_validate_cache_hit_rate(hid_t file_id, double *hit_rate_ptr, hbool_t d
         else {
 
             cache_ptr = file_ptr->shared->cache;
+            if (NULL == cache_ptr) {
+                pass         = FALSE;
+                failure_mssg = "NULL cache pointer";
+            }
         }
     }
 
     /* verify that we can access the cache data structure */
     if (pass) {
 
-        if ((cache_ptr == NULL) || (cache_ptr->magic != H5C__H5C_T_MAGIC)) {
+        if (cache_ptr->magic != H5C__H5C_T_MAGIC) {
 
             pass         = FALSE;
             failure_mssg = "Can't access cache resize_ctl.";
@@ -5090,8 +5102,8 @@ check_and_validate_cache_size(hid_t file_id, size_t *max_size_ptr, size_t *min_c
     size_t   cur_size;
     uint32_t expected_cur_num_entries;
     int      cur_num_entries;
-    H5F_t *  file_ptr  = NULL;
-    H5C_t *  cache_ptr = NULL;
+    H5F_t   *file_ptr  = NULL;
+    H5C_t   *cache_ptr = NULL;
 
     /* get a pointer to the files internal data structure */
     if (pass) {
@@ -5106,13 +5118,17 @@ check_and_validate_cache_size(hid_t file_id, size_t *max_size_ptr, size_t *min_c
         else {
 
             cache_ptr = file_ptr->shared->cache;
+            if (NULL == cache_ptr) {
+                pass         = FALSE;
+                failure_mssg = "NULL cache pointer";
+            }
         }
     }
 
     /* verify that we can access the cache data structure */
     if (pass) {
 
-        if ((cache_ptr == NULL) || (cache_ptr->magic != H5C__H5C_T_MAGIC)) {
+        if (cache_ptr->magic != H5C__H5C_T_MAGIC) {
 
             pass         = FALSE;
             failure_mssg = "Can't access cache data structure.";
@@ -5249,8 +5265,8 @@ void
 validate_mdc_config(hid_t file_id, H5AC_cache_config_t *ext_config_ptr, hbool_t compare_init, int test_num)
 {
     static char         msg[256];
-    H5F_t *             file_ptr  = NULL;
-    H5C_t *             cache_ptr = NULL;
+    H5F_t              *file_ptr  = NULL;
+    H5C_t              *cache_ptr = NULL;
     H5AC_cache_config_t scratch;
     H5C_auto_size_ctl_t int_config;
 

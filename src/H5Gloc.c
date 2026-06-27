@@ -93,7 +93,7 @@ typedef struct {
 /* User data for getting an object's comment in a group */
 typedef struct {
     /* downward */
-    char * comment; /* Object comment buffer */
+    char  *comment; /* Object comment buffer */
     size_t bufsize; /* Size of object comment buffer */
 
     /* upward */
@@ -255,7 +255,7 @@ done:
 herr_t
 H5G_loc(hid_t loc_id, H5G_loc_t *loc)
 {
-    void * obj       = NULL;    /* VOL object   */
+    void  *obj       = NULL;    /* VOL object   */
     herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
@@ -925,8 +925,8 @@ H5G__loc_set_comment_cb(H5G_loc_t H5_ATTR_UNUSED *grp_loc /*in*/, const char H5_
 
     /* Add the new message */
     if (udata->comment && *udata->comment) {
-        /* Casting away const OK -QAK */
-        comment.s = (char *)udata->comment;
+        if (NULL == (comment.s = HDstrdup(udata->comment)))
+            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL, "can't copy group comment")
         if (H5O_msg_create(obj_loc->oloc, H5O_NAME_ID, 0, H5O_UPDATE_TIME, &comment) < 0)
             HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to set comment object header message")
     } /* end if */

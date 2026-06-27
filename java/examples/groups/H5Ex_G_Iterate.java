@@ -51,7 +51,8 @@ public class H5Ex_G_Iterate {
         public static H5O_type get(int code) { return lookup.get(code); }
     }
 
-    private static void do_iterate() {
+    private static void do_iterate()
+    {
         long file_id = HDF5Constants.H5I_INVALID_HID;
 
         // Open a file using default properties.

@@ -38,17 +38,18 @@ public class H5Ex_D_FillValue {
     private static final int NDIMS    = 2;
     private static final int FILLVAL  = 99;
 
-    private static void fillValue() {
-        long file_id = HDF5Constants.H5I_INVALID_HID;
-        long dcpl_id = HDF5Constants.H5I_INVALID_HID;
-        long dataspace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id = HDF5Constants.H5I_INVALID_HID;
-        long[] dims = { DIM_X, DIM_Y };
-        long[] extdims = { EDIM_X, EDIM_Y };
-        long[] chunk_dims = { CHUNK_X, CHUNK_Y };
-        long[] maxdims = { HDF5Constants.H5S_UNLIMITED, HDF5Constants.H5S_UNLIMITED };
-        int[][] write_dset_data = new int[DIM_X][DIM_Y];
-        int[][] read_dset_data = new int[DIM_X][DIM_Y];
+    private static void fillValue()
+    {
+        long file_id             = HDF5Constants.H5I_INVALID_HID;
+        long dcpl_id             = HDF5Constants.H5I_INVALID_HID;
+        long dataspace_id        = HDF5Constants.H5I_INVALID_HID;
+        long dataset_id          = HDF5Constants.H5I_INVALID_HID;
+        long[] dims              = {DIM_X, DIM_Y};
+        long[] extdims           = {EDIM_X, EDIM_Y};
+        long[] chunk_dims        = {CHUNK_X, CHUNK_Y};
+        long[] maxdims           = {HDF5Constants.H5S_UNLIMITED, HDF5Constants.H5S_UNLIMITED};
+        int[][] write_dset_data  = new int[DIM_X][DIM_Y];
+        int[][] read_dset_data   = new int[DIM_X][DIM_Y];
         int[][] extend_dset_data = new int[EDIM_X][EDIM_Y];
 
         // Initialize the dataset.

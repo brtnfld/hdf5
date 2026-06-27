@@ -27,9 +27,9 @@
 
 /* PRIVATE PROTOTYPES */
 static herr_t H5O__dtype_encode(H5F_t *f, uint8_t *p, const void *mesg);
-static void * H5O__dtype_decode(H5F_t *f, H5O_t *open_oh, unsigned mesg_flags, unsigned *ioflags,
+static void  *H5O__dtype_decode(H5F_t *f, H5O_t *open_oh, unsigned mesg_flags, unsigned *ioflags,
                                 size_t p_size, const uint8_t *p);
-static void * H5O__dtype_copy(const void *_mesg, void *_dest);
+static void  *H5O__dtype_copy(const void *_mesg, void *_dest);
 static size_t H5O__dtype_size(const H5F_t *f, const void *_mesg);
 static herr_t H5O__dtype_reset(void *_mesg);
 static herr_t H5O__dtype_free(void *_mesg);
@@ -37,7 +37,7 @@ static herr_t H5O__dtype_set_share(void *_mesg, const H5O_shared_t *sh);
 static htri_t H5O__dtype_can_share(const void *_mesg);
 static herr_t H5O__dtype_pre_copy_file(H5F_t *file_src, const void *mesg_src, hbool_t *deleted,
                                        const H5O_copy_t *cpy_info, void *_udata);
-static void * H5O__dtype_copy_file(H5F_t *file_src, const H5O_msg_class_t *mesg_type, void *native_src,
+static void  *H5O__dtype_copy_file(H5F_t *file_src, const H5O_msg_class_t *mesg_type, void *native_src,
                                    H5F_t *file_dst, hbool_t *recompute_size, H5O_copy_t *cpy_info,
                                    void *udata);
 static herr_t H5O__dtype_shared_post_copy_upd(const H5O_loc_t *src_oloc, const void *mesg_src,
@@ -277,8 +277,8 @@ H5O__dtype_decode_helper(unsigned *ioflags /*in,out*/, const uint8_t **pp, H5T_t
                 unsigned ndims = 0;             /* Number of dimensions of the array field */
                 htri_t   can_upgrade;           /* Whether we can upgrade this type's version */
                 hsize_t  dim[H5O_LAYOUT_NDIMS]; /* Dimensions of the array */
-                H5T_t *  array_dt;              /* Temporary pointer to the array datatype */
-                H5T_t *  temp_type;             /* Temporary pointer to the field's datatype */
+                H5T_t   *array_dt;              /* Temporary pointer to the array datatype */
+                H5T_t   *temp_type;             /* Temporary pointer to the field's datatype */
 
                 /* Decode the field name */
                 dt->shared->u.compnd.memb[i].name = H5MM_xstrdup((const char *)*pp);
@@ -1122,7 +1122,7 @@ H5O__dtype_decode(H5F_t H5_ATTR_UNUSED *f, H5O_t H5_ATTR_UNUSED *open_oh, unsign
                   unsigned *ioflags /*in,out*/, size_t H5_ATTR_UNUSED p_size, const uint8_t *p)
 {
     H5T_t *dt        = NULL;
-    void * ret_value = NULL; /* Return value */
+    void  *ret_value = NULL; /* Return value */
 
     FUNC_ENTER_PACKAGE
 
@@ -1203,8 +1203,8 @@ static void *
 H5O__dtype_copy(const void *_src, void *_dst)
 {
     const H5T_t *src = (const H5T_t *)_src;
-    H5T_t *      dst;
-    void *       ret_value = NULL; /* Return value */
+    H5T_t       *dst;
+    void        *ret_value = NULL; /* Return value */
 
     FUNC_ENTER_PACKAGE
 
@@ -1531,7 +1531,7 @@ static herr_t
 H5O__dtype_pre_copy_file(H5F_t *file_src, const void *mesg_src, hbool_t H5_ATTR_UNUSED *deleted,
                          const H5O_copy_t *cpy_info, void *_udata)
 {
-    const H5T_t *       dt_src    = (const H5T_t *)mesg_src;      /* Source datatype */
+    const H5T_t        *dt_src    = (const H5T_t *)mesg_src;      /* Source datatype */
     H5D_copy_file_ud_t *udata     = (H5D_copy_file_ud_t *)_udata; /* Dataset copying user data */
     herr_t              ret_value = SUCCEED;                      /* Return value */
 
@@ -1588,7 +1588,7 @@ H5O__dtype_copy_file(H5F_t H5_ATTR_UNUSED *file_src, const H5O_msg_class_t *mesg
                      H5O_copy_t H5_ATTR_UNUSED *cpy_info, void H5_ATTR_UNUSED *udata)
 {
     H5T_t *dst_mesg;         /* Destination datatype */
-    void * ret_value = NULL; /* Return value */
+    void  *ret_value = NULL; /* Return value */
 
     FUNC_ENTER_PACKAGE
 
@@ -1669,7 +1669,7 @@ static herr_t
 H5O__dtype_debug(H5F_t *f, const void *mesg, FILE *stream, int indent, int fwidth)
 {
     const H5T_t *dt = (const H5T_t *)mesg;
-    const char * s;
+    const char  *s;
     char         buf[256];
     unsigned     i;
     size_t       k;
@@ -1746,7 +1746,7 @@ H5O__dtype_debug(H5F_t *f, const void *mesg, FILE *stream, int indent, int fwidt
         HDfprintf(stream, "%*s%-*s %u\n", indent, "", fwidth,
                   "Number of members:", dt->shared->u.compnd.nmembs);
         for (i = 0; i < dt->shared->u.compnd.nmembs; i++) {
-            HDsprintf(buf, "Member %u:", i);
+            HDsnprintf(buf, sizeof(buf), "Member %u:", i);
             HDfprintf(stream, "%*s%-*s %s\n", indent, "", fwidth, buf, dt->shared->u.compnd.memb[i].name);
             HDfprintf(stream, "%*s%-*s %lu\n", indent + 3, "", MAX(0, fwidth - 3),
                       "Byte offset:", (unsigned long)(dt->shared->u.compnd.memb[i].offset));
@@ -1759,7 +1759,7 @@ H5O__dtype_debug(H5F_t *f, const void *mesg, FILE *stream, int indent, int fwidt
         HDfprintf(stream, "%*s%-*s %u\n", indent, "", fwidth,
                   "Number of members:", dt->shared->u.enumer.nmembs);
         for (i = 0; i < dt->shared->u.enumer.nmembs; i++) {
-            HDsprintf(buf, "Member %u:", i);
+            HDsnprintf(buf, sizeof(buf), "Member %u:", i);
             HDfprintf(stream, "%*s%-*s %s\n", indent, "", fwidth, buf, dt->shared->u.enumer.name[i]);
             HDfprintf(stream, "%*s%-*s 0x", indent, "", fwidth, "Raw bytes of value:");
             for (k = 0; k < dt->shared->parent->shared->size; k++)
@@ -2094,7 +2094,7 @@ H5O__dtype_debug(H5F_t *f, const void *mesg, FILE *stream, int indent, int fwidt
 
                 case H5T_NORM_ERROR:
                 default:
-                    HDsprintf(buf, "H5T_NORM_%d", (int)(dt->shared->u.atomic.u.f.norm));
+                    HDsnprintf(buf, sizeof(buf), "H5T_NORM_%d", (int)(dt->shared->u.atomic.u.f.norm));
                     s = buf;
             } /* end switch */
             HDfprintf(stream, "%*s%-*s %s\n", indent, "", fwidth, "Normalization:", s);
@@ -2131,7 +2131,7 @@ H5O__dtype_debug(H5F_t *f, const void *mesg, FILE *stream, int indent, int fwidt
                 case H5T_SGN_ERROR:
                 case H5T_NSGN:
                 default:
-                    HDsprintf(buf, "H5T_SGN_%d", (int)(dt->shared->u.atomic.u.i.sign));
+                    HDsnprintf(buf, sizeof(buf), "H5T_SGN_%d", (int)(dt->shared->u.atomic.u.i.sign));
                     s = buf;
                     break;
             } /* end switch */

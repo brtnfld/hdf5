@@ -73,7 +73,7 @@ static hbool_t H5_ntzset = FALSE;
 int
 HDvasprintf(char **bufp, const char *fmt, va_list _ap)
 {
-    char * buf;   /* buffer to receive formatted string */
+    char  *buf;   /* buffer to receive formatted string */
     size_t bufsz; /* size of buffer to allocate */
 
     for (bufsz = 32; (buf = HDmalloc(bufsz)) != NULL;) {
@@ -443,22 +443,6 @@ H5_get_win32_times(H5_timevals_t *tvs /*in,out*/)
 } /* end H5_get_win32_times() */
 #endif
 
-#define WloginBuffer_count 256
-static char Wlogin_buffer[WloginBuffer_count];
-
-char *
-Wgetlogin(void)
-{
-
-#ifdef H5_HAVE_WIN32_API
-    DWORD bufferCount = WloginBuffer_count;
-    if (GetUserName(Wlogin_buffer, &bufferCount) != 0)
-        return (Wlogin_buffer);
-    else
-#endif
-        return NULL;
-}
-
 /*-------------------------------------------------------------------------
  * Function:    Wflock
  *
@@ -659,9 +643,9 @@ done:
 herr_t
 H5_build_extpath(const char *name, char **extpath /*out*/)
 {
-    char * full_path = NULL;    /* Pointer to the full path, as built or passed in */
-    char * cwdpath   = NULL;    /* Pointer to the current working directory path */
-    char * new_name  = NULL;    /* Pointer to the name of the file */
+    char  *full_path = NULL;    /* Pointer to the full path, as built or passed in */
+    char  *cwdpath   = NULL;    /* Pointer to the current working directory path */
+    char  *new_name  = NULL;    /* Pointer to the name of the file */
     herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
@@ -682,7 +666,7 @@ H5_build_extpath(const char *name, char **extpath /*out*/)
             HGOTO_ERROR(H5E_INTERNAL, H5E_NOSPACE, FAIL, "memory allocation failed")
     }      /* end if */
     else { /* relative pathname */
-        char * retcwd;
+        char  *retcwd;
         size_t name_len;
         int    drive;
 
@@ -732,8 +716,8 @@ H5_build_extpath(const char *name, char **extpath /*out*/)
 
             HDstrncpy(full_path, cwdpath, cwdlen + 1);
             if (!H5_CHECK_DELIMITER(cwdpath[cwdlen - 1]))
-                HDstrncat(full_path, H5_DIR_SEPS, HDstrlen(H5_DIR_SEPS));
-            HDstrncat(full_path, new_name, HDstrlen(new_name));
+                HDstrncat(full_path, H5_DIR_SEPS, path_len - (cwdlen + 1));
+            HDstrncat(full_path, new_name, path_len - (cwdlen + 1) - HDstrlen(H5_DIR_SEPS));
         } /* end if */
     }     /* end else */
 
@@ -909,7 +893,7 @@ herr_t
 H5_expand_windows_env_vars(char **env_var)
 {
     long   n_chars   = 0;
-    char * temp_buf  = NULL;
+    char  *temp_buf  = NULL;
     herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
@@ -1116,7 +1100,7 @@ H5_get_option(int argc, const char *const *argv, const char *opts, const struct 
         /* long command line option */
         int        i;
         const char ch      = '=';
-        char *     arg     = HDstrdup(&argv[H5_optind][2]);
+        char      *arg     = HDstrdup(&argv[H5_optind][2]);
         size_t     arg_len = 0;
 
         H5_optarg = strchr(&argv[H5_optind][2], ch);
@@ -1173,14 +1157,14 @@ H5_get_option(int argc, const char *const *argv, const char *opts, const struct 
         HDfree(arg);
     }
     else {
-        register char *cp; /* pointer into current token */
+        char *cp; /* pointer into current token */
 
         /* short command line option */
-        optopt = argv[H5_optind][sp];
+        optchar = argv[H5_optind][sp];
 
-        if (optopt == ':' || (cp = HDstrchr(opts, optopt)) == 0) {
+        if (optchar == ':' || (cp = HDstrchr(opts, optchar)) == 0) {
             if (H5_opterr)
-                HDfprintf(stderr, "%s: unknown option \"%c\"\n", argv[0], optopt);
+                HDfprintf(stderr, "%s: unknown option \"%c\"\n", argv[0], optchar);
 
             /* if no chars left in this token, move to next token */
             if (argv[H5_optind][++sp] == '\0') {
@@ -1198,9 +1182,9 @@ H5_get_option(int argc, const char *const *argv, const char *opts, const struct 
             }
             else if (++H5_optind >= argc) {
                 if (H5_opterr)
-                    HDfprintf(stderr, "%s: value expected for option \"%c\"\n", argv[0], optopt);
+                    HDfprintf(stderr, "%s: value expected for option \"%c\"\n", argv[0], optchar);
 
-                optopt = '?';
+                optchar = '?';
             }
             else {
                 /* flag value is next token */

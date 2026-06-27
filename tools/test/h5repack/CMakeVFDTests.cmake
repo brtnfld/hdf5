@@ -15,20 +15,11 @@
 ###           T E S T I N G                                                ###
 ##############################################################################
 ##############################################################################
+H5_CREATE_VFD_DIR()
 
-set (VFD_LIST
-    sec2
-    stdio
-    core
-    core_paged
-    split
-    multi
-    family
+set (H5REPACK_VFD_subfiling_SKIP_TESTS
+  h5repacktest
 )
-
-if (H5_HAVE_DIRECT)
-  set (VFD_LIST ${VFD_LIST} direct)
-endif ()
 
 ##############################################################################
 ##############################################################################
@@ -74,20 +65,22 @@ macro (ADD_VFD_TEST vfdname resultcode)
               h5repack_paged_persist.h5
         WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/${vfdname}
     )
-    add_test (
-        NAME H5REPACK_VFD-${vfdname}-h5repacktest
-        COMMAND "${CMAKE_COMMAND}"
-            -D "TEST_EMULATOR=${CMAKE_CROSSCOMPILING_EMULATOR}"
-            -D "TEST_PROGRAM=$<TARGET_FILE:h5repacktest>"
-            -D "TEST_ARGS:STRING="
-            -D "TEST_VFD:STRING=${vfdname}"
-            -D "TEST_EXPECT=${resultcode}"
-            -D "TEST_OUTPUT=${vfdname}-h5repacktest.out"
-            -D "TEST_FOLDER=${PROJECT_BINARY_DIR}/${vfdname}"
-            -P "${HDF_RESOURCES_DIR}/vfdTest.cmake"
-    )
-    set_tests_properties (H5REPACK_VFD-${vfdname}-h5repacktest PROPERTIES DEPENDS H5REPACK_VFD-${vfdname}-h5repacktest-clear-objects)
-    set_tests_properties (H5REPACK_VFD-${vfdname}-h5repacktest PROPERTIES TIMEOUT ${CTEST_SHORT_TIMEOUT})
+    if (NOT "h5repacktest" IN_LIST H5REPACK_VFD_${vfdname}_SKIP_TESTS)
+      add_test (
+          NAME H5REPACK_VFD-${vfdname}-h5repacktest
+          COMMAND "${CMAKE_COMMAND}"
+              -D "TEST_EMULATOR=${CMAKE_CROSSCOMPILING_EMULATOR}"
+              -D "TEST_PROGRAM=$<TARGET_FILE:h5repacktest>"
+              -D "TEST_ARGS:STRING="
+              -D "TEST_VFD:STRING=${vfdname}"
+              -D "TEST_EXPECT=${resultcode}"
+              -D "TEST_OUTPUT=${vfdname}-h5repacktest.out"
+              -D "TEST_FOLDER=${PROJECT_BINARY_DIR}/${vfdname}"
+              -P "${HDF_RESOURCES_DIR}/vfdTest.cmake"
+      )
+      set_tests_properties (H5REPACK_VFD-${vfdname}-h5repacktest PROPERTIES DEPENDS H5REPACK_VFD-${vfdname}-h5repacktest-clear-objects)
+      set_tests_properties (H5REPACK_VFD-${vfdname}-h5repacktest PROPERTIES TIMEOUT ${CTEST_SHORT_TIMEOUT})
+    endif ()
   endif ()
 endmacro ()
 

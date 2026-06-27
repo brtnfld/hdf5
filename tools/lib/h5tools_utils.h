@@ -34,7 +34,7 @@ H5TOOLS_DLLVAR int           g_nTasks;
 H5TOOLS_DLLVAR unsigned char g_Parallel;
 H5TOOLS_DLLVAR char          outBuff[];
 H5TOOLS_DLLVAR unsigned      outBuffOffset;
-H5TOOLS_DLLVAR FILE *overflow_file;
+H5TOOLS_DLLVAR FILE         *overflow_file;
 
 /* Maximum size used in a call to malloc for a dataset */
 H5TOOLS_DLLVAR hsize_t H5TOOLS_MALLOCSIZE;
@@ -44,7 +44,7 @@ H5TOOLS_DLLVAR hsize_t H5TOOLS_BUFSIZE;
 /*struct taken from the dumper. needed in table struct*/
 typedef struct obj_t {
     H5O_token_t obj_token;
-    char *      objname;
+    char       *objname;
     hbool_t     displayed; /* Flag to indicate that the object has been displayed */
     hbool_t     recorded;  /* Flag for named datatypes to indicate they were found in the group hierarchy */
 } obj_t;
@@ -70,11 +70,11 @@ H5TOOLS_DLLVAR unsigned h5tools_nCols; /*max number of columns for outputting  *
 /* Definitions of useful routines */
 H5TOOLS_DLL void   indentation(unsigned);
 H5TOOLS_DLL void   print_version(const char *progname);
-H5TOOLS_DLL void   parallel_print(const char *format, ...);
+H5TOOLS_DLL void   parallel_print(const char *format, ...) H5_ATTR_FORMAT(printf, 1, 2);
 H5TOOLS_DLL herr_t parse_tuple(const char *start, int sep, char **cpy_out, unsigned *nelems,
                                char ***ptrs_out);
-H5TOOLS_DLL void   error_msg(const char *fmt, ...);
-H5TOOLS_DLL void   warn_msg(const char *fmt, ...);
+H5TOOLS_DLL void   error_msg(const char *fmt, ...) H5_ATTR_FORMAT(printf, 1, 2);
+H5TOOLS_DLL void   warn_msg(const char *fmt, ...) H5_ATTR_FORMAT(printf, 1, 2);
 H5TOOLS_DLL void   help_ref_msg(FILE *output);
 H5TOOLS_DLL void   free_table(table_t *table);
 #ifdef H5DUMP_DEBUG
@@ -109,7 +109,7 @@ typedef struct {
 /* obtain link info from H5tools_get_symlink_info() */
 typedef struct {
     H5O_type_t trg_type;     /* OUT: target type */
-    char *     trg_path;     /* OUT: target obj path. This must be freed
+    char      *trg_path;     /* OUT: target obj path. This must be freed
                               *      when used with H5tools_get_symlink_info() */
     H5O_token_t   obj_token; /* OUT: target object token */
     unsigned long fileno;    /* OUT: File number that target object is located in */

@@ -83,18 +83,18 @@
  * These flags determine which fields will be filled in the H5O_info_t
  * struct.
  */
-#define H5O_INFO_BASIC     0x0001u /* Fill in the fileno, addr, type, and rc fields */
-#define H5O_INFO_TIME      0x0002u /* Fill in the atime, mtime, ctime, and btime fields */
-#define H5O_INFO_NUM_ATTRS 0x0004u /* Fill in the num_attrs field */
+#define H5O_INFO_BASIC     0x0001u /**< Fill in the fileno, addr, type, and rc fields */
+#define H5O_INFO_TIME      0x0002u /**< Fill in the atime, mtime, ctime, and btime fields */
+#define H5O_INFO_NUM_ATTRS 0x0004u /**< Fill in the num_attrs field */
 #define H5O_INFO_ALL       (H5O_INFO_BASIC | H5O_INFO_TIME | H5O_INFO_NUM_ATTRS)
 
 //! <!-- [H5O_native_info_fields_snip] -->
 /**
- * Flags for H5Oget_native_info().  Theses flags determine which fields will be
- * filled in in the \ref H5O_native_info_t struct.
+ * Flags for H5Oget_native_info().  These flags determine which fields will be
+ * filled in the \ref H5O_native_info_t struct.
  */
-#define H5O_NATIVE_INFO_HDR       0x0008u /* Fill in the hdr field */
-#define H5O_NATIVE_INFO_META_SIZE 0x0010u /* Fill in the meta_size field */
+#define H5O_NATIVE_INFO_HDR       0x0008u /**< Fill in the hdr field */
+#define H5O_NATIVE_INFO_META_SIZE 0x0010u /**< Fill in the meta_size field */
 #define H5O_NATIVE_INFO_ALL       (H5O_NATIVE_INFO_HDR | H5O_NATIVE_INFO_META_SIZE)
 //! <!-- [H5O_native_info_fields_snip] -->
 
@@ -148,15 +148,15 @@ typedef struct H5O_hdr_info_t {
  * (For H5Oget_info(), H5Oget_info_by_name(), H5Oget_info_by_idx() version 3)
  */
 typedef struct H5O_info2_t {
-    unsigned long fileno;    /* File number that object is located in */
-    H5O_token_t   token;     /* Token representing the object        */
-    H5O_type_t    type;      /* Basic object type (group, dataset, etc.) */
-    unsigned      rc;        /* Reference count of object            */
-    time_t        atime;     /* Access time                          */
-    time_t        mtime;     /* Modification time                    */
-    time_t        ctime;     /* Change time                          */
-    time_t        btime;     /* Birth time                           */
-    hsize_t       num_attrs; /* # of attributes attached to object   */
+    unsigned long fileno;    /**< File number that object is located in */
+    H5O_token_t   token;     /**< Token representing the object        */
+    H5O_type_t    type;      /**< Basic object type (group, dataset, etc.) */
+    unsigned      rc;        /**< Reference count of object            */
+    time_t        atime;     /**< Access time                          */
+    time_t        mtime;     /**< Modification time                    */
+    time_t        ctime;     /**< Change time                          */
+    time_t        btime;     /**< Birth time                           */
+    hsize_t       num_attrs; /**< Number of attributes attached to object   */
 } H5O_info2_t;
 //! <!-- [H5O_info2_t_snip] -->
 
@@ -290,10 +290,6 @@ H5_DLL hid_t H5Oopen_async(const char *app_file, const char *app_func, unsigned 
  *
  * \details H5Oopen_by_token() opens an object specified by the object
  *          identifier, \p loc_id and object token, \p token.
- *
- * \par Example
- *      An example snippet from examples/h5_extlink.c:
- *      \snippet h5_extlink.c H5Open_by_token_snip
  *
  * \since 1.12.0
  *
@@ -521,29 +517,6 @@ H5_DLL herr_t H5Oget_info3(hid_t loc_id, H5O_info2_t *oinfo, unsigned fields);
  *          \p loc_id and \p name, respectively, and retrieves the metadata
  *          describing that object in \p oinfo, an H5O_info2_t struct.
  *
- *          \p oinfo, in which the object information is returned, is a \c struct of
- *          type H5O_info2_t, which is defined in H5Opublic.h in the HDF5 source code:
- *
- *          \snippet this H5O_info2_t_snip
- *
- *          Note the following about H5O_info2_t :
- *          - Of the four time fields (\c atime, \c mtime, \c ctime, and \c btime)
- *            only \c ctime has been implemented.
- *          - The \c atime value is the last time the object was read or written.
- *          - The \c mtime value is the last time the raw data in the object was changed.
- *          - The \c ctime value is the last time the metadata for the object was changed.
- *          - The \c btime value is the time the object was created.
- *
- *          The H5O_token_t is defined in H5public.h as follows:
- *          \snippet H5public.h H5O_token_t_snip
- *
- *          The H5O_type_t \c enum indicates the object type and
- *          is defined in H5Opublic.h as follows:
- *          \snippet this H5O_type_t_snip
- *
- *          Note that the object retrieved as indicated by \p loc_id
- *          refers only to the types specified by H5O_type_t.
- *
  *          The \p fields parameter contains flags to determine which fields will be filled in
  *          the H5O_info2_t \c struct returned in \p oinfo.
  *          These flags are defined in the H5Opublic.h file:
@@ -598,34 +571,6 @@ H5_DLL herr_t H5Oget_info_by_name_async(const char *app_file, const char *app_fu
  *
  *          If \p loc_id fully specifies the group in which the object resides,
  *          \p group_name can be a dot (\c .).
- *
- *          \p idx_type is of type #H5_index_t, defined in H5public.h as:
- *          \snippet H5public.h H5_index_t_snip
- *
- *          \p order is of type #H5_iter_order_t defined in H5public.h as:
- *          \snippet H5public.h H5_iter_order_t_snip
- *
- *          \p oinfo, in which the object information is returned, is a \c struct of
- *          type H5O_info2_t, which is defined in H5Opublic.h in the HDF5 source code:
- *          \snippet this H5O_info2_t_snip
- *
- *          Note the following about H5O_info2_t :
- *          - Of the four time fields (\c atime, \c mtime, \c ctime, and \c btime)
- *            only \c ctime has been implemented.
- *          - The \c atime value is the last time the object was read or written.
- *          - The \c mtime value is the last time the raw data in the object was changed.
- *          - The \c ctime value is the last time the metadata for the object was changed.
- *          - The \c btime value is the time the object was created.
- *
- *          H5O_token_t is defined in H5public.h as follows:
- *          \snippet H5public.h H5O_token_t_snip
- *
- *          The #H5O_type_t \c enum indicates the object type and
- *          is defined in H5Opublic.h as follows:
- *          \snippet this H5O_type_t_snip
- *
- *          Note that the object retrieved as indicated by \p loc_id
- *          refers only to the types specified by #H5O_type_t.
  *
  *          The \p fields parameter contains flags to determine which fields will be filled in
  *          the H5O_info2_t \c struct returned in \p oinfo.
@@ -1246,24 +1191,6 @@ H5_DLL ssize_t H5Oget_comment_by_name(hid_t loc_id, const char *name, char *comm
  *          group change during the iteration, the resulting behavior
  *          is undefined.
  *
- * \note \Bold{Programming Note for C++ Developers Using C Functions:}
- * \note If a C routine that takes a function pointer as an argument is
- *       called from within C++ code, the C routine should be returned
- *       from normally.
- *
- * \note Examples of this kind of routine include callbacks such as
- *       H5Pset_elink_cb() and H5Pset_type_conv_cb() and
- *       functions such as H5Tconvert() and H5Ewalk2().
- *
- * \note Exiting the routine in its normal fashion allows the HDF5
- *       C library to clean up its work properly. In other words, if
- *       the C++ application jumps out of the routine back to the C++
- *       “catch” statement, the library is not given the opportunity
- *       to close any temporary data structures that were set up when
- *       the routine was called. The C++ application should save some
- *       state as the routine is started so that any problem that occurs
- *       might be diagnosed.
- *
  * \par Example
  *      An example snippet from test/links.c:
  *      \snippet links.c H5Ovisit3_snip
@@ -1366,24 +1293,6 @@ H5_DLL herr_t H5Ovisit3(hid_t obj_id, H5_index_t idx_type, H5_iter_order_t order
  *          successfully, every link or object below the specified point
  *          in the file has been presented to the application for whatever
  *          processing the application requires.
- *
- * \note \Bold{Programming Note for C++ Developers Using C Functions:}
- * \note If a C routine that takes a function pointer as an argument is
- *       called from within C++ code, the C routine should be returned
- *       from normally.
- *
- * \note Examples of this kind of routine include callbacks such as
- *       H5Pset_elink_cb() and H5Pset_type_conv_cb() and
- *       functions such as H5Tconvert() and H5Ewalk2().
- *
- * \note Exiting the routine in its normal fashion allows the HDF5
- *       C library to clean up its work properly. In other words, if
- *       the C++ application jumps out of the routine back to the C++
- *       “catch” statement, the library is not given the opportunity
- *       to close any temporary data structures that were set up when
- *       the routine was called. The C++ application should save some
- *       state as the routine is started so that any problem that occurs
- *       might be diagnosed.
  *
  * \par Example
  *      An example snippet from test/links.c:
@@ -1567,28 +1476,18 @@ H5_DLL herr_t H5Odisable_mdc_flushes(hid_t object_id);
  *          metadata cache level.
  *
  *
- * \note HDF5 objects include datasets, groups, and committed datatypes.
- *       Only #hid_t identifiers that represent these objects can be
- *       passed to the function.
- *
- * \note Passing in a #hid_t identifier that represents any other HDF5 entity
- *       is considered an error.
- *
- * \note It is an error to pass an HDF5 file identifier
- *       (obtained from H5Fopen() or H5Fcreate())
- *       to this function.
- *
- * \note Using this function on an object that has not had flushes disabled
- *       is considered an error. The state of an object can be determined
- *       with H5Oare_mdc_flushes_disabled().
- *
- * \note An object will be returned to the default flush algorithm when it is closed.
- *
- * \note All objects will be returned to the default flush algorithm when
- *       the file is closed.
- *
- * \note An object’s entries will not necessarily be flushed as a result of
- *       calling this function.
+ * \note HDF5 objects include datasets, groups, and committed datatypes.  Only
+ *       #hid_t identifiers that represent these objects can be passed to the
+ *       function.  Passing in a #hid_t identifier that represents any other
+ *       HDF5 entity is considered an error.  It is an error to pass an HDF5
+ *       file identifier (obtained from H5Fopen() or H5Fcreate()) to this
+ *       function.  Using this function on an object that has not had flushes
+ *       disabled is considered an error. The state of an object can be
+ *       determined with H5Oare_mdc_flushes_disabled().  An object will be
+ *       returned to the default flush algorithm when it is closed.  All objects
+ *       will be returned to the default flush algorithm when the file is
+ *       closed.  An object’s entries will not necessarily be flushed as a
+ *       result of calling this function.
  *
  * \since 1.10.0
  *
@@ -1992,16 +1891,6 @@ H5_DLL herr_t H5Oget_info_by_name1(hid_t loc_id, const char *name, H5O_info1_t *
  *          If \p loc_id fully specifies the group in which the object resides,
  *          \p group_name can be a dot (\c .).
  *
- *          \p idx_type is of type #H5_index_t, defined in H5public.h as:
- *          \snippet H5public.h H5_index_t_snip
- *
- *          \p order is of type #H5_iter_order_t defined in H5public.h as:
- *          \snippet H5public.h H5_iter_order_t_snip
- *
- *          \p oinfo, in which the object information is returned, is a \c struct of
- *          type H5O_info1_t .
- *          \snippet this H5O_info1_t_snip
- *
  *          The link access property list, \c lapl_id, is not currently used;
  *          it should be passed in as #H5P_DEFAULT.
  *
@@ -2222,24 +2111,6 @@ H5_DLL herr_t H5Oget_info_by_idx2(hid_t loc_id, const char *group_name, H5_index
  *          group change during the iteration, the resulting behavior
  *          is undefined.
  *
- * \note \Bold{Programming Note for C++ Developers Using C Functions:}
- * \note If a C routine that takes a function pointer as an argument is
- *       called from within C++ code, the C routine should be returned
- *       from normally.
- *
- * \note Examples of this kind of routine include callbacks such as
- *       H5Pset_elink_cb() and H5Pset_type_conv_cb() and
- *       functions such as H5Tconvert() and H5Ewalk2().
- *
- * \note Exiting the routine in its normal fashion allows the HDF5
- *       C library to clean up its work properly. In other words, if
- *       the C++ application jumps out of the routine back to the C++
- *       “catch” statement, the library is not given the opportunity
- *       to close any temporary data structures that were set up when
- *       the routine was called. The C++ application should save some
- *       state as the routine is started so that any problem that occurs
- *       might be diagnosed.
- *
  * \version 1.10.5 The macro #H5Ovisit was removed and the function
  *          H5Ovisit1() was copied to H5Ovisit().
  * \version 1.10.3 Function H5Ovisit() was copied to H5Ovisit1(),
@@ -2348,24 +2219,6 @@ H5_DLL herr_t H5Ovisit1(hid_t obj_id, H5_index_t idx_type, H5_iter_order_t order
  *          in the file has been presented to the application for whatever
  *          processing the application requires.
  *
- * \note \Bold{Programming Note for C++ Developers Using C Functions:}
- * \note If a C routine that takes a function pointer as an argument is
- *       called from within C++ code, the C routine should be returned
- *       from normally.
- *
- * \note Examples of this kind of routine include callbacks such as
- *       H5Pset_elink_cb() and H5Pset_type_conv_cb() and
- *       functions such as H5Tconvert() and H5Ewalk2().
- *
- * \note Exiting the routine in its normal fashion allows the HDF5
- *       C library to clean up its work properly. In other words, if
- *       the C++ application jumps out of the routine back to the C++
- *       “catch” statement, the library is not given the opportunity
- *       to close any temporary data structures that were set up when
- *       the routine was called. The C++ application should save some
- *       state as the routine is started so that any problem that occurs
- *       might be diagnosed.
- *
  * \version 1.10.5 The macro #H5Ovisit_by_name was removed and the function
  *          H5Ovisit_by_name1() was copied to #H5Ovisit_by_name.
  * \version 1.10.3 The H5Ovisit_by_name() function was renamed to H5Ovisit_by_name1(),
@@ -2458,23 +2311,6 @@ H5_DLL herr_t H5Ovisit_by_name1(hid_t loc_id, const char *obj_name, H5_index_t i
  *          group change during the iteration, the resulting behavior
  *          is undefined.
  *
- * \note \Bold{Programming Note for C++ Developers Using C Functions:}
- * \note If a C routine that takes a function pointer as an argument is
- *       called from within C++ code, the C routine should be returned
- *       from normally.
- *
- * \note Examples of this kind of routine include callbacks such as
- *       H5Pset_elink_cb() and H5Pset_type_conv_cb() and
- *       functions such as H5Tconvert() and H5Ewalk2().
- *
- * \note Exiting the routine in its normal fashion allows the HDF5
- *       C library to clean up its work properly. In other words, if
- *       the C++ application jumps out of the routine back to the C++
- *       “catch” statement, the library is not given the opportunity
- *       to close any temporary data structures that were set up when
- *       the routine was called. The C++ application should save some
- *       state as the routine is started so that any problem that occurs
- *       might be diagnosed.
  *
  * \since 1.10.3
  *
@@ -2584,24 +2420,6 @@ H5_DLL herr_t H5Ovisit2(hid_t obj_id, H5_index_t idx_type, H5_iter_order_t order
  *          successfully, every link or object below the specified point
  *          in the file has been presented to the application for whatever
  *          processing the application requires.
- *
- * \note \Bold{Programming Note for C++ Developers Using C Functions:}
- * \note If a C routine that takes a function pointer as an argument is
- *       called from within C++ code, the C routine should be returned
- *       from normally.
- *
- * \note Examples of this kind of routine include callbacks such as
- *       H5Pset_elink_cb() and H5Pset_type_conv_cb() and
- *       functions such as H5Tconvert() and H5Ewalk2().
- *
- * \note Exiting the routine in its normal fashion allows the HDF5
- *       C library to clean up its work properly. In other words, if
- *       the C++ application jumps out of the routine back to the C++
- *       “catch” statement, the library is not given the opportunity
- *       to close any temporary data structures that were set up when
- *       the routine was called. The C++ application should save some
- *       state as the routine is started so that any problem that occurs
- *       might be diagnosed.
  *
  * \since 1.10.3
  *

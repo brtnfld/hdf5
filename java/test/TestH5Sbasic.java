@@ -348,34 +348,44 @@ public class TestH5Sbasic {
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void testH5Sselect_intersect_block_rank_start() throws Throwable {
-        long sid = HDF5Constants.H5I_INVALID_HID;
+    public void testH5Sselect_intersect_block_rank_start() throws Throwable
+    {
+        long sid     = HDF5Constants.H5I_INVALID_HID;
         long start[] = new long[2];
-        long end[] = null;
+        long end[]   = null;
 
         try {
             sid = H5.H5Screate(HDF5Constants.H5S_SIMPLE);
-            assertTrue("H5.H5Screate_simple_extent",sid > 0);
+            assertTrue("H5.H5Screate_simple_extent", sid > 0);
             H5.H5Sselect_intersect_block(sid, start, end);
         }
         finally {
-            try {H5.H5Sclose(sid);} catch (Exception ex) {}
+            try {
+                H5.H5Sclose(sid);
+            }
+            catch (Exception ex) {
+            }
         }
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void testH5Sselect_intersect_block_rank_end() throws Throwable {
-        long sid = HDF5Constants.H5I_INVALID_HID;
+    public void testH5Sselect_intersect_block_rank_end() throws Throwable
+    {
+        long sid     = HDF5Constants.H5I_INVALID_HID;
         long start[] = null;
-        long end[] = new long[2];
+        long end[]   = new long[2];
 
         try {
             sid = H5.H5Screate(HDF5Constants.H5S_SIMPLE);
-            assertTrue("H5.H5Screate_simple_extent",sid > 0);
+            assertTrue("H5.H5Screate_simple_extent", sid > 0);
             H5.H5Sselect_intersect_block(sid, start, end);
         }
         finally {
-            try {H5.H5Sclose(sid);} catch (Exception ex) {}
+            try {
+                H5.H5Sclose(sid);
+            }
+            catch (Exception ex) {
+            }
         }
     }
 

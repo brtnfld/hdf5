@@ -40,14 +40,17 @@ public class HDF5GroupInfo {
     long mtime;
     int linklen;
 
-    /** Container for the information reported about an HDF5 Object
-      * from the H5Gget_obj_info() method */
-    public HDF5GroupInfo() {
-        fileno = new long[2];
-        objno = new long[2];
-        nlink = -1;
-        type = -1;
-        mtime = 0;
+    /**
+     * Container for the information reported about an HDF5 Object
+     * from the H5Gget_obj_info() method
+     */
+    public HDF5GroupInfo()
+    {
+        fileno  = new long[2];
+        objno   = new long[2];
+        nlink   = -1;
+        type    = -1;
+        mtime   = 0;
         linklen = 0;
     }
 
@@ -90,47 +93,41 @@ public class HDF5GroupInfo {
         linklen   = 0;
     }
 
-    /** fileno accessors
+    /**
+     * fileno accessors
      * @return the file number if successful
      */
-    public long[] getFileno() {
-        return fileno;
-    }
+    public long[] getFileno() { return fileno; }
 
-    /** accessors
+    /**
+     * accessors
      * @return the object number if successful
      */
-    public long[] getObjno() {
-        return objno;
-    }
+    public long[] getObjno() { return objno; }
 
-    /** accessors
+    /**
+     * accessors
      * @return type of group if successful
      */
-    public int getType() {
-        return type;
-    }
+    public int getType() { return type; }
 
-    /** accessors
+    /**
+     * accessors
      * @return the number of links in the group if successful
      */
-    public int getNlink() {
-        return nlink;
-    }
+    public int getNlink() { return nlink; }
 
-    /** accessors
+    /**
+     * accessors
      * @return the modified time value if successful
      */
-    public long getMtime() {
-        return mtime;
-    }
+    public long getMtime() { return mtime; }
 
-    /** accessors
+    /**
+     * accessors
      * @return a length of link name if successful
      */
-    public int getLinklen() {
-        return linklen;
-    }
+    public int getLinklen() { return linklen; }
 
     /**
      * The fileno and objno fields contain four values which uniquely identify
@@ -161,7 +158,7 @@ public class HDF5GroupInfo {
     public long getOID() { return objno[0]; }
 
     /**
-     * /** Converts this object to a String representation.
+     * Converts this object to a String representation.
      *
      * @return a string representation of this object
      */

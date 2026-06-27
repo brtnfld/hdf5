@@ -54,7 +54,7 @@ static herr_t H5C__epoch_marker_get_initial_load_size(void *udata_ptr, size_t *i
 static herr_t H5C__epoch_marker_get_final_load_size(const void *image_ptr, size_t image_len_ptr,
                                                     void *udata_ptr, size_t *actual_len);
 static htri_t H5C__epoch_marker_verify_chksum(const void *image_ptr, size_t len, void *udata_ptr);
-static void * H5C__epoch_marker_deserialize(const void *image_ptr, size_t len, void *udata,
+static void  *H5C__epoch_marker_deserialize(const void *image_ptr, size_t len, void *udata,
                                             hbool_t *dirty_ptr);
 static herr_t H5C__epoch_marker_image_len(const void *thing, size_t *image_len_ptr);
 static herr_t H5C__epoch_marker_pre_serialize(H5F_t *f, void *thing, haddr_t addr, size_t len,
@@ -64,7 +64,7 @@ static herr_t H5C__epoch_marker_serialize(const H5F_t *f, void *image_ptr, size_
 static herr_t H5C__epoch_marker_notify(H5C_notify_action_t action, void *thing);
 static herr_t H5C__epoch_marker_free_icr(void *thing);
 static herr_t H5C__epoch_marker_fsf_size(const void H5_ATTR_UNUSED *thing,
-                                         hsize_t H5_ATTR_UNUSED *fsf_size_ptr);
+                                         hsize_t H5_ATTR_UNUSED    *fsf_size_ptr);
 
 /*********************/
 /* Package Variables */
@@ -78,23 +78,21 @@ static herr_t H5C__epoch_marker_fsf_size(const void H5_ATTR_UNUSED *thing,
 /* Local Variables */
 /*******************/
 
-const H5AC_class_t H5AC_EPOCH_MARKER[1] = {{
-    /* id                    = */ H5AC_EPOCH_MARKER_ID,
-    /* name                  = */ "epoch marker",
-    /* mem_type              = */ H5FD_MEM_DEFAULT, /* value doesn't matter */
-    /* flags                 = */ H5AC__CLASS_NO_FLAGS_SET,
-    /* get_initial_load_size = */ H5C__epoch_marker_get_initial_load_size,
-    /* get_final_load_size   = */ H5C__epoch_marker_get_final_load_size,
-    /* verify_chksum         = */ H5C__epoch_marker_verify_chksum,
-    /* deserialize           = */ H5C__epoch_marker_deserialize,
-    /* image_len             = */ H5C__epoch_marker_image_len,
-    /* pre_serialize         = */ H5C__epoch_marker_pre_serialize,
-    /* serialize             = */ H5C__epoch_marker_serialize,
-    /* notify                = */ H5C__epoch_marker_notify,
-    /* free_icr              = */ H5C__epoch_marker_free_icr,
-    /* fsf_size              = */ H5C__epoch_marker_fsf_size,
-    /* refresh               = */ NULL,
-}};
+const H5AC_class_t H5AC_EPOCH_MARKER[1] = {
+    {/* id                    = */ H5AC_EPOCH_MARKER_ID,
+     /* name                  = */ "epoch marker",
+     /* mem_type              = */ H5FD_MEM_DEFAULT, /* value doesn't matter */
+     /* flags                 = */ H5AC__CLASS_NO_FLAGS_SET,
+     /* get_initial_load_size = */ H5C__epoch_marker_get_initial_load_size,
+     /* get_final_load_size   = */ H5C__epoch_marker_get_final_load_size,
+     /* verify_chksum         = */ H5C__epoch_marker_verify_chksum,
+     /* deserialize           = */ H5C__epoch_marker_deserialize,
+     /* image_len             = */ H5C__epoch_marker_image_len,
+     /* pre_serialize         = */ H5C__epoch_marker_pre_serialize,
+     /* serialize             = */ H5C__epoch_marker_serialize,
+     /* notify                = */ H5C__epoch_marker_notify,
+     /* free_icr              = */ H5C__epoch_marker_free_icr,
+     /* fsf_size              = */ H5C__epoch_marker_fsf_size}};
 
 /***************************************************************************
  * Class functions for H5C__EPOCH_MAKER_TYPE:

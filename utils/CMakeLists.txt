@@ -8,13 +8,10 @@ endif ()
 option (HDF5_BUILD_UTILS  "Build HDF5 Utils" ON)
 if (HDF5_BUILD_UTILS)
   add_subdirectory (mirror_vfd)
+  add_subdirectory (subfiling_vfd)
 endif ()
 
 #-- Add the h5dwalk and test executables
 if (HDF5_BUILD_PARALLEL_TOOLS AND HDF5_ENABLE_PARALLEL)
   add_subdirectory(tools)
-endif()
-
-if (HDF5_HAVE_AUX_PROCESS)
-  add_subdirectory (vfd_swmr)
 endif()

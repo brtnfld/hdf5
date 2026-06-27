@@ -71,7 +71,7 @@ static herr_t H5HF__cache_hdr_get_initial_load_size(void *udata, size_t *image_l
 static herr_t H5HF__cache_hdr_get_final_load_size(const void *image_ptr, size_t image_len, void *udata,
                                                   size_t *actual_len);
 static htri_t H5HF__cache_hdr_verify_chksum(const void *image_ptr, size_t len, void *udata_ptr);
-static void * H5HF__cache_hdr_deserialize(const void *image, size_t len, void *udata, hbool_t *dirty);
+static void  *H5HF__cache_hdr_deserialize(const void *image, size_t len, void *udata, hbool_t *dirty);
 static herr_t H5HF__cache_hdr_image_len(const void *thing, size_t *image_len);
 static herr_t H5HF__cache_hdr_pre_serialize(H5F_t *f, void *thing, haddr_t addr, size_t len,
                                             haddr_t *new_addr, size_t *new_len, unsigned *flags);
@@ -80,7 +80,7 @@ static herr_t H5HF__cache_hdr_free_icr(void *thing);
 
 static herr_t H5HF__cache_iblock_get_initial_load_size(void *udata, size_t *image_len);
 static htri_t H5HF__cache_iblock_verify_chksum(const void *image_ptr, size_t len, void *udata_ptr);
-static void * H5HF__cache_iblock_deserialize(const void *image, size_t len, void *udata, hbool_t *dirty);
+static void  *H5HF__cache_iblock_deserialize(const void *image, size_t len, void *udata, hbool_t *dirty);
 static herr_t H5HF__cache_iblock_image_len(const void *thing, size_t *image_len);
 static herr_t H5HF__cache_iblock_pre_serialize(H5F_t *f, void *thing, haddr_t addr, size_t len,
                                                haddr_t *new_addr, size_t *new_len, unsigned *flags);
@@ -90,7 +90,7 @@ static herr_t H5HF__cache_iblock_free_icr(void *thing);
 
 static herr_t H5HF__cache_dblock_get_initial_load_size(void *udata, size_t *image_len);
 static htri_t H5HF__cache_dblock_verify_chksum(const void *image_ptr, size_t len, void *udata_ptr);
-static void * H5HF__cache_dblock_deserialize(const void *image, size_t len, void *udata, hbool_t *dirty);
+static void  *H5HF__cache_dblock_deserialize(const void *image, size_t len, void *udata, hbool_t *dirty);
 static herr_t H5HF__cache_dblock_image_len(const void *thing, size_t *image_len);
 static herr_t H5HF__cache_dblock_pre_serialize(H5F_t *f, void *thing, haddr_t addr, size_t len,
                                                haddr_t *new_addr, size_t *new_len, unsigned *flags);
@@ -134,7 +134,6 @@ const H5AC_class_t H5AC_FHEAP_HDR[1] = {{
     NULL,                                  /* 'notify' callback */
     H5HF__cache_hdr_free_icr,              /* 'free_icr' callback */
     NULL,                                  /* 'fsf_size' callback */
-    NULL,                                  /* VFD SWMR 'refresh' callback */
 }};
 
 /* H5HF indirect block inherits cache-like properties from H5AC */
@@ -153,7 +152,6 @@ const H5AC_class_t H5AC_FHEAP_IBLOCK[1] = {{
     H5HF__cache_iblock_notify,                /* 'notify' callback */
     H5HF__cache_iblock_free_icr,              /* 'free_icr' callback */
     NULL,                                     /* 'fsf_size' callback */
-    NULL,                                     /* VFD SWMR 'refresh' callback */
 }};
 
 /* H5HF direct block inherits cache-like properties from H5AC */
@@ -172,7 +170,6 @@ const H5AC_class_t H5AC_FHEAP_DBLOCK[1] = {{
     H5HF__cache_dblock_notify,                /* 'notify' callback */
     H5HF__cache_dblock_free_icr,              /* 'free_icr' callback */
     H5HF__cache_dblock_fsf_size,              /* 'fsf_size' callback */
-    NULL,                                     /* VFD SWMR 'refresh' callback */
 }};
 
 /*****************************/
@@ -388,7 +385,7 @@ H5HF__cache_hdr_get_final_load_size(const void *_image, size_t H5_ATTR_NDEBUG_UN
                                     size_t *actual_len)
 {
     H5HF_hdr_t           hdr;                                       /* Temporary fractal heap header */
-    const uint8_t *      image     = (const uint8_t *)_image;       /* Pointer into into supplied image */
+    const uint8_t       *image     = (const uint8_t *)_image;       /* Pointer into into supplied image */
     H5HF_hdr_cache_ud_t *udata     = (H5HF_hdr_cache_ud_t *)_udata; /* User data for callback */
     herr_t               ret_value = SUCCEED;                       /* Return value */
 
@@ -469,12 +466,12 @@ H5HF__cache_hdr_verify_chksum(const void *_image, size_t len, void H5_ATTR_UNUSE
 static void *
 H5HF__cache_hdr_deserialize(const void *_image, size_t len, void *_udata, hbool_t H5_ATTR_UNUSED *dirty)
 {
-    H5HF_hdr_t *         hdr   = NULL;                          /* Fractal heap info */
+    H5HF_hdr_t          *hdr   = NULL;                          /* Fractal heap info */
     H5HF_hdr_cache_ud_t *udata = (H5HF_hdr_cache_ud_t *)_udata; /* User data for callback */
-    const uint8_t *      image = (const uint8_t *)_image;       /* Pointer into into supplied image */
+    const uint8_t       *image = (const uint8_t *)_image;       /* Pointer into into supplied image */
     uint32_t             stored_chksum;                         /* Stored metadata checksum value */
     uint8_t              heap_flags;                            /* Status flags for heap */
-    void *               ret_value = NULL;                      /* Return value */
+    void                *ret_value = NULL;                      /* Return value */
 
     FUNC_ENTER_PACKAGE
 
@@ -729,7 +726,7 @@ static herr_t
 H5HF__cache_hdr_serialize(const H5F_t *f, void *_image, size_t H5_ATTR_NDEBUG_UNUSED len, void *_thing)
 {
     H5HF_hdr_t *hdr   = (H5HF_hdr_t *)_thing; /* Fractal heap info */
-    uint8_t *   image = (uint8_t *)_image;    /* Pointer into raw data buffer */
+    uint8_t    *image = (uint8_t *)_image;    /* Pointer into raw data buffer */
     uint8_t     heap_flags;                   /* Status flags for heap */
     uint32_t    metadata_chksum;              /* Computed metadata checksum value */
     herr_t      ret_value = SUCCEED;          /* Return value */
@@ -745,9 +742,11 @@ H5HF__cache_hdr_serialize(const H5F_t *f, void *_image, size_t H5_ATTR_NDEBUG_UN
     HDassert(len == hdr->heap_size);
 
     /* Set the shared heap header's file context for this operation */
-    H5_GCC_CLANG_DIAG_OFF("discarded-qualifiers")
+    H5_GCC_DIAG_OFF("discarded-qualifiers")
+    H5_CLANG_DIAG_OFF("incompatible-pointer-types-discards-qualifiers")
     hdr->f = f;
-    H5_GCC_CLANG_DIAG_ON("discarded-qualifiers")
+    H5_GCC_DIAG_ON("discarded-qualifiers")
+    H5_CLANG_DIAG_ON("incompatible-pointer-types-discards-qualifiers")
 
     /* Magic number */
     H5MM_memcpy(image, H5HF_HDR_MAGIC, (size_t)H5_SIZEOF_MAGIC);
@@ -955,14 +954,14 @@ static void *
 H5HF__cache_iblock_deserialize(const void *_image, size_t H5_ATTR_NDEBUG_UNUSED len, void *_udata,
                                hbool_t H5_ATTR_UNUSED *dirty)
 {
-    H5HF_hdr_t *            hdr;                                       /* Shared fractal heap information */
+    H5HF_hdr_t             *hdr;                                       /* Shared fractal heap information */
     H5HF_iblock_cache_ud_t *udata  = (H5HF_iblock_cache_ud_t *)_udata; /* User data for callback */
-    H5HF_indirect_t *       iblock = NULL;                             /* Indirect block info */
-    const uint8_t *         image  = (const uint8_t *)_image;          /* Pointer into raw data buffer */
+    H5HF_indirect_t        *iblock = NULL;                             /* Indirect block info */
+    const uint8_t          *image  = (const uint8_t *)_image;          /* Pointer into raw data buffer */
     haddr_t                 heap_addr;        /* Address of heap header in the file */
     uint32_t                stored_chksum;    /* Stored metadata checksum value */
     unsigned                u;                /* Local index variable */
-    void *                  ret_value = NULL; /* Return value */
+    void                   *ret_value = NULL; /* Return value */
 
     FUNC_ENTER_PACKAGE
 
@@ -1182,7 +1181,7 @@ static herr_t
 H5HF__cache_iblock_pre_serialize(H5F_t *f, void *_thing, haddr_t addr, size_t H5_ATTR_UNUSED len,
                                  haddr_t *new_addr, size_t H5_ATTR_UNUSED *new_len, unsigned *flags)
 {
-    H5HF_hdr_t *     hdr;                                   /* Shared fractal heap information */
+    H5HF_hdr_t      *hdr;                                   /* Shared fractal heap information */
     H5HF_indirect_t *iblock    = (H5HF_indirect_t *)_thing; /* Indirect block info */
     herr_t           ret_value = SUCCEED;                   /* Return value */
 
@@ -1303,9 +1302,9 @@ done:
 static herr_t
 H5HF__cache_iblock_serialize(const H5F_t *f, void *_image, size_t H5_ATTR_NDEBUG_UNUSED len, void *_thing)
 {
-    H5HF_hdr_t *     hdr;                                /* Shared fractal heap information */
+    H5HF_hdr_t      *hdr;                                /* Shared fractal heap information */
     H5HF_indirect_t *iblock = (H5HF_indirect_t *)_thing; /* Indirect block info */
-    uint8_t *        image  = (uint8_t *)_image;         /* Pointer into raw data buffer */
+    uint8_t         *image  = (uint8_t *)_image;         /* Pointer into raw data buffer */
 #ifndef NDEBUG
     unsigned nchildren = 0;       /* Track # of children */
     size_t   max_child = 0;       /* Track max. child entry used */
@@ -1333,9 +1332,11 @@ H5HF__cache_iblock_serialize(const H5F_t *f, void *_image, size_t H5_ATTR_NDEBUG
     hdr = iblock->hdr;
 
     /* Set the shared heap header's file context for this operation */
-    H5_GCC_CLANG_DIAG_OFF("discarded-qualifiers")
+    H5_GCC_DIAG_OFF("discarded-qualifiers")
+    H5_CLANG_DIAG_OFF("incompatible-pointer-types-discards-qualifiers")
     hdr->f = f;
-    H5_GCC_CLANG_DIAG_ON("discarded-qualifiers")
+    H5_GCC_DIAG_ON("discarded-qualifiers")
+    H5_CLANG_DIAG_ON("incompatible-pointer-types-discards-qualifiers")
 
     /* Magic number */
     H5MM_memcpy(image, H5HF_IBLOCK_MAGIC, (size_t)H5_SIZEOF_MAGIC);
@@ -1561,8 +1562,8 @@ static herr_t
 H5HF__cache_dblock_get_initial_load_size(void *_udata, size_t *image_len)
 {
     const H5HF_dblock_cache_ud_t *udata = (const H5HF_dblock_cache_ud_t *)_udata; /* User data for callback */
-    const H5HF_parent_t *         par_info; /* Pointer to parent information */
-    const H5HF_hdr_t *            hdr;      /* Shared fractal heap information */
+    const H5HF_parent_t          *par_info; /* Pointer to parent information */
+    const H5HF_hdr_t             *hdr;      /* Shared fractal heap information */
 
     FUNC_ENTER_PACKAGE_NOERR
 
@@ -1608,15 +1609,15 @@ H5HF__cache_dblock_get_initial_load_size(void *_udata, size_t *image_len)
 static htri_t
 H5HF__cache_dblock_verify_chksum(const void *_image, size_t len, void *_udata)
 {
-    const uint8_t *         image    = (const uint8_t *)_image;          /* Pointer into raw data buffer */
+    const uint8_t          *image    = (const uint8_t *)_image;          /* Pointer into raw data buffer */
     H5HF_dblock_cache_ud_t *udata    = (H5HF_dblock_cache_ud_t *)_udata; /* User data for callback */
-    void *                  read_buf = NULL;                             /* Pointer to buffer to read in */
-    H5HF_hdr_t *            hdr;                                         /* Shared fractal heap information */
-    H5HF_parent_t *         par_info;                                    /* Pointer to parent information */
+    void                   *read_buf = NULL;                             /* Pointer to buffer to read in */
+    H5HF_hdr_t             *hdr;                                         /* Shared fractal heap information */
+    H5HF_parent_t          *par_info;                                    /* Pointer to parent information */
     uint32_t                stored_chksum;                               /* Stored metadata checksum value */
     uint32_t                computed_chksum;  /* Computed metadata checksum value */
     size_t                  chk_size;         /* The size for validating checksum */
-    uint8_t *               chk_p;            /* Pointer to the area for validating checksum */
+    uint8_t                *chk_p;            /* Pointer to the area for validating checksum */
     htri_t                  ret_value = TRUE; /* Return value */
 
     FUNC_ENTER_PACKAGE
@@ -1662,9 +1663,15 @@ H5HF__cache_dblock_verify_chksum(const void *_image, size_t len, void *_udata)
         /* Update info about direct block */
         udata->decompressed = TRUE;
         len                 = nbytes;
-    } /* end if */
-    else
-        read_buf = (void *)image; /* Casting away const OK - QAK */
+    }
+    else {
+        /* If the data are unfiltered, we just point to the image, which we
+         * never modify. Casting away const is okay here.
+         */
+        H5_GCC_CLANG_DIAG_OFF("cast-qual")
+        read_buf = (void *)image;
+        H5_GCC_CLANG_DIAG_OFF("cast-qual")
+    }
 
     /* Decode checksum */
     chk_size = (size_t)(H5HF_MAN_ABS_DIRECT_OVERHEAD(hdr) - H5HF_SIZEOF_CHKSUM);
@@ -1733,14 +1740,14 @@ done:
 static void *
 H5HF__cache_dblock_deserialize(const void *_image, size_t len, void *_udata, hbool_t H5_ATTR_UNUSED *dirty)
 {
-    H5HF_hdr_t *            hdr;                                      /* Shared fractal heap information */
+    H5HF_hdr_t             *hdr;                                      /* Shared fractal heap information */
     H5HF_dblock_cache_ud_t *udata = (H5HF_dblock_cache_ud_t *)_udata; /* User data for callback */
-    H5HF_parent_t *         par_info;                                 /* Pointer to parent information */
-    H5HF_direct_t *         dblock   = NULL;                          /* Direct block info */
-    const uint8_t *         image    = (const uint8_t *)_image;       /* Pointer into raw data buffer */
-    void *                  read_buf = NULL;                          /* Pointer to buffer to decompress */
+    H5HF_parent_t          *par_info;                                 /* Pointer to parent information */
+    H5HF_direct_t          *dblock   = NULL;                          /* Direct block info */
+    const uint8_t          *image    = (const uint8_t *)_image;       /* Pointer into raw data buffer */
+    void                   *read_buf = NULL;                          /* Pointer to buffer to decompress */
     haddr_t                 heap_addr;                                /* Address of heap header in the file */
-    void *                  ret_value = NULL;                         /* Return value */
+    void                   *ret_value = NULL;                         /* Return value */
 
     FUNC_ENTER_PACKAGE
 
@@ -1915,7 +1922,7 @@ static herr_t
 H5HF__cache_dblock_image_len(const void *_thing, size_t *image_len)
 {
     const H5HF_direct_t *dblock = (const H5HF_direct_t *)_thing; /* Direct block info */
-    const H5HF_hdr_t *   hdr;                                    /* Shared fractal heap information */
+    const H5HF_hdr_t    *hdr;                                    /* Shared fractal heap information */
     size_t               size;
 
     FUNC_ENTER_PACKAGE_NOERR
@@ -2050,13 +2057,13 @@ H5HF__cache_dblock_pre_serialize(H5F_t *f, void *_thing, haddr_t addr, size_t le
     hbool_t at_tmp_addr; /* Flag to indicate direct block is */
                          /* at temporary address */
     haddr_t          dblock_addr;
-    H5HF_hdr_t *     hdr;                              /* Shared fractal heap information */
-    H5HF_direct_t *  dblock = (H5HF_direct_t *)_thing; /* Direct block info */
+    H5HF_hdr_t      *hdr;                              /* Shared fractal heap information */
+    H5HF_direct_t   *dblock = (H5HF_direct_t *)_thing; /* Direct block info */
     H5HF_indirect_t *par_iblock;                       /* Parent indirect block */
     unsigned         par_entry = 0;                    /* Entry in parent indirect block */
-    void *           write_buf;                        /* Pointer to buffer to write out */
+    void            *write_buf;                        /* Pointer to buffer to write out */
     size_t           write_size;                       /* Size of buffer to write out */
-    uint8_t *        image;                            /* Pointer into raw data buffer */
+    uint8_t         *image;                            /* Pointer into raw data buffer */
     unsigned         dblock_flags = 0;
     herr_t           ret_value    = SUCCEED; /* Return value */
 

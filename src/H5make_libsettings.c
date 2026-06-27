@@ -71,6 +71,7 @@ insert_libhdf5_settings(FILE *flibinfo)
      */
     HDfprintf(flibinfo, "#include \"H5private.h\"\n");
     HDfprintf(flibinfo, "H5_GCC_DIAG_OFF(\"larger-than=\")\n\n");
+    HDfprintf(flibinfo, "H5_CLANG_DIAG_OFF(\"overlength-strings\")\n\n");
 
     /* Print variable definition and the string. Do not use const or some
      * platforms (AIX?) will have issues.
@@ -110,6 +111,7 @@ insert_libhdf5_settings(FILE *flibinfo)
 
     /* Re-enable warnings for large arrays */
     HDfprintf(rawoutstream, "H5_GCC_DIAG_ON(\"larger-than=\")\n");
+    HDfprintf(rawoutstream, "H5_CLANG_DIAG_OFF(\"overlength-strings\")\n");
 #else
     /* Print variable definition and an empty string. Do not use const or some
      * platforms (AIX?) will have issues.
@@ -147,7 +149,7 @@ static void
 print_header(void)
 {
     time_t      now = HDtime(NULL);
-    struct tm * tm  = HDlocaltime(&now);
+    struct tm  *tm  = HDlocaltime(&now);
     char        real_name[30];
     char        host_name[256];
     int         i;
@@ -169,7 +171,7 @@ information about the library build configuration\n";
 #ifdef H5_HAVE_GETPWUID
     {
         size_t n;
-        char * comma;
+        char  *comma;
 
         if ((pwd = HDgetpwuid(HDgetuid()))) {
             if ((comma = HDstrchr(pwd->pw_gecos, ','))) {

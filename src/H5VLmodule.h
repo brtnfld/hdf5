@@ -23,18 +23,15 @@
  *      reporting macros.
  */
 #define H5VL_MODULE
-#define H5_MY_PKG      H5VL
-#define H5_MY_PKG_ERR  H5E_VOL
-#define H5_MY_PKG_INIT YES
+#define H5_MY_PKG     H5VL
+#define H5_MY_PKG_ERR H5E_VOL
 
-/**
- * \defgroup H5VL H5VL
- * \brief Virtual Object Layer Interface
- * \todo Describe concisely what the functions in this module are about.
+/**\defgroup H5VL H5VL
+ *
+ * \todo Describe the VOL plugin life cycle.
  *
  * \defgroup ASYNC Asynchronous Functions
  * \brief Asynchronous Functions
- * \todo Describe concisely what the functions in this module are about.
  *
  * \defgroup H5VLDEF Definitions
  * \ingroup H5VL

@@ -23,14 +23,15 @@ public class H5Ex_T_VLString {
     private static String FILENAME    = "H5Ex_T_VLString.h5";
     private static String DATASETNAME = "DS1";
 
-    private static void createDataset() {
-        long file_id = HDF5Constants.H5I_INVALID_HID;
-        long type_id = HDF5Constants.H5I_INVALID_HID;
+    private static void createDataset()
+    {
+        long file_id      = HDF5Constants.H5I_INVALID_HID;
+        long type_id      = HDF5Constants.H5I_INVALID_HID;
         long dataspace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id = HDF5Constants.H5I_INVALID_HID;
-        int rank = 1;
-        String[] str_data = { "Parting", "is such", "sweet", "sorrow." };
-        long[] dims = { str_data.length };
+        long dataset_id   = HDF5Constants.H5I_INVALID_HID;
+        int rank          = 1;
+        String[] str_data = {"Parting", "is such", "sweet", "sorrow."};
+        long[] dims       = {str_data.length};
 
         // Create a new file using default properties.
         try {
@@ -91,11 +92,12 @@ public class H5Ex_T_VLString {
         }
     }
 
-    private static void readDataset() {
-        long file_id = HDF5Constants.H5I_INVALID_HID;
-        long type_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id = HDF5Constants.H5I_INVALID_HID;
-        String[] str_data = { "", "", "", "" };
+    private static void readDataset()
+    {
+        long file_id      = HDF5Constants.H5I_INVALID_HID;
+        long type_id      = HDF5Constants.H5I_INVALID_HID;
+        long dataset_id   = HDF5Constants.H5I_INVALID_HID;
+        String[] str_data = {"", "", "", ""};
 
         try {
             file_id = H5.H5Fopen(FILENAME, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
