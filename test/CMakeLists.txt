@@ -88,6 +88,17 @@ if (HDF5_ENABLE_FORMATTERS)
   endif ()
 endif ()
 
+#-----------------------------------------------------------------------------
+# Add Target to clang-format
+#-----------------------------------------------------------------------------
+if (HDF5_ENABLE_FORMATTERS)
+  if (NOT ONLY_SHARED_LIBS)
+    clang_format (HDF5_TEST_SRC_FORMAT ${HDF5_TEST_LIB_TARGET})
+  else ()
+    clang_format (HDF5_TEST_SRC_FORMAT ${HDF5_TEST_LIBSH_TARGET})
+  endif ()
+endif ()
+
 #################################################################################
 # If filter, vfd and vol plugin tests can be tested
 #################################################################################
@@ -594,6 +605,20 @@ if (HDF5_BUILD_UTILS) # requires mirror server
   if (HDF5_ENABLE_FORMATTERS)
     clang_format (HDF5_TEST_mirror_vfd_FORMAT mirror_vfd)
   endif ()
+endif ()
+
+#-----------------------------------------------------------------------------
+# Add Target to clang-format
+#-----------------------------------------------------------------------------
+if (HDF5_ENABLE_FORMATTERS)
+  clang_format (HDF5_TEST_mirror_vfd_FORMAT mirror_vfd)
+endif ()
+
+#-----------------------------------------------------------------------------
+# Add Target to clang-format
+#-----------------------------------------------------------------------------
+if (HDF5_ENABLE_FORMATTERS)
+  clang_format (HDF5_TEST_event_set_FORMAT event_set)
 endif ()
 
 ##############################################################################

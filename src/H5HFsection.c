@@ -713,7 +713,7 @@ H5HF__sect_single_full_dblock(H5HF_hdr_t *hdr, H5HF_free_section_t *sect)
     size_t  dblock_overhead;     /* Direct block's overhead */
     herr_t  ret_value = SUCCEED; /* Return value */
 
-    FUNC_ENTER_PACKAGE
+    FUNC_ENTER_STATIC
 
     /* Check arguments. */
     HDassert(sect);

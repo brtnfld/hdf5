@@ -242,7 +242,7 @@ main(int argc, char *argv[])
     if (argno >= argc)
         usage(prog_name);
     src_gen_name = argv[argno++];
-    HDsnprintf(src_name, NAMELEN, src_gen_name, src_membno);
+    HDsprintf(src_name, src_gen_name, src_membno);
     src_is_family = strcmp(src_name, src_gen_name);
 
     if ((src = HDopen(src_name, O_RDONLY)) < 0) {

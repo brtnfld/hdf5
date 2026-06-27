@@ -997,22 +997,6 @@ H5C__read_cache_image(H5F_t *f, H5C_t *cache_ptr)
 #endif /* H5_HAVE_PARALLEL */
 
             /* Read the buffer (if serial access, or rank 0 of parallel access) */
-
-            /* No need to set the page buffer hints here, as if paged
-             * allocation is in use, we know that the cache image was allocated
-             * directly from the free space manager, and thus either doesn't
-             * cross page boundaries, or is page aligned.  Between this,
-             * and the fact that the cache image is never read speculatively,
-             * the page buffer should never request hints in this context.
-             *
-             * If for some reason it does, the NULL curr_io_type will trigger
-             * an assertion failure.
-             *
-             * Note that we will have to revisit this if we ever use
-             * cache_ptr->curr_io_type for something other than sanity
-             * checking
-             *                                      JRM -- 3/30/20
-             */
             if (H5F_block_read(f, H5FD_MEM_SUPER, cache_ptr->image_addr, cache_ptr->image_len,
                                cache_ptr->image_buffer) < 0)
                 HGOTO_ERROR(H5E_CACHE, H5E_READERROR, FAIL, "Can't read metadata cache image block")

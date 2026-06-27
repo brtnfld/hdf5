@@ -58,7 +58,7 @@ ReadGifHeader(GIFHEAD * GifHead, /* Pointer to GIF header structure  */
               GIFBYTE **MemGif2) /* GIF image file input FILE stream */
 {
     GIFWORD i;         /* Loop counter                                */
-    GIFWORD tableSize; /* Number of entries in the Global Color Table */
+    GIFWORD tableSize; /* Number of entires in the Global Color Table */
 
     GifHead->TableSize = 0;
     for (i = 0; i < 6; i++) {
@@ -103,7 +103,7 @@ ReadGifHeader(GIFHEAD * GifHead, /* Pointer to GIF header structure  */
         return -1;
 #endif /* 0 */
 
-    return 0; /* No FILE stream error occurred */
+    return 0; /* No FILE stream error occured */
 }
 
 /*
@@ -196,7 +196,7 @@ ReadGifImageDesc(GIFIMAGEDESC *GifImageDesc, /* Pointer to GIF image descriptor 
             *TempPtr++ = *(*MemGif2)++;
     } while (ch1);
 
-    return (0); /* No FILE stream error occurred */
+    return (0); /* No FILE stream error occured */
 }
 
 /*
@@ -219,7 +219,7 @@ ReadGifGraphicControl(GIFGRAPHICCONTROL *GifGraphicControl, /* Pointer to GC Ext
         GifGraphicControl->GCEDump[i] = *(*MemGif2)++;
     }
 
-    return (0); /* No FILE stream error occurred */
+    return (0); /* No FILE stream error occured */
 }
 
 /*
@@ -256,7 +256,7 @@ ReadGifPlainText(GIFPLAINTEXT *GifPlainText, /* Pointer to Plain Text Extension 
            return(-1);
     */
 
-    return (0); /* No FILE stream error occurred */
+    return (0); /* No FILE stream error occured */
 }
 
 /*
@@ -292,7 +292,7 @@ ReadGifApplication(GIFAPPLICATION *GifApplication, /* Pointer to Application Ext
            return(-1);
     */
 
-    return (0); /* No FILE stream error occurred */
+    return (0); /* No FILE stream error occured */
 }
 
 /*
@@ -316,7 +316,7 @@ ReadGifComment(GIFCOMMENT *GifComment, /* Pointer to GIF Comment Extension struc
 
     GifComment->Terminator = 0;
 
-    return (0); /* No FILE stream error occurred */
+    return (0); /* No FILE stream error occured */
 }
 
 /*
@@ -364,7 +364,7 @@ ReadDataSubBlocks(GIFBYTE **MemGif2, /* GIF image file input FILE stream        
         if ((dataSize = *(*MemGif2)++) == 0)
             break; /* Block Terminator encountered */
 
-        /* Increase the buffer size to accommodate the next sub-block */
+        /* Increase the buffer size to accomodate the next sub-block */
         if (!(ptr1 = ptr2 = (GIFBYTE *)realloc(ptr2, bufSize + dataSize + 1)))
             return ((GIFBYTE *)NULL);
 

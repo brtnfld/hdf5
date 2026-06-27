@@ -6066,11 +6066,7 @@ test_misc(void)
     test_misc17(); /* Test array of ASCII character */
     test_misc18(); /* Test new object header information in H5O_info_t struct */
     test_misc19(); /* Test incrementing & decrementing ref count on IDs */
-
-    if (!driver_uses_modified_filename) {
-        test_misc20(); /* Test problems with truncated dimensions in version 2 of storage layout message */
-    }
-
+    test_misc20(); /* Test problems with truncated dimensions in version 2 of storage layout message */
 #ifdef H5_HAVE_FILTER_SZIP
     test_misc21();  /* Test that "late" allocation time is treated the same as "incremental", for chunked
                        datasets w/a filters */

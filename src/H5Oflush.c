@@ -38,10 +38,10 @@
 #include "H5CXprivate.h" /* API Contexts */
 #include "H5Dprivate.h"  /* Datasets */
 #include "H5Eprivate.h"  /* Errors   */
+#include "H5ESprivate.h" /* Event Sets */
 #include "H5Fprivate.h"  /* Files    */
 #include "H5Gprivate.h"  /* Groups   */
 #include "H5Iprivate.h"  /* IDs      */
-#include "H5Dpkg.h"      /* Datasets */
 #include "H5Opkg.h"      /* Objects  */
 #include "H5Tpkg.h"      /* Datatypes */
 
@@ -196,21 +196,19 @@ done:
 herr_t
 H5O_refresh_metadata(H5O_loc_t *oloc, hid_t oid)
 {
-    hbool_t objs_incr = FALSE;   /* Whether the object count in the file was incremented */
-    herr_t  ret_value = SUCCEED; /* Return value */
+    H5VL_object_t *vol_obj   = NULL;    /* VOL object associated with the ID */
+    hbool_t        objs_incr = FALSE;   /* Whether the object count in the file was incremented */
+    herr_t         ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
     /* If the file is opened with write access, no need to perform refresh actions. */
     if (!(H5F_INTENT(oloc->file) & H5F_ACC_RDWR)) {
-        H5G_loc_t            obj_loc;
-        H5O_loc_t            obj_oloc;
-        H5G_name_t           obj_path;
-        H5O_refresh_state_t  state;
-        const H5D_t *        ds;
-        const H5VL_object_t *vol_obj;
-        const void *         object;
-        H5VL_t *             connector = NULL;
+        H5G_loc_t    obj_loc;
+        H5O_loc_t    obj_oloc;
+        H5G_name_t   obj_path;
+        H5O_shared_t cached_H5O_shared;
+        H5VL_t *     connector = NULL;
 
         /* Create empty object location */
         obj_loc.oloc = &obj_oloc;
@@ -222,6 +220,11 @@ H5O_refresh_metadata(H5O_loc_t *oloc, hid_t oid)
          */
         H5F_incr_nopen_objs(oloc->file);
         objs_incr = TRUE;
+
+        /* Save important datatype state */
+        if (H5I_get_type(oid) == H5I_DATATYPE)
+            if (H5T_save_refresh_state(oid, &cached_H5O_shared) < 0)
+                HGOTO_ERROR(H5E_DATATYPE, H5E_CANTOPENOBJ, FAIL, "unable to save datatype state")
 
         /* Get the VOL object from the ID and cache a pointer to the connector.
          * The vol_obj will disappear when the underlying object is closed, so
@@ -258,25 +261,16 @@ H5O_refresh_metadata(H5O_loc_t *oloc, hid_t oid)
             HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to refresh object")
 
         /* Re-open the object, re-fetching its metadata */
-        if (H5O_refresh_metadata_reopen(oid, &obj_loc, &state, connector, FALSE) < 0)
+        if (H5O_refresh_metadata_reopen(oid, &obj_loc, connector, FALSE) < 0)
             HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to refresh object")
 
         /* Restore the number of references on the VOL connector */
         connector->nrefs--;
 
         /* Restore important datatype state */
-        switch (H5I_get_type(oid)) {
-            case H5I_DATATYPE:
-                if (H5T_restore_refresh_state(oid, &state.shared_ohdr_info) < 0)
-                    HGOTO_ERROR(H5E_DATATYPE, H5E_CANTOPENOBJ, FAIL, "unable to restore datatype state")
-                break;
-            case H5I_DATASET:
-                if (H5I_dec_ref(state.dapl_id) < 0)
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "could not decrease refcnt");
-                break;
-            default:
-                break;
-        }
+        if (H5I_get_type(oid) == H5I_DATATYPE)
+            if (H5T_restore_refresh_state(oid, &cached_H5O_shared) < 0)
+                HGOTO_ERROR(H5E_DATATYPE, H5E_CANTOPENOBJ, FAIL, "unable to restore datatype state")
 
     } /* end if */
 
@@ -408,8 +402,7 @@ H5O_refresh_metadata_reopen(hid_t oid, H5G_loc_t *obj_loc, const H5O_refresh_sta
 
         case H5I_DATASET:
             /* Re-open the dataset */
-            object = H5D_open(obj_loc, (state == NULL) ? H5P_DATASET_ACCESS_DEFAULT : state->dapl_id);
-            if (NULL == object)
+            if (NULL == (object = H5D_open(obj_loc, H5P_DATASET_ACCESS_DEFAULT)))
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTOPENOBJ, FAIL, "unable to open dataset")
             if (!start_swmr) /* No need to handle multiple opens when H5Fstart_swmr_write() */
                 if (H5D_mult_refresh_reopen((H5D_t *)object) < 0)

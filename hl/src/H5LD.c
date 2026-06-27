@@ -251,10 +251,8 @@ H5LD_construct_vector(char *fields, H5LD_memb_t *listv[] /*OUT*/, hid_t par_tid)
                 goto done;
         } /* end if */
         else {
-            if (memb) {
-                HDfree(memb->names);
+            if (memb)
                 HDfree(memb);
-            }
             goto done;
         } /* end else */
     }     /* while !end_of_fields */

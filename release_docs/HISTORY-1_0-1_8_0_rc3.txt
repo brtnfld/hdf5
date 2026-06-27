@@ -103,9 +103,9 @@ New Features
             -JML 2006/6/21
         - If both shared and static libraries are installed, now both will be
             tested during 'make install'. -MAM 2006/06/21
-        - Added support to explicitly enable stream_vfd or shared libraries
+        - Added support to explicity enable stream_vfd or shared libraries
             when using parallel via the '--enable-stream_vfd' and
-            '--enable-shared' options, respectively. If not explicitly defined,
+            '--enable-shared' options, respectively. If not explicity defined,
             These settings default to enabled when parallel is not used,
             and disabled when parallel is used. -MAM 2006/06/17
         - Remove the flexible parallel code and the --enable-fphdf5
@@ -169,7 +169,7 @@ New Features
               variable $FC, not $F9X.  F9X still works, but is depreciated.
             The output of make may be different.  This should be only a
               cosmetic effect.
-            make depend (or make dep) is no longer recognized, since automake
+            make depened (or make dep) is no longer recognized, since automake
             handles dependency tracking.
             Some new configure options exist.  --enable-dependency-tracking
               and --disable-dependency-tracking are used to control automake's
@@ -306,11 +306,11 @@ New Features
         - Added managements of collective IO supports for chunking storage
              inside parallel HDF5
              1) Implemented One IO with collective mode for all chunks in the
-                application by building one MPI derived datatype across all
+                application by building one MPI derived datatype accross all
                 chunks.
              2) Implemented the decision-making support to do collective IO inside
                 MPI-IO per chunk.
-             3) Added the decision-making support to do one IO across all chunks
+             3) Added the decision-making support to do one IO accross all chunks
                 or to do multiple IOs with each IO per chunk.
              4) Added the support to handle the case some processes won't do any IOs in
                 collectively.
@@ -319,7 +319,7 @@ New Features
                 contributions to IOs, a special macro is added to change
                 collective IO mode to independent IO mode inside HDF5 library.
 
-                Currently we find that MPICH at Linux and vendor MPI-IO package at NCSA
+                Currently we find that MPICH at Linux and vender MPI-IO package at NCSA
                 Altix cannot handle this case.
 
              "hdf5_mpi_special_collective_io_works=${hdf5_mpi_special_collective_io_works='no'}"
@@ -639,7 +639,7 @@ Support for new platforms, languages and compilers.
         - Added support for HPUX11.23 for both 32 and 64-bit; HDF5 C++
         - Added support for 64-bit Windows with Visual Studio .NET and 2005.
             SJW - 2007/06/25
-        - Added support for HPUX11.23 for both 32 and 64-bit; HDF5 C++
+        - Added suport for HPUX11.23 for both 32 and 64-bit; HDF5 C++
             shared library is not supported with +DD64 flag.
                                                      EIP - 2006/06/22
         - Added support for VAX floating numbers for Alpha Open VMS 7.3.2
@@ -855,7 +855,7 @@ Bug Fixes since HDF5-1.6.0 release
         - Fixed dtypes "sw long double -> double" failure in QSC class
             machines.  AKC - 2004/4/16
         - Fixed problem with fletcher32 filter when converting data of different
-            endianness. PVN - 2004/03/10
+            endianess. PVN - 2004/03/10
         - Fixed problem with H5Tget_native_type() not handling opaque fields
             correctly.  QAK - 2004/01/31
         - Fixed several errors in B-tree deletion code which could cause a
@@ -4448,7 +4448,7 @@ New Features
             verbosity via the '-v' option.  The default is less verbose
             than before.  AKC - 2004/01/23
         - Added parallel test, test_mpio_1wMr, which tests if the
-            underlying parallel I/O system is conforming to the POSIX
+            underlaying parallel I/O system is conforming to the POSIX
             write/read requirement. This version includes options of using
             atomicity and file-sync.  AKC - 2003/11/27
 

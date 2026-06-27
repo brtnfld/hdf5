@@ -95,6 +95,9 @@ static herr_t         H5VL__free_vol_wrapper(H5VL_wrap_ctx_t *vol_wrap_ctx);
 /* Package Variables */
 /*********************/
 
+/* Package initialization variable */
+hbool_t H5_PKG_INIT_VAR = FALSE;
+
 /*****************************/
 /* Library Private Variables */
 /*****************************/
@@ -195,14 +198,18 @@ H5VL_init_phase2(void)
     };
 
     /* Initialize all packages for VOL-managed objects */
-    for (i = 0; i < NELMTS(initializer); i++) {
-        if (initializer[i].func() < 0) {
-            HGOTO_ERROR(H5E_VOL, H5E_CANTINIT, FAIL,
-                "unable to initialize %s interface", initializer[i].descr)
-        }
-    }
-
-    /* clang-format on */
+    if (H5T_init() < 0)
+        HGOTO_ERROR(H5E_VOL, H5E_CANTINIT, FAIL, "unable to initialize datatype interface")
+    if (H5D_init() < 0)
+        HGOTO_ERROR(H5E_VOL, H5E_CANTINIT, FAIL, "unable to initialize dataset interface")
+    if (H5F_init() < 0)
+        HGOTO_ERROR(H5E_VOL, H5E_CANTINIT, FAIL, "unable to initialize file interface")
+    if (H5G_init() < 0)
+        HGOTO_ERROR(H5E_VOL, H5E_CANTINIT, FAIL, "unable to initialize group interface")
+    if (H5A_init() < 0)
+        HGOTO_ERROR(H5E_VOL, H5E_CANTINIT, FAIL, "unable to initialize attribute interface")
+    if (H5M_init() < 0)
+        HGOTO_ERROR(H5E_VOL, H5E_CANTINIT, FAIL, "unable to initialize map interface")
 
     /* Sanity check default VOL connector */
     HDassert(H5VL_def_conn_s.connector_id == (-1));
@@ -215,6 +222,32 @@ H5VL_init_phase2(void)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5VL_init_phase2() */
+
+/*-------------------------------------------------------------------------
+ * Function:	H5VL__init_package
+ *
+ * Purpose:     Initialize interface-specific information
+ *
+ * Return:      Success:    Non-negative
+ *
+ *              Failure:    Negative
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5VL__init_package(void)
+{
+    herr_t ret_value = SUCCEED; /* Return value */
+
+    FUNC_ENTER_PACKAGE
+
+    /* Initialize the ID group for the VL IDs */
+    if (H5I_register_type(H5I_VOL_CLS) < 0)
+        HGOTO_ERROR(H5E_VOL, H5E_CANTINIT, FAIL, "unable to initialize H5VL interface")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5VL__init_package() */
 
 /*-------------------------------------------------------------------------
  * Function:	H5VL_term_package
@@ -234,31 +267,37 @@ H5VL_term_package(void)
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-    if (H5VL_def_conn_s.connector_id > 0) {
-        /* Release the default VOL connector */
-        (void)H5VL_conn_free(&H5VL_def_conn_s);
-        H5VL_def_conn_s.connector_id   = -1;
-        H5VL_def_conn_s.connector_info = NULL;
-        n++;
-    } /* end if */
-    else {
-        if (H5I_nmembers(H5I_VOL) > 0) {
-            /* Unregister all VOL connectors */
-            (void)H5I_clear_type(H5I_VOL, TRUE, FALSE);
+    if (H5_PKG_INIT_VAR) {
+        if (H5VL_def_conn_s.connector_id > 0) {
+            /* Release the default VOL connector */
+            (void)H5VL_conn_free(&H5VL_def_conn_s);
+            H5VL_def_conn_s.connector_id   = -1;
+            H5VL_def_conn_s.connector_info = NULL;
             n++;
         } /* end if */
         else {
-            if (H5VL__num_opt_operation() > 0) {
-                /* Unregister all dynamically registered optional operations */
-                (void)H5VL__term_opt_operation();
+            if (H5I_nmembers(H5I_VOL) > 0) {
+                /* Unregister all VOL connectors */
+                (void)H5I_clear_type(H5I_VOL, TRUE, FALSE);
                 n++;
             } /* end if */
             else {
-                /* Destroy the VOL connector ID group */
-                n += (H5I_dec_type_ref(H5I_VOL) > 0);
-            } /* end else */
-        }     /* end else */
-    }         /* end else */
+                if (H5VL__num_opt_operation() > 0) {
+                    /* Unregister all dynamically registered optional operations */
+                    (void)H5VL__term_opt_operation();
+                    n++;
+                } /* end if */
+                else {
+                    /* Destroy the VOL connector ID group */
+                    n += (H5I_dec_type_ref(H5I_VOL) > 0);
+
+                    /* Mark interface as closed */
+                    if (0 == n)
+                        H5_PKG_INIT_VAR = FALSE;
+                } /* end else */
+            }     /* end else */
+        }         /* end else */
+    }             /* end if */
 
     FUNC_LEAVE_NOAPI(n)
 } /* end H5VL_term_package() */
@@ -320,15 +359,15 @@ H5VL__get_connector_cb(void *obj, hid_t id, void *_op_data)
 
     FUNC_ENTER_PACKAGE_NOERR
 
-    if (H5VL_GET_CONNECTOR_BY_NAME == op_data->key.kind) {
-        if (0 == HDstrcmp(cls->name, op_data->key.u.name)) {
+    if (H5VL_GET_CONNECTOR_BY_NAME == op_data->kind) {
+        if (0 == HDstrcmp(cls->name, op_data->u.name)) {
             op_data->found_id = id;
             ret_value         = H5_ITER_STOP;
         } /* end if */
     }     /* end if */
     else {
-        HDassert(H5VL_GET_CONNECTOR_BY_VALUE == op_data->key.kind);
-        if (cls->value == op_data->key.u.value) {
+        HDassert(H5VL_GET_CONNECTOR_BY_VALUE == op_data->kind);
+        if (cls->value == op_data->u.value) {
             op_data->found_id = id;
             ret_value         = H5_ITER_STOP;
         } /* end if */
@@ -955,7 +994,7 @@ H5VL_conn_inc_rc(H5VL_t *connector)
 {
     int64_t ret_value = -1;
 
-    FUNC_ENTER_NOAPI_NOERR
+    FUNC_ENTER_NOAPI(-1)
 
     /* Check arguments */
     HDassert(connector);
@@ -965,6 +1004,7 @@ H5VL_conn_inc_rc(H5VL_t *connector)
 
     ret_value = connector->nrefs;
 
+done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5VL_conn_inc_rc() */
 
@@ -1277,9 +1317,9 @@ H5VL__register_connector_by_class(const H5VL_class_t *cls, hbool_t app_ref, hid_
                     "callback is provided")
 
     /* Set up op data for iteration */
-    op_data.key.kind   = H5VL_GET_CONNECTOR_BY_NAME;
-    op_data.key.u.name = cls->name;
-    op_data.found_id   = H5I_INVALID_HID;
+    op_data.kind     = H5VL_GET_CONNECTOR_BY_NAME;
+    op_data.u.name   = cls->name;
+    op_data.found_id = H5I_INVALID_HID;
 
     /* Check if connector is already registered */
     if (H5I_iterate(H5I_VOL, H5VL__get_connector_cb, &op_data, TRUE) < 0)
@@ -1328,15 +1368,15 @@ H5VL__register_connector_by_name(const char *name, hbool_t app_ref, hid_t vipl_i
     FUNC_ENTER_PACKAGE
 
     /* Set up op data for iteration */
-    op_data.key.kind   = H5VL_GET_CONNECTOR_BY_NAME;
-    op_data.key.u.name = name;
-    op_data.found_id   = H5I_INVALID_HID;
+    op_data.kind     = H5VL_GET_CONNECTOR_BY_NAME;
+    op_data.u.name   = name;
+    op_data.found_id = H5I_INVALID_HID;
 
     /* Check if connector is already registered */
     if (H5I_iterate(H5I_VOL, H5VL__get_connector_cb, &op_data, app_ref) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_BADITER, H5I_INVALID_HID, "can't iterate over VOL ids")
 
-    /* If connector already registered, increment ref count on ID and return ID */
+    /* If connector alread registered, increment ref count on ID and return ID */
     if (op_data.found_id != H5I_INVALID_HID) {
         if (H5I_inc_ref(op_data.found_id, app_ref) < 0)
             HGOTO_ERROR(H5E_VOL, H5E_CANTINC, H5I_INVALID_HID,
@@ -1388,15 +1428,15 @@ H5VL__register_connector_by_value(H5VL_class_value_t value, hbool_t app_ref, hid
     FUNC_ENTER_PACKAGE
 
     /* Set up op data for iteration */
-    op_data.key.kind    = H5VL_GET_CONNECTOR_BY_VALUE;
-    op_data.key.u.value = value;
-    op_data.found_id    = H5I_INVALID_HID;
+    op_data.kind     = H5VL_GET_CONNECTOR_BY_VALUE;
+    op_data.u.value  = value;
+    op_data.found_id = H5I_INVALID_HID;
 
     /* Check if connector is already registered */
-    if (H5I_iterate(H5I_VOL, H5VL__get_connector_cb, &op_data, app_ref) < 0)
+    if (H5I_iterate(H5I_VOL, H5VL__get_connector_cb, &op_data, TRUE) < 0)
         HGOTO_ERROR(H5E_VOL, H5E_BADITER, H5I_INVALID_HID, "can't iterate over VOL ids")
 
-    /* If connector already registered, increment ref count on ID and return ID */
+    /* If connector alread registered, increment ref count on ID and return ID */
     if (op_data.found_id != H5I_INVALID_HID) {
         if (H5I_inc_ref(op_data.found_id, app_ref) < 0)
             HGOTO_ERROR(H5E_VOL, H5E_CANTINC, H5I_INVALID_HID,
@@ -1445,9 +1485,9 @@ H5VL__is_connector_registered_by_name(const char *name)
     FUNC_ENTER_PACKAGE
 
     /* Set up op data for iteration */
-    op_data.key.kind   = H5VL_GET_CONNECTOR_BY_NAME;
-    op_data.key.u.name = name;
-    op_data.found_id   = H5I_INVALID_HID;
+    op_data.kind     = H5VL_GET_CONNECTOR_BY_NAME;
+    op_data.u.name   = name;
+    op_data.found_id = H5I_INVALID_HID;
 
     /* Find connector with name */
     if (H5I_iterate(H5I_VOL, H5VL__get_connector_cb, &op_data, TRUE) < 0)
@@ -1482,9 +1522,9 @@ H5VL__is_connector_registered_by_value(H5VL_class_value_t value)
     FUNC_ENTER_PACKAGE
 
     /* Set up op data for iteration */
-    op_data.key.kind    = H5VL_GET_CONNECTOR_BY_VALUE;
-    op_data.key.u.value = value;
-    op_data.found_id    = H5I_INVALID_HID;
+    op_data.kind     = H5VL_GET_CONNECTOR_BY_VALUE;
+    op_data.u.value  = value;
+    op_data.found_id = H5I_INVALID_HID;
 
     /* Find connector with value */
     if (H5I_iterate(H5I_VOL, H5VL__get_connector_cb, &op_data, TRUE) < 0)
@@ -1615,9 +1655,9 @@ H5VL__peek_connector_id_by_name(const char *name)
     FUNC_ENTER_PACKAGE
 
     /* Set up op data for iteration */
-    op_data.key.kind   = H5VL_GET_CONNECTOR_BY_NAME;
-    op_data.key.u.name = name;
-    op_data.found_id   = H5I_INVALID_HID;
+    op_data.kind     = H5VL_GET_CONNECTOR_BY_NAME;
+    op_data.u.name   = name;
+    op_data.found_id = H5I_INVALID_HID;
 
     /* Find connector with name */
     if (H5I_iterate(H5I_VOL, H5VL__get_connector_cb, &op_data, TRUE) < 0)
@@ -1651,9 +1691,9 @@ H5VL__peek_connector_id_by_value(H5VL_class_value_t value)
     FUNC_ENTER_PACKAGE
 
     /* Set up op data for iteration */
-    op_data.key.kind    = H5VL_GET_CONNECTOR_BY_VALUE;
-    op_data.key.u.value = value;
-    op_data.found_id    = H5I_INVALID_HID;
+    op_data.kind     = H5VL_GET_CONNECTOR_BY_VALUE;
+    op_data.u.value  = value;
+    op_data.found_id = H5I_INVALID_HID;
 
     /* Find connector with value */
     if (H5I_iterate(H5I_VOL, H5VL__get_connector_cb, &op_data, TRUE) < 0)
@@ -1737,7 +1777,7 @@ H5VL__get_connector_name(hid_t id, char *name /*out*/, size_t size)
 
     len = HDstrlen(cls->name);
     if (name) {
-        HDstrncpy(name, cls->name, size);
+        HDstrncpy(name, cls->name, MIN(len + 1, size));
         if (len >= size)
             name[size - 1] = '\0';
     } /* end if */
@@ -2514,7 +2554,7 @@ H5VL_check_plugin_load(const H5VL_class_t *cls, const H5PL_key_t *key, hbool_t *
 {
     herr_t ret_value = SUCCEED; /* Return value */
 
-    FUNC_ENTER_NOAPI_NOERR
+    FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
     HDassert(cls);
@@ -2540,6 +2580,7 @@ H5VL_check_plugin_load(const H5VL_class_t *cls, const H5PL_key_t *key, hbool_t *
     if (*success && cls->version != H5VL_VERSION)
         *success = FALSE;
 
+done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5VL_check_plugin_load() */
 

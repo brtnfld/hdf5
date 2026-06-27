@@ -32,12 +32,11 @@ public class H5Ex_D_Hyperslab {
     private static final int DIM_Y    = 8;
     private static final int RANK     = 2;
 
-    private static void writeHyperslab()
-    {
-        long file_id      = HDF5Constants.H5I_INVALID_HID;
+    private static void writeHyperslab() {
+        long file_id = HDF5Constants.H5I_INVALID_HID;
         long filespace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id   = HDF5Constants.H5I_INVALID_HID;
-        long[] dims       = {DIM_X, DIM_Y};
+        long dataset_id = HDF5Constants.H5I_INVALID_HID;
+        long[] dims = { DIM_X, DIM_Y };
         int[][] dset_data = new int[DIM_X][DIM_Y];
 
         // Initialize data to "1", to make it easier to see the selections.
@@ -144,12 +143,11 @@ public class H5Ex_D_Hyperslab {
         }
     }
 
-    private static void readHyperslab()
-    {
-        long file_id      = HDF5Constants.H5I_INVALID_HID;
+    private static void readHyperslab() {
+        long file_id = HDF5Constants.H5I_INVALID_HID;
         long filespace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id   = HDF5Constants.H5I_INVALID_HID;
-        long dcpl_id      = HDF5Constants.H5I_INVALID_HID;
+        long dataset_id = HDF5Constants.H5I_INVALID_HID;
+        long dcpl_id = HDF5Constants.H5I_INVALID_HID;
         int[][] dset_data = new int[DIM_X][DIM_Y];
 
         // Open an existing file.

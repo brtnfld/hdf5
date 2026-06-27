@@ -25,13 +25,12 @@
  *      reporting macros.
  */
 #define H5ES_MODULE
-#define H5_MY_PKG     H5ES
-#define H5_MY_PKG_ERR H5E_EVENTSET
+#define H5_MY_PKG      H5ES
+#define H5_MY_PKG_ERR  H5E_EVENTSET
+#define H5_MY_PKG_INIT YES
 
-/**\defgroup H5ES H5ES
- *
- * \todo Add the event set life cycle.
- *
+/**
+ * \defgroup H5ES H5ES
  * \brief Event Set Interface
  *
  * \details \Bold{This interface can be only used with the HDF5 VOL connectors that

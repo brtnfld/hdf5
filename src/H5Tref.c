@@ -792,6 +792,10 @@ H5T__ref_disk_isnull(const H5VL_object_t *src_file, const void *src_buf, hbool_t
         vol_cb_args.op_type             = H5VL_BLOB_ISNULL;
         vol_cb_args.args.is_null.isnull = isnull;
 
+        /* Set up VOL callback arguments */
+        vol_cb_args.op_type             = H5VL_BLOB_ISNULL;
+        vol_cb_args.args.is_null.isnull = isnull;
+
         /* Check if blob ID is "nil" */
         if (H5VL_blob_specific(src_file, (void *)p, &vol_cb_args) < 0)
             HGOTO_ERROR(H5E_DATATYPE, H5E_CANTGET, FAIL, "unable to check if a blob ID is 'nil'")
@@ -829,6 +833,9 @@ H5T__ref_disk_setnull(H5VL_object_t *dst_file, void *dst_buf, void *bg_buf)
     if (p_bg) {
         /* Skip the size / header */
         p_bg += (sizeof(uint32_t) + H5R_ENCODE_HEADER_SIZE);
+
+        /* Set up VOL callback arguments */
+        vol_cb_args.op_type = H5VL_BLOB_DELETE;
 
         /* Set up VOL callback arguments */
         vol_cb_args.op_type = H5VL_BLOB_DELETE;
@@ -986,6 +993,9 @@ H5T__ref_disk_write(H5VL_object_t H5_ATTR_UNUSED *src_file, const void *src_buf,
         p_bg += (sizeof(uint32_t) + H5R_ENCODE_HEADER_SIZE);
         HDassert(p_buf_size_left > (sizeof(uint32_t) + H5R_ENCODE_HEADER_SIZE));
         p_buf_size_left -= (sizeof(uint32_t) + H5R_ENCODE_HEADER_SIZE);
+
+        /* Set up VOL callback arguments */
+        vol_cb_args.op_type = H5VL_BLOB_DELETE;
 
         /* Set up VOL callback arguments */
         vol_cb_args.op_type = H5VL_BLOB_DELETE;

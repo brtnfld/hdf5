@@ -41,7 +41,7 @@ const char *FILENAME[NFILENAME] = {"CacheTestDummy", NULL};
 #ifndef PATH_MAX
 #define PATH_MAX 512
 #endif /* !PATH_MAX */
-char *  filenames[NFILENAME];
+char    filenames[NFILENAME][PATH_MAX];
 hid_t   fapl;                      /* file access property list */
 haddr_t max_addr = 0;              /* used to store the end of
                                     * the address space used by
@@ -6499,7 +6499,7 @@ trace_file_check(int metadata_write_strategy)
         } /* end if */
 
         if (nerrors == 0) {
-            HDsnprintf(trace_file_name, sizeof(trace_file_name), "t_cache_trace.txt.%d", (int)file_mpi_rank);
+            HDsprintf(trace_file_name, "t_cache_trace.txt.%d", (int)file_mpi_rank);
 
             if ((trace_file_ptr = HDfopen(trace_file_name, "r")) == NULL) {
 
@@ -6698,9 +6698,7 @@ smoke_check_6(int metadata_write_strategy)
         virt_num_data_entries = NUM_DATA_ENTRIES;
 
         /* insert the first half collectively */
-        md_reads_file_flag    = H5P_USER_TRUE;
-        md_reads_context_flag = TRUE;
-        H5F_set_coll_metadata_reads(file_ptr, &md_reads_file_flag, &md_reads_context_flag);
+        H5CX_set_coll_metadata_read(TRUE);
         for (i = 0; i < virt_num_data_entries / 2; i++) {
             struct datum *entry_ptr;
             entry_ptr = &(data[i]);
@@ -6723,9 +6721,7 @@ smoke_check_6(int metadata_write_strategy)
         H5F_set_coll_metadata_reads(file_ptr, &md_reads_file_flag, &md_reads_context_flag);
 
         /* insert the other half independently */
-        md_reads_file_flag    = H5P_USER_FALSE;
-        md_reads_context_flag = FALSE;
-        H5F_set_coll_metadata_reads(file_ptr, &md_reads_file_flag, &md_reads_context_flag);
+        H5CX_set_coll_metadata_read(FALSE);
         for (i = virt_num_data_entries / 2; i < virt_num_data_entries; i++) {
             struct datum *entry_ptr;
             entry_ptr = &(data[i]);
@@ -6735,7 +6731,7 @@ smoke_check_6(int metadata_write_strategy)
             if (FALSE != entry_ptr->header.coll_access) {
                 nerrors++;
                 if (verbose) {
-                    HDfprintf(stdout, "%d:%s: Entry inserted independently marked as collective.\n",
+                    HDfprintf(stdout, "%d:%s: Entry inserted indepedently marked as collective.\n",
                               world_mpi_rank, __func__);
                 }
             }
@@ -6755,9 +6751,7 @@ smoke_check_6(int metadata_write_strategy)
         }
 
         /* Protect the first half of the entries collectively */
-        md_reads_file_flag    = H5P_USER_TRUE;
-        md_reads_context_flag = TRUE;
-        H5F_set_coll_metadata_reads(file_ptr, &md_reads_file_flag, &md_reads_context_flag);
+        H5CX_set_coll_metadata_read(TRUE);
         for (i = 0; i < (virt_num_data_entries / 2); i++) {
             struct datum *entry_ptr;
             entry_ptr = &(data[i]);
@@ -6779,9 +6773,7 @@ smoke_check_6(int metadata_write_strategy)
         H5F_set_coll_metadata_reads(file_ptr, &md_reads_file_flag, &md_reads_context_flag);
 
         /* protect the other half independently */
-        md_reads_file_flag    = H5P_USER_FALSE;
-        md_reads_context_flag = FALSE;
-        H5F_set_coll_metadata_reads(file_ptr, &md_reads_file_flag, &md_reads_context_flag);
+        H5CX_set_coll_metadata_read(FALSE);
         for (i = virt_num_data_entries / 2; i < virt_num_data_entries; i++) {
             struct datum *entry_ptr;
             entry_ptr = &(data[i]);
@@ -6791,7 +6783,7 @@ smoke_check_6(int metadata_write_strategy)
             if (FALSE != entry_ptr->header.coll_access) {
                 nerrors++;
                 if (verbose) {
-                    HDfprintf(stdout, "%d:%s: Entry inserted independently marked as collective.\n",
+                    HDfprintf(stdout, "%d:%s: Entry inserted indepedently marked as collective.\n",
                               world_mpi_rank, __func__);
                 }
             }
@@ -7087,8 +7079,8 @@ finish:
     MPI_Barrier(MPI_COMM_WORLD);
     if (MAINPROCESS) { /* only process 0 reports */
         HDprintf("===================================\n");
-        if (nerrors || failures) {
-            HDprintf("***metadata cache tests detected %d failures***\n", nerrors + failures);
+        if (failures) {
+            HDprintf("***metadata cache tests detected %d failures***\n", failures);
         }
         else {
             HDprintf("metadata cache tests finished with no failures\n");

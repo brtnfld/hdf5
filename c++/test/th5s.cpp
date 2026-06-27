@@ -74,7 +74,6 @@ struct space4_struct {
     float    f;
     char     c2;
 } space4_data = {'v', 987123, -3.14F, 'g'}; /* Test data for 4th dataspace */
-
 /* Null dataspace */
 int space5_data = 7;
 

@@ -732,8 +732,8 @@ H5_build_extpath(const char *name, char **extpath /*out*/)
 
             HDstrncpy(full_path, cwdpath, cwdlen + 1);
             if (!H5_CHECK_DELIMITER(cwdpath[cwdlen - 1]))
-                HDstrncat(full_path, H5_DIR_SEPS, path_len - (cwdlen + 1));
-            HDstrncat(full_path, new_name, path_len - (cwdlen + 1) - HDstrlen(H5_DIR_SEPS));
+                HDstrncat(full_path, H5_DIR_SEPS, HDstrlen(H5_DIR_SEPS));
+            HDstrncat(full_path, new_name, HDstrlen(new_name));
         } /* end if */
     }     /* end else */
 
@@ -1173,14 +1173,14 @@ H5_get_option(int argc, const char *const *argv, const char *opts, const struct 
         HDfree(arg);
     }
     else {
-        char *cp; /* pointer into current token */
+        register char *cp; /* pointer into current token */
 
         /* short command line option */
-        optchar = argv[H5_optind][sp];
+        optopt = argv[H5_optind][sp];
 
-        if (optchar == ':' || (cp = HDstrchr(opts, optchar)) == 0) {
+        if (optopt == ':' || (cp = HDstrchr(opts, optopt)) == 0) {
             if (H5_opterr)
-                HDfprintf(stderr, "%s: unknown option \"%c\"\n", argv[0], optchar);
+                HDfprintf(stderr, "%s: unknown option \"%c\"\n", argv[0], optopt);
 
             /* if no chars left in this token, move to next token */
             if (argv[H5_optind][++sp] == '\0') {
@@ -1198,9 +1198,9 @@ H5_get_option(int argc, const char *const *argv, const char *opts, const struct 
             }
             else if (++H5_optind >= argc) {
                 if (H5_opterr)
-                    HDfprintf(stderr, "%s: value expected for option \"%c\"\n", argv[0], optchar);
+                    HDfprintf(stderr, "%s: value expected for option \"%c\"\n", argv[0], optopt);
 
-                optchar = '?';
+                optopt = '?';
             }
             else {
                 /* flag value is next token */

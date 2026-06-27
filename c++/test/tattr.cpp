@@ -96,7 +96,6 @@ struct attr4_struct {
 const H5std_string ATTR5_NAME("Attr5");
 const int          ATTR5_RANK = 0;
 float              attr_data5 = -5.123F; // Test data for 5th attribute
-
 /* Info for another attribute */
 const H5std_string ATTR1A_NAME("Attr1_a");
 int                attr_data1a[ATTR1_DIM1] = {256, 11945, -22107};
@@ -1681,14 +1680,12 @@ test_attr_exists()
 
         // Check for existence of attribute
         bool attr_exists = fid1.attrExists(ATTR1_FL_STR_NAME);
-        if (!attr_exists)
-            throw InvalidActionException("H5File::attrExists",
+        if (!attr_exists)            throw InvalidActionException("H5File::attrExists",
                                          "fid1, ATTR1_FL_STR_NAMEAttribute should exist but does not");
 
         // Check for existence of attribute
         attr_exists = fid1.attrExists(FATTR1_NAME);
-        if (!attr_exists)
-            throw InvalidActionException("H5File::attrExists",
+        if (!attr_exists)            throw InvalidActionException("H5File::attrExists",
                                          "fid1,FATTR2_NAMEAttribute should exist but does not");
 
         // Open a group.
@@ -1696,8 +1693,7 @@ test_attr_exists()
 
         // Check for existence of attribute
         attr_exists = group.attrExists(ATTR2_NAME);
-        if (!attr_exists)
-            throw InvalidActionException("H5File::attrExists",
+        if (!attr_exists)            throw InvalidActionException("H5File::attrExists",
                                          "group, ATTR2_NAMEAttribute should exist but does not");
 
         PASSED();

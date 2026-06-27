@@ -870,7 +870,7 @@ H5P__encode_chunk_cache_nslots(const void *value, void **_pp, size_t *size)
     uint8_t **pp        = (uint8_t **)_pp;
     unsigned  enc_size; /* Size of encoded property */
 
-    FUNC_ENTER_PACKAGE_NOERR
+    FUNC_ENTER_STATIC_NOERR
 
     /* Sanity checks */
     HDcompile_assert(sizeof(size_t) <= sizeof(uint64_t));
@@ -925,7 +925,7 @@ H5P__decode_chunk_cache_nslots(const void **_pp, void *_value)
     uint64_t        enc_value; /* Decoded property value */
     unsigned        enc_size;  /* Size of encoded property */
 
-    FUNC_ENTER_PACKAGE_NOERR
+    FUNC_ENTER_STATIC_NOERR
 
     /* Sanity check */
     HDcompile_assert(sizeof(size_t) <= sizeof(uint64_t));
@@ -970,7 +970,7 @@ H5P__encode_chunk_cache_nbytes(const void *value, void **_pp, size_t *size)
     uint8_t **pp        = (uint8_t **)_pp;
     unsigned  enc_size; /* Size of encoded property */
 
-    FUNC_ENTER_PACKAGE_NOERR
+    FUNC_ENTER_STATIC_NOERR
 
     /* Sanity checks */
     HDcompile_assert(sizeof(size_t) <= sizeof(uint64_t));
@@ -1025,7 +1025,7 @@ H5P__decode_chunk_cache_nbytes(const void **_pp, void *_value)
     uint64_t        enc_value; /* Decoded property value */
     unsigned        enc_size;  /* Size of encoded property */
 
-    FUNC_ENTER_PACKAGE_NOERR
+    FUNC_ENTER_STATIC_NOERR
 
     /* Sanity check */
     HDcompile_assert(sizeof(size_t) <= sizeof(uint64_t));
@@ -1453,7 +1453,7 @@ H5Pget_efile_prefix(hid_t plist_id, char *prefix /*out*/, size_t size)
         /* Copy to user's buffer, if given */
         len = HDstrlen(my_prefix);
         if (prefix) {
-            HDstrncpy(prefix, my_prefix, size);
+            HDstrncpy(prefix, my_prefix, MIN(len + 1, size));
             if (len >= size)
                 prefix[size - 1] = '\0';
         } /* end if */
@@ -1543,7 +1543,7 @@ H5Pget_virtual_prefix(hid_t plist_id, char *prefix /*out*/, size_t size)
         /* Copy to user's buffer, if given */
         len = HDstrlen(my_prefix);
         if (prefix) {
-            HDstrncpy(prefix, my_prefix, size);
+            HDstrncpy(prefix, my_prefix, MIN(len + 1, size));
             if (len >= size)
                 prefix[size - 1] = '\0';
         } /* end if */

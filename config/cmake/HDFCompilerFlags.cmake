@@ -14,8 +14,10 @@ set(CMAKE_C_STANDARD_REQUIRED TRUE)
 
 set (CMAKE_C_FLAGS "${CMAKE_C99_STANDARD_COMPILE_OPTION} ${CMAKE_C_FLAGS}")
 set (CMAKE_C_FLAGS "${CMAKE_C_SANITIZER_FLAGS} ${CMAKE_C_FLAGS}")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_SANITIZER_FLAGS} ${CMAKE_CXX_FLAGS}")
+
 if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.15.0")
-  message (VERBOSE "Warnings Configuration: C default: ${CMAKE_C_FLAGS}")
+  message (VERBOSE "Warnings Configuration: default: ${CMAKE_C_FLAGS} : ${CMAKE_CXX_FLAGS}")
 endif ()
 #-----------------------------------------------------------------------------
 # Compiler specific flags : Shouldn't there be compiler tests for these
@@ -109,37 +111,33 @@ endif ()
 # HDF5 library compile options
 #-----------------------------------------------------------------------------
 
-#-----------------------------------------------------------------------------
-# Option to allow the user to interpret certain warnings as errors
-#
-# This should NOT be on by default as it can cause a lot of conflicts with
-# new operating systems and compiler versions. Header files that are out of
-# our control (MPI, HDFS, etc.) can also raise warnings.
-#-----------------------------------------------------------------------------
-option (HDF5_ENABLE_WARNINGS_AS_ERRORS "Interpret some warnings as errors" OFF)
-if (HDF5_ENABLE_WARNINGS_AS_ERRORS)
-  message (STATUS "...some warnings will be interpreted as errors")
-endif ()
+if (NOT MSVC AND NOT MINGW)
+  #-----------------------------------------------------------------------------
+  # Option to allow the user to interpret certain warnings as errors
+  #
+  # This should NOT be on by default as it can cause a lot of conflicts with
+  # new operating systems and compiler versions. Header files that are out of
+  # our control (MPI, HDFS, etc.) can also raise warnings.
+  #-----------------------------------------------------------------------------
+  option (HDF5_ENABLE_WARNINGS_AS_ERRORS "Interpret some warnings as errors" OFF)
+  if (HDF5_ENABLE_WARNINGS_AS_ERRORS)
+    message (STATUS "...some warnings will be interpreted as errors")
+  endif ()
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
-  list (APPEND HDF5_CMAKE_C_FLAGS "-erroff=%none -DBSD_COMP")
-else ()
-  # General flags
-  #
-  # Note that some of the flags listed here really should be developer
-  # flags (listed in a separate variable, below) but we put them here
-  # because they are not raised by the current code and we'd like to
-  # know if they do start showing up.
-  #
-  # NOTE: Don't add -Wpadded here since we can't/won't fix the (many)
-  # warnings that are emitted. If you need it, add it at configure time.
-  if (CMAKE_C_COMPILER_ID STREQUAL "Intel")
-    if (_INTEL_WINDOWS)
-      ADD_H5_FLAGS (HDF5_CMAKE_C_FLAGS "${HDF5_SOURCE_DIR}/config/intel-warnings/win-general")
-    else ()
+  if (${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+    list (APPEND HDF5_CMAKE_C_FLAGS "-erroff=%none -DBSD_COMP")
+  else ()
+    # General flags
+    #
+    # Note that some of the flags listed here really should be developer
+    # flags (listed in a separate variable, below) but we put them here
+    # because they are not raised by the current code and we'd like to
+    # know if they do start showing up.
+    #
+    # NOTE: Don't add -Wpadded here since we can't/won't fix the (many)
+    # warnings that are emitted. If you need it, add it at configure time.
+    if (CMAKE_C_COMPILER_ID STREQUAL "Intel")
       ADD_H5_FLAGS (HDF5_CMAKE_C_FLAGS "${HDF5_SOURCE_DIR}/config/intel-warnings/general")
-    endif()
-    if (NOT _INTEL_WINDOWS)
       if(NOT CMAKE_C_COMPILER_VERSION VERSION_LESS 15.0)
         ADD_H5_FLAGS (H5_CFLAGS "${HDF5_SOURCE_DIR}/config/intel-warnings/15")
       endif()
@@ -148,52 +146,55 @@ else ()
       if(NOT CMAKE_C_COMPILER_VERSION VERSION_LESS 18.0)
         ADD_H5_FLAGS (H5_CFLAGS "${HDF5_SOURCE_DIR}/config/intel-warnings/18")
       endif()
-    endif()
-  elseif (CMAKE_C_COMPILER_ID STREQUAL "GNU")
-    # Add general CFlags for GCC versions 4.8 and above
-    if (CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 4.8)
-      ADD_H5_FLAGS (HDF5_CMAKE_C_FLAGS "${HDF5_SOURCE_DIR}/config/gnu-warnings/general")
-      ADD_H5_FLAGS (H5_CFLAGS "${HDF5_SOURCE_DIR}/config/gnu-warnings/error-general")
+    elseif (CMAKE_C_COMPILER_ID STREQUAL "GNU")
+      # Add general CFlags for GCC versions 4.8 and above
+      if (CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 4.8)
+        ADD_H5_FLAGS (HDF5_CMAKE_C_FLAGS "${HDF5_SOURCE_DIR}/config/gnu-warnings/general")
+        if (HDF5_ENABLE_WARNINGS_AS_ERRORS)
+          ADD_H5_FLAGS (H5_CFLAGS "${HDF5_SOURCE_DIR}/config/gnu-warnings/error-general")
+        else ()
+          ADD_H5_FLAGS (H5_CFLAGS "${HDF5_SOURCE_DIR}/config/gnu-warnings/noerror-general")
+        endif ()
+      endif ()
+      # gcc automatically inlines based on the optimization level
+      # this is just a failsafe
+      list (APPEND H5_CFLAGS "-finline-functions")
+    elseif (CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
+      ADD_H5_FLAGS (HDF5_CMAKE_C_FLAGS "${HDF5_SOURCE_DIR}/config/clang-warnings/general")
+      if (HDF5_ENABLE_WARNINGS_AS_ERRORS)
+        ADD_H5_FLAGS (H5_CFLAGS "${HDF5_SOURCE_DIR}/config/clang-warnings/error-general")
+      else ()
+        ADD_H5_FLAGS (H5_CFLAGS "${HDF5_SOURCE_DIR}/config/clang-warnings/noerror-general")
+      endif ()
+    elseif (CMAKE_C_COMPILER_ID STREQUAL "PGI")
+      list (APPEND HDF5_CMAKE_C_FLAGS "-Minform=inform")
     endif ()
-    # gcc automatically inlines based on the optimization level
-    # this is just a failsafe
-    list (APPEND H5_CFLAGS "-finline-functions")
-  elseif (CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
-    ADD_H5_FLAGS (HDF5_CMAKE_C_FLAGS "${HDF5_SOURCE_DIR}/config/clang-warnings/general")
-    ADD_H5_FLAGS (H5_CFLAGS "${HDF5_SOURCE_DIR}/config/clang-warnings/error-general")
-  elseif (CMAKE_C_COMPILER_ID STREQUAL "PGI")
-    list (APPEND HDF5_CMAKE_C_FLAGS "-Minform=inform")
+    if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.15.0")
+      message (VERBOSE "CMAKE_C_FLAGS_GENERAL=${HDF5_CMAKE_C_FLAGS}")
+    endif ()
   endif ()
-  if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.15.0")
-    message (VERBOSE "CMAKE_C_FLAGS_GENERAL=${HDF5_CMAKE_C_FLAGS}")
-  endif ()
-endif ()
 
-#-----------------------------------------------------------------------------
-# Option to allow the user to enable developer warnings
-# Developer warnings (suggestions from gcc, not code problems)
-#-----------------------------------------------------------------------------
-option (HDF5_ENABLE_DEV_WARNINGS "Enable HDF5 developer group warnings" OFF)
-if (HDF5_ENABLE_DEV_WARNINGS)
-  message (STATUS "....HDF5 developer group warnings are enabled")
-  if (CMAKE_C_COMPILER_ID STREQUAL "Intel")
-    if (_INTEL_WINDOWS)
-      ADD_H5_FLAGS (H5_CFLAGS "${HDF5_SOURCE_DIR}/config/intel-warnings/win-developer-general")
-    else ()
+  #-----------------------------------------------------------------------------
+  # Option to allow the user to enable developer warnings
+  # Developer warnings (suggestions from gcc, not code problems)
+  #-----------------------------------------------------------------------------
+  option (HDF5_ENABLE_DEV_WARNINGS "Enable HDF5 developer group warnings" OFF)
+  if (HDF5_ENABLE_DEV_WARNINGS)
+    message (STATUS "....HDF5 developer group warnings are enabled")
+    if (CMAKE_C_COMPILER_ID STREQUAL "Intel")
       ADD_H5_FLAGS (H5_CFLAGS "${HDF5_SOURCE_DIR}/config/intel-warnings/developer-general")
+    elseif (CMAKE_C_COMPILER_ID STREQUAL "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 4.8)
+      ADD_H5_FLAGS (H5_CFLAGS "${HDF5_SOURCE_DIR}/config/gnu-warnings/developer-general")
+    elseif (CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
+      ADD_H5_FLAGS (H5_CFLAGS "${HDF5_SOURCE_DIR}/config/clang-warnings/developer-general")
     endif ()
-  elseif (CMAKE_C_COMPILER_ID STREQUAL "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 4.8)
-    ADD_H5_FLAGS (H5_CFLAGS "${HDF5_SOURCE_DIR}/config/gnu-warnings/developer-general")
-  elseif (CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
-    ADD_H5_FLAGS (H5_CFLAGS "${HDF5_SOURCE_DIR}/config/clang-warnings/developer-general")
+  else ()
+    if (CMAKE_C_COMPILER_ID STREQUAL "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 4.8)
+      ADD_H5_FLAGS (H5_CFLAGS "${HDF5_SOURCE_DIR}/config/gnu-warnings/no-developer-general")
+    elseif (CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
+      ADD_H5_FLAGS (H5_CFLAGS "${HDF5_SOURCE_DIR}/config/clang-warnings/no-developer-general")
+    endif ()
   endif ()
-else ()
-  if (CMAKE_C_COMPILER_ID STREQUAL "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 4.8)
-    ADD_H5_FLAGS (H5_CFLAGS "${HDF5_SOURCE_DIR}/config/gnu-warnings/no-developer-general")
-  elseif (CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
-    ADD_H5_FLAGS (H5_CFLAGS "${HDF5_SOURCE_DIR}/config/clang-warnings/no-developer-general")
-  endif ()
-endif ()
 
 if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
   # Technically, variable-length arrays are part of the C99 standard, but
@@ -268,6 +269,7 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
     #  ADD_H5_FLAGS (H5_CFLAGS "${HDF5_SOURCE_DIR}/config/gnu-warnings/no-developer-10")
     endif ()
   endif ()
+endif ()
 endif ()
 
 #-----------------------------------------------------------------------------

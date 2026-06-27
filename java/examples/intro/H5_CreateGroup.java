@@ -23,9 +23,8 @@ public class H5_CreateGroup {
     private static String FILENAME  = "H5_CreateGroup.h5";
     private static String GROUPNAME = "MyGroup";
 
-    private static void CreateGroup()
-    {
-        long file_id  = HDF5Constants.H5I_INVALID_HID;
+    private static void CreateGroup() {
+        long file_id = HDF5Constants.H5I_INVALID_HID;
         long group_id = HDF5Constants.H5I_INVALID_HID;
 
         // Create a new file using default properties.

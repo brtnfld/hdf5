@@ -98,15 +98,14 @@ public class H5Ex_D_UnlimitedGzip {
         return true;
     }
 
-    private static void writeUnlimited()
-    {
-        long file_id      = HDF5Constants.H5I_INVALID_HID;
-        long dcpl_id      = HDF5Constants.H5I_INVALID_HID;
+    private static void writeUnlimited() {
+        long file_id = HDF5Constants.H5I_INVALID_HID;
+        long dcpl_id = HDF5Constants.H5I_INVALID_HID;
         long dataspace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id   = HDF5Constants.H5I_INVALID_HID;
-        long[] dims       = {DIM_X, DIM_Y};
-        long[] chunk_dims = {CHUNK_X, CHUNK_Y};
-        long[] maxdims    = {HDF5Constants.H5S_UNLIMITED, HDF5Constants.H5S_UNLIMITED};
+        long dataset_id = HDF5Constants.H5I_INVALID_HID;
+        long[] dims = { DIM_X, DIM_Y };
+        long[] chunk_dims = { CHUNK_X, CHUNK_Y };
+        long[] maxdims = { HDF5Constants.H5S_UNLIMITED, HDF5Constants.H5S_UNLIMITED };
         int[][] dset_data = new int[DIM_X][DIM_Y];
 
         // Initialize the dataset.
@@ -200,15 +199,14 @@ public class H5Ex_D_UnlimitedGzip {
         }
     }
 
-    private static void extendUnlimited()
-    {
-        long file_id      = HDF5Constants.H5I_INVALID_HID;
+    private static void extendUnlimited() {
+        long file_id = HDF5Constants.H5I_INVALID_HID;
         long dataspace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id   = HDF5Constants.H5I_INVALID_HID;
-        long[] dims       = {DIM_X, DIM_Y};
-        long[] extdims    = {EDIM_X, EDIM_Y};
-        long[] start      = {0, 0};
-        long[] count      = new long[2];
+        long dataset_id = HDF5Constants.H5I_INVALID_HID;
+        long[] dims = { DIM_X, DIM_Y };
+        long[] extdims = { EDIM_X, EDIM_Y };
+        long[] start = { 0, 0 };
+        long[] count = new long[2];
         int[][] dset_data;
         int[][] extend_dset_data = new int[EDIM_X][EDIM_Y];
 
@@ -351,13 +349,12 @@ public class H5Ex_D_UnlimitedGzip {
         }
     }
 
-    private static void readUnlimited()
-    {
-        long file_id      = HDF5Constants.H5I_INVALID_HID;
+    private static void readUnlimited() {
+        long file_id = HDF5Constants.H5I_INVALID_HID;
         long dataspace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id   = HDF5Constants.H5I_INVALID_HID;
-        long dcpl_id      = HDF5Constants.H5I_INVALID_HID;
-        long[] dims       = {DIM_X, DIM_Y};
+        long dataset_id = HDF5Constants.H5I_INVALID_HID;
+        long dcpl_id = HDF5Constants.H5I_INVALID_HID;
+        long[] dims = { DIM_X, DIM_Y };
         int[][] dset_data;
 
         // Open an existing file.

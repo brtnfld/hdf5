@@ -25,8 +25,9 @@
  *      reporting macros.
  */
 #define H5D_MODULE
-#define H5_MY_PKG     H5D
-#define H5_MY_PKG_ERR H5E_DATASET
+#define H5_MY_PKG      H5D
+#define H5_MY_PKG_ERR  H5E_DATASET
+#define H5_MY_PKG_INIT YES
 
 /**\defgroup H5D H5D
  *
@@ -43,18 +44,18 @@
  * <tr><th>Create</th><th>Read</th></tr>
  * <tr valign="top">
  *   <td>
- *   \snippet{lineno} H5D_examples.c create
+ *   \snippet H5D_examples.c create
  *   </td>
  *   <td>
- *   \snippet{lineno} H5D_examples.c read
+ *   \snippet H5D_examples.c read
  *   </td>
  * <tr><th>Update</th><th>Delete</th></tr>
  * <tr valign="top">
  *   <td>
- *   \snippet{lineno} H5D_examples.c update
+ *   \snippet H5D_examples.c update
  *   </td>
  *   <td>
- *   \snippet{lineno} H5D_examples.c delete
+ *   \snippet H5D_examples.c delete
  *   </td>
  * </tr>
  * </table>

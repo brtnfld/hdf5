@@ -1642,7 +1642,8 @@ H5B2__iterate_node(H5B2_hdr_t *hdr, uint16_t depth, H5B2_node_ptr_t *curr_node, 
 
         /* Lock the current B-tree node */
         if (NULL ==
-            (internal = H5B2__protect_internal(hdr, parent, curr_node, depth, FALSE, H5AC__READ_ONLY_FLAG)))
+            (internal = H5B2__protect_internal(hdr, parent, (H5B2_node_ptr_t *)curr_node, depth, FALSE,
+                                               H5AC__READ_ONLY_FLAG))) /* Casting away const OK -QAK */
             HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree internal node")
 
         /* Set up information about current node */
@@ -1758,7 +1759,8 @@ H5B2__delete_node(H5B2_hdr_t *hdr, uint16_t depth, H5B2_node_ptr_t *curr_node, v
 
         /* Lock the current B-tree node */
         if (NULL ==
-            (internal = H5B2__protect_internal(hdr, parent, curr_node, depth, FALSE, H5AC__NO_FLAGS_SET)))
+            (internal = H5B2__protect_internal(hdr, parent, (H5B2_node_ptr_t *)curr_node, depth, FALSE,
+                                               H5AC__NO_FLAGS_SET))) /* Casting away const OK -QAK */
             HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree internal node")
 
         /* Set up information about current node */
@@ -1837,8 +1839,8 @@ H5B2__node_size(H5B2_hdr_t *hdr, uint16_t depth, H5B2_node_ptr_t *curr_node, voi
     HDassert(depth > 0);
 
     /* Lock the current B-tree node */
-    if (NULL ==
-        (internal = H5B2__protect_internal(hdr, parent, curr_node, depth, FALSE, H5AC__READ_ONLY_FLAG)))
+    if (NULL == (internal = H5B2__protect_internal(hdr, parent, (H5B2_node_ptr_t *)curr_node, depth, FALSE,
+                                                   H5AC__READ_ONLY_FLAG))) /* Casting away const OK -QAK */
         HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree internal node")
 
     /* Recursively descend into child nodes, if we are above the "twig" level in the B-tree */
@@ -1939,8 +1941,9 @@ H5B2__update_flush_depend(H5B2_hdr_t *hdr, unsigned depth, H5B2_node_ptr_t *node
             H5B2_internal_t *child_int;
 
             /* Protect child */
-            if (NULL == (child_int = H5B2__protect_internal(hdr, new_parent, node_ptr, (uint16_t)(depth - 1),
-                                                            FALSE, H5AC__NO_FLAGS_SET)))
+            if (NULL == (child_int = H5B2__protect_internal(
+                             hdr, new_parent, (H5B2_node_ptr_t *)node_ptr, (uint16_t)(depth - 1), FALSE,
+                             H5AC__NO_FLAGS_SET))) /* Casting away const OK -QAK */
                 HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree internal node")
             child_class = H5AC_BT2_INT;
             child       = child_int;

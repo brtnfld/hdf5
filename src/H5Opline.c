@@ -639,6 +639,7 @@ static herr_t
 H5O__pline_debug(H5F_t H5_ATTR_UNUSED *f, const void *mesg, FILE *stream, int indent, int fwidth)
 {
     const H5O_pline_t *pline = (const H5O_pline_t *)mesg;
+    size_t             i, j;
 
     FUNC_ENTER_PACKAGE_NOERR
 
@@ -653,15 +654,10 @@ H5O__pline_debug(H5F_t H5_ATTR_UNUSED *f, const void *mesg, FILE *stream, int in
               pline->nalloc);
 
     /* Loop over all the filters */
-    for (size_t i = 0; i < pline->nused; i++) {
-        /* 19 characters for text + 20 characters for largest 64-bit size_t +
-         * terminal NUL = 40 characters.
-         */
-        char name[64];
+    for (i = 0; i < pline->nused; i++) {
+        char name[32];
 
-        HDmemset(name, 0, 64);
         HDsnprintf(name, sizeof(name), "Filter at position %zu", i);
-
         HDfprintf(stream, "%*s%-*s\n", indent, "", fwidth, name);
         HDfprintf(stream, "%*s%-*s 0x%04x\n", indent + 3, "", MAX(0, fwidth - 3),
                   "Filter identification:", (unsigned)(pline->filter[i].id));

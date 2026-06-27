@@ -127,7 +127,7 @@ H5CS__get_stack(void)
 herr_t
 H5CS_print_stack(const H5CS_t *fstack, FILE *stream)
 {
-    const int indent = 2; /* Indentation level */
+    const int indent = 2; /* Indention level */
     int       i;          /* Local index ariable */
 
     /* Don't push this function on the function stack... :-) */

@@ -420,6 +420,7 @@ create_long_dataset(hid_t fid, const char *dsname, const char *dsidx, int fulldi
     int     rank                = 4;
     int     rankds              = 1;
     hsize_t dims[4]             = {DIM1_SIZE, DIM2_SIZE, DIM3_SIZE, DIM4_SIZE};
+    long *  buf                 = NULL;
     hsize_t s1_dim[1]           = {DIM1_SIZE};
     hsize_t s2_dim[1]           = {DIM2_SIZE};
     hsize_t s3_dim[1]           = {DIM3_SIZE};
@@ -477,9 +478,13 @@ create_long_dataset(hid_t fid, const char *dsname, const char *dsidx, int fulldi
     else
         goto error;
 
+    HDfree(buf);
+
     return SUCCEED;
 
 error:
+    HDfree(buf);
+
     return FAIL;
 }
 
@@ -1220,14 +1225,14 @@ test_detachscales(void)
 
     /* make datasets; they are three dimensional*/
     for (i = 0; i < 2; i++) {
-        HDsnprintf(dname, sizeof(dname), "D%d", i);
+        HDsprintf(dname, "D%d", i);
         if (H5LTmake_dataset_int(fid, dname, rank3, dims, buf) < 0)
             goto out;
     }
     /* create datasets and make them dim. scales */
 
     for (i = 0; i < 4; i++) {
-        HDsnprintf(dname, sizeof(dname), "DS%d", i);
+        HDsprintf(dname, "DS%d", i);
         if (H5LTmake_dataset_int(fid, dname, rank1, dims, buf) < 0)
             goto out;
     }
@@ -1235,7 +1240,7 @@ test_detachscales(void)
        two scales attached  */
     if ((did = H5Dopen2(fid, "D0", H5P_DEFAULT)) >= 0) {
         for (i = 0; i < 4; i++) {
-            HDsnprintf(dname, sizeof(dname), "DS%d", i);
+            HDsprintf(dname, "DS%d", i);
             if ((dsid = H5Dopen2(fid, dname, H5P_DEFAULT)) < 0)
                 goto out;
             if (H5DSattach_scale(did, dsid, (unsigned int)i % 3) < 0)
@@ -1252,7 +1257,7 @@ test_detachscales(void)
     /* attach scales to the second dataset */
     if ((did = H5Dopen2(fid, "D1", H5P_DEFAULT)) >= 0) {
         for (i = 0; i < 3; i++) {
-            HDsnprintf(dname, sizeof(dname), "DS%d", i);
+            HDsprintf(dname, "DS%d", i);
             if ((dsid = H5Dopen2(fid, dname, H5P_DEFAULT)) < 0)
                 goto out;
             if (H5DSattach_scale(did, dsid, (unsigned int)i) < 0)
@@ -1273,7 +1278,7 @@ test_detachscales(void)
         goto out;
 
     for (i = 0; i < 2; i++) {
-        HDsnprintf(dname, sizeof(dname), "D%d", i);
+        HDsprintf(dname, "D%d", i);
         if ((did = H5Dopen2(fid, dname, H5P_DEFAULT)) < 0)
             goto out;
         if (H5DSdetach_scale(did, dsid, (unsigned int)0) < 0)
@@ -1303,7 +1308,7 @@ test_detachscales(void)
        sure that attribute "DIMENSION_LIST" doesn't exist anymore */
     if ((did = H5Dopen2(fid, "D0", H5P_DEFAULT)) >= 0) {
         for (i = 1; i < 4; i++) {
-            HDsnprintf(dname, sizeof(dname), "DS%d", i);
+            HDsprintf(dname, "DS%d", i);
             if ((dsid = H5Dopen2(fid, dname, H5P_DEFAULT)) < 0)
                 goto out;
             if (H5DSdetach_scale(did, dsid, (unsigned int)i % 3) < 0)
@@ -2984,10 +2989,10 @@ test_simple(void)
     if ((sid = H5Screate_simple(rank, dims, NULL)) < 0)
         goto out;
     for (i = 0; i < 5; i++) {
-        HDsnprintf(dname, sizeof(dname), "dset_%d", i);
+        HDsprintf(dname, "dset_%d", i);
         if ((did = H5Dcreate2(gid, dname, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
             goto out;
-        HDsnprintf(sname, sizeof(sname), "ds_%d", i);
+        HDsprintf(sname, "ds_%d", i);
         if ((dsid = H5Dcreate2(gid, sname, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
             goto out;
         if (H5DSset_scale(dsid, "scale") < 0)
@@ -2999,16 +3004,16 @@ test_simple(void)
     }
 
     /*-------------------------------------------------------------------------
-     * attach for DIM 0
+     * detach for DIM0
      *-------------------------------------------------------------------------
      */
 
     for (i = 0; i < 5; i++) {
-        HDsnprintf(dname, sizeof(dname), "dset_%d", i);
+        HDsprintf(dname, "dset_%d", i);
         if ((did = H5Dopen2(gid, dname, H5P_DEFAULT)) < 0)
             goto out;
         for (j = 0; j < 5; j++) {
-            HDsnprintf(sname, sizeof(sname), "ds_%d", j);
+            HDsprintf(sname, "ds_%d", j);
             if ((dsid = H5Dopen2(gid, sname, H5P_DEFAULT)) < 0)
                 goto out;
             if (H5DSattach_scale(did, dsid, DIM0) < 0)
@@ -3021,16 +3026,16 @@ test_simple(void)
     }
 
     /*-------------------------------------------------------------------------
-     * detach for DIM0
+     * attach again for DIM0
      *-------------------------------------------------------------------------
      */
 
     for (i = 0; i < 5; i++) {
-        HDsnprintf(dname, sizeof(dname), "dset_%d", i);
+        HDsprintf(dname, "dset_%d", i);
         if ((did = H5Dopen2(gid, dname, H5P_DEFAULT)) < 0)
             goto out;
         for (j = 0; j < 5; j++) {
-            HDsnprintf(sname, sizeof(sname), "ds_%d", j);
+            HDsprintf(sname, "ds_%d", j);
             if ((dsid = H5Dopen2(gid, sname, H5P_DEFAULT)) < 0)
                 goto out;
             if (H5DSdetach_scale(did, dsid, DIM0) < 0)
@@ -3048,11 +3053,11 @@ test_simple(void)
      */
 
     for (i = 0; i < 5; i++) {
-        HDsnprintf(dname, sizeof(dname), "dset_%d", i);
+        HDsprintf(dname, "dset_%d", i);
         if ((did = H5Dopen2(gid, dname, H5P_DEFAULT)) < 0)
             goto out;
         for (j = 0; j < 5; j++) {
-            HDsnprintf(sname, sizeof(sname), "ds_%d", j);
+            HDsprintf(sname, "ds_%d", j);
             if ((dsid = H5Dopen2(gid, sname, H5P_DEFAULT)) < 0)
                 goto out;
             if (H5DSattach_scale(did, dsid, DIM0) < 0)
@@ -4292,7 +4297,7 @@ test_iterators(void)
 
     for (i = 0; i < 100; i++) {
         /* make a DS */
-        HDsnprintf(dname, sizeof(dname), "ds_%d", i);
+        HDsprintf(dname, "ds_%d", i);
         if (H5LTmake_dataset_int(fid, dname, rankds, s1_dim, NULL) < 0)
             goto out;
         /* open */
@@ -4442,7 +4447,7 @@ test_rank(void)
         goto out;
 
     for (i = 0; i < 3; i++) {
-        HDsnprintf(name, sizeof(name), "ds_a_%d", i);
+        HDsprintf(name, "ds_a_%d", i);
         if ((dsid = H5Dopen2(fid, name, H5P_DEFAULT)) < 0)
             goto out;
         if (H5DSattach_scale(did, dsid, (unsigned)i) < 0)
@@ -4469,7 +4474,7 @@ test_rank(void)
         goto out;
 
     for (i = 0; i < 3; i++) {
-        HDsnprintf(name, sizeof(name), "ds_a_%d", i);
+        HDsprintf(name, "ds_a_%d", i);
         if ((dsid = H5Dopen2(fid, name, H5P_DEFAULT)) < 0)
             goto out;
         if (H5DSdetach_scale(did, dsid, (unsigned)i) < 0)
@@ -4495,7 +4500,7 @@ test_rank(void)
         goto out;
 
     for (i = 0; i < 3; i++) {
-        HDsnprintf(name, sizeof(name), "ds_a_%d", i);
+        HDsprintf(name, "ds_a_%d", i);
         if ((dsid = H5Dopen2(fid, name, H5P_DEFAULT)) < 0)
             goto out;
         if (H5DSset_scale(dsid, name) < 0)

@@ -40,16 +40,16 @@ public class TestH5A {
     @Rule
     public TestName testname            = new TestName();
     private static final String H5_FILE = "testA.h5";
-    private static final int DIM_X      = 4;
-    private static final int DIM_Y      = 6;
-    long H5fid                          = HDF5Constants.H5I_INVALID_HID;
-    long H5dsid                         = HDF5Constants.H5I_INVALID_HID;
-    long H5did                          = HDF5Constants.H5I_INVALID_HID;
-    long[] H5dims                       = {DIM_X, DIM_Y};
-    long type_id                        = HDF5Constants.H5I_INVALID_HID;
-    long space_id                       = HDF5Constants.H5I_INVALID_HID;
-    long lapl_id                        = HDF5Constants.H5I_INVALID_HID;
-    long aapl_id                        = HDF5Constants.H5I_INVALID_HID;
+    private static final int DIM_X = 4;
+    private static final int DIM_Y = 6;
+    long H5fid = HDF5Constants.H5I_INVALID_HID;
+    long H5dsid = HDF5Constants.H5I_INVALID_HID;
+    long H5did = HDF5Constants.H5I_INVALID_HID;
+    long[] H5dims = { DIM_X, DIM_Y };
+    long type_id = HDF5Constants.H5I_INVALID_HID;
+    long space_id = HDF5Constants.H5I_INVALID_HID;
+    long lapl_id = HDF5Constants.H5I_INVALID_HID;
+    long aapl_id = HDF5Constants.H5I_INVALID_HID;
 
     private final void _deleteFile(String filename)
     {

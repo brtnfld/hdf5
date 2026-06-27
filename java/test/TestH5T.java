@@ -205,12 +205,11 @@ public class TestH5T {
     }
 
     @Test
-    public void testH5Tget_array_dims()
-    {
-        long filetype_id = HDF5Constants.H5I_INVALID_HID;
-        int ndims        = 0;
-        long[] adims     = {3, 5};
-        long[] rdims     = new long[2];
+    public void testH5Tget_array_dims() {
+       long filetype_id = HDF5Constants.H5I_INVALID_HID;
+       int ndims = 0;
+       long[] adims = { 3, 5 };
+       long[] rdims = new long[2];
 
         try {
             filetype_id = H5.H5Tarray_create(HDF5Constants.H5T_STD_I64LE, 2, adims);
@@ -241,12 +240,11 @@ public class TestH5T {
     }
 
     @Test
-    public void testH5Tenum_functions()
-    {
-        long filetype_id = HDF5Constants.H5I_INVALID_HID;
-        String enum_type = "Enum_type";
-        byte[] enum_val  = new byte[1];
-        String enum_name = null;
+    public void testH5Tenum_functions() {
+        long       filetype_id = HDF5Constants.H5I_INVALID_HID;
+        String    enum_type ="Enum_type";
+        byte[]    enum_val = new byte[1];
+        String    enum_name = null;
 
         // Create a enumerate datatype
         try {

@@ -149,15 +149,21 @@ static herr_t H5R__decode_string(const unsigned char *buf, size_t *nbytes, char 
 /* Local Variables */
 /*******************/
 
-/*-------------------------------------------------------------------------
- * Function:    H5R_init
- *
- * Purpose:     Initialize the interface from some other layer.
- *
- * Return:      Success:        non-negative
- *              Failure:        negative
- *-------------------------------------------------------------------------
- */
+/* Flag indicating "top" of interface has been initialized */
+static hbool_t H5R_top_package_initialize_s = FALSE;
+
+/*--------------------------------------------------------------------------
+NAME
+   H5R__init_package -- Initialize interface-specific information
+USAGE
+    herr_t H5R__init_package()
+
+RETURNS
+    Non-negative on success/Negative on failure
+DESCRIPTION
+    Initializes any interface-specific data or routines.
+
+--------------------------------------------------------------------------*/
 herr_t
 H5R_init(void)
 {

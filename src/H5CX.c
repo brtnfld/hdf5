@@ -428,6 +428,9 @@ static H5CX_node_t *H5CX__pop_common(hbool_t update_dxpl_props);
 /* Package Variables */
 /*********************/
 
+/* Package initialization variable */
+hbool_t H5_PKG_INIT_VAR = FALSE;
+
 /*******************/
 /* Local Variables */
 /*******************/
@@ -460,15 +463,16 @@ H5FL_DEFINE_STATIC(H5CX_node_t);
 /* Declare a static free list to manage H5CX_state_t structs */
 H5FL_DEFINE_STATIC(H5CX_state_t);
 
-/*-------------------------------------------------------------------------
- * Function:    H5CX_init
- *
- * Purpose:     Initialize the interface from some other layer.
- *
- * Return:      Success:        non-negative
- *              Failure:        negative
- *-------------------------------------------------------------------------
- */
+/*--------------------------------------------------------------------------
+NAME
+    H5CX__init_package -- Initialize interface-specific information
+USAGE
+    herr_t H5CX__init_package()
+RETURNS
+    Non-negative on success/Negative on failure
+DESCRIPTION
+    Initializes any interface-specific data or routines.
+--------------------------------------------------------------------------*/
 herr_t
 H5CX_init(void)
 {

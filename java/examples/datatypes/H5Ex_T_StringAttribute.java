@@ -31,18 +31,17 @@ public class H5Ex_T_StringAttribute {
     private static final int SDIM       = 8;
     private static final int RANK       = 1;
 
-    private static void CreateDataset()
-    {
-        long file_id            = HDF5Constants.H5I_INVALID_HID;
-        long memtype_id         = HDF5Constants.H5I_INVALID_HID;
-        long filetype_id        = HDF5Constants.H5I_INVALID_HID;
-        long dataspace_id       = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id         = HDF5Constants.H5I_INVALID_HID;
-        long attribute_id       = HDF5Constants.H5I_INVALID_HID;
-        long[] dims             = {DIM0};
-        byte[][] dset_data      = new byte[DIM0][SDIM];
-        StringBuffer[] str_data = {new StringBuffer("Parting"), new StringBuffer("is such"),
-                                   new StringBuffer("sweet"), new StringBuffer("sorrow.")};
+    private static void CreateDataset() {
+        long file_id = HDF5Constants.H5I_INVALID_HID;
+        long memtype_id = HDF5Constants.H5I_INVALID_HID;
+        long filetype_id = HDF5Constants.H5I_INVALID_HID;
+        long dataspace_id = HDF5Constants.H5I_INVALID_HID;
+        long dataset_id = HDF5Constants.H5I_INVALID_HID;
+        long attribute_id = HDF5Constants.H5I_INVALID_HID;
+        long[] dims = { DIM0 };
+        byte[][] dset_data = new byte[DIM0][SDIM];
+        StringBuffer[] str_data = { new StringBuffer("Parting"), new StringBuffer("is such"),
+                new StringBuffer("sweet"), new StringBuffer("sorrow.") };
 
         // Create a new file using default properties.
         try {
@@ -178,16 +177,15 @@ public class H5Ex_T_StringAttribute {
         }
     }
 
-    private static void ReadDataset()
-    {
-        long file_id      = HDF5Constants.H5I_INVALID_HID;
-        long filetype_id  = HDF5Constants.H5I_INVALID_HID;
-        long memtype_id   = HDF5Constants.H5I_INVALID_HID;
+    private static void ReadDataset() {
+        long file_id = HDF5Constants.H5I_INVALID_HID;
+        long filetype_id = HDF5Constants.H5I_INVALID_HID;
+        long memtype_id = HDF5Constants.H5I_INVALID_HID;
         long dataspace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id   = HDF5Constants.H5I_INVALID_HID;
+        long dataset_id = HDF5Constants.H5I_INVALID_HID;
         long attribute_id = HDF5Constants.H5I_INVALID_HID;
-        long sdim         = 0;
-        long[] dims       = {DIM0};
+        long sdim = 0;
+        long[] dims = { DIM0 };
         byte[][] dset_data;
         StringBuffer[] str_data;
 

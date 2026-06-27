@@ -42,8 +42,7 @@ public class H5Ex_G_Traverse {
     private static String FILE          = "h5ex_g_traverse.h5";
     public static H5L_iterate_t iter_cb = new H5L_iter_callbackT();
 
-    private static void OpenGroup()
-    {
+    private static void OpenGroup() {
         long file_id = HDF5Constants.H5I_INVALID_HID;
         H5O_info_t infobuf;
         opdata od = new opdata();

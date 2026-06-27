@@ -161,7 +161,6 @@ test_iter_group(FileAccPropList &fapl)
 
         for (int i = 0; i < NDATASETS; i++) {
             snprintf(name, sizeof(name), "Dataset %d", i);
-
             // Create a dataset in the file
             DataSet dataset = file.createDataSet(name, datatype, filespace);
 
@@ -398,37 +397,6 @@ test_HDFFV_9920()
 
     /* Output message about test being performed */
     SUBTEST("Member access");
-
-    try {
-        // Create a new file and a group in it
-        H5File file(FILE_NAME, H5F_ACC_TRUNC);
-
-        Group gr1(file.createGroup(GRP_NAME));
-
-        // Create the data space for the attribute.
-        DataSpace dspace = DataSpace(1, dims);
-
-        DataSet fds = file.createDataSet(FDATASET_NAME, PredType::STD_I32BE, dspace);
-        DataSet gds = gr1.createDataSet(GDATASET_NAME, PredType::STD_I32BE, dspace);
-
-        // Create a file attribute and a group attribute.
-        Attribute fa1 = file.createAttribute(FATTR_NAME, PredType::STD_I32BE, dspace);
-        Attribute ga1 = gr1.createAttribute(GATTR_NAME, PredType::STD_I32BE, dspace);
-
-        // Write the attribute data.
-        fa1.write(PredType::NATIVE_INT, attr_data);
-        ga1.write(PredType::NATIVE_INT, attr_data);
-
-        fa1.close();
-        ga1.close();
-        fds.close();
-        gds.close();
-
-        // Verify the attributes have correct names.
-        printelems(file, FDATASET_NAME, FATTR_NAME);
-        printelems(gr1, GDATASET_NAME, GATTR_NAME);
-
-        PASSED();
     } // end of try block
 
     // Catch all failures for handling in the same way

@@ -95,14 +95,13 @@ public class H5Ex_D_Soint {
         return true;
     }
 
-    private static void writeData()
-    {
-        long file_id      = HDF5Constants.H5I_INVALID_HID;
+    private static void writeData() {
+        long file_id = HDF5Constants.H5I_INVALID_HID;
         long filespace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id   = HDF5Constants.H5I_INVALID_HID;
-        long dcpl_id      = HDF5Constants.H5I_INVALID_HID;
-        long[] dims       = {DIM_X, DIM_Y};
-        long[] chunk_dims = {CHUNK_X, CHUNK_Y};
+        long dataset_id = HDF5Constants.H5I_INVALID_HID;
+        long dcpl_id = HDF5Constants.H5I_INVALID_HID;
+        long[] dims = { DIM_X, DIM_Y };
+        long[] chunk_dims = { CHUNK_X, CHUNK_Y };
         int[][] dset_data = new int[DIM_X][DIM_Y];
 
         // Initialize data.
@@ -196,11 +195,10 @@ public class H5Ex_D_Soint {
         }
     }
 
-    private static void readData()
-    {
-        long file_id      = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id   = HDF5Constants.H5I_INVALID_HID;
-        long dcpl_id      = HDF5Constants.H5I_INVALID_HID;
+    private static void readData() {
+        long file_id = HDF5Constants.H5I_INVALID_HID;
+        long dataset_id = HDF5Constants.H5I_INVALID_HID;
+        long dcpl_id = HDF5Constants.H5I_INVALID_HID;
         int[][] dset_data = new int[DIM_X][DIM_Y];
 
         // Open file using the default properties.

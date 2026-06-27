@@ -227,7 +227,7 @@ parse_tuple(const char *start, int sep, char **cpy_out, unsigned *nelems, char *
     char *   elem_ptr    = NULL;
     char *   dest_ptr    = NULL;
     unsigned elems_count = 0;
-    char **  elems       = NULL; /* more like *elems[], but compiler... */
+    char **  elems       = NULL; /* more like *elems[], but complier... */
     char **  elems_re    = NULL; /* temporary pointer, for realloc */
     char *   cpy         = NULL;
     herr_t   ret_value   = SUCCEED;

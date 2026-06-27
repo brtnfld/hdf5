@@ -1297,8 +1297,8 @@ create_mirroring_split_fapl(const char *_basename, struct mirrortest_filenames *
      */
     mirror_conf.magic          = H5FD_MIRROR_FAPL_MAGIC;
     mirror_conf.version        = H5FD_MIRROR_CURR_FAPL_T_VERSION;
-    mirror_conf.handshake_port = opts->portno;
-    if (HDstrncpy(mirror_conf.remote_ip, opts->ip, H5FD_MIRROR_MAX_IP_LEN) == NULL) {
+    mirror_conf.handshake_port = SERVER_HANDSHAKE_PORT;
+    if (HDstrncpy(mirror_conf.remote_ip, SERVER_IP_ADDRESS, H5FD_MIRROR_MAX_IP_LEN) == NULL) {
         TEST_ERROR;
     }
     splitter_config.wo_fapl_id = H5Pcreate(H5P_FILE_ACCESS);
@@ -2192,9 +2192,7 @@ test_on_disk_zoo(const struct mt_opts *opts)
      */
 
     if (pass) {
-        pass = create_zoo(
-            file_id, grp_name, &lastmsgtime,
-            (zoo_config_t){.proc_num = 0, .skip_varlen = false, .skip_compact = false, .msgival = {0, 0}});
+        create_zoo(file_id, grp_name, 0);
     }
     if (pass) {
         if (H5Fclose(file_id) == FAIL) {
@@ -2206,13 +2204,10 @@ test_on_disk_zoo(const struct mt_opts *opts)
         }
     }
     if (pass) {
-        validate_zoo(
-            file_id, grp_name, &lastmsgtime,
-            (zoo_config_t){.proc_num = 0, .skip_varlen = false, .skip_compact = false, .msgival = {0, 0}});
+        validate_zoo(file_id, grp_name, 0); /* sanity-check */
     }
-
     if (!pass) {
-        HDprintf("%s", failure_mssg);
+        HDprintf(failure_mssg);
         TEST_ERROR;
     }
 

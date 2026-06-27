@@ -169,7 +169,8 @@ H5TEST_DLLVAR MPI_Info h5_io_info_g; /* MPI INFO object for IO */
 #define H5_ALARM_SEC 1200 /* default is 20 minutes */
 
 /* Flags for h5_fileaccess_flags() */
-#define H5_FILEACCESS_LIBVER 0x01
+#define H5_FILEACCESS_VFD    0x01
+#define H5_FILEACCESS_LIBVER 0x02
 
 /* Flags for h5_driver_uses_multiple_files() */
 #define H5_EXCLUDE_MULTIPART_DRIVERS     0x01

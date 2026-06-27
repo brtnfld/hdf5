@@ -10,7 +10,7 @@ main(void)
 {
     int ret_val = EXIT_SUCCESS;
 
-    //! <!-- [create] -->
+    //! <!-- [life_cycle] -->
     {
         __label__ fail_fapl, fail_fcpl, fail_file;
         hid_t fcpl, fapl, file;
@@ -48,13 +48,12 @@ fail_fapl:
         H5Pclose(fcpl);
 fail_fcpl:;
     }
-    //! <!-- [create] -->
+    //! <!-- [life_cycle] -->
 
-    //! <!-- [read] -->
+    //! <!-- [life_cycle_w_open] -->
     {
         __label__ fail_fapl, fail_file;
-        hid_t   fapl, file;
-        hsize_t size;
+        hid_t fapl, file;
 
         if ((fapl = H5Pcreate(H5P_FILE_ACCESS)) == H5I_INVALID_HID) {
             ret_val = EXIT_FAILURE;
@@ -64,7 +63,7 @@ fail_fcpl:;
             // adjust the file access properties
         }
 
-        unsigned mode   = H5F_ACC_RDONLY;
+        unsigned mode   = H5F_ACC_RDWR;
         char     name[] = "f1.h5";
 
         if ((file = H5Fopen(name, mode, fapl)) == H5I_INVALID_HID) {
@@ -72,41 +71,14 @@ fail_fcpl:;
             goto fail_file;
         }
 
-        if (H5Fget_filesize(file, &size) < 0) {
-            ret_val = EXIT_FAILURE;
-        }
-
-        printf("File size: %llu bytes\n", size);
+        // do something useful with FILE
 
         H5Fclose(file);
 fail_file:
         H5Pclose(fapl);
 fail_fapl:;
     }
-    //! <!-- [read] -->
-
-    //! <!-- [update] -->
-    {
-        __label__ fail_file;
-        hid_t file;
-
-        unsigned mode   = H5F_ACC_RDWR;
-        char     name[] = "f1.h5";
-
-        if ((file = H5Fopen(name, mode, H5P_DEFAULT)) == H5I_INVALID_HID) {
-            ret_val = EXIT_FAILURE;
-            goto fail_file;
-        }
-
-        // create a cycle by hard linking the root group in the root group
-        if (H5Lcreate_hard(file, ".", file, "loopback", H5P_DEFAULT, H5P_DEFAULT) < 0) {
-            ret_val = EXIT_FAILURE;
-        }
-
-        H5Fclose(file);
-fail_file:;
-    }
-    //! <!-- [update] -->
+    //! <!-- [life_cycle_w_open] -->
 
     //! <!-- [minimal] -->
     {

@@ -244,7 +244,7 @@ jserr_str(const char *expected, const char *actual, const char *reason)
     }
 
 #ifdef JSVERIFY_EXP_ACT
-/* VERIFY routines with parameter order (<expected>, <actual> [, <msg> ])
+/* VERIFY rountines with paramter order (<expected>, <actual> [, <msg> ])
  */
 
 /*----------------------------------------------------------------------------
@@ -730,7 +730,7 @@ test_hrb_init_request(void)
             FALSE,
         },
         {
-            "null verb substitutes to GET",
+            "null verb substitues to GET",
             NULL,
             "/MYPATH/MYFILE.tiff",
             "/MYPATH/MYFILE.tiff",
@@ -1143,10 +1143,10 @@ test_hrb_node_set(void)
          *********/
 
         for (mock_i = 0; test->given[mock_i] != NULL; mock_i += 2) {
-            const char *name  = test->given[mock_i];
-            const char *value = test->given[mock_i + 1];
+            const char *name = test->given[mock_i];
+            const char *valu = test->given[mock_i + 1];
 
-            FAIL_IF(SUCCEED != H5FD_s3comms_hrb_node_set(&list, name, value))
+            FAIL_IF(SUCCEED != H5FD_s3comms_hrb_node_set(&list, name, valu))
         }
         /********
          * TEST *
@@ -1162,11 +1162,11 @@ test_hrb_node_set(void)
         node   = list;
         mock_i = 0;
         while (test->expected[mock_i] != NULL && node != NULL) {
-            const char *name  = test->expected[mock_i];
-            const char *value = test->expected[mock_i + 1];
+            const char *name = test->expected[mock_i];
+            const char *valu = test->expected[mock_i + 1];
 
             JSVERIFY_STR(name, node->name, NULL)
-            JSVERIFY_STR(value, node->value, NULL)
+            JSVERIFY_STR(valu, node->value, NULL)
 
             mock_i += 2;
             node = node->next;
@@ -2514,7 +2514,7 @@ test_uriencode(void)
     int             ncases       = 6;
     size_t          str_len      = 0;
 
-    TESTING("s3comms uriencode");
+    TESTING("s3comms uriencode")
 
     for (i = 0; i < ncases; i++) {
         str_len = cases[i].s_len;
@@ -2610,7 +2610,7 @@ main(void)
 
     bucket_url_env = HDgetenv("HDF5_ROS3_TEST_BUCKET_URL");
     if (bucket_url_env == NULL || bucket_url_env[0] == '\0') {
-        HDprintf("WARNING: S3 bucket url is not defined in environment "
+        HDprintf("WARNING: S3 bucket url is not defined in enviornment "
                  "variable 'HDF5_ROS3_TEST_BUCKET_URL'!\n");
     }
     else {

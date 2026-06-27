@@ -69,7 +69,7 @@
  *
  *****************************************************************************/
 
-H5_GCC_CLANG_DIAG_OFF("format")
+H5_GCC_DIAG_OFF("format")
 
 /*----------------------------------------------------------------------------
  *
@@ -1201,17 +1201,13 @@ test_set_configured_fapl(void)
 #endif /* UTIL_TEST_DEBUG */
 
         /* test */
-        vfd_info.type   = VFD_BY_NAME;
-        vfd_info.info   = C.conf_fa;
-        vfd_info.u.name = C.vfdname;
-        vfd_info.fname  = "ignore";
-        result          = h5tools_get_fapl(H5P_DEFAULT, NULL, &vfd_info);
-        if (C.expected == 0) {
+        vfd_info.info = C.conf_fa;
+        vfd_info.name = C.vfdname;
+        result        = h5tools_get_fapl(H5P_DEFAULT, NULL, &vfd_info);
+        if (C.expected == 0)
             JSVERIFY(result, H5I_INVALID_HID, C.message)
-        }
-        else {
+        else
             JSVERIFY_NOT(result, H5I_INVALID_HID, C.message)
-        }
 
 #if UTIL_TEST_DEBUG
         HDfprintf(stderr, "after test\n");
@@ -1258,7 +1254,7 @@ error:
 #undef UTIL_TEST_DEFAULT
 #undef UTIL_TEST_CREATE
 } /* test_set_configured_fapl */
-H5_GCC_CLANG_DIAG_ON("format")
+H5_GCC_DIAG_ON("format")
 
 /*----------------------------------------------------------------------------
  *

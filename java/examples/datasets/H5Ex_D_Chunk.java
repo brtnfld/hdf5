@@ -64,14 +64,13 @@ public class H5Ex_D_Chunk {
         public static H5D_layout get(int code) { return lookup.get(code); }
     }
 
-    private static void writeChunk()
-    {
-        long file_id      = HDF5Constants.H5I_INVALID_HID;
+    private static void writeChunk() {
+        long file_id = HDF5Constants.H5I_INVALID_HID;
         long filespace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id   = HDF5Constants.H5I_INVALID_HID;
-        long dcpl_id      = HDF5Constants.H5I_INVALID_HID;
-        long[] dims       = {DIM_X, DIM_Y};
-        long[] chunk_dims = {CHUNK_X, CHUNK_Y};
+        long dataset_id = HDF5Constants.H5I_INVALID_HID;
+        long dcpl_id = HDF5Constants.H5I_INVALID_HID;
+        long[] dims = { DIM_X, DIM_Y };
+        long[] chunk_dims = { CHUNK_X, CHUNK_Y };
         int[][] dset_data = new int[DIM_X][DIM_Y];
 
         // Initialize data to "1", to make it easier to see the selections.
@@ -202,12 +201,11 @@ public class H5Ex_D_Chunk {
         }
     }
 
-    private static void readChunk()
-    {
-        long file_id      = HDF5Constants.H5I_INVALID_HID;
+    private static void readChunk() {
+        long file_id = HDF5Constants.H5I_INVALID_HID;
         long filespace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id   = HDF5Constants.H5I_INVALID_HID;
-        long dcpl_id      = HDF5Constants.H5I_INVALID_HID;
+        long dataset_id = HDF5Constants.H5I_INVALID_HID;
+        long dcpl_id = HDF5Constants.H5I_INVALID_HID;
         int[][] dset_data = new int[DIM_X][DIM_Y];
 
         // Open an existing file.

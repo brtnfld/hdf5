@@ -1662,15 +1662,9 @@ H5HF__cache_dblock_verify_chksum(const void *_image, size_t len, void *_udata)
         /* Update info about direct block */
         udata->decompressed = TRUE;
         len                 = nbytes;
-    }
-    else {
-        /* If the data are unfiltered, we just point to the image, which we
-         * never modify. Casting away const is okay here.
-         */
-        H5_GCC_CLANG_DIAG_OFF("cast-qual")
-        read_buf = (void *)image;
-        H5_GCC_CLANG_DIAG_OFF("cast-qual")
-    }
+    } /* end if */
+    else
+        read_buf = (void *)image; /* Casting away const OK - QAK */
 
     /* Decode checksum */
     chk_size = (size_t)(H5HF_MAN_ABS_DIRECT_OVERHEAD(hdr) - H5HF_SIZEOF_CHKSUM);

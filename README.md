@@ -104,4 +104,3 @@ Source packages for current and previous releases are located at:
 Development code is available at our Github location:
     
    https://github.com/HDFGroup/hdf5.git
-

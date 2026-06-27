@@ -32,15 +32,14 @@ public class H5Ex_T_Array {
     private static final int RANK     = 1;
     private static final int NDIMS    = 2;
 
-    private static void CreateDataset()
-    {
-        long file_id        = HDF5Constants.H5I_INVALID_HID;
-        long filetype_id    = HDF5Constants.H5I_INVALID_HID;
-        long memtype_id     = HDF5Constants.H5I_INVALID_HID;
-        long dataspace_id   = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id     = HDF5Constants.H5I_INVALID_HID;
-        long[] dims         = {DIM0};
-        long[] adims        = {ADIM0, ADIM1};
+    private static void CreateDataset() {
+        long file_id = HDF5Constants.H5I_INVALID_HID;
+        long filetype_id = HDF5Constants.H5I_INVALID_HID;
+        long memtype_id = HDF5Constants.H5I_INVALID_HID;
+        long dataspace_id = HDF5Constants.H5I_INVALID_HID;
+        long dataset_id = HDF5Constants.H5I_INVALID_HID;
+        long[] dims = { DIM0 };
+        long[] adims = { ADIM0, ADIM1 };
         int[][][] dset_data = new int[DIM0][ADIM0][ADIM1];
 
         // Initialize data. indx is the element in the dataspace, jndx and kndx the
@@ -151,14 +150,13 @@ public class H5Ex_T_Array {
         }
     }
 
-    private static void ReadDataset()
-    {
-        long file_id     = HDF5Constants.H5I_INVALID_HID;
+    private static void ReadDataset() {
+        long file_id = HDF5Constants.H5I_INVALID_HID;
         long filetype_id = HDF5Constants.H5I_INVALID_HID;
-        long memtype_id  = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id  = HDF5Constants.H5I_INVALID_HID;
-        long[] dims      = {DIM0};
-        long[] adims     = {ADIM0, ADIM1};
+        long memtype_id = HDF5Constants.H5I_INVALID_HID;
+        long dataset_id = HDF5Constants.H5I_INVALID_HID;
+        long[] dims = { DIM0 };
+        long[] adims = { ADIM0, ADIM1 };
         int[][][] dset_data;
 
         // Open an existing file.

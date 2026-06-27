@@ -1,18 +1,10 @@
-name: PR hdf5 dev CI
+name: hdf5 dev CI
 
 # Controls when the action will run. Triggers the workflow on push or pull request
 on:
   pull_request:
-    branches: [ develop, hdf5_1_12, hdf5_1_10, hdf5_1_8, feature/vfd_swmr ]
-    paths-ignore:
-    - '.github/CODEOWNERS'
-    - '.github/FUNDING.yml'
-    - 'doc/**'
-    - 'release_docs/**'
-    - 'ACKNOWLEDGEMENTS'
-    - 'COPYING**'
-    - '**.md'
- 
+    branches: [ develop, hdf5_1_12, hdf5_1_10, hdf5_1_8 ]
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
@@ -20,11 +12,11 @@ jobs:
     strategy:
 #      fail-fast: false
       matrix:
-        name: ["Windows Latest MSVC", "Ubuntu Latest GCC", "Ubuntu Debug GCC", "macOS Latest Clang", "Ubuntu Autotools GCC", "Ubuntu Debug Autotools GCC", "-Werror Ubuntu Debug Autotools GCC", "Windows TS MSVC", "Ubuntu TS GCC", "TS Debug GCC", "macOS TS Clang", "TS Autotools GCC"]
+        name: ["Windows Latest MSVC", "Ubuntu Latest GCC", "Ubuntu Debug GCC", "macOS Latest Clang", "Ubuntu Autotools GCC", "Windows TS MSVC", "Ubuntu TS GCC", "TS Debug GCC", "macOS TS Clang", "TS Autotools GCC"]
         include:
           - name: "Windows Latest MSVC"
             artifact: "Windows-MSVC.tar.xz"
-            os: windows-2022
+            os: windows-latest
             build_type: "Release"
             toolchain: ""
             cpp: ON
@@ -33,8 +25,7 @@ jobs:
             ts: OFF
             hl: ON
             parallel: OFF
-            generator: "-G \"Visual Studio 17 2022\" -A x64"
-            flags: ""
+            generator: "-G \"Visual Studio 16 2019\" -A x64"
           - name: "Ubuntu Latest GCC"
             artifact: "Linux.tar.xz"
             os: ubuntu-latest
@@ -73,11 +64,10 @@ jobs:
             parallel: OFF
             toolchain: "config/toolchain/GCC.cmake"
             generator: "-G Ninja"
-            flags: ""
           - name: "Ubuntu Autotools GCC"
             artifact: "LinuxA.tar.xz"
             os: ubuntu-latest
-            build_type: "production"
+            build_type: "Release"
             cpp: enable
             fortran: enable
             java: enable
@@ -86,38 +76,10 @@ jobs:
             parallel: disable
             toolchain: ""
             generator: "autogen"
-            flags: ""
-          - name: "Ubuntu Debug Autotools GCC"
-            artifact: "LinuxA.tar.xz"
-            os: ubuntu-latest
-            build_type: "debug"
-            cpp: enable
-            fortran: enable
-            java: enable
-            ts: disable
-            hl: enable
-            parallel: disable
-            toolchain: ""
-            generator: "autogen"
-            flags: ""
-          # Build that ensures no new warnings sneak into the library.
-          - name: "-Werror Ubuntu Debug Autotools GCC"
-            artifact: "LinuxDBG.tar.xz"
-            os: ubuntu-latest
-            build_type: "debug"
-            cpp: disable
-            fortran: disable
-            java: disable
-            ts: disable
-            hl: enable
-            parallel: disable
-            toolchain: ""
-            generator: "autogen"
-            flags: "CFLAGS=-Werror"
 #  Threadsafe runs
           - name: "Windows TS MSVC"
             artifact: "Windows-MSVCTS.tar.xz"
-            os: windows-2019
+            os: windows-2016
             build_type: "Release"
             toolchain: ""
             cpp: OFF
@@ -126,8 +88,7 @@ jobs:
             ts: ON
             hl: OFF
             parallel: OFF
-            generator: "-G \"Visual Studio 16 2019\" -A x64"
-            flags: ""
+            generator: "-G \"Visual Studio 15 2017 Win64\""
           - name: "Ubuntu TS GCC"
             artifact: "LinuxTS.tar.xz"
             os: ubuntu-latest
@@ -166,11 +127,10 @@ jobs:
             parallel: OFF
             toolchain: "config/toolchain/GCC.cmake"
             generator: "-G Ninja"
-            flags: ""
           - name: "TS Autotools GCC"
             artifact: "LinuxATS.tar.xz"
             os: ubuntu-latest
-            build_type: "production"
+            build_type: "Release"
             cpp: disable
             fortran: disable
             java: disable
@@ -179,7 +139,15 @@ jobs:
             parallel: disable
             toolchain: ""
             generator: "autogen"
-            flags: ""
+#          - name: "Ubuntu Parallel GCC"
+#            artifact: "LinuxPar.tar.xz"
+#            os: ubuntu-latest
+#            build_type: "Release"
+#            cpp: OFF
+#            fortran: OFF
+#            parallel: ON
+#            toolchain: "config/toolchain/GCC.cmake"
+#            generator: "-G Ninja"
 
     name: ${{ matrix.name }}
     # The type of runner that the job will run on
@@ -192,11 +160,7 @@ jobs:
       run: sudo apt-get install ninja-build
       if: matrix.os == 'ubuntu-latest'
     - name: Install Autotools Dependencies (Linux)
-      run: |
-           sudo apt update
-           sudo apt install automake autoconf libtool libtool-bin
-           sudo apt install gcc-11 g++-11 gfortran-11
-           sudo apt install openmpi-bin openmpi-common
+      run: sudo apt-get install automake autoconf libtool libtool-bin
       if: matrix.generator == 'autogen'
     - name: Install Dependencies (Windows)
       run: choco install ninja
@@ -219,14 +183,11 @@ jobs:
       if: matrix.generator == 'autogen'
       run: |
         sh ./autogen.sh
+        sh ./bin/chkmanifest
         mkdir "${{ runner.workspace }}/build"
         cd "${{ runner.workspace }}/build"
-        ${{ matrix.flags }} $GITHUB_WORKSPACE/configure --enable-build-mode=${{ matrix.build_type }} --enable-shared --${{ matrix.ts }}-threadsafe --${{ matrix.hl }}-hl --${{ matrix.parallel }}-parallel --${{ matrix.cpp }}-cxx --${{ matrix.fortran }}-fortran --${{ matrix.java }}-java
+        $GITHUB_WORKSPACE/configure --enable-shared --${{ matrix.ts }}-threadsafe --${{ matrix.hl }}-hl --${{ matrix.parallel }}-parallel --${{ matrix.cpp }}-cxx --${{ matrix.fortran }}-fortran --${{ matrix.java }}-java
       shell: bash
-      env:
-        CC:   gcc-11
-        CXX:  g++-11
-        FC:   gfortran-11
 
     - name: Configure
       if: matrix.generator != 'autogen'

@@ -1213,7 +1213,7 @@ New Features
         H5PLreplace - Replace the path at the specified index.
         H5PLinsert  - Insert a plugin path at the specified index, moving
                       other paths after the index.
-        H5PLremove  - Remove the plugin path at the specified index and
+        H5PLremove  - Remove the plugin path at the specifed index and
                       compacting the list.
         H5PLget     - Query the plugin path at the specified index.
         H5PLsize    - Query the size of the current list of plugin paths.
@@ -1251,7 +1251,7 @@ New Features
         // Returns a copy of the creation property list of a datatype.
         DataType::getCreatePlist() - C API H5Tget_create_plist()
 
-        // Opens an object within a location, regardless its type.
+        // Opens an object within a location, regarless its type.
         H5Location::openObjId() - C API H5Oopen()
         H5Location::openObjId() - C API H5Oopen()
 
@@ -1730,7 +1730,7 @@ Bug Fixes since HDF5-1.8.17
       files to ensure that the library fails gracefully in these cases:
 
       * Writing to a corrupted file that has an object message which is
-        incorrectly marked as shareable on disk results in a buffer overflow /
+        incorrectly marked as sharable on disk results in a buffer overflow /
         invalid write instead of a clean error message.
 
       * Decoding data from a corrupted file with a dataset encoded with the

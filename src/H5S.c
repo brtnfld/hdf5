@@ -93,6 +93,9 @@ static const H5I_class_t H5I_SPACE_SEL_ITER_CLS[1] = {{
     (H5I_free_t)H5S__sel_iter_close_cb /* Callback routine for closing objects of this class */
 }};
 
+/* Flag indicating "top" of interface has been initialized */
+static hbool_t H5S_top_package_initialize_s = FALSE;
+
 /*-------------------------------------------------------------------------
  * Function: H5S_init
  *
@@ -102,6 +105,28 @@ static const H5I_class_t H5I_SPACE_SEL_ITER_CLS[1] = {{
  *           Failure:    negative
  *-------------------------------------------------------------------------
  */
+herr_t
+H5S_init(void)
+{
+    herr_t ret_value = SUCCEED; /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+    /* FUNC_ENTER() does all the work */
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5S_init() */
+
+/*--------------------------------------------------------------------------
+NAME
+   H5S__init_package -- Initialize interface-specific information
+USAGE
+    herr_t H5S__init_package()
+RETURNS
+    Non-negative on success/Negative on failure
+DESCRIPTION
+    Initializes any interface-specific data or routines.
+--------------------------------------------------------------------------*/
 herr_t
 H5S_init(void)
 {
@@ -147,14 +172,21 @@ H5S_top_term_package(void)
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-    if (H5I_nmembers(H5I_DATASPACE) > 0) {
-        (void)H5I_clear_type(H5I_DATASPACE, FALSE, FALSE);
-        n++;
-    }
-    if (H5I_nmembers(H5I_SPACE_SEL_ITER) > 0) {
-        (void)H5I_clear_type(H5I_SPACE_SEL_ITER, FALSE, FALSE);
-        n++;
-    }
+    if (H5S_top_package_initialize_s) {
+        if (H5I_nmembers(H5I_DATASPACE) > 0) {
+            (void)H5I_clear_type(H5I_DATASPACE, FALSE, FALSE);
+            n++; /*H5I*/
+        }        /* end if */
+
+        if (H5I_nmembers(H5I_SPACE_SEL_ITER) > 0) {
+            (void)H5I_clear_type(H5I_SPACE_SEL_ITER, FALSE, FALSE);
+            n++; /*H5I*/
+        }        /* end if */
+
+        /* Mark "top" of interface as closed */
+        if (0 == n)
+            H5S_top_package_initialize_s = FALSE;
+    } /* end if */
 
     FUNC_LEAVE_NOAPI(n)
 } /* end H5S_top_term_package() */
@@ -186,9 +218,11 @@ H5S_term_package(void)
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-    /* Sanity checks */
-    HDassert(0 == H5I_nmembers(H5I_DATASPACE));
-    HDassert(0 == H5I_nmembers(H5I_SPACE_SEL_ITER));
+    if (H5_PKG_INIT_VAR) {
+        /* Sanity checks */
+        HDassert(0 == H5I_nmembers(H5I_DATASPACE));
+        HDassert(0 == H5I_nmembers(H5I_SPACE_SEL_ITER));
+        HDassert(FALSE == H5S_top_package_initialize_s);
 
     /* Destroy the dataspace object id group */
     n += (H5I_dec_type_ref(H5I_DATASPACE) > 0);

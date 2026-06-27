@@ -73,10 +73,10 @@ static herr_t H5S__mpio_create_point_datatype(size_t elmt_size, hsize_t num_poin
 static herr_t H5S__mpio_point_type(const H5S_t *space, size_t elmt_size, MPI_Datatype *new_type, int *count,
                                    hbool_t *is_derived_type, hbool_t do_permute, hsize_t **permute_map,
                                    hbool_t *is_permuted);
-static herr_t H5S__mpio_permute_type(H5S_t *space, size_t elmt_size, hsize_t **permute_map,
+static herr_t H5S__mpio_permute_type(const H5S_t *space, size_t elmt_size, hsize_t **permute_map,
                                      MPI_Datatype *new_type, int *count, hbool_t *is_derived_type);
-static herr_t H5S__mpio_reg_hyper_type(H5S_t *space, size_t elmt_size, MPI_Datatype *new_type, int *count,
-                                       hbool_t *is_derived_type);
+static herr_t H5S__mpio_reg_hyper_type(const H5S_t *space, size_t elmt_size, MPI_Datatype *new_type,
+                                       int *count, hbool_t *is_derived_type);
 static herr_t H5S__mpio_span_hyper_type(const H5S_t *space, size_t elmt_size, MPI_Datatype *new_type,
                                         int *count, hbool_t *is_derived_type);
 static herr_t H5S__release_datatype(H5S_mpio_mpitype_list_t *type_list);
@@ -226,7 +226,7 @@ H5S__mpio_create_point_datatype(size_t elmt_size, hsize_t num_points, MPI_Aint *
 
     /* Check whether standard or BIGIO processing will be employeed */
     if (bigio_count >= num_points) {
-#if H5_CHECK_MPI_VERSION(3, 0)
+#if MPI_VERSION >= 3
         /* Create an MPI datatype for the whole point selection */
         if (MPI_SUCCESS !=
             (mpi_code = MPI_Type_create_hindexed_block((int)num_points, 1, disp, elmt_type, new_type)))
@@ -287,7 +287,7 @@ H5S__mpio_create_point_datatype(size_t elmt_size, hsize_t num_points, MPI_Aint *
 #endif
 
         for (i = 0; i < num_big_types; i++) {
-#if H5_CHECK_MPI_VERSION(3, 0)
+#if MPI_VERSION >= 3
             if (MPI_SUCCESS != (mpi_code = MPI_Type_create_hindexed_block((int)bigio_count, 1,
                                                                           &disp[(hsize_t)i * bigio_count],
                                                                           elmt_type, &inner_types[i])))
@@ -303,7 +303,7 @@ H5S__mpio_create_point_datatype(size_t elmt_size, hsize_t num_points, MPI_Aint *
         } /* end for*/
 
         if (remaining_points) {
-#if H5_CHECK_MPI_VERSION(3, 0)
+#if MPI_VERSION >= 3
             if (MPI_SUCCESS != (mpi_code = MPI_Type_create_hindexed_block(
                                     remaining_points, 1, &disp[(hsize_t)num_big_types * bigio_count],
                                     elmt_type, &inner_types[num_big_types])))
@@ -504,19 +504,17 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5S__mpio_permute_type(H5S_t *space, size_t elmt_size, hsize_t **permute, MPI_Datatype *new_type, int *count,
-                       hbool_t *is_derived_type)
+H5S__mpio_permute_type(const H5S_t *space, size_t elmt_size, hsize_t **permute, MPI_Datatype *new_type,
+                       int *count, hbool_t *is_derived_type)
 {
-    MPI_Aint *      disp          = NULL;  /* Datatype displacement for each point*/
-    H5S_sel_iter_t *sel_iter      = NULL;  /* Selection iteration info */
-    hbool_t         sel_iter_init = FALSE; /* Selection iteration info has been initialized */
-    hssize_t        snum_points;           /* Signed number of elements in selection */
-    hsize_t         num_points;            /* Number of points in the selection */
-    hsize_t *       off = NULL;
-    size_t *        len = NULL;
-    size_t          max_elem;            /* Maximum number of elements allowed in sequences */
-    hsize_t         u;                   /* Local index variable */
-    herr_t          ret_value = SUCCEED; /* Return value */
+    MPI_Aint *     disp = NULL;           /* Datatype displacement for each point*/
+    H5S_sel_iter_t sel_iter;              /* Selection iteration info */
+    hbool_t        sel_iter_init = FALSE; /* Selection iteration info has been initialized */
+    hssize_t       snum_points;           /* Signed number of elements in selection */
+    hsize_t        num_points;            /* Number of points in the selection */
+    size_t         max_elem;              /* Maximum number of elements allowed in sequences */
+    hsize_t        u;                     /* Local index variable */
+    herr_t         ret_value = SUCCEED;   /* Return value */
 
     FUNC_ENTER_PACKAGE
 
@@ -652,11 +650,11 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5S__mpio_reg_hyper_type(H5S_t *space, size_t elmt_size, MPI_Datatype *new_type, int *count,
+H5S__mpio_reg_hyper_type(const H5S_t *space, size_t elmt_size, MPI_Datatype *new_type, int *count,
                          hbool_t *is_derived_type)
 {
-    H5S_sel_iter_t *sel_iter      = NULL;  /* Selection iteration info */
-    hbool_t         sel_iter_init = FALSE; /* Selection iteration info has been initialized */
+    H5S_sel_iter_t sel_iter;              /* Selection iteration info */
+    hbool_t        sel_iter_init = FALSE; /* Selection iteration info has been initialized */
 
     struct dim { /* less hassle than malloc/free & ilk */
         hssize_t start;
@@ -1170,7 +1168,7 @@ H5S__obtain_datatype(H5S_hyper_span_info_t *spans, const hsize_t *down, size_t e
         /* If this is the fastest changing dimension, it is the base case for derived datatype. */
         span = spans->head;
         if (NULL == span->down) {
-            hbool_t large_block = FALSE; /* Whether the block length is larger than 32 bit integer */
+            hbool_t large_block = FALSE; /* Wether the block length is larger than 32 bit integer */
 
             outercount = 0;
             while (span) {

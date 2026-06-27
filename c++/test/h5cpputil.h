@@ -50,14 +50,14 @@ class InvalidActionException : public Exception {
   public:
     InvalidActionException(const H5std_string &func_name, const H5std_string &message = DEFAULT_MSG);
     InvalidActionException();
-    ~InvalidActionException() throw() override;
+    virtual ~InvalidActionException() throw();
 };
 
 class TestFailedException : public Exception {
   public:
     TestFailedException(const H5std_string &func_name, const H5std_string &message = DEFAULT_MSG);
     TestFailedException();
-    ~TestFailedException() throw() override;
+    virtual ~TestFailedException() throw();
 };
 
 // Overloaded/Template functions to verify values and display proper info

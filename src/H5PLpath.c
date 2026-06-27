@@ -707,11 +707,10 @@ H5PL__path_table_iterate_process_path(const char *plugin_path, H5PL_iterate_type
     HDassert(plugin_path);
     HDassert(iter_op);
 
-    /* Specify a file mask. *.* = We want everything! -
-     * skip the path if the directory can't be opened */
-    HDsnprintf(service, sizeof(service), "%s\\*.dll", plugin_path);
+    /* Specify a file mask. *.* = We want everything! */
+    HDsprintf(service, "%s\\*.dll", plugin_path);
     if ((hFind = FindFirstFileA(service, &fdFile)) == INVALID_HANDLE_VALUE)
-        HGOTO_DONE(H5_ITER_CONT)
+        HGOTO_ERROR(H5E_PLUGIN, H5E_OPENERROR, H5_ITER_ERROR, "can't open directory")
 
     /* Loop over all the files */
     do {

@@ -69,13 +69,7 @@ test_encode_decode(hid_t orig_pl, int mpi_rank, int recv_proc)
             HDfree(rbuf);
     } /* end if */
 
-    if (0 == mpi_rank) {
-        /* gcc 11 complains about passing MPI_STATUSES_IGNORE as an MPI_Status
-         * array. See the discussion here:
-         *
-         * https://github.com/pmodels/mpich/issues/5687
-         */
-        H5_GCC_DIAG_OFF("stringop-overflow")
+    if (0 == mpi_rank)
         MPI_Waitall(2, req, MPI_STATUSES_IGNORE);
         H5_GCC_DIAG_ON("stringop-overflow")
     }
@@ -564,7 +558,7 @@ external_links(void)
 
             /* test opening a group that is to an external link, the external linked
                file should inherit the source file's access properties */
-            HDsnprintf(link_path, sizeof(link_path), "%s%s%s", group_path, "/", link_name);
+            HDsprintf(link_path, "%s%s%s", group_path, "/", link_name);
             group = H5Gopen2(fid, link_path, H5P_DEFAULT);
             VRFY((group >= 0), "H5Gopen succeeded");
             ret = H5Gclose(group);

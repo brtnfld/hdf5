@@ -2404,6 +2404,11 @@ H5_DLL herr_t H5CX_pop(hbool_t update_dxpl_props);
     {                                                                                                        \
         FUNC_ENTER_COMMON_NOERR(H5_IS_PKG(__func__));
 
+/* Aliases for FUNC_ENTER_STATIC* — develop M1 used these names; feature renamed them to PACKAGE */
+#define FUNC_ENTER_STATIC                FUNC_ENTER_PACKAGE
+#define FUNC_ENTER_STATIC_NOERR          FUNC_ENTER_PACKAGE_NOERR
+#define FUNC_ENTER_STATIC_NAMECHECK_ONLY FUNC_ENTER_PACKAGE_NAMECHECK_ONLY
+
 /*-------------------------------------------------------------------------
  * Purpose:  Register function exit for code profiling.  This should be
  *    the last statement executed by a function.

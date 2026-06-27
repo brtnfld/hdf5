@@ -1222,7 +1222,7 @@ H5S__select_iter_block(const H5S_sel_iter_t *iter, hsize_t *start, hsize_t *end)
 {
     herr_t ret_value; /* return value */
 
-    FUNC_ENTER_PACKAGE_NOERR
+    FUNC_ENTER_STATIC_NOERR
 
     /* Check args */
     HDassert(iter);
@@ -1300,7 +1300,7 @@ H5S__select_iter_has_next_block(const H5S_sel_iter_t *iter)
 {
     herr_t ret_value; /* return value */
 
-    FUNC_ENTER_PACKAGE_NOERR
+    FUNC_ENTER_STATIC_NOERR
 
     /* Check args */
     HDassert(iter);
@@ -1384,7 +1384,7 @@ H5S__select_iter_next_block(H5S_sel_iter_t *iter)
 {
     herr_t ret_value; /* return value */
 
-    FUNC_ENTER_PACKAGE_NOERR
+    FUNC_ENTER_STATIC_NOERR
 
     /* Check args */
     HDassert(iter);
@@ -1759,8 +1759,8 @@ H5S_select_shape_same(H5S_t *space1, H5S_t *space2)
     /* Check special cases if both dataspaces aren't scalar */
     /* (If only one is, the number of selected points check is sufficient) */
     if (space1->extent.rank > 0 && space2->extent.rank > 0) {
-        H5S_t *      space_a;      /* Dataspace with larger rank */
-        H5S_t *      space_b;      /* Dataspace with smaller rank */
+        const H5S_t *space_a;      /* Dataspace with larger rank */
+        const H5S_t *space_b;      /* Dataspace with smaller rank */
         unsigned     space_a_rank; /* Number of dimensions of dataspace A */
         unsigned     space_b_rank; /* Number of dimensions of dataspace B */
         int          space_a_dim;  /* Current dimension in dataspace A */
@@ -2227,6 +2227,7 @@ H5S_select_construct_projection(H5S_t *base_space, H5S_t **new_space_ptr, unsign
     HDassert(new_space_ptr != NULL);
     HDassert((new_space_rank != 0) || (H5S_GET_SELECT_NPOINTS(base_space) <= 1));
     HDassert(new_space_rank <= H5S_MAX_RANK);
+    HDassert((buf == NULL) || (adj_buf_ptr != NULL));
     HDassert(element_size > 0);
 
     /* Get the extent info for the base dataspace */
@@ -2549,8 +2550,9 @@ to share structures inside dst_space with proj_space
  REVISION LOG
 --------------------------------------------------------------------------*/
 herr_t
-H5S_select_project_intersection(H5S_t *src_space, H5S_t *dst_space, H5S_t *src_intersect_space,
-                                H5S_t **new_space_ptr, hbool_t share_selection)
+H5S_select_project_intersection(const H5S_t *src_space, const H5S_t *dst_space,
+                                const H5S_t *src_intersect_space, H5S_t **new_space_ptr,
+                                hbool_t share_selection)
 {
     H5S_t *         new_space               = NULL;    /* New dataspace constructed */
     H5S_t *         tmp_src_intersect_space = NULL;    /* Temporary SIS converted from points->hyperslabs */

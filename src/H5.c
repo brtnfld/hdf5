@@ -32,8 +32,7 @@
 #include "H5PLprivate.h" /* Plugins                                  */
 #include "H5SLprivate.h" /* Skip lists                               */
 #include "H5Tprivate.h"  /* Datatypes                                */
-
-#include "H5FDsec2.h" /* for H5FD_sec2_init() */
+#include "H5FDsec2.h"    /* for H5FD_sec2_init()                     */
 
 /****************/
 /* Local Macros */
@@ -66,13 +65,16 @@ static int H5__mpi_delete_cb(MPI_Comm comm, int keyval, void *attr_val, int *fla
 /* Package Variables */
 /*********************/
 
+/* Package initialization variable */
+hbool_t H5_PKG_INIT_VAR = FALSE;
+
 /*****************************/
 /* Library Private Variables */
 /*****************************/
 
-/* Library incompatible release versions, develop releases are incompatible by design */
-const unsigned VERS_RELEASE_EXCEPTIONS[]    = {0, 1, 2};
-const unsigned VERS_RELEASE_EXCEPTIONS_SIZE = 3;
+/* Library incompatible release versions */
+const unsigned VERS_RELEASE_EXCEPTIONS[]    = {0};
+const unsigned VERS_RELEASE_EXCEPTIONS_SIZE = 0;
 
 /* statically initialize block for pthread_once call used in initializing */
 /* the first global mutex                                                 */
@@ -102,6 +104,33 @@ static H5_atclose_node_t *H5_atclose_head = NULL;
 
 /* Declare a free list to manage the H5_atclose_node_t struct */
 H5FL_DEFINE_STATIC(H5_atclose_node_t);
+
+/*--------------------------------------------------------------------------
+NAME
+    H5__init_package -- Initialize interface-specific information
+USAGE
+    herr_t H5__init_package()
+RETURNS
+    Non-negative on success/Negative on failure
+DESCRIPTION
+    Initializes any interface-specific data or routines.
+--------------------------------------------------------------------------*/
+herr_t
+H5__init_package(void)
+{
+    herr_t ret_value = SUCCEED; /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+    /* Run the library initialization routine, if it hasn't already ran */
+    if (!H5_INIT_GLOBAL && !H5_TERM_GLOBAL) {
+        if (H5_init_library() < 0)
+            HGOTO_ERROR(H5E_LIB, H5E_CANTINIT, FAIL, "unable to initialize library")
+    } /* end if */
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5__init_package() */
 
 /*-------------------------------------------------------------------------
  * Function:    H5_default_vfd_init
@@ -965,8 +994,9 @@ H5check_version(unsigned majnum, unsigned minnum, unsigned relnum)
     static int          checked                  = 0; /* If we've already checked the version info */
     static unsigned int disable_version_check    = 0; /* Set if the version check should be disabled */
     static const char * version_mismatch_warning = VERSION_MISMATCH_WARNING;
-    static const char * release_mismatch_warning = RELEASE_MISMATCH_WARNING;
     herr_t              ret_value                = SUCCEED; /* Return value */
+    int                 releasenum               = relnum;  /* To avoid warning for unsigned < 0
+                                                               comparison in first release versions */
 
     FUNC_ENTER_API_NOINIT_NOERR_NOFS
     H5TRACE3("e", "IuIuIu", majnum, minnum, relnum);
@@ -986,7 +1016,7 @@ H5check_version(unsigned majnum, unsigned minnum, unsigned relnum)
     }
 
     /* H5_VERS_MAJOR and H5_VERS_MINOR must match */
-    if (H5_VERS_MAJOR != majnum || H5_VERS_MINOR != minnum) {
+    if (H5_VERS_MAJOR != majnum || H5_VERS_MINOR != minnum || H5_VERS_RELEASE > releasenum) {
         switch (disable_version_check) {
             case 0:
                 HDfprintf(stderr, "%s%s", version_mismatch_warning,
@@ -1021,10 +1051,9 @@ H5check_version(unsigned majnum, unsigned minnum, unsigned relnum)
                 break;
         } /* end switch */
 
-    } /* end if (H5_VERS_MAJOR != majnum || H5_VERS_MINOR != minnum) */
+    } /* end if (H5_VERS_MAJOR != majnum || H5_VERS_MINOR != minnum || H5_VERS_RELEASE > relnum) */
 
     /* H5_VERS_RELEASE should be compatible, we will only add checks for exceptions */
-    /* Library develop release versions are incompatible by design */
     if (H5_VERS_RELEASE != relnum) {
         for (unsigned i = 0; i < VERS_RELEASE_EXCEPTIONS_SIZE; i++) {
             /* Check for incompatible headers or incompatible library */
@@ -1032,7 +1061,7 @@ H5check_version(unsigned majnum, unsigned minnum, unsigned relnum)
                 switch (disable_version_check) {
                     case 0:
                         HDfprintf(
-                            stderr, "%s%s", release_mismatch_warning,
+                            stderr, "%s%s", version_mismatch_warning,
                             "You can, at your own risk, disable this warning by setting the environment\n"
                             "variable 'HDF5_DISABLE_VERSION_CHECK' to a value of '1'.\n"
                             "Setting it to 2 or higher will suppress the warning messages totally.\n");
@@ -1051,7 +1080,7 @@ H5check_version(unsigned majnum, unsigned minnum, unsigned relnum)
                                   "%s'HDF5_DISABLE_VERSION_CHECK' "
                                   "environment variable is set to %d, application will\n"
                                   "continue at your own risk.\n",
-                                  release_mismatch_warning, disable_version_check);
+                                  version_mismatch_warning, disable_version_check);
                         /* Mention the versions we are referring to */
                         HDfprintf(stderr, "Headers are %u.%u.%u, library is %u.%u.%u\n", majnum, minnum,
                                   relnum, (unsigned)H5_VERS_MAJOR, (unsigned)H5_VERS_MINOR,

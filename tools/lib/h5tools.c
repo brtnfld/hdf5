@@ -81,11 +81,7 @@ const char *volnames[] = {
  *
  */
 const char *drivernames[] = {
-    [SEC2_VFD_IDX] = "sec2",       [DIRECT_VFD_IDX] = "direct", [LOG_VFD_IDX] = "log",
-    [WINDOWS_VFD_IDX] = "windows", [STDIO_VFD_IDX] = "stdio",   [CORE_VFD_IDX] = "core",
-    [FAMILY_VFD_IDX] = "family",   [SPLIT_VFD_IDX] = "split",   [MULTI_VFD_IDX] = "multi",
-    [MPIO_VFD_IDX] = "mpio",       [ROS3_VFD_IDX] = "ros3",     [HDFS_VFD_IDX] = "hdfs",
-    [SWMR_VFD_IDX] = "swmr",
+    "sec2", "direct", "log", "windows", "stdio", "core", "family", "split", "multi", "mpio", "ros3", "hdfs",
 };
 
 #define NUM_VOLS    (sizeof(volnames) / sizeof(volnames[0]))
@@ -549,11 +545,11 @@ h5tools_set_fapl_vfd(hid_t fapl_id, h5tools_vfd_info_t *vfd_info)
             else if (!HDstrcmp(vfd_info->u.name, drivernames[LOG_VFD_IDX])) {
                 unsigned long long log_flags = H5FD_LOG_LOC_IO | H5FD_LOG_ALLOC;
 
-                /* Log Driver */
-                if (H5Pset_fapl_log(fapl_id, NULL, log_flags, (size_t)0) < 0)
-                    H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_log failed");
-            }
-            else if (!HDstrcmp(vfd_info->u.name, drivernames[WINDOWS_VFD_IDX])) {
+        /* Log Driver */
+        if (H5Pset_fapl_log(fapl_id, NULL, log_flags, (size_t)0) < 0)
+            H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_log failed");
+    }
+    else if (!HDstrcmp(vfd_info->name, drivernames[WINDOWS_VFD_IDX])) {
 #ifdef H5_HAVE_WINDOWS
                 /* There is no Windows VFD - use SEC2 */
                 if (H5Pset_fapl_sec2(fapl_id) < 0)
@@ -561,36 +557,36 @@ h5tools_set_fapl_vfd(hid_t fapl_id, h5tools_vfd_info_t *vfd_info)
 #else
                 H5TOOLS_GOTO_ERROR(FAIL, "Windows VFD is not enabled");
 #endif
-            }
-            else if (!HDstrcmp(vfd_info->u.name, drivernames[STDIO_VFD_IDX])) {
-                /* Stdio Driver */
-                if (H5Pset_fapl_stdio(fapl_id) < 0)
-                    H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_stdio failed");
-            }
-            else if (!HDstrcmp(vfd_info->u.name, drivernames[CORE_VFD_IDX])) {
-                /* Core Driver */
-                if (H5Pset_fapl_core(fapl_id, (size_t)H5_MB, TRUE) < 0)
-                    H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_core failed");
-            }
-            else if (!HDstrcmp(vfd_info->u.name, drivernames[FAMILY_VFD_IDX])) {
-                /* FAMILY Driver */
-                /* Set member size to be 0 to indicate the current first member size
-                 * is the member size.
-                 */
-                if (H5Pset_fapl_family(fapl_id, (hsize_t)0, H5P_DEFAULT) < 0)
-                    H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_family failed");
-            }
-            else if (!HDstrcmp(vfd_info->u.name, drivernames[SPLIT_VFD_IDX])) {
-                /* SPLIT Driver */
-                if (H5Pset_fapl_split(fapl_id, "-m.h5", H5P_DEFAULT, "-r.h5", H5P_DEFAULT) < 0)
-                    H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_split failed");
-            }
-            else if (!HDstrcmp(vfd_info->u.name, drivernames[MULTI_VFD_IDX])) {
-                /* MULTI Driver */
-                if (H5Pset_fapl_multi(fapl_id, NULL, NULL, NULL, NULL, TRUE) < 0)
-                    H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_multi failed");
-            }
-            else if (!HDstrcmp(vfd_info->u.name, drivernames[MPIO_VFD_IDX])) {
+    }
+    else if (!HDstrcmp(vfd_info->name, drivernames[STDIO_VFD_IDX])) {
+        /* Stdio Driver */
+        if (H5Pset_fapl_stdio(fapl_id) < 0)
+            H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_stdio failed");
+    }
+    else if (!HDstrcmp(vfd_info->name, drivernames[CORE_VFD_IDX])) {
+        /* Core Driver */
+        if (H5Pset_fapl_core(fapl_id, (size_t)H5_MB, TRUE) < 0)
+            H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_core failed");
+    }
+    else if (!HDstrcmp(vfd_info->name, drivernames[FAMILY_VFD_IDX])) {
+        /* FAMILY Driver */
+        /* Set member size to be 0 to indicate the current first member size
+         * is the member size.
+         */
+        if (H5Pset_fapl_family(fapl_id, (hsize_t)0, H5P_DEFAULT) < 0)
+            H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_family failed");
+    }
+    else if (!HDstrcmp(vfd_info->name, drivernames[SPLIT_VFD_IDX])) {
+        /* SPLIT Driver */
+        if (H5Pset_fapl_split(fapl_id, "-m.h5", H5P_DEFAULT, "-r.h5", H5P_DEFAULT) < 0)
+            H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_split failed");
+    }
+    else if (!HDstrcmp(vfd_info->name, drivernames[MULTI_VFD_IDX])) {
+        /* MULTI Driver */
+        if (H5Pset_fapl_multi(fapl_id, NULL, NULL, NULL, NULL, TRUE) < 0)
+            H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_multi failed");
+    }
+    else if (!HDstrcmp(vfd_info->name, drivernames[MPIO_VFD_IDX])) {
 #ifdef H5_HAVE_PARALLEL
                 int mpi_initialized, mpi_finalized;
 
@@ -1042,17 +1038,8 @@ h5tools_fopen(const char *fname, unsigned flags, hid_t fapl_id, hbool_t use_spec
                 if (drivernum == LOG_VFD_IDX)
                     continue;
 
-                /* Skip the SWMR VFD, since it will start to wait to
-                 * rendezvous with a writer, and that's not usually
-                 * desired.
-                 */
-                if (drivernum == SWMR_VFD_IDX)
-                    continue;
-
-                vfd_info.type   = VFD_BY_NAME;
-                vfd_info.info   = NULL;
-                vfd_info.fname  = fname;
-                vfd_info.u.name = drivernames[drivernum];
+                vfd_info.info = NULL;
+                vfd_info.name = drivernames[drivernum];
 
                 /* Get a fapl reflecting the selected VOL connector and VFD */
                 if ((tmp_fapl_id = h5tools_get_fapl(fapl_id, &vol_info, &vfd_info)) < 0)
@@ -1963,22 +1950,15 @@ render_bin_output(FILE *stream, hid_t container, hid_t tid, void *_mem, hsize_t 
                     hid_t        region_id    = H5I_INVALID_HID;
                     hid_t        region_space = H5I_INVALID_HID;
                     H5S_sel_type region_type;
-                    H5R_ref_t    tref;
-
-                    if (size > sizeof(tref))
-                        H5TOOLS_THROW((-1), "unexpectedly large ref");
-
-                    HDmemset(&tref, 0, sizeof(tref));
 
                     for (block_index = 0; block_index < block_nelmts; block_index++) {
                         mem = ((unsigned char *)_mem) + block_index * size;
-                        HDmemcpy(&tref, mem, size);
-                        if ((region_id = H5Ropen_object(&tref, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+                        if ((region_id = H5Ropen_object((H5R_ref_t *)mem, H5P_DEFAULT, H5P_DEFAULT)) < 0)
                             H5TOOLS_INFO("H5Ropen_object H5T_STD_REF failed");
                         else {
-                            if ((region_space = H5Ropen_region(&tref, H5P_DEFAULT, H5P_DEFAULT)) >= 0) {
-                                if (!h5tools_is_zero(&tref, H5Tget_size(H5T_STD_REF))) {
-
+                            if ((region_space = H5Ropen_region((H5R_ref_t *)mem, H5P_DEFAULT, H5P_DEFAULT)) >=
+                                0) {
+                                if (!h5tools_is_zero(mem, H5Tget_size(H5T_STD_REF))) {
                                     region_type = H5Sget_select_type(region_space);
                                     if (region_type == H5S_SEL_POINTS)
                                         render_bin_output_region_points(region_space, region_id, stream,

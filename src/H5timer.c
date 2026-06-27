@@ -107,35 +107,35 @@ H5_bandwidth(char *buf /*out*/, size_t bufsize, double nbytes, double nseconds)
         if (H5_DBL_ABS_EQUAL(bw, 0.0))
             HDstrcpy(buf, "0.000  B/s");
         else if (bw < 1.0)
-            HDsnprintf(buf, bufsize, "%10.4e", bw);
+            HDsprintf(buf, "%10.4e", bw);
         else if (bw < (double)H5_KB) {
-            HDsnprintf(buf, bufsize, "%05.4f", bw);
+            HDsprintf(buf, "%05.4f", bw);
             HDstrcpy(buf + 5, "  B/s");
         }
         else if (bw < (double)H5_MB) {
-            HDsnprintf(buf, bufsize, "%05.4f", bw / (double)H5_KB);
+            HDsprintf(buf, "%05.4f", bw / (double)H5_KB);
             HDstrcpy(buf + 5, " kB/s");
         }
         else if (bw < (double)H5_GB) {
-            HDsnprintf(buf, bufsize, "%05.4f", bw / (double)H5_MB);
+            HDsprintf(buf, "%05.4f", bw / (double)H5_MB);
             HDstrcpy(buf + 5, " MB/s");
         }
         else if (bw < (double)H5_TB) {
-            HDsnprintf(buf, bufsize, "%05.4f", bw / (double)H5_GB);
+            HDsprintf(buf, "%05.4f", bw / (double)H5_GB);
             HDstrcpy(buf + 5, " GB/s");
         }
         else if (bw < (double)H5_PB) {
-            HDsnprintf(buf, bufsize, "%05.4f", bw / (double)H5_TB);
+            HDsprintf(buf, "%05.4f", bw / (double)H5_TB);
             HDstrcpy(buf + 5, " TB/s");
         }
         else if (bw < (double)H5_EB) {
-            HDsnprintf(buf, bufsize, "%05.4f", bw / (double)H5_PB);
+            HDsprintf(buf, "%05.4f", bw / (double)H5_PB);
             HDstrcpy(buf + 5, " PB/s");
         }
         else {
-            HDsnprintf(buf, bufsize, "%10.4e", bw);
+            HDsprintf(buf, "%10.4e", bw);
             if (HDstrlen(buf) > 10)
-                HDsnprintf(buf, bufsize, "%10.3e", bw);
+                HDsprintf(buf, "%10.3e", bw);
         } /* end else-if */
     }     /* end else */
 } /* end H5_bandwidth() */
@@ -210,9 +210,7 @@ H5_now_usec(void)
         now = ((uint64_t)now_tv.tv_sec * ((uint64_t)1000 * (uint64_t)1000)) + (uint64_t)now_tv.tv_usec;
     }
 #else  /* H5_HAVE_GETTIMEOFDAY */
-    /* Cast all values in this expression to uint64_t to ensure that all intermediate calculations
-     * are done in 64 bit, to prevent overflow */
-    now       = ((uint64_t)HDtime(NULL) * ((uint64_t)1000 * (uint64_t)1000));
+    now       = (uint64_t)(HDtime(NULL) * (1000 * 1000));
 #endif /* H5_HAVE_GETTIMEOFDAY */
 
     return (now);
@@ -627,24 +625,24 @@ H5_timer_get_time_string(double seconds)
      * (name? round_up_size? ?)
      */
     if (seconds < 0.0)
-        HDsnprintf(s, H5TIMER_TIME_STRING_LEN, "N/A");
+        HDsprintf(s, "N/A");
     else if (H5_DBL_ABS_EQUAL(0.0, seconds))
-        HDsnprintf(s, H5TIMER_TIME_STRING_LEN, "0.0 s");
+        HDsprintf(s, "0.0 s");
     else if (seconds < 1.0E-6)
         /* t < 1 us, Print time in ns */
-        HDsnprintf(s, H5TIMER_TIME_STRING_LEN, "%.f ns", seconds * 1.0E9);
+        HDsprintf(s, "%.f ns", seconds * 1.0E9);
     else if (seconds < 1.0E-3)
         /* t < 1 ms, Print time in us */
-        HDsnprintf(s, H5TIMER_TIME_STRING_LEN, "%.1f us", seconds * 1.0E6);
+        HDsprintf(s, "%.1f us", seconds * 1.0E6);
     else if (seconds < 1.0)
         /* t < 1 s, Print time in ms */
-        HDsnprintf(s, H5TIMER_TIME_STRING_LEN, "%.1f ms", seconds * 1.0E3);
+        HDsprintf(s, "%.1f ms", seconds * 1.0E3);
     else if (seconds < H5_SEC_PER_MIN)
         /* t < 1 m, Print time in s */
-        HDsnprintf(s, H5TIMER_TIME_STRING_LEN, "%.2f s", seconds);
+        HDsprintf(s, "%.2f s", seconds);
     else if (seconds < H5_SEC_PER_HOUR)
         /* t < 1 h, Print time in m and s */
-        HDsnprintf(s, H5TIMER_TIME_STRING_LEN, "%.f m %.f s", minutes, remainder_sec);
+        HDsprintf(s, "%.f m %.f s", minutes, remainder_sec);
     else if (seconds < H5_SEC_PER_DAY)
         /* t < 1 d, Print time in h, m and s */
         HDsnprintf(s, H5TIMER_TIME_STRING_LEN, "%.f h %.f m %.f s", hours, minutes, remainder_sec);

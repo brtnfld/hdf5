@@ -3956,7 +3956,7 @@ void *      old_client_data; /* previous error handler arg.*/
 #define NFILENAME    2
 #define PARATESTFILE filenames[0]
 const char *FILENAME[NFILENAME] = {"ShapeSameTest", NULL};
-char *      filenames[NFILENAME];
+char        filenames[NFILENAME][PATH_MAX];
 hid_t       fapl; /* file access property list */
 
 #ifdef USE_PAUSE

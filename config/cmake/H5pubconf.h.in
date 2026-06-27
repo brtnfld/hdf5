@@ -98,6 +98,10 @@
 /* Define if the __attribute__(()) extension is present */
 #cmakedefine H5_HAVE_ATTRIBUTE @H5_HAVE_ATTRIBUTE@
 
+/* Define if the compiler understands C99 designated initialization of structs
+   and unions */
+#cmakedefine H5_HAVE_C99_DESIGNATED_INITIALIZER @H5_HAVE_C99_DESIGNATED_INITIALIZER@
+
 /* Define to 1 if you have the `clock_gettime' function. */
 #cmakedefine H5_HAVE_CLOCK_GETTIME @H5_HAVE_CLOCK_GETTIME@
 
@@ -436,6 +440,9 @@
 /* Define to enable internal memory allocation sanity checking. */
 #cmakedefine H5_MEMORY_ALLOC_SANITY_CHECK @H5_MEMORY_ALLOC_SANITY_CHECK@
 
+/* Define if we can violate pointer alignment restrictions */
+#cmakedefine H5_NO_ALIGNMENT_RESTRICTIONS @H5_NO_ALIGNMENT_RESTRICTIONS@
+
 /* Define if deprecated public API symbols are disabled */
 #cmakedefine H5_NO_DEPRECATED_SYMBOLS @H5_NO_DEPRECATED_SYMBOLS@
 
@@ -465,6 +472,9 @@
 
 /* Define Fortran Maximum Real Decimal Precision */
 #define H5_PAC_FC_MAX_REAL_PRECISION @H5_PAC_FC_MAX_REAL_PRECISION@
+
+/* Width for printf() for type `long long' or `__int64', use `ll' */
+#cmakedefine H5_PRINTF_LL_WIDTH @H5_PRINTF_LL_WIDTH@
 
 /* The size of `bool', as computed by sizeof. */
 #cmakedefine H5_SIZEOF_BOOL @H5_SIZEOF_BOOL@
@@ -558,7 +568,8 @@
 
 #endif
 
-/* The size of `long long', as computed by sizeof. */
+/* Define size of long long and/or __int64 bit integer type only if the type
+   exists.  */
 #if !defined(__APPLE__)
  #cmakedefine H5_SIZEOF_LONG_LONG @H5_SIZEOF_LONG_LONG@
 #else
@@ -625,6 +636,9 @@
 /* The size of `__float128', as computed by sizeof. */
 #define H5_SIZEOF___FLOAT128 @H5_SIZEOF___FLOAT128@
 
+/* The size of `__int64', as computed by sizeof. */
+#define H5_SIZEOF___INT64 @H5_SIZEOF___INT64@
+
 /* Define if strict file format checks are enabled */
 #cmakedefine H5_STRICT_FORMAT_CHECKS @H5_STRICT_FORMAT_CHECKS@
 
@@ -646,6 +660,12 @@
 
 /* Define using v1.14 public API symbols by default */
 #cmakedefine H5_USE_114_API_DEFAULT @H5_USE_114_API_DEFAULT@
+
+/* Define using v1.6 public API symbols by default */
+#cmakedefine H5_USE_16_API_DEFAULT @H5_USE_16_API_DEFAULT@
+
+/* Define using v1.8 public API symbols by default */
+#cmakedefine H5_USE_18_API_DEFAULT @H5_USE_18_API_DEFAULT@
 
 /* Define if the library will use file locking */
 #cmakedefine H5_USE_FILE_LOCKING @H5_USE_FILE_LOCKING@

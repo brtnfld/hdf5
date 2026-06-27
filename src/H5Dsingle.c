@@ -89,8 +89,7 @@ const H5D_chunk_ops_t H5D_COPS_SINGLE[1] = {{
     H5D__single_idx_size,           /* size */
     H5D__single_idx_reset,          /* reset */
     H5D__single_idx_dump,           /* dump */
-    NULL,                           /* destroy */
-    NULL                            /* close */
+    NULL                            /* destroy */
 }};
 
 /*****************************/
@@ -126,14 +125,8 @@ H5D__single_idx_init(const H5D_chk_idx_info_t *idx_info, const H5S_t H5_ATTR_UNU
     HDassert(idx_info->layout);
     HDassert(idx_info->storage);
 
-    if (idx_info->pline->nused) {
+    if (idx_info->pline->nused)
         idx_info->layout->flags |= H5O_LAYOUT_CHUNK_SINGLE_INDEX_WITH_FILTER;
-
-        if (!H5F_addr_defined(idx_info->storage->idx_addr)) {
-            idx_info->storage->u.single.nbytes      = 0;
-            idx_info->storage->u.single.filter_mask = 0;
-        }
-    }
     else
         idx_info->layout->flags = 0;
 

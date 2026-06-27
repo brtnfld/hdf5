@@ -225,7 +225,7 @@ test_mpio_gb_file(char *filename)
      * sizes.
      */
     if (MAINPROCESS) { /* only process 0 needs to check it*/
-        HDprintf("MPI_Offset is %s %d bytes integral type\n", is_signed ? "signed" : "unsigned",
+        HDprintf("MPI_Offset is %s %d bytes integeral type\n", is_signed ? "signed" : "unsigned",
                  (int)sizeof(MPI_Offset));
         if (sizeof_mpi_offset <= 4 && is_signed) {
             HDprintf("Skipped 2GB range test "
@@ -936,6 +936,10 @@ test_mpio_special_collective(char *filename)
             return 1;
         } /* end if */
     }     /* end if */
+    else {
+        filetype = MPI_BYTE;
+        buftype  = MPI_BYTE;
+    } /* end else */
 
     /* Open a file */
     if ((mpi_err = MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_RDWR | MPI_MODE_CREATE, MPI_INFO_NULL,
@@ -956,12 +960,6 @@ test_mpio_special_collective(char *filename)
         HDprintf("MPI_File_set_view failed (%s)\n", mpi_err_str);
         return 1;
     } /* end if */
-
-    if (filetype != MPI_BYTE && (mpi_err = MPI_Type_free(&filetype)) != MPI_SUCCESS) {
-        MPI_Error_string(mpi_err, mpi_err_str, &mpi_err_strlen);
-        HDprintf("MPI_Type_free failed (%s)\n", mpi_err_str);
-        return 1;
-    }
 
     /* Collectively write into the file */
     if ((mpi_err = MPI_File_write_at_all(fh, mpi_off, writedata, bufcount, buftype, &mpi_stat)) !=

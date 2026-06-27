@@ -117,18 +117,26 @@ H5_DLL herr_t H5Aclose_async(const char *app_file, const char *app_func, unsigne
  *          The attribute name, \p attr_name, must be unique for the object.
  *
  *          The attribute is created with the specified datatype and dataspace,
- *          \p type_id and \p space_id.
+ *          \p type_id and \p space_id, which are created with the H5T and
+ *          H5S interfaces, respectively.
  *
- *          \plist_unused{acpl}
+ *          If \p type_id is either a fixed-length or variable-length string,
+ *          it is important to set the string length when defining the
+ *          datatype. String datatypes are derived from #H5T_C_S1 (or
+ *          #H5T_FORTRAN_S1 for Fortran), which defaults to 1 character in
+ *          size. See H5Tset_size() and Creating variable-length string
+ *          datatypes.
+ *
+ *          The access property list is currently unused, but will be used in
+ *          the future. This property list should currently be #H5P_DEFAULT.
  *
  *          The attribute identifier returned by this function must be released
  *          with H5Aclose() resource leaks will develop.
  *
+ * \note The \p aapl parameter is currently not used; specify #H5P_DEFAULT.
+ *
  * \note If \p loc_id is a file identifier, the attribute will be attached
  *       that file’s root group.
- *
- * \par Example
- * \snippet H5A_examples.c create
  *
  * \since 1.8.0
  *
@@ -172,13 +180,20 @@ H5_DLL hid_t H5Acreate_async(const char *app_file, const char *app_func, unsigne
  *          The attribute name, \p attr_name, must be unique for the object.
  *
  *          The attribute is created with the specified datatype and
- *          dataspace, \p type_id and \p space_id.
+ *          dataspace, \p type_id and \p space_id, which are created with
+ *          the H5T and H5S interfaces respectively.
  *
- *          \plist_unused{aapl}
+ *          The attribute creation and access property lists are currently
+ *          unused, but will be used in the future for optional attribute
+ *          creation and access properties. These property lists should
+ *          currently be #H5P_DEFAULT.
  *
  *          The link access property list, \p lapl_id, may provide
  *          information regarding the properties of links required to access
  *          the object, \p obj_name.
+ *
+ *          The attribute identifier returned by this function must be
+ *          released with H5close() or resource leaks will develop.
  *
  * \since 1.8.0
  *
@@ -241,15 +256,26 @@ H5_DLL herr_t H5Adelete(hid_t loc_id, const char *attr_name);
  *
  *          The object from which the attribute is to be removed is
  *          specified by a location identifier and name, \p loc_id and
- *          \p obj_name, respectively.
+ *          \p obj_name, respectively. If \p loc_id fully specifies the
+ *          object from which the attribute is to be removed, \p obj_name
+ *          should be '.' (a dot).
  *
  *          The attribute to be removed is specified by a position in an
- *          index, \p n. The type of index is specified by \p idx_type.
- *          The order in which the index is to be traversed is specified by
- *          \p order. For example, if \p idx_type, \p order,
+ *          index, \p n. The type of index is specified by \p idx_type and
+ *          may be #H5_INDEX_NAME, for an alpha-numeric index by name, or
+ *          #H5_INDEX_CRT_ORDER, for an index by creation order. The order
+ *          in which the index is to be traversed is specified by \p order
+ *          and may be #H5_ITER_INC (increment) for top-down iteration,
+ *          #H5_ITER_DEC (decrement) for bottom-up iteration, or
+ *          #H5_ITER_NATIVE, in which case HDF5 will iterate in the
+ *          fastest-available order. For example, if \p idx_type, \p order,
  *          and \p n are set to #H5_INDEX_NAME, #H5_ITER_INC, and 5,
- *          respectively, the fifth attribute in lexicographic order of
+ *          respectively, the fifth attribute by alpha-numeric order of
  *          attribute names will be removed.
+ *
+ *          For a discussion of \p idx_type and \p order, the valid values
+ *          of those parameters, and the use of \p n, see the description
+ *          of H5Aiterate2().
  *
  *          The link access property list, \p lapl_id, may provide
  *          information regarding the properties of links required to access
@@ -277,6 +303,9 @@ H5_DLL herr_t H5Adelete_by_idx(hid_t loc_id, const char *obj_name, H5_index_t id
  * \details H5Adelete_by_name() removes the attribute \p attr_name
  *          from an object specified by location and name, \p loc_id and
  *          \p obj_name, respectively.
+ *
+ *          If \p loc_id fully specifies the object from which the
+ *          attribute is to be removed, \p obj_name should be '.' (a dot).
  *
  *          The link access property list, \p lapl_id, may provide
  *          information regarding the properties of links required to
@@ -333,7 +362,9 @@ H5_DLL herr_t H5Aexists_async(const char *app_file, const char *app_func, unsign
  *          \p loc_id specifies a location in the file containing the object.
  *          \p obj_name is the name of the object to which the attribute is
  *          attached and can be a relative name, relative to \p loc_id,
- *          or an absolute name, based in the root group of the file.
+ *          or an absolute name, based in the root group of the file. If
+ *          \p loc_id fully specifies the object, \p obj_name should be '.'
+ *          (a dot).
  *
  *          The link access property list, \p lapl_id, may provide
  *          information regarding the properties of links required to access
@@ -364,6 +395,9 @@ H5_DLL herr_t H5Aexists_by_name_async(const char *app_file, const char *app_func
  * \details H5Aget_create_plist() returns an identifier for the attribute
  *          creation property list associated with the attribute specified
  *          by \p attr_id.
+ *
+ *          The creation property list identifier should be released with
+ *          H5Pclose().
  *
  * \since 1.8.0
  *
@@ -444,6 +478,11 @@ H5_DLL herr_t H5Aget_info_by_idx(hid_t loc_id, const char *obj_name, H5_index_t 
  *          location and name, \p loc_id and \p obj_name, respectively.
  *          The attribute information is returned in the \p ainfo struct.
  *
+ *          If \p loc_id fully specifies the object to which the attribute
+ *          is attached, \p obj_name should be '.' (a dot).
+ *
+ *          The \p ainfo struct is described in H5Aget_info().
+ *
  *          The link access property list, \p lapl_id, may provide
  *          information regarding the properties of links required to
  *          access the object, \p obj_name.
@@ -474,8 +513,8 @@ H5_DLL herr_t H5Aget_info_by_name(hid_t loc_id, const char *obj_name, const char
  *          string terminator is stored in the last position of the buffer
  *          to properly terminate the string.
  *
- *          If the user only wants to retrieve the name length, the
- *          values 0 and NULL should be passed for the parameters
+ *          If the user only wants to find out the size of this name, the
+ *          values 0 and NULL can be passed in for the parameters
  *          \p bufsize and \p buf.
  *
  * \since 1.0.0
@@ -616,6 +655,17 @@ H5_DLL hid_t H5Aget_type(hid_t attr_id);
  *          are specified by three parameters: the index type,
  *          \p idx_type; the order in which the index is to be traversed,
  *          \p order; and the attribute’s position in the index, \p idx.
+ *
+ *          The type of index specified by \p idx_type can be one of the
+ *          following:
+ *
+ *          \indexes
+ *
+ *          The order in which the index is to be traversed, as specified
+ *          by \p order, can be one of the following:
+ *
+ *          \orders
+ *
  *          The next attribute to be operated on is specified by \p idx,
  *          a position in the index.
  *
@@ -631,6 +681,11 @@ H5_DLL hid_t H5Aget_type(hid_t attr_id);
  *          passed in identifies the parameter to be operated on first;
  *          the value returned identifies the parameter to be operated on
  *          in the next step of the iteration.
+ *
+ *          \p op is a user-defined function whose prototype is defined
+ *          as follows:
+ *          \snippet this H5A_operator2_t_snip
+ *          \click4more
  *
  * \note This function is also available through the H5Aiterate() macro.
  *
@@ -667,10 +722,24 @@ H5_DLL herr_t H5Aiterate2(hid_t loc_id, H5_index_t idx_type, H5_iter_order_t ord
  *          additional information as defined below, is passed to a
  *          user-defined function, \p op, which operates on that attribute.
  *
+ *          If \p loc_id fully specifies the object to which these
+ *          attributes are attached, \p obj_name should be '.' (a dot).
+ *
  *          The order of the iteration and the attributes iterated over
  *          are specified by three parameters: the index type, \p idx_type;
  *          the order in which the index is to be traversed, \p order;
  *          and the attribute’s position in the index, \p idx.
+ *
+ *          The type of index specified by \p idx_type can be one of the
+ *          following:
+ *
+ *          \indexes
+ *
+ *          The order in which the index is to be traversed, as specified
+ *          by \p order, can be one of the following:
+ *
+ *          \orders
+ *
  *          The next attribute to be operated on is specified by \p idx,
  *          a position in the index.
  *
@@ -686,6 +755,25 @@ H5_DLL herr_t H5Aiterate2(hid_t loc_id, H5_index_t idx_type, H5_iter_order_t ord
  *          value passed in identifies the parameter to be operated on first;
  *          the value returned identifies the parameter to be operated on in
  *          the next step of the iteration.
+ *
+ *          \p op is a user-defined function whose prototype is defined
+ *          as follows:
+ *          \snippet this H5A_operator2_t_snip
+ *          \click4more
+ *
+ *          Valid return values from an operator and the resulting
+ *          H5Aiterate_by_name() and \p op behavior are as follows:
+ *
+ *          \li Zero causes the iterator to continue, returning zero when
+ *              all attributes have been processed.
+ *          \li A positive value causes the iterator to immediately return
+ *              that positive value, indicating short-circuit success.
+ *              The iterator can be restarted at the next attribute, as
+ *              indicated by the return value of \p idx.
+ *          \li A negative value causes the iterator to immediately return
+ *              that value, indicating failure. The iterator can be
+ *              restarted at the next attribute, as indicated by the return
+ *              value of \p idx.
  *
  *          The link access property list, \p lapl_id, may provide
  *          information regarding the properties of links required to access
@@ -1124,6 +1212,10 @@ H5_DLL int H5Aget_num_attrs(hid_t loc_id);
  *          index for the next attribute to be processed by the operator,
  *          \p op, is returned in \p idx. If \p idx is the null pointer,
  *          then all attributes are processed.
+ *
+ *          \p op is a user-defined function whose prototype is defined as follows:
+ *          \snippet this H5A_operator1_t_snip
+ *          \click4more
  *
  * \version 1.8.0 The function \p H5Aiterate was renamed to H5Aiterate1()
  *                and deprecated in this release.

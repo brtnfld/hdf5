@@ -25,12 +25,11 @@ public class H5_CreateDataset {
     private static final int DIM_X    = 4;
     private static final int DIM_Y    = 6;
 
-    private static void CreateDataset()
-    {
-        long file_id      = HDF5Constants.H5I_INVALID_HID;
+    private static void CreateDataset() {
+        long file_id = HDF5Constants.H5I_INVALID_HID;
         long dataspace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id   = HDF5Constants.H5I_INVALID_HID;
-        long[] dims       = {DIM_X, DIM_Y};
+        long dataset_id = HDF5Constants.H5I_INVALID_HID;
+        long[] dims = { DIM_X, DIM_Y };
 
         // Create a new file using default properties.
         try {

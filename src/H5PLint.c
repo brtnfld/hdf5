@@ -46,6 +46,9 @@
 /* Package Variables */
 /*********************/
 
+/* Package initialization variable */
+hbool_t H5_PKG_INIT_VAR = FALSE;
+
 /*****************************/
 /* Library Private Variables */
 /*****************************/
@@ -308,7 +311,7 @@ done:
  *       get_plugin_info function pointer, but early (4.4.7, at least) gcc
  *       only allows diagnostic pragmas to be toggled outside of functions.
  */
-H5_GCC_CLANG_DIAG_OFF("pedantic")
+H5_GCC_DIAG_OFF("pedantic")
 herr_t
 H5PL__open(const char *path, H5PL_type_t type, const H5PL_key_t *key, hbool_t *success,
            H5PL_type_t *plugin_type, const void **plugin_info)
@@ -460,7 +463,7 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL__open() */
-H5_GCC_CLANG_DIAG_ON("pedantic")
+H5_GCC_DIAG_ON("pedantic")
 
 /*-------------------------------------------------------------------------
  * Function:    H5PL__close
@@ -499,9 +502,10 @@ H5PL_iterate(H5PL_iterate_type_t iter_type, H5PL_iterate_t iter_op, void *op_dat
 {
     herr_t ret_value = H5_ITER_CONT;
 
-    FUNC_ENTER_NOAPI_NOERR
+    FUNC_ENTER_NOAPI(H5_ITER_ERROR)
 
     ret_value = H5PL__path_table_iterate(iter_type, iter_op, op_data);
 
+done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL_iterate() */

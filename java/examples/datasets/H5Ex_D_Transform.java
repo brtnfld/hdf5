@@ -34,12 +34,11 @@ public class H5Ex_D_Transform {
     private static String TRANSFORM  = "x+1";
     private static String RTRANSFORM = "x-1";
 
-    private static void writeData()
-    {
-        long file_id      = HDF5Constants.H5I_INVALID_HID;
+    private static void writeData() {
+        long file_id = HDF5Constants.H5I_INVALID_HID;
         long filespace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id   = HDF5Constants.H5I_INVALID_HID;
-        long dxpl_id      = HDF5Constants.H5I_INVALID_HID;
+        long dataset_id = HDF5Constants.H5I_INVALID_HID;
+        long dxpl_id = HDF5Constants.H5I_INVALID_HID;
 
         long[] dims       = {DIM_X, DIM_Y};
         int[][] dset_data = new int[DIM_X][DIM_Y];

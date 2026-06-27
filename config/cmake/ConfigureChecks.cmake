@@ -232,7 +232,7 @@ endif ()
 # so this one is used.
 #-----------------------------------------------------------------------------
 set (RUN_OUTPUT_PATH_DEFAULT ${CMAKE_BINARY_DIR})
-macro (C_RUN FUNCTION_NAME SOURCE_CODE RETURN_VAR RETURN_OUTPUT_VAR)
+macro (C_RUN FUNCTION_NAME SOURCE_CODE RETURN_VAR)
     if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.15.0")
       message (VERBOSE "Detecting C ${FUNCTION_NAME}")
     endif ()
@@ -248,7 +248,7 @@ macro (C_RUN FUNCTION_NAME SOURCE_CODE RETURN_VAR RETURN_OUTPUT_VAR)
         RUN_OUTPUT_VARIABLE OUTPUT_VAR
     )
 
-    set (${RETURN_OUTPUT_VAR} ${OUTPUT_VAR})
+    set (${RETURN_VAR} ${OUTPUT_VAR})
 
     if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.15.0")
       message (VERBOSE "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * ")
@@ -259,8 +259,8 @@ macro (C_RUN FUNCTION_NAME SOURCE_CODE RETURN_VAR RETURN_OUTPUT_VAR)
       message (VERBOSE "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * ")
     endif ()
 
-    if (COMPILE_RESULT_VAR)
-      if (RUN_RESULT_VAR EQUAL "0")
+    if (${COMPILE_RESULT_VAR})
+      if (${RUN_RESULT_VAR} MATCHES 0)
         set (${RETURN_VAR} 1 CACHE INTERNAL "Have C function ${FUNCTION_NAME}")
         if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.15.0")
           message (VERBOSE "Testing C ${FUNCTION_NAME} - OK")
@@ -317,7 +317,7 @@ message (STATUS "Testing maximum decimal precision for C - ${PROG_OUTPUT4}")
 list (GET PROG_OUTPUT4 0 H5_LDBL_DIG)
 list (GET PROG_OUTPUT4 1 H5_FLT128_DIG)
 
-if (${HDF_PREFIX}_SIZEOF___FLOAT128 EQUAL "0" OR FLT128_DIG EQUAL "0")
+if (${HDF_PREFIX}_SIZEOF___FLOAT128 EQUAL 0 OR FLT128_DIG EQUAL 0)
   set (${HDF_PREFIX}_HAVE_FLOAT128 0)
   set (${HDF_PREFIX}_SIZEOF___FLOAT128 0)
   set (_PAC_C_MAX_REAL_PRECISION ${H5_LDBL_DIG})

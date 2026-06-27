@@ -30,12 +30,11 @@ public class H5Ex_T_Bit {
     private static final int DIM1     = 7;
     private static final int RANK     = 2;
 
-    private static void CreateDataset()
-    {
-        long file_id      = HDF5Constants.H5I_INVALID_HID;
+    private static void CreateDataset() {
+        long file_id = HDF5Constants.H5I_INVALID_HID;
         long dataspace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id   = HDF5Constants.H5I_INVALID_HID;
-        long[] dims       = {DIM0, DIM1};
+        long dataset_id = HDF5Constants.H5I_INVALID_HID;
+        long[] dims = { DIM0, DIM1 };
         int[][] dset_data = new int[DIM0][DIM1];
 
         // Initialize data.
@@ -115,12 +114,11 @@ public class H5Ex_T_Bit {
         }
     }
 
-    private static void ReadDataset()
-    {
-        long file_id      = HDF5Constants.H5I_INVALID_HID;
+    private static void ReadDataset() {
+        long file_id = HDF5Constants.H5I_INVALID_HID;
         long dataspace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id   = HDF5Constants.H5I_INVALID_HID;
-        long[] dims       = {DIM0, DIM1};
+        long dataset_id = HDF5Constants.H5I_INVALID_HID;
+        long[] dims = { DIM0, DIM1 };
         int[][] dset_data;
 
         // Open an existing file.

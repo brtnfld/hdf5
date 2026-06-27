@@ -300,11 +300,11 @@ h5tools_str_prefix(h5tools_str_t *str /*in,out*/, const h5tool_format_t *info, h
             if (i)
                 h5tools_str_append(str, "%s", OPT(info->idx_sep, ","));
 
-            h5tools_str_append(str, OPT(info->idx_n_fmt, "%" PRIuHSIZE), (hsize_t)ctx->pos[i]);
+            h5tools_str_append(str, OPT(info->idx_n_fmt, HSIZE_T_FORMAT), (hsize_t)ctx->pos[i]);
         }
     }
     else /* Scalar */
-        h5tools_str_append(str, OPT(info->idx_n_fmt, "%" PRIuHSIZE), (hsize_t)elmtno);
+        h5tools_str_append(str, OPT(info->idx_n_fmt, HSIZE_T_FORMAT), (hsize_t)elmtno);
     H5TOOLS_DEBUG("str=%s", str->s);
 
     H5TOOLS_ENDDEBUG(" ");
@@ -341,11 +341,11 @@ h5tools_str_region_prefix(h5tools_str_t *str /*in,out*/, const h5tool_format_t *
             if (i)
                 h5tools_str_append(str, "%s", OPT(info->idx_sep, ","));
 
-            h5tools_str_append(str, OPT(info->idx_n_fmt, "%" PRIuHSIZE), (hsize_t)ctx->pos[i]);
+            h5tools_str_append(str, OPT(info->idx_n_fmt, HSIZE_T_FORMAT), (hsize_t)ctx->pos[i]);
         }
     }
     else /* Scalar */
-        h5tools_str_append(str, OPT(info->idx_n_fmt, "%" PRIuHSIZE), (hsize_t)0);
+        h5tools_str_append(str, OPT(info->idx_n_fmt, HSIZE_T_FORMAT), (hsize_t)0);
     H5TOOLS_DEBUG("str=%s", str->s);
 
     H5TOOLS_ENDDEBUG(" ");
@@ -660,8 +660,8 @@ h5tools_str_sprint(h5tools_str_t *str, const h5tool_format_t *info, hid_t contai
     H5TOOLS_START_DEBUG(" ");
     /* Build default formats for long long types */
     if (!fmt_llong[0]) {
-        HDsnprintf(fmt_llong, sizeof(fmt_llong), "%%lld");
-        HDsnprintf(fmt_ullong, sizeof(fmt_ullong), "%%llu");
+        HDsnprintf(fmt_llong, sizeof(fmt_llong), "%%%sd", H5_PRINTF_LL_WIDTH);
+        HDsnprintf(fmt_ullong, sizeof(fmt_ullong), "%%%su", H5_PRINTF_LL_WIDTH);
     }
 
     /* Append value depending on data type */
@@ -704,6 +704,7 @@ h5tools_str_sprint(h5tools_str_t *str, const h5tool_format_t *info, hid_t contai
 
                     HDmemcpy(&tempdouble, vp, sizeof(double));
                     h5tools_str_append(str, OPT(info->fmt_double, "%g"), tempdouble);
+#if H5_SIZEOF_LONG_DOUBLE != 0
                 }
                 else if (sizeof(long double) == nsize) {
                     /* if (H5Tequal(type, H5T_NATIVE_LDOUBLE)) */
@@ -711,6 +712,15 @@ h5tools_str_sprint(h5tools_str_t *str, const h5tool_format_t *info, hid_t contai
 
                     HDmemcpy(&templdouble, vp, sizeof(long double));
                     h5tools_str_append(str, "%Lg", templdouble);
+                }
+                else {
+                    size_t i;
+
+                    for (i = 0; i < nsize; i++) {
+                        if (i)
+                            h5tools_str_append(str, ":");
+                        h5tools_str_append(str, OPT(info->fmt_raw, "%02x"), ucp_vp[i]);
+                    }
                 }
                 else {
                     size_t i;
@@ -1401,10 +1411,10 @@ h5tools_str_sprint_reference(h5tools_str_t *str, H5R_ref_t *ref_vp)
 static char *
 h5tools_escape(char *s /*in,out*/, size_t size)
 {
-    size_t      i;
-    const char *escape;
-    char        octal[8];
-    size_t      n = HDstrlen(s);
+    register size_t i;
+    const char *    escape;
+    char            octal[8];
+    size_t          n = HDstrlen(s);
 
     for (i = 0; i < n; i++) {
         switch (s[i]) {

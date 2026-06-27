@@ -1874,6 +1874,9 @@ H5_DLL herr_t H5Pget_attr_phase_change(hid_t plist_id, unsigned *max_compact, un
  *
  * \brief Returns information about a filter in a pipeline
  *
+ * \todo Signature for H5Pget_filter2 is different in H5Pocpl.c than in
+ *       H5Ppublic.h
+ *
  * \ocpl_id{plist_id}
  * \param[in] idx    Sequence number within the filter pipeline of the filter
  *                   for which information is sought
@@ -4210,6 +4213,8 @@ H5_DLL herr_t H5Pset_alignment(hid_t fapl_id, hsize_t threshold, hsize_t alignme
  *
  * \note Raw dataset chunk caching is supported when these drivers are
  *       used in read-only mode.
+ *
+ * \todo Check on H5Pset_fapl_mpio() and H5Pset_fapl_mpiposix().
  *
  * \version 1.8.0 The use of the \p mdc_nelmts parameter was discontinued.
  *                Metadata cache configuration is managed with
@@ -7129,6 +7134,9 @@ H5_DLL herr_t H5Pget_virtual_printf_gap(hid_t dapl_id, hsize_t *gap_size);
  *
  * \dapl_id
  * \param[out] view The flag specifying the view of the virtual dataset.
+ *                  Valid values are:
+ *                  \li #H5D_VDS_FIRST_MISSING
+ *                  \li #H5D_VDS_LAST_AVAILABLE
  *
  * \return \herr_t
  *
@@ -7586,6 +7594,10 @@ H5_DLL size_t H5Pget_buffer(hid_t plist_id, void **tconv /*out*/, void **bkg /*o
  *
  *          If an error occurs, the buffer pointed to by \p expression is
  *          unchanged, and the function returns a negative value.
+ *
+ * \par Example
+ *      An example snippet from examples/h5_dtransform.c:
+ *      \snippet h5_dtransform.c H5Pget_data_transform_snip
  *
  * \since 1.8.0
  *
@@ -9597,6 +9609,9 @@ H5_DLL herr_t H5Pset_mcdt_search_cb(hid_t plist_id, H5O_mcdt_search_cb_t func, v
  *
  *          The #H5P_prp_cb2_t is as follows:
  *          \snippet this H5P_prp_cb2_t_snip
+ *
+ *
+ * \cpp_c_api_note
  *
  */
 

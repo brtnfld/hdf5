@@ -15,7 +15,20 @@
 ###           T E S T I N G                                                ###
 ##############################################################################
 ##############################################################################
-H5_CREATE_VFD_DIR()
+
+set (VFD_H5DUMP_LIST
+    sec2
+    stdio
+    core
+    core_paged
+    split
+    multi
+    family
+)
+
+if (H5_HAVE_DIRECT)
+  set (VFD_H5DUMP_LIST ${VFD_H5DUMP_LIST} direct)
+endif ()
 
 # --------------------------------------------------------------------
 # Copy all the HDF5 files from the source directory into the test directory

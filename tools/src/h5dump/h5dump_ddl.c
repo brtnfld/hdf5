@@ -1347,13 +1347,9 @@ attr_search(hid_t oid, const char *attr_name, const H5A_info_t H5_ATTR_UNUSED *a
 
                 HDmemset(obj_name, '\0', w);
                 if (op_name[0] != '/') {
-                    HDstrncat(obj_name, buf, buffer_space);
-                    buffer_space -= MIN(buffer_space, u);
-
-                    if (buf[u - 1] != '/') {
-                        HDstrncat(obj_name, "/", buffer_space);
-                        buffer_space -= MIN(buffer_space, 2);
-                    }
+                    HDstrncat(obj_name, buf, u + 1);
+                    if (buf[u - 1] != '/')
+                        HDstrncat(obj_name, "/", (size_t)2);
                 }
 
                 HDstrncat(obj_name, op_name, buffer_space);

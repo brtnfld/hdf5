@@ -88,9 +88,9 @@ static hbool_t not_comparable;
         per            = -1;                                                                                 \
         not_comparable = FALSE;                                                                              \
         both_zero      = FALSE;                                                                              \
-        if (H5_DBL_ABS_EQUAL(0, (double)(A)) && H5_DBL_ABS_EQUAL(0, (double)(B)))                            \
+        if (H5_DBL_ABS_EQUAL(0, (double)A) && H5_DBL_ABS_EQUAL(0, (double)B))                                \
             both_zero = TRUE;                                                                                \
-        if (!H5_DBL_ABS_EQUAL(0, (double)(A)))                                                               \
+        if (!H5_DBL_ABS_EQUAL(0, (double)A))                                                                 \
             per = (double)ABS((double)((B) - (A)) / (double)(A));                                            \
         else                                                                                                 \
             not_comparable = TRUE;                                                                           \
@@ -101,9 +101,9 @@ static hbool_t not_comparable;
         per            = -1;                                                                                 \
         not_comparable = FALSE;                                                                              \
         both_zero      = FALSE;                                                                              \
-        if (H5_DBL_ABS_EQUAL(0, (double)(A)) && H5_DBL_ABS_EQUAL(0, (double)(B)))                            \
+        if (H5_DBL_ABS_EQUAL(0, (double)A) && H5_DBL_ABS_EQUAL(0, (double)B))                                \
             both_zero = TRUE;                                                                                \
-        if (!H5_DBL_ABS_EQUAL(0, (double)(A)))                                                               \
+        if (!H5_DBL_ABS_EQUAL(0, (double)A))                                                                 \
             per = ABS((double)((TYPE)((B) - (A))) / (double)(A));                                            \
         else                                                                                                 \
             not_comparable = TRUE;                                                                           \
@@ -129,6 +129,7 @@ static hsize_t character_compare_opt(unsigned char *mem1, unsigned char *mem2, h
                                      diff_opt_t *opts);
 static hbool_t equal_float(float value, float expected, diff_opt_t *opts);
 static hbool_t equal_double(double value, double expected, diff_opt_t *opts);
+#if H5_SIZEOF_LONG_DOUBLE != 0
 static hbool_t equal_ldouble(long double value, long double expected, diff_opt_t *opts);
 
 static int  print_data(diff_opt_t *opts);
@@ -254,6 +255,7 @@ diff_array(void *_mem1, void *_mem2, diff_opt_t *opts, hid_t container1_id, hid_
                         return nfound;
                 } /* nelmts */
             }
+#if H5_SIZEOF_LONG_DOUBLE != 0
             else if (H5Tequal(opts->m_tid, H5T_NATIVE_LDOUBLE)) {
                 for (i = 0; i < opts->hs_nelmts; i++) {
                     nfound += diff_ldouble_element(mem1, mem2, i, opts);
@@ -264,6 +266,7 @@ diff_array(void *_mem1, void *_mem2, diff_opt_t *opts, hid_t container1_id, hid_
                         return nfound;
                 } /* nelmts */
             }
+#endif
             break;
 
         case H5T_INTEGER:
@@ -2000,7 +2003,7 @@ diff_double_element(unsigned char *mem1, unsigned char *mem2, hsize_t elem_idx, 
             nfound++;
         }
     }
-    H5TOOLS_ENDDEBUG(":%" PRIuHSIZE " - errstat:%d", nfound, opts->err_stat);
+    H5TOOLS_ENDDEBUG(":%lld - errstat:%d", nfound, opts->err_stat);
 
     return nfound;
 }
@@ -2013,6 +2016,7 @@ diff_double_element(unsigned char *mem1, unsigned char *mem2, hsize_t elem_idx, 
  * Return:   number of differences found
  *-------------------------------------------------------------------------
  */
+#if H5_SIZEOF_LONG_DOUBLE != 0
 
 static hsize_t
 diff_ldouble_element(unsigned char *mem1, unsigned char *mem2, hsize_t elem_idx, diff_opt_t *opts)
@@ -2048,11 +2052,104 @@ diff_ldouble_element(unsigned char *mem1, unsigned char *mem2, hsize_t elem_idx,
 
         /* both not NaN, do the comparison */
         if (!isnan1 && !isnan2) {
-            if ((double)ABS(temp1_double - temp2_double) > opts->delta) {
+            if (ABS(temp1_double - temp2_double) > opts->delta) {
                 opts->print_percentage = 0;
                 print_pos(opts, elem_idx, 0);
                 if (print_data(opts)) {
                     parallel_print(LD_FORMAT, temp1_double, temp2_double, ABS(temp1_double - temp2_double));
+                }
+                nfound++;
+            }
+        } /* NaN */
+        /* only one is NaN, assume difference */
+        else if ((isnan1 && !isnan2) || (!isnan1 && isnan2)) {
+            opts->print_percentage = 0;
+            print_pos(opts, elem_idx, 0);
+            if (print_data(opts)) {
+                parallel_print(F_FORMAT, temp1_double, temp2_double, ABS(temp1_double - temp2_double));
+            }
+            nfound++;
+        }
+    }
+    /*-------------------------------------------------------------------------
+     * !-d and -p
+     *-------------------------------------------------------------------------
+     */
+    else if (!opts->delta_bool && opts->percent_bool) {
+        /*-------------------------------------------------------------------------
+         * detect NaNs
+         *-------------------------------------------------------------------------
+         */
+        if (opts->do_nans) {
+            isnan1 = HDisnan(temp1_double);
+            isnan2 = HDisnan(temp2_double);
+        }
+        /* both not NaN, do the comparison */
+        if (!isnan1 && !isnan2) {
+            PER(temp1_double, temp2_double);
+
+            if (not_comparable && !both_zero) {
+                opts->print_percentage = 1;
+                print_pos(opts, elem_idx, 0);
+                if (print_data(opts)) {
+                    parallel_print(F_FORMAT_P_NOTCOMP, temp1_double, temp2_double,
+                                   ABS(temp1_double - temp2_double));
+                }
+                nfound++;
+            }
+            else if (per > opts->percent) {
+                opts->print_percentage = 1;
+                print_pos(opts, elem_idx, 0);
+                if (print_data(opts)) {
+                    parallel_print(F_FORMAT_P, temp1_double, temp2_double, ABS(temp1_double - temp2_double),
+                                   ABS(1 - temp2_double / temp1_double));
+                }
+                nfound++;
+            }
+        }
+        /* only one is NaN, assume difference */
+        else if ((isnan1 && !isnan2) || (!isnan1 && isnan2)) {
+            opts->print_percentage = 0;
+            print_pos(opts, elem_idx, 0);
+            if (print_data(opts)) {
+                parallel_print(F_FORMAT, temp1_double, temp2_double, ABS(temp1_double - temp2_double));
+            }
+            nfound++;
+        }
+    }
+    /*-------------------------------------------------------------------------
+     * -d and -p
+     *-------------------------------------------------------------------------
+     */
+    else if (opts->delta_bool && opts->percent_bool) {
+        /*-------------------------------------------------------------------------
+         * detect NaNs
+         *-------------------------------------------------------------------------
+         */
+        if (opts->do_nans) {
+            isnan1 = HDisnan(temp1_double);
+            isnan2 = HDisnan(temp2_double);
+        }
+
+        /* both not NaN, do the comparison */
+        if (!isnan1 && !isnan2) {
+            PER(temp1_double, temp2_double);
+
+            if (not_comparable && !both_zero) {
+                opts->print_percentage = 1;
+                print_pos(opts, elem_idx, 0);
+                if (print_data(opts)) {
+                    parallel_print(F_FORMAT_P_NOTCOMP, temp1_double, temp2_double,
+                                   ABS(temp1_double - temp2_double));
+                }
+                nfound++;
+            }
+            else if (per > opts->percent && ABS(temp1_double - temp2_double) > opts->delta) {
+                opts->print_percentage = 1;
+                print_pos(opts, elem_idx, 0);
+                if (print_data(opts)) {
+                    parallel_print(LD_FORMAT_P, temp1_double, temp2_double, ABS(temp1_double - temp2_double),
+                                   ABS(1 - temp2_double / temp1_double));
                 }
                 nfound++;
             }
@@ -3180,6 +3277,7 @@ equal_double(double value, double expected, diff_opt_t *opts)
  *-------------------------------------------------------------------------
  */
 
+#if H5_SIZEOF_LONG_DOUBLE != 0
 static hbool_t
 equal_ldouble(long double value, long double expected, diff_opt_t *opts)
 {

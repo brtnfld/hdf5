@@ -181,6 +181,7 @@ H5FL_term_package(void)
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
+    if (H5_PKG_INIT_VAR) {
         /* Garbage collect any nodes on the free lists */
         (void)
     H5FL_garbage_coll();
@@ -1007,23 +1008,23 @@ H5FL_blk_free(H5FL_blk_head_t *head, void *block)
         HDmemcpy(&trk, block_ptr, sizeof(H5FL_track_t));
 
         /* Free tracking information about the allocation location */
-        H5CS_close_stack(trk.stack);
+        H5CS_close_stack(trk->stack);
         /* The 'func' & 'file' strings are statically allocated (by the compiler)
          * and are not allocated, so there's no need to free them.
          */
-        trk.file = NULL;
-        trk.func = NULL;
+        trk->file = NULL;
+        trk->func = NULL;
 
         /* Remove from "outstanding allocations" list */
-        if ((void *)block_ptr == (void *)H5FL_out_head_g) {
+        if (trk == H5FL_out_head_g) {
             H5FL_out_head_g = H5FL_out_head_g->next;
             if (H5FL_out_head_g)
                 H5FL_out_head_g->prev = NULL;
         } /* end if */
         else {
-            trk.prev->next = trk.next;
-            if (trk.next)
-                trk.next->prev = trk.prev;
+            trk->prev->next = trk->next;
+            if (trk->next)
+                trk->next->prev = trk->prev;
         } /* end else */
 
         HDmemcpy(block_ptr, &trk, sizeof(H5FL_track_t));
@@ -1131,24 +1132,22 @@ H5FL_blk_realloc(H5FL_blk_head_t *head, void *block, size_t new_size H5FL_TRACK_
                 HDmemcpy(&trk, block_ptr, sizeof(H5FL_track_t));
 
                 /* Release previous tracking information */
-                H5CS_close_stack(trk.stack);
+                H5CS_close_stack(trk->stack);
                 /* The 'func' & 'file' strings are statically allocated (by the compiler)
                  * and are not allocated, so there's no need to free them.
                  */
-                trk.file = NULL;
-                trk.func = NULL;
+                trk->file = NULL;
+                trk->func = NULL;
 
                 /* Store new tracking information */
-                trk.stack = H5CS_copy_stack();
-                HDassert(trk.stack);
+                trk->stack = H5CS_copy_stack();
+                HDassert(trk->stack);
                 /* The 'call_func' & 'call_file' strings are statically allocated (by the compiler)
                  * there's no need to duplicate them.
                  */
-                trk.file = call_file;
-                trk.func = call_func;
-                trk.line = call_line;
-
-                HDmemcpy(block_ptr, &trk, sizeof(H5FL_track_t));
+                trk->file = call_file;
+                trk->func = call_func;
+                trk->line = call_line;
             }
 #endif /* H5FL_TRACK */
             ret_value = block;
@@ -1470,8 +1469,7 @@ H5FL_arr_free(H5FL_arr_head_t *head, void *obj)
     /* Get the pointer to the info header in front of the block to free */
     temp = (H5FL_arr_list_t *)((
         void *)((unsigned char *)obj -
-                (sizeof(H5FL_arr_list_t) +
-                 H5FL_TRACK_SIZE))); /*lint !e826 Pointer-to-pointer cast is appropriate here */
+                sizeof(H5FL_arr_list_t))); /*lint !e826 Pointer-to-pointer cast is appropriate here */
 
     /* Get the number of elements */
     free_nelem = temp->nelem;
@@ -1565,8 +1563,7 @@ H5FL_arr_malloc(H5FL_arr_head_t *head, size_t elem H5FL_TRACK_PARAMS)
     } /* end if */
     /* Otherwise allocate a node */
     else {
-        if (NULL ==
-            (new_obj = (H5FL_arr_list_t *)H5FL__malloc(sizeof(H5FL_arr_list_t) + H5FL_TRACK_SIZE + mem_size)))
+        if (NULL == (new_obj = (H5FL_arr_list_t *)H5FL__malloc(sizeof(H5FL_arr_list_t) + mem_size)))
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
         /* Increment the number of blocks of this size */
@@ -1633,7 +1630,7 @@ H5FL_arr_calloc(H5FL_arr_head_t *head, size_t elem H5FL_TRACK_PARAMS)
     HDassert(elem);
 
     /* Allocate the array */
-    if (NULL == (ret_value = H5FL_arr_malloc(head, elem H5FL_TRACK_INFO_INT)))
+    if (NULL == (ret_value = H5FL_arr_malloc(head, elem)))
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
     /* Clear to zeros */
@@ -1657,7 +1654,7 @@ done:
  *-------------------------------------------------------------------------
  */
 void *
-H5FL_arr_realloc(H5FL_arr_head_t *head, void *obj, size_t new_elem H5FL_TRACK_PARAMS)
+H5FL_arr_realloc(H5FL_arr_head_t *head, void *obj, size_t new_elem)
 {
     void *ret_value = NULL; /* Pointer to the block to return */
 
@@ -1669,7 +1666,7 @@ H5FL_arr_realloc(H5FL_arr_head_t *head, void *obj, size_t new_elem H5FL_TRACK_PA
 
     /* Check if we are really allocating the object */
     if (obj == NULL)
-        ret_value = H5FL_arr_malloc(head, new_elem H5FL_TRACK_INFO_INT);
+        ret_value = H5FL_arr_malloc(head, new_elem);
     else {
         H5FL_arr_list_t *temp; /* Temp. ptr to the new free list node allocated */
 
@@ -1679,8 +1676,7 @@ H5FL_arr_realloc(H5FL_arr_head_t *head, void *obj, size_t new_elem H5FL_TRACK_PA
         /* Get the pointer to the info header in front of the block to free */
         temp = (H5FL_arr_list_t *)((
             void *)((unsigned char *)obj -
-                    (sizeof(H5FL_arr_list_t) +
-                     H5FL_TRACK_SIZE))); /*lint !e826 Pointer-to-pointer cast is appropriate here */
+                    sizeof(H5FL_arr_list_t))); /*lint !e826 Pointer-to-pointer cast is appropriate here */
 
         /* Check if the size is really changing */
         if (temp->nelem != new_elem) {

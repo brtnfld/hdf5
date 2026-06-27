@@ -58,15 +58,14 @@ public class H5Ex_T_ObjectReference {
         public static H5G_obj get(int code) { return lookup.get(code); }
     }
 
-    private static void writeObjRef()
-    {
-        long file_id       = HDF5Constants.H5I_INVALID_HID;
-        long dataspace_id  = HDF5Constants.H5I_INVALID_HID;
-        long filespace_id  = HDF5Constants.H5I_INVALID_HID;
-        long group_id      = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id    = HDF5Constants.H5I_INVALID_HID;
-        long[] dims        = {DIM0};
-        byte[][] dset_data = new byte[DIM0][HDF5Constants.H5R_REF_BUF_SIZE];
+    private static void writeObjRef() {
+        long file_id = HDF5Constants.H5I_INVALID_HID;
+        long dataspace_id = HDF5Constants.H5I_INVALID_HID;
+        long filespace_id = HDF5Constants.H5I_INVALID_HID;
+        long group_id = HDF5Constants.H5I_INVALID_HID;
+        long dataset_id = HDF5Constants.H5I_INVALID_HID;
+        long[] dims = { DIM0 };
+        byte[][] dset_data = new byte[DIM0][8];
 
         // Create a new file using default properties.
         try {
@@ -199,15 +198,14 @@ public class H5Ex_T_ObjectReference {
         }
     }
 
-    private static void readObjRef()
-    {
-        long file_id       = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id    = HDF5Constants.H5I_INVALID_HID;
-        long dataspace_id  = HDF5Constants.H5I_INVALID_HID;
-        int object_type    = -1;
-        long object_id     = HDF5Constants.H5I_INVALID_HID;
-        long[] dims        = {DIM0};
-        byte[][] dset_data = new byte[DIM0][HDF5Constants.H5R_REF_BUF_SIZE];
+    private static void readObjRef() {
+        long file_id = HDF5Constants.H5I_INVALID_HID;
+        long dataset_id = HDF5Constants.H5I_INVALID_HID;
+        long dataspace_id = HDF5Constants.H5I_INVALID_HID;
+        int object_type = -1;
+        long object_id = HDF5Constants.H5I_INVALID_HID;
+        long[] dims = { DIM0 };
+        byte[][] dset_data;
 
         // Open an existing file.
         try {

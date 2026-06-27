@@ -218,7 +218,7 @@ rsrv_ohdr(void)
     } /* end for */
 
     for (i = 0; i < 2000; i++) {
-        HDsnprintf(attrname, sizeof(attrname), "attr %d", i);
+        HDsprintf(attrname, "attr %d", i);
         H5E_BEGIN_TRY
         {
             aid     = H5Screate_simple(2, dims, NULL);

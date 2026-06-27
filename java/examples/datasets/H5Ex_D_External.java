@@ -32,13 +32,12 @@ public class H5Ex_D_External {
     private static final int RANK          = 2;
     private static final int NAME_BUF_SIZE = 32;
 
-    private static void writeExternal()
-    {
-        long file_id      = HDF5Constants.H5I_INVALID_HID;
-        long dcpl_id      = HDF5Constants.H5I_INVALID_HID;
+    private static void writeExternal() {
+        long file_id = HDF5Constants.H5I_INVALID_HID;
+        long dcpl_id = HDF5Constants.H5I_INVALID_HID;
         long filespace_id = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id   = HDF5Constants.H5I_INVALID_HID;
-        long[] dims       = {DIM_X, DIM_Y};
+        long dataset_id = HDF5Constants.H5I_INVALID_HID;
+        long[] dims = { DIM_X, DIM_Y };
         int[][] dset_data = new int[DIM_X][DIM_Y];
 
         // Initialize the dataset.
@@ -136,11 +135,10 @@ public class H5Ex_D_External {
         }
     }
 
-    private static void readExternal()
-    {
-        long file_id      = HDF5Constants.H5I_INVALID_HID;
-        long dcpl_id      = HDF5Constants.H5I_INVALID_HID;
-        long dataset_id   = HDF5Constants.H5I_INVALID_HID;
+    private static void readExternal() {
+        long file_id = HDF5Constants.H5I_INVALID_HID;
+        long dcpl_id = HDF5Constants.H5I_INVALID_HID;
+        long dataset_id = HDF5Constants.H5I_INVALID_HID;
         int[][] dset_data = new int[DIM_X][DIM_Y];
         String[] Xname    = new String[1];
 

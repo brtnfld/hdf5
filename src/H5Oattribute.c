@@ -248,13 +248,13 @@ H5O__attr_create(const H5O_loc_t *loc, H5A_t *attr)
 
         /* Check if switching to "dense" attribute storage is possible */
         if (!H5F_addr_defined(ainfo.fheap_addr)) {
-            htri_t shareable;    /* Whether the attribute will be shared */
+            htri_t sharable;     /* Whether the attribute will be shared */
             size_t raw_size = 0; /* Raw size of message */
 
-            /* Check for attribute being shareable */
-            if ((shareable = H5SM_can_share(loc->file, NULL, NULL, H5O_ATTR_ID, attr)) < 0)
+            /* Check for attribute being sharable */
+            if ((sharable = H5SM_can_share(loc->file, NULL, NULL, H5O_ATTR_ID, attr)) < 0)
                 HGOTO_ERROR(H5E_ATTR, H5E_BADMESG, FAIL, "can't determine attribute sharing status")
-            else if (shareable == FALSE) {
+            else if (sharable == FALSE) {
                 /* Compute the size needed to encode the attribute */
                 raw_size = (H5O_MSG_ATTR->raw_size)(loc->file, FALSE, attr);
             } /* end if */
