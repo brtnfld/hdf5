@@ -1587,13 +1587,14 @@ H5F__vfd_swmr_update_end_of_tick_and_tick_num(H5F_shared_t *shared, hbool_t incr
     FUNC_ENTER_PACKAGE
 
     /* Get current time in struct timespec */
-#ifdef H5_HAVE_WIN32_API
+#if defined(H5_HAVE_TIMESPEC_GET)
     if (timespec_get(&curr, TIME_UTC) != TIME_UTC)
         HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time via timespec_get");
-#else
-    if (clock_gettime(CLOCK_MONOTONIC, &curr) < 0) {
+#elif defined(H5_HAVE_CLOCK_GETTIME)
+    if (clock_gettime(CLOCK_REALTIME, &curr) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time via clock_gettime");
-    }
+#else
+#error "No suitable time function (timespec_get or clock_gettime) available"
 #endif
 
     /* Convert curr to nsecs */
@@ -1989,12 +1990,14 @@ H5F_vfd_swmr_process_eot_queue(hbool_t entering_api)
         H5F_t        *f      = head->vfd_swmr_file;
         H5F_shared_t *shared = f->shared;
 
-#ifdef H5_HAVE_WIN32_API
+#if defined(H5_HAVE_TIMESPEC_GET)
         if (timespec_get(&now, TIME_UTC) != TIME_UTC)
             HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time via timespec_get");
-#else
-        if (clock_gettime(CLOCK_MONOTONIC, &now) < 0)
+#elif defined(H5_HAVE_CLOCK_GETTIME)
+        if (clock_gettime(CLOCK_REALTIME, &now) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time via clock_gettime");
+#else
+#error "No suitable time function (timespec_get or clock_gettime) available"
 #endif
         if (timespeccmp(&now, &head->end_of_tick, <))
             break;

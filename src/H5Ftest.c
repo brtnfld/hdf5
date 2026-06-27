@@ -321,7 +321,7 @@ H5F__vfd_swmr_writer_create_open_flush_test(hid_t file_id, hbool_t file_create)
     if ((md_fd = open(f->shared->md_file_path_name, O_RDONLY)) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL, "error opening metadata file");
     /* Verify the minimum size for the metadata file */
-    if (stat(f->shared->md_file_path_name, &stat_buf) < 0)
+    if (HDstat(f->shared->md_file_path_name, &stat_buf) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_BADFILE, FAIL, "unable to stat the metadata file");
     if (file_create) { /* Creating file */
         if (stat_buf.st_size != 0)
