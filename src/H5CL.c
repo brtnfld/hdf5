@@ -2095,11 +2095,11 @@ herr_t
 H5CL_load_config_string_from_file(const char *file_path, char **cfg_str_ptr_ptr)
 {
     h5_stat_t st;
-    size_t      num_chars;
-    char       *dst;
-    FILE       *file      = NULL;
-    char       *buf       = NULL;
-    herr_t      ret_value = SUCCEED;
+    size_t    num_chars;
+    char     *dst;
+    FILE     *file      = NULL;
+    char     *buf       = NULL;
+    herr_t    ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(FAIL)
 
