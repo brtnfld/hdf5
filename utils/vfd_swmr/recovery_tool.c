@@ -38,21 +38,20 @@
 
 /* Macro to disable switch case fallthrough warning on supported systems */
 #if defined(__clang__) || defined(__GNUC__)
-#  define FALLTHROUGH __attribute__((fallthrough))
+#define FALLTHROUGH __attribute__((fallthrough))
 #else
-#  define FALLTHROUGH ((void)0)
+#define FALLTHROUGH ((void)0)
 #endif
 
 /*****************************************************************************/
-/*** Begin macro definitions common to aux_process.c and recovery_tool.c.  ***/                                                    
+/*** Begin macro definitions common to aux_process.c and recovery_tool.c.  ***/
 /*****************************************************************************/
 #define FILE_NAME_LEN                  1024
 #define SIGNATURE_LEN                  4
 #define UPDATER_SIGNATURE              "VUDH"
 #define CL_SIGNATURE                   "VUCL"
 #define CREATE_METADATA_FILE_ONLY_FLAG 0x0001
-#define FINAL_UPDATE_FLAG              0x0002        
-
+#define FINAL_UPDATE_FLAG              0x0002
 
 /* The length for the header of the updater file is 48 bytes, with the breakdown as below:
  *     signature:          4
@@ -68,15 +67,15 @@
 #define UD_HEADER_LEN 48
 
 /* The length for the top fields of the change list in the updater file is 48 bytes, with the breakdown as
- * below: 
- * signature:                                          4 
- * tick number:                                        8 
- * page offset for metadata file header in updater:    4 
- * length for metadata file header:                    4 
- * checksum for metadata file header:                  4 
- * page offset for metadata file index in updater:     4 
- * offset for metadata file index in metadata file:    8 
- * length for metadata file index:                     4 
+ * below:
+ * signature:                                          4
+ * tick number:                                        8
+ * page offset for metadata file header in updater:    4
+ * length for metadata file header:                    4
+ * checksum for metadata file header:                  4
+ * page offset for metadata file index in updater:     4
+ * offset for metadata file index in metadata file:    8
+ * length for metadata file index:                     4
  * checksum for metadata file index:                   4
  * number of change list entries:                      4
  */
@@ -95,21 +94,21 @@
  * the future */
 #define UINT16DECODE(p, i)                                                                                   \
     {                                                                                                        \
-        (i) = (uint16_t)(*(p)&0xff);                                                                         \
+        (i) = (uint16_t)(*(p) & 0xff);                                                                       \
         (p)++;                                                                                               \
-        (i) |= (uint16_t)((*(p)&0xff) << 8);                                                                 \
+        (i) |= (uint16_t)((*(p) & 0xff) << 8);                                                               \
         (p)++;                                                                                               \
     }
 
 #define UINT32DECODE(p, i)                                                                                   \
     {                                                                                                        \
-        (i) = (uint32_t)(*(p)&0xff);                                                                         \
+        (i) = (uint32_t)(*(p) & 0xff);                                                                       \
         (p)++;                                                                                               \
-        (i) |= ((uint32_t)(*(p)&0xff) << 8);                                                                 \
+        (i) |= ((uint32_t)(*(p) & 0xff) << 8);                                                               \
         (p)++;                                                                                               \
-        (i) |= ((uint32_t)(*(p)&0xff) << 16);                                                                \
+        (i) |= ((uint32_t)(*(p) & 0xff) << 16);                                                              \
         (p)++;                                                                                               \
-        (i) |= ((uint32_t)(*(p)&0xff) << 24);                                                                \
+        (i) |= ((uint32_t)(*(p) & 0xff) << 24);                                                              \
         (p)++;                                                                                               \
     }
 
@@ -172,21 +171,18 @@
 /***** End macro definitions common to aux_process.c and recovery_tool.c *****/
 /*****************************************************************************/
 
-
 /* Handler modified from aux_process.c to suite recovery tool purposes */
 typedef struct {
-    char *log_file_path;  /* path name for the log file                                                   */
-    FILE *log_file;       /* log file containing the details of this program                              */
-    FILE *output;         /* output the details of this program to STDOUT or a log file                   */
-    bool  is_posix;       /* whether the HDF5 file is on a POSIX file system                              */
-    bool  verbose;        /* print out the details of this program                                        */
-    char *updater_path;   /* path name for the updater files                                              */
-    char *h5_file_path;   /* path name for the HDF5 file                                                  */
-    int   h5_fd;          /* file descriptor for the HDF5 file.  Must use file descriptor as the C        */
-    char *h5clear_path;   /* path name for the h5clear utility                                            */
+    char *log_file_path; /* path name for the log file                                                   */
+    FILE *log_file;      /* log file containing the details of this program                              */
+    FILE *output;        /* output the details of this program to STDOUT or a log file                   */
+    bool  is_posix;      /* whether the HDF5 file is on a POSIX file system                              */
+    bool  verbose;       /* print out the details of this program                                        */
+    char *updater_path;  /* path name for the updater files                                              */
+    char *h5_file_path;  /* path name for the HDF5 file                                                  */
+    int   h5_fd;         /* file descriptor for the HDF5 file.  Must use file descriptor as the C        */
+    char *h5clear_path;  /* path name for the h5clear utility                                            */
 } handler_t;
-
-
 
 /*****************************************************************************/
 /****** Begin structure and type definitions common to aux_process.c and *****/
@@ -195,7 +191,7 @@ typedef struct {
 
 /* Structure for the entry of change list in the updater file */
 typedef struct {
-    void *   data; /* buffer for the data (changes)                                                */
+    void    *data; /* buffer for the data (changes)                                                */
     uint32_t ud_file_page_offset; /* page offset of the data in the updater file */
     uint32_t md_file_page_offset; /* page offset of the the data in the metadata file */
     uint32_t h5_file_page_offset; /* page offset of the data in the HDF5 file (future usage) */
@@ -205,7 +201,7 @@ typedef struct {
 
 /* Updater file header related fields */
 typedef struct {
-    FILE *         file;
+    FILE          *file;
     unsigned char  ud_header_buf[UD_HEADER_LEN];
     unsigned char  ud_cl_top_buf[UD_CL_TOP_LEN];
     unsigned char *cl_buf;
@@ -229,13 +225,13 @@ typedef struct {
     uint32_t md_file_header_ud_page_offset;
     uint32_t md_file_header_len;
     uint32_t md_file_header_chksum;
-    void *   md_file_header_buf;
+    void    *md_file_header_buf;
 
     uint32_t md_file_index_ud_page_offset;
     uint64_t md_file_index_md_file_offset;
     uint32_t md_file_index_len;
     uint32_t md_file_index_chksum;
-    void *   md_file_index_buf;
+    void    *md_file_index_buf;
 
     uint32_t received_cl_checksum;
     uint32_t verified_cl_checksum;
@@ -283,7 +279,7 @@ enum aux_arg_level {
  * end.
  */
 typedef struct {
-    const char *       name;     /* Name of the long option */
+    const char        *name;     /* Name of the long option */
     enum aux_arg_level has_arg;  /* Whether we should look for an arg */
     char               shortval; /* The shortname equivalent of long arg
                                   * this gets returned from get_option
@@ -294,13 +290,11 @@ typedef struct {
 /****** recovery_tool.c                                                *******/
 /*****************************************************************************/
 
-/* Global variables for option parsing, found in both aux_process.c and 
+/* Global variables for option parsing, found in both aux_process.c and
  * recovery_tool.c */
 int         aux_opterr = 1; /* Get_option prints errors if this is on */
 int         aux_optind = 1; /* Token pointer                          */
 const char *aux_optarg;     /* Flag argument (or value)               */
-
-
 
 /*****************************************************************************/
 /******** Begin functions common to aux_process.c and recovery_tool.c ********/
@@ -339,7 +333,7 @@ aux_get_options(int argc, char **argv, const char *opts, const aux_long_options 
         /* long command line option */
         int        i;
         const char ch      = '=';
-        char *     arg     = strdup(&argv[aux_optind][2]);
+        char      *arg     = strdup(&argv[aux_optind][2]);
         size_t     arg_len = 0;
 
         aux_optarg = strchr(&argv[aux_optind][2], ch);
@@ -535,7 +529,7 @@ checksum_lookup(const void *key, size_t length, uint32_t initval)
         case 12:
             c += ((uint32_t)k[11]) << 24;
             FALLTHROUGH;
-            
+
         case 11:
             c += ((uint32_t)k[10]) << 16;
             FALLTHROUGH;
@@ -590,7 +584,6 @@ checksum_lookup(const void *key, size_t length, uint32_t initval)
 done:
     return c;
 } /* checksum_lookup() */
-
 
 /*-------------------------------------------------------------------------
  * Function: decode_ud_header
@@ -815,17 +808,13 @@ error:
     return -1;
 } /* decode_cl_top_fields() */
 
-
 /*****************************************************************************/
 /******** End functions common to aux_process.c and recovery_tool.c **********/
 /*****************************************************************************/
 
-
-
 /*****************************************************************************/
 /******** Begin functions specific to recovery_tool.c ************************/
 /*****************************************************************************/
-
 
 /*-------------------------------------------------------------------------
  * Function: copy_data
@@ -842,7 +831,7 @@ copy_data(handler_t *hand, FILE *src_file, int dst_fd, off_t src_file_offset, of
           size_t data_len, uint32_t received_checksum)
 {
     uint32_t verified_checksum;           /* calculated checksum for the data being copied */
-    void *   data_buf = malloc(data_len); /* buffer for the data being copied              */
+    void    *data_buf = malloc(data_len); /* buffer for the data being copied              */
 
     /* Seek and read in the data from the source file */
     if (fseek(src_file, src_file_offset, SEEK_SET) != 0) {
@@ -864,7 +853,6 @@ copy_data(handler_t *hand, FILE *src_file, int dst_fd, off_t src_file_offset, of
         goto error;
     }
 
-
     /* Verbose logging */
     if (hand->output) {
         fprintf(hand->output, "INFO: dst_fd = %d\n", dst_fd);
@@ -874,9 +862,9 @@ copy_data(handler_t *hand, FILE *src_file, int dst_fd, off_t src_file_offset, of
     }
 
     /* Seek the correct write position of the destination file */
-    if ( -1 == lseek(dst_fd, dst_file_offset, SEEK_SET) ) {
-        fprintf(stderr, "lseek to offset 0x%llx failed.  errno = %d (%s)\n", 
-                        (unsigned long long)dst_file_offset, errno, strerror(errno));
+    if (-1 == lseek(dst_fd, dst_file_offset, SEEK_SET)) {
+        fprintf(stderr, "lseek to offset 0x%llx failed.  errno = %d (%s)\n",
+                (unsigned long long)dst_file_offset, errno, strerror(errno));
         goto error;
     }
 
@@ -886,20 +874,20 @@ copy_data(handler_t *hand, FILE *src_file, int dst_fd, off_t src_file_offset, of
      */
     {
         size_t size = data_len;
-        void * buf = data_buf;
-     
+        void  *buf  = data_buf;
+
         while (size > 0) {
-            size_t     bytes_in    = 0;  /* # of bytes to write  */
-            ssize_t    bytes_wrote = -1; /* # of bytes written   */
+            size_t  bytes_in    = 0;  /* # of bytes to write  */
+            ssize_t bytes_wrote = -1; /* # of bytes written   */
 
             /* Trying to write more bytes than the return type can handle is
              * undefined behavior in POSIX.
              */
-            if (size > SIZE_MAX / 2) {   /* should be SSIZE_MAX, but doesn't seem to be defined */
+            if (size > SIZE_MAX / 2) { /* should be SSIZE_MAX, but doesn't seem to be defined */
 
                 bytes_in = SIZE_MAX / 2;
-
-            } else {
+            }
+            else {
 
                 bytes_in = size;
             }
@@ -910,11 +898,11 @@ copy_data(handler_t *hand, FILE *src_file, int dst_fd, off_t src_file_offset, of
 
             } while (-1 == bytes_wrote && EINTR == errno);
 
-            if ( -1 == bytes_wrote ) { /* error */
+            if (-1 == bytes_wrote) { /* error */
 
-                int    myerrno = errno;
+                int myerrno = errno;
 
-                fprintf(stderr, "Write to HDF5 file at offset 0x%llx failes.  errno = %d (%s)\n", 
+                fprintf(stderr, "Write to HDF5 file at offset 0x%llx failes.  errno = %d (%s)\n",
                         (unsigned long long)dst_file_offset, errno, strerror(myerrno));
                 goto error;
 
@@ -924,7 +912,7 @@ copy_data(handler_t *hand, FILE *src_file, int dst_fd, off_t src_file_offset, of
             assert((size_t)bytes_wrote <= size);
 
             size -= (size_t)bytes_wrote;
-            buf = (void*)((char *)buf + bytes_wrote);
+            buf = (void *)((char *)buf + bytes_wrote);
         } /* end while */
     }
 
@@ -936,7 +924,8 @@ copy_data(handler_t *hand, FILE *src_file, int dst_fd, off_t src_file_offset, of
         fprintf(hand->output, "\tsource file=%p\n", (void *)src_file);
         fprintf(hand->output, "\tdestination fd=%d\n", dst_fd);
         fprintf(hand->output, "\toffset in the source file=0x%llx\n", (unsigned long long)src_file_offset);
-        fprintf(hand->output, "\toffset in the destination file=0x%llx\n", (unsigned long long)dst_file_offset);
+        fprintf(hand->output, "\toffset in the destination file=0x%llx\n",
+                (unsigned long long)dst_file_offset);
         fprintf(hand->output, "\tlength of data=%lld\n", (unsigned long long)data_len);
         fprintf(hand->output, "\treceived checksum=%u\n", received_checksum);
         fprintf(hand->output, "\tcalculated checksum=%u\n", verified_checksum);
@@ -971,7 +960,6 @@ decode_and_copy_cl_entries_recovery_only(updater_t *updater, handler_t *hand)
         /* Allocate the buffer for the change list */
         updater->change_list = (cl_entry_t *)malloc(sizeof(cl_entry_t) * updater->num_cl_entries);
 
-        
         ptr = updater->cl_buf + UD_CL_TOP_LEN;
 
         for (i = 0; i < updater->num_cl_entries; i++) {
@@ -1029,7 +1017,6 @@ error:
     return -1;
 } /* decode_and_copy_cl_entries_recovery_only() */
 
-
 /*-------------------------------------------------------------------------
  * Function: apply_updater_recovery_only
  *
@@ -1069,20 +1056,20 @@ apply_updater_recovery_only(const char *updater_name, handler_t *hand)
     /*----------------------------------------------
      * Check the flags
      *----------------------------------------------
-     * If the flag is CREATE_METADATA_FILE_ONLY_FLAG (0x0001), then this 
-     * updater file has no data and only serves to tell us to open the 
+     * If the flag is CREATE_METADATA_FILE_ONLY_FLAG (0x0001), then this
+     * updater file has no data and only serves to tell us to open the
      * HDF5 file for writing so we can apply updater files. If the HDF5
      * file is not on a POSIX-compliant file system, then we skip opening
      * the HDF5 file until we need to apply an updater file.
      */
     if (updater.flags & CREATE_METADATA_FILE_ONLY_FLAG) {
         /* If the hdf5 file is on a POSIX-compliant file system, then we only open
-        * the file once in the beginning. */
+         * the file once in the beginning. */
         if (hand->is_posix) {
-            assert( -1 == hand->h5_fd ); /* verify that the HDF5 file is closed */
-            if ( -1 ==  (hand->h5_fd = open(hand->h5_file_path, O_WRONLY | O_SYNC)) ) {
-                fprintf(stderr, "failed to open the HDF5 file: %s.  errno = %d (%s)\n", 
-                        hand->h5_file_path, errno, strerror(errno));
+            assert(-1 == hand->h5_fd); /* verify that the HDF5 file is closed */
+            if (-1 == (hand->h5_fd = open(hand->h5_file_path, O_WRONLY | O_SYNC))) {
+                fprintf(stderr, "failed to open the HDF5 file: %s.  errno = %d (%s)\n", hand->h5_file_path,
+                        errno, strerror(errno));
                 goto error;
             }
         }
@@ -1092,27 +1079,27 @@ apply_updater_recovery_only(const char *updater_name, handler_t *hand)
             fprintf(stderr, "updater file close failed: %s\n", updater_name);
             goto error;
         }
-                
+
         return true;
     }
 
-    if(!hand->is_posix) {
+    if (!hand->is_posix) {
         /* If the hdf5 file is not on a POSIX-compliant file system, then we open
-        * the file every time we apply an updater file. */
-        assert( -1 == hand->h5_fd ); /* verify that the HDF5 file is closed */
-        if ( -1 ==  (hand->h5_fd = open(hand->h5_file_path, O_WRONLY | O_SYNC)) ) {
-            fprintf(stderr, "failed to open the HDF5 file: %s.  errno = %d (%s)\n", 
-                    hand->h5_file_path, errno, strerror(errno));
+         * the file every time we apply an updater file. */
+        assert(-1 == hand->h5_fd); /* verify that the HDF5 file is closed */
+        if (-1 == (hand->h5_fd = open(hand->h5_file_path, O_WRONLY | O_SYNC))) {
+            fprintf(stderr, "failed to open the HDF5 file: %s.  errno = %d (%s)\n", hand->h5_file_path, errno,
+                    strerror(errno));
             goto error;
         }
     }
 
     /* Check that H5 file has been opened before copying data */
-    if ( -1 == hand->h5_fd ) {
+    if (-1 == hand->h5_fd) {
         fprintf(stderr, "HDF5 file is not opened yet, cannot apply updater file: %s\n", updater_name);
         goto error;
     }
-    
+
     /*----------------------------------------------
      * Decode the top fields of the change list
      *----------------------------------------------
@@ -1140,21 +1127,21 @@ apply_updater_recovery_only(const char *updater_name, handler_t *hand)
 
     /* If the hdf5 file is on a non-POSIX-compliant file system, then we close
      * the file every time we finish applying an updater file. */
-    if(!hand->is_posix) {
-        if ( 0 != close(hand->h5_fd) ) {
-            fprintf(stderr, "failed to close the HDF5 file.  errno = %d (%s)\n", 
-                    errno, strerror(errno));
+    if (!hand->is_posix) {
+        if (0 != close(hand->h5_fd)) {
+            fprintf(stderr, "failed to close the HDF5 file.  errno = %d (%s)\n", errno, strerror(errno));
             goto error;
         }
         hand->h5_fd = -1; /* to mark the HDF5 file as closed in hand */
     }
-    
+
     /* If the flag is FINAL_UPDATE_FLAG (0x0002), print a message
      * and do nothing else */
     if (updater.flags & FINAL_UPDATE_FLAG) {
         if (hand->output) {
             fprintf(hand->output, "FINAL_UPDATE_FLAG is set in updater file: %s\n", updater_name);
-        } else { /* Print it to stdout even if verbose output is not enabled */
+        }
+        else { /* Print it to stdout even if verbose output is not enabled */
             fprintf(stdout, "FINAL_UPDATE_FLAG is set in updater file: %s\n", updater_name);
         }
     }
@@ -1174,12 +1161,12 @@ error:
         free(updater.change_list);
     }
 
-    if(updater.file) {
+    if (updater.file) {
         fclose(updater.file);
         updater.file = NULL;
     }
 
-    if ( -1 == hand->h5_fd ) {
+    if (-1 == hand->h5_fd) {
         close(hand->h5_fd);
         hand->h5_fd = -1;
     }
@@ -1187,7 +1174,6 @@ error:
     return false;
 
 } /* apply_updater_recovery_only() */
-
 
 /*-----------------------------------------------------------------------------
  * Function: apply_all_updater_files
@@ -1205,17 +1191,17 @@ static int
 apply_all_updater_files(handler_t *hand)
 {
     char updater_name[FILE_NAME_LEN];
-    int i;
-    int ret;
-    
+    int  i;
+    int  ret;
+
     /* We need to remove any numeric extension from the updater path */
     char *last_dot = strrchr(hand->updater_path, '.');
-    if (last_dot != NULL) { /* found a dot */
-        char *endptr = last_dot + 1; /* point to the character after the dot */
-        bool all_digits = true;
+    if (last_dot != NULL) {              /* found a dot */
+        char *endptr     = last_dot + 1; /* point to the character after the dot */
+        bool  all_digits = true;
 
         /* Check if all characters after the dot are digits */
-        while (*endptr != '\0') { 
+        while (*endptr != '\0') {
             if (!isdigit((unsigned char)*endptr)) {
                 all_digits = false;
                 break;
@@ -1227,7 +1213,6 @@ apply_all_updater_files(handler_t *hand)
         if (all_digits) {
             *last_dot = '\0';
         }
-
     }
 
     /* Print out chosen file information */
@@ -1235,15 +1220,16 @@ apply_all_updater_files(handler_t *hand)
         fprintf(hand->output, "Using specified files:\n");
         fprintf(hand->output, " - HDF5 file:           %s\n", hand->h5_file_path);
         fprintf(hand->output, " - Updater file prefix: %s\n\n", hand->updater_path);
-    } else { /* Print it to stdout even if verbose output is not enabled */
+    }
+    else { /* Print it to stdout even if verbose output is not enabled */
         fprintf(stdout, "Using specified files:\n");
         fprintf(stdout, " - HDF5 file:           %s\n", hand->h5_file_path);
         fprintf(stdout, " - Updater file prefix: %s\n\n", hand->updater_path);
     }
 
-    for (i = 0; ; i++) {
+    for (i = 0;; i++) {
         ret = snprintf(updater_name, sizeof(updater_name), "%s.%d", hand->updater_path, i);
-    
+
         if (ret < 0) {
             fprintf(stderr, "Internal snprintf error while formatting updater_name\n");
             goto error;
@@ -1254,9 +1240,9 @@ apply_all_updater_files(handler_t *hand)
         }
 
         /* Only process if the file exists */
-        if (access(updater_name, F_OK) != 0){
+        if (access(updater_name, F_OK) != 0) {
             /* Can't find the first updater file */
-            if( i == 0) {
+            if (i == 0) {
                 fprintf(stderr, "No updater files found at path: %s.0\n", hand->updater_path);
                 goto error;
             }
@@ -1276,17 +1262,16 @@ apply_all_updater_files(handler_t *hand)
 
     /* If the is_posix flag is true, then the HDF5 file should still be open.
      * Close it now. */
-    if ( hand->is_posix ) {
-        
+    if (hand->is_posix) {
+
         assert(hand->h5_fd >= 0); /* verify that the HDF5 file is open */
-        if ( 0 != close(hand->h5_fd) ) {
-            fprintf(stderr, "failed to close the HDF5 file.  errno = %d (%s)\n", 
-                    errno, strerror(errno));
+        if (0 != close(hand->h5_fd)) {
+            fprintf(stderr, "failed to close the HDF5 file.  errno = %d (%s)\n", errno, strerror(errno));
             goto error;
         }
         hand->h5_fd = -1; /* to mark the HDF5 file as close in hand */
-
-    } else {
+    }
+    else {
 
         assert(-1 == hand->h5_fd); /* verify that the HDF5 file is closed */
     }
@@ -1297,22 +1282,21 @@ error:
     return -1;
 } /* apply_all_updater_files() */
 
-
 /*-------------------------------------------------------------------------
  * Function: run_command_with_catch
  *
  * Purpose:  Run a command with the given arguments, redirecting its output
  *    (stdout and stderr) to a file, and capturing its exit status and PID
  *    into separate files.
- * 
- * Description: This function forks a child process to run the command. The 
- *    child process redirects its output (stdout and stderr) to a file named 
- *    "<outbase>.out". The parent process writes the child's PID to 
- *    "<outbase>.pid", then waits for the child to finish and captures its 
+ *
+ * Description: This function forks a child process to run the command. The
+ *    child process redirects its output (stdout and stderr) to a file named
+ *    "<outbase>.out". The parent process writes the child's PID to
+ *    "<outbase>.pid", then waits for the child to finish and captures its
  *    exit status in "<outbase>.rc".
- * 
+ *
  * Return:   Success:       exit status of the command
- *           Failure:      -1 
+ *           Failure:      -1
  *
  * Cody Sloan -- 6/10/2025
  */
@@ -1323,8 +1307,9 @@ run_command_with_catch(const char *outbase, char *const cmd_argv[])
     if (pid < 0) {
         perror("fork failed");
         goto error;
-    } else if (pid == 0) { /* Child process */
-    
+    }
+    else if (pid == 0) { /* Child process */
+
         /* Prepare output file names */
         char out_file[FILE_NAME_LEN];
         snprintf(out_file, sizeof(out_file), "%s.out", outbase);
@@ -1351,7 +1336,8 @@ run_command_with_catch(const char *outbase, char *const cmd_argv[])
         /* If execvp returns, there was an error */
         perror("execvp failed");
         exit(EXIT_FAILURE);
-    } else { /* Parent process */
+    }
+    else { /* Parent process */
         /* Wait for the child process to finish */
         int status;
         if (waitpid(pid, &status, 0) == -1) {
@@ -1370,13 +1356,15 @@ run_command_with_catch(const char *outbase, char *const cmd_argv[])
             if (rc_fp) {
                 fprintf(rc_fp, "%d\n", exit_status);
                 fclose(rc_fp);
-            } else {
+            }
+            else {
                 perror("fopen rc file failed");
                 goto error;
             }
 
             return exit_status; /* Return the exit status of the command */
-        } else {
+        }
+        else {
             fprintf(stderr, "Command did not exit normally\n");
             goto error;
         }
@@ -1385,7 +1373,6 @@ run_command_with_catch(const char *outbase, char *const cmd_argv[])
 error:
     return -1; /* Indicate failure */
 } /* run_command_with_catch() */
-
 
 /*-------------------------------------------------------------------------
  * Function: check_h5clear_path
@@ -1397,7 +1384,8 @@ error:
  *           Failure:    -1
  */
 static int
-check_h5clear_path(handler_t *hand){
+check_h5clear_path(handler_t *hand)
+{
     char path_buf[FILE_NAME_LEN];
 
     /* Check for h5clear path in environment variable H5CLEAR_PATH */
@@ -1412,38 +1400,39 @@ check_h5clear_path(handler_t *hand){
             fprintf(stderr, "ERROR: H5CLEAR_PATH does not end with 'h5clear'\n");
             return -1;
         }
-        
-    } else {
+    }
+    else {
         /* Check for h5clear in PATH */
-        bool found = false;
+        bool  found    = false;
         char *path_env = strdup(getenv("PATH"));
-        char *s = path_env;
-        char *p = NULL;
-        
+        char *s        = path_env;
+        char *p        = NULL;
+
         /* Loop through PATH to find h5clear */
         do {
             p = strchr(s, ':');
             if (p != NULL) {
-                *p = '\0';  /* Temporarily null-terminate */
+                *p = '\0'; /* Temporarily null-terminate */
             }
-            
+
             snprintf(path_buf, sizeof(path_buf), "%s/h5clear", s);
             if (access(path_buf, X_OK) == 0) {
                 found = true;
                 break;
             }
-            
+
             s = p + 1;
         } while (p != NULL);
 
         free(path_env);
 
         if (!found) {
-            fprintf(stderr, "ERROR: h5clear command not found in PATH or H5CLEAR_PATH environment variable\n");
+            fprintf(stderr,
+                    "ERROR: h5clear command not found in PATH or H5CLEAR_PATH environment variable\n");
             return -1;
         }
     }
-    
+
     /* Store the h5clear path in the handler */
     hand->h5clear_path = strdup(path_buf);
     if (hand->h5clear_path == NULL) {
@@ -1458,21 +1447,21 @@ check_h5clear_path(handler_t *hand){
  *
  * Purpose: Reset the status flags in the superblock of the h5 file so that
  *         the file can be opened again.
- * 
+ *
  * Description: runs the h5clear command with the -s option to reset the
  *              status flags in the superblock of the h5 file.
- *              Path to h5clear utility MUST be defined in PATH or 
+ *              Path to h5clear utility MUST be defined in PATH or
  *              H5CLEAR_PATH environment variable.
- * 
+ *
  * Return:   Success:    0
- * 
+ *
  *           Failure:    -1
- * 
+ *
  * Cody Sloan -- 6/10/2025
  *
- * Changes:     Added the "--increment" option to h5clear_opts[].  This 
- *              option should set the eof of the target file to the 
- *              maximum of EOA and EOF.  This should prevent recovery 
+ * Changes:     Added the "--increment" option to h5clear_opts[].  This
+ *              option should set the eof of the target file to the
+ *              maximum of EOA and EOF.  This should prevent recovery
  *              failures caused by apparent HDF5 file truncation.
  *
  *                                              JRM -- 5/9/26
@@ -1499,8 +1488,8 @@ reset_status_flags(handler_t *hand)
     // char h5clear_opts[] = "--status --increment";
     /* Execute h5clear command*/
     char *cmd_argv[] = {hand->h5clear_path, h5clear_opts, hand->h5_file_path, NULL};
-    int ret = run_command_with_catch("h5clear_post", cmd_argv);
-    
+    int   ret        = run_command_with_catch("h5clear_post", cmd_argv);
+
     if (ret < 0) {
         fprintf(stderr, "error: Failed to run h5clear command\n");
         return -1;
@@ -1510,7 +1499,6 @@ reset_status_flags(handler_t *hand)
     }
     return 0;
 } /* reset_status_flags() */
-
 
 /*----------------------------------------------------------------------------
  * Function: release_resources
@@ -1548,7 +1536,6 @@ error:
 
 } /* release_resources() */
 
-
 /*-------------------------------------------------------------------------
  * Function: usage
  *
@@ -1577,7 +1564,6 @@ usage(void)
     printf("\n");
 } /* usage() */
 
-
 /*-------------------------------------------------------------------------
  * Function: parse_command_line
  *
@@ -1586,7 +1572,7 @@ usage(void)
  * Return:   Success:    0
  *
  *           Failure:    -1
- * 
+ *
  * Found in aux_process, but modified to handle recovery_tool inputs.
  *-------------------------------------------------------------------------
  */
@@ -1601,14 +1587,14 @@ parse_command_line(int argc, char *argv[], handler_t *hand)
                                        {NULL, 0, 0}};
 
     /* Initialize the command line options */
-    hand->verbose              = false;
-    hand->log_file_path        = NULL;
-    hand->log_file             = NULL;
-    hand->is_posix             = false;
-    hand->output               = NULL;
-    hand->updater_path         = NULL;
-    hand->h5_file_path         = NULL;
-    hand->h5_fd                = -1;
+    hand->verbose       = false;
+    hand->log_file_path = NULL;
+    hand->log_file      = NULL;
+    hand->is_posix      = false;
+    hand->output        = NULL;
+    hand->updater_path  = NULL;
+    hand->h5_file_path  = NULL;
+    hand->h5_fd         = -1;
 
     /*
      * aux_get_options supports both POSIX and Windows
@@ -1651,7 +1637,8 @@ parse_command_line(int argc, char *argv[], handler_t *hand)
     if ((argc - aux_optind) >= 2) {
         hand->h5_file_path = strdup(argv[aux_optind++]);
         hand->updater_path = strdup(argv[aux_optind++]);
-    } else {
+    }
+    else {
         fprintf(stderr, "Missing required arguments: <h5_file> <ud_file>\n");
         goto error;
     }
@@ -1672,7 +1659,8 @@ parse_command_line(int argc, char *argv[], handler_t *hand)
     if (hand->is_posix) {
         if (hand->output) {
             fprintf(hand->output, "Assuming POSIX semantics for file system containing HDF5 file. \n");
-        } else { /* Print it to stdout even if verbose output is not enabled */
+        }
+        else { /* Print it to stdout even if verbose output is not enabled */
             fprintf(stdout, "Assuming POSIX semantics for file system containing HDF5 file. \n");
         }
     }
@@ -1682,7 +1670,6 @@ parse_command_line(int argc, char *argv[], handler_t *hand)
 error:
     return -1;
 } /* parse_command_line() */
-
 
 /*-------------------------------------------------------------------------
  * Function: main
@@ -1702,7 +1689,7 @@ main(int argc, char **argv)
 
     if (parse_command_line(argc, argv, &hand) < 0)
         goto error;
-    
+
     if (check_h5clear_path(&hand) < 0)
         goto error;
 
@@ -1719,7 +1706,8 @@ main(int argc, char **argv)
     /* Print completion message */
     if (hand.output) {
         fprintf(hand.output, "Recovery completed successfully.\n");
-    } else { /* Print it to stdout even if verbose output is not enabled */
+    }
+    else { /* Print it to stdout even if verbose output is not enabled */
         fprintf(stdout, "Recovery completed successfully.\n");
     }
 

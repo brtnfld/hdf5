@@ -98,19 +98,19 @@ main(int argc, char **argv)
     hid_t                  dset[2] = {H5I_INVALID_HID, H5I_INVALID_HID};
     char                   content[2][96];
     char                   name[2][96];
-    H5F_t *                f;
-    H5C_t *                cache;
+    H5F_t                 *f;
+    H5C_t                 *cache;
     sigset_t               oldsigs;
     hbool_t                variable = true, wait_for_signal = true;
     const hsize_t          dims = 1;
     int                    opt, i, ntimes = 100;
     unsigned long          tmp;
-    char *                 end;
+    char                  *end;
     hbool_t                use_vfd_swmr = true;
     const uint64_t         delay_ns     = 100 * 1000 * 1000; /* 100 ms */
     testsel_t              sel          = TEST_NONE;
     H5F_vfd_swmr_config_t *config       = NULL;
-    const char *           s_opts       = "SWfn:qt:";
+    const char            *s_opts       = "SWfn:qt:";
     struct h5_long_options l_opts[]     = {{NULL, 0, '\0'}};
 
     HDassert(H5T_C_S1 != H5I_INVALID_HID);

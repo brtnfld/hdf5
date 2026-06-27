@@ -149,8 +149,8 @@ done:
 herr_t
 H5MF_process_deferred_frees(H5F_t *f, const uint64_t tick_num)
 {
-    lower_defree_t *     df;
-    H5F_shared_t *       shared    = f->shared;
+    lower_defree_t      *df;
+    H5F_shared_t        *shared    = f->shared;
     lower_defree_queue_t defrees   = SIMPLEQ_HEAD_INITIALIZER(defrees);
     herr_t               ret_value = SUCCEED;
 

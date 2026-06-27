@@ -21,34 +21,33 @@
 #include "H5Epkg.h"
 #include "H5Fprivate.h"
 
-
-/* 
+/*
  * Disable calls to cl_test_verify_error_stack() because this HDF5
  * version lacks the required internal error stack structures.
  *
- * The error stack verification is implemented and tested in the 
+ * The error stack verification is implemented and tested in the
  * LifeboatLLC/HDF5-Encryption repository:
  *  hdf5/hdf5-1.14.6/test/vfd_cl.c
  */
 #define VERIFY_ERROR_STACK_SUPPORTED 0
 /* file name for config file tests */
-#define TEST_CONFIG_FILE_NAME        "cl_test_config.txt"
+#define TEST_CONFIG_FILE_NAME "cl_test_config.txt"
 /* name of directory (non-regular file) for config file tests */
 #define NON_REGULAR_CONFIG_FILE_NAME "non_regular_file_dir"
 
-
 /* utility functions */
-static herr_t create_config_file(const char* file_name, const char *config_string, size_t len);
-static int cl_lexer_test_verify_token(H5CL_token_t * token_ptr, int token_num, int32_t expected_code, 
-                                       const char * expected_str, int64_t expected_int_val, double expected_f_val, 
-                                       uint8_t * expected_bb_ptr, size_t expected_bb_len, bool verbose);
-static int cl_test_verify_nv_pair(H5CL_nv_pair_t * nv_pair_ptr, int nv_pair_num, const char * expected_name_ptr, 
+static herr_t create_config_file(const char *file_name, const char *config_string, size_t len);
+static int    cl_lexer_test_verify_token(H5CL_token_t *token_ptr, int token_num, int32_t expected_code,
+                                         const char *expected_str, int64_t expected_int_val,
+                                         double expected_f_val, uint8_t *expected_bb_ptr, size_t expected_bb_len,
+                                         bool verbose);
+static int cl_test_verify_nv_pair(H5CL_nv_pair_t *nv_pair_ptr, int nv_pair_num, const char *expected_name_ptr,
                                   int expected_val_type, int64_t expected_int_val, double expected_f_val,
-                                  const void * expected_vlen_val_ptr, size_t expected_len, bool verbose);
-static int cl_test_verify_nv_pairs(H5CL_nv_pair_t * actual_nv_pairs, H5CL_nv_pair_t * expected_nv_pairs,
+                                  const void *expected_vlen_val_ptr, size_t expected_len, bool verbose);
+static int cl_test_verify_nv_pairs(H5CL_nv_pair_t *actual_nv_pairs, H5CL_nv_pair_t *expected_nv_pairs,
                                    int num_nv_pairs, bool verbose);
-static int vfd_swmr_test_verify_config(H5F_vfd_swmr_config_t *input_config, H5F_vfd_swmr_config_t *expected_config,
-                                       bool verbose);
+static int vfd_swmr_test_verify_config(H5F_vfd_swmr_config_t *input_config,
+                                       H5F_vfd_swmr_config_t *expected_config, bool verbose);
 #if VERIFY_ERROR_STACK_SUPPORTED
 static int cl_test_verify_error_stack(hid_t maj_num, hid_t min_num, const char *desc, bool verbose);
 #endif
@@ -109,20 +108,20 @@ static herr_t vfd_swmr_load_file_config_smoke_check(void);
  *    None.
  *
  *******************************************************************************/
-static herr_t 
-create_config_file(const char* file_name, const char *config_string, size_t len)
+static herr_t
+create_config_file(const char *file_name, const char *config_string, size_t len)
 {
     size_t written;
 
     /* Open the file and truncate if it already exists */
-    FILE *fp = fopen(file_name, "w"); 
-    if ( !fp ) {
+    FILE *fp = fopen(file_name, "w");
+    if (!fp) {
         perror("fopen failed");
         return -1;
     }
 
     written = fwrite(config_string, 1, len, fp);
-    if ( written != len ) {
+    if (written != len) {
         perror("fwrite failed");
         fclose(fp);
         return -1;
@@ -151,11 +150,9 @@ create_config_file(const char* file_name, const char *config_string, size_t len)
  *******************************************************************************/
 
 static int
-cl_lexer_test_verify_token(H5CL_token_t * token_ptr, int token_num, 
-                           int32_t expected_code, const char * expected_str, 
-                           int64_t expected_int_val, double expected_f_val, 
-                           uint8_t * expected_bb_ptr, size_t expected_bb_len, 
-                           bool verbose)
+cl_lexer_test_verify_token(H5CL_token_t *token_ptr, int token_num, int32_t expected_code,
+                           const char *expected_str, int64_t expected_int_val, double expected_f_val,
+                           uint8_t *expected_bb_ptr, size_t expected_bb_len, bool verbose)
 {
     int failures = 0;
     int i;
@@ -163,23 +160,21 @@ cl_lexer_test_verify_token(H5CL_token_t * token_ptr, int token_num,
     assert(token_ptr);
     assert(H5CL_TOKEN_STRUCT_TAG == token_ptr->struct_tag);
 
-    if ( ( token_ptr->code != expected_code ) ||
-         ( 0 != strcmp(token_ptr->str_ptr, expected_str) ) ||
-         ( token_ptr->str_len != strlen(expected_str) ) ||
-         ( token_ptr->int_val != expected_int_val ) || 
-         ( token_ptr->f_val < expected_f_val ) ||      /* circumlocution to keep */
-         ( token_ptr->f_val > expected_f_val ) ||      /* the compiler happy     */
-         ( token_ptr->bb_len != expected_bb_len ) ) {
+    if ((token_ptr->code != expected_code) || (0 != strcmp(token_ptr->str_ptr, expected_str)) ||
+        (token_ptr->str_len != strlen(expected_str)) || (token_ptr->int_val != expected_int_val) ||
+        (token_ptr->f_val < expected_f_val) || /* circumlocution to keep */
+        (token_ptr->f_val > expected_f_val) || /* the compiler happy     */
+        (token_ptr->bb_len != expected_bb_len)) {
 
         failures++;
+    }
+    else {
 
-    } else {
+        if (H5CL_BIN_BLOB_TOK == expected_code) {
 
-        if ( H5CL_BIN_BLOB_TOK == expected_code ) {
+            for (i = 0; i < (int)expected_bb_len; i++) {
 
-            for ( i = 0; i < (int)expected_bb_len; i++ ) {
-
-                if ( expected_bb_ptr[i] != token_ptr->bb_ptr[i] ) {
+                if (expected_bb_ptr[i] != token_ptr->bb_ptr[i]) {
 
                     failures++;
                 }
@@ -187,32 +182,31 @@ cl_lexer_test_verify_token(H5CL_token_t * token_ptr, int token_num,
         }
     }
 
-    if ( ( failures > 0 ) && ( verbose ) ) {
+    if ((failures > 0) && (verbose)) {
 
         fprintf(stdout, "\n\nToken %d verify failed:\n", token_num);
         fprintf(stdout, "token actual / expected code    = %d / %d\n", token_ptr->code, expected_code);
-        fprintf(stdout, "token actual / expected str_ptr = \"%s\" / \"%s\"\n", 
-                token_ptr->str_ptr, expected_str);
-        fprintf(stdout, "token actual / expected str_len = %ld / %ld\n", 
-                token_ptr->str_len, strlen(expected_str));
-        fprintf(stdout, "token actual / expected int_val = %lld / %lld\n", 
+        fprintf(stdout, "token actual / expected str_ptr = \"%s\" / \"%s\"\n", token_ptr->str_ptr,
+                expected_str);
+        fprintf(stdout, "token actual / expected str_len = %ld / %ld\n", token_ptr->str_len,
+                strlen(expected_str));
+        fprintf(stdout, "token actual / expected int_val = %lld / %lld\n",
                 (long long int)(token_ptr->int_val), (long long int)(expected_int_val));
-        fprintf(stdout, "token actual / expected f_val   = %lf / %lf\n", 
-                token_ptr->f_val, expected_f_val);
+        fprintf(stdout, "token actual / expected f_val   = %lf / %lf\n", token_ptr->f_val, expected_f_val);
         fprintf(stdout, "bb_len actual / expected        = %ld / %ld\n", token_ptr->bb_len, expected_bb_len);
 
-        if ( expected_bb_len > 0 ) {
+        if (expected_bb_len > 0) {
 
             fprintf(stdout, "actual bb   = ");
 
-            for ( i = 0; i < (int)expected_bb_len; i++ ) {
+            for (i = 0; i < (int)expected_bb_len; i++) {
 
                 fprintf(stdout, "0x%02x ", (unsigned)(token_ptr->bb_ptr[i]));
             }
 
             fprintf(stdout, "\nexpected bb = ");
 
-            for ( i = 0; i < (int)expected_bb_len; i++ ) {
+            for (i = 0; i < (int)expected_bb_len; i++) {
 
                 fprintf(stdout, "0x%02x ", (unsigned)(expected_bb_ptr[i]));
             }
@@ -221,16 +215,15 @@ cl_lexer_test_verify_token(H5CL_token_t * token_ptr, int token_num,
         }
     }
 
-    return(failures);
+    return (failures);
 
 } /* cl_lexer_test_verify_token() */
-
 
 /*******************************************************************************
  *
  * cl_test_verify_nv_pair()
  *
- * Verify that the supplied instance of cl_nv_pair_t contains the expected 
+ * Verify that the supplied instance of cl_nv_pair_t contains the expected
  * data.
  *
  *                                              JRM -- 12/19/25
@@ -242,11 +235,9 @@ cl_lexer_test_verify_token(H5CL_token_t * token_ptr, int token_num,
  *******************************************************************************/
 
 static int
-cl_test_verify_nv_pair(H5CL_nv_pair_t * nv_pair_ptr, int nv_pair_num, 
-                       const char * expected_name_ptr, int expected_val_type,
-                       int64_t expected_int_val, double expected_f_val,
-                       const void * expected_vlen_val_ptr, size_t expected_len,
-                       bool verbose)
+cl_test_verify_nv_pair(H5CL_nv_pair_t *nv_pair_ptr, int nv_pair_num, const char *expected_name_ptr,
+                       int expected_val_type, int64_t expected_int_val, double expected_f_val,
+                       const void *expected_vlen_val_ptr, size_t expected_len, bool verbose)
 {
     int failures = 0;
     int i;
@@ -254,26 +245,25 @@ cl_test_verify_nv_pair(H5CL_nv_pair_t * nv_pair_ptr, int nv_pair_num,
     assert(nv_pair_ptr);
     assert(H5CL_NV_PAIR_STRUCT_TAG == nv_pair_ptr->struct_tag);
 
-    if ( ( 0 != strcmp(nv_pair_ptr->name_ptr, expected_name_ptr) ) ||
-         ( expected_val_type != nv_pair_ptr->val_type ) ||
-         ( expected_int_val != nv_pair_ptr->int_val ) ||
-         ( expected_f_val < nv_pair_ptr->f_val ) ||     /* circumlocution to keep the */
-         ( expected_f_val > nv_pair_ptr->f_val ) ||     /* the compiler happy         */
-         ( expected_len != nv_pair_ptr->len ) ) {
+    if ((0 != strcmp(nv_pair_ptr->name_ptr, expected_name_ptr)) ||
+        (expected_val_type != nv_pair_ptr->val_type) || (expected_int_val != nv_pair_ptr->int_val) ||
+        (expected_f_val < nv_pair_ptr->f_val) || /* circumlocution to keep the */
+        (expected_f_val > nv_pair_ptr->f_val) || /* the compiler happy         */
+        (expected_len != nv_pair_ptr->len)) {
 
         failures++;
+    }
+    else {
 
-    } else {
-
-        switch ( nv_pair_ptr->val_type ) {
+        switch (nv_pair_ptr->val_type) {
 
             case H5CL_VAL_QSTR:
             case H5CL_VAL_LIST:
-                if ( 0 != strcmp((char *)(nv_pair_ptr->vlen_val_ptr), (const char *)(expected_vlen_val_ptr)) ) {
+                if (0 != strcmp((char *)(nv_pair_ptr->vlen_val_ptr), (const char *)(expected_vlen_val_ptr))) {
 
                     failures++;
-
-                } else if ( strlen((char *)(nv_pair_ptr->vlen_val_ptr)) != nv_pair_ptr->len ) {
+                }
+                else if (strlen((char *)(nv_pair_ptr->vlen_val_ptr)) != nv_pair_ptr->len) {
 
                     failures++;
                 }
@@ -281,10 +271,10 @@ cl_test_verify_nv_pair(H5CL_nv_pair_t * nv_pair_ptr, int nv_pair_num,
 
             case H5CL_VAL_BB:
 
-                for ( i = 0; i < (int)expected_len; i++ ) {
+                for (i = 0; i < (int)expected_len; i++) {
 
-                    if ( ((const uint8_t *)(expected_vlen_val_ptr))[i] != 
-                         ((uint8_t *)(nv_pair_ptr->vlen_val_ptr))[i] ) {
+                    if (((const uint8_t *)(expected_vlen_val_ptr))[i] !=
+                        ((uint8_t *)(nv_pair_ptr->vlen_val_ptr))[i]) {
 
                         failures++;
                     }
@@ -292,8 +282,7 @@ cl_test_verify_nv_pair(H5CL_nv_pair_t * nv_pair_ptr, int nv_pair_num,
                 break;
 
             default:
-                if ( ( NULL != nv_pair_ptr->vlen_val_ptr ) ||
-                     ( NULL != expected_vlen_val_ptr ) ) {
+                if ((NULL != nv_pair_ptr->vlen_val_ptr) || (NULL != expected_vlen_val_ptr)) {
 
                     failures++;
                 }
@@ -301,41 +290,42 @@ cl_test_verify_nv_pair(H5CL_nv_pair_t * nv_pair_ptr, int nv_pair_num,
         }
     }
 
-    if ( ( failures > 0 ) && ( verbose ) ) {
+    if ((failures > 0) && (verbose)) {
 
         fprintf(stdout, "\n\nName / Value Pair %d verify failed:\n", nv_pair_num);
-        fprintf(stdout, "nv pair actual / expected name     = \"%s\" / \"%s\" \n", 
-                nv_pair_ptr->name_ptr, expected_name_ptr);
-        fprintf(stdout, "nv pair actual / expected val_type = %d / %d\n", 
-                nv_pair_ptr->val_type, expected_val_type);
-        fprintf(stdout, "nv pair actual / expected int_val  = %lld / %lld\n", 
+        fprintf(stdout, "nv pair actual / expected name     = \"%s\" / \"%s\" \n", nv_pair_ptr->name_ptr,
+                expected_name_ptr);
+        fprintf(stdout, "nv pair actual / expected val_type = %d / %d\n", nv_pair_ptr->val_type,
+                expected_val_type);
+        fprintf(stdout, "nv pair actual / expected int_val  = %lld / %lld\n",
                 (long long int)(nv_pair_ptr->int_val), (long long int)(expected_int_val));
-        fprintf(stdout, "nv pair actual / expected f_val    = %lf / %lf\n", 
-                nv_pair_ptr->f_val, expected_f_val);
+        fprintf(stdout, "nv pair actual / expected f_val    = %lf / %lf\n", nv_pair_ptr->f_val,
+                expected_f_val);
 
-        switch ( expected_val_type ) {
+        switch (expected_val_type) {
 
             case H5CL_VAL_QSTR:
             case H5CL_VAL_LIST:
                 fprintf(stdout, "nv pair actual vlen val   = \"%s\"\n", (char *)(nv_pair_ptr->vlen_val_ptr));
-                fprintf(stdout, "nv pair expected vlen val = \"%s\"\n", (const char *)(expected_vlen_val_ptr));
+                fprintf(stdout, "nv pair expected vlen val = \"%s\"\n",
+                        (const char *)(expected_vlen_val_ptr));
                 break;
 
             case H5CL_VAL_BB:
-                if ( expected_len > 0 ) {
+                if (expected_len > 0) {
 
                     fprintf(stdout, "nv pair actual vlen val   = ");
 
-                    for ( i = 0; i < (int)expected_len; i++ ) {
+                    for (i = 0; i < (int)expected_len; i++) {
 
-                        fprintf(stdout, "%2x ", (unsigned)(((uint8_t*)(nv_pair_ptr->vlen_val_ptr))[i]));
+                        fprintf(stdout, "%2x ", (unsigned)(((uint8_t *)(nv_pair_ptr->vlen_val_ptr))[i]));
                     }
 
                     fprintf(stdout, "\nnv pair expected vlen val = ");
 
-                    for ( i = 0; i < (int)expected_len; i++ ) {
+                    for (i = 0; i < (int)expected_len; i++) {
 
-                        fprintf(stdout, "%2x ", (unsigned)(((const uint8_t*)(expected_vlen_val_ptr))[i]));
+                        fprintf(stdout, "%2x ", (unsigned)(((const uint8_t *)(expected_vlen_val_ptr))[i]));
                     }
 
                     fprintf(stdout, "\n");
@@ -343,25 +333,23 @@ cl_test_verify_nv_pair(H5CL_nv_pair_t * nv_pair_ptr, int nv_pair_num,
                 break;
 
             default:
-                fprintf(stdout, "nv pair actual / expected vlen_val_ptr = 0x%llx / 0x%llx\n", 
-                        (unsigned long long)(nv_pair_ptr->vlen_val_ptr), 
+                fprintf(stdout, "nv pair actual / expected vlen_val_ptr = 0x%llx / 0x%llx\n",
+                        (unsigned long long)(nv_pair_ptr->vlen_val_ptr),
                         (unsigned long long)(expected_vlen_val_ptr));
         }
 
-        fprintf(stdout, "nv pair len / expected len         = %ld / %ld\n", 
-                nv_pair_ptr->len, expected_len);
+        fprintf(stdout, "nv pair len / expected len         = %ld / %ld\n", nv_pair_ptr->len, expected_len);
     }
 
-    return(failures);
+    return (failures);
 
 } /* cl_test_verify_nv_pair() */
-
 
 /*******************************************************************************
  *
  * vfd_swmr_test_verify_config()()
  *
- * Verify that the supplied instance of H5F_vfd_swmr_config_t contains the expected 
+ * Verify that the supplied instance of H5F_vfd_swmr_config_t contains the expected
  * data.
  *
  *                                              Cody S. -- 04/28/26
@@ -373,259 +361,240 @@ cl_test_verify_nv_pair(H5CL_nv_pair_t * nv_pair_ptr, int nv_pair_num,
  *******************************************************************************/
 
 static int
-vfd_swmr_test_verify_config(H5F_vfd_swmr_config_t *input_config, 
-                            H5F_vfd_swmr_config_t *expected_config,
+vfd_swmr_test_verify_config(H5F_vfd_swmr_config_t *input_config, H5F_vfd_swmr_config_t *expected_config,
                             bool verbose)
 {
     int failures = 0;
 
-    if ( input_config->version != expected_config->version ) {
+    if (input_config->version != expected_config->version) {
 
         /* Print header once, before the first reported mismatch */
-        if ( failures == 0 && verbose ) {
+        if (failures == 0 && verbose) {
             fprintf(stdout, "\n\nH5F_vfd_swmr_config_t verify failed:\n");
         }
 
         failures++;
 
-        if ( verbose ) {
-            fprintf(stdout, "  %-28s actual=%d  expected=%d\n",
-                "version:",
-                input_config->version,
-                expected_config->version);
+        if (verbose) {
+            fprintf(stdout, "  %-28s actual=%d  expected=%d\n", "version:", input_config->version,
+                    expected_config->version);
         }
     }
-    if ( input_config->tick_len != expected_config->tick_len ) {
-        
+    if (input_config->tick_len != expected_config->tick_len) {
+
         /* Print header once, before the first reported mismatch */
-        if ( failures == 0 && verbose ) {
+        if (failures == 0 && verbose) {
             fprintf(stdout, "\n\nH5F_vfd_swmr_config_t verify failed:\n");
         }
 
         failures++;
 
-        if ( verbose ) {
-            fprintf(stdout, "  %-28s actual=%d  expected=%d\n",
-                "tick_len:",
-                input_config->tick_len,
-                expected_config->tick_len);
+        if (verbose) {
+            fprintf(stdout, "  %-28s actual=%d  expected=%d\n", "tick_len:", input_config->tick_len,
+                    expected_config->tick_len);
         }
     }
-    if ( input_config->max_lag != expected_config->max_lag ) {
+    if (input_config->max_lag != expected_config->max_lag) {
 
         /* Print header once, before the first reported mismatch */
-        if ( failures == 0 && verbose ) {
+        if (failures == 0 && verbose) {
             fprintf(stdout, "\n\nH5F_vfd_swmr_config_t verify failed:\n");
         }
 
         failures++;
 
-        if ( verbose ) {
-            fprintf(stdout, "  %-28s actual=%d  expected=%d\n",
-                "max_lag:",
-                input_config->max_lag,
-                expected_config->max_lag);
+        if (verbose) {
+            fprintf(stdout, "  %-28s actual=%d  expected=%d\n", "max_lag:", input_config->max_lag,
+                    expected_config->max_lag);
         }
     }
-    if ( input_config->presume_posix_semantics != expected_config->presume_posix_semantics ) { 
+    if (input_config->presume_posix_semantics != expected_config->presume_posix_semantics) {
 
         /* Print header once, before the first reported mismatch */
-        if ( failures == 0 && verbose ) {
+        if (failures == 0 && verbose) {
             fprintf(stdout, "\n\nH5F_vfd_swmr_config_t verify failed:\n");
         }
 
         failures++;
 
-        if ( verbose ) {
+        if (verbose) {
             fprintf(stdout, "  %-28s actual=%-5s expected=%-5s\n",
-                "presume_posix_semantics:",
-                input_config->presume_posix_semantics ? "true" : "false",
-                expected_config->presume_posix_semantics ? "true" : "false");
+                    "presume_posix_semantics:", input_config->presume_posix_semantics ? "true" : "false",
+                    expected_config->presume_posix_semantics ? "true" : "false");
         }
     }
-    if ( input_config->writer != expected_config->writer ) {
+    if (input_config->writer != expected_config->writer) {
 
         /* Print header once, before the first reported mismatch */
-        if ( failures == 0 && verbose ) {
+        if (failures == 0 && verbose) {
             fprintf(stdout, "\n\nH5F_vfd_swmr_config_t verify failed:\n");
         }
 
         failures++;
 
-        if ( verbose ) {
+        if (verbose) {
             fprintf(stdout, "  %-28s actual=%-5s expected=%-5s\n",
-                "writer:",
-                input_config->writer ? "true" : "false",
-                expected_config->writer ? "true" : "false");
+                    "writer:", input_config->writer ? "true" : "false",
+                    expected_config->writer ? "true" : "false");
         }
     }
-    if ( input_config->maintain_metadata_file != expected_config->maintain_metadata_file ) {
+    if (input_config->maintain_metadata_file != expected_config->maintain_metadata_file) {
 
         /* Print header once, before the first reported mismatch */
-        if ( failures == 0 && verbose ) {
+        if (failures == 0 && verbose) {
             fprintf(stdout, "\n\nH5F_vfd_swmr_config_t verify failed:\n");
         }
 
         failures++;
 
-        if ( verbose ) {
+        if (verbose) {
             fprintf(stdout, "  %-28s actual=%-5s expected=%-5s\n",
-                "maintain_metadata_file:",
-                input_config->maintain_metadata_file ? "true" : "false",
-                expected_config->maintain_metadata_file ? "true" : "false");
+                    "maintain_metadata_file:", input_config->maintain_metadata_file ? "true" : "false",
+                    expected_config->maintain_metadata_file ? "true" : "false");
         }
     }
-    if ( input_config->generate_updater_files != expected_config->generate_updater_files ) {
+    if (input_config->generate_updater_files != expected_config->generate_updater_files) {
 
         /* Print header once, before the first reported mismatch */
-        if ( failures == 0 && verbose ) {
+        if (failures == 0 && verbose) {
             fprintf(stdout, "\n\nH5F_vfd_swmr_config_t verify failed:\n");
         }
 
         failures++;
 
-        if ( verbose ) {
+        if (verbose) {
             fprintf(stdout, "  %-28s actual=%-5s expected=%-5s\n",
-                "generate_updater_files:",
-                input_config->generate_updater_files ? "true" : "false",
-                expected_config->generate_updater_files ? "true" : "false");
+                    "generate_updater_files:", input_config->generate_updater_files ? "true" : "false",
+                    expected_config->generate_updater_files ? "true" : "false");
         }
     }
-    if ( input_config->flush_raw_data != expected_config->flush_raw_data ) {
-  
+    if (input_config->flush_raw_data != expected_config->flush_raw_data) {
+
         /* Print header once, before the first reported mismatch */
-        if ( failures == 0 && verbose ) {
+        if (failures == 0 && verbose) {
             fprintf(stdout, "\n\nH5F_vfd_swmr_config_t verify failed:\n");
         }
 
         failures++;
 
-        if ( verbose ) {
+        if (verbose) {
             fprintf(stdout, "  %-28s actual=%-5s expected=%-5s\n",
-                    "flush_raw_data:",
-                    input_config->flush_raw_data ? "true" : "false",
+                    "flush_raw_data:", input_config->flush_raw_data ? "true" : "false",
                     expected_config->flush_raw_data ? "true" : "false");
         }
     }
-    if ( input_config->md_pages_reserved != expected_config->md_pages_reserved ) {
+    if (input_config->md_pages_reserved != expected_config->md_pages_reserved) {
 
         /* Print header once, before the first reported mismatch */
-        if ( failures == 0 && verbose ) {
+        if (failures == 0 && verbose) {
             fprintf(stdout, "\n\nH5F_vfd_swmr_config_t verify failed:\n");
         }
 
         failures++;
 
-        if ( verbose ) {
+        if (verbose) {
             fprintf(stdout, "  %-28s actual=%d  expected=%d\n",
-                "md_pages_reserved:",
-                input_config->md_pages_reserved,
-                expected_config->md_pages_reserved);
+                    "md_pages_reserved:", input_config->md_pages_reserved,
+                    expected_config->md_pages_reserved);
         }
     }
-    if ( input_config->pb_expansion_threshold != expected_config->pb_expansion_threshold ) {
+    if (input_config->pb_expansion_threshold != expected_config->pb_expansion_threshold) {
 
         /* Print header once, before the first reported mismatch */
-        if ( failures == 0 && verbose ) {
+        if (failures == 0 && verbose) {
             fprintf(stdout, "\n\nH5F_vfd_swmr_config_t verify failed:\n");
         }
 
         failures++;
 
-        if ( verbose ) {
+        if (verbose) {
             fprintf(stdout, "  %-28s actual=%d  expected=%d\n",
-                "pb_expansion_threshold:",
-                input_config->pb_expansion_threshold,
-                expected_config->pb_expansion_threshold);
+                    "pb_expansion_threshold:", input_config->pb_expansion_threshold,
+                    expected_config->pb_expansion_threshold);
         }
     }
-    if ( 0 != strcmp(input_config->md_file_path, expected_config->md_file_path) ) {
+    if (0 != strcmp(input_config->md_file_path, expected_config->md_file_path)) {
 
         /* Print header once, before the first reported mismatch */
-        if ( failures == 0 && verbose ) {
+        if (failures == 0 && verbose) {
             fprintf(stdout, "\n\nH5F_vfd_swmr_config_t verify failed:\n");
         }
 
         failures++;
 
-        if ( verbose ) {
+        if (verbose) {
             fprintf(stdout,
-                "  md_file_path:\n"
-                "    actual:   \"%s\"\n"
-                "    expected: \"%s\"\n",
-                input_config->md_file_path,
-                expected_config->md_file_path);
+                    "  md_file_path:\n"
+                    "    actual:   \"%s\"\n"
+                    "    expected: \"%s\"\n",
+                    input_config->md_file_path, expected_config->md_file_path);
         }
     }
-    if ( 0 != strcmp(input_config->md_file_name, expected_config->md_file_name) ) {
+    if (0 != strcmp(input_config->md_file_name, expected_config->md_file_name)) {
 
         /* Print header once, before the first reported mismatch */
-        if ( failures == 0 && verbose ) {
+        if (failures == 0 && verbose) {
             fprintf(stdout, "\n\nH5F_vfd_swmr_config_t verify failed:\n");
         }
 
         failures++;
 
-        if ( verbose ) {
+        if (verbose) {
             fprintf(stdout,
-                "  md_file_name:\n"
-                "    actual:   \"%s\"\n"
-                "    expected: \"%s\"\n",
-                input_config->md_file_name,
-                expected_config->md_file_name);
+                    "  md_file_name:\n"
+                    "    actual:   \"%s\"\n"
+                    "    expected: \"%s\"\n",
+                    input_config->md_file_name, expected_config->md_file_name);
         }
     }
-    if ( 0 != strcmp(input_config->updater_file_path, expected_config->updater_file_path) ) {
+    if (0 != strcmp(input_config->updater_file_path, expected_config->updater_file_path)) {
 
         /* Print header once, before the first reported mismatch */
-        if ( failures == 0 && verbose ) {
+        if (failures == 0 && verbose) {
             fprintf(stdout, "\n\nH5F_vfd_swmr_config_t verify failed:\n");
         }
 
         failures++;
 
-        if ( verbose ) {
+        if (verbose) {
             fprintf(stdout,
-                "  updater_file_path:\n"
-                "    actual:   \"%s\"\n"
-                "    expected: \"%s\"\n",
-                input_config->updater_file_path,
-                expected_config->updater_file_path);
+                    "  updater_file_path:\n"
+                    "    actual:   \"%s\"\n"
+                    "    expected: \"%s\"\n",
+                    input_config->updater_file_path, expected_config->updater_file_path);
         }
     }
-    if ( 0 != strcmp(input_config->log_file_path, expected_config->log_file_path) ) {
+    if (0 != strcmp(input_config->log_file_path, expected_config->log_file_path)) {
 
         /* Print header once, before the first reported mismatch */
-        if ( failures == 0 && verbose ) {
+        if (failures == 0 && verbose) {
             fprintf(stdout, "\n\nH5F_vfd_swmr_config_t verify failed:\n");
         }
 
         failures++;
 
-        if ( verbose ) {
+        if (verbose) {
             fprintf(stdout,
-                "  log_file_path:\n"
-                "    actual:   \"%s\"\n"
-                "    expected: \"%s\"\n",
-                input_config->log_file_path,
-                expected_config->log_file_path);
+                    "  log_file_path:\n"
+                    "    actual:   \"%s\"\n"
+                    "    expected: \"%s\"\n",
+                    input_config->log_file_path, expected_config->log_file_path);
         }
     }
 
-    if ( failures > 0 && verbose ){
+    if (failures > 0 && verbose) {
         fprintf(stdout, "Number of mismatched values: %d\n\n", failures);
     }
 
-    return(failures);
+    return (failures);
 } /* vfd_swmr_test_verify_config() */
-
 
 /*******************************************************************************
  *
  * cl_test_verify_nv_pair_vector()
  *
  * Verify that the supplied vectors of cl_nv_pair_t are identical.
- * 
+ *
  *
  *                                              JRM -- 12/19/25
  *
@@ -636,38 +605,32 @@ vfd_swmr_test_verify_config(H5F_vfd_swmr_config_t *input_config,
  *******************************************************************************/
 
 static int
-cl_test_verify_nv_pairs(H5CL_nv_pair_t * actual_nv_pairs, 
-                        H5CL_nv_pair_t * expected_nv_pairs,
-                        int num_nv_pairs, bool verbose)
+cl_test_verify_nv_pairs(H5CL_nv_pair_t *actual_nv_pairs, H5CL_nv_pair_t *expected_nv_pairs, int num_nv_pairs,
+                        bool verbose)
 {
     int failures = 0;
     int i;
 
-    for ( i = 0; i < num_nv_pairs; i++ ) {
+    for (i = 0; i < num_nv_pairs; i++) {
 
         assert(H5CL_NV_PAIR_STRUCT_TAG == expected_nv_pairs[i].struct_tag);
 
-        failures += cl_test_verify_nv_pair(&(actual_nv_pairs[i]), i, 
-                                           expected_nv_pairs[i].name_ptr,
-                                           expected_nv_pairs[i].val_type,
-                                           expected_nv_pairs[i].int_val,
-                                           expected_nv_pairs[i].f_val,
-                                           expected_nv_pairs[i].vlen_val_ptr,
-                                           expected_nv_pairs[i].len,
-                                           verbose);
+        failures += cl_test_verify_nv_pair(&(actual_nv_pairs[i]), i, expected_nv_pairs[i].name_ptr,
+                                           expected_nv_pairs[i].val_type, expected_nv_pairs[i].int_val,
+                                           expected_nv_pairs[i].f_val, expected_nv_pairs[i].vlen_val_ptr,
+                                           expected_nv_pairs[i].len, verbose);
     }
 
-    return(failures);
+    return (failures);
 
 } /* cl_test_verify_nv_pairs() */
-
 
 #if VERIFY_ERROR_STACK_SUPPORTED
 /*******************************************************************************
  *
  * cl_test_verify_error_stack()
  *
- * Verify that the bottom entry on the current error stack has major and 
+ * Verify that the bottom entry on the current error stack has major and
  * minor error IDs and error message matching the supplied values.
  *
  *                                              JRM -- 1/10/26
@@ -681,39 +644,40 @@ cl_test_verify_nv_pairs(H5CL_nv_pair_t * actual_nv_pairs,
 static int
 cl_test_verify_error_stack(hid_t maj_num, hid_t min_num, const char *desc, bool verbose)
 {
-    int failures = 0;
-    H5E_stack_t * estack_ptr;
-    H5E_entry_t * entry_ptr;
-    H5E_error2_t * err_ptr;
+    int           failures = 0;
+    H5E_stack_t  *estack_ptr;
+    H5E_entry_t  *entry_ptr;
+    H5E_error2_t *err_ptr;
 
-    if ( NULL == (estack_ptr = H5E__get_my_stack()) ) {
+    if (NULL == (estack_ptr = H5E__get_my_stack())) {
 
         failures++;
 
-        if ( verbose ) {
+        if (verbose) {
 
             fprintf(stderr, "\ncl_test_verify_error_stack(): can't get error stack\n");
         }
-    } else if ( estack_ptr->nused < 1 ) {
+    }
+    else if (estack_ptr->nused < 1) {
 
         failures++;
 
-        if ( verbose ) {
+        if (verbose) {
 
             fprintf(stderr, "\ncl_test_verify_error_stack(): error stack is empty\n");
         }
-    } else {
+    }
+    else {
 
         entry_ptr = &(estack_ptr->entries[0]);
-        err_ptr = &(entry_ptr->err);
+        err_ptr   = &(entry_ptr->err);
 
-        if ( ( maj_num != err_ptr->maj_num ) ||
-             ( min_num != err_ptr->min_num ) ||
-             ( 0 != strcmp(desc, err_ptr->desc) ) ) {
+        if ((maj_num != err_ptr->maj_num) || (min_num != err_ptr->min_num) ||
+            (0 != strcmp(desc, err_ptr->desc))) {
 
             failures++;
 
-            if ( verbose ) {
+            if (verbose) {
 
                 fprintf(stderr, "\n\nActual / Expected major error number = 0x%llx / 0x%llx.\n",
                         (long long)(err_ptr->maj_num), (long long)(maj_num));
@@ -727,7 +691,7 @@ cl_test_verify_error_stack(hid_t maj_num, hid_t min_num, const char *desc, bool 
         H5E__clear_stack(estack_ptr);
     }
 
-    return(failures);
+    return (failures);
 
 } /* cl_test_verify_error_stack() */
 #endif
@@ -750,133 +714,113 @@ cl_test_verify_error_stack(hid_t maj_num, hid_t min_num, const char *desc, bool 
 static herr_t
 cl_lexer_smoke_check(void)
 {
-    int token_num = 0;
-    const char * input_string = "( ) /* comment */ symbol 1 3.14159 \"Hello World\" --00010203 ( sec2 () )";
-    uint8_t bb_0[] = { 0, 1, 2, 3};
-    size_t bb_0_len = 4;
-    H5CL_token_t * token_ptr;
-    H5CL_lex_vars_t lex_vars = {
-        /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
-        /* input_str_ptr     = */ NULL,
-        /* next_char_ptr     = */ NULL,
-        /* end_of_input      = */ false, 
-        /* err_ctx           = */ "",
-        /* token             = */ {
-        /* token.struct_tag  = */    H5CL_TOKEN_STRUCT_TAG,
-        /* token.code        = */    H5CL_ERROR_TOK,
-        /* token.str_ptr     = */    NULL,
-        /* token.str_len     = */    0,
-        /* token.max_str_len = */    0,
-        /* token.int_val     = */    1,    /* should be overwritten on init */
-        /* token.f_val       = */    1.0,  /* should be overwritten on init */
-        /* token.bb_ptr      = */    NULL,
-        /* token.bb_len      = */    0
-        /* end of token        */ }
-    };
+    int           token_num    = 0;
+    const char   *input_string = "( ) /* comment */ symbol 1 3.14159 \"Hello World\" --00010203 ( sec2 () )";
+    uint8_t       bb_0[]       = {0, 1, 2, 3};
+    size_t        bb_0_len     = 4;
+    H5CL_token_t *token_ptr;
+    H5CL_lex_vars_t lex_vars = {/* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
+                                /* input_str_ptr     = */ NULL,
+                                /* next_char_ptr     = */ NULL,
+                                /* end_of_input      = */ false,
+                                /* err_ctx           = */ "",
+                                /* token             = */
+                                {/* token.struct_tag  = */ H5CL_TOKEN_STRUCT_TAG,
+                                 /* token.code        = */ H5CL_ERROR_TOK,
+                                 /* token.str_ptr     = */ NULL,
+                                 /* token.str_len     = */ 0,
+                                 /* token.max_str_len = */ 0,
+                                 /* token.int_val     = */ 1,   /* should be overwritten on init */
+                                 /* token.f_val       = */ 1.0, /* should be overwritten on init */
+                                 /* token.bb_ptr      = */ NULL,
+                                 /* token.bb_len      = */ 0
+                                 /* end of token        */}};
 
     TESTING("VFD Configuration Language Lexer Smoke Check");
 
-    if ( H5CL__init_lex_vars(input_string, &lex_vars) < 0 ) {
+    if (H5CL__init_lex_vars(input_string, &lex_vars) < 0) {
 
         TEST_ERROR;
     }
 
-    if ( ( H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL == lex_vars.input_str_ptr ) ||
-         ( input_string == lex_vars.input_str_ptr ) ||
-         ( 0 != strcmp(input_string, lex_vars.input_str_ptr) ) ||
-         ( lex_vars.input_str_ptr != lex_vars.next_char_ptr ) || 
-         ( H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( H5CL_ERROR_TOK != lex_vars.token.code ) ||
-         ( NULL == lex_vars.token.str_ptr ) ||
-         ( 0 != lex_vars.token.str_len ) ||
-         ( strlen(input_string) != lex_vars.token.max_str_len ) ||
-         ( 0 != lex_vars.token.int_val ) ||
-         ( 0.0 < lex_vars.token.f_val ) ||    /* circumlocution to keep */
-         ( 0.0 > lex_vars.token.f_val ) ||    /* the compier happy      */
-         ( NULL == lex_vars.token.bb_ptr ) ||
-         ( 0 != lex_vars.token.bb_len ) ) {
+    if ((H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL == lex_vars.input_str_ptr) ||
+        (input_string == lex_vars.input_str_ptr) || (0 != strcmp(input_string, lex_vars.input_str_ptr)) ||
+        (lex_vars.input_str_ptr != lex_vars.next_char_ptr) ||
+        (H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (H5CL_ERROR_TOK != lex_vars.token.code) ||
+        (NULL == lex_vars.token.str_ptr) || (0 != lex_vars.token.str_len) ||
+        (strlen(input_string) != lex_vars.token.max_str_len) || (0 != lex_vars.token.int_val) ||
+        (0.0 < lex_vars.token.f_val) || /* circumlocution to keep */
+        (0.0 > lex_vars.token.f_val) || /* the compier happy      */
+        (NULL == lex_vars.token.bb_ptr) || (0 != lex_vars.token.bb_len)) {
 
         TEST_ERROR;
     }
 
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 0 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 0 */
         TEST_ERROR;
 
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_L_PAREN_TOK, "(", 0, 0.0, NULL, 0, true) )
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_L_PAREN_TOK, "(", 0, 0.0, NULL, 0, true))
         TEST_ERROR;
 
-
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 1 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 1 */
         TEST_ERROR;
 
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_R_PAREN_TOK, ")", 0, 0.0, NULL, 0, true) )
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_R_PAREN_TOK, ")", 0, 0.0, NULL, 0, true))
         TEST_ERROR;
 
-
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 2 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 2 */
         TEST_ERROR;
 
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_SYMBOL_TOK, "symbol", 0, 0.0, 
-                                         NULL, 0, true) )
+    if (0 !=
+        cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_SYMBOL_TOK, "symbol", 0, 0.0, NULL, 0, true))
         TEST_ERROR;
 
-
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 3 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 3 */
         TEST_ERROR;
 
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_INT_TOK, "1", 1, 0.0, NULL, 0, true) )
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_INT_TOK, "1", 1, 0.0, NULL, 0, true))
         TEST_ERROR;
 
-
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 4 */
-        TEST_ERROR;
-    
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_FLOAT_TOK, "3.14159", 0, 3.14159, 
-                                         NULL, 0, true) )
-        TEST_ERROR;
-    
-
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 5 */
-        TEST_ERROR;
-    
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_QSTRING_TOK, "Hello World", 0, 0.0, 
-                                         NULL, 0, true) )
-        TEST_ERROR;
-    
-
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 6 */
-        TEST_ERROR;
-    
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_BIN_BLOB_TOK, "--00010203", 0, 0.0, 
-                                          bb_0, bb_0_len, true) )
-        TEST_ERROR;
-    
-
-    if ( H5CL__lex_read_token(true, false, &token_ptr, &lex_vars) < 0 ) /* 7 */
-        TEST_ERROR;
-    
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_LIST_TOK, "( sec2 () )", 0, 0.0, 
-                                         NULL, 0, true) )
-        TEST_ERROR;
-    
-
-    if ( H5CL__lex_read_token(false, true, &token_ptr, &lex_vars) < 0 ) /* 8 */
-        TEST_ERROR;
-    
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_EOS_TOK, "", 0, 0.0, NULL, 0, true) )
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 4 */
         TEST_ERROR;
 
-
-    if ( H5CL__take_down_lex_vars(&lex_vars) < 0 )
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_FLOAT_TOK, "3.14159", 0, 3.14159, NULL,
+                                        0, true))
         TEST_ERROR;
-    
 
-    if ( ( H5CL_INVALID_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL != lex_vars.input_str_ptr ) ||
-         ( H5CL_INVALID_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( NULL != lex_vars.token.str_ptr ) ||
-         ( NULL != lex_vars.token.bb_ptr ) ) {
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 5 */
+        TEST_ERROR;
+
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_QSTRING_TOK, "Hello World", 0, 0.0, NULL,
+                                        0, true))
+        TEST_ERROR;
+
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 6 */
+        TEST_ERROR;
+
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_BIN_BLOB_TOK, "--00010203", 0, 0.0, bb_0,
+                                        bb_0_len, true))
+        TEST_ERROR;
+
+    if (H5CL__lex_read_token(true, false, &token_ptr, &lex_vars) < 0) /* 7 */
+        TEST_ERROR;
+
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_LIST_TOK, "( sec2 () )", 0, 0.0, NULL, 0,
+                                        true))
+        TEST_ERROR;
+
+    if (H5CL__lex_read_token(false, true, &token_ptr, &lex_vars) < 0) /* 8 */
+        TEST_ERROR;
+
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_EOS_TOK, "", 0, 0.0, NULL, 0, true))
+        TEST_ERROR;
+
+    if (H5CL__take_down_lex_vars(&lex_vars) < 0)
+        TEST_ERROR;
+
+    if ((H5CL_INVALID_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL != lex_vars.input_str_ptr) ||
+        (H5CL_INVALID_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (NULL != lex_vars.token.str_ptr) ||
+        (NULL != lex_vars.token.bb_ptr)) {
 
         TEST_ERROR;
     }
@@ -890,7 +834,6 @@ error:
     return -1;
 
 } /* cl_lexer_smoke_check() */
-
 
 /*******************************************************************************
  *
@@ -910,317 +853,266 @@ error:
 static herr_t
 cl_lexer_detail_check(void)
 {
-    int token_num = 0;
-    const char * input_string = "(()())/* comment */)A1 1+1-1 2A2 1.1.1 +.2-.3\"i\"A/**/B\"\\\"\")"
-                                "--0--123 --aAb --AaB --0ff)(/* commenta can appear in lists)"
-                                "(ilegal characters, i.e.!@#$%^;:&*, can appear in lists)"
-                                "( and ()(((arbitrary))nesting of((parens))))";
-    uint8_t bb_0[] = { 0 };
-    uint8_t bb_1[] = { 18, 48 };
-    uint8_t bb_2[] = { 170, 176 };
-    uint8_t bb_3[] = { 15, 240 };
-    size_t bb_0_len = 1;
-    size_t bb_1_len = 2;
-    size_t bb_2_len = 2;
-    size_t bb_3_len = 2;
-    H5CL_token_t * token_ptr;
-    H5CL_lex_vars_t lex_vars = {
-        /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
-        /* input_str_ptr     = */ NULL,
-        /* next_char_ptr     = */ NULL,
-        /* end_of_input      = */ false, 
-        /* err_ctx           = */ "",
-        /* token             = */ {
-        /* token.struct_tag  = */    H5CL_TOKEN_STRUCT_TAG,
-        /* token.code        = */    H5CL_ERROR_TOK,
-        /* token.str_ptr     = */    NULL,
-        /* token.str_len     = */    0,
-        /* token.max_str_len = */    0,
-        /* token.int_val     = */    1,    /* should be overwritten on init */
-        /* token.f_val       = */    1.0,  /* should be overwritten on init */
-        /* token.bb_ptr      = */    NULL,
-        /* token.bb_len      = */    0
-        /* end of token        */ }
-    };
+    int             token_num    = 0;
+    const char     *input_string = "(()())/* comment */)A1 1+1-1 2A2 1.1.1 +.2-.3\"i\"A/**/B\"\\\"\")"
+                                   "--0--123 --aAb --AaB --0ff)(/* commenta can appear in lists)"
+                                   "(ilegal characters, i.e.!@#$%^;:&*, can appear in lists)"
+                                   "( and ()(((arbitrary))nesting of((parens))))";
+    uint8_t         bb_0[]       = {0};
+    uint8_t         bb_1[]       = {18, 48};
+    uint8_t         bb_2[]       = {170, 176};
+    uint8_t         bb_3[]       = {15, 240};
+    size_t          bb_0_len     = 1;
+    size_t          bb_1_len     = 2;
+    size_t          bb_2_len     = 2;
+    size_t          bb_3_len     = 2;
+    H5CL_token_t   *token_ptr;
+    H5CL_lex_vars_t lex_vars = {/* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
+                                /* input_str_ptr     = */ NULL,
+                                /* next_char_ptr     = */ NULL,
+                                /* end_of_input      = */ false,
+                                /* err_ctx           = */ "",
+                                /* token             = */
+                                {/* token.struct_tag  = */ H5CL_TOKEN_STRUCT_TAG,
+                                 /* token.code        = */ H5CL_ERROR_TOK,
+                                 /* token.str_ptr     = */ NULL,
+                                 /* token.str_len     = */ 0,
+                                 /* token.max_str_len = */ 0,
+                                 /* token.int_val     = */ 1,   /* should be overwritten on init */
+                                 /* token.f_val       = */ 1.0, /* should be overwritten on init */
+                                 /* token.bb_ptr      = */ NULL,
+                                 /* token.bb_len      = */ 0
+                                 /* end of token        */}};
 
     TESTING("VFD Configuration Language Lexer detail Check");
 
-    if ( H5CL__init_lex_vars(input_string, &lex_vars) < 0 ) {
+    if (H5CL__init_lex_vars(input_string, &lex_vars) < 0) {
 
         TEST_ERROR;
     }
 
-    if ( ( H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL == lex_vars.input_str_ptr ) ||
-         ( input_string == lex_vars.input_str_ptr ) ||
-         ( 0 != strcmp(input_string, lex_vars.input_str_ptr) ) ||
-         ( lex_vars.input_str_ptr != lex_vars.next_char_ptr ) || 
-         ( H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( H5CL_ERROR_TOK != lex_vars.token.code ) ||
-         ( NULL == lex_vars.token.str_ptr ) ||
-         ( 0 != lex_vars.token.str_len ) ||
-         ( strlen(input_string) != lex_vars.token.max_str_len ) ||
-         ( 0 != lex_vars.token.int_val ) ||
-         ( 0.0 < lex_vars.token.f_val ) ||    /* circumlocution to keep */
-         ( 0.0 > lex_vars.token.f_val ) ||    /* the compier happy      */
-         ( NULL == lex_vars.token.bb_ptr ) ||
-         ( 0 != lex_vars.token.bb_len ) ) {
+    if ((H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL == lex_vars.input_str_ptr) ||
+        (input_string == lex_vars.input_str_ptr) || (0 != strcmp(input_string, lex_vars.input_str_ptr)) ||
+        (lex_vars.input_str_ptr != lex_vars.next_char_ptr) ||
+        (H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (H5CL_ERROR_TOK != lex_vars.token.code) ||
+        (NULL == lex_vars.token.str_ptr) || (0 != lex_vars.token.str_len) ||
+        (strlen(input_string) != lex_vars.token.max_str_len) || (0 != lex_vars.token.int_val) ||
+        (0.0 < lex_vars.token.f_val) || /* circumlocution to keep */
+        (0.0 > lex_vars.token.f_val) || /* the compier happy      */
+        (NULL == lex_vars.token.bb_ptr) || (0 != lex_vars.token.bb_len)) {
 
         TEST_ERROR;
     }
 
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 0 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 0 */
         TEST_ERROR;
 
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_L_PAREN_TOK, "(", 0, 0.0, NULL, 0, true) )
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_L_PAREN_TOK, "(", 0, 0.0, NULL, 0, true))
         TEST_ERROR;
 
-
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 1 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 1 */
         TEST_ERROR;
 
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_L_PAREN_TOK, "(", 0, 0.0, NULL, 0, true) )
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_L_PAREN_TOK, "(", 0, 0.0, NULL, 0, true))
         TEST_ERROR;
-
 
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 2 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 2 */
         TEST_ERROR;
 
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_R_PAREN_TOK, ")", 0, 0.0, NULL, 0, true) )
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_R_PAREN_TOK, ")", 0, 0.0, NULL, 0, true))
         TEST_ERROR;
 
-
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 3 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 3 */
         TEST_ERROR;
 
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_L_PAREN_TOK, "(", 0, 0.0, NULL, 0, true) )
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_L_PAREN_TOK, "(", 0, 0.0, NULL, 0, true))
         TEST_ERROR;
-
 
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 4 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 4 */
         TEST_ERROR;
 
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_R_PAREN_TOK, ")", 0, 0.0, NULL, 0, true) )
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_R_PAREN_TOK, ")", 0, 0.0, NULL, 0, true))
         TEST_ERROR;
 
-
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 5 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 5 */
         TEST_ERROR;
 
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_R_PAREN_TOK, ")", 0, 0.0, NULL, 0, true) )
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_R_PAREN_TOK, ")", 0, 0.0, NULL, 0, true))
         TEST_ERROR;
-
 
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 6 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 6 */
         TEST_ERROR;
 
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_R_PAREN_TOK, ")", 0, 0.0, NULL, 0, true) )
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_R_PAREN_TOK, ")", 0, 0.0, NULL, 0, true))
         TEST_ERROR;
 
-
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 7 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 7 */
         TEST_ERROR;
 
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_SYMBOL_TOK, "A1", 0, 0.0, 
-                                         NULL, 0, true) )
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_SYMBOL_TOK, "A1", 0, 0.0, NULL, 0, true))
         TEST_ERROR;
 
-
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 8 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 8 */
         TEST_ERROR;
 
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_INT_TOK, "1", 1, 0.0, NULL, 0, true) )
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_INT_TOK, "1", 1, 0.0, NULL, 0, true))
         TEST_ERROR;
-
 
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 9 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 9 */
         TEST_ERROR;
 
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_INT_TOK, "+1", 1, 0.0, NULL, 0, true) )
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_INT_TOK, "+1", 1, 0.0, NULL, 0, true))
         TEST_ERROR;
 
-
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 10 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 10 */
         TEST_ERROR;
 
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_INT_TOK, "-1", -1, 0.0, NULL, 0, true) )
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_INT_TOK, "-1", -1, 0.0, NULL, 0, true))
         TEST_ERROR;
-
 
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 11 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 11 */
         TEST_ERROR;
 
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_INT_TOK, "2", 2, 0.0, NULL, 0, true) )
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_INT_TOK, "2", 2, 0.0, NULL, 0, true))
         TEST_ERROR;
 
-
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 12 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 12 */
         TEST_ERROR;
 
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_SYMBOL_TOK, "A2", 0, 0.0, 
-                                         NULL, 0, true) )
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_SYMBOL_TOK, "A2", 0, 0.0, NULL, 0, true))
         TEST_ERROR;
 
-
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 13 */
-        TEST_ERROR;
-    
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_FLOAT_TOK, "1.1", 0, 1.1, 
-                                         NULL, 0, true) )
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 13 */
         TEST_ERROR;
 
-
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 14 */
-        TEST_ERROR;
-    
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_FLOAT_TOK, ".1", 0, .1, 
-                                         NULL, 0, true) )
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_FLOAT_TOK, "1.1", 0, 1.1, NULL, 0, true))
         TEST_ERROR;
 
-
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 15 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 14 */
         TEST_ERROR;
-    
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_FLOAT_TOK, "+.2", 0, .2, 
-                                         NULL, 0, true) )
-        TEST_ERROR;
-
 
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 16 */
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_FLOAT_TOK, ".1", 0, .1, NULL, 0, true))
         TEST_ERROR;
-    
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_FLOAT_TOK, "-.3", 0, -.3, 
-                                         NULL, 0, true) )
-        TEST_ERROR;
-
 
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 17 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 15 */
         TEST_ERROR;
-    
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_QSTRING_TOK, "i", 0, 0.0, 
-                                         NULL, 0, true) )
-        TEST_ERROR;
-
 
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 18 */
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_FLOAT_TOK, "+.2", 0, .2, NULL, 0, true))
         TEST_ERROR;
 
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_SYMBOL_TOK, "A", 0, 0.0, 
-                                         NULL, 0, true) )
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 16 */
         TEST_ERROR;
 
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_FLOAT_TOK, "-.3", 0, -.3, NULL, 0, true))
+        TEST_ERROR;
 
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 19 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 17 */
         TEST_ERROR;
 
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_SYMBOL_TOK, "B", 0, 0.0, 
-                                         NULL, 0, true) )
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_QSTRING_TOK, "i", 0, 0.0, NULL, 0, true))
         TEST_ERROR;
-    
 
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 20 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 18 */
         TEST_ERROR;
-    
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_QSTRING_TOK, "\\\"", 0, 0.0, 
-                                         NULL, 0, true) )
+
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_SYMBOL_TOK, "A", 0, 0.0, NULL, 0, true))
         TEST_ERROR;
 
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 19 */
+        TEST_ERROR;
 
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 21 */
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_SYMBOL_TOK, "B", 0, 0.0, NULL, 0, true))
         TEST_ERROR;
 
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_R_PAREN_TOK, ")", 0, 0.0, NULL, 0, true) )
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 20 */
         TEST_ERROR;
-    
 
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 22 */
+    if (0 !=
+        cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_QSTRING_TOK, "\\\"", 0, 0.0, NULL, 0, true))
         TEST_ERROR;
-    
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_BIN_BLOB_TOK, "--0", 0, 0.0, 
-                                          bb_0, bb_0_len, true) )
+
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 21 */
         TEST_ERROR;
-    
 
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 23 */
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_R_PAREN_TOK, ")", 0, 0.0, NULL, 0, true))
         TEST_ERROR;
-    
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_BIN_BLOB_TOK, "--123", 0, 0.0, 
-                                          bb_1, bb_1_len, true) )
+
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 22 */
         TEST_ERROR;
-    
 
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 24 */
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_BIN_BLOB_TOK, "--0", 0, 0.0, bb_0,
+                                        bb_0_len, true))
         TEST_ERROR;
-    
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_BIN_BLOB_TOK, "--aAb", 0, 0.0, 
-                                          bb_2, bb_2_len, true) )
+
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 23 */
         TEST_ERROR;
-    
 
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 25 */
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_BIN_BLOB_TOK, "--123", 0, 0.0, bb_1,
+                                        bb_1_len, true))
         TEST_ERROR;
-    
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_BIN_BLOB_TOK, "--AaB", 0, 0.0, 
-                                          bb_2, bb_2_len, true) )
+
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 24 */
         TEST_ERROR;
-    
 
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 26 */
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_BIN_BLOB_TOK, "--aAb", 0, 0.0, bb_2,
+                                        bb_2_len, true))
         TEST_ERROR;
-    
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_BIN_BLOB_TOK, "--0ff", 0, 0.0, 
-                                          bb_3, bb_3_len, true) )
+
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 25 */
         TEST_ERROR;
 
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_BIN_BLOB_TOK, "--AaB", 0, 0.0, bb_2,
+                                        bb_2_len, true))
+        TEST_ERROR;
 
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0 ) /* 27 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 26 */
         TEST_ERROR;
 
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_R_PAREN_TOK, ")", 0, 0.0, NULL, 0, true) )
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_BIN_BLOB_TOK, "--0ff", 0, 0.0, bb_3,
+                                        bb_3_len, true))
         TEST_ERROR;
-    
 
-    if ( H5CL__lex_read_token(true, false, &token_ptr, &lex_vars) < 0 ) /* 28 */
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) < 0) /* 27 */
         TEST_ERROR;
-    
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_LIST_TOK, 
-                                         "(/* commenta can appear in lists)", 0, 0.0, NULL, 0, true) )
+
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_R_PAREN_TOK, ")", 0, 0.0, NULL, 0, true))
         TEST_ERROR;
-    
 
-    if ( H5CL__lex_read_token(true, false, &token_ptr, &lex_vars) < 0 ) /* 29 */
+    if (H5CL__lex_read_token(true, false, &token_ptr, &lex_vars) < 0) /* 28 */
         TEST_ERROR;
-    
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_LIST_TOK, 
-                                         "(ilegal characters, i.e.!@#$%^;:&*, can appear in lists)", 0, 0.0, 
-                                         NULL, 0, true) )
+
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_LIST_TOK,
+                                        "(/* commenta can appear in lists)", 0, 0.0, NULL, 0, true))
         TEST_ERROR;
-    
 
-    if ( H5CL__lex_read_token(true, false, &token_ptr, &lex_vars) < 0 ) /* 30 */
+    if (H5CL__lex_read_token(true, false, &token_ptr, &lex_vars) < 0) /* 29 */
         TEST_ERROR;
-    
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_LIST_TOK, 
-                                         "( and ()(((arbitrary))nesting of((parens))))", 0, 0.0, 
-                                         NULL, 0, true) )
+
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_LIST_TOK,
+                                        "(ilegal characters, i.e.!@#$%^;:&*, can appear in lists)", 0, 0.0,
+                                        NULL, 0, true))
         TEST_ERROR;
 
+    if (H5CL__lex_read_token(true, false, &token_ptr, &lex_vars) < 0) /* 30 */
+        TEST_ERROR;
 
-    if ( H5CL__lex_read_token(false, true, &token_ptr, &lex_vars) < 0 ) /* 31 */
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_LIST_TOK,
+                                        "( and ()(((arbitrary))nesting of((parens))))", 0, 0.0, NULL, 0,
+                                        true))
         TEST_ERROR;
-    
-    if ( 0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_EOS_TOK, "", 0, 0.0, NULL, 0, true) )
+
+    if (H5CL__lex_read_token(false, true, &token_ptr, &lex_vars) < 0) /* 31 */
         TEST_ERROR;
 
+    if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_EOS_TOK, "", 0, 0.0, NULL, 0, true))
+        TEST_ERROR;
 
-    if ( H5CL__take_down_lex_vars(&lex_vars) < 0 )
+    if (H5CL__take_down_lex_vars(&lex_vars) < 0)
         TEST_ERROR;
 
-    if ( ( H5CL_INVALID_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL != lex_vars.input_str_ptr ) ||
-         ( H5CL_INVALID_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( NULL != lex_vars.token.str_ptr ) ||
-         ( NULL != lex_vars.token.bb_ptr ) ) {
+    if ((H5CL_INVALID_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL != lex_vars.input_str_ptr) ||
+        (H5CL_INVALID_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (NULL != lex_vars.token.str_ptr) ||
+        (NULL != lex_vars.token.bb_ptr)) {
 
         TEST_ERROR;
     }
@@ -1234,7 +1126,6 @@ error:
     return -1;
 
 } /* cl_lexer_detail_check() */
-
 
 /*******************************************************************************
  *
@@ -1253,197 +1144,188 @@ error:
 static herr_t
 cl_lexer_error_check_1(void)
 {
-    const char * input_string = "* /* a comment */&/*another comment */    _=% {}[]\"unterminated string";
+    const char *input_string = "* /* a comment */&/*another comment */    _=% {}[]\"unterminated string";
 #if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
 #endif
-    H5CL_token_t * token_ptr;
-    H5CL_lex_vars_t lex_vars = {
-        /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
-        /* input_str_ptr     = */ NULL,
-        /* next_char_ptr     = */ NULL,
-        /* end_of_input      = */ false, 
-        /* err_ctx           = */ "",
-        /* token             = */ {
-        /* token.struct_tag  = */    H5CL_TOKEN_STRUCT_TAG,
-        /* token.code        = */    H5CL_ERROR_TOK,
-        /* token.str_ptr     = */    NULL,
-        /* token.str_len     = */    0,
-        /* token.max_str_len = */    0,
-        /* token.int_val     = */    1,    /* should be overwritten on init */
-        /* token.f_val       = */    1.0,  /* should be overwritten on init */
-        /* token.bb_ptr      = */    NULL,
-        /* token.bb_len      = */    0
-        /* end of token        */ }
-    };
+    H5CL_token_t   *token_ptr;
+    H5CL_lex_vars_t lex_vars = {/* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
+                                /* input_str_ptr     = */ NULL,
+                                /* next_char_ptr     = */ NULL,
+                                /* end_of_input      = */ false,
+                                /* err_ctx           = */ "",
+                                /* token             = */
+                                {/* token.struct_tag  = */ H5CL_TOKEN_STRUCT_TAG,
+                                 /* token.code        = */ H5CL_ERROR_TOK,
+                                 /* token.str_ptr     = */ NULL,
+                                 /* token.str_len     = */ 0,
+                                 /* token.max_str_len = */ 0,
+                                 /* token.int_val     = */ 1,   /* should be overwritten on init */
+                                 /* token.f_val       = */ 1.0, /* should be overwritten on init */
+                                 /* token.bb_ptr      = */ NULL,
+                                 /* token.bb_len      = */ 0
+                                 /* end of token        */}};
 
     TESTING("VFD Configuration Language Lexer error detection & reporting 1");
 
-    if ( H5CL__init_lex_vars(input_string, &lex_vars) < 0 ) {
+    if (H5CL__init_lex_vars(input_string, &lex_vars) < 0) {
 
         TEST_ERROR;
     }
 
-    if ( ( H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL == lex_vars.input_str_ptr ) ||
-         ( input_string == lex_vars.input_str_ptr ) ||
-         ( 0 != strcmp(input_string, lex_vars.input_str_ptr) ) ||
-         ( lex_vars.input_str_ptr != lex_vars.next_char_ptr ) || 
-         ( H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( H5CL_ERROR_TOK != lex_vars.token.code ) ||
-         ( NULL == lex_vars.token.str_ptr ) ||
-         ( 0 != lex_vars.token.str_len ) ||
-         ( strlen(input_string) != lex_vars.token.max_str_len ) ||
-         ( 0 != lex_vars.token.int_val ) ||
-         ( 0.0 < lex_vars.token.f_val ) ||    /* circumlocution to keep */
-         ( 0.0 > lex_vars.token.f_val ) ||    /* the compier happy      */
-         ( NULL == lex_vars.token.bb_ptr ) ||
-         ( 0 != lex_vars.token.bb_len ) ) {
+    if ((H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL == lex_vars.input_str_ptr) ||
+        (input_string == lex_vars.input_str_ptr) || (0 != strcmp(input_string, lex_vars.input_str_ptr)) ||
+        (lex_vars.input_str_ptr != lex_vars.next_char_ptr) ||
+        (H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (H5CL_ERROR_TOK != lex_vars.token.code) ||
+        (NULL == lex_vars.token.str_ptr) || (0 != lex_vars.token.str_len) ||
+        (strlen(input_string) != lex_vars.token.max_str_len) || (0 != lex_vars.token.int_val) ||
+        (0.0 < lex_vars.token.f_val) || /* circumlocution to keep */
+        (0.0 > lex_vars.token.f_val) || /* the compier happy      */
+        (NULL == lex_vars.token.bb_ptr) || (0 != lex_vars.token.bb_len)) {
 
         TEST_ERROR;
     }
 
     /* should fail on illegal char '*' */
-    if  ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0 ) {
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                               "Illegal char '*' in input string.  Context: * /* a comment */&/*another co...", 
-                               verbose) ) {
+    else if (0 != cl_test_verify_error_stack(
+                      H5E_ARGS, H5E_BADVALUE,
+                      "Illegal char '*' in input string.  Context: * /* a comment */&/*another co...",
+                      verbose)) {
 
         TEST_ERROR;
     }
 #endif
     /* should fail on illegal char '&' */
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0 ) {
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                               "Illegal char '&' in input string.  Context: ...* a comment */&/*another comme...",
-                                verbose) ) {
+    else if (0 != cl_test_verify_error_stack(
+                      H5E_ARGS, H5E_BADVALUE,
+                      "Illegal char '&' in input string.  Context: ...* a comment */&/*another comme...",
+                      verbose)) {
 
         TEST_ERROR;
     }
 #endif
     /* should fail on illegal char '_' */
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0 ) {
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                "Illegal char '_' in input string.  Context: ...comment */    _=% {}[]\"untermi...",
-                                verbose) ) {
+    else if (0 != cl_test_verify_error_stack(
+                      H5E_ARGS, H5E_BADVALUE,
+                      "Illegal char '_' in input string.  Context: ...comment */    _=% {}[]\"untermi...",
+                      verbose)) {
 
         TEST_ERROR;
     }
 #endif
     /* should fail on illegal char '=' */
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0 ) {
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                "Illegal char '=' in input string.  Context: ...omment */    _=% {}[]\"untermin...",
-                                verbose) ) {
+    else if (0 != cl_test_verify_error_stack(
+                      H5E_ARGS, H5E_BADVALUE,
+                      "Illegal char '=' in input string.  Context: ...omment */    _=% {}[]\"untermin...",
+                      verbose)) {
 
         TEST_ERROR;
     }
 #endif
 
     /* should fail on illegal char '%' */
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0 ) {
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                "Percent sign in input string.  Context: ...mment */    _=% {}[]\"untermina...",
-                                verbose) ) {
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(
+                      H5E_ARGS, H5E_BADVALUE,
+                      "Percent sign in input string.  Context: ...mment */    _=% {}[]\"untermina...",
+                      verbose)) {
 
         TEST_ERROR;
     }
 #endif
 
     /* should fail on illegal char '{' */
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0 ) {
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                "Illegal char '{' in input string.  Context: ...ent */    _=% {}[]\"unterminate...",
-                                verbose) ) {
+    else if (0 != cl_test_verify_error_stack(
+                      H5E_ARGS, H5E_BADVALUE,
+                      "Illegal char '{' in input string.  Context: ...ent */    _=% {}[]\"unterminate...",
+                      verbose)) {
 
         TEST_ERROR;
     }
 #endif
 
     /* should fail on illegal char '}' */
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0 ) {
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                "Illegal char '}' in input string.  Context: ...nt */    _=% {}[]\"unterminated...",
-                                verbose) ) {
+    else if (0 != cl_test_verify_error_stack(
+                      H5E_ARGS, H5E_BADVALUE,
+                      "Illegal char '}' in input string.  Context: ...nt */    _=% {}[]\"unterminated...",
+                      verbose)) {
 
         TEST_ERROR;
     }
 #endif
     /* should fail on illegal char '[' */
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0 ) {
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                "Illegal char '[' in input string.  Context: ...t */    _=% {}[]\"unterminated ...",
-                                verbose) ) {
+    else if (0 != cl_test_verify_error_stack(
+                      H5E_ARGS, H5E_BADVALUE,
+                      "Illegal char '[' in input string.  Context: ...t */    _=% {}[]\"unterminated ...",
+                      verbose)) {
 
         TEST_ERROR;
     }
 #endif
 
     /* should fail on illegal char ']' */
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0 ) {
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                "Illegal char ']' in input string.  Context: ... */    _=% {}[]\"unterminated s...",
-                                verbose) ) {
+    else if (0 != cl_test_verify_error_stack(
+                      H5E_ARGS, H5E_BADVALUE,
+                      "Illegal char ']' in input string.  Context: ... */    _=% {}[]\"unterminated s...",
+                      verbose)) {
 
         TEST_ERROR;
     }
 #endif
 
     /* should fail on an unterminated string' */
-    if ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0 ) {
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                "Un-terminate quote string in input string.  Context: ...rminated string",
-                                verbose) ) {
+    else if (0 != cl_test_verify_error_stack(
+                      H5E_ARGS, H5E_BADVALUE,
+                      "Un-terminate quote string in input string.  Context: ...rminated string", verbose)) {
 
         TEST_ERROR;
     }
@@ -1458,7 +1340,6 @@ error:
     return -1;
 
 } /* cl_lexer_error_check_1() */
-
 
 /*******************************************************************************
  *
@@ -1477,141 +1358,133 @@ error:
 static herr_t
 cl_lexer_error_check_2(void)
 {
-    const char * input_string = "/* malformed numeric values */ + - . +. -. (an unterminated list";
+    const char *input_string = "/* malformed numeric values */ + - . +. -. (an unterminated list";
 #if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
 #endif
-    H5CL_token_t * token_ptr;
-    H5CL_lex_vars_t lex_vars = {
-        /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
-        /* input_str_ptr     = */ NULL,
-        /* next_char_ptr     = */ NULL,
-        /* end_of_input      = */ false, 
-        /* err_ctx           = */ "",
-        /* token             = */ {
-        /* token.struct_tag  = */    H5CL_TOKEN_STRUCT_TAG,
-        /* token.code        = */    H5CL_ERROR_TOK,
-        /* token.str_ptr     = */    NULL,
-        /* token.str_len     = */    0,
-        /* token.max_str_len = */    0,
-        /* token.int_val     = */    1,    /* should be overwritten on init */
-        /* token.f_val       = */    1.0,  /* should be overwritten on init */
-        /* token.bb_ptr      = */    NULL,
-        /* token.bb_len      = */    0
-        /* end of token        */ }
-    };
+    H5CL_token_t   *token_ptr;
+    H5CL_lex_vars_t lex_vars = {/* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
+                                /* input_str_ptr     = */ NULL,
+                                /* next_char_ptr     = */ NULL,
+                                /* end_of_input      = */ false,
+                                /* err_ctx           = */ "",
+                                /* token             = */
+                                {/* token.struct_tag  = */ H5CL_TOKEN_STRUCT_TAG,
+                                 /* token.code        = */ H5CL_ERROR_TOK,
+                                 /* token.str_ptr     = */ NULL,
+                                 /* token.str_len     = */ 0,
+                                 /* token.max_str_len = */ 0,
+                                 /* token.int_val     = */ 1,   /* should be overwritten on init */
+                                 /* token.f_val       = */ 1.0, /* should be overwritten on init */
+                                 /* token.bb_ptr      = */ NULL,
+                                 /* token.bb_len      = */ 0
+                                 /* end of token        */}};
 
     TESTING("VFD Configuration Language Lexer error detection & reporting 2");
 
-    if ( H5CL__init_lex_vars(input_string, &lex_vars) < 0 ) {
+    if (H5CL__init_lex_vars(input_string, &lex_vars) < 0) {
 
         TEST_ERROR;
     }
 
-    if ( ( H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL == lex_vars.input_str_ptr ) ||
-         ( input_string == lex_vars.input_str_ptr ) ||
-         ( 0 != strcmp(input_string, lex_vars.input_str_ptr) ) ||
-         ( lex_vars.input_str_ptr != lex_vars.next_char_ptr ) || 
-         ( H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( H5CL_ERROR_TOK != lex_vars.token.code ) ||
-         ( NULL == lex_vars.token.str_ptr ) ||
-         ( 0 != lex_vars.token.str_len ) ||
-         ( strlen(input_string) != lex_vars.token.max_str_len ) ||
-         ( 0 != lex_vars.token.int_val ) ||
-         ( 0.0 < lex_vars.token.f_val ) ||    /* circumlocution to keep */
-         ( 0.0 > lex_vars.token.f_val ) ||    /* the compier happy      */
-         ( NULL == lex_vars.token.bb_ptr ) ||
-         ( 0 != lex_vars.token.bb_len ) ) {
+    if ((H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL == lex_vars.input_str_ptr) ||
+        (input_string == lex_vars.input_str_ptr) || (0 != strcmp(input_string, lex_vars.input_str_ptr)) ||
+        (lex_vars.input_str_ptr != lex_vars.next_char_ptr) ||
+        (H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (H5CL_ERROR_TOK != lex_vars.token.code) ||
+        (NULL == lex_vars.token.str_ptr) || (0 != lex_vars.token.str_len) ||
+        (strlen(input_string) != lex_vars.token.max_str_len) || (0 != lex_vars.token.int_val) ||
+        (0.0 < lex_vars.token.f_val) || /* circumlocution to keep */
+        (0.0 > lex_vars.token.f_val) || /* the compier happy      */
+        (NULL == lex_vars.token.bb_ptr) || (0 != lex_vars.token.bb_len)) {
 
         TEST_ERROR;
     }
 
     /* should fail on an ill formed numeric constantt */
-    if  ( H5CL__lex_read_token(true, false, &token_ptr, &lex_vars) >= 0 ) {
+    if (H5CL__lex_read_token(true, false, &token_ptr, &lex_vars) >= 0) {
         TEST_ERROR;
-    } 
+    }
 
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                               "Ill-formed numerical constant.  Context: ...eric values */ + - . +. -. (an...",
-                               verbose) ) {
+    else if (0 != cl_test_verify_error_stack(
+                      H5E_ARGS, H5E_BADVALUE,
+                      "Ill-formed numerical constant.  Context: ...eric values */ + - . +. -. (an...",
+                      verbose)) {
 
         TEST_ERROR;
     }
 #endif
 
     /* should fail on an ill formed numeric constantt */
-    if  ( H5CL__lex_read_token(true, false, &token_ptr, &lex_vars) >= 0 ) {
-
-        TEST_ERROR;
-
-    }
-#if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                               "Ill-formed numerical constant.  Context: ...ic values */ + - . +. -. (an u...",
-                               verbose) ) {
+    if (H5CL__lex_read_token(true, false, &token_ptr, &lex_vars) >= 0) {
 
         TEST_ERROR;
     }
-#endif
-
-    /* should fail on an ill formed numeric constantt */
-    if  ( H5CL__lex_read_token(true, false, &token_ptr, &lex_vars) >= 0 ) {
-
-        TEST_ERROR;
-
-    } 
-    
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                               "Ill-formed numerical constant.  Context: ... values */ + - . +. -. (an unt...",
-                               verbose) ) {
+    else if (0 != cl_test_verify_error_stack(
+                      H5E_ARGS, H5E_BADVALUE,
+                      "Ill-formed numerical constant.  Context: ...ic values */ + - . +. -. (an u...",
+                      verbose)) {
 
         TEST_ERROR;
     }
 #endif
 
     /* should fail on an ill formed numeric constantt */
-    if  ( H5CL__lex_read_token(true, false, &token_ptr, &lex_vars) >= 0 ) {
+    if (H5CL__lex_read_token(true, false, &token_ptr, &lex_vars) >= 0) {
 
         TEST_ERROR;
+    }
 
-    } 
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                               "Ill-formed numerical constant.  Context: ...alues */ + - . +. -. (an unter...",
-                               verbose) ) {
+    else if (0 != cl_test_verify_error_stack(
+                      H5E_ARGS, H5E_BADVALUE,
+                      "Ill-formed numerical constant.  Context: ... values */ + - . +. -. (an unt...",
+                      verbose)) {
 
         TEST_ERROR;
     }
 #endif
 
     /* should fail on an ill formed numeric constantt */
-    if  ( H5CL__lex_read_token(true, false, &token_ptr, &lex_vars) >= 0 ) {
+    if (H5CL__lex_read_token(true, false, &token_ptr, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                               "Ill-formed numerical constant.  Context: ...es */ + - . +. -. (an untermin...",
-                               verbose) ) {
+    else if (0 != cl_test_verify_error_stack(
+                      H5E_ARGS, H5E_BADVALUE,
+                      "Ill-formed numerical constant.  Context: ...alues */ + - . +. -. (an unter...",
+                      verbose)) {
+
+        TEST_ERROR;
+    }
+#endif
+
+    /* should fail on an ill formed numeric constantt */
+    if (H5CL__lex_read_token(true, false, &token_ptr, &lex_vars) >= 0) {
+
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(
+                      H5E_ARGS, H5E_BADVALUE,
+                      "Ill-formed numerical constant.  Context: ...es */ + - . +. -. (an untermin...",
+                      verbose)) {
 
         TEST_ERROR;
     }
 #endif
 
     /* should fail on na unterminate list */
-    if  ( H5CL__lex_read_token(true, false, &token_ptr, &lex_vars) >= 0 ) {
+    if (H5CL__lex_read_token(true, false, &token_ptr, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                               "Un-terminated list in input string.  Context: ...terminated list",
-                               verbose) ) {
+    else if (0 != cl_test_verify_error_stack(
+                      H5E_ARGS, H5E_BADVALUE,
+                      "Un-terminated list in input string.  Context: ...terminated list", verbose)) {
 
         TEST_ERROR;
     }
@@ -1626,7 +1499,6 @@ error:
     return -1;
 
 } /* cl_lexer_error_check_2() */
-
 
 /*******************************************************************************
  *
@@ -1645,66 +1517,57 @@ error:
 static herr_t
 cl_lexer_error_check_3(void)
 {
-    const char * input_string = " /* an empty input string to generate an unexpected EOI error */";
+    const char *input_string = " /* an empty input string to generate an unexpected EOI error */";
 #if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
 #endif
-    H5CL_token_t * token_ptr;
-    H5CL_lex_vars_t lex_vars = {
-        /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
-        /* input_str_ptr     = */ NULL,
-        /* next_char_ptr     = */ NULL,
-        /* end_of_input      = */ false, 
-        /* err_ctx           = */ "",
-        /* token             = */ {
-        /* token.struct_tag  = */    H5CL_TOKEN_STRUCT_TAG,
-        /* token.code        = */    H5CL_ERROR_TOK,
-        /* token.str_ptr     = */    NULL,
-        /* token.str_len     = */    0,
-        /* token.max_str_len = */    0,
-        /* token.int_val     = */    1,    /* should be overwritten on init */
-        /* token.f_val       = */    1.0,  /* should be overwritten on init */
-        /* token.bb_ptr      = */    NULL,
-        /* token.bb_len      = */    0
-        /* end of token        */ }
-    };
+    H5CL_token_t   *token_ptr;
+    H5CL_lex_vars_t lex_vars = {/* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
+                                /* input_str_ptr     = */ NULL,
+                                /* next_char_ptr     = */ NULL,
+                                /* end_of_input      = */ false,
+                                /* err_ctx           = */ "",
+                                /* token             = */
+                                {/* token.struct_tag  = */ H5CL_TOKEN_STRUCT_TAG,
+                                 /* token.code        = */ H5CL_ERROR_TOK,
+                                 /* token.str_ptr     = */ NULL,
+                                 /* token.str_len     = */ 0,
+                                 /* token.max_str_len = */ 0,
+                                 /* token.int_val     = */ 1,   /* should be overwritten on init */
+                                 /* token.f_val       = */ 1.0, /* should be overwritten on init */
+                                 /* token.bb_ptr      = */ NULL,
+                                 /* token.bb_len      = */ 0
+                                 /* end of token        */}};
 
     TESTING("VFD Configuration Language Lexer error detection & reporting 3");
 
-    if ( H5CL__init_lex_vars(input_string, &lex_vars) < 0 ) {
+    if (H5CL__init_lex_vars(input_string, &lex_vars) < 0) {
 
         TEST_ERROR;
     }
 
-    if ( ( H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL == lex_vars.input_str_ptr ) ||
-         ( input_string == lex_vars.input_str_ptr ) ||
-         ( 0 != strcmp(input_string, lex_vars.input_str_ptr) ) ||
-         ( lex_vars.input_str_ptr != lex_vars.next_char_ptr ) || 
-         ( H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( H5CL_ERROR_TOK != lex_vars.token.code ) ||
-         ( NULL == lex_vars.token.str_ptr ) ||
-         ( 0 != lex_vars.token.str_len ) ||
-         ( strlen(input_string) != lex_vars.token.max_str_len ) ||
-         ( 0 != lex_vars.token.int_val ) ||
-         ( 0.0 < lex_vars.token.f_val ) ||    /* circumlocution to keep */
-         ( 0.0 > lex_vars.token.f_val ) ||    /* the compier happy      */
-         ( NULL == lex_vars.token.bb_ptr ) ||
-         ( 0 != lex_vars.token.bb_len ) ) {
+    if ((H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL == lex_vars.input_str_ptr) ||
+        (input_string == lex_vars.input_str_ptr) || (0 != strcmp(input_string, lex_vars.input_str_ptr)) ||
+        (lex_vars.input_str_ptr != lex_vars.next_char_ptr) ||
+        (H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (H5CL_ERROR_TOK != lex_vars.token.code) ||
+        (NULL == lex_vars.token.str_ptr) || (0 != lex_vars.token.str_len) ||
+        (strlen(input_string) != lex_vars.token.max_str_len) || (0 != lex_vars.token.int_val) ||
+        (0.0 < lex_vars.token.f_val) || /* circumlocution to keep */
+        (0.0 > lex_vars.token.f_val) || /* the compier happy      */
+        (NULL == lex_vars.token.bb_ptr) || (0 != lex_vars.token.bb_len)) {
 
         TEST_ERROR;
     }
 
     /* should fail on an un enxpected end of input string error */
-    if  ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0 ) {
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                               "Un-expected end of input string.  Context: ...ed EOI error */",
-                               verbose) ) {
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "Un-expected end of input string.  Context: ...ed EOI error */",
+                                             verbose)) {
 
         TEST_ERROR;
     }
@@ -1719,7 +1582,6 @@ error:
     return -1;
 
 } /* cl_lexer_error_check_3() */
-
 
 /*******************************************************************************
  *
@@ -1738,66 +1600,57 @@ error:
 static herr_t
 cl_lexer_error_check_4(void)
 {
-    const char * input_string = " /* end of input in a comment ";
+    const char *input_string = " /* end of input in a comment ";
 #if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
 #endif
-    H5CL_token_t * token_ptr;
-    H5CL_lex_vars_t lex_vars = {
-        /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
-        /* input_str_ptr     = */ NULL,
-        /* next_char_ptr     = */ NULL,
-        /* end_of_input      = */ false, 
-        /* err_ctx           = */ "",
-        /* token             = */ {
-        /* token.struct_tag  = */    H5CL_TOKEN_STRUCT_TAG,
-        /* token.code        = */    H5CL_ERROR_TOK,
-        /* token.str_ptr     = */    NULL,
-        /* token.str_len     = */    0,
-        /* token.max_str_len = */    0,
-        /* token.int_val     = */    1,    /* should be overwritten on init */
-        /* token.f_val       = */    1.0,  /* should be overwritten on init */
-        /* token.bb_ptr      = */    NULL,
-        /* token.bb_len      = */    0
-        /* end of token        */ }
-    };
+    H5CL_token_t   *token_ptr;
+    H5CL_lex_vars_t lex_vars = {/* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
+                                /* input_str_ptr     = */ NULL,
+                                /* next_char_ptr     = */ NULL,
+                                /* end_of_input      = */ false,
+                                /* err_ctx           = */ "",
+                                /* token             = */
+                                {/* token.struct_tag  = */ H5CL_TOKEN_STRUCT_TAG,
+                                 /* token.code        = */ H5CL_ERROR_TOK,
+                                 /* token.str_ptr     = */ NULL,
+                                 /* token.str_len     = */ 0,
+                                 /* token.max_str_len = */ 0,
+                                 /* token.int_val     = */ 1,   /* should be overwritten on init */
+                                 /* token.f_val       = */ 1.0, /* should be overwritten on init */
+                                 /* token.bb_ptr      = */ NULL,
+                                 /* token.bb_len      = */ 0
+                                 /* end of token        */}};
 
     TESTING("VFD Configuration Language Lexer error detection & reporting 4");
 
-    if ( H5CL__init_lex_vars(input_string, &lex_vars) < 0 ) {
+    if (H5CL__init_lex_vars(input_string, &lex_vars) < 0) {
 
         TEST_ERROR;
     }
 
-    if ( ( H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL == lex_vars.input_str_ptr ) ||
-         ( input_string == lex_vars.input_str_ptr ) ||
-         ( 0 != strcmp(input_string, lex_vars.input_str_ptr) ) ||
-         ( lex_vars.input_str_ptr != lex_vars.next_char_ptr ) || 
-         ( H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( H5CL_ERROR_TOK != lex_vars.token.code ) ||
-         ( NULL == lex_vars.token.str_ptr ) ||
-         ( 0 != lex_vars.token.str_len ) ||
-         ( strlen(input_string) != lex_vars.token.max_str_len ) ||
-         ( 0 != lex_vars.token.int_val ) ||
-         ( 0.0 < lex_vars.token.f_val ) ||    /* circumlocution to keep */
-         ( 0.0 > lex_vars.token.f_val ) ||    /* the compier happy      */
-         ( NULL == lex_vars.token.bb_ptr ) ||
-         ( 0 != lex_vars.token.bb_len ) ) {
+    if ((H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL == lex_vars.input_str_ptr) ||
+        (input_string == lex_vars.input_str_ptr) || (0 != strcmp(input_string, lex_vars.input_str_ptr)) ||
+        (lex_vars.input_str_ptr != lex_vars.next_char_ptr) ||
+        (H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (H5CL_ERROR_TOK != lex_vars.token.code) ||
+        (NULL == lex_vars.token.str_ptr) || (0 != lex_vars.token.str_len) ||
+        (strlen(input_string) != lex_vars.token.max_str_len) || (0 != lex_vars.token.int_val) ||
+        (0.0 < lex_vars.token.f_val) || /* circumlocution to keep */
+        (0.0 > lex_vars.token.f_val) || /* the compier happy      */
+        (NULL == lex_vars.token.bb_ptr) || (0 != lex_vars.token.bb_len)) {
 
         TEST_ERROR;
     }
 
     /* should fail on an un enxpected end of input string error */
-    if  ( H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0 ) {
+    if (H5CL__lex_read_token(false, false, &token_ptr, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                               "Un-expected end of input string.  Context: ...t in a comment ",
-                               verbose) ) {
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "Un-expected end of input string.  Context: ...t in a comment ",
+                                             verbose)) {
 
         TEST_ERROR;
     }
@@ -1813,13 +1666,12 @@ error:
 
 } /* cl_lexer_error_check_4() */
 
-
 /*******************************************************************************
  *
  * cl_parse_name_val_pair_smoke_check()
  *
- * Initial set of parse tests designed to verify basic functionality of the 
- * function that parses name value pairs.  Note that theses tests do not 
+ * Initial set of parse tests designed to verify basic functionality of the
+ * function that parses name value pairs.  Note that theses tests do not
  * trigger any error conditinos in the parser.
  *
  *                                              JRM -- 12/17/25
@@ -1833,118 +1685,101 @@ error:
 static herr_t
 cl_parse_name_val_pair_smoke_check(void)
 {
-    int nv_pair_num = 0;
-    const char * input_string = "( name_0 1 ) ( name_1 3.14159 ) ( name_2 \"Hello World\" ) "
-                          "( name_3 --10111213 ) ( name_4 ( sec2 () ) )";
-    uint8_t bb_0[] = { 0x10, 0x11, 0x12, 0x13 };
-    size_t bb_0_len = 4;
-    H5CL_nv_pair_t nv_pairs[5];
-    H5CL_lex_vars_t lex_vars = {
-        /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
-        /* input_str_ptr     = */ NULL,
-        /* next_char_ptr     = */ NULL,
-        /* end_of_input      = */ false, 
-        /* err_ctx           = */ "",
-        /* token             = */ {
-        /* token.struct_tag  = */    H5CL_TOKEN_STRUCT_TAG,
-        /* token.code        = */    H5CL_ERROR_TOK,
-        /* token.str_ptr     = */    NULL,
-        /* token.str_len     = */    0,
-        /* token.max_str_len = */    0,
-        /* token.int_val     = */    1,    /* should be overwritten on init */
-        /* token.f_val       = */    1.0,  /* should be overwritten on init */
-        /* token.bb_ptr      = */    NULL,
-        /* token.bb_len      = */    0
-        /* end of token        */ }
-    };
+    int             nv_pair_num  = 0;
+    const char     *input_string = "( name_0 1 ) ( name_1 3.14159 ) ( name_2 \"Hello World\" ) "
+                                   "( name_3 --10111213 ) ( name_4 ( sec2 () ) )";
+    uint8_t         bb_0[]       = {0x10, 0x11, 0x12, 0x13};
+    size_t          bb_0_len     = 4;
+    H5CL_nv_pair_t  nv_pairs[5];
+    H5CL_lex_vars_t lex_vars = {/* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
+                                /* input_str_ptr     = */ NULL,
+                                /* next_char_ptr     = */ NULL,
+                                /* end_of_input      = */ false,
+                                /* err_ctx           = */ "",
+                                /* token             = */
+                                {/* token.struct_tag  = */ H5CL_TOKEN_STRUCT_TAG,
+                                 /* token.code        = */ H5CL_ERROR_TOK,
+                                 /* token.str_ptr     = */ NULL,
+                                 /* token.str_len     = */ 0,
+                                 /* token.max_str_len = */ 0,
+                                 /* token.int_val     = */ 1,   /* should be overwritten on init */
+                                 /* token.f_val       = */ 1.0, /* should be overwritten on init */
+                                 /* token.bb_ptr      = */ NULL,
+                                 /* token.bb_len      = */ 0
+                                 /* end of token        */}};
 
     TESTING("VFD Configuration Language Parse Name Value Pair Smoke Check");
 
-    if ( H5CL__init_lex_vars(input_string, &lex_vars) < 0 ) 
+    if (H5CL__init_lex_vars(input_string, &lex_vars) < 0)
         TEST_ERROR;
 
-
-    if ( ( H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL == lex_vars.input_str_ptr ) ||
-         ( input_string == lex_vars.input_str_ptr ) ||
-         ( 0 != strcmp(input_string, lex_vars.input_str_ptr) ) ||
-         ( lex_vars.input_str_ptr != lex_vars.next_char_ptr ) || 
-         ( H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( H5CL_ERROR_TOK != lex_vars.token.code ) ||
-         ( NULL == lex_vars.token.str_ptr ) ||
-         ( 0 != lex_vars.token.str_len ) ||
-         ( strlen(input_string) != lex_vars.token.max_str_len ) ||
-         ( 0 != lex_vars.token.int_val ) ||
-         ( 0.0 < lex_vars.token.f_val ) ||    /* circumlocution to keep */
-         ( 0.0 > lex_vars.token.f_val ) ||    /* the compier happy      */
-         ( NULL == lex_vars.token.bb_ptr ) ||
-         ( 0 != lex_vars.token.bb_len ) ) {
+    if ((H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL == lex_vars.input_str_ptr) ||
+        (input_string == lex_vars.input_str_ptr) || (0 != strcmp(input_string, lex_vars.input_str_ptr)) ||
+        (lex_vars.input_str_ptr != lex_vars.next_char_ptr) ||
+        (H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (H5CL_ERROR_TOK != lex_vars.token.code) ||
+        (NULL == lex_vars.token.str_ptr) || (0 != lex_vars.token.str_len) ||
+        (strlen(input_string) != lex_vars.token.max_str_len) || (0 != lex_vars.token.int_val) ||
+        (0.0 < lex_vars.token.f_val) || /* circumlocution to keep */
+        (0.0 > lex_vars.token.f_val) || /* the compier happy      */
+        (NULL == lex_vars.token.bb_ptr) || (0 != lex_vars.token.bb_len)) {
 
         TEST_ERROR;
     }
 
     /* initialize the array of instance of cl_nv_pair_t */
-    for ( nv_pair_num = 0; nv_pair_num < 5; nv_pair_num++ ) {
+    for (nv_pair_num = 0; nv_pair_num < 5; nv_pair_num++) {
 
         nv_pairs[nv_pair_num].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
 
-        if ( H5CL_init_nv_pair(&(nv_pairs[nv_pair_num])) < 0 )
+        if (H5CL_init_nv_pair(&(nv_pairs[nv_pair_num])) < 0)
             TEST_ERROR;
     }
 
-
-    if ( H5CL__parse_name_value_pair(&(nv_pairs[0]), &lex_vars) < 0 )
-        TEST_ERROR;
-  
-    if ( 0 != cl_test_verify_nv_pair(&(nv_pairs[0]), 0, "name_0", H5CL_VAL_INT, 1, 0.0, NULL, 0, true) )
+    if (H5CL__parse_name_value_pair(&(nv_pairs[0]), &lex_vars) < 0)
         TEST_ERROR;
 
-
-    if ( H5CL__parse_name_value_pair(&(nv_pairs[1]), &lex_vars) < 0 )
-        TEST_ERROR;
-  
-    if ( 0 != cl_test_verify_nv_pair(&(nv_pairs[1]), 1, "name_1", H5CL_VAL_FLOAT, 0, 3.14159, NULL, 0, true) )
+    if (0 != cl_test_verify_nv_pair(&(nv_pairs[0]), 0, "name_0", H5CL_VAL_INT, 1, 0.0, NULL, 0, true))
         TEST_ERROR;
 
-
-    if ( H5CL__parse_name_value_pair(&(nv_pairs[2]), &lex_vars) < 0 )
-        TEST_ERROR;
-  
-    if ( 0 != cl_test_verify_nv_pair(&(nv_pairs[2]), 2, "name_2", H5CL_VAL_QSTR, 0, 0.0, "Hello World", 11, true) )
+    if (H5CL__parse_name_value_pair(&(nv_pairs[1]), &lex_vars) < 0)
         TEST_ERROR;
 
-
-    if ( H5CL__parse_name_value_pair(&(nv_pairs[3]), &lex_vars) < 0 )
-        TEST_ERROR;
-  
-    if ( 0 != cl_test_verify_nv_pair(&(nv_pairs[3]), 3, "name_3", H5CL_VAL_BB, 0, 0.0, bb_0, bb_0_len, true) )
+    if (0 != cl_test_verify_nv_pair(&(nv_pairs[1]), 1, "name_1", H5CL_VAL_FLOAT, 0, 3.14159, NULL, 0, true))
         TEST_ERROR;
 
-
-    if ( H5CL__parse_name_value_pair(&(nv_pairs[4]), &lex_vars) < 0 )
-        TEST_ERROR;
-  
-    if ( 0 != cl_test_verify_nv_pair(&(nv_pairs[4]), 4, "name_4", H5CL_VAL_LIST, 0, 0.0, "( sec2 () )", 11, true) )
+    if (H5CL__parse_name_value_pair(&(nv_pairs[2]), &lex_vars) < 0)
         TEST_ERROR;
 
+    if (0 !=
+        cl_test_verify_nv_pair(&(nv_pairs[2]), 2, "name_2", H5CL_VAL_QSTR, 0, 0.0, "Hello World", 11, true))
+        TEST_ERROR;
+
+    if (H5CL__parse_name_value_pair(&(nv_pairs[3]), &lex_vars) < 0)
+        TEST_ERROR;
+
+    if (0 != cl_test_verify_nv_pair(&(nv_pairs[3]), 3, "name_3", H5CL_VAL_BB, 0, 0.0, bb_0, bb_0_len, true))
+        TEST_ERROR;
+
+    if (H5CL__parse_name_value_pair(&(nv_pairs[4]), &lex_vars) < 0)
+        TEST_ERROR;
+
+    if (0 !=
+        cl_test_verify_nv_pair(&(nv_pairs[4]), 4, "name_4", H5CL_VAL_LIST, 0, 0.0, "( sec2 () )", 11, true))
+        TEST_ERROR;
 
     /* take down the array of instance of cl_nv_pair_t */
-    for ( nv_pair_num = 0; nv_pair_num < 5; nv_pair_num++ ) {
+    for (nv_pair_num = 0; nv_pair_num < 5; nv_pair_num++) {
 
-        if ( H5CL_take_down_nv_pair(&(nv_pairs[nv_pair_num])) < 0 ) 
+        if (H5CL_take_down_nv_pair(&(nv_pairs[nv_pair_num])) < 0)
             TEST_ERROR;
     }
 
-
-    if ( H5CL__take_down_lex_vars(&lex_vars) < 0 )
+    if (H5CL__take_down_lex_vars(&lex_vars) < 0)
         TEST_ERROR;
 
-
-    if ( ( H5CL_INVALID_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL != lex_vars.input_str_ptr ) ||
-         ( H5CL_INVALID_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( NULL != lex_vars.token.str_ptr ) ||
-         ( NULL != lex_vars.token.bb_ptr ) ) {
+    if ((H5CL_INVALID_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL != lex_vars.input_str_ptr) ||
+        (H5CL_INVALID_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (NULL != lex_vars.token.str_ptr) ||
+        (NULL != lex_vars.token.bb_ptr)) {
 
         TEST_ERROR;
     }
@@ -1963,7 +1798,7 @@ error:
  *
  * cl_parse_nv_pair_error_check_1()
  *
- * Verify that the name value pair parser function detects and reports errors 
+ * Verify that the name value pair parser function detects and reports errors
  * as expected.
  *
  *                                              JRM -- 1/8/26
@@ -1977,71 +1812,63 @@ error:
 static herr_t
 cl_parse_nv_pair_error_check_1(void)
 {
-    const char * input_string = "name 1 ) /* NV pair missing the opening paren */";
+    const char *input_string = "name 1 ) /* NV pair missing the opening paren */";
 #if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
 #endif
-    H5CL_lex_vars_t lex_vars = {
-        /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
-        /* input_str_ptr     = */ NULL,
-        /* next_char_ptr     = */ NULL,
-        /* end_of_input      = */ false, 
-        /* err_ctx           = */ "",
-        /* token             = */ {
-        /* token.struct_tag  = */    H5CL_TOKEN_STRUCT_TAG,
-        /* token.code        = */    H5CL_ERROR_TOK,
-        /* token.str_ptr     = */    NULL,
-        /* token.str_len     = */    0,
-        /* token.max_str_len = */    0,
-        /* token.int_val     = */    1,    /* should be overwritten on init */
-        /* token.f_val       = */    1.0,  /* should be overwritten on init */
-        /* token.bb_ptr      = */    NULL,
-        /* token.bb_len      = */    0
-        /* end of token        */ }
-    };
+    H5CL_lex_vars_t lex_vars = {/* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
+                                /* input_str_ptr     = */ NULL,
+                                /* next_char_ptr     = */ NULL,
+                                /* end_of_input      = */ false,
+                                /* err_ctx           = */ "",
+                                /* token             = */
+                                {/* token.struct_tag  = */ H5CL_TOKEN_STRUCT_TAG,
+                                 /* token.code        = */ H5CL_ERROR_TOK,
+                                 /* token.str_ptr     = */ NULL,
+                                 /* token.str_len     = */ 0,
+                                 /* token.max_str_len = */ 0,
+                                 /* token.int_val     = */ 1,   /* should be overwritten on init */
+                                 /* token.f_val       = */ 1.0, /* should be overwritten on init */
+                                 /* token.bb_ptr      = */ NULL,
+                                 /* token.bb_len      = */ 0
+                                 /* end of token        */}};
     H5CL_nv_pair_t nv_pair;
 
     TESTING("VFD Configuration Language NV pair err detection & reporting 1");
 
-    if ( H5CL__init_lex_vars(input_string, &lex_vars) < 0 ) {
+    if (H5CL__init_lex_vars(input_string, &lex_vars) < 0) {
 
         TEST_ERROR;
     }
 
-    if ( ( H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL == lex_vars.input_str_ptr ) ||
-         ( input_string == lex_vars.input_str_ptr ) ||
-         ( 0 != strcmp(input_string, lex_vars.input_str_ptr) ) ||
-         ( lex_vars.input_str_ptr != lex_vars.next_char_ptr ) || 
-         ( H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( H5CL_ERROR_TOK != lex_vars.token.code ) ||
-         ( NULL == lex_vars.token.str_ptr ) ||
-         ( 0 != lex_vars.token.str_len ) ||
-         ( strlen(input_string) != lex_vars.token.max_str_len ) ||
-         ( 0 != lex_vars.token.int_val ) ||
-         ( 0.0 < lex_vars.token.f_val ) ||    /* circumlocution to keep */
-         ( 0.0 > lex_vars.token.f_val ) ||    /* the compier happy      */
-         ( NULL == lex_vars.token.bb_ptr ) ||
-         ( 0 != lex_vars.token.bb_len ) ) {
+    if ((H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL == lex_vars.input_str_ptr) ||
+        (input_string == lex_vars.input_str_ptr) || (0 != strcmp(input_string, lex_vars.input_str_ptr)) ||
+        (lex_vars.input_str_ptr != lex_vars.next_char_ptr) ||
+        (H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (H5CL_ERROR_TOK != lex_vars.token.code) ||
+        (NULL == lex_vars.token.str_ptr) || (0 != lex_vars.token.str_len) ||
+        (strlen(input_string) != lex_vars.token.max_str_len) || (0 != lex_vars.token.int_val) ||
+        (0.0 < lex_vars.token.f_val) || /* circumlocution to keep */
+        (0.0 > lex_vars.token.f_val) || /* the compier happy      */
+        (NULL == lex_vars.token.bb_ptr) || (0 != lex_vars.token.bb_len)) {
 
         TEST_ERROR;
     }
 
     nv_pair.struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
 
-    if ( H5CL_init_nv_pair(&nv_pair) < 0 )
+    if (H5CL_init_nv_pair(&nv_pair) < 0)
         TEST_ERROR;
 
     /* should fail on a missing initial paren */
-    if ( H5CL__parse_name_value_pair(&nv_pair, &lex_vars) >= 0 ) {
+    if (H5CL__parse_name_value_pair(&nv_pair, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-            "Syntax error -- Initial '(' of name value pair expected.  Context: name 1 ) /* NV pair missing th...",
-            verbose) ) {
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "Syntax error -- Initial '(' of name value pair expected.  "
+                                             "Context: name 1 ) /* NV pair missing th...",
+                                             verbose)) {
 
         TEST_ERROR;
     }
@@ -2061,7 +1888,7 @@ error:
  *
  * cl_parse_nv_pair_error_check_2()
  *
- * Verify that the name value pair parser function detects and reports errors 
+ * Verify that the name value pair parser function detects and reports errors
  * as expected.
  *
  *                                              JRM -- 1/8/26
@@ -2075,71 +1902,63 @@ error:
 static herr_t
 cl_parse_nv_pair_error_check_2(void)
 {
-    const char * input_string = "( /* NV pair missing the name */ 1 --01020304 )";
+    const char *input_string = "( /* NV pair missing the name */ 1 --01020304 )";
 #if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
 #endif
-    H5CL_lex_vars_t lex_vars = {
-        /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
-        /* input_str_ptr     = */ NULL,
-        /* next_char_ptr     = */ NULL,
-        /* end_of_input      = */ false, 
-        /* err_ctx           = */ "",
-        /* token             = */ {
-        /* token.struct_tag  = */    H5CL_TOKEN_STRUCT_TAG,
-        /* token.code        = */    H5CL_ERROR_TOK,
-        /* token.str_ptr     = */    NULL,
-        /* token.str_len     = */    0,
-        /* token.max_str_len = */    0,
-        /* token.int_val     = */    1,    /* should be overwritten on init */
-        /* token.f_val       = */    1.0,  /* should be overwritten on init */
-        /* token.bb_ptr      = */    NULL,
-        /* token.bb_len      = */    0
-        /* end of token        */ }
-    };
+    H5CL_lex_vars_t lex_vars = {/* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
+                                /* input_str_ptr     = */ NULL,
+                                /* next_char_ptr     = */ NULL,
+                                /* end_of_input      = */ false,
+                                /* err_ctx           = */ "",
+                                /* token             = */
+                                {/* token.struct_tag  = */ H5CL_TOKEN_STRUCT_TAG,
+                                 /* token.code        = */ H5CL_ERROR_TOK,
+                                 /* token.str_ptr     = */ NULL,
+                                 /* token.str_len     = */ 0,
+                                 /* token.max_str_len = */ 0,
+                                 /* token.int_val     = */ 1,   /* should be overwritten on init */
+                                 /* token.f_val       = */ 1.0, /* should be overwritten on init */
+                                 /* token.bb_ptr      = */ NULL,
+                                 /* token.bb_len      = */ 0
+                                 /* end of token        */}};
     H5CL_nv_pair_t nv_pair;
 
     TESTING("VFD Configuration Language NV pair err detection & reporting 2");
 
-    if ( H5CL__init_lex_vars(input_string, &lex_vars) < 0 ) {
+    if (H5CL__init_lex_vars(input_string, &lex_vars) < 0) {
 
         TEST_ERROR;
     }
 
-    if ( ( H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL == lex_vars.input_str_ptr ) ||
-         ( input_string == lex_vars.input_str_ptr ) ||
-         ( 0 != strcmp(input_string, lex_vars.input_str_ptr) ) ||
-         ( lex_vars.input_str_ptr != lex_vars.next_char_ptr ) || 
-         ( H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( H5CL_ERROR_TOK != lex_vars.token.code ) ||
-         ( NULL == lex_vars.token.str_ptr ) ||
-         ( 0 != lex_vars.token.str_len ) ||
-         ( strlen(input_string) != lex_vars.token.max_str_len ) ||
-         ( 0 != lex_vars.token.int_val ) ||
-         ( 0.0 < lex_vars.token.f_val ) ||    /* circumlocution to keep */
-         ( 0.0 > lex_vars.token.f_val ) ||    /* the compier happy      */
-         ( NULL == lex_vars.token.bb_ptr ) ||
-         ( 0 != lex_vars.token.bb_len ) ) {
+    if ((H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL == lex_vars.input_str_ptr) ||
+        (input_string == lex_vars.input_str_ptr) || (0 != strcmp(input_string, lex_vars.input_str_ptr)) ||
+        (lex_vars.input_str_ptr != lex_vars.next_char_ptr) ||
+        (H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (H5CL_ERROR_TOK != lex_vars.token.code) ||
+        (NULL == lex_vars.token.str_ptr) || (0 != lex_vars.token.str_len) ||
+        (strlen(input_string) != lex_vars.token.max_str_len) || (0 != lex_vars.token.int_val) ||
+        (0.0 < lex_vars.token.f_val) || /* circumlocution to keep */
+        (0.0 > lex_vars.token.f_val) || /* the compier happy      */
+        (NULL == lex_vars.token.bb_ptr) || (0 != lex_vars.token.bb_len)) {
 
         TEST_ERROR;
     }
 
     nv_pair.struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
 
-    if ( H5CL_init_nv_pair(&nv_pair) < 0 )
+    if (H5CL_init_nv_pair(&nv_pair) < 0)
         TEST_ERROR;
 
     /* should fail on a missing name in the name value pair */
-    if ( H5CL__parse_name_value_pair(&nv_pair, &lex_vars) >= 0 ) {
+    if (H5CL__parse_name_value_pair(&nv_pair, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                    "Syntax error -- name of name value pair expected.  Context: ...g the name */ 1 --01020304 )",
-                    verbose) ) {
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "Syntax error -- name of name value pair expected.  Context: "
+                                             "...g the name */ 1 --01020304 )",
+                                             verbose)) {
 
         TEST_ERROR;
     }
@@ -2155,12 +1974,11 @@ error:
 
 } /* cl_parse_nv_pair_error_check_2() */
 
-
 /*******************************************************************************
  *
  * cl_parse_nv_pair_error_check_3()
  *
- * Verify that the name value pair parser function detects and reports errors 
+ * Verify that the name value pair parser function detects and reports errors
  * as expected.
  *
  *                                              JRM -- 1/8/26
@@ -2174,71 +1992,63 @@ error:
 static herr_t
 cl_parse_nv_pair_error_check_3(void)
 {
-    const char * input_string = "( name /* NV pair missing the value */ )";
+    const char *input_string = "( name /* NV pair missing the value */ )";
 #if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
 #endif
-    H5CL_lex_vars_t lex_vars = {
-        /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
-        /* input_str_ptr     = */ NULL,
-        /* next_char_ptr     = */ NULL,
-        /* end_of_input      = */ false, 
-        /* err_ctx           = */ "",
-        /* token             = */ {
-        /* token.struct_tag  = */    H5CL_TOKEN_STRUCT_TAG,
-        /* token.code        = */    H5CL_ERROR_TOK,
-        /* token.str_ptr     = */    NULL,
-        /* token.str_len     = */    0,
-        /* token.max_str_len = */    0,
-        /* token.int_val     = */    1,    /* should be overwritten on init */
-        /* token.f_val       = */    1.0,  /* should be overwritten on init */
-        /* token.bb_ptr      = */    NULL,
-        /* token.bb_len      = */    0
-        /* end of token        */ }
-    };
+    H5CL_lex_vars_t lex_vars = {/* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
+                                /* input_str_ptr     = */ NULL,
+                                /* next_char_ptr     = */ NULL,
+                                /* end_of_input      = */ false,
+                                /* err_ctx           = */ "",
+                                /* token             = */
+                                {/* token.struct_tag  = */ H5CL_TOKEN_STRUCT_TAG,
+                                 /* token.code        = */ H5CL_ERROR_TOK,
+                                 /* token.str_ptr     = */ NULL,
+                                 /* token.str_len     = */ 0,
+                                 /* token.max_str_len = */ 0,
+                                 /* token.int_val     = */ 1,   /* should be overwritten on init */
+                                 /* token.f_val       = */ 1.0, /* should be overwritten on init */
+                                 /* token.bb_ptr      = */ NULL,
+                                 /* token.bb_len      = */ 0
+                                 /* end of token        */}};
     H5CL_nv_pair_t nv_pair;
 
     TESTING("VFD Configuration Language NV pair err detection & reporting 3");
 
-    if ( H5CL__init_lex_vars(input_string, &lex_vars) < 0 ) {
+    if (H5CL__init_lex_vars(input_string, &lex_vars) < 0) {
 
         TEST_ERROR;
     }
 
-    if ( ( H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL == lex_vars.input_str_ptr ) ||
-         ( input_string == lex_vars.input_str_ptr ) ||
-         ( 0 != strcmp(input_string, lex_vars.input_str_ptr) ) ||
-         ( lex_vars.input_str_ptr != lex_vars.next_char_ptr ) || 
-         ( H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( H5CL_ERROR_TOK != lex_vars.token.code ) ||
-         ( NULL == lex_vars.token.str_ptr ) ||
-         ( 0 != lex_vars.token.str_len ) ||
-         ( strlen(input_string) != lex_vars.token.max_str_len ) ||
-         ( 0 != lex_vars.token.int_val ) ||
-         ( 0.0 < lex_vars.token.f_val ) ||    /* circumlocution to keep */
-         ( 0.0 > lex_vars.token.f_val ) ||    /* the compier happy      */
-         ( NULL == lex_vars.token.bb_ptr ) ||
-         ( 0 != lex_vars.token.bb_len ) ) {
+    if ((H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL == lex_vars.input_str_ptr) ||
+        (input_string == lex_vars.input_str_ptr) || (0 != strcmp(input_string, lex_vars.input_str_ptr)) ||
+        (lex_vars.input_str_ptr != lex_vars.next_char_ptr) ||
+        (H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (H5CL_ERROR_TOK != lex_vars.token.code) ||
+        (NULL == lex_vars.token.str_ptr) || (0 != lex_vars.token.str_len) ||
+        (strlen(input_string) != lex_vars.token.max_str_len) || (0 != lex_vars.token.int_val) ||
+        (0.0 < lex_vars.token.f_val) || /* circumlocution to keep */
+        (0.0 > lex_vars.token.f_val) || /* the compier happy      */
+        (NULL == lex_vars.token.bb_ptr) || (0 != lex_vars.token.bb_len)) {
 
         TEST_ERROR;
     }
 
     nv_pair.struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
 
-    if ( H5CL_init_nv_pair(&nv_pair) < 0 )
+    if (H5CL_init_nv_pair(&nv_pair) < 0)
         TEST_ERROR;
 
     /* should fail on a missing value in the name value pair */
-    if ( H5CL__parse_name_value_pair(&nv_pair, &lex_vars) >= 0 ) {
+    if (H5CL__parse_name_value_pair(&nv_pair, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                "Syntax error -- value of name value pair expected.  Context: ... the value */ )",
-                                verbose) ) {
+    else if (0 != cl_test_verify_error_stack(
+                      H5E_ARGS, H5E_BADVALUE,
+                      "Syntax error -- value of name value pair expected.  Context: ... the value */ )",
+                      verbose)) {
 
         TEST_ERROR;
     }
@@ -2254,12 +2064,11 @@ error:
 
 } /* cl_parse_nv_pair_error_check_3() */
 
-
 /*******************************************************************************
  *
  * cl_parse_nv_pair_error_check_4()
  *
- * Verify that the name value pair parser function detects and reports errors 
+ * Verify that the name value pair parser function detects and reports errors
  * as expected.
  *
  *                                              JRM -- 1/8/26
@@ -2273,71 +2082,64 @@ error:
 static herr_t
 cl_parse_nv_pair_error_check_4(void)
 {
-    const char * input_string = "( name 1.1 /* NV pair with extra value */ --01020304 )";
+    const char *input_string = "( name 1.1 /* NV pair with extra value */ --01020304 )";
 #if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
 #endif
-    H5CL_lex_vars_t lex_vars = {
-        /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
-        /* input_str_ptr     = */ NULL,
-        /* next_char_ptr     = */ NULL,
-        /* end_of_input      = */ false, 
-        /* err_ctx           = */ "",
-        /* token             = */ {
-        /* token.struct_tag  = */    H5CL_TOKEN_STRUCT_TAG,
-        /* token.code        = */    H5CL_ERROR_TOK,
-        /* token.str_ptr     = */    NULL,
-        /* token.str_len     = */    0,
-        /* token.max_str_len = */    0,
-        /* token.int_val     = */    1,    /* should be overwritten on init */
-        /* token.f_val       = */    1.0,  /* should be overwritten on init */
-        /* token.bb_ptr      = */    NULL,
-        /* token.bb_len      = */    0
-        /* end of token        */ }
-    };
+    H5CL_lex_vars_t lex_vars = {/* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
+                                /* input_str_ptr     = */ NULL,
+                                /* next_char_ptr     = */ NULL,
+                                /* end_of_input      = */ false,
+                                /* err_ctx           = */ "",
+                                /* token             = */
+                                {/* token.struct_tag  = */ H5CL_TOKEN_STRUCT_TAG,
+                                 /* token.code        = */ H5CL_ERROR_TOK,
+                                 /* token.str_ptr     = */ NULL,
+                                 /* token.str_len     = */ 0,
+                                 /* token.max_str_len = */ 0,
+                                 /* token.int_val     = */ 1,   /* should be overwritten on init */
+                                 /* token.f_val       = */ 1.0, /* should be overwritten on init */
+                                 /* token.bb_ptr      = */ NULL,
+                                 /* token.bb_len      = */ 0
+                                 /* end of token        */}};
     H5CL_nv_pair_t nv_pair;
 
     TESTING("VFD Configuration Language NV pair err detection & reporting 4");
 
-    if ( H5CL__init_lex_vars(input_string, &lex_vars) < 0 ) {
+    if (H5CL__init_lex_vars(input_string, &lex_vars) < 0) {
 
         TEST_ERROR;
     }
 
-    if ( ( H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL == lex_vars.input_str_ptr ) ||
-         ( input_string == lex_vars.input_str_ptr ) ||
-         ( 0 != strcmp(input_string, lex_vars.input_str_ptr) ) ||
-         ( lex_vars.input_str_ptr != lex_vars.next_char_ptr ) || 
-         ( H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( H5CL_ERROR_TOK != lex_vars.token.code ) ||
-         ( NULL == lex_vars.token.str_ptr ) ||
-         ( 0 != lex_vars.token.str_len ) ||
-         ( strlen(input_string) != lex_vars.token.max_str_len ) ||
-         ( 0 != lex_vars.token.int_val ) ||
-         ( 0.0 < lex_vars.token.f_val ) ||    /* circumlocution to keep */
-         ( 0.0 > lex_vars.token.f_val ) ||    /* the compier happy      */
-         ( NULL == lex_vars.token.bb_ptr ) ||
-         ( 0 != lex_vars.token.bb_len ) ) {
+    if ((H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL == lex_vars.input_str_ptr) ||
+        (input_string == lex_vars.input_str_ptr) || (0 != strcmp(input_string, lex_vars.input_str_ptr)) ||
+        (lex_vars.input_str_ptr != lex_vars.next_char_ptr) ||
+        (H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (H5CL_ERROR_TOK != lex_vars.token.code) ||
+        (NULL == lex_vars.token.str_ptr) || (0 != lex_vars.token.str_len) ||
+        (strlen(input_string) != lex_vars.token.max_str_len) || (0 != lex_vars.token.int_val) ||
+        (0.0 < lex_vars.token.f_val) || /* circumlocution to keep */
+        (0.0 > lex_vars.token.f_val) || /* the compier happy      */
+        (NULL == lex_vars.token.bb_ptr) || (0 != lex_vars.token.bb_len)) {
 
         TEST_ERROR;
     }
 
     nv_pair.struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
 
-    if ( H5CL_init_nv_pair(&nv_pair) < 0 )
+    if (H5CL_init_nv_pair(&nv_pair) < 0)
         TEST_ERROR;
 
     /* should fail on an extra value / missting closing paren in the name value pair */
-    if ( H5CL__parse_name_value_pair(&nv_pair, &lex_vars) >= 0 ) {
+    if (H5CL__parse_name_value_pair(&nv_pair, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
     }
-#if VERIFY_ERROR_STACK_SUPPORTED 
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                    "Syntax error -- Terminal ')' of name value pair expected.  Context: ...e */ --01020304 )",
-                    verbose) ) {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 !=
+             cl_test_verify_error_stack(
+                 H5E_ARGS, H5E_BADVALUE,
+                 "Syntax error -- Terminal ')' of name value pair expected.  Context: ...e */ --01020304 )",
+                 verbose)) {
 
         TEST_ERROR;
     }
@@ -2353,12 +2155,11 @@ error:
 
 } /* cl_parse_nv_pair_error_check_4() */
 
-
 /*******************************************************************************
  *
  * cl_parse_nv_pair_error_check_5()
  *
- * Verify that the name value pair parser function detects and reports errors 
+ * Verify that the name value pair parser function detects and reports errors
  * as expected.
  *
  *                                              JRM -- 1/8/26
@@ -2372,71 +2173,62 @@ error:
 static herr_t
 cl_parse_nv_pair_error_check_5(void)
 {
-    const char * input_string = "( name \" unterminated quote string ";
+    const char *input_string = "( name \" unterminated quote string ";
 #if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
 #endif
-    H5CL_lex_vars_t lex_vars = {
-        /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
-        /* input_str_ptr     = */ NULL,
-        /* next_char_ptr     = */ NULL,
-        /* end_of_input      = */ false, 
-        /* err_ctx           = */ "",
-        /* token             = */ {
-        /* token.struct_tag  = */    H5CL_TOKEN_STRUCT_TAG,
-        /* token.code        = */    H5CL_ERROR_TOK,
-        /* token.str_ptr     = */    NULL,
-        /* token.str_len     = */    0,
-        /* token.max_str_len = */    0,
-        /* token.int_val     = */    1,    /* should be overwritten on init */
-        /* token.f_val       = */    1.0,  /* should be overwritten on init */
-        /* token.bb_ptr      = */    NULL,
-        /* token.bb_len      = */    0
-        /* end of token        */ }
-    };
+    H5CL_lex_vars_t lex_vars = {/* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
+                                /* input_str_ptr     = */ NULL,
+                                /* next_char_ptr     = */ NULL,
+                                /* end_of_input      = */ false,
+                                /* err_ctx           = */ "",
+                                /* token             = */
+                                {/* token.struct_tag  = */ H5CL_TOKEN_STRUCT_TAG,
+                                 /* token.code        = */ H5CL_ERROR_TOK,
+                                 /* token.str_ptr     = */ NULL,
+                                 /* token.str_len     = */ 0,
+                                 /* token.max_str_len = */ 0,
+                                 /* token.int_val     = */ 1,   /* should be overwritten on init */
+                                 /* token.f_val       = */ 1.0, /* should be overwritten on init */
+                                 /* token.bb_ptr      = */ NULL,
+                                 /* token.bb_len      = */ 0
+                                 /* end of token        */}};
     H5CL_nv_pair_t nv_pair;
 
     TESTING("VFD Configuration Language NV pair err detection & reporting 5");
 
-    if ( H5CL__init_lex_vars(input_string, &lex_vars) < 0 ) {
+    if (H5CL__init_lex_vars(input_string, &lex_vars) < 0) {
 
         TEST_ERROR;
     }
 
-    if ( ( H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL == lex_vars.input_str_ptr ) ||
-         ( input_string == lex_vars.input_str_ptr ) ||
-         ( 0 != strcmp(input_string, lex_vars.input_str_ptr) ) ||
-         ( lex_vars.input_str_ptr != lex_vars.next_char_ptr ) || 
-         ( H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( H5CL_ERROR_TOK != lex_vars.token.code ) ||
-         ( NULL == lex_vars.token.str_ptr ) ||
-         ( 0 != lex_vars.token.str_len ) ||
-         ( strlen(input_string) != lex_vars.token.max_str_len ) ||
-         ( 0 != lex_vars.token.int_val ) ||
-         ( 0.0 < lex_vars.token.f_val ) ||    /* circumlocution to keep */
-         ( 0.0 > lex_vars.token.f_val ) ||    /* the compier happy      */
-         ( NULL == lex_vars.token.bb_ptr ) ||
-         ( 0 != lex_vars.token.bb_len ) ) {
+    if ((H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL == lex_vars.input_str_ptr) ||
+        (input_string == lex_vars.input_str_ptr) || (0 != strcmp(input_string, lex_vars.input_str_ptr)) ||
+        (lex_vars.input_str_ptr != lex_vars.next_char_ptr) ||
+        (H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (H5CL_ERROR_TOK != lex_vars.token.code) ||
+        (NULL == lex_vars.token.str_ptr) || (0 != lex_vars.token.str_len) ||
+        (strlen(input_string) != lex_vars.token.max_str_len) || (0 != lex_vars.token.int_val) ||
+        (0.0 < lex_vars.token.f_val) || /* circumlocution to keep */
+        (0.0 > lex_vars.token.f_val) || /* the compier happy      */
+        (NULL == lex_vars.token.bb_ptr) || (0 != lex_vars.token.bb_len)) {
 
         TEST_ERROR;
     }
 
     nv_pair.struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
 
-    if ( H5CL_init_nv_pair(&nv_pair) < 0 )
+    if (H5CL_init_nv_pair(&nv_pair) < 0)
         TEST_ERROR;
 
     /* should fail on an unterminated quote string */
-    if ( H5CL__parse_name_value_pair(&nv_pair, &lex_vars) >= 0 ) {
+    if (H5CL__parse_name_value_pair(&nv_pair, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                        "Un-terminate quote string in input string.  Context: ...d quote string ",
-                                        verbose) ) {
+    else if (0 != cl_test_verify_error_stack(
+                      H5E_ARGS, H5E_BADVALUE,
+                      "Un-terminate quote string in input string.  Context: ...d quote string ", verbose)) {
 
         TEST_ERROR;
     }
@@ -2452,12 +2244,11 @@ error:
 
 } /* cl_parse_nv_pair_error_check_5() */
 
-
 /*******************************************************************************
  *
  * cl_parse_nv_pair_error_check_6()
  *
- * Verify that the name value pair parser function detects and reports errors 
+ * Verify that the name value pair parser function detects and reports errors
  * as expected.
  *
  *                                              JRM -- 1/8/26
@@ -2471,71 +2262,62 @@ error:
 static herr_t
 cl_parse_nv_pair_error_check_6(void)
 {
-    const char * input_string = "( name ( unterminated list ";
+    const char *input_string = "( name ( unterminated list ";
 #if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
 #endif
-    H5CL_lex_vars_t lex_vars = {
-        /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
-        /* input_str_ptr     = */ NULL,
-        /* next_char_ptr     = */ NULL,
-        /* end_of_input      = */ false, 
-        /* err_ctx           = */ "",
-        /* token             = */ {
-        /* token.struct_tag  = */    H5CL_TOKEN_STRUCT_TAG,
-        /* token.code        = */    H5CL_ERROR_TOK,
-        /* token.str_ptr     = */    NULL,
-        /* token.str_len     = */    0,
-        /* token.max_str_len = */    0,
-        /* token.int_val     = */    1,    /* should be overwritten on init */
-        /* token.f_val       = */    1.0,  /* should be overwritten on init */
-        /* token.bb_ptr      = */    NULL,
-        /* token.bb_len      = */    0
-        /* end of token        */ }
-    };
+    H5CL_lex_vars_t lex_vars = {/* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
+                                /* input_str_ptr     = */ NULL,
+                                /* next_char_ptr     = */ NULL,
+                                /* end_of_input      = */ false,
+                                /* err_ctx           = */ "",
+                                /* token             = */
+                                {/* token.struct_tag  = */ H5CL_TOKEN_STRUCT_TAG,
+                                 /* token.code        = */ H5CL_ERROR_TOK,
+                                 /* token.str_ptr     = */ NULL,
+                                 /* token.str_len     = */ 0,
+                                 /* token.max_str_len = */ 0,
+                                 /* token.int_val     = */ 1,   /* should be overwritten on init */
+                                 /* token.f_val       = */ 1.0, /* should be overwritten on init */
+                                 /* token.bb_ptr      = */ NULL,
+                                 /* token.bb_len      = */ 0
+                                 /* end of token        */}};
     H5CL_nv_pair_t nv_pair;
 
     TESTING("VFD Configuration Language NV pair err detection & reporting 6");
 
-    if ( H5CL__init_lex_vars(input_string, &lex_vars) < 0 ) {
+    if (H5CL__init_lex_vars(input_string, &lex_vars) < 0) {
 
         TEST_ERROR;
     }
 
-    if ( ( H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL == lex_vars.input_str_ptr ) ||
-         ( input_string == lex_vars.input_str_ptr ) ||
-         ( 0 != strcmp(input_string, lex_vars.input_str_ptr) ) ||
-         ( lex_vars.input_str_ptr != lex_vars.next_char_ptr ) || 
-         ( H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( H5CL_ERROR_TOK != lex_vars.token.code ) ||
-         ( NULL == lex_vars.token.str_ptr ) ||
-         ( 0 != lex_vars.token.str_len ) ||
-         ( strlen(input_string) != lex_vars.token.max_str_len ) ||
-         ( 0 != lex_vars.token.int_val ) ||
-         ( 0.0 < lex_vars.token.f_val ) ||    /* circumlocution to keep */
-         ( 0.0 > lex_vars.token.f_val ) ||    /* the compier happy      */
-         ( NULL == lex_vars.token.bb_ptr ) ||
-         ( 0 != lex_vars.token.bb_len ) ) {
+    if ((H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL == lex_vars.input_str_ptr) ||
+        (input_string == lex_vars.input_str_ptr) || (0 != strcmp(input_string, lex_vars.input_str_ptr)) ||
+        (lex_vars.input_str_ptr != lex_vars.next_char_ptr) ||
+        (H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (H5CL_ERROR_TOK != lex_vars.token.code) ||
+        (NULL == lex_vars.token.str_ptr) || (0 != lex_vars.token.str_len) ||
+        (strlen(input_string) != lex_vars.token.max_str_len) || (0 != lex_vars.token.int_val) ||
+        (0.0 < lex_vars.token.f_val) || /* circumlocution to keep */
+        (0.0 > lex_vars.token.f_val) || /* the compier happy      */
+        (NULL == lex_vars.token.bb_ptr) || (0 != lex_vars.token.bb_len)) {
 
         TEST_ERROR;
     }
 
     nv_pair.struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
 
-    if ( H5CL_init_nv_pair(&nv_pair) < 0 )
+    if (H5CL_init_nv_pair(&nv_pair) < 0)
         TEST_ERROR;
 
     /* should fail on an unterminated list */
-    if ( H5CL__parse_name_value_pair(&nv_pair, &lex_vars) >= 0 ) {
+    if (H5CL__parse_name_value_pair(&nv_pair, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                        "Un-terminated list in input string.  Context: ...erminated list ",
-                                        verbose) ) {
+    else if (0 != cl_test_verify_error_stack(
+                      H5E_ARGS, H5E_BADVALUE,
+                      "Un-terminated list in input string.  Context: ...erminated list ", verbose)) {
 
         TEST_ERROR;
     }
@@ -2551,12 +2333,11 @@ error:
 
 } /* cl_parse_nv_pair_error_check_6() */
 
-
 /*******************************************************************************
  *
  * cl_parse_nv_pair_error_check_7()
  *
- * Verify that the name value pair parser function detects and reports errors 
+ * Verify that the name value pair parser function detects and reports errors
  * as expected.
  *
  *                                              JRM -- 1/8/26
@@ -2570,71 +2351,62 @@ error:
 static herr_t
 cl_parse_nv_pair_error_check_7(void)
 {
-    const char * input_string = "( name 3.14159 /* unexpected EOI */ ";
+    const char *input_string = "( name 3.14159 /* unexpected EOI */ ";
 #if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
 #endif
-    H5CL_lex_vars_t lex_vars = {
-        /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
-        /* input_str_ptr     = */ NULL,
-        /* next_char_ptr     = */ NULL,
-        /* end_of_input      = */ false, 
-        /* err_ctx           = */ "",
-        /* token             = */ {
-        /* token.struct_tag  = */    H5CL_TOKEN_STRUCT_TAG,
-        /* token.code        = */    H5CL_ERROR_TOK,
-        /* token.str_ptr     = */    NULL,
-        /* token.str_len     = */    0,
-        /* token.max_str_len = */    0,
-        /* token.int_val     = */    1,    /* should be overwritten on init */
-        /* token.f_val       = */    1.0,  /* should be overwritten on init */
-        /* token.bb_ptr      = */    NULL,
-        /* token.bb_len      = */    0
-        /* end of token        */ }
-    };
+    H5CL_lex_vars_t lex_vars = {/* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
+                                /* input_str_ptr     = */ NULL,
+                                /* next_char_ptr     = */ NULL,
+                                /* end_of_input      = */ false,
+                                /* err_ctx           = */ "",
+                                /* token             = */
+                                {/* token.struct_tag  = */ H5CL_TOKEN_STRUCT_TAG,
+                                 /* token.code        = */ H5CL_ERROR_TOK,
+                                 /* token.str_ptr     = */ NULL,
+                                 /* token.str_len     = */ 0,
+                                 /* token.max_str_len = */ 0,
+                                 /* token.int_val     = */ 1,   /* should be overwritten on init */
+                                 /* token.f_val       = */ 1.0, /* should be overwritten on init */
+                                 /* token.bb_ptr      = */ NULL,
+                                 /* token.bb_len      = */ 0
+                                 /* end of token        */}};
     H5CL_nv_pair_t nv_pair;
 
     TESTING("VFD Configuration Language NV pair err detection & reporting 7");
 
-    if ( H5CL__init_lex_vars(input_string, &lex_vars) < 0 ) {
+    if (H5CL__init_lex_vars(input_string, &lex_vars) < 0) {
 
         TEST_ERROR;
     }
 
-    if ( ( H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL == lex_vars.input_str_ptr ) ||
-         ( input_string == lex_vars.input_str_ptr ) ||
-         ( 0 != strcmp(input_string, lex_vars.input_str_ptr) ) ||
-         ( lex_vars.input_str_ptr != lex_vars.next_char_ptr ) || 
-         ( H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( H5CL_ERROR_TOK != lex_vars.token.code ) ||
-         ( NULL == lex_vars.token.str_ptr ) ||
-         ( 0 != lex_vars.token.str_len ) ||
-         ( strlen(input_string) != lex_vars.token.max_str_len ) ||
-         ( 0 != lex_vars.token.int_val ) ||
-         ( 0.0 < lex_vars.token.f_val ) ||    /* circumlocution to keep */
-         ( 0.0 > lex_vars.token.f_val ) ||    /* the compier happy      */
-         ( NULL == lex_vars.token.bb_ptr ) ||
-         ( 0 != lex_vars.token.bb_len ) ) {
+    if ((H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL == lex_vars.input_str_ptr) ||
+        (input_string == lex_vars.input_str_ptr) || (0 != strcmp(input_string, lex_vars.input_str_ptr)) ||
+        (lex_vars.input_str_ptr != lex_vars.next_char_ptr) ||
+        (H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (H5CL_ERROR_TOK != lex_vars.token.code) ||
+        (NULL == lex_vars.token.str_ptr) || (0 != lex_vars.token.str_len) ||
+        (strlen(input_string) != lex_vars.token.max_str_len) || (0 != lex_vars.token.int_val) ||
+        (0.0 < lex_vars.token.f_val) || /* circumlocution to keep */
+        (0.0 > lex_vars.token.f_val) || /* the compier happy      */
+        (NULL == lex_vars.token.bb_ptr) || (0 != lex_vars.token.bb_len)) {
 
         TEST_ERROR;
     }
 
     nv_pair.struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
 
-    if ( H5CL_init_nv_pair(&nv_pair) < 0 )
+    if (H5CL_init_nv_pair(&nv_pair) < 0)
         TEST_ERROR;
 
     /* should fail on an unterminated list */
-    if ( H5CL__parse_name_value_pair(&nv_pair, &lex_vars) >= 0 ) {
+    if (H5CL__parse_name_value_pair(&nv_pair, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                        "Un-expected end of input string.  Context: ...xpected EOI */ ",
-                                        verbose) ) {
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "Un-expected end of input string.  Context: ...xpected EOI */ ",
+                                             verbose)) {
 
         TEST_ERROR;
     }
@@ -2650,13 +2422,12 @@ error:
 
 } /* cl_parse_nv_pair_error_check_7() */
 
-
 /*******************************************************************************
  *
  * cl_parse_name_val_pair_list_smoke_check()
  *
- * Initial set of parse tests designed to verify basic functionality of the 
- * function that parses name value pair lists.  Note that theses tests do not 
+ * Initial set of parse tests designed to verify basic functionality of the
+ * function that parses name value pair lists.  Note that theses tests do not
  * trigger any error conditinos in the parser.
  *
  *                                              JRM -- 12/20/25
@@ -2670,150 +2441,123 @@ error:
 static herr_t
 cl_parse_name_val_pair_list_smoke_check(void)
 {
-    int nv_pair_num = 0;
-    const char * input_string = "( ( name_0 1 ) ( name_1 3.14159 ) ( name_2 \"Hello World\" ) "
-                                "( name_3 --10111213 ) ( name_4 ( sec2 () ) ) )";
-    uint8_t bb_0[] = { 0x10, 0x11, 0x12, 0x13 };
-    size_t bb_0_len = 4;
-    H5CL_nv_pair_t actual_nv_pairs[5];
-    char name_0[7] = "name_0";
-    char name_1[7] = "name_1";
-    char name_2[7] = "name_2";
-    char name_3[7] = "name_3";
-    char name_4[7] = "name_4";
-    char hello_world[12] = "Hello World";
-    char test_list[12] = "( sec2 () )";
-    H5CL_nv_pair_t expected_nv_pairs[5] = 
-    { 
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ name_0,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 1,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ name_1,
-            /* val_type     = */ H5CL_VAL_FLOAT,
-            /* int_val      = */ 0,
-            /* f_val        = */ 3.14159,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ name_2,
-            /* val_type     = */ H5CL_VAL_QSTR,
-            /* int_val      = */ 0,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ hello_world,
-            /* len          = */ 11
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ name_3,
-            /* val_type     = */ H5CL_VAL_BB,
-            /* int_val      = */ 0,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ (void *)bb_0,
-            /* len          = */ bb_0_len
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ name_4,
-            /* val_type     = */ H5CL_VAL_LIST,
-            /* int_val      = */ 0,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ test_list,
-            /* len          = */ 11 
-        }
-    };
-    H5CL_lex_vars_t lex_vars = {
-        /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
-        /* input_str_ptr     = */ NULL,
-        /* next_char_ptr     = */ NULL,
-        /* end_of_input      = */ false, 
-        /* err_ctx           = */ "",
-        /* token             = */ {
-        /* token.struct_tag  = */    H5CL_TOKEN_STRUCT_TAG,
-        /* token.code        = */    H5CL_ERROR_TOK,
-        /* token.str_ptr     = */    NULL,
-        /* token.str_len     = */    0,
-        /* token.max_str_len = */    0,
-        /* token.int_val     = */    1,    /* should be overwritten on init */
-        /* token.f_val       = */    1.0,  /* should be overwritten on init */
-        /* token.bb_ptr      = */    NULL,
-        /* token.bb_len      = */    0
-        /* end of token        */ }
-    };
+    int             nv_pair_num  = 0;
+    const char     *input_string = "( ( name_0 1 ) ( name_1 3.14159 ) ( name_2 \"Hello World\" ) "
+                                   "( name_3 --10111213 ) ( name_4 ( sec2 () ) ) )";
+    uint8_t         bb_0[]       = {0x10, 0x11, 0x12, 0x13};
+    size_t          bb_0_len     = 4;
+    H5CL_nv_pair_t  actual_nv_pairs[5];
+    char            name_0[7]            = "name_0";
+    char            name_1[7]            = "name_1";
+    char            name_2[7]            = "name_2";
+    char            name_3[7]            = "name_3";
+    char            name_4[7]            = "name_4";
+    char            hello_world[12]      = "Hello World";
+    char            test_list[12]        = "( sec2 () )";
+    H5CL_nv_pair_t  expected_nv_pairs[5] = {{/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                            /* name_ptr     = */ name_0,
+                                            /* val_type     = */ H5CL_VAL_INT,
+                                            /* int_val      = */ 1,
+                                            /* f_val        = */ 0.0,
+                                            /* vlen_val_ptr = */ NULL,
+                                            /* len          = */ 0},
+                                            {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                            /* name_ptr     = */ name_1,
+                                            /* val_type     = */ H5CL_VAL_FLOAT,
+                                            /* int_val      = */ 0,
+                                            /* f_val        = */ 3.14159,
+                                            /* vlen_val_ptr = */ NULL,
+                                            /* len          = */ 0},
+                                            {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                            /* name_ptr     = */ name_2,
+                                            /* val_type     = */ H5CL_VAL_QSTR,
+                                            /* int_val      = */ 0,
+                                            /* f_val        = */ 0.0,
+                                            /* vlen_val_ptr = */ hello_world,
+                                            /* len          = */ 11},
+                                            {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                            /* name_ptr     = */ name_3,
+                                            /* val_type     = */ H5CL_VAL_BB,
+                                            /* int_val      = */ 0,
+                                            /* f_val        = */ 0.0,
+                                            /* vlen_val_ptr = */ (void *)bb_0,
+                                            /* len          = */ bb_0_len},
+                                            {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                            /* name_ptr     = */ name_4,
+                                            /* val_type     = */ H5CL_VAL_LIST,
+                                            /* int_val      = */ 0,
+                                            /* f_val        = */ 0.0,
+                                            /* vlen_val_ptr = */ test_list,
+                                            /* len          = */ 11}};
+    H5CL_lex_vars_t lex_vars             = {/* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
+                                /* input_str_ptr     = */ NULL,
+                                /* next_char_ptr     = */ NULL,
+                                /* end_of_input      = */ false,
+                                /* err_ctx           = */ "",
+                                /* token             = */
+                                {/* token.struct_tag  = */ H5CL_TOKEN_STRUCT_TAG,
+                                 /* token.code        = */ H5CL_ERROR_TOK,
+                                 /* token.str_ptr     = */ NULL,
+                                 /* token.str_len     = */ 0,
+                                 /* token.max_str_len = */ 0,
+                                 /* token.int_val     = */ 1, /* should be overwritten on init */
+                                 /* token.f_val       = */ 1.0, /* should be overwritten on init */
+                                 /* token.bb_ptr      = */ NULL,
+                                 /* token.bb_len      = */ 0
+                                 /* end of token        */}};
 
     TESTING("VFD Configuration Language Parse NV Pair List Smoke Check");
 
-    if ( H5CL__init_lex_vars(input_string, &lex_vars) < 0 ) 
+    if (H5CL__init_lex_vars(input_string, &lex_vars) < 0)
         TEST_ERROR;
 
-
-    if ( ( H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL == lex_vars.input_str_ptr ) ||
-         ( input_string == lex_vars.input_str_ptr ) ||
-         ( 0 != strcmp(input_string, lex_vars.input_str_ptr) ) ||
-         ( lex_vars.input_str_ptr != lex_vars.next_char_ptr ) || 
-         ( H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( H5CL_ERROR_TOK != lex_vars.token.code ) ||
-         ( NULL == lex_vars.token.str_ptr ) ||
-         ( 0 != lex_vars.token.str_len ) ||
-         ( strlen(input_string) != lex_vars.token.max_str_len ) ||
-         ( 0 != lex_vars.token.int_val ) ||
-         ( 0.0 < lex_vars.token.f_val ) ||    /* circumlocution to keep */
-         ( 0.0 > lex_vars.token.f_val ) ||    /* the compier happy      */
-         ( NULL == lex_vars.token.bb_ptr ) ||
-         ( 0 != lex_vars.token.bb_len ) ) {
+    if ((H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL == lex_vars.input_str_ptr) ||
+        (input_string == lex_vars.input_str_ptr) || (0 != strcmp(input_string, lex_vars.input_str_ptr)) ||
+        (lex_vars.input_str_ptr != lex_vars.next_char_ptr) ||
+        (H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (H5CL_ERROR_TOK != lex_vars.token.code) ||
+        (NULL == lex_vars.token.str_ptr) || (0 != lex_vars.token.str_len) ||
+        (strlen(input_string) != lex_vars.token.max_str_len) || (0 != lex_vars.token.int_val) ||
+        (0.0 < lex_vars.token.f_val) || /* circumlocution to keep */
+        (0.0 > lex_vars.token.f_val) || /* the compier happy      */
+        (NULL == lex_vars.token.bb_ptr) || (0 != lex_vars.token.bb_len)) {
 
         TEST_ERROR;
     }
 
     /* initialize the array of instance of cl_nv_pair_t */
-    for ( nv_pair_num = 0; nv_pair_num < 5; nv_pair_num++ ) {
+    for (nv_pair_num = 0; nv_pair_num < 5; nv_pair_num++) {
 
         actual_nv_pairs[nv_pair_num].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
 
-        if ( H5CL_init_nv_pair(&(actual_nv_pairs[nv_pair_num])) < 0 )
+        if (H5CL_init_nv_pair(&(actual_nv_pairs[nv_pair_num])) < 0)
             TEST_ERROR;
     }
 
-
-    if ( H5CL__parse_name_value_pair_list(actual_nv_pairs, 5, &lex_vars) < 0 )
+    if (H5CL__parse_name_value_pair_list(actual_nv_pairs, 5, &lex_vars) < 0)
         TEST_ERROR;
 
-    if ( 0 != cl_test_verify_nv_pairs(actual_nv_pairs, expected_nv_pairs, 5, true) )
+    if (0 != cl_test_verify_nv_pairs(actual_nv_pairs, expected_nv_pairs, 5, true))
         TEST_ERROR;
-
 
     /* Don't take down expected name value pairs since all strings are either constant
      * or allocated on the stack.
      */
 
-    for ( nv_pair_num = 0; nv_pair_num < 5; nv_pair_num++ ) {
+    for (nv_pair_num = 0; nv_pair_num < 5; nv_pair_num++) {
 
-        if ( H5CL_take_down_nv_pair(&(actual_nv_pairs[nv_pair_num])) < 0 )
+        if (H5CL_take_down_nv_pair(&(actual_nv_pairs[nv_pair_num])) < 0)
             TEST_ERROR;
     }
 
-    if ( H5CL__take_down_lex_vars(&lex_vars) < 0 )
+    if (H5CL__take_down_lex_vars(&lex_vars) < 0)
         TEST_ERROR;
 
-    if ( ( H5CL_INVALID_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL != lex_vars.input_str_ptr ) ||
-         ( H5CL_INVALID_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( NULL != lex_vars.token.str_ptr ) ||
-         ( NULL != lex_vars.token.bb_ptr ) ) {
+    if ((H5CL_INVALID_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL != lex_vars.input_str_ptr) ||
+        (H5CL_INVALID_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (NULL != lex_vars.token.str_ptr) ||
+        (NULL != lex_vars.token.bb_ptr)) {
 
         TEST_ERROR;
     }
-
 
     PASSED();
 
@@ -2824,7 +2568,6 @@ error:
     return -1;
 
 } /* cl_parse_name_val_pair_list_smoke_check() */
-
 
 /*******************************************************************************
  *
@@ -2846,92 +2589,79 @@ cl_parse_name_val_pair_list_err_check_1(void)
 #if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
 #endif
-    int nv_pair_num = 0;
-    const char * input_string = " ( name_0 1 ) ( name_1 3.14159 ) ( name_2 \"Hello World\" ) "
-                                "( name_3 --10111213 ) ( name_4 ( sec2 () ) ) )";
-    H5CL_nv_pair_t actual_nv_pairs[5];
-    H5CL_lex_vars_t lex_vars = {
-        /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
-        /* input_str_ptr     = */ NULL,
-        /* next_char_ptr     = */ NULL,
-        /* end_of_input      = */ false, 
-        /* err_ctx           = */ "",
-        /* token             = */ {
-        /* token.struct_tag  = */    H5CL_TOKEN_STRUCT_TAG,
-        /* token.code        = */    H5CL_ERROR_TOK,
-        /* token.str_ptr     = */    NULL,
-        /* token.str_len     = */    0,
-        /* token.max_str_len = */    0,
-        /* token.int_val     = */    1,    /* should be overwritten on init */
-        /* token.f_val       = */    1.0,  /* should be overwritten on init */
-        /* token.bb_ptr      = */    NULL,
-        /* token.bb_len      = */    0
-        /* end of token        */ }
-    };
+    int             nv_pair_num  = 0;
+    const char     *input_string = " ( name_0 1 ) ( name_1 3.14159 ) ( name_2 \"Hello World\" ) "
+                                   "( name_3 --10111213 ) ( name_4 ( sec2 () ) ) )";
+    H5CL_nv_pair_t  actual_nv_pairs[5];
+    H5CL_lex_vars_t lex_vars = {/* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
+                                /* input_str_ptr     = */ NULL,
+                                /* next_char_ptr     = */ NULL,
+                                /* end_of_input      = */ false,
+                                /* err_ctx           = */ "",
+                                /* token             = */
+                                {/* token.struct_tag  = */ H5CL_TOKEN_STRUCT_TAG,
+                                 /* token.code        = */ H5CL_ERROR_TOK,
+                                 /* token.str_ptr     = */ NULL,
+                                 /* token.str_len     = */ 0,
+                                 /* token.max_str_len = */ 0,
+                                 /* token.int_val     = */ 1,   /* should be overwritten on init */
+                                 /* token.f_val       = */ 1.0, /* should be overwritten on init */
+                                 /* token.bb_ptr      = */ NULL,
+                                 /* token.bb_len      = */ 0
+                                 /* end of token        */}};
 
     TESTING("VFD Configuration Language NV Pair List err detect & report 1");
 
-    if ( H5CL__init_lex_vars(input_string, &lex_vars) < 0 ) 
+    if (H5CL__init_lex_vars(input_string, &lex_vars) < 0)
         TEST_ERROR;
 
-
-    if ( ( H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL == lex_vars.input_str_ptr ) ||
-         ( input_string == lex_vars.input_str_ptr ) ||
-         ( 0 != strcmp(input_string, lex_vars.input_str_ptr) ) ||
-         ( lex_vars.input_str_ptr != lex_vars.next_char_ptr ) || 
-         ( H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( H5CL_ERROR_TOK != lex_vars.token.code ) ||
-         ( NULL == lex_vars.token.str_ptr ) ||
-         ( 0 != lex_vars.token.str_len ) ||
-         ( strlen(input_string) != lex_vars.token.max_str_len ) ||
-         ( 0 != lex_vars.token.int_val ) ||
-         ( 0.0 < lex_vars.token.f_val ) ||    /* circumlocution to keep */
-         ( 0.0 > lex_vars.token.f_val ) ||    /* the compier happy      */
-         ( NULL == lex_vars.token.bb_ptr ) ||
-         ( 0 != lex_vars.token.bb_len ) ) {
+    if ((H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL == lex_vars.input_str_ptr) ||
+        (input_string == lex_vars.input_str_ptr) || (0 != strcmp(input_string, lex_vars.input_str_ptr)) ||
+        (lex_vars.input_str_ptr != lex_vars.next_char_ptr) ||
+        (H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (H5CL_ERROR_TOK != lex_vars.token.code) ||
+        (NULL == lex_vars.token.str_ptr) || (0 != lex_vars.token.str_len) ||
+        (strlen(input_string) != lex_vars.token.max_str_len) || (0 != lex_vars.token.int_val) ||
+        (0.0 < lex_vars.token.f_val) || /* circumlocution to keep */
+        (0.0 > lex_vars.token.f_val) || /* the compier happy      */
+        (NULL == lex_vars.token.bb_ptr) || (0 != lex_vars.token.bb_len)) {
 
         TEST_ERROR;
     }
 
     /* initialize the array of instance of cl_nv_pair_t */
-    for ( nv_pair_num = 0; nv_pair_num < 5; nv_pair_num++ ) {
+    for (nv_pair_num = 0; nv_pair_num < 5; nv_pair_num++) {
 
         actual_nv_pairs[nv_pair_num].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
 
-        if ( H5CL_init_nv_pair(&(actual_nv_pairs[nv_pair_num])) < 0 )
+        if (H5CL_init_nv_pair(&(actual_nv_pairs[nv_pair_num])) < 0)
             TEST_ERROR;
     }
 
     /* missing initial left paren -- should fail with either left or right parent expected */
-    if ( H5CL__parse_name_value_pair_list(actual_nv_pairs, 5, &lex_vars) >= 0 ) {
+    if (H5CL__parse_name_value_pair_list(actual_nv_pairs, 5, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                        "Syntax error -- Terminal \')\' of name value pair list or leading \'(\' "
-                                        "of name value pair expected.  Context:  ( name_0 1 ) ( name_1 3.14159...",
-                                        verbose) ) {
+    else if (0 != cl_test_verify_error_stack(
+                      H5E_ARGS, H5E_BADVALUE,
+                      "Syntax error -- Terminal \')\' of name value pair list or leading \'(\' "
+                      "of name value pair expected.  Context:  ( name_0 1 ) ( name_1 3.14159...",
+                      verbose)) {
 
         TEST_ERROR;
     }
 #endif
 
-
-    if ( H5CL__take_down_lex_vars(&lex_vars) < 0 )
+    if (H5CL__take_down_lex_vars(&lex_vars) < 0)
         TEST_ERROR;
 
-    if ( ( H5CL_INVALID_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL != lex_vars.input_str_ptr ) ||
-         ( H5CL_INVALID_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( NULL != lex_vars.token.str_ptr ) ||
-         ( NULL != lex_vars.token.bb_ptr ) ) {
+    if ((H5CL_INVALID_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL != lex_vars.input_str_ptr) ||
+        (H5CL_INVALID_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (NULL != lex_vars.token.str_ptr) ||
+        (NULL != lex_vars.token.bb_ptr)) {
 
         TEST_ERROR;
     }
-
 
     PASSED();
 
@@ -2942,7 +2672,6 @@ error:
     return -1;
 
 } /* cl_parse_name_val_pair_list_err_check_1() */
-
 
 /*******************************************************************************
  *
@@ -2964,92 +2693,79 @@ cl_parse_name_val_pair_list_err_check_2(void)
 #if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
 #endif
-    int nv_pair_num = 0;
-    const char * input_string = "  name_0 1 ) ( name_1 3.14159 ) ( name_2 \"Hello World\" ) "
-                                "( name_3 --10111213 ) ( name_4 ( sec2 () ) ) )";
-    H5CL_nv_pair_t actual_nv_pairs[5];
-    H5CL_lex_vars_t lex_vars = {
-        /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
-        /* input_str_ptr     = */ NULL,
-        /* next_char_ptr     = */ NULL,
-        /* end_of_input      = */ false, 
-        /* err_ctx           = */ "",
-        /* token             = */ {
-        /* token.struct_tag  = */    H5CL_TOKEN_STRUCT_TAG,
-        /* token.code        = */    H5CL_ERROR_TOK,
-        /* token.str_ptr     = */    NULL,
-        /* token.str_len     = */    0,
-        /* token.max_str_len = */    0,
-        /* token.int_val     = */    1,    /* should be overwritten on init */
-        /* token.f_val       = */    1.0,  /* should be overwritten on init */
-        /* token.bb_ptr      = */    NULL,
-        /* token.bb_len      = */    0
-        /* end of token        */ }
-    };
+    int             nv_pair_num  = 0;
+    const char     *input_string = "  name_0 1 ) ( name_1 3.14159 ) ( name_2 \"Hello World\" ) "
+                                   "( name_3 --10111213 ) ( name_4 ( sec2 () ) ) )";
+    H5CL_nv_pair_t  actual_nv_pairs[5];
+    H5CL_lex_vars_t lex_vars = {/* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
+                                /* input_str_ptr     = */ NULL,
+                                /* next_char_ptr     = */ NULL,
+                                /* end_of_input      = */ false,
+                                /* err_ctx           = */ "",
+                                /* token             = */
+                                {/* token.struct_tag  = */ H5CL_TOKEN_STRUCT_TAG,
+                                 /* token.code        = */ H5CL_ERROR_TOK,
+                                 /* token.str_ptr     = */ NULL,
+                                 /* token.str_len     = */ 0,
+                                 /* token.max_str_len = */ 0,
+                                 /* token.int_val     = */ 1,   /* should be overwritten on init */
+                                 /* token.f_val       = */ 1.0, /* should be overwritten on init */
+                                 /* token.bb_ptr      = */ NULL,
+                                 /* token.bb_len      = */ 0
+                                 /* end of token        */}};
 
     TESTING("VFD Configuration Language NV Pair List err detect & report 2");
 
-    if ( H5CL__init_lex_vars(input_string, &lex_vars) < 0 ) 
+    if (H5CL__init_lex_vars(input_string, &lex_vars) < 0)
         TEST_ERROR;
 
-
-    if ( ( H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL == lex_vars.input_str_ptr ) ||
-         ( input_string == lex_vars.input_str_ptr ) ||
-         ( 0 != strcmp(input_string, lex_vars.input_str_ptr) ) ||
-         ( lex_vars.input_str_ptr != lex_vars.next_char_ptr ) || 
-         ( H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( H5CL_ERROR_TOK != lex_vars.token.code ) ||
-         ( NULL == lex_vars.token.str_ptr ) ||
-         ( 0 != lex_vars.token.str_len ) ||
-         ( strlen(input_string) != lex_vars.token.max_str_len ) ||
-         ( 0 != lex_vars.token.int_val ) ||
-         ( 0.0 < lex_vars.token.f_val ) ||    /* circumlocution to keep */
-         ( 0.0 > lex_vars.token.f_val ) ||    /* the compier happy      */
-         ( NULL == lex_vars.token.bb_ptr ) ||
-         ( 0 != lex_vars.token.bb_len ) ) {
+    if ((H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL == lex_vars.input_str_ptr) ||
+        (input_string == lex_vars.input_str_ptr) || (0 != strcmp(input_string, lex_vars.input_str_ptr)) ||
+        (lex_vars.input_str_ptr != lex_vars.next_char_ptr) ||
+        (H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (H5CL_ERROR_TOK != lex_vars.token.code) ||
+        (NULL == lex_vars.token.str_ptr) || (0 != lex_vars.token.str_len) ||
+        (strlen(input_string) != lex_vars.token.max_str_len) || (0 != lex_vars.token.int_val) ||
+        (0.0 < lex_vars.token.f_val) || /* circumlocution to keep */
+        (0.0 > lex_vars.token.f_val) || /* the compier happy      */
+        (NULL == lex_vars.token.bb_ptr) || (0 != lex_vars.token.bb_len)) {
 
         TEST_ERROR;
     }
 
     /* initialize the array of instance of cl_nv_pair_t */
-    for ( nv_pair_num = 0; nv_pair_num < 5; nv_pair_num++ ) {
+    for (nv_pair_num = 0; nv_pair_num < 5; nv_pair_num++) {
 
         actual_nv_pairs[nv_pair_num].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
 
-        if ( H5CL_init_nv_pair(&(actual_nv_pairs[nv_pair_num])) < 0 )
+        if (H5CL_init_nv_pair(&(actual_nv_pairs[nv_pair_num])) < 0)
             TEST_ERROR;
     }
 
     /* missing initial left paren -- should fail with either left or right parent expected */
-    if ( H5CL__parse_name_value_pair_list(actual_nv_pairs, 5, &lex_vars) >= 0 ) {
+    if (H5CL__parse_name_value_pair_list(actual_nv_pairs, 5, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
+    else if (0 !=
+             cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
                                         "Syntax error -- Initial \'(\' of name value pair list expected.  "
                                         "Context:   name_0 1 ) ( name_1 3.14159 ...",
-                                        verbose) ) {
+                                        verbose)) {
 
         TEST_ERROR;
     }
 #endif
 
-
-    if ( H5CL__take_down_lex_vars(&lex_vars) < 0 )
+    if (H5CL__take_down_lex_vars(&lex_vars) < 0)
         TEST_ERROR;
 
-    if ( ( H5CL_INVALID_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL != lex_vars.input_str_ptr ) ||
-         ( H5CL_INVALID_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( NULL != lex_vars.token.str_ptr ) ||
-         ( NULL != lex_vars.token.bb_ptr ) ) {
+    if ((H5CL_INVALID_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL != lex_vars.input_str_ptr) ||
+        (H5CL_INVALID_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (NULL != lex_vars.token.str_ptr) ||
+        (NULL != lex_vars.token.bb_ptr)) {
 
         TEST_ERROR;
     }
-
 
     PASSED();
 
@@ -3060,7 +2776,6 @@ error:
     return -1;
 
 } /* cl_parse_name_val_pair_list_err_check_2() */
-
 
 /*******************************************************************************
  *
@@ -3082,90 +2797,77 @@ cl_parse_name_val_pair_list_err_check_3(void)
 #if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
 #endif
-    int nv_pair_num = 0;
-    const char * input_string = "( ( name_3 --10111213- ) ( name_4 ( sec2 () ) ) )";
-    H5CL_nv_pair_t actual_nv_pairs[5];
-    H5CL_lex_vars_t lex_vars = {
-        /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
-        /* input_str_ptr     = */ NULL,
-        /* next_char_ptr     = */ NULL,
-        /* end_of_input      = */ false, 
-        /* err_ctx           = */ "",
-        /* token             = */ {
-        /* token.struct_tag  = */    H5CL_TOKEN_STRUCT_TAG,
-        /* token.code        = */    H5CL_ERROR_TOK,
-        /* token.str_ptr     = */    NULL,
-        /* token.str_len     = */    0,
-        /* token.max_str_len = */    0,
-        /* token.int_val     = */    1,    /* should be overwritten on init */
-        /* token.f_val       = */    1.0,  /* should be overwritten on init */
-        /* token.bb_ptr      = */    NULL,
-        /* token.bb_len      = */    0
-        /* end of token        */ }
-    };
+    int             nv_pair_num  = 0;
+    const char     *input_string = "( ( name_3 --10111213- ) ( name_4 ( sec2 () ) ) )";
+    H5CL_nv_pair_t  actual_nv_pairs[5];
+    H5CL_lex_vars_t lex_vars = {/* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
+                                /* input_str_ptr     = */ NULL,
+                                /* next_char_ptr     = */ NULL,
+                                /* end_of_input      = */ false,
+                                /* err_ctx           = */ "",
+                                /* token             = */
+                                {/* token.struct_tag  = */ H5CL_TOKEN_STRUCT_TAG,
+                                 /* token.code        = */ H5CL_ERROR_TOK,
+                                 /* token.str_ptr     = */ NULL,
+                                 /* token.str_len     = */ 0,
+                                 /* token.max_str_len = */ 0,
+                                 /* token.int_val     = */ 1,   /* should be overwritten on init */
+                                 /* token.f_val       = */ 1.0, /* should be overwritten on init */
+                                 /* token.bb_ptr      = */ NULL,
+                                 /* token.bb_len      = */ 0
+                                 /* end of token        */}};
 
     TESTING("VFD Configuration Language NV Pair List err detect & report 3");
 
-    if ( H5CL__init_lex_vars(input_string, &lex_vars) < 0 ) 
+    if (H5CL__init_lex_vars(input_string, &lex_vars) < 0)
         TEST_ERROR;
 
-
-    if ( ( H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL == lex_vars.input_str_ptr ) ||
-         ( input_string == lex_vars.input_str_ptr ) ||
-         ( 0 != strcmp(input_string, lex_vars.input_str_ptr) ) ||
-         ( lex_vars.input_str_ptr != lex_vars.next_char_ptr ) || 
-         ( H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( H5CL_ERROR_TOK != lex_vars.token.code ) ||
-         ( NULL == lex_vars.token.str_ptr ) ||
-         ( 0 != lex_vars.token.str_len ) ||
-         ( strlen(input_string) != lex_vars.token.max_str_len ) ||
-         ( 0 != lex_vars.token.int_val ) ||
-         ( 0.0 < lex_vars.token.f_val ) ||    /* circumlocution to keep */
-         ( 0.0 > lex_vars.token.f_val ) ||    /* the compier happy      */
-         ( NULL == lex_vars.token.bb_ptr ) ||
-         ( 0 != lex_vars.token.bb_len ) ) {
+    if ((H5CL_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL == lex_vars.input_str_ptr) ||
+        (input_string == lex_vars.input_str_ptr) || (0 != strcmp(input_string, lex_vars.input_str_ptr)) ||
+        (lex_vars.input_str_ptr != lex_vars.next_char_ptr) ||
+        (H5CL_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (H5CL_ERROR_TOK != lex_vars.token.code) ||
+        (NULL == lex_vars.token.str_ptr) || (0 != lex_vars.token.str_len) ||
+        (strlen(input_string) != lex_vars.token.max_str_len) || (0 != lex_vars.token.int_val) ||
+        (0.0 < lex_vars.token.f_val) || /* circumlocution to keep */
+        (0.0 > lex_vars.token.f_val) || /* the compier happy      */
+        (NULL == lex_vars.token.bb_ptr) || (0 != lex_vars.token.bb_len)) {
 
         TEST_ERROR;
     }
 
     /* initialize the array of instance of cl_nv_pair_t */
-    for ( nv_pair_num = 0; nv_pair_num < 5; nv_pair_num++ ) {
+    for (nv_pair_num = 0; nv_pair_num < 5; nv_pair_num++) {
 
         actual_nv_pairs[nv_pair_num].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
 
-        if ( H5CL_init_nv_pair(&(actual_nv_pairs[nv_pair_num])) < 0 )
+        if (H5CL_init_nv_pair(&(actual_nv_pairs[nv_pair_num])) < 0)
             TEST_ERROR;
     }
 
     /* missing initial left paren -- should fail with either left or right parent expected */
-    if ( H5CL__parse_name_value_pair_list(actual_nv_pairs, 5, &lex_vars) >= 0 ) {
+    if (H5CL__parse_name_value_pair_list(actual_nv_pairs, 5, &lex_vars) >= 0) {
 
         TEST_ERROR;
-
-    } 
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                        "Ill-formed numerical constant.  "
-                                        "Context: ...me_3 --10111213- ) ( name_4 ( ...",
-                                        verbose) ) {
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "Ill-formed numerical constant.  "
+                                             "Context: ...me_3 --10111213- ) ( name_4 ( ...",
+                                             verbose)) {
 
         TEST_ERROR;
     }
 #endif
 
-    if ( H5CL__take_down_lex_vars(&lex_vars) < 0 )
+    if (H5CL__take_down_lex_vars(&lex_vars) < 0)
         TEST_ERROR;
 
-    if ( ( H5CL_INVALID_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag ) ||
-         ( NULL != lex_vars.input_str_ptr ) ||
-         ( H5CL_INVALID_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag ) ||
-         ( NULL != lex_vars.token.str_ptr ) ||
-         ( NULL != lex_vars.token.bb_ptr ) ) {
+    if ((H5CL_INVALID_LEX_VARS_STRUCT_TAG != lex_vars.struct_tag) || (NULL != lex_vars.input_str_ptr) ||
+        (H5CL_INVALID_TOKEN_STRUCT_TAG != lex_vars.token.struct_tag) || (NULL != lex_vars.token.str_ptr) ||
+        (NULL != lex_vars.token.bb_ptr)) {
 
         TEST_ERROR;
     }
-
 
     PASSED();
 
@@ -3177,12 +2879,11 @@ error:
 
 } /* cl_parse_name_val_pair_list_err_check_3() */
 
-
 /*******************************************************************************
  *
  * cl_parser_smoke_check()
  *
- * Initial full configuraion language parser smoke checks. Note that theses 
+ * Initial full configuraion language parser smoke checks. Note that theses
  * tests do not trigger any error conditinos in the parser.
  *
  *                                              JRM -- 12/20/25
@@ -3196,14 +2897,14 @@ error:
 static herr_t
 cl_parser_smoke_check(void)
 {
-    int i;
-    int num_nv_pairs_0 = 1;
-    int num_nv_pairs_1 = 4;
-    int num_nv_pairs_2 = 1;
-    int num_nv_pairs_3 = 10;
-    int num_nv_pairs_4 = 1;
-    int num_nv_pairs_5 = 1;
-    const char * input_string_0 = 
+    int         i;
+    int         num_nv_pairs_0 = 1;
+    int         num_nv_pairs_1 = 4;
+    int         num_nv_pairs_2 = 1;
+    int         num_nv_pairs_3 = 10;
+    int         num_nv_pairs_4 = 1;
+    int         num_nv_pairs_5 = 1;
+    const char *input_string_0 =
         "( page_buffer "
         "  ( ( page_size 4096 )"
         "    ( max_num_pages 16 )"
@@ -3225,8 +2926,8 @@ cl_parser_smoke_check(void)
         "    )"
         "  )"
         ")";
-    char input_string_1[521] = 
-          "( ( page_size 4096 )"
+    char input_string_1[521] =
+        "( ( page_size 4096 )"
         "    ( max_num_pages 16 )"
         "    ( replacement_policy 0 )"
         "    ( underlying_VFD "
@@ -3245,8 +2946,8 @@ cl_parser_smoke_check(void)
         "      )"
         "    )"
         "  )";
-    char input_string_2[405] = 
-             "( encryption_VFD "
+    char input_string_2[405] =
+        "( encryption_VFD "
         "        ( ( plaintext_page_size  4096 )"
         "          ( ciphertext_page_size 4112 )"
         "          ( encryption_buffer_size 65792 )"
@@ -3259,8 +2960,8 @@ cl_parser_smoke_check(void)
         "          ( underlying_VFD ( sec2 () ) )"
         "        )"
         "      )";
-    char input_string_3[373] = 
-                "( ( plaintext_page_size  4096 )"
+    char input_string_3[373] =
+        "( ( plaintext_page_size  4096 )"
         "          ( ciphertext_page_size 4112 )"
         "          ( encryption_buffer_size 65792 )"
         "          ( cipher  0 )"
@@ -3271,436 +2972,374 @@ cl_parser_smoke_check(void)
         "          ( mode 0 )"
         "          ( underlying_VFD ( sec2 () ) )"
         "        )";
-    char input_string_4[12] = "( sec2 () )";
-    char  input_string_5[3] = "()";
-    uint8_t key[] = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
-                      0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
-                      0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
-                      0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF };
-    size_t key_len = 32;
+    char           input_string_4[12] = "( sec2 () )";
+    char           input_string_5[3]  = "()";
+    uint8_t        key[]              = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0x01, 0x23, 0x45,
+                                         0x67, 0x89, 0xAB, 0xCD, 0xEF, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB,
+                                         0xCD, 0xEF, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF};
+    size_t         key_len            = 32;
     H5CL_nv_pair_t actual_nv_pairs_0[1];
     H5CL_nv_pair_t actual_nv_pairs_1[4];
     H5CL_nv_pair_t actual_nv_pairs_2[1];
     H5CL_nv_pair_t actual_nv_pairs_3[11];
     H5CL_nv_pair_t actual_nv_pairs_4[1];
     H5CL_nv_pair_t actual_nv_pairs_5[1];
-    char l0_page_buffer[12] = "page_buffer";
-    H5CL_nv_pair_t expected_nv_pairs_0[1] =
-    { 
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ l0_page_buffer,
-            /* val_type     = */ H5CL_VAL_LIST,
-            /* int_val      = */ 0,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ input_string_1,
-            /* len          = */ 511 
-        }
-    };
-    char l1_page_size[]          = "page_size";
-    char l1_max_num_pages[]      = "max_num_pages";
-    char l1_replacement_policy[] = "replacement_policy";
-    char l1_underlying_vfd[]     = "underlying_VFD";
-    H5CL_nv_pair_t expected_nv_pairs_1[4] = 
-    { 
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ l1_page_size,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 4096,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ l1_max_num_pages,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 16,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ l1_replacement_policy,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 0,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ l1_underlying_vfd,
-            /* val_type     = */ H5CL_VAL_LIST,
-            /* int_val      = */ 0,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ input_string_2,
-            /* len          = */ 404
-        }
-    };
-    char l2_encryption_VFD[] = "encryption_VFD";
-    H5CL_nv_pair_t expected_nv_pairs_2[1] = 
-    { 
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ l2_encryption_VFD,
-            /* val_type     = */ H5CL_VAL_LIST,
-            /* int_val      = */ 0,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ input_string_3,
-            /* len          = */ 372
-        }
-    };
-    char l3_plaintext_page_size[]    = "plaintext_page_size";
-    char l3_ciphertext_page_size[]   = "ciphertext_page_size";
-    char l3_encryption_buffer_size[] = "encryption_buffer_size";
-    char l3_cipher[]                 = "cipher";
-    char l3_cipher_block_size[]      = "cipher_block_size";
-    char l3_key_size[]               = "key_size";
-    char l3_key[]                    = "key";
-    char l3_iv_size[]                = "iv_size";
-    char l3_mode[]                   = "mode";
-    char l3_underlying_VFD[]         = "underlying_VFD";
-    H5CL_nv_pair_t expected_nv_pairs_3[11] = 
-    { 
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ l3_plaintext_page_size,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 4096,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ l3_ciphertext_page_size,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 4112,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ l3_encryption_buffer_size,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 65792,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ l3_cipher,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 0,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ l3_cipher_block_size,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 16,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ l3_key_size,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 32,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ l3_key,
-            /* val_type     = */ H5CL_VAL_BB,
-            /* int_val      = */ 0,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ key,
-            /* len          = */ key_len
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ l3_iv_size,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 16,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ l3_mode,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 0,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ l3_underlying_VFD,
-            /* val_type     = */ H5CL_VAL_LIST,
-            /* int_val      = */ 0,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ input_string_4,
-            /* len          = */ 11
-        }
-    };
-    char l4_sec2[] = "sec2";
-    H5CL_nv_pair_t expected_nv_pairs_4[1] = 
-    { 
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ l4_sec2,
-            /* val_type     = */ H5CL_VAL_LIST,
-            /* int_val      = */ 0,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ input_string_5,
-            /* len          = */ 2
-        }
-    };
+    char           l0_page_buffer[12]          = "page_buffer";
+    H5CL_nv_pair_t expected_nv_pairs_0[1]      = {{/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                              /* name_ptr     = */ l0_page_buffer,
+                                              /* val_type     = */ H5CL_VAL_LIST,
+                                              /* int_val      = */ 0,
+                                              /* f_val        = */ 0.0,
+                                              /* vlen_val_ptr = */ input_string_1,
+                                              /* len          = */ 511}};
+    char           l1_page_size[]              = "page_size";
+    char           l1_max_num_pages[]          = "max_num_pages";
+    char           l1_replacement_policy[]     = "replacement_policy";
+    char           l1_underlying_vfd[]         = "underlying_VFD";
+    H5CL_nv_pair_t expected_nv_pairs_1[4]      = {{/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                              /* name_ptr     = */ l1_page_size,
+                                              /* val_type     = */ H5CL_VAL_INT,
+                                              /* int_val      = */ 4096,
+                                              /* f_val        = */ 0.0,
+                                              /* vlen_val_ptr = */ NULL,
+                                              /* len          = */ 0},
+                                                  {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                              /* name_ptr     = */ l1_max_num_pages,
+                                              /* val_type     = */ H5CL_VAL_INT,
+                                              /* int_val      = */ 16,
+                                              /* f_val        = */ 0.0,
+                                              /* vlen_val_ptr = */ NULL,
+                                              /* len          = */ 0},
+                                                  {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                              /* name_ptr     = */ l1_replacement_policy,
+                                              /* val_type     = */ H5CL_VAL_INT,
+                                              /* int_val      = */ 0,
+                                              /* f_val        = */ 0.0,
+                                              /* vlen_val_ptr = */ NULL,
+                                              /* len          = */ 0},
+                                                  {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                              /* name_ptr     = */ l1_underlying_vfd,
+                                              /* val_type     = */ H5CL_VAL_LIST,
+                                              /* int_val      = */ 0,
+                                              /* f_val        = */ 0.0,
+                                              /* vlen_val_ptr = */ input_string_2,
+                                              /* len          = */ 404}};
+    char           l2_encryption_VFD[]         = "encryption_VFD";
+    H5CL_nv_pair_t expected_nv_pairs_2[1]      = {{/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                              /* name_ptr     = */ l2_encryption_VFD,
+                                              /* val_type     = */ H5CL_VAL_LIST,
+                                              /* int_val      = */ 0,
+                                              /* f_val        = */ 0.0,
+                                              /* vlen_val_ptr = */ input_string_3,
+                                              /* len          = */ 372}};
+    char           l3_plaintext_page_size[]    = "plaintext_page_size";
+    char           l3_ciphertext_page_size[]   = "ciphertext_page_size";
+    char           l3_encryption_buffer_size[] = "encryption_buffer_size";
+    char           l3_cipher[]                 = "cipher";
+    char           l3_cipher_block_size[]      = "cipher_block_size";
+    char           l3_key_size[]               = "key_size";
+    char           l3_key[]                    = "key";
+    char           l3_iv_size[]                = "iv_size";
+    char           l3_mode[]                   = "mode";
+    char           l3_underlying_VFD[]         = "underlying_VFD";
+    H5CL_nv_pair_t expected_nv_pairs_3[11]     = {{/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                               /* name_ptr     = */ l3_plaintext_page_size,
+                                               /* val_type     = */ H5CL_VAL_INT,
+                                               /* int_val      = */ 4096,
+                                               /* f_val        = */ 0.0,
+                                               /* vlen_val_ptr = */ NULL,
+                                               /* len          = */ 0},
+                                                  {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                               /* name_ptr     = */ l3_ciphertext_page_size,
+                                               /* val_type     = */ H5CL_VAL_INT,
+                                               /* int_val      = */ 4112,
+                                               /* f_val        = */ 0.0,
+                                               /* vlen_val_ptr = */ NULL,
+                                               /* len          = */ 0},
+                                                  {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                               /* name_ptr     = */ l3_encryption_buffer_size,
+                                               /* val_type     = */ H5CL_VAL_INT,
+                                               /* int_val      = */ 65792,
+                                               /* f_val        = */ 0.0,
+                                               /* vlen_val_ptr = */ NULL,
+                                               /* len          = */ 0},
+                                                  {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                               /* name_ptr     = */ l3_cipher,
+                                               /* val_type     = */ H5CL_VAL_INT,
+                                               /* int_val      = */ 0,
+                                               /* f_val        = */ 0.0,
+                                               /* vlen_val_ptr = */ NULL,
+                                               /* len          = */ 0},
+                                                  {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                               /* name_ptr     = */ l3_cipher_block_size,
+                                               /* val_type     = */ H5CL_VAL_INT,
+                                               /* int_val      = */ 16,
+                                               /* f_val        = */ 0.0,
+                                               /* vlen_val_ptr = */ NULL,
+                                               /* len          = */ 0},
+                                                  {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                               /* name_ptr     = */ l3_key_size,
+                                               /* val_type     = */ H5CL_VAL_INT,
+                                               /* int_val      = */ 32,
+                                               /* f_val        = */ 0.0,
+                                               /* vlen_val_ptr = */ NULL,
+                                               /* len          = */ 0},
+                                                  {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                               /* name_ptr     = */ l3_key,
+                                               /* val_type     = */ H5CL_VAL_BB,
+                                               /* int_val      = */ 0,
+                                               /* f_val        = */ 0.0,
+                                               /* vlen_val_ptr = */ key,
+                                               /* len          = */ key_len},
+                                                  {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                               /* name_ptr     = */ l3_iv_size,
+                                               /* val_type     = */ H5CL_VAL_INT,
+                                               /* int_val      = */ 16,
+                                               /* f_val        = */ 0.0,
+                                               /* vlen_val_ptr = */ NULL,
+                                               /* len          = */ 0},
+                                                  {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                               /* name_ptr     = */ l3_mode,
+                                               /* val_type     = */ H5CL_VAL_INT,
+                                               /* int_val      = */ 0,
+                                               /* f_val        = */ 0.0,
+                                               /* vlen_val_ptr = */ NULL,
+                                               /* len          = */ 0},
+                                                  {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                               /* name_ptr     = */ l3_underlying_VFD,
+                                               /* val_type     = */ H5CL_VAL_LIST,
+                                               /* int_val      = */ 0,
+                                               /* f_val        = */ 0.0,
+                                               /* vlen_val_ptr = */ input_string_4,
+                                               /* len          = */ 11}};
+    char           l4_sec2[]                   = "sec2";
+    H5CL_nv_pair_t expected_nv_pairs_4[1]      = {{/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                              /* name_ptr     = */ l4_sec2,
+                                              /* val_type     = */ H5CL_VAL_LIST,
+                                              /* int_val      = */ 0,
+                                              /* f_val        = */ 0.0,
+                                              /* vlen_val_ptr = */ input_string_5,
+                                              /* len          = */ 2}};
     H5CL_nv_pair_t expected_nv_pairs_5[1];
 
-    H5CL_lex_vars_t lex_vars = {
-        /* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
-        /* input_str_ptr     = */ NULL,
-        /* next_char_ptr     = */ NULL,
-        /* end_of_input      = */ false, 
-        /* err_ctx           = */ "",
-        /* token             = */ {
-        /* token.struct_tag  = */    H5CL_TOKEN_STRUCT_TAG,
-        /* token.code        = */    H5CL_ERROR_TOK,
-        /* token.str_ptr     = */    NULL,
-        /* token.str_len     = */    0,
-        /* token.max_str_len = */    0,
-        /* token.int_val     = */    1,    /* should be overwritten on init */
-        /* token.f_val       = */    1.0,  /* should be overwritten on init */
-        /* token.bb_ptr      = */    NULL,
-        /* token.bb_len      = */    0
-        /* end of token        */ }
-    };
+    H5CL_lex_vars_t lex_vars = {/* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
+                                /* input_str_ptr     = */ NULL,
+                                /* next_char_ptr     = */ NULL,
+                                /* end_of_input      = */ false,
+                                /* err_ctx           = */ "",
+                                /* token             = */
+                                {/* token.struct_tag  = */ H5CL_TOKEN_STRUCT_TAG,
+                                 /* token.code        = */ H5CL_ERROR_TOK,
+                                 /* token.str_ptr     = */ NULL,
+                                 /* token.str_len     = */ 0,
+                                 /* token.max_str_len = */ 0,
+                                 /* token.int_val     = */ 1,   /* should be overwritten on init */
+                                 /* token.f_val       = */ 1.0, /* should be overwritten on init */
+                                 /* token.bb_ptr      = */ NULL,
+                                 /* token.bb_len      = */ 0
+                                 /* end of token        */}};
 
     TESTING("VFD Configuration Language Parser Smoke Check");
 
     /* Level 0 */
 
-    if ( H5CL__init_lex_vars(input_string_0, &lex_vars) < 0 )
+    if (H5CL__init_lex_vars(input_string_0, &lex_vars) < 0)
         TEST_ERROR;
 
-
     /* initialize the array of instance of cl_nv_pair_t */
-    for ( i = 0; i < num_nv_pairs_0; i++ ) {
+    for (i = 0; i < num_nv_pairs_0; i++) {
 
         actual_nv_pairs_0[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
 
-        if ( H5CL_init_nv_pair(&(actual_nv_pairs_0[i])) < 0 )
+        if (H5CL_init_nv_pair(&(actual_nv_pairs_0[i])) < 0)
             TEST_ERROR;
-
     }
 
-    if ( H5CL__parse_name_value_pair(&(actual_nv_pairs_0[0]), &lex_vars) < 0 )
+    if (H5CL__parse_name_value_pair(&(actual_nv_pairs_0[0]), &lex_vars) < 0)
         TEST_ERROR;
 
-    if ( 0 != cl_test_verify_nv_pairs(actual_nv_pairs_0, expected_nv_pairs_0, 1, true) )
+    if (0 != cl_test_verify_nv_pairs(actual_nv_pairs_0, expected_nv_pairs_0, 1, true))
         TEST_ERROR;
-
 
     /* Don't take down expected name value pairs since all strings are either constant
      * or allocated on the stack.
      */
 
-    for ( i = 0; i < num_nv_pairs_0; i++ ) {
+    for (i = 0; i < num_nv_pairs_0; i++) {
 
-        if ( H5CL_take_down_nv_pair(&(actual_nv_pairs_0[0])) < 0 )
+        if (H5CL_take_down_nv_pair(&(actual_nv_pairs_0[0])) < 0)
             TEST_ERROR;
     }
 
-    if ( H5CL__take_down_lex_vars(&lex_vars) < 0 ) 
+    if (H5CL__take_down_lex_vars(&lex_vars) < 0)
         TEST_ERROR;
-
 
     /* level 1 */
 
     lex_vars.struct_tag = H5CL_LEX_VARS_STRUCT_TAG;
-    if ( H5CL__init_lex_vars(input_string_1, &lex_vars) < 0 )
+    if (H5CL__init_lex_vars(input_string_1, &lex_vars) < 0)
         TEST_ERROR;
 
     /* initialize the array of instance of cl_nv_pair_t */
-    for ( i = 0; i < num_nv_pairs_1; i++ ) {
+    for (i = 0; i < num_nv_pairs_1; i++) {
 
         actual_nv_pairs_1[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
 
-        if ( H5CL_init_nv_pair(&(actual_nv_pairs_1[i])) < 0 )
+        if (H5CL_init_nv_pair(&(actual_nv_pairs_1[i])) < 0)
             TEST_ERROR;
     }
 
-    if ( H5CL__parse_name_value_pair_list(actual_nv_pairs_1, num_nv_pairs_1, &lex_vars) < 0 )
+    if (H5CL__parse_name_value_pair_list(actual_nv_pairs_1, num_nv_pairs_1, &lex_vars) < 0)
         TEST_ERROR;
 
-    if ( 0 != cl_test_verify_nv_pairs(actual_nv_pairs_1, expected_nv_pairs_1, num_nv_pairs_1, true) )
+    if (0 != cl_test_verify_nv_pairs(actual_nv_pairs_1, expected_nv_pairs_1, num_nv_pairs_1, true))
         TEST_ERROR;
-
 
     /* Don't take down expected name value pairs since all strings are either constant
      * or allocated on the stack.
      */
 
-    for ( i = 0; i < num_nv_pairs_1; i++ ) {
+    for (i = 0; i < num_nv_pairs_1; i++) {
 
-        if ( H5CL_take_down_nv_pair(&(actual_nv_pairs_1[i])) < 0 )
+        if (H5CL_take_down_nv_pair(&(actual_nv_pairs_1[i])) < 0)
             TEST_ERROR;
     }
 
-    if ( H5CL__take_down_lex_vars(&lex_vars) < 0 )
+    if (H5CL__take_down_lex_vars(&lex_vars) < 0)
         TEST_ERROR;
-
 
     /* level 2 */
 
     lex_vars.struct_tag = H5CL_LEX_VARS_STRUCT_TAG;
-    if ( H5CL__init_lex_vars(input_string_2, &lex_vars) < 0 )
+    if (H5CL__init_lex_vars(input_string_2, &lex_vars) < 0)
         TEST_ERROR;
 
     /* initialize the array of instance of cl_nv_pair_t */
-    for ( i = 0; i < num_nv_pairs_2; i++ ) {
+    for (i = 0; i < num_nv_pairs_2; i++) {
 
         actual_nv_pairs_2[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
 
-        if ( H5CL_init_nv_pair(&(actual_nv_pairs_2[i])) < 0 )
+        if (H5CL_init_nv_pair(&(actual_nv_pairs_2[i])) < 0)
             TEST_ERROR;
     }
 
-    if ( H5CL__parse_name_value_pair(&(actual_nv_pairs_2[0]), &lex_vars) < 0 )
+    if (H5CL__parse_name_value_pair(&(actual_nv_pairs_2[0]), &lex_vars) < 0)
         TEST_ERROR;
 
-    if ( 0 != cl_test_verify_nv_pairs(actual_nv_pairs_2, expected_nv_pairs_2, num_nv_pairs_2, true) )
+    if (0 != cl_test_verify_nv_pairs(actual_nv_pairs_2, expected_nv_pairs_2, num_nv_pairs_2, true))
         TEST_ERROR;
 
     /* Don't take down expected name value pairs since all strings are either constant
      * or allocated on the stack.
      */
 
-    for ( i = 0; i < num_nv_pairs_2; i++ ) {
+    for (i = 0; i < num_nv_pairs_2; i++) {
 
-        if ( H5CL_take_down_nv_pair(&(actual_nv_pairs_2[i])) < 0 )
+        if (H5CL_take_down_nv_pair(&(actual_nv_pairs_2[i])) < 0)
             TEST_ERROR;
     }
 
-    if ( H5CL__take_down_lex_vars(&lex_vars) < 0 )
+    if (H5CL__take_down_lex_vars(&lex_vars) < 0)
         TEST_ERROR;
-
 
     /* level 3 */
 
     lex_vars.struct_tag = H5CL_LEX_VARS_STRUCT_TAG;
-    if ( H5CL__init_lex_vars(input_string_3, &lex_vars) < 0 )
+    if (H5CL__init_lex_vars(input_string_3, &lex_vars) < 0)
         TEST_ERROR;
 
     /* initialize the array of instance of cl_nv_pair_t */
-    for ( i = 0; i < num_nv_pairs_3; i++ ) {
+    for (i = 0; i < num_nv_pairs_3; i++) {
 
         actual_nv_pairs_3[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
 
-        if ( H5CL_init_nv_pair(&(actual_nv_pairs_3[i])) < 0 )
+        if (H5CL_init_nv_pair(&(actual_nv_pairs_3[i])) < 0)
             TEST_ERROR;
     }
 
-    if ( H5CL__parse_name_value_pair_list(actual_nv_pairs_3, num_nv_pairs_3, &lex_vars) < 0 )
+    if (H5CL__parse_name_value_pair_list(actual_nv_pairs_3, num_nv_pairs_3, &lex_vars) < 0)
         TEST_ERROR;
 
-    if ( 0 != cl_test_verify_nv_pairs(actual_nv_pairs_3, expected_nv_pairs_3, num_nv_pairs_3, true) )
+    if (0 != cl_test_verify_nv_pairs(actual_nv_pairs_3, expected_nv_pairs_3, num_nv_pairs_3, true))
         TEST_ERROR;
 
     /* Don't take down expected name value pairs since all strings are either constant
      * or allocated on the stack.
      */
 
-    for ( i = 0; i < num_nv_pairs_3; i++ ) {
+    for (i = 0; i < num_nv_pairs_3; i++) {
 
-        if ( H5CL_take_down_nv_pair(&(actual_nv_pairs_3[i])) < 0 )
+        if (H5CL_take_down_nv_pair(&(actual_nv_pairs_3[i])) < 0)
             TEST_ERROR;
     }
 
-    if ( H5CL__take_down_lex_vars(&lex_vars) < 0 )
+    if (H5CL__take_down_lex_vars(&lex_vars) < 0)
         TEST_ERROR;
-
 
     /* level 4 */
 
     lex_vars.struct_tag = H5CL_LEX_VARS_STRUCT_TAG;
-    if ( H5CL__init_lex_vars(input_string_4, &lex_vars) < 0 )
+    if (H5CL__init_lex_vars(input_string_4, &lex_vars) < 0)
         TEST_ERROR;
 
     /* initialize the array of instance of cl_nv_pair_t */
-    for ( i = 0; i < num_nv_pairs_4; i++ ) {
+    for (i = 0; i < num_nv_pairs_4; i++) {
 
         actual_nv_pairs_4[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
 
-        if ( H5CL_init_nv_pair(&(actual_nv_pairs_4[i])) < 0 )
+        if (H5CL_init_nv_pair(&(actual_nv_pairs_4[i])) < 0)
             TEST_ERROR;
     }
 
-    if ( H5CL__parse_name_value_pair(&(actual_nv_pairs_4[0]), &lex_vars) < 0 )
+    if (H5CL__parse_name_value_pair(&(actual_nv_pairs_4[0]), &lex_vars) < 0)
         TEST_ERROR;
 
-    if ( 0 != cl_test_verify_nv_pairs(actual_nv_pairs_4, expected_nv_pairs_4, num_nv_pairs_4, true) )
+    if (0 != cl_test_verify_nv_pairs(actual_nv_pairs_4, expected_nv_pairs_4, num_nv_pairs_4, true))
         TEST_ERROR;
 
     /* Don't take down expected name value pairs since all strings are either constant
      * or allocated on the stack.
      */
 
-    for ( i = 0; i < num_nv_pairs_4; i++ ) {
+    for (i = 0; i < num_nv_pairs_4; i++) {
 
-        if ( H5CL_take_down_nv_pair(&(actual_nv_pairs_4[i])) < 0 )
+        if (H5CL_take_down_nv_pair(&(actual_nv_pairs_4[i])) < 0)
             TEST_ERROR;
     }
 
-    if ( H5CL__take_down_lex_vars(&lex_vars) < 0 )
+    if (H5CL__take_down_lex_vars(&lex_vars) < 0)
         TEST_ERROR;
-
 
     /* level 5 */
 
     lex_vars.struct_tag = H5CL_LEX_VARS_STRUCT_TAG;
-    if ( H5CL__init_lex_vars(input_string_5, &lex_vars) < 0 )
+    if (H5CL__init_lex_vars(input_string_5, &lex_vars) < 0)
         TEST_ERROR;
 
     /* initialize the array of instance of cl_nv_pair_t */
-    for ( i = 0; i < num_nv_pairs_5; i++ ) {
+    for (i = 0; i < num_nv_pairs_5; i++) {
 
         actual_nv_pairs_5[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
 
-        if ( H5CL_init_nv_pair(&(actual_nv_pairs_5[i])) < 0 )
+        if (H5CL_init_nv_pair(&(actual_nv_pairs_5[i])) < 0)
             TEST_ERROR;
 
         expected_nv_pairs_5[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
 
-        if ( H5CL_init_nv_pair(&(expected_nv_pairs_5[i])) < 0 )
+        if (H5CL_init_nv_pair(&(expected_nv_pairs_5[i])) < 0)
             TEST_ERROR;
     }
 
-    if ( H5CL__parse_name_value_pair_list(actual_nv_pairs_5, num_nv_pairs_5, &lex_vars) < 0 ) 
+    if (H5CL__parse_name_value_pair_list(actual_nv_pairs_5, num_nv_pairs_5, &lex_vars) < 0)
         TEST_ERROR;
 
-    if ( actual_nv_pairs_5[0].val_type != H5CL_VAL_NONE )
+    if (actual_nv_pairs_5[0].val_type != H5CL_VAL_NONE)
         TEST_ERROR;
 
     /* Don't take down the actual and expected name value pairs since they contain no strings */
 
-    if ( H5CL__take_down_lex_vars(&lex_vars) < 0 )
+    if (H5CL__take_down_lex_vars(&lex_vars) < 0)
         TEST_ERROR;
-
 
     PASSED();
 
@@ -3711,7 +3350,6 @@ error:
     return -1;
 
 } /* cl_parser_smoke_check() */
-
 
 /*******************************************************************************
  *
@@ -3731,300 +3369,241 @@ error:
 static herr_t
 cl_parse_config_group_smoke_check(void)
 {
-    const char * input_string = 
-        "( vfd_swmr_config_data "
-        "  ("
-        "    ( H5F_vfd_swmr_config"
-        "      ("
-        "        ( version 1 )"
-        "        ( tick_len 4 )"
-        "        ( max_lag 7 )"
-        "        ( presume_posix_semantics 1 )"
-        "        ( maintain_metadata_file 1 )"
-        "        ( generate_updater_files 0 )"
-        "        ( flush_raw_data 1 )"
-        "        ( md_pages_reserved 128 )"
-        "        ( md_file_path \"/a/path/\" )"
-        "        ( md_file_name \"md_file\" )"
-        "        ( updater_file_path \"\" )"
-        "        ( log_file_path \"\" )"
-        "        ( pb_expansion_threshold 0 ) "
-        "      )"
-        "    )"
-        "    ( page_buffer_config "
-        "      ("
-        "        ( page_buf_size 409600 )"
-        "        ( metadata_pages_only 1 )"
-        "      )"
-        "    )"
-        "    ( file_space_strategy_config "
-        "      ("
-        "        ( persist 0 )"
-        "      )"
-        "    )"
-        "    ( file_space_page_size "
-        "      ("
-        "        ( page_size 4096 )"
-        "      )"
-        "    )"
-        "  )"
-        ")";
-    int i;
-    char vfd_swmr_config_data[] = "vfd_swmr_config_data";
-    char H5F_vfd_swmr_config[] = "H5F_vfd_swmr_config";
-    char page_buffer_config[] = "page_buffer_config";
-    char file_space_strategy_config[] = "file_space_strategy_config";
-    char file_space_page_size[] = "file_space_page_size";
-    H5CL_config_spec configs[4] =
-    {
-      {
-        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ H5F_vfd_swmr_config,
-        /* max_num_params = */ 13,
-        /* nv_pairs       = */ NULL, /* will overwrite */
-        /* parse          = */ false
-      },
-      {
-        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ page_buffer_config,
-        /* max_num_params = */ 2,
-        /* nv_pairs       = */ NULL, /* will overwrite */
-        /* parse          = */ false
-      },
-      {
-        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ file_space_strategy_config,
-        /* max_num_params = */ 1,
-        /* nv_pairs       = */ NULL, /* will overwrite */
-        /* parse          = */ false
-      },
-      {
-        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ file_space_page_size,
-        /* max_num_params = */ 1,
-        /* nv_pairs       = */ NULL, /* will overwrite */
-        /* parse          = */ false
-      }
-    };
-    char version[] = "version";
-    char tick_len[] = "tick_len";
-    char max_lag[] = "max_lag";
-    char presume_posix_semantics[] = "presume_posix_semantics";
-    char maintain_metadata_file[] = "maintain_metadata_file";
-    char generate_updater_files[] = "generate_updater_files";
-    char flush_raw_data[] = "flush_raw_data";
-    char md_pages_reserved[] = "md_pages_reserved";
-    char md_file_path[] = "md_file_path";
-    char md_file_path_str[] = "/a/path/";
-    char md_file_name[] = "md_file_name";
-    char md_file_name_str[] = "md_file";
-    char updater_file_path[] = "updater_file_path";
-    char updater_file_path_str[] = "";
-    char log_file_path[] = "log_file_path";
-    char log_file_path_str[] = "";
-    char pb_expansion_threshold[] = "pb_expansion_threshold";
-    char page_buf_size[] = "page_buf_size";
-    char metadata_pages_only[] = "metadata_pages_only";
-    char persist[] = "persist";
-    char page_size[] = "page_size";
-    int num_vfd_swmr_config_nv_pairs = 13;
-    int num_page_buffer_config_nv_pairs = 2;
-    int num_file_space_strategy_nv_pairs = 1;
-    int num_file_space_page_size_nv_pairs = 1;
-    H5CL_nv_pair_t actual_vfd_swmr_config_nv_pairs[13];
-    H5CL_nv_pair_t actual_page_buffer_config_nv_pairs[2];
-    H5CL_nv_pair_t actual_file_space_strategy_nv_pairs[1];
-    H5CL_nv_pair_t actual_file_space_page_size_nv_pairs[1];
-    H5CL_nv_pair_t expected_vfd_swmr_config_nv_pairs[13] =
-    { 
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ version,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 1,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0 
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ tick_len,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 4,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0 
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ max_lag,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 7,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0 
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ presume_posix_semantics,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 1,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0 
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ maintain_metadata_file,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 1,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0 
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ generate_updater_files,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 0,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0 
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ flush_raw_data,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 1,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ md_pages_reserved,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 128,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0 
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ md_file_path,
-            /* val_type     = */ H5CL_VAL_QSTR,
-            /* int_val      = */ 0,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ md_file_path_str,
-            /* len          = */ 8 
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ md_file_name,
-            /* val_type     = */ H5CL_VAL_QSTR,
-            /* int_val      = */ 0,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ md_file_name_str,
-            /* len          = */ 7 
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ updater_file_path,
-            /* val_type     = */ H5CL_VAL_QSTR,
-            /* int_val      = */ 0,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ updater_file_path_str,
-            /* len          = */ 0 
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ log_file_path,
-            /* val_type     = */ H5CL_VAL_QSTR,
-            /* int_val      = */ 0,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ log_file_path_str,
-            /* len          = */ 0 
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ pb_expansion_threshold,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 0,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0 
-        }
-    };
-    H5CL_nv_pair_t expected_page_buffer_config_nv_pairs[2] =
-    { 
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ page_buf_size,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 409600,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0
-        },
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ metadata_pages_only,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 1,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0
-        }
-    };
-    H5CL_nv_pair_t expected_file_space_strategy_nv_pairs[1] =
-    { 
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ persist,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 0,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0
-        }
-    };
-    H5CL_nv_pair_t expected_file_space_page_size_nv_pairs[1] =
-    { 
-        {
-            /* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
-            /* name_ptr     = */ page_size,
-            /* val_type     = */ H5CL_VAL_INT,
-            /* int_val      = */ 4096,
-            /* f_val        = */ 0.0,
-            /* vlen_val_ptr = */ NULL,
-            /* len          = */ 0
-        }
-    };
+    const char      *input_string = "( vfd_swmr_config_data "
+                                    "  ("
+                                    "    ( H5F_vfd_swmr_config"
+                                    "      ("
+                                    "        ( version 1 )"
+                                    "        ( tick_len 4 )"
+                                    "        ( max_lag 7 )"
+                                    "        ( presume_posix_semantics 1 )"
+                                    "        ( maintain_metadata_file 1 )"
+                                    "        ( generate_updater_files 0 )"
+                                    "        ( flush_raw_data 1 )"
+                                    "        ( md_pages_reserved 128 )"
+                                    "        ( md_file_path \"/a/path/\" )"
+                                    "        ( md_file_name \"md_file\" )"
+                                    "        ( updater_file_path \"\" )"
+                                    "        ( log_file_path \"\" )"
+                                    "        ( pb_expansion_threshold 0 ) "
+                                    "      )"
+                                    "    )"
+                                    "    ( page_buffer_config "
+                                    "      ("
+                                    "        ( page_buf_size 409600 )"
+                                    "        ( metadata_pages_only 1 )"
+                                    "      )"
+                                    "    )"
+                                    "    ( file_space_strategy_config "
+                                    "      ("
+                                    "        ( persist 0 )"
+                                    "      )"
+                                    "    )"
+                                    "    ( file_space_page_size "
+                                    "      ("
+                                    "        ( page_size 4096 )"
+                                    "      )"
+                                    "    )"
+                                    "  )"
+                                    ")";
+    int              i;
+    char             vfd_swmr_config_data[]            = "vfd_swmr_config_data";
+    char             H5F_vfd_swmr_config[]             = "H5F_vfd_swmr_config";
+    char             page_buffer_config[]              = "page_buffer_config";
+    char             file_space_strategy_config[]      = "file_space_strategy_config";
+    char             file_space_page_size[]            = "file_space_page_size";
+    H5CL_config_spec configs[4]                        = {{/* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+                                    /* config_name    = */ H5F_vfd_swmr_config,
+                                    /* max_num_params = */ 13,
+                                    /* nv_pairs       = */ NULL, /* will overwrite */
+                                    /* parse          = */ false},
+                                                          {/* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+                                    /* config_name    = */ page_buffer_config,
+                                    /* max_num_params = */ 2,
+                                    /* nv_pairs       = */ NULL, /* will overwrite */
+                                    /* parse          = */ false},
+                                                          {/* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+                                    /* config_name    = */ file_space_strategy_config,
+                                    /* max_num_params = */ 1,
+                                    /* nv_pairs       = */ NULL, /* will overwrite */
+                                    /* parse          = */ false},
+                                                          {/* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+                                    /* config_name    = */ file_space_page_size,
+                                    /* max_num_params = */ 1,
+                                    /* nv_pairs       = */ NULL, /* will overwrite */
+                                    /* parse          = */ false}};
+    char             version[]                         = "version";
+    char             tick_len[]                        = "tick_len";
+    char             max_lag[]                         = "max_lag";
+    char             presume_posix_semantics[]         = "presume_posix_semantics";
+    char             maintain_metadata_file[]          = "maintain_metadata_file";
+    char             generate_updater_files[]          = "generate_updater_files";
+    char             flush_raw_data[]                  = "flush_raw_data";
+    char             md_pages_reserved[]               = "md_pages_reserved";
+    char             md_file_path[]                    = "md_file_path";
+    char             md_file_path_str[]                = "/a/path/";
+    char             md_file_name[]                    = "md_file_name";
+    char             md_file_name_str[]                = "md_file";
+    char             updater_file_path[]               = "updater_file_path";
+    char             updater_file_path_str[]           = "";
+    char             log_file_path[]                   = "log_file_path";
+    char             log_file_path_str[]               = "";
+    char             pb_expansion_threshold[]          = "pb_expansion_threshold";
+    char             page_buf_size[]                   = "page_buf_size";
+    char             metadata_pages_only[]             = "metadata_pages_only";
+    char             persist[]                         = "persist";
+    char             page_size[]                       = "page_size";
+    int              num_vfd_swmr_config_nv_pairs      = 13;
+    int              num_page_buffer_config_nv_pairs   = 2;
+    int              num_file_space_strategy_nv_pairs  = 1;
+    int              num_file_space_page_size_nv_pairs = 1;
+    H5CL_nv_pair_t   actual_vfd_swmr_config_nv_pairs[13];
+    H5CL_nv_pair_t   actual_page_buffer_config_nv_pairs[2];
+    H5CL_nv_pair_t   actual_file_space_strategy_nv_pairs[1];
+    H5CL_nv_pair_t   actual_file_space_page_size_nv_pairs[1];
+    H5CL_nv_pair_t   expected_vfd_swmr_config_nv_pairs[13]   = {{/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                                             /* name_ptr     = */ version,
+                                                             /* val_type     = */ H5CL_VAL_INT,
+                                                             /* int_val      = */ 1,
+                                                             /* f_val        = */ 0.0,
+                                                             /* vlen_val_ptr = */ NULL,
+                                                             /* len          = */ 0},
+                                                                {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                                             /* name_ptr     = */ tick_len,
+                                                             /* val_type     = */ H5CL_VAL_INT,
+                                                             /* int_val      = */ 4,
+                                                             /* f_val        = */ 0.0,
+                                                             /* vlen_val_ptr = */ NULL,
+                                                             /* len          = */ 0},
+                                                                {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                                             /* name_ptr     = */ max_lag,
+                                                             /* val_type     = */ H5CL_VAL_INT,
+                                                             /* int_val      = */ 7,
+                                                             /* f_val        = */ 0.0,
+                                                             /* vlen_val_ptr = */ NULL,
+                                                             /* len          = */ 0},
+                                                                {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                                             /* name_ptr     = */ presume_posix_semantics,
+                                                             /* val_type     = */ H5CL_VAL_INT,
+                                                             /* int_val      = */ 1,
+                                                             /* f_val        = */ 0.0,
+                                                             /* vlen_val_ptr = */ NULL,
+                                                             /* len          = */ 0},
+                                                                {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                                             /* name_ptr     = */ maintain_metadata_file,
+                                                             /* val_type     = */ H5CL_VAL_INT,
+                                                             /* int_val      = */ 1,
+                                                             /* f_val        = */ 0.0,
+                                                             /* vlen_val_ptr = */ NULL,
+                                                             /* len          = */ 0},
+                                                                {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                                             /* name_ptr     = */ generate_updater_files,
+                                                             /* val_type     = */ H5CL_VAL_INT,
+                                                             /* int_val      = */ 0,
+                                                             /* f_val        = */ 0.0,
+                                                             /* vlen_val_ptr = */ NULL,
+                                                             /* len          = */ 0},
+                                                                {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                                             /* name_ptr     = */ flush_raw_data,
+                                                             /* val_type     = */ H5CL_VAL_INT,
+                                                             /* int_val      = */ 1,
+                                                             /* f_val        = */ 0.0,
+                                                             /* vlen_val_ptr = */ NULL,
+                                                             /* len          = */ 0},
+                                                                {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                                             /* name_ptr     = */ md_pages_reserved,
+                                                             /* val_type     = */ H5CL_VAL_INT,
+                                                             /* int_val      = */ 128,
+                                                             /* f_val        = */ 0.0,
+                                                             /* vlen_val_ptr = */ NULL,
+                                                             /* len          = */ 0},
+                                                                {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                                             /* name_ptr     = */ md_file_path,
+                                                             /* val_type     = */ H5CL_VAL_QSTR,
+                                                             /* int_val      = */ 0,
+                                                             /* f_val        = */ 0.0,
+                                                             /* vlen_val_ptr = */ md_file_path_str,
+                                                             /* len          = */ 8},
+                                                                {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                                             /* name_ptr     = */ md_file_name,
+                                                             /* val_type     = */ H5CL_VAL_QSTR,
+                                                             /* int_val      = */ 0,
+                                                             /* f_val        = */ 0.0,
+                                                             /* vlen_val_ptr = */ md_file_name_str,
+                                                             /* len          = */ 7},
+                                                                {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                                             /* name_ptr     = */ updater_file_path,
+                                                             /* val_type     = */ H5CL_VAL_QSTR,
+                                                             /* int_val      = */ 0,
+                                                             /* f_val        = */ 0.0,
+                                                             /* vlen_val_ptr = */ updater_file_path_str,
+                                                             /* len          = */ 0},
+                                                                {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                                             /* name_ptr     = */ log_file_path,
+                                                             /* val_type     = */ H5CL_VAL_QSTR,
+                                                             /* int_val      = */ 0,
+                                                             /* f_val        = */ 0.0,
+                                                             /* vlen_val_ptr = */ log_file_path_str,
+                                                             /* len          = */ 0},
+                                                                {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                                             /* name_ptr     = */ pb_expansion_threshold,
+                                                             /* val_type     = */ H5CL_VAL_INT,
+                                                             /* int_val      = */ 0,
+                                                             /* f_val        = */ 0.0,
+                                                             /* vlen_val_ptr = */ NULL,
+                                                             /* len          = */ 0}};
+    H5CL_nv_pair_t   expected_page_buffer_config_nv_pairs[2] = {{/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                                               /* name_ptr     = */ page_buf_size,
+                                                               /* val_type     = */ H5CL_VAL_INT,
+                                                               /* int_val      = */ 409600,
+                                                               /* f_val        = */ 0.0,
+                                                               /* vlen_val_ptr = */ NULL,
+                                                               /* len          = */ 0},
+                                                                {/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                                               /* name_ptr     = */ metadata_pages_only,
+                                                               /* val_type     = */ H5CL_VAL_INT,
+                                                               /* int_val      = */ 1,
+                                                               /* f_val        = */ 0.0,
+                                                               /* vlen_val_ptr = */ NULL,
+                                                               /* len          = */ 0}};
+    H5CL_nv_pair_t expected_file_space_strategy_nv_pairs[1]  = {{/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                                                /* name_ptr     = */ persist,
+                                                                /* val_type     = */ H5CL_VAL_INT,
+                                                                /* int_val      = */ 0,
+                                                                /* f_val        = */ 0.0,
+                                                                /* vlen_val_ptr = */ NULL,
+                                                                /* len          = */ 0}};
+    H5CL_nv_pair_t expected_file_space_page_size_nv_pairs[1] = {{/* struct_tag   = */ H5CL_NV_PAIR_STRUCT_TAG,
+                                                                 /* name_ptr     = */ page_size,
+                                                                 /* val_type     = */ H5CL_VAL_INT,
+                                                                 /* int_val      = */ 4096,
+                                                                 /* f_val        = */ 0.0,
+                                                                 /* vlen_val_ptr = */ NULL,
+                                                                 /* len          = */ 0}};
 
     TESTING("H5CL_parse_config_group() -- Initial Smoke Check");
 
     /* setup the name value pair arrays */
 
-    for ( i = 0; i < num_vfd_swmr_config_nv_pairs; i++ ) {
+    for (i = 0; i < num_vfd_swmr_config_nv_pairs; i++) {
 
         actual_vfd_swmr_config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
 
-    for ( i = 0; i < num_page_buffer_config_nv_pairs; i++ ) {
+    for (i = 0; i < num_page_buffer_config_nv_pairs; i++) {
 
         actual_page_buffer_config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
 
-    for ( i = 0; i < num_file_space_strategy_nv_pairs; i++ ) {
+    for (i = 0; i < num_file_space_strategy_nv_pairs; i++) {
 
         actual_file_space_strategy_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
 
-    for ( i = 0; i < num_file_space_page_size_nv_pairs; i++ ) {
+    for (i = 0; i < num_file_space_page_size_nv_pairs; i++) {
 
         actual_file_space_page_size_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
-
 
     /* load pointers to the actual nv pair arrays into configs[] */
 
@@ -4033,61 +3612,56 @@ cl_parse_config_group_smoke_check(void)
     configs[2].nv_pairs = &(actual_file_space_strategy_nv_pairs[0]);
     configs[3].nv_pairs = &(actual_file_space_page_size_nv_pairs[0]);
 
-
     /* parse the configuration group */
 
-    if ( H5CL_parse_config_group(input_string, vfd_swmr_config_data, 4, configs) < 0 )
+    if (H5CL_parse_config_group(input_string, vfd_swmr_config_data, 4, configs) < 0)
         TEST_ERROR;
-
 
     /* Verify the resulting arrays of name value pairs */
 
-    if ( 0 != cl_test_verify_nv_pairs(actual_vfd_swmr_config_nv_pairs, 
-                                      expected_vfd_swmr_config_nv_pairs, 
-                                      num_vfd_swmr_config_nv_pairs, true) )
+    if (0 != cl_test_verify_nv_pairs(actual_vfd_swmr_config_nv_pairs, expected_vfd_swmr_config_nv_pairs,
+                                     num_vfd_swmr_config_nv_pairs, true))
         TEST_ERROR;
 
-    if ( 0 != cl_test_verify_nv_pairs(actual_page_buffer_config_nv_pairs, 
-                                      expected_page_buffer_config_nv_pairs, 
-                                      num_page_buffer_config_nv_pairs, true) )
+    if (0 != cl_test_verify_nv_pairs(actual_page_buffer_config_nv_pairs, expected_page_buffer_config_nv_pairs,
+                                     num_page_buffer_config_nv_pairs, true))
         TEST_ERROR;
 
-    if ( 0 != cl_test_verify_nv_pairs(actual_file_space_strategy_nv_pairs, 
-                                      expected_file_space_strategy_nv_pairs, 
-                                      num_file_space_strategy_nv_pairs, true) )
+    if (0 != cl_test_verify_nv_pairs(actual_file_space_strategy_nv_pairs,
+                                     expected_file_space_strategy_nv_pairs, num_file_space_strategy_nv_pairs,
+                                     true))
         TEST_ERROR;
 
-    if ( 0 != cl_test_verify_nv_pairs(actual_file_space_page_size_nv_pairs, 
-                                      expected_file_space_page_size_nv_pairs, 
-                                      num_file_space_page_size_nv_pairs, true) )
+    if (0 != cl_test_verify_nv_pairs(actual_file_space_page_size_nv_pairs,
+                                     expected_file_space_page_size_nv_pairs,
+                                     num_file_space_page_size_nv_pairs, true))
         TEST_ERROR;
-
 
     /* cleanup after test.  Don't take down the expected name value pair arrays since all strings
      * are either constant or allocated on the stack.
      */
 
-    for ( i = 0; i < num_vfd_swmr_config_nv_pairs; i++ ) {
+    for (i = 0; i < num_vfd_swmr_config_nv_pairs; i++) {
 
-        if ( H5CL_take_down_nv_pair(&(actual_vfd_swmr_config_nv_pairs[i])) < 0 )
+        if (H5CL_take_down_nv_pair(&(actual_vfd_swmr_config_nv_pairs[i])) < 0)
             TEST_ERROR;
     }
 
-    for ( i = 0; i < num_page_buffer_config_nv_pairs; i++ ) {
+    for (i = 0; i < num_page_buffer_config_nv_pairs; i++) {
 
-        if ( H5CL_take_down_nv_pair(&(actual_page_buffer_config_nv_pairs[i])) < 0 )
+        if (H5CL_take_down_nv_pair(&(actual_page_buffer_config_nv_pairs[i])) < 0)
             TEST_ERROR;
     }
 
-    for ( i = 0; i < num_file_space_strategy_nv_pairs; i++ ) {
+    for (i = 0; i < num_file_space_strategy_nv_pairs; i++) {
 
-        if ( H5CL_take_down_nv_pair(&(actual_file_space_strategy_nv_pairs[i])) < 0 )
+        if (H5CL_take_down_nv_pair(&(actual_file_space_strategy_nv_pairs[i])) < 0)
             TEST_ERROR;
     }
 
-    for ( i = 0; i < num_file_space_page_size_nv_pairs; i++ ) {
+    for (i = 0; i < num_file_space_page_size_nv_pairs; i++) {
 
-        if ( H5CL_take_down_nv_pair(&(actual_file_space_page_size_nv_pairs[i])) < 0 )
+        if (H5CL_take_down_nv_pair(&(actual_file_space_page_size_nv_pairs[i])) < 0)
             TEST_ERROR;
     }
 
@@ -4101,16 +3675,15 @@ error:
 
 } /* cl_parse_config_group_smoke_check() */
 
-
 /*******************************************************************************
  *
  * cl_parse_config_group_err_check_1()
  *
- * Verify that the config group parser function detects and reports errors 
+ * Verify that the config group parser function detects and reports errors
  * as expected.
- * Specifically, test that duplicate configuration names in a 
+ * Specifically, test that duplicate configuration names in a
  * configuration group will cause errors in H5CL_parse_config_group().
- * 
+ *
  *                                              Cody S. -- 4/17/26
  *
  * Changes:
@@ -4119,63 +3692,54 @@ error:
  *
  *******************************************************************************/
 static herr_t
-cl_parse_config_group_err_check_1(void){
-    const char * input_string = 
-        "( top_name "
-        "  ("
-        "    ( duplicate_name"
-        "      ("
-        "        ( param_1 1 )"
-        "      )"
-        "    )"
-        "    ( normal_name "
-        "      ("
-        "        ( param_2 2 )"
-        "      )"
-        "    )"
-        "    ( duplicate_name "
-        "      ("
-        "        ( param_3 3 )"
-        "      )"
-        "    )"
-        "  )"
-        ")";
-    int i;
-    int j;
-    int num_configs = 3;
-    int duplicate_1_num_params = 1;
-    int normal_num_params = 1;
-    int duplicate_2_num_params = 1;
+cl_parse_config_group_err_check_1(void)
+{
+    const char *input_string = "( top_name "
+                               "  ("
+                               "    ( duplicate_name"
+                               "      ("
+                               "        ( param_1 1 )"
+                               "      )"
+                               "    )"
+                               "    ( normal_name "
+                               "      ("
+                               "        ( param_2 2 )"
+                               "      )"
+                               "    )"
+                               "    ( duplicate_name "
+                               "      ("
+                               "        ( param_3 3 )"
+                               "      )"
+                               "    )"
+                               "  )"
+                               ")";
+    int         i;
+    int         j;
+    int         num_configs            = 3;
+    int         duplicate_1_num_params = 1;
+    int         normal_num_params      = 1;
+    int         duplicate_2_num_params = 1;
 #if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
 #endif
-    char top_name[] = "top_name";
-    char duplicate_name[] = "duplicate_name";
-    char normal_name[] = "normal_name";
-    H5CL_config_spec configs[3] =
-    {
-      {
-        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ duplicate_name,
-        /* max_num_params = */ duplicate_1_num_params,
-        /* nv_pairs       = */ NULL, /* will overwrite */
-        /* parse          = */ false
-      },
-      {
-        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ normal_name,
-        /* max_num_params = */ normal_num_params,
-        /* nv_pairs       = */ NULL, /* will overwrite */
-        /* parse          = */ false
-      },
-      {
-        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ duplicate_name,
-        /* max_num_params = */ duplicate_2_num_params,
-        /* nv_pairs       = */ NULL, /* will overwrite */
-        /* parse          = */ false
-      }
-    };
+    char             top_name[]       = "top_name";
+    char             duplicate_name[] = "duplicate_name";
+    char             normal_name[]    = "normal_name";
+    H5CL_config_spec configs[3]       = {{/* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+                                    /* config_name    = */ duplicate_name,
+                                    /* max_num_params = */ duplicate_1_num_params,
+                                    /* nv_pairs       = */ NULL, /* will overwrite */
+                                    /* parse          = */ false},
+                                         {/* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+                                    /* config_name    = */ normal_name,
+                                    /* max_num_params = */ normal_num_params,
+                                    /* nv_pairs       = */ NULL, /* will overwrite */
+                                    /* parse          = */ false},
+                                         {/* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+                                    /* config_name    = */ duplicate_name,
+                                    /* max_num_params = */ duplicate_2_num_params,
+                                    /* nv_pairs       = */ NULL, /* will overwrite */
+                                    /* parse          = */ false}};
 
     H5CL_nv_pair_t duplicate_1_config_nv_pairs[1];
     H5CL_nv_pair_t normal_config_nv_pairs[1];
@@ -4185,17 +3749,17 @@ cl_parse_config_group_err_check_1(void){
 
     /* setup the name value pair arrays */
 
-    for ( i = 0; i < duplicate_1_num_params; i++ ) {
+    for (i = 0; i < duplicate_1_num_params; i++) {
 
         duplicate_1_config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
 
-    for ( i = 0; i < duplicate_1_num_params; i++ ) {
+    for (i = 0; i < duplicate_1_num_params; i++) {
 
         normal_config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
 
-    for ( i = 0; i < duplicate_2_num_params; i++ ) {
+    for (i = 0; i < duplicate_2_num_params; i++) {
 
         duplicate_2_config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
@@ -4205,28 +3769,24 @@ cl_parse_config_group_err_check_1(void){
     configs[1].nv_pairs = &(normal_config_nv_pairs[0]);
     configs[2].nv_pairs = &(duplicate_2_config_nv_pairs[0]);
 
-    if ( H5CL_parse_config_group(input_string, top_name, num_configs, configs) >= 0 ) {
+    if (H5CL_parse_config_group(input_string, top_name, num_configs, configs) >= 0) {
         TEST_ERROR;
-
     }
-#if VERIFY_ERROR_STACK_SUPPORTED 
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                    "Duplicate config name.",
-                                    verbose) ) {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, "Duplicate config name.", verbose)) {
 
         TEST_ERROR;
     }
 #endif
 
     /* cleanup after test. */
-    for ( i = 0; i < num_configs; i++ ) {
+    for (i = 0; i < num_configs; i++) {
 
-        for ( j = 0; j < configs[i].max_num_params; j++ ) {
+        for (j = 0; j < configs[i].max_num_params; j++) {
 
             /* Attempt cleanup only if struct_tag is valid */
-            if ( ( configs[i].nv_pairs[j].struct_tag == H5CL_NV_PAIR_STRUCT_TAG ) &&
-                 ( H5CL_take_down_nv_pair(&configs[i].nv_pairs[j]) < 0 ) ) 
-            {
+            if ((configs[i].nv_pairs[j].struct_tag == H5CL_NV_PAIR_STRUCT_TAG) &&
+                (H5CL_take_down_nv_pair(&configs[i].nv_pairs[j]) < 0)) {
                 TEST_ERROR;
             }
         }
@@ -4245,11 +3805,11 @@ error:
  *
  * cl_parse_config_group_err_check_2()
  *
- * Verify that the config group parser function detects and reports errors 
+ * Verify that the config group parser function detects and reports errors
  * as expected.
- * Specifically, test that H5CL_parse_config_group() errors when num_configs 
+ * Specifically, test that H5CL_parse_config_group() errors when num_configs
  * is too small.
- * 
+ *
  *                                              Cody S. -- 4/17/26
  *
  * Changes:
@@ -4258,50 +3818,43 @@ error:
  *
  *******************************************************************************/
 static herr_t
-cl_parse_config_group_err_check_2(void){
-    const char * input_string = 
-        "( top_name "
-        "  ("
-        "    ( config_1 "
-        "      ("
-        "        ( param_1 1 )"
-        "      )"
-        "    )"
-        "   ( config_2 "
-        "     ("
-        "       (param_2 2)"
-        "     )"
-        "   )"
-        "  )"
-        ")";
+cl_parse_config_group_err_check_2(void)
+{
+    const char *input_string = "( top_name "
+                               "  ("
+                               "    ( config_1 "
+                               "      ("
+                               "        ( param_1 1 )"
+                               "      )"
+                               "    )"
+                               "   ( config_2 "
+                               "     ("
+                               "       (param_2 2)"
+                               "     )"
+                               "   )"
+                               "  )"
+                               ")";
 #if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
 #endif
-    int i;
-    int j;
-    int num_configs = 2;
-    int config_1_num_params = 1;
-    int config_2_num_params = 1;
-    char top_name[] = "top_name";
-    char config_1_name[] = "config_1";
-    char config_2_name[] = "config_2";
-    H5CL_config_spec configs[2] =
-    {
-      {
-        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ config_1_name,
-        /* max_num_params = */ config_1_num_params,
-        /* nv_pairs       = */ NULL, /* will overwrite */
-        /* parse          = */ false
-      },
-      {
-        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ config_2_name,
-        /* max_num_params = */ config_2_num_params,
-        /* nv_pairs       = */ NULL, /* will overwrite */
-        /* parse          = */ false
-      }
-    };
+    int              i;
+    int              j;
+    int              num_configs         = 2;
+    int              config_1_num_params = 1;
+    int              config_2_num_params = 1;
+    char             top_name[]          = "top_name";
+    char             config_1_name[]     = "config_1";
+    char             config_2_name[]     = "config_2";
+    H5CL_config_spec configs[2]          = {{/* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+                                    /* config_name    = */ config_1_name,
+                                    /* max_num_params = */ config_1_num_params,
+                                    /* nv_pairs       = */ NULL, /* will overwrite */
+                                    /* parse          = */ false},
+                                            {/* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+                                    /* config_name    = */ config_2_name,
+                                    /* max_num_params = */ config_2_num_params,
+                                    /* nv_pairs       = */ NULL, /* will overwrite */
+                                    /* parse          = */ false}};
 
     H5CL_nv_pair_t config_1_config_nv_pairs[1];
     H5CL_nv_pair_t config_2_config_nv_pairs[1];
@@ -4310,12 +3863,12 @@ cl_parse_config_group_err_check_2(void){
 
     /* setup the name value pair arrays. */
 
-    for ( i = 0; i < config_1_num_params; i++ ) {
+    for (i = 0; i < config_1_num_params; i++) {
 
         config_1_config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
 
-    for ( i = 0; i < config_2_num_params; i++ ) {
+    for (i = 0; i < config_2_num_params; i++) {
 
         config_2_config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
@@ -4325,14 +3878,12 @@ cl_parse_config_group_err_check_2(void){
     configs[1].nv_pairs = &(config_2_config_nv_pairs[0]);
 
     /* Purposely pass num_configs value that is less than required */
-    if ( H5CL_parse_config_group(input_string, top_name, num_configs - 1, configs) >= 0 ) {
-       TEST_ERROR;
-
+    if (H5CL_parse_config_group(input_string, top_name, num_configs - 1, configs) >= 0) {
+        TEST_ERROR;
     }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                    "max number of name value pairs exceeded.",
-                                    verbose) ) {
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "max number of name value pairs exceeded.", verbose)) {
 
         TEST_ERROR;
     }
@@ -4340,14 +3891,13 @@ cl_parse_config_group_err_check_2(void){
 
     /* cleanup after test. */
     /* Don't try to clean up nv pairs that H5CL_parse_config_group() didn't initialize */
-    for ( i = 0; i < num_configs - 1; i++ ) {
+    for (i = 0; i < num_configs - 1; i++) {
 
-        for ( j = 0; j < configs[i].max_num_params; j++ ) {
+        for (j = 0; j < configs[i].max_num_params; j++) {
 
             /* Attempt cleanup only if struct_tag is valid */
-            if ( ( configs[i].nv_pairs[j].struct_tag == H5CL_NV_PAIR_STRUCT_TAG ) &&
-                 ( H5CL_take_down_nv_pair(&configs[i].nv_pairs[j]) < 0 ) ) 
-            {
+            if ((configs[i].nv_pairs[j].struct_tag == H5CL_NV_PAIR_STRUCT_TAG) &&
+                (H5CL_take_down_nv_pair(&configs[i].nv_pairs[j]) < 0)) {
                 TEST_ERROR;
             }
         }
@@ -4362,16 +3912,15 @@ error:
     return -1;
 } /* cl_parse_config_group_err_check_2() */
 
-
 /*******************************************************************************
  *
  * cl_parse_config_group_err_check_3()
  *
- * Verify that the config group parser function detects and reports errors 
+ * Verify that the config group parser function detects and reports errors
  * as expected.
  * Specifically, test that H5CL_parse_config_group() errors when one of the
  * configs[].max_num_configs values is too small.
- * 
+ *
  *                                              Cody S. -- 4/17/26
  *
  * Changes:
@@ -4380,45 +3929,41 @@ error:
  *
  *******************************************************************************/
 static herr_t
-cl_parse_config_group_err_check_3(void){
-    const char * input_string = 
-        "( top_name "
-        "  ("
-        "    ( config_name "
-        "      ("
-        "        ( param_1 1 )"
-        "        ( param_2 2 )"
-        "        ( param_3 3 )"
-        "      )"
-        "    )"
-        "  )"
-        ")";
+cl_parse_config_group_err_check_3(void)
+{
+    const char *input_string = "( top_name "
+                               "  ("
+                               "    ( config_name "
+                               "      ("
+                               "        ( param_1 1 )"
+                               "        ( param_2 2 )"
+                               "        ( param_3 3 )"
+                               "      )"
+                               "    )"
+                               "  )"
+                               ")";
 #if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
 #endif
-    int i;
-    int j;
-    int num_configs = 1;
-    int config_num_params = 3;
-    char top_name[] = "top_name";
-    char config_name[] = "config_name";
-    H5CL_config_spec configs[1] =
-    {
-      {
-        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ config_name,
-        /* max_num_params = */ config_num_params - 1,    /* purposely set to less than needed*/
-        /* nv_pairs       = */ NULL, /* will overwrite */
-        /* parse          = */ false
-      }
-    };
+    int              i;
+    int              j;
+    int              num_configs       = 1;
+    int              config_num_params = 3;
+    char             top_name[]        = "top_name";
+    char             config_name[]     = "config_name";
+    H5CL_config_spec configs[1]        = {
+        {/* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+         /* config_name    = */ config_name,
+         /* max_num_params = */ config_num_params - 1, /* purposely set to less than needed*/
+         /* nv_pairs       = */ NULL,                  /* will overwrite */
+         /* parse          = */ false}};
 
     H5CL_nv_pair_t config_nv_pairs[3];
 
     TESTING("H5CL_parse_config_group() err detect & report 3");
 
     /* setup the name value pair arrays */
-    for ( i = 0; i < config_num_params; i++ ) {
+    for (i = 0; i < config_num_params; i++) {
 
         config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
@@ -4426,32 +3971,30 @@ cl_parse_config_group_err_check_3(void){
     /* load pointers to the actual nv pair arrays into configs[] */
     configs[0].nv_pairs = &(config_nv_pairs[0]);
 
-    if ( H5CL_parse_config_group(input_string, top_name, num_configs, configs) >= 0 ) {
+    if (H5CL_parse_config_group(input_string, top_name, num_configs, configs) >= 0) {
         TEST_ERROR;
     }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                    "max number of name value pairs exceeded.",
-                                    verbose) ) {
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "max number of name value pairs exceeded.", verbose)) {
 
         TEST_ERROR;
     }
 #endif
 
     /* cleanup after test. */
-    for ( i = 0; i < num_configs; i++ ) {
+    for (i = 0; i < num_configs; i++) {
 
-        for ( j = 0; j < configs[i].max_num_params; j++ ) {
+        for (j = 0; j < configs[i].max_num_params; j++) {
 
             /* Attempt cleanup only if struct_tag is valid */
-            if ( ( configs[i].nv_pairs[j].struct_tag == H5CL_NV_PAIR_STRUCT_TAG ) &&
-                 ( H5CL_take_down_nv_pair(&configs[i].nv_pairs[j]) < 0 ) ) 
-            {
+            if ((configs[i].nv_pairs[j].struct_tag == H5CL_NV_PAIR_STRUCT_TAG) &&
+                (H5CL_take_down_nv_pair(&configs[i].nv_pairs[j]) < 0)) {
                 TEST_ERROR;
             }
         }
     }
-    
+
     PASSED();
 
     return 0;
@@ -4461,16 +4004,15 @@ error:
     return -1;
 } /* cl_parse_config_group_err_check_3() */
 
-
 /*******************************************************************************
  *
  * cl_parse_config_group_err_check_4()
  *
- * Verify that the config group parser function detects and reports errors 
+ * Verify that the config group parser function detects and reports errors
  * as expected.
- * Specifically, test that H5CL_parse_config_group() errors both when the 
+ * Specifically, test that H5CL_parse_config_group() errors both when the
  * top-level group name and a config name dont match the configuration string.
- * 
+ *
  *                                              Cody S. -- 4/21/26
  *
  * Changes:
@@ -4479,60 +4021,53 @@ error:
  *
  *******************************************************************************/
 static herr_t
-cl_parse_config_group_err_check_4(void){
-    const char * input_string = 
-        "( top_name "
-        "  ("
-        "    ( config_name "
-        "      ("
-        "        ( param 1 )"
-        "      )"
-        "    )"
-        "  )"
-        ")";
+cl_parse_config_group_err_check_4(void)
+{
+    const char *input_string = "( top_name "
+                               "  ("
+                               "    ( config_name "
+                               "      ("
+                               "        ( param 1 )"
+                               "      )"
+                               "    )"
+                               "  )"
+                               ")";
 #if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
 #endif
-    int i;
-    int j;
-    int num_configs = 1;
-    int config_num_params = 1;
-    char wrong_name[] = "wrong_name";
-    char top_name[] = "top_name";
-    char config_name[] = "config_name";
-    H5CL_config_spec configs[1] =
-    {
-      {
-        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ config_name,
-        /* max_num_params = */ config_num_params,
-        /* nv_pairs       = */ NULL, /* will overwrite */
-        /* parse          = */ false
-      }
-    };
-    
+    int              i;
+    int              j;
+    int              num_configs       = 1;
+    int              config_num_params = 1;
+    char             wrong_name[]      = "wrong_name";
+    char             top_name[]        = "top_name";
+    char             config_name[]     = "config_name";
+    H5CL_config_spec configs[1]        = {{/* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+                                    /* config_name    = */ config_name,
+                                    /* max_num_params = */ config_num_params,
+                                    /* nv_pairs       = */ NULL, /* will overwrite */
+                                    /* parse          = */ false}};
+
     H5CL_nv_pair_t config_nv_pairs[1];
 
     TESTING("H5CL_parse_config_group() err detect & report 4");
 
     /* setup the name value pair array. */
-    for ( i = 0; i < config_num_params; i++ ) {
+    for (i = 0; i < config_num_params; i++) {
 
         config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
-
 
     /* load pointers to the actual nv pair arrays into configs[] */
     configs[0].nv_pairs = &(config_nv_pairs[0]);
 
     /* First pass wrong topmost nv_pair name */
-    if ( H5CL_parse_config_group(input_string, wrong_name, num_configs, configs) >= 0 ) {
-       TEST_ERROR;
+    if (H5CL_parse_config_group(input_string, wrong_name, num_configs, configs) >= 0) {
+        TEST_ERROR;
     }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                    "config group name mismatch.",
-                                    verbose) ) {
+    else if (0 !=
+             cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, "config group name mismatch.", verbose)) {
 
         TEST_ERROR;
     }
@@ -4540,34 +4075,30 @@ cl_parse_config_group_err_check_4(void){
 
     /* Now set the config's expected name to wrong_name and retry with the correct top-level name */
     configs[0].config_name = wrong_name;
-    
-    if ( H5CL_parse_config_group(input_string, top_name, num_configs, configs) >= 0 ) {
-       TEST_ERROR;
 
-    } 
+    if (H5CL_parse_config_group(input_string, top_name, num_configs, configs) >= 0) {
+        TEST_ERROR;
+    }
 #if VERIFY_ERROR_STACK_SUPPORTED
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                    "Unknown config name.",
-                                    verbose) ) {
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, "Unknown config name.", verbose)) {
 
         TEST_ERROR;
     }
 #endif
 
     /* cleanup after test. */
-    for ( i = 0; i < num_configs; i++ ) {
+    for (i = 0; i < num_configs; i++) {
 
-        for ( j = 0; j < configs[i].max_num_params; j++ ) {
+        for (j = 0; j < configs[i].max_num_params; j++) {
 
             /* Attempt cleanup only if struct_tag is valid */
-            if ( ( configs[i].nv_pairs[j].struct_tag == H5CL_NV_PAIR_STRUCT_TAG ) &&
-                 ( H5CL_take_down_nv_pair(&configs[i].nv_pairs[j]) < 0 ) ) 
-            {
+            if ((configs[i].nv_pairs[j].struct_tag == H5CL_NV_PAIR_STRUCT_TAG) &&
+                (H5CL_take_down_nv_pair(&configs[i].nv_pairs[j]) < 0)) {
                 TEST_ERROR;
             }
         }
     }
-    
+
     PASSED();
 
     return 0;
@@ -4581,11 +4112,11 @@ error:
  *
  * cl_parse_config_group_err_check_5()
  *
- * Verify that the config group parser function detects and reports errors 
+ * Verify that the config group parser function detects and reports errors
  * as expected.
- * Specifically, test that H5CL_parse_config_group() errors when the 
+ * Specifically, test that H5CL_parse_config_group() errors when the
  * top-level group config doesn't use a list as its value.
- * 
+ *
  *                                              Cody S. -- 4/21/26
  *
  * Changes:
@@ -4594,34 +4125,30 @@ error:
  *
  *******************************************************************************/
 static herr_t
-cl_parse_config_group_err_check_5(void){
-    const char * input_string = "( top_name 1 )"; /* value isnt a list */
+cl_parse_config_group_err_check_5(void)
+{
+    const char *input_string = "( top_name 1 )"; /* value isnt a list */
 #if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
 #endif
-    int i;
-    int j;
-    int num_configs = 1;
-    int config_num_params = 1;
-    char top_name[] = "top_name";
-    char config_name[] = "config_name";
-    H5CL_config_spec configs[1] =
-    {
-      {
-        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ config_name,
-        /* max_num_params = */ config_num_params,
-        /* nv_pairs       = */ NULL,
-        /* parse          = */ false
-      }
-    };
+    int              i;
+    int              j;
+    int              num_configs       = 1;
+    int              config_num_params = 1;
+    char             top_name[]        = "top_name";
+    char             config_name[]     = "config_name";
+    H5CL_config_spec configs[1]        = {{/* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+                                    /* config_name    = */ config_name,
+                                    /* max_num_params = */ config_num_params,
+                                    /* nv_pairs       = */ NULL,
+                                    /* parse          = */ false}};
 
     H5CL_nv_pair_t config_nv_pairs[1];
 
     TESTING("H5CL_parse_config_group() err detect & report 5");
 
     /* setup the name value pair array. */
-    for ( i = 0; i < config_num_params; i++ ) {
+    for (i = 0; i < config_num_params; i++) {
 
         config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
@@ -4629,28 +4156,26 @@ cl_parse_config_group_err_check_5(void){
     /* load pointers to the actual nv pair arrays into configs[] */
     configs[0].nv_pairs = &(config_nv_pairs[0]);
 
-    if ( H5CL_parse_config_group(input_string, top_name, num_configs, configs) >= 0 ) {
-       TEST_ERROR;
-
-    } 
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                    "value of the config group level name value pair is not a list.",
-                                    verbose) ) {
+    if (H5CL_parse_config_group(input_string, top_name, num_configs, configs) >= 0) {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "value of the config group level name value pair is not a list.",
+                                             verbose)) {
 
         TEST_ERROR;
     }
 #endif
 
     /* cleanup after test. */
-    for ( i = 0; i < num_configs; i++ ) {
+    for (i = 0; i < num_configs; i++) {
 
-        for ( j = 0; j < configs[i].max_num_params; j++ ) {
+        for (j = 0; j < configs[i].max_num_params; j++) {
 
             /* Attempt cleanup only if struct_tag is valid */
-            if ( ( configs[i].nv_pairs[j].struct_tag == H5CL_NV_PAIR_STRUCT_TAG ) &&
-                 ( H5CL_take_down_nv_pair(&configs[i].nv_pairs[j]) < 0 ) ) 
-            {
+            if ((configs[i].nv_pairs[j].struct_tag == H5CL_NV_PAIR_STRUCT_TAG) &&
+                (H5CL_take_down_nv_pair(&configs[i].nv_pairs[j]) < 0)) {
                 TEST_ERROR;
             }
         }
@@ -4669,11 +4194,11 @@ error:
  *
  * cl_parse_config_group_err_check_6()
  *
- * Verify that the config group parser function detects and reports errors 
+ * Verify that the config group parser function detects and reports errors
  * as expected.
- * Specifically, test that H5CL_parse_config_group() errors when a 
+ * Specifically, test that H5CL_parse_config_group() errors when a
  * configuration within the group doesn't contain a list as its value.
- * 
+ *
  *                                              Cody S. -- 4/21/26
  *
  * Changes:
@@ -4682,39 +4207,34 @@ error:
  *
  *******************************************************************************/
 static herr_t
-cl_parse_config_group_err_check_6(void){
-    const char * input_string = 
-        "( top_name "
-        "  ("
-        "    ( config_name 1 )" /* config value isn't a list */
-        "  )"
-        ")";
+cl_parse_config_group_err_check_6(void)
+{
+    const char *input_string = "( top_name "
+                               "  ("
+                               "    ( config_name 1 )" /* config value isn't a list */
+                               "  )"
+                               ")";
 #if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
 #endif
-    int i;
-    int j;
-    int num_configs = 1;
-    int config_num_params = 1;
-    char top_name[] = "top_name";
-    char config_name[] = "config_name";
-    H5CL_config_spec configs[1] =
-    {
-      {
-        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ config_name,
-        /* max_num_params = */ config_num_params,
-        /* nv_pairs       = */ NULL, /* will overwrite */
-        /* parse          = */ false
-      }
-    };
-    
+    int              i;
+    int              j;
+    int              num_configs       = 1;
+    int              config_num_params = 1;
+    char             top_name[]        = "top_name";
+    char             config_name[]     = "config_name";
+    H5CL_config_spec configs[1]        = {{/* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+                                    /* config_name    = */ config_name,
+                                    /* max_num_params = */ config_num_params,
+                                    /* nv_pairs       = */ NULL, /* will overwrite */
+                                    /* parse          = */ false}};
+
     H5CL_nv_pair_t config_nv_pairs[1];
 
     TESTING("H5CL_parse_config_group() err detect & report 6");
 
     /* setup the name value pair array. */
-    for ( i = 0; i < config_num_params; i++ ) {
+    for (i = 0; i < config_num_params; i++) {
 
         config_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
@@ -4722,33 +4242,30 @@ cl_parse_config_group_err_check_6(void){
     /* load pointers to the actual nv pair arrays into configs[] */
     configs[0].nv_pairs = &(config_nv_pairs[0]);
 
-    if ( H5CL_parse_config_group(input_string, top_name, num_configs, configs) >= 0 ) {
-       TEST_ERROR;
-
-    } 
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                    "value of a configuration is not a list.",
-                                    verbose) ) {
+    if (H5CL_parse_config_group(input_string, top_name, num_configs, configs) >= 0) {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "value of a configuration is not a list.", verbose)) {
 
         TEST_ERROR;
     }
 #endif
 
     /* cleanup after test. */
-    for ( i = 0; i < num_configs; i++ ) {
+    for (i = 0; i < num_configs; i++) {
 
-        for ( j = 0; j < configs[i].max_num_params; j++ ) {
+        for (j = 0; j < configs[i].max_num_params; j++) {
 
             /* Attempt cleanup only if struct_tag is valid */
-            if ( ( configs[i].nv_pairs[j].struct_tag == H5CL_NV_PAIR_STRUCT_TAG ) &&
-                 ( H5CL_take_down_nv_pair(&configs[i].nv_pairs[j]) < 0 ) ) 
-            {
+            if ((configs[i].nv_pairs[j].struct_tag == H5CL_NV_PAIR_STRUCT_TAG) &&
+                (H5CL_take_down_nv_pair(&configs[i].nv_pairs[j]) < 0)) {
                 TEST_ERROR;
             }
         }
     }
-    
+
     PASSED();
 
     return 0;
@@ -4758,16 +4275,15 @@ error:
     return -1;
 } /* cl_parse_config_group_err_check_6() */
 
-
 /*******************************************************************************
  *
  * cl_parse_config_group_err_check_7()
  *
- * Verify that the config group parser function detects and reports errors 
+ * Verify that the config group parser function detects and reports errors
  * as expected.
- * Specifically, test that H5CL_parse_config_group() errors when an extra 
+ * Specifically, test that H5CL_parse_config_group() errors when an extra
  * unneeded H5CL_config_spec element is added to the configs[] array.
- * 
+ *
  *                                              Cody S. -- 4/21/26
  *
  * Changes:
@@ -4776,95 +4292,83 @@ error:
  *
  *******************************************************************************/
 static herr_t
-cl_parse_config_group_err_check_7(void){
-    const char * input_string = 
-        "( top_name "
-        "  ("
-        "    ( config_name "
-        "      ("
-        "        ( param 1 )"
-        "      )"
-        "    )"
-        "  )"
-        ")";
+cl_parse_config_group_err_check_7(void)
+{
+    const char *input_string = "( top_name "
+                               "  ("
+                               "    ( config_name "
+                               "      ("
+                               "        ( param 1 )"
+                               "      )"
+                               "    )"
+                               "  )"
+                               ")";
 #if VERIFY_ERROR_STACK_SUPPORTED
     bool verbose = true;
 #endif
-    int i;
-    int j;
-    int num_configs = 2;
-    int config_1_num_params = 1;
-    int config_2_num_params = 1;
-    char top_name[] = "top_name";
-    char config_1_name[] = "config_1_name";
-    char config_2_name[] = "config_2_name";
-    H5CL_config_spec configs[2] =
-    {
-      {
-        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ config_1_name,
-        /* max_num_params = */ config_1_num_params,
-        /* nv_pairs       = */ NULL, /* will overwrite */
-        /* parse          = */ false
-      },
-      /* Add extra unneeded element */
-      {
-        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ config_2_name,
-        /* max_num_params = */ config_2_num_params,
-        /* nv_pairs       = */ NULL, /* will overwrite */
-        /* parse          = */ false
-      }
-    };
-    
+    int              i;
+    int              j;
+    int              num_configs         = 2;
+    int              config_1_num_params = 1;
+    int              config_2_num_params = 1;
+    char             top_name[]          = "top_name";
+    char             config_1_name[]     = "config_1_name";
+    char             config_2_name[]     = "config_2_name";
+    H5CL_config_spec configs[2]          = {{/* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+                                    /* config_name    = */ config_1_name,
+                                    /* max_num_params = */ config_1_num_params,
+                                    /* nv_pairs       = */ NULL, /* will overwrite */
+                                    /* parse          = */ false},
+                                            /* Add extra unneeded element */
+                                            {/* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+                                    /* config_name    = */ config_2_name,
+                                    /* max_num_params = */ config_2_num_params,
+                                    /* nv_pairs       = */ NULL, /* will overwrite */
+                                    /* parse          = */ false}};
+
     H5CL_nv_pair_t config_1_nv_pairs[1];
     H5CL_nv_pair_t config_2_nv_pairs[1];
 
     TESTING("H5CL_parse_config_group() err detect & report 7");
 
     /* setup the name value pair array. */
-    for ( i = 0; i < config_1_num_params; i++ ) {
+    for (i = 0; i < config_1_num_params; i++) {
 
         config_1_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
 
-    for ( i = 0; i < config_2_num_params; i++ ) {
+    for (i = 0; i < config_2_num_params; i++) {
 
         config_2_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
     }
 
-
     /* load pointers to the actual nv pair arrays into configs[] */
     configs[0].nv_pairs = &(config_1_nv_pairs[0]);
     configs[1].nv_pairs = &(config_2_nv_pairs[0]);
-    
-    if ( H5CL_parse_config_group(input_string, top_name, num_configs, configs) >= 0 ) {
-       TEST_ERROR;
 
-    } 
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                    "Unknown config name.",
-                                    verbose) ) {
+    if (H5CL_parse_config_group(input_string, top_name, num_configs, configs) >= 0) {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, "Unknown config name.", verbose)) {
 
         TEST_ERROR;
     }
 #endif
 
     /* cleanup after test. */
-    for ( i = 0; i < num_configs; i++ ) {
+    for (i = 0; i < num_configs; i++) {
 
-        for ( j = 0; j < configs[i].max_num_params; j++ ) {
+        for (j = 0; j < configs[i].max_num_params; j++) {
 
             /* Attempt cleanup only if struct_tag is valid */
-            if ( ( configs[i].nv_pairs[j].struct_tag == H5CL_NV_PAIR_STRUCT_TAG ) &&
-                 ( H5CL_take_down_nv_pair(&configs[i].nv_pairs[j]) < 0 ) ) 
-            {
+            if ((configs[i].nv_pairs[j].struct_tag == H5CL_NV_PAIR_STRUCT_TAG) &&
+                (H5CL_take_down_nv_pair(&configs[i].nv_pairs[j]) < 0)) {
                 TEST_ERROR;
             }
         }
     }
-    
+
     PASSED();
 
     return 0;
@@ -4873,7 +4377,6 @@ error:
 
     return -1;
 } /* cl_parse_config_group_err_check_7() */
-
 
 /*******************************************************************************
  *
@@ -4889,77 +4392,75 @@ error:
  *    None.
  *
  *******************************************************************************/
-static herr_t 
+static herr_t
 vfd_swmr_load_string_config_smoke_check(void)
 {
     /* Input values for PL setup */
-    const char * input_string = 
-        "( vfd_swmr_config_data "
-        "  ("
-        "    ( H5F_vfd_swmr_config"
-        "      ("
-        "        ( version 1 )"
-        "        ( tick_len 4 )"
-        "        ( max_lag 7 )"
-        "        ( presume_posix_semantics 1 )"
-        "        ( maintain_metadata_file 1 )"
-        "        ( generate_updater_files 0 )"
-        "        ( flush_raw_data 1 )"
-        "        ( md_pages_reserved 128 )"
-        "        ( md_file_path \"./md_dir/\" )"
-        "        ( md_file_name \"md_file\" )"
-        "        ( updater_file_path \"\" )"
-        "        ( log_file_path \"\" )"
-        "        ( pb_expansion_threshold 0 ) "
-        "      )"
-        "    )"
-        "    ( page_buffer_config "
-        "      ("
-        "        ( page_buf_size 4096 )"
-        "        ( metadata_pages_only 1 )"
-        "      )"
-        "    )"
-        "    ( file_space_strategy_config "
-        "      ("
-        "        ( persist 0 )"
-        "      )"
-        "    )"
-        "    ( file_space_page_size "
-        "      ("
-        "        ( page_size 4096 )"
-        "      )"
-        "    )"
-        "  )"
-        ")";
-    hid_t                  fapl        = H5I_INVALID_HID;
-    hid_t                  fcpl        = H5I_INVALID_HID;
-    hbool_t                writer      = true;
-    hbool_t                create_file = true;
+    const char *input_string = "( vfd_swmr_config_data "
+                               "  ("
+                               "    ( H5F_vfd_swmr_config"
+                               "      ("
+                               "        ( version 1 )"
+                               "        ( tick_len 4 )"
+                               "        ( max_lag 7 )"
+                               "        ( presume_posix_semantics 1 )"
+                               "        ( maintain_metadata_file 1 )"
+                               "        ( generate_updater_files 0 )"
+                               "        ( flush_raw_data 1 )"
+                               "        ( md_pages_reserved 128 )"
+                               "        ( md_file_path \"./md_dir/\" )"
+                               "        ( md_file_name \"md_file\" )"
+                               "        ( updater_file_path \"\" )"
+                               "        ( log_file_path \"\" )"
+                               "        ( pb_expansion_threshold 0 ) "
+                               "      )"
+                               "    )"
+                               "    ( page_buffer_config "
+                               "      ("
+                               "        ( page_buf_size 4096 )"
+                               "        ( metadata_pages_only 1 )"
+                               "      )"
+                               "    )"
+                               "    ( file_space_strategy_config "
+                               "      ("
+                               "        ( persist 0 )"
+                               "      )"
+                               "    )"
+                               "    ( file_space_page_size "
+                               "      ("
+                               "        ( page_size 4096 )"
+                               "      )"
+                               "    )"
+                               "  )"
+                               ")";
+    hid_t       fapl         = H5I_INVALID_HID;
+    hid_t       fcpl         = H5I_INVALID_HID;
+    hbool_t     writer       = true;
+    hbool_t     create_file  = true;
 
     /* Output values for testing PL setup */
     H5F_fspace_strategy_t  strategy;
-    hbool_t                persist; 
+    hbool_t                persist;
     hsize_t                threshold;
     hsize_t                fsp_size;
     H5F_libver_t           libver_low;
     H5F_libver_t           libver_high;
     size_t                 page_buf_size;
-    unsigned int           min_meta_perc; 
+    unsigned int           min_meta_perc;
     unsigned int           min_raw_perc;
     H5F_vfd_swmr_config_t *actual_config = NULL;
 
     /* Expected values */
     H5F_fspace_strategy_t expected_strategy      = H5F_FSPACE_STRATEGY_PAGE;
-    hbool_t               expected_persist       = false; 
+    hbool_t               expected_persist       = false;
     hsize_t               expected_threshold     = 1;
     hsize_t               expected_fsp_size      = 4096;
     H5F_libver_t          expected_libver_low    = H5F_LIBVER_LATEST;
     H5F_libver_t          expected_libver_high   = H5F_LIBVER_LATEST;
     size_t                expected_page_buf_size = 4096;
-    unsigned int          expected_min_meta_perc = 100; 
+    unsigned int          expected_min_meta_perc = 100;
     unsigned int          expected_min_raw_perc  = 0;
-    H5F_vfd_swmr_config_t expected_config =
-    {
+    H5F_vfd_swmr_config_t expected_config        = {
         /* version                 = */ H5F__CURR_VFD_SWMR_CONFIG_VERSION,
         /* tick_len                = */ 4,
         /* max_lag                 = */ 7,
@@ -4973,13 +4474,11 @@ vfd_swmr_load_string_config_smoke_check(void)
         /* md_file_path            = */ "./md_dir/",
         /* md_file_name            = */ "md_file",
         /* updater_file_path       = */ "",
-        /* log_file_path           = */ ""
-    };
+        /* log_file_path           = */ ""};
 
     bool verbose = true;
 
-
-    if ( NULL == (actual_config = HDcalloc(1, sizeof(H5F_vfd_swmr_config_t))) ) {
+    if (NULL == (actual_config = HDcalloc(1, sizeof(H5F_vfd_swmr_config_t)))) {
         TEST_ERROR;
     }
     HDmemset(actual_config, 0, sizeof(H5F_vfd_swmr_config_t));
@@ -4987,58 +4486,52 @@ vfd_swmr_load_string_config_smoke_check(void)
     TESTING("H5F_load_swmr_config_from_string() -- Initial Smoke Check");
 
     /* Initialize property lists */
-    if ( (fapl = h5_fileaccess()) < 0 )
+    if ((fapl = h5_fileaccess()) < 0)
         TEST_ERROR;
-    if ( (fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0 )
+    if ((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
         TEST_ERROR;
 
     /* Use cl string to setup property lists */
-    if ( H5F_load_swmr_config_from_string(input_string, fapl, fcpl, writer, create_file) < 0 )
+    if (H5F_load_swmr_config_from_string(input_string, fapl, fcpl, writer, create_file) < 0)
         TEST_ERROR;
 
     /* Get configured values */
-    if ( H5Pget_file_space_strategy(fcpl, &strategy, &persist, &threshold) < 0 )
+    if (H5Pget_file_space_strategy(fcpl, &strategy, &persist, &threshold) < 0)
         TEST_ERROR;
 
-    if ( H5Pget_file_space_page_size(fcpl, &fsp_size) < 0 )
+    if (H5Pget_file_space_page_size(fcpl, &fsp_size) < 0)
         TEST_ERROR;
 
-    if ( H5Pget_libver_bounds(fapl, &libver_low, &libver_high) < 0 )
+    if (H5Pget_libver_bounds(fapl, &libver_low, &libver_high) < 0)
         TEST_ERROR;
 
-    if ( H5Pget_page_buffer_size(fapl, &page_buf_size, &min_meta_perc, &min_raw_perc) < 0 )
+    if (H5Pget_page_buffer_size(fapl, &page_buf_size, &min_meta_perc, &min_raw_perc) < 0)
         TEST_ERROR;
 
-    if ( H5Pget_vfd_swmr_config(fapl, actual_config) < 0 )
+    if (H5Pget_vfd_swmr_config(fapl, actual_config) < 0)
         TEST_ERROR;
-
 
     /* Test returned values */
-    if ( ( strategy != expected_strategy ) || 
-         ( persist != expected_persist ) || 
-         ( threshold != expected_threshold ) ||
-         ( fsp_size != expected_fsp_size ) ||
-         ( libver_low != expected_libver_low ) ||
-         ( libver_high != expected_libver_high ) ||
-         ( page_buf_size != expected_page_buf_size ) || 
-         ( min_meta_perc != expected_min_meta_perc ) ||
-         ( min_raw_perc != expected_min_raw_perc ) ||
-         ( vfd_swmr_test_verify_config(actual_config, &expected_config, verbose) > 0 ) ) 
-    {
+    if ((strategy != expected_strategy) || (persist != expected_persist) ||
+        (threshold != expected_threshold) || (fsp_size != expected_fsp_size) ||
+        (libver_low != expected_libver_low) || (libver_high != expected_libver_high) ||
+        (page_buf_size != expected_page_buf_size) || (min_meta_perc != expected_min_meta_perc) ||
+        (min_raw_perc != expected_min_raw_perc) ||
+        (vfd_swmr_test_verify_config(actual_config, &expected_config, verbose) > 0)) {
 
         TEST_ERROR;
     }
 
     /* Close property lists */
-    if ( H5Pclose(fapl) < 0 )
+    if (H5Pclose(fapl) < 0)
         TEST_ERROR;
-    if ( H5Pclose(fcpl) < 0 )
+    if (H5Pclose(fcpl) < 0)
         TEST_ERROR;
-    
+
     /* Free allocated config struct */
-    if ( actual_config )
+    if (actual_config)
         free(actual_config);
-    
+
     PASSED();
 
     return 0;
@@ -5050,18 +4543,17 @@ error:
     H5Pclose(fcpl);
 
     /* Free allocated config struct */
-    if ( actual_config )
+    if (actual_config)
         free(actual_config);
 
     return -1;
 } /* vfd_swmr_load_string_config_smoke_check */
 
-
 /*******************************************************************************
  *
  * vfd_swmr_load_string_config_err_check_1()
  *
- * Verify that the VFD SWMR property list setup function detects and reports 
+ * Verify that the VFD SWMR property list setup function detects and reports
  * errors as expected.
  * Specifically, test that H5F_load_swmr_config_from_string() errors when
  * create_file parameter is true but writer parameter is false.
@@ -5073,83 +4565,80 @@ error:
  *    None.
  *
  *******************************************************************************/
-static herr_t 
+static herr_t
 vfd_swmr_load_string_config_err_check_1(void)
 {
     /* Input values for PL setup */
-    const char * input_string = 
-        "( vfd_swmr_config_data "
-        "  ("
-        "    ( H5F_vfd_swmr_config"
-        "      ("
-        "        ( version 1 )"
-        "        ( tick_len 4 )"
-        "        ( max_lag 7 )"
-        "        ( presume_posix_semantics 1 )"
-        "        ( maintain_metadata_file 1 )"
-        "        ( generate_updater_files 0 )"
-        "        ( flush_raw_data 1 )"
-        "        ( md_pages_reserved 128 )"
-        "        ( md_file_path \"./md_dir/\" )"
-        "        ( md_file_name \"md_file\" )"
-        "        ( updater_file_path \"\" )"
-        "        ( log_file_path \"\" )"
-        "        ( pb_expansion_threshold 0 ) "
-        "      )"
-        "    )"
-        "    ( page_buffer_config "
-        "      ("
-        "        ( page_buf_size 4096 )"
-        "        ( metadata_pages_only 1 )"
-        "      )"
-        "    )"
-        "    ( file_space_strategy_config "
-        "      ("
-        "        ( persist 0 )"
-        "      )"
-        "    )"
-        "    ( file_space_page_size "
-        "      ("
-        "        ( page_size 4096 )"
-        "      )"
-        "    )"
-        "  )"
-        ")";
-    hid_t   fapl        = H5I_INVALID_HID;
-    hid_t   fcpl        = H5I_INVALID_HID;
-    hbool_t writer      = false;
-    hbool_t create_file = true;
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    bool    verbose     = true;
+    const char *input_string = "( vfd_swmr_config_data "
+                               "  ("
+                               "    ( H5F_vfd_swmr_config"
+                               "      ("
+                               "        ( version 1 )"
+                               "        ( tick_len 4 )"
+                               "        ( max_lag 7 )"
+                               "        ( presume_posix_semantics 1 )"
+                               "        ( maintain_metadata_file 1 )"
+                               "        ( generate_updater_files 0 )"
+                               "        ( flush_raw_data 1 )"
+                               "        ( md_pages_reserved 128 )"
+                               "        ( md_file_path \"./md_dir/\" )"
+                               "        ( md_file_name \"md_file\" )"
+                               "        ( updater_file_path \"\" )"
+                               "        ( log_file_path \"\" )"
+                               "        ( pb_expansion_threshold 0 ) "
+                               "      )"
+                               "    )"
+                               "    ( page_buffer_config "
+                               "      ("
+                               "        ( page_buf_size 4096 )"
+                               "        ( metadata_pages_only 1 )"
+                               "      )"
+                               "    )"
+                               "    ( file_space_strategy_config "
+                               "      ("
+                               "        ( persist 0 )"
+                               "      )"
+                               "    )"
+                               "    ( file_space_page_size "
+                               "      ("
+                               "        ( page_size 4096 )"
+                               "      )"
+                               "    )"
+                               "  )"
+                               ")";
+    hid_t       fapl         = H5I_INVALID_HID;
+    hid_t       fcpl         = H5I_INVALID_HID;
+    hbool_t     writer       = false;
+    hbool_t     create_file  = true;
+#if VERIFY_ERROR_STACK_SUPPORTED
+    bool verbose = true;
 #endif
 
     TESTING("H5F_load_swmr_config_from_string() err detect 1");
 
     /* Initialize property lists */
-    if ( (fapl = h5_fileaccess()) < 0 )
+    if ((fapl = h5_fileaccess()) < 0)
         TEST_ERROR;
-    if ( (fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0 )
+    if ((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
         TEST_ERROR;
 
     /* Expected to fail because writer is false but create_file is true */
-    if ( H5F_load_swmr_config_from_string(input_string, fapl, fcpl, writer, create_file) >= 0 ) {
-       TEST_ERROR;
-    } 
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "must be in writer mode to create file",
-                                              verbose) )
-    {
+    if (H5F_load_swmr_config_from_string(input_string, fapl, fcpl, writer, create_file) >= 0) {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, "must be in writer mode to create file",
+                                             verbose)) {
         TEST_ERROR;
     }
 #endif
 
     /* Close property lists */
-    if ( H5Pclose(fapl) < 0 )
+    if (H5Pclose(fapl) < 0)
         TEST_ERROR;
-    if ( H5Pclose(fcpl) < 0 )
+    if (H5Pclose(fcpl) < 0)
         TEST_ERROR;
-    
+
     PASSED();
 
     return 0;
@@ -5167,7 +4656,7 @@ error:
  *
  * vfd_swmr_load_string_config_err_check_2()
  *
- * Verify that the VFD SWMR property list setup function detects and reports 
+ * Verify that the VFD SWMR property list setup function detects and reports
  * errors as expected.
  * Specifically, test that H5F_load_swmr_config_from_string() errors when
  * required configs are missing.
@@ -5179,161 +4668,147 @@ error:
  *    None.
  *
  *******************************************************************************/
-static herr_t 
+static herr_t
 vfd_swmr_load_string_config_err_check_2(void)
 {
     /* Input values for PL setup */
-    const char * missing_H5F_vfd_swmr_config_str= 
-        "( vfd_swmr_config_data "
-        "  ("
-        "    ( page_buffer_config "
-        "      ("
-        "        ( page_buf_size 4096 )"
-        "        ( metadata_pages_only 1 )"
-        "      )"
-        "    )"
-        "    ( file_space_strategy_config "
-        "      ("
-        "        ( persist 0 )"
-        "      )"
-        "    )"
-        "    ( file_space_page_size "
-        "      ("
-        "        ( page_size 4096 )"
-        "      )"
-        "    )"
-        "  )"
-        ")";
-    const char * missing_page_buffer_config_str = 
-        "( vfd_swmr_config_data "
-        "  ("
-        "    ( H5F_vfd_swmr_config"
-        "      ("
-        "        ( version 1 )"
-        "        ( tick_len 4 )"
-        "        ( max_lag 7 )"
-        "        ( presume_posix_semantics 1 )"
-        "        ( maintain_metadata_file 1 )"
-        "        ( generate_updater_files 0 )"
-        "        ( flush_raw_data 1 )"
-        "        ( md_pages_reserved 128 )"
-        "        ( md_file_path \"./md_dir/\" )"
-        "        ( md_file_name \"md_file\" )"
-        "        ( updater_file_path \"\" )"
-        "        ( log_file_path \"\" )"
-        "        ( pb_expansion_threshold 0 ) "
-        "      )"
-        "    )"
-        "    ( file_space_strategy_config "
-        "      ("
-        "        ( persist 0 )"
-        "      )"
-        "    )"
-        "    ( file_space_page_size "
-        "      ("
-        "        ( page_size 4096 )"
-        "      )"
-        "    )"
-        "  )"
-        ")";
-    const char * missing_file_space_str = 
-        "( vfd_swmr_config_data "
-        "  ("
-        "    ( H5F_vfd_swmr_config"
-        "      ("
-        "        ( version 1 )"
-        "        ( tick_len 4 )"
-        "        ( max_lag 7 )"
-        "        ( presume_posix_semantics 1 )"
-        "        ( maintain_metadata_file 1 )"
-        "        ( generate_updater_files 0 )"
-        "        ( flush_raw_data 1 )"
-        "        ( md_pages_reserved 128 )"
-        "        ( md_file_path \"./md_dir/\" )"
-        "        ( md_file_name \"md_file\" )"
-        "        ( updater_file_path \"\" )"
-        "        ( log_file_path \"\" )"
-        "        ( pb_expansion_threshold 0 ) "
-        "      )"
-        "    )"
-        "    ( page_buffer_config "
-        "      ("
-        "        ( page_buf_size 4096 )"
-        "        ( metadata_pages_only 1 )"
-        "      )"
-        "    )"
-        "  )"
-        ")";
-    hid_t   fapl        = H5I_INVALID_HID;
-    hid_t   fcpl        = H5I_INVALID_HID;
-    hbool_t writer      = true;
-    hbool_t create_file = true;
+    const char *missing_H5F_vfd_swmr_config_str = "( vfd_swmr_config_data "
+                                                  "  ("
+                                                  "    ( page_buffer_config "
+                                                  "      ("
+                                                  "        ( page_buf_size 4096 )"
+                                                  "        ( metadata_pages_only 1 )"
+                                                  "      )"
+                                                  "    )"
+                                                  "    ( file_space_strategy_config "
+                                                  "      ("
+                                                  "        ( persist 0 )"
+                                                  "      )"
+                                                  "    )"
+                                                  "    ( file_space_page_size "
+                                                  "      ("
+                                                  "        ( page_size 4096 )"
+                                                  "      )"
+                                                  "    )"
+                                                  "  )"
+                                                  ")";
+    const char *missing_page_buffer_config_str  = "( vfd_swmr_config_data "
+                                                  "  ("
+                                                  "    ( H5F_vfd_swmr_config"
+                                                  "      ("
+                                                  "        ( version 1 )"
+                                                  "        ( tick_len 4 )"
+                                                  "        ( max_lag 7 )"
+                                                  "        ( presume_posix_semantics 1 )"
+                                                  "        ( maintain_metadata_file 1 )"
+                                                  "        ( generate_updater_files 0 )"
+                                                  "        ( flush_raw_data 1 )"
+                                                  "        ( md_pages_reserved 128 )"
+                                                  "        ( md_file_path \"./md_dir/\" )"
+                                                  "        ( md_file_name \"md_file\" )"
+                                                  "        ( updater_file_path \"\" )"
+                                                  "        ( log_file_path \"\" )"
+                                                  "        ( pb_expansion_threshold 0 ) "
+                                                  "      )"
+                                                  "    )"
+                                                  "    ( file_space_strategy_config "
+                                                  "      ("
+                                                  "        ( persist 0 )"
+                                                  "      )"
+                                                  "    )"
+                                                  "    ( file_space_page_size "
+                                                  "      ("
+                                                  "        ( page_size 4096 )"
+                                                  "      )"
+                                                  "    )"
+                                                  "  )"
+                                                  ")";
+    const char *missing_file_space_str          = "( vfd_swmr_config_data "
+                                                  "  ("
+                                                  "    ( H5F_vfd_swmr_config"
+                                                  "      ("
+                                                  "        ( version 1 )"
+                                                  "        ( tick_len 4 )"
+                                                  "        ( max_lag 7 )"
+                                                  "        ( presume_posix_semantics 1 )"
+                                                  "        ( maintain_metadata_file 1 )"
+                                                  "        ( generate_updater_files 0 )"
+                                                  "        ( flush_raw_data 1 )"
+                                                  "        ( md_pages_reserved 128 )"
+                                                  "        ( md_file_path \"./md_dir/\" )"
+                                                  "        ( md_file_name \"md_file\" )"
+                                                  "        ( updater_file_path \"\" )"
+                                                  "        ( log_file_path \"\" )"
+                                                  "        ( pb_expansion_threshold 0 ) "
+                                                  "      )"
+                                                  "    )"
+                                                  "    ( page_buffer_config "
+                                                  "      ("
+                                                  "        ( page_buf_size 4096 )"
+                                                  "        ( metadata_pages_only 1 )"
+                                                  "      )"
+                                                  "    )"
+                                                  "  )"
+                                                  ")";
+    hid_t       fapl                            = H5I_INVALID_HID;
+    hid_t       fcpl                            = H5I_INVALID_HID;
+    hbool_t     writer                          = true;
+    hbool_t     create_file                     = true;
 #if VERIFY_ERROR_STACK_SUPPORTED
-    bool    verbose     = true;
+    bool verbose = true;
 #endif
 
     TESTING("H5F_load_swmr_config_from_string() err detect 2");
 
     /* Initialize property lists */
-    if ( (fapl = h5_fileaccess()) < 0 )
+    if ((fapl = h5_fileaccess()) < 0)
         TEST_ERROR;
-    if ( (fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0 )
+    if ((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
         TEST_ERROR;
 
     /* Expected to fail because H5F_vfd_swmr_config missing */
-    if ( H5F_load_swmr_config_from_string(missing_H5F_vfd_swmr_config_str, 
-                                              fapl, fcpl, writer, 
-                                              create_file) >= 0 )
-    {
-       TEST_ERROR;
-    } 
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "required configuration groups missing",
-                                              verbose) )
-    {
+    if (H5F_load_swmr_config_from_string(missing_H5F_vfd_swmr_config_str, fapl, fcpl, writer, create_file) >=
+        0) {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, "required configuration groups missing",
+                                             verbose)) {
         TEST_ERROR;
     }
 #endif
 
     /* Expected to fail because page_buffer_config missing */
-    if ( H5F_load_swmr_config_from_string(missing_page_buffer_config_str,
-                                              fapl, fcpl, writer, 
-                                              create_file) >= 0 )
-    {
-       TEST_ERROR;
-    } 
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "required configuration groups missing",
-                                              verbose) )
-    {
+    if (H5F_load_swmr_config_from_string(missing_page_buffer_config_str, fapl, fcpl, writer, create_file) >=
+        0) {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, "required configuration groups missing",
+                                             verbose)) {
         TEST_ERROR;
     }
 #endif
 
     /* Expected to fail because create_file is true but file_space configurations missing */
-    if ( H5F_load_swmr_config_from_string(missing_file_space_str, 
-                                              fapl, fcpl, writer, 
-                                              create_file) >= 0 )
-    {
+    if (H5F_load_swmr_config_from_string(missing_file_space_str, fapl, fcpl, writer, create_file) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                "file_space_strategy_config and file_space_page_size must both be configured if create_file is true",
-                verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "file_space_strategy_config and file_space_page_size must both "
+                                             "be configured if create_file is true",
+                                             verbose)) {
         TEST_ERROR;
     }
 #endif
 
     /* Close property lists */
-    if ( H5Pclose(fapl) < 0 )
+    if (H5Pclose(fapl) < 0)
         TEST_ERROR;
-    if ( H5Pclose(fcpl) < 0 )
+    if (H5Pclose(fcpl) < 0)
         TEST_ERROR;
-    
+
     PASSED();
 
     return 0;
@@ -5347,16 +4822,15 @@ error:
     return -1;
 } /* vfd_swmr_load_string_config_err_check_2() */
 
-
 /*******************************************************************************
  *
  * vfd_swmr_load_string_config_err_check_3()
  *
- * Verify that the VFD SWMR property list setup function detects and reports 
+ * Verify that the VFD SWMR property list setup function detects and reports
  * errors as expected.
  * Specifically, test that H5F_load_swmr_config_from_string() errors when
  * any of the required configuration paramaters are missing.
- * 
+ *
  *                                              Cody S. -- 4/30/26
  *
  * Changes:
@@ -5364,484 +4838,458 @@ error:
  *    None.
  *
  *******************************************************************************/
-static herr_t 
+static herr_t
 vfd_swmr_load_string_config_err_check_3(void)
 {
     /* Input values for PL setup */
-    const char * missing_tick_len_str = 
-        "( vfd_swmr_config_data "
-        "  ("
-        "    ( H5F_vfd_swmr_config"
-        "      ("
-        "        ( version 1 )"
-        /* missing tick_len config */
-        "        ( max_lag 7 )"
-        "        ( presume_posix_semantics 1 )"
-        "        ( maintain_metadata_file 1 )"
-        "        ( generate_updater_files 0 )"
-        "        ( flush_raw_data 1 )"
-        "        ( md_pages_reserved 128 )"
-        "        ( md_file_path \"./md_dir/\" )"
-        "        ( md_file_name \"md_file\" )"
-        "        ( updater_file_path \"\" )"
-        "        ( log_file_path \"\" )"
-        "        ( pb_expansion_threshold 0 ) "
-        "      )"
-        "    )"
-        "    ( page_buffer_config "
-        "      ("
-        "        ( page_buf_size 4096 )"
-        "        ( metadata_pages_only 1 )"
-        "      )"
-        "    )"
-        "    ( file_space_strategy_config "
-        "      ("
-        "        ( persist 0 )"
-        "      )"
-        "    )"
-        "    ( file_space_page_size "
-        "      ("
-        "        ( page_size 4096 )"
-        "      )"
-        "    )"
-        "  )"
-        ")";
-    const char * missing_max_lag_str = 
-        "( vfd_swmr_config_data "
-        "  ("
-        "    ( H5F_vfd_swmr_config"
-        "      ("
-        "        ( version 1 )"
-        "        ( tick_len 4 )"
-        /* missing max_lag config */
-        "        ( presume_posix_semantics 1 )"
-        "        ( maintain_metadata_file 1 )"
-        "        ( generate_updater_files 0 )"
-        "        ( flush_raw_data 1 )"
-        "        ( md_pages_reserved 128 )"
-        "        ( md_file_path \"./md_dir/\" )"
-        "        ( md_file_name \"md_file\" )"
-        "        ( updater_file_path \"\" )"
-        "        ( log_file_path \"\" )"
-        "        ( pb_expansion_threshold 0 ) "
-        "      )"
-        "    )"
-        "    ( page_buffer_config "
-        "      ("
-        "        ( page_buf_size 4096 )"
-        "        ( metadata_pages_only 1 )"
-        "      )"
-        "    )"
-        "    ( file_space_strategy_config "
-        "      ("
-        "        ( persist 0 )"
-        "      )"
-        "    )"
-        "    ( file_space_page_size "
-        "      ("
-        "        ( page_size 4096 )"
-        "      )"
-        "    )"
-        "  )"
-        ")";
-    const char * missing_maintain_md_file_str = 
-        "( vfd_swmr_config_data "
-        "  ("
-        "    ( H5F_vfd_swmr_config"
-        "      ("
-        "        ( version 1 )"
-        "        ( tick_len 4 )"
-        "        ( max_lag 7 )"
-        "        ( presume_posix_semantics 1 )"
-        /* missing maintain_metadata_file config */
-        "        ( generate_updater_files 0 )"
-        "        ( flush_raw_data 1 )"
-        "        ( md_pages_reserved 128 )"
-        "        ( md_file_path \"./md_dir/\" )"
-        "        ( md_file_name \"md_file\" )"
-        "        ( updater_file_path \"\" )"
-        "        ( log_file_path \"\" )"
-        "        ( pb_expansion_threshold 0 ) "
-        "      )"
-        "    )"
-        "    ( page_buffer_config "
-        "      ("
-        "        ( page_buf_size 4096 )"
-        "        ( metadata_pages_only 1 )"
-        "      )"
-        "    )"
-        "    ( file_space_strategy_config "
-        "      ("
-        "        ( persist 0 )"
-        "      )"
-        "    )"
-        "    ( file_space_page_size "
-        "      ("
-        "        ( page_size 4096 )"
-        "      )"
-        "    )"
-        "  )"
-        ")";
-    const char * missing_gen_updater_files_str = 
-        "( vfd_swmr_config_data "
-        "  ("
-        "    ( H5F_vfd_swmr_config"
-        "      ("
-        "        ( version 1 )"
-        "        ( tick_len 4 )"
-        "        ( max_lag 7 )"
-        "        ( presume_posix_semantics 1 )"
-        "        ( maintain_metadata_file 1 )"
-        /* missing generate_updater_files config */
-        "        ( flush_raw_data 1 )"
-        "        ( md_pages_reserved 128 )"
-        "        ( md_file_path \"./md_dir/\" )"
-        "        ( md_file_name \"md_file\" )"
-        "        ( updater_file_path \"\" )"
-        "        ( log_file_path \"\" )"
-        "        ( pb_expansion_threshold 0 ) "
-        "      )"
-        "    )"
-        "    ( page_buffer_config "
-        "      ("
-        "        ( page_buf_size 4096 )"
-        "        ( metadata_pages_only 1 )"
-        "      )"
-        "    )"
-        "    ( file_space_strategy_config "
-        "      ("
-        "        ( persist 0 )"
-        "      )"
-        "    )"
-        "    ( file_space_page_size "
-        "      ("
-        "        ( page_size 4096 )"
-        "      )"
-        "    )"
-        "  )"
-        ")";
-    const char * missing_md_pages_reserved_str = 
-        "( vfd_swmr_config_data "
-        "  ("
-        "    ( H5F_vfd_swmr_config"
-        "      ("
-        "        ( version 1 )"
-        "        ( tick_len 4 )"
-        "        ( max_lag 7 )"
-        "        ( presume_posix_semantics 1 )"
-        "        ( maintain_metadata_file 1 )"
-        "        ( generate_updater_files 0 )"
-        "        ( flush_raw_data 1 )"
-        /* missing md_pages_reserved config */
-        "        ( md_file_path \"./md_dir/\" )"
-        "        ( md_file_name \"md_file\" )"
-        "        ( updater_file_path \"\" )"
-        "        ( log_file_path \"\" )"
-        "        ( pb_expansion_threshold 0 ) "
-        "      )"
-        "    )"
-        "    ( page_buffer_config "
-        "      ("
-        "        ( page_buf_size 4096 )"
-        "        ( metadata_pages_only 1 )"
-        "      )"
-        "    )"
-        "    ( file_space_strategy_config "
-        "      ("
-        "        ( persist 0 )"
-        "      )"
-        "    )"
-        "    ( file_space_page_size "
-        "      ("
-        "        ( page_size 4096 )"
-        "      )"
-        "    )"
-        "  )"
-        ")";
-    const char * missing_page_buf_size_str = 
-        "( vfd_swmr_config_data "
-        "  ("
-        "    ( H5F_vfd_swmr_config"
-        "      ("
-        "        ( version 1 )"
-        "        ( tick_len 4 )"
-        "        ( max_lag 7 )"
-        "        ( presume_posix_semantics 1 )"
-        "        ( maintain_metadata_file 1 )"
-        "        ( generate_updater_files 0 )"
-        "        ( flush_raw_data 1 )"
-        "        ( md_pages_reserved 128 )"
-        "        ( md_file_path \"./md_dir/\" )"
-        "        ( md_file_name \"md_file\" )"
-        "        ( updater_file_path \"\" )"
-        "        ( log_file_path \"\" )"
-        "        ( pb_expansion_threshold 0 ) "
-        "      )"
-        "    )"
-        "    ( page_buffer_config "
-        "      ("
-        /* missing page_buf_size config */
-        "        ( metadata_pages_only 1 )"
-        "      )"
-        "    )"
-        "    ( file_space_strategy_config "
-        "      ("
-        "        ( persist 0 )"
-        "      )"
-        "    )"
-        "    ( file_space_page_size "
-        "      ("
-        "        ( page_size 4096 )"
-        "      )"
-        "    )"
-        "  )"
-        ")";
-    const char * missing_md_pages_only_str = 
-        "( vfd_swmr_config_data "
-        "  ("
-        "    ( H5F_vfd_swmr_config"
-        "      ("
-        "        ( version 1 )"
-        "        ( tick_len 4 )"
-        "        ( max_lag 7 )"
-        "        ( presume_posix_semantics 1 )"
-        "        ( maintain_metadata_file 1 )"
-        "        ( generate_updater_files 0 )"
-        "        ( flush_raw_data 1 )"
-        "        ( md_pages_reserved 128 )"
-        "        ( md_file_path \"./md_dir/\" )"
-        "        ( md_file_name \"md_file\" )"
-        "        ( updater_file_path \"\" )"
-        "        ( log_file_path \"\" )"
-        "        ( pb_expansion_threshold 0 ) "
-        "      )"
-        "    )"
-        "    ( page_buffer_config "
-        "      ("
-        "        ( page_buf_size 4096 )"
-        /* missing metadata_pages_only config */
-        "      )"
-        "    )"
-        "    ( file_space_strategy_config "
-        "      ("
-        "        ( persist 0 )"
-        "      )"
-        "    )"
-        "    ( file_space_page_size "
-        "      ("
-        "        ( page_size 4096 )"
-        "      )"
-        "    )"
-        "  )"
-        ")";
-    const char * missing_persist_str = 
-        "( vfd_swmr_config_data "
-        "  ("
-        "    ( H5F_vfd_swmr_config"
-        "      ("
-        "        ( version 1 )"
-        "        ( tick_len 4 )"
-        "        ( max_lag 7 )"
-        "        ( presume_posix_semantics 1 )"
-        "        ( maintain_metadata_file 1 )"
-        "        ( generate_updater_files 0 )"
-        "        ( flush_raw_data 1 )"
-        "        ( md_pages_reserved 128 )"
-        "        ( md_file_path \"./md_dir/\" )"
-        "        ( md_file_name \"md_file\" )"
-        "        ( updater_file_path \"\" )"
-        "        ( log_file_path \"\" )"
-        "        ( pb_expansion_threshold 0 ) "
-        "      )"
-        "    )"
-        "    ( page_buffer_config "
-        "      ("
-        "        ( page_buf_size 4096 )"
-        "        ( metadata_pages_only 1 )"
-        "      )"
-        "    )"
-        "    ( file_space_strategy_config "
-        "      ("
-        /* missing persist config */
-        "      )"
-        "    )"
-        "    ( file_space_page_size "
-        "      ("
-        "        ( page_size 4096 )"
-        "      )"
-        "    )"
-        "  )"
-        ")";
-    const char * missing_page_size_str = 
-        "( vfd_swmr_config_data "
-        "  ("
-        "    ( H5F_vfd_swmr_config"
-        "      ("
-        "        ( version 1 )"
-        "        ( tick_len 4 )"
-        "        ( max_lag 7 )"
-        "        ( presume_posix_semantics 1 )"
-        "        ( maintain_metadata_file 1 )"
-        "        ( generate_updater_files 0 )"
-        "        ( flush_raw_data 1 )"
-        "        ( md_pages_reserved 128 )"
-        "        ( md_file_path \"./md_dir/\" )"
-        "        ( md_file_name \"md_file\" )"
-        "        ( updater_file_path \"\" )"
-        "        ( log_file_path \"\" )"
-        "        ( pb_expansion_threshold 0 ) "
-        "      )"
-        "    )"
-        "    ( page_buffer_config "
-        "      ("
-        "        ( page_buf_size 4096 )"
-        "        ( metadata_pages_only 1 )"
-        "      )"
-        "    )"
-        "    ( file_space_strategy_config "
-        "      ("
-        "        ( persist 0 )"
-        "      )"
-        "    )"
-        "    ( file_space_page_size "
-        "      ("
-        /* missing page_size config */
-        "      )"
-        "    )"
-        "  )"
-        ")";
+    const char *missing_tick_len_str = "( vfd_swmr_config_data "
+                                       "  ("
+                                       "    ( H5F_vfd_swmr_config"
+                                       "      ("
+                                       "        ( version 1 )"
+                                       /* missing tick_len config */
+                                       "        ( max_lag 7 )"
+                                       "        ( presume_posix_semantics 1 )"
+                                       "        ( maintain_metadata_file 1 )"
+                                       "        ( generate_updater_files 0 )"
+                                       "        ( flush_raw_data 1 )"
+                                       "        ( md_pages_reserved 128 )"
+                                       "        ( md_file_path \"./md_dir/\" )"
+                                       "        ( md_file_name \"md_file\" )"
+                                       "        ( updater_file_path \"\" )"
+                                       "        ( log_file_path \"\" )"
+                                       "        ( pb_expansion_threshold 0 ) "
+                                       "      )"
+                                       "    )"
+                                       "    ( page_buffer_config "
+                                       "      ("
+                                       "        ( page_buf_size 4096 )"
+                                       "        ( metadata_pages_only 1 )"
+                                       "      )"
+                                       "    )"
+                                       "    ( file_space_strategy_config "
+                                       "      ("
+                                       "        ( persist 0 )"
+                                       "      )"
+                                       "    )"
+                                       "    ( file_space_page_size "
+                                       "      ("
+                                       "        ( page_size 4096 )"
+                                       "      )"
+                                       "    )"
+                                       "  )"
+                                       ")";
+    const char *missing_max_lag_str = "( vfd_swmr_config_data "
+                                      "  ("
+                                      "    ( H5F_vfd_swmr_config"
+                                      "      ("
+                                      "        ( version 1 )"
+                                      "        ( tick_len 4 )"
+                                      /* missing max_lag config */
+                                      "        ( presume_posix_semantics 1 )"
+                                      "        ( maintain_metadata_file 1 )"
+                                      "        ( generate_updater_files 0 )"
+                                      "        ( flush_raw_data 1 )"
+                                      "        ( md_pages_reserved 128 )"
+                                      "        ( md_file_path \"./md_dir/\" )"
+                                      "        ( md_file_name \"md_file\" )"
+                                      "        ( updater_file_path \"\" )"
+                                      "        ( log_file_path \"\" )"
+                                      "        ( pb_expansion_threshold 0 ) "
+                                      "      )"
+                                      "    )"
+                                      "    ( page_buffer_config "
+                                      "      ("
+                                      "        ( page_buf_size 4096 )"
+                                      "        ( metadata_pages_only 1 )"
+                                      "      )"
+                                      "    )"
+                                      "    ( file_space_strategy_config "
+                                      "      ("
+                                      "        ( persist 0 )"
+                                      "      )"
+                                      "    )"
+                                      "    ( file_space_page_size "
+                                      "      ("
+                                      "        ( page_size 4096 )"
+                                      "      )"
+                                      "    )"
+                                      "  )"
+                                      ")";
+    const char *missing_maintain_md_file_str = "( vfd_swmr_config_data "
+                                               "  ("
+                                               "    ( H5F_vfd_swmr_config"
+                                               "      ("
+                                               "        ( version 1 )"
+                                               "        ( tick_len 4 )"
+                                               "        ( max_lag 7 )"
+                                               "        ( presume_posix_semantics 1 )"
+                                               /* missing maintain_metadata_file config */
+                                               "        ( generate_updater_files 0 )"
+                                               "        ( flush_raw_data 1 )"
+                                               "        ( md_pages_reserved 128 )"
+                                               "        ( md_file_path \"./md_dir/\" )"
+                                               "        ( md_file_name \"md_file\" )"
+                                               "        ( updater_file_path \"\" )"
+                                               "        ( log_file_path \"\" )"
+                                               "        ( pb_expansion_threshold 0 ) "
+                                               "      )"
+                                               "    )"
+                                               "    ( page_buffer_config "
+                                               "      ("
+                                               "        ( page_buf_size 4096 )"
+                                               "        ( metadata_pages_only 1 )"
+                                               "      )"
+                                               "    )"
+                                               "    ( file_space_strategy_config "
+                                               "      ("
+                                               "        ( persist 0 )"
+                                               "      )"
+                                               "    )"
+                                               "    ( file_space_page_size "
+                                               "      ("
+                                               "        ( page_size 4096 )"
+                                               "      )"
+                                               "    )"
+                                               "  )"
+                                               ")";
+    const char *missing_gen_updater_files_str = "( vfd_swmr_config_data "
+                                                "  ("
+                                                "    ( H5F_vfd_swmr_config"
+                                                "      ("
+                                                "        ( version 1 )"
+                                                "        ( tick_len 4 )"
+                                                "        ( max_lag 7 )"
+                                                "        ( presume_posix_semantics 1 )"
+                                                "        ( maintain_metadata_file 1 )"
+                                                /* missing generate_updater_files config */
+                                                "        ( flush_raw_data 1 )"
+                                                "        ( md_pages_reserved 128 )"
+                                                "        ( md_file_path \"./md_dir/\" )"
+                                                "        ( md_file_name \"md_file\" )"
+                                                "        ( updater_file_path \"\" )"
+                                                "        ( log_file_path \"\" )"
+                                                "        ( pb_expansion_threshold 0 ) "
+                                                "      )"
+                                                "    )"
+                                                "    ( page_buffer_config "
+                                                "      ("
+                                                "        ( page_buf_size 4096 )"
+                                                "        ( metadata_pages_only 1 )"
+                                                "      )"
+                                                "    )"
+                                                "    ( file_space_strategy_config "
+                                                "      ("
+                                                "        ( persist 0 )"
+                                                "      )"
+                                                "    )"
+                                                "    ( file_space_page_size "
+                                                "      ("
+                                                "        ( page_size 4096 )"
+                                                "      )"
+                                                "    )"
+                                                "  )"
+                                                ")";
+    const char *missing_md_pages_reserved_str = "( vfd_swmr_config_data "
+                                                "  ("
+                                                "    ( H5F_vfd_swmr_config"
+                                                "      ("
+                                                "        ( version 1 )"
+                                                "        ( tick_len 4 )"
+                                                "        ( max_lag 7 )"
+                                                "        ( presume_posix_semantics 1 )"
+                                                "        ( maintain_metadata_file 1 )"
+                                                "        ( generate_updater_files 0 )"
+                                                "        ( flush_raw_data 1 )"
+                                                /* missing md_pages_reserved config */
+                                                "        ( md_file_path \"./md_dir/\" )"
+                                                "        ( md_file_name \"md_file\" )"
+                                                "        ( updater_file_path \"\" )"
+                                                "        ( log_file_path \"\" )"
+                                                "        ( pb_expansion_threshold 0 ) "
+                                                "      )"
+                                                "    )"
+                                                "    ( page_buffer_config "
+                                                "      ("
+                                                "        ( page_buf_size 4096 )"
+                                                "        ( metadata_pages_only 1 )"
+                                                "      )"
+                                                "    )"
+                                                "    ( file_space_strategy_config "
+                                                "      ("
+                                                "        ( persist 0 )"
+                                                "      )"
+                                                "    )"
+                                                "    ( file_space_page_size "
+                                                "      ("
+                                                "        ( page_size 4096 )"
+                                                "      )"
+                                                "    )"
+                                                "  )"
+                                                ")";
+    const char *missing_page_buf_size_str = "( vfd_swmr_config_data "
+                                            "  ("
+                                            "    ( H5F_vfd_swmr_config"
+                                            "      ("
+                                            "        ( version 1 )"
+                                            "        ( tick_len 4 )"
+                                            "        ( max_lag 7 )"
+                                            "        ( presume_posix_semantics 1 )"
+                                            "        ( maintain_metadata_file 1 )"
+                                            "        ( generate_updater_files 0 )"
+                                            "        ( flush_raw_data 1 )"
+                                            "        ( md_pages_reserved 128 )"
+                                            "        ( md_file_path \"./md_dir/\" )"
+                                            "        ( md_file_name \"md_file\" )"
+                                            "        ( updater_file_path \"\" )"
+                                            "        ( log_file_path \"\" )"
+                                            "        ( pb_expansion_threshold 0 ) "
+                                            "      )"
+                                            "    )"
+                                            "    ( page_buffer_config "
+                                            "      ("
+                                            /* missing page_buf_size config */
+                                            "        ( metadata_pages_only 1 )"
+                                            "      )"
+                                            "    )"
+                                            "    ( file_space_strategy_config "
+                                            "      ("
+                                            "        ( persist 0 )"
+                                            "      )"
+                                            "    )"
+                                            "    ( file_space_page_size "
+                                            "      ("
+                                            "        ( page_size 4096 )"
+                                            "      )"
+                                            "    )"
+                                            "  )"
+                                            ")";
+    const char *missing_md_pages_only_str = "( vfd_swmr_config_data "
+                                            "  ("
+                                            "    ( H5F_vfd_swmr_config"
+                                            "      ("
+                                            "        ( version 1 )"
+                                            "        ( tick_len 4 )"
+                                            "        ( max_lag 7 )"
+                                            "        ( presume_posix_semantics 1 )"
+                                            "        ( maintain_metadata_file 1 )"
+                                            "        ( generate_updater_files 0 )"
+                                            "        ( flush_raw_data 1 )"
+                                            "        ( md_pages_reserved 128 )"
+                                            "        ( md_file_path \"./md_dir/\" )"
+                                            "        ( md_file_name \"md_file\" )"
+                                            "        ( updater_file_path \"\" )"
+                                            "        ( log_file_path \"\" )"
+                                            "        ( pb_expansion_threshold 0 ) "
+                                            "      )"
+                                            "    )"
+                                            "    ( page_buffer_config "
+                                            "      ("
+                                            "        ( page_buf_size 4096 )"
+                                            /* missing metadata_pages_only config */
+                                            "      )"
+                                            "    )"
+                                            "    ( file_space_strategy_config "
+                                            "      ("
+                                            "        ( persist 0 )"
+                                            "      )"
+                                            "    )"
+                                            "    ( file_space_page_size "
+                                            "      ("
+                                            "        ( page_size 4096 )"
+                                            "      )"
+                                            "    )"
+                                            "  )"
+                                            ")";
+    const char *missing_persist_str = "( vfd_swmr_config_data "
+                                      "  ("
+                                      "    ( H5F_vfd_swmr_config"
+                                      "      ("
+                                      "        ( version 1 )"
+                                      "        ( tick_len 4 )"
+                                      "        ( max_lag 7 )"
+                                      "        ( presume_posix_semantics 1 )"
+                                      "        ( maintain_metadata_file 1 )"
+                                      "        ( generate_updater_files 0 )"
+                                      "        ( flush_raw_data 1 )"
+                                      "        ( md_pages_reserved 128 )"
+                                      "        ( md_file_path \"./md_dir/\" )"
+                                      "        ( md_file_name \"md_file\" )"
+                                      "        ( updater_file_path \"\" )"
+                                      "        ( log_file_path \"\" )"
+                                      "        ( pb_expansion_threshold 0 ) "
+                                      "      )"
+                                      "    )"
+                                      "    ( page_buffer_config "
+                                      "      ("
+                                      "        ( page_buf_size 4096 )"
+                                      "        ( metadata_pages_only 1 )"
+                                      "      )"
+                                      "    )"
+                                      "    ( file_space_strategy_config "
+                                      "      ("
+                                      /* missing persist config */
+                                      "      )"
+                                      "    )"
+                                      "    ( file_space_page_size "
+                                      "      ("
+                                      "        ( page_size 4096 )"
+                                      "      )"
+                                      "    )"
+                                      "  )"
+                                      ")";
+    const char *missing_page_size_str = "( vfd_swmr_config_data "
+                                        "  ("
+                                        "    ( H5F_vfd_swmr_config"
+                                        "      ("
+                                        "        ( version 1 )"
+                                        "        ( tick_len 4 )"
+                                        "        ( max_lag 7 )"
+                                        "        ( presume_posix_semantics 1 )"
+                                        "        ( maintain_metadata_file 1 )"
+                                        "        ( generate_updater_files 0 )"
+                                        "        ( flush_raw_data 1 )"
+                                        "        ( md_pages_reserved 128 )"
+                                        "        ( md_file_path \"./md_dir/\" )"
+                                        "        ( md_file_name \"md_file\" )"
+                                        "        ( updater_file_path \"\" )"
+                                        "        ( log_file_path \"\" )"
+                                        "        ( pb_expansion_threshold 0 ) "
+                                        "      )"
+                                        "    )"
+                                        "    ( page_buffer_config "
+                                        "      ("
+                                        "        ( page_buf_size 4096 )"
+                                        "        ( metadata_pages_only 1 )"
+                                        "      )"
+                                        "    )"
+                                        "    ( file_space_strategy_config "
+                                        "      ("
+                                        "        ( persist 0 )"
+                                        "      )"
+                                        "    )"
+                                        "    ( file_space_page_size "
+                                        "      ("
+                                        /* missing page_size config */
+                                        "      )"
+                                        "    )"
+                                        "  )"
+                                        ")";
     hid_t   fapl        = H5I_INVALID_HID;
     hid_t   fcpl        = H5I_INVALID_HID;
     hbool_t writer      = true;
     hbool_t create_file = true;
 #if VERIFY_ERROR_STACK_SUPPORTED
-    bool    verbose     = true;
+    bool verbose = true;
 #endif
 
     TESTING("H5F_load_swmr_config_from_string() err detect 3");
 
     /* Initialize property lists */
-    if ( (fapl = h5_fileaccess()) < 0 )
+    if ((fapl = h5_fileaccess()) < 0)
         TEST_ERROR;
-    if ( (fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0 )
+    if ((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
         TEST_ERROR;
 
-
-    if ( H5F_load_swmr_config_from_string(missing_tick_len_str, fapl, fcpl, writer, create_file) >= 0 ) {
-       TEST_ERROR;
-    } 
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "missing required parameter: tick_len",
-                                              verbose) )
-    {
+    if (H5F_load_swmr_config_from_string(missing_tick_len_str, fapl, fcpl, writer, create_file) >= 0) {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, "missing required parameter: tick_len",
+                                             verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    if ( H5F_load_swmr_config_from_string(missing_max_lag_str, fapl, fcpl, writer, create_file) >= 0 ) {
-       TEST_ERROR;
-    } 
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "missing required parameter: max_lag",
-                                              verbose) )
-    {
+    if (H5F_load_swmr_config_from_string(missing_max_lag_str, fapl, fcpl, writer, create_file) >= 0) {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, "missing required parameter: max_lag",
+                                             verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    if ( H5F_load_swmr_config_from_string(missing_maintain_md_file_str, fapl, fcpl, writer, create_file) >= 0 ) {
-       TEST_ERROR;
-    } 
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "missing required parameter: maintain_metadata_file",
-                                              verbose) )
-    {
+    if (H5F_load_swmr_config_from_string(missing_maintain_md_file_str, fapl, fcpl, writer, create_file) >=
+        0) {
         TEST_ERROR;
     }
-#endif
-    
-    if ( H5F_load_swmr_config_from_string(missing_gen_updater_files_str, fapl, fcpl, writer, create_file) >= 0 ) {
-       TEST_ERROR;
-    } 
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "missing required parameter: generate_updater_file",
-                                              verbose) )
-    {
-        TEST_ERROR;
-    }
-#endif
-    
-    if ( H5F_load_swmr_config_from_string(missing_md_pages_reserved_str, fapl, fcpl, writer, create_file) >= 0 ) {
-       TEST_ERROR;
-    } 
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "missing required parameter: md_pages_reserved",
-                                              verbose) )
-    {
-        TEST_ERROR;
-    }
-#endif
-    
-    if ( H5F_load_swmr_config_from_string(missing_page_buf_size_str, fapl, fcpl, writer, create_file) >= 0 ) {
-       TEST_ERROR;
-    } 
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "missing required parameter: page_buf_size",
-                                              verbose) )
-    {
-        TEST_ERROR;
-    }
-#endif
-    
-    if ( H5F_load_swmr_config_from_string(missing_md_pages_only_str, fapl, fcpl, writer, create_file) >= 0 ) {
-       TEST_ERROR;
-    } 
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "missing required parameter: metadata_pages_only",
-                                              verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "missing required parameter: maintain_metadata_file", verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    if ( H5F_load_swmr_config_from_string(missing_persist_str, fapl, fcpl, writer, create_file) >= 0 ) {
-       TEST_ERROR;
-    } 
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "missing required parameter: persist",
-                                              verbose) )
-    {
+    if (H5F_load_swmr_config_from_string(missing_gen_updater_files_str, fapl, fcpl, writer, create_file) >=
+        0) {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "missing required parameter: generate_updater_file", verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    if ( H5F_load_swmr_config_from_string(missing_page_size_str, fapl, fcpl, writer, create_file) >= 0 ) {
-       TEST_ERROR;
-    } 
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "missing required parameter: page_size",
-                                              verbose) )
-    {
+    if (H5F_load_swmr_config_from_string(missing_md_pages_reserved_str, fapl, fcpl, writer, create_file) >=
+        0) {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "missing required parameter: md_pages_reserved", verbose)) {
         TEST_ERROR;
     }
 #endif
 
+    if (H5F_load_swmr_config_from_string(missing_page_buf_size_str, fapl, fcpl, writer, create_file) >= 0) {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "missing required parameter: page_buf_size", verbose)) {
+        TEST_ERROR;
+    }
+#endif
+
+    if (H5F_load_swmr_config_from_string(missing_md_pages_only_str, fapl, fcpl, writer, create_file) >= 0) {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "missing required parameter: metadata_pages_only", verbose)) {
+        TEST_ERROR;
+    }
+#endif
+
+    if (H5F_load_swmr_config_from_string(missing_persist_str, fapl, fcpl, writer, create_file) >= 0) {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, "missing required parameter: persist",
+                                             verbose)) {
+        TEST_ERROR;
+    }
+#endif
+
+    if (H5F_load_swmr_config_from_string(missing_page_size_str, fapl, fcpl, writer, create_file) >= 0) {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, "missing required parameter: page_size",
+                                             verbose)) {
+        TEST_ERROR;
+    }
+#endif
 
     /* Close property lists */
-    if ( H5Pclose(fapl) < 0 )
+    if (H5Pclose(fapl) < 0)
         TEST_ERROR;
-    if ( H5Pclose(fcpl) < 0 )
+    if (H5Pclose(fcpl) < 0)
         TEST_ERROR;
-    
+
     PASSED();
 
     return 0;
@@ -5855,12 +5303,11 @@ error:
     return -1;
 } /* vfd_swmr_load_string_config_err_check_3() */
 
-
 /*******************************************************************************
  *
  * vfd_swmr_load_string_config_err_check_4()
  *
- * Verify that the VFD SWMR property list setup function detects and reports 
+ * Verify that the VFD SWMR property list setup function detects and reports
  * errors as expected.
  * Specifically, test that H5F_load_swmr_config_from_string() errors when
  * configs contain duplicate parameters.
@@ -5872,121 +5319,117 @@ error:
  *    None.
  *
  *******************************************************************************/
-static herr_t 
+static herr_t
 vfd_swmr_load_string_config_err_check_4(void)
 {
     /* Input values for PL setup */
-    const char * duplicate_H5F_vfd_swmr_config_str = 
-        "( vfd_swmr_config_data "
-        "  ("
-        "    ( H5F_vfd_swmr_config"
-        "      ("
-        "        ( version 1 )"
-        "        ( tick_len 4 )"
-        "        ( tick_len 5 )"
-        "        ( max_lag 7 )"
-        "        ( presume_posix_semantics 1 )"
-        "        ( maintain_metadata_file 1 )"
-        "        ( generate_updater_files 0 )"
-        "        ( md_pages_reserved 128 )"
-        "        ( md_file_path \"./md_dir/\" )"
-        "        ( md_file_name \"md_file\" )"
-        "        ( updater_file_path \"\" )"
-        "        ( log_file_path \"\" )"
-        "        ( pb_expansion_threshold 0 ) "
-        "      )"
-        "    )"
-        "    ( page_buffer_config "
-        "      ("
-        "        ( page_buf_size 4096 )"
-        "        ( metadata_pages_only 1 )"
-        "      )"
-        "    )"
-        "    ( file_space_strategy_config "
-        "      ("
-        "        ( persist 0 )"
-        "      )"
-        "    )"
-        "    ( file_space_page_size "
-        "      ("
-        "        ( page_size 4096 )"
-        "      )"
-        "    )"
-        "  )"
-        ")";
-    const char * duplicate_page_buffer_config_str = 
-        "( vfd_swmr_config_data "
-        "  ("
-        "    ( H5F_vfd_swmr_config"
-        "      ("
-        "        ( version 1 )"
-        "        ( tick_len 4 )"
-        "        ( max_lag 7 )"
-        "        ( maintain_metadata_file 1 )"
-        "        ( generate_updater_files 0 )"
-        "        ( flush_raw_data 1 )"
-        "        ( md_pages_reserved 128 )"
-        "        ( md_file_path \"./md_dir/\" )"
-        "        ( md_file_name \"md_file\" )"
-        "        ( updater_file_path \"\" )"
-        "        ( log_file_path \"\" )"
-        "        ( pb_expansion_threshold 0 ) "
-        "      )"
-        "    )"
-        "    ( page_buffer_config "
-        "      ("
-        "        ( page_buf_size 4096 )"
-        "        ( page_buf_size 5120 )"
-        "      )"
-        "    )"
-        "    ( file_space_strategy_config "
-        "      ("
-        "        ( persist 0 )"
-        "      )"
-        "    )"
-        "    ( file_space_page_size "
-        "      ("
-        "        ( page_size 4096 )"
-        "      )"
-        "    )"
-        "  )"
-        ")";
-    hid_t   fapl        = H5I_INVALID_HID;
-    hid_t   fcpl        = H5I_INVALID_HID;
-    hbool_t writer      = true;
-    hbool_t create_file = true;
+    const char *duplicate_H5F_vfd_swmr_config_str = "( vfd_swmr_config_data "
+                                                    "  ("
+                                                    "    ( H5F_vfd_swmr_config"
+                                                    "      ("
+                                                    "        ( version 1 )"
+                                                    "        ( tick_len 4 )"
+                                                    "        ( tick_len 5 )"
+                                                    "        ( max_lag 7 )"
+                                                    "        ( presume_posix_semantics 1 )"
+                                                    "        ( maintain_metadata_file 1 )"
+                                                    "        ( generate_updater_files 0 )"
+                                                    "        ( md_pages_reserved 128 )"
+                                                    "        ( md_file_path \"./md_dir/\" )"
+                                                    "        ( md_file_name \"md_file\" )"
+                                                    "        ( updater_file_path \"\" )"
+                                                    "        ( log_file_path \"\" )"
+                                                    "        ( pb_expansion_threshold 0 ) "
+                                                    "      )"
+                                                    "    )"
+                                                    "    ( page_buffer_config "
+                                                    "      ("
+                                                    "        ( page_buf_size 4096 )"
+                                                    "        ( metadata_pages_only 1 )"
+                                                    "      )"
+                                                    "    )"
+                                                    "    ( file_space_strategy_config "
+                                                    "      ("
+                                                    "        ( persist 0 )"
+                                                    "      )"
+                                                    "    )"
+                                                    "    ( file_space_page_size "
+                                                    "      ("
+                                                    "        ( page_size 4096 )"
+                                                    "      )"
+                                                    "    )"
+                                                    "  )"
+                                                    ")";
+    const char *duplicate_page_buffer_config_str  = "( vfd_swmr_config_data "
+                                                    "  ("
+                                                    "    ( H5F_vfd_swmr_config"
+                                                    "      ("
+                                                    "        ( version 1 )"
+                                                    "        ( tick_len 4 )"
+                                                    "        ( max_lag 7 )"
+                                                    "        ( maintain_metadata_file 1 )"
+                                                    "        ( generate_updater_files 0 )"
+                                                    "        ( flush_raw_data 1 )"
+                                                    "        ( md_pages_reserved 128 )"
+                                                    "        ( md_file_path \"./md_dir/\" )"
+                                                    "        ( md_file_name \"md_file\" )"
+                                                    "        ( updater_file_path \"\" )"
+                                                    "        ( log_file_path \"\" )"
+                                                    "        ( pb_expansion_threshold 0 ) "
+                                                    "      )"
+                                                    "    )"
+                                                    "    ( page_buffer_config "
+                                                    "      ("
+                                                    "        ( page_buf_size 4096 )"
+                                                    "        ( page_buf_size 5120 )"
+                                                    "      )"
+                                                    "    )"
+                                                    "    ( file_space_strategy_config "
+                                                    "      ("
+                                                    "        ( persist 0 )"
+                                                    "      )"
+                                                    "    )"
+                                                    "    ( file_space_page_size "
+                                                    "      ("
+                                                    "        ( page_size 4096 )"
+                                                    "      )"
+                                                    "    )"
+                                                    "  )"
+                                                    ")";
+    hid_t       fapl                              = H5I_INVALID_HID;
+    hid_t       fcpl                              = H5I_INVALID_HID;
+    hbool_t     writer                            = true;
+    hbool_t     create_file                       = true;
 #if VERIFY_ERROR_STACK_SUPPORTED
-    bool    verbose     = true;
+    bool verbose = true;
 #endif
 
     TESTING("H5F_load_swmr_config_from_string() err detect 4");
 
     /* Initialize property lists */
-    if ( (fapl = h5_fileaccess()) < 0 )
+    if ((fapl = h5_fileaccess()) < 0)
         TEST_ERROR;
-    if ( (fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0 )
+    if ((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
         TEST_ERROR;
 
-    if ( H5F_load_swmr_config_from_string(duplicate_H5F_vfd_swmr_config_str, fapl, fcpl, writer, create_file) >= 0 ) {
-       TEST_ERROR;
-    } 
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "duplicate parameter: tick_len",
-                                              verbose) )
-    {
+    if (H5F_load_swmr_config_from_string(duplicate_H5F_vfd_swmr_config_str, fapl, fcpl, writer,
+                                         create_file) >= 0) {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 !=
+             cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, "duplicate parameter: tick_len", verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    if ( H5F_load_swmr_config_from_string(duplicate_page_buffer_config_str, fapl, fcpl, writer, create_file) >= 0 ) {
-       TEST_ERROR;
-    } 
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "duplicate parameter: page_buf_size",
-                                              verbose) )
-    {
+    if (H5F_load_swmr_config_from_string(duplicate_page_buffer_config_str, fapl, fcpl, writer, create_file) >=
+        0) {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, "duplicate parameter: page_buf_size",
+                                             verbose)) {
         TEST_ERROR;
     }
 #endif
@@ -5995,11 +5438,11 @@ vfd_swmr_load_string_config_err_check_4(void)
      * are limited to only allow 1 parameter */
 
     /* Close property lists */
-    if ( H5Pclose(fapl) < 0 )
+    if (H5Pclose(fapl) < 0)
         TEST_ERROR;
-    if ( H5Pclose(fcpl) < 0 )
+    if (H5Pclose(fcpl) < 0)
         TEST_ERROR;
-    
+
     PASSED();
 
     return 0;
@@ -6013,12 +5456,11 @@ error:
     return -1;
 } /* vfd_swmr_load_string_config_err_check_4() */
 
-
 /*******************************************************************************
  *
  * vfd_swmr_load_string_config_err_check_5()
  *
- * Verify that the VFD SWMR property list setup function detects and reports 
+ * Verify that the VFD SWMR property list setup function detects and reports
  * errors as expected.
  * Specifically, test that H5F_load_swmr_config_from_string() errors when
  * unique parameter range checks are violated.
@@ -6030,17 +5472,17 @@ error:
  *    None.
  *
  *******************************************************************************/
-static herr_t 
+static herr_t
 vfd_swmr_load_string_config_err_check_5(void)
 {
     /* string to test lower int32_t bound in H5F__set_vfd_swmr_config() */
-    const char * invalid_config_str_1 = 
+    const char *invalid_config_str_1 =
         "( vfd_swmr_config_data "
         "  ("
         "    ( H5F_vfd_swmr_config"
         "      ("
         "        ( version -2147483649 )" /* value < INT32_MIN to exercise range check */
-        "        ( tick_len 4 )" 
+        "        ( tick_len 4 )"
         "        ( max_lag 7 )"
         "        ( presume_posix_semantics 1 )"
         "        ( maintain_metadata_file 1 )"
@@ -6073,13 +5515,13 @@ vfd_swmr_load_string_config_err_check_5(void)
         "  )"
         ")";
     /* string to test upper int32_t bound in H5F__set_vfd_swmr_config() */
-    const char * invalid_config_str_2 = 
+    const char *invalid_config_str_2 =
         "( vfd_swmr_config_data "
         "  ("
         "    ( H5F_vfd_swmr_config"
         "      ("
         "        ( version 2147483649 )" /* value > INT32_MAX to exercise range check */
-        "        ( tick_len 4 )" 
+        "        ( tick_len 4 )"
         "        ( max_lag 7 )"
         "        ( presume_posix_semantics 1 )"
         "        ( maintain_metadata_file 1 )"
@@ -6112,7 +5554,7 @@ vfd_swmr_load_string_config_err_check_5(void)
         "  )"
         ")";
     /* string to test lower uint32_t bound in H5F__set_vfd_swmr_config() */
-    const char * invalid_config_str_3 = 
+    const char *invalid_config_str_3 =
         "( vfd_swmr_config_data "
         "  ("
         "    ( H5F_vfd_swmr_config"
@@ -6151,7 +5593,7 @@ vfd_swmr_load_string_config_err_check_5(void)
         "  )"
         ")";
     /* string to test upper uint32_t bound in H5F__set_vfd_swmr_config() */
-    const char * invalid_config_str_4 = 
+    const char *invalid_config_str_4 =
         "( vfd_swmr_config_data "
         "  ("
         "    ( H5F_vfd_swmr_config"
@@ -6190,7 +5632,7 @@ vfd_swmr_load_string_config_err_check_5(void)
         "  )"
         ")";
     /* string to test below 0 for boolean field in H5F__set_vfd_swmr_config() */
-    const char * invalid_config_str_5 = 
+    const char *invalid_config_str_5 =
         "( vfd_swmr_config_data "
         "  ("
         "    ( H5F_vfd_swmr_config"
@@ -6229,7 +5671,7 @@ vfd_swmr_load_string_config_err_check_5(void)
         "  )"
         ")";
     /* string to test above 1 for boolean field in H5F__set_vfd_swmr_config() */
-    const char * invalid_config_str_6 = 
+    const char *invalid_config_str_6 =
         "( vfd_swmr_config_data "
         "  ("
         "    ( H5F_vfd_swmr_config"
@@ -6268,7 +5710,7 @@ vfd_swmr_load_string_config_err_check_5(void)
         "  )"
         ")";
     /* string to test below 0 for size_t field in H5F__set_vfd_swmr_page_buffer_config() */
-    const char * invalid_config_str_7 = 
+    const char *invalid_config_str_7 =
         "( vfd_swmr_config_data "
         "  ("
         "    ( H5F_vfd_swmr_config"
@@ -6290,7 +5732,7 @@ vfd_swmr_load_string_config_err_check_5(void)
         "    )"
         "    ( page_buffer_config "
         "      ("
-        "        ( page_buf_size -1 )"  /* value less than 0 to exercise range check */
+        "        ( page_buf_size -1 )" /* value less than 0 to exercise range check */
         "        ( metadata_pages_only 1 )"
         "      )"
         "    )"
@@ -6307,7 +5749,7 @@ vfd_swmr_load_string_config_err_check_5(void)
         "  )"
         ")";
     /* string to test below 0 for boolean field in H5F__set_vfd_swmr_page_buffer_config() */
-    const char * invalid_config_str_8 = 
+    const char *invalid_config_str_8 =
         "( vfd_swmr_config_data "
         "  ("
         "    ( H5F_vfd_swmr_config"
@@ -6346,7 +5788,7 @@ vfd_swmr_load_string_config_err_check_5(void)
         "  )"
         ")";
     /* string to test above 1 for boolean field in H5F__set_vfd_swmr_page_buffer_config() */
-    const char * invalid_config_str_9 = 
+    const char *invalid_config_str_9 =
         "( vfd_swmr_config_data "
         "  ("
         "    ( H5F_vfd_swmr_config"
@@ -6385,7 +5827,7 @@ vfd_swmr_load_string_config_err_check_5(void)
         "  )"
         ")";
     /* string to test below 0 for boolean field in H5F__set_vfd_swmr_fs_strategy_config() */
-    const char * invalid_config_str_10 = 
+    const char *invalid_config_str_10 =
         "( vfd_swmr_config_data "
         "  ("
         "    ( H5F_vfd_swmr_config"
@@ -6424,7 +5866,7 @@ vfd_swmr_load_string_config_err_check_5(void)
         "  )"
         ")";
     /* string to test above 1 for boolean field in H5F__set_vfd_swmr_fs_strategy_config() */
-    const char * invalid_config_str_11 = 
+    const char *invalid_config_str_11 =
         "( vfd_swmr_config_data "
         "  ("
         "    ( H5F_vfd_swmr_config"
@@ -6432,7 +5874,7 @@ vfd_swmr_load_string_config_err_check_5(void)
         "        ( version 1 )"
         "        ( tick_len 4 )"
         "        ( max_lag 7 )"
-        "        ( presume_posix_semantics 1 )" 
+        "        ( presume_posix_semantics 1 )"
         "        ( maintain_metadata_file 1 )"
         "        ( generate_updater_files 0 )"
         "        ( flush_raw_data 1 )"
@@ -6463,7 +5905,7 @@ vfd_swmr_load_string_config_err_check_5(void)
         "  )"
         ")";
     /* string to test below 512 for page_size field in H5F__set_vfd_swmr_fs_page_size_config() */
-    const char * invalid_config_str_12 = 
+    const char *invalid_config_str_12 =
         "( vfd_swmr_config_data "
         "  ("
         "    ( H5F_vfd_swmr_config"
@@ -6502,7 +5944,7 @@ vfd_swmr_load_string_config_err_check_5(void)
         "  )"
         ")";
     /* string to test above 1073741824 for page_size field in H5F__set_vfd_swmr_fs_page_size_config() */
-    const char * invalid_config_str_13 = 
+    const char *invalid_config_str_13 =
         "( vfd_swmr_config_data "
         "  ("
         "    ( H5F_vfd_swmr_config"
@@ -6545,222 +5987,158 @@ vfd_swmr_load_string_config_err_check_5(void)
     hbool_t writer      = true;
     hbool_t create_file = true;
 #if VERIFY_ERROR_STACK_SUPPORTED
-    bool    verbose     = true;
+    bool verbose = true;
 #endif
 
     TESTING("H5F_load_swmr_config_from_string() err detect 5");
 
     /* Initialize property lists */
-    if ( (fapl = h5_fileaccess()) < 0 )
+    if ((fapl = h5_fileaccess()) < 0)
         TEST_ERROR;
-    if ( (fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0 )
+    if ((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
         TEST_ERROR;
 
-    if ( H5F_load_swmr_config_from_string(invalid_config_str_1, 
-                                              fapl, fcpl, writer, 
-                                              create_file) >= 0 )
-    {
+    if (H5F_load_swmr_config_from_string(invalid_config_str_1, fapl, fcpl, writer, create_file) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "version value out of range",
-                                              verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, "version value out of range", verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    if ( H5F_load_swmr_config_from_string(invalid_config_str_2,
-                                              fapl, fcpl, writer, 
-                                              create_file) >= 0 )
-    {
+    if (H5F_load_swmr_config_from_string(invalid_config_str_2, fapl, fcpl, writer, create_file) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "version value out of range",
-                                              verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, "version value out of range", verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    if ( H5F_load_swmr_config_from_string(invalid_config_str_3, 
-                                              fapl, fcpl, writer, 
-                                              create_file) >= 0 )
-    {
+    if (H5F_load_swmr_config_from_string(invalid_config_str_3, fapl, fcpl, writer, create_file) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "tick_len value out of range",
-                                              verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 !=
+             cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, "tick_len value out of range", verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    if ( H5F_load_swmr_config_from_string(invalid_config_str_4, 
-                                              fapl, fcpl, writer, 
-                                              create_file) >= 0 )
-    {
+    if (H5F_load_swmr_config_from_string(invalid_config_str_4, fapl, fcpl, writer, create_file) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "tick_len value out of range",
-                                              verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 !=
+             cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, "tick_len value out of range", verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    if ( H5F_load_swmr_config_from_string(invalid_config_str_5, 
-                                              fapl, fcpl, writer, 
-                                              create_file) >= 0 )
-    {
+    if (H5F_load_swmr_config_from_string(invalid_config_str_5, fapl, fcpl, writer, create_file) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "presume_posix_semantics must have value of either 0 or 1",
-                                              verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "presume_posix_semantics must have value of either 0 or 1",
+                                             verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    if ( H5F_load_swmr_config_from_string(invalid_config_str_6, 
-                                              fapl, fcpl, writer, 
-                                              create_file) >= 0 )
-    {
+    if (H5F_load_swmr_config_from_string(invalid_config_str_6, fapl, fcpl, writer, create_file) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "presume_posix_semantics must have value of either 0 or 1",
-                                              verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "presume_posix_semantics must have value of either 0 or 1",
+                                             verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    if ( H5F_load_swmr_config_from_string(invalid_config_str_7, 
-                                              fapl, fcpl, writer, 
-                                              create_file) >= 0 )
-    {
+    if (H5F_load_swmr_config_from_string(invalid_config_str_7, fapl, fcpl, writer, create_file) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "page_buf_size value out of range",
-                                              verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, "page_buf_size value out of range",
+                                             verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    /* Cannot test upper bound of page_buf_size because most on modern systems, 
+    /* Cannot test upper bound of page_buf_size because most on modern systems,
      * SIZE_MAX is greater than INT64_MAX (used by config parser int_val) */
-    
 
-    if ( H5F_load_swmr_config_from_string(invalid_config_str_8, 
-                                              fapl, fcpl, writer, 
-                                              create_file) >= 0 )
-    {
+    if (H5F_load_swmr_config_from_string(invalid_config_str_8, fapl, fcpl, writer, create_file) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "metadata_pages_only must have value of either 0 or 1",
-                                              verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "metadata_pages_only must have value of either 0 or 1",
+                                             verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    if ( H5F_load_swmr_config_from_string(invalid_config_str_9, 
-                                              fapl, fcpl, writer, 
-                                              create_file) >= 0 )
-    {
+    if (H5F_load_swmr_config_from_string(invalid_config_str_9, fapl, fcpl, writer, create_file) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "metadata_pages_only must have value of either 0 or 1",
-                                              verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "metadata_pages_only must have value of either 0 or 1",
+                                             verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    if ( H5F_load_swmr_config_from_string(invalid_config_str_10, 
-                                              fapl, fcpl, writer, 
-                                              create_file) >= 0 )
-    {
+    if (H5F_load_swmr_config_from_string(invalid_config_str_10, fapl, fcpl, writer, create_file) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "persist must have value of either 0 or 1",
-                                              verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "persist must have value of either 0 or 1", verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    if ( H5F_load_swmr_config_from_string(invalid_config_str_11, 
-                                              fapl, fcpl, writer, 
-                                              create_file) >= 0 )
-    {
+    if (H5F_load_swmr_config_from_string(invalid_config_str_11, fapl, fcpl, writer, create_file) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "persist must have value of either 0 or 1",
-                                              verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "persist must have value of either 0 or 1", verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    if ( H5F_load_swmr_config_from_string(invalid_config_str_12, 
-                                              fapl, fcpl, writer, 
-                                              create_file) >= 0 )
-    {
+    if (H5F_load_swmr_config_from_string(invalid_config_str_12, fapl, fcpl, writer, create_file) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "cannot set file space page size to less than 512",
-                                              verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "cannot set file space page size to less than 512", verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    if ( H5F_load_swmr_config_from_string(invalid_config_str_13, 
-                                              fapl, fcpl, writer, 
-                                              create_file) >= 0 )
-    {
+    if (H5F_load_swmr_config_from_string(invalid_config_str_13, fapl, fcpl, writer, create_file) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "cannot set file space page size to more than 1GB",
-                                              verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "cannot set file space page size to more than 1GB", verbose)) {
         TEST_ERROR;
     }
 #endif
 
     /* Close property lists */
-    if ( H5Pclose(fapl) < 0 )
+    if (H5Pclose(fapl) < 0)
         TEST_ERROR;
-    if ( H5Pclose(fcpl) < 0 )
+    if (H5Pclose(fcpl) < 0)
         TEST_ERROR;
-    
+
     PASSED();
 
     return 0;
@@ -6774,12 +6152,11 @@ error:
     return -1;
 } /* vfd_swmr_load_string_config_err_check_5() */
 
-
 /*******************************************************************************
  *
  * vfd_swmr_load_string_config_err_check_6()
  *
- * Verify that the VFD SWMR property list setup function detects and reports 
+ * Verify that the VFD SWMR property list setup function detects and reports
  * errors as expected.
  * Specifically, test that H5F_load_swmr_config_from_string() errors when
  * strings that are too large are used.
@@ -6791,7 +6168,7 @@ error:
  *    None.
  *
  *******************************************************************************/
-static herr_t 
+static herr_t
 vfd_swmr_load_string_config_err_check_6(void)
 {
     /* Create config string with an nv_pair string value greater than allowed */
@@ -6800,83 +6177,78 @@ vfd_swmr_load_string_config_err_check_6(void)
 
     memset(long_path, 'A', 1025);
     long_path[1025] = '\0';
-    
+
     snprintf(config_str, sizeof(config_str),
-        "( vfd_swmr_config_data "
-        "  ("
-        "    ( H5F_vfd_swmr_config"
-        "      ("
-        "        ( version 1 )"
-        "        ( tick_len 4 )" 
-        "        ( max_lag 7 )"
-        "        ( presume_posix_semantics 1 )"
-        "        ( maintain_metadata_file 1 )"
-        "        ( generate_updater_files 0 )"
-        "        ( flush_raw_data 1 )"
-        "        ( md_pages_reserved 128 )"
-        "        ( md_file_path \"%s\" )" /* use string format specifier to add a long string value */
-        "        ( md_file_name \"md_file\" )"
-        "        ( updater_file_path \"\" )"
-        "        ( log_file_path \"\" )"
-        "        ( pb_expansion_threshold 0 ) "
-        "      )"
-        "    )"
-        "    ( page_buffer_config "
-        "      ("
-        "        ( page_buf_size 409600 )"
-        "        ( metadata_pages_only 1 )"
-        "      )"
-        "    )"
-        "    ( file_space_strategy_config "
-        "      ("
-        "        ( persist 0 )"
-        "      )"
-        "    )"
-        "    ( file_space_page_size "
-        "      ("
-        "        ( page_size 4096 )"
-        "      )"
-        "    )"
-        "  )"
-        ")",
-        long_path);
+             "( vfd_swmr_config_data "
+             "  ("
+             "    ( H5F_vfd_swmr_config"
+             "      ("
+             "        ( version 1 )"
+             "        ( tick_len 4 )"
+             "        ( max_lag 7 )"
+             "        ( presume_posix_semantics 1 )"
+             "        ( maintain_metadata_file 1 )"
+             "        ( generate_updater_files 0 )"
+             "        ( flush_raw_data 1 )"
+             "        ( md_pages_reserved 128 )"
+             "        ( md_file_path \"%s\" )" /* use string format specifier to add a long string value */
+             "        ( md_file_name \"md_file\" )"
+             "        ( updater_file_path \"\" )"
+             "        ( log_file_path \"\" )"
+             "        ( pb_expansion_threshold 0 ) "
+             "      )"
+             "    )"
+             "    ( page_buffer_config "
+             "      ("
+             "        ( page_buf_size 409600 )"
+             "        ( metadata_pages_only 1 )"
+             "      )"
+             "    )"
+             "    ( file_space_strategy_config "
+             "      ("
+             "        ( persist 0 )"
+             "      )"
+             "    )"
+             "    ( file_space_page_size "
+             "      ("
+             "        ( page_size 4096 )"
+             "      )"
+             "    )"
+             "  )"
+             ")",
+             long_path);
     hid_t   fapl        = H5I_INVALID_HID;
     hid_t   fcpl        = H5I_INVALID_HID;
     hbool_t writer      = true;
     hbool_t create_file = true;
 #if VERIFY_ERROR_STACK_SUPPORTED
-    bool    verbose     = true;
+    bool verbose = true;
 #endif
 
     TESTING("H5F_load_swmr_config_from_string() err detect 6");
 
     /* Initialize property lists */
-    if ( (fapl = h5_fileaccess()) < 0 )
+    if ((fapl = h5_fileaccess()) < 0)
         TEST_ERROR;
-    if ( (fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0 )
+    if ((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
         TEST_ERROR;
 
-    if ( H5F_load_swmr_config_from_string(config_str, 
-                                          fapl, fcpl, writer, 
-                                          create_file) >= 0 )
-    {
+    if (H5F_load_swmr_config_from_string(config_str, fapl, fcpl, writer, create_file) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "string data for md_file_path is too large.",
-                                              verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE,
+                                             "string data for md_file_path is too large.", verbose)) {
         TEST_ERROR;
     }
 #endif
 
     /* Close property lists */
-    if ( H5Pclose(fapl) < 0 )
+    if (H5Pclose(fapl) < 0)
         TEST_ERROR;
-    if ( H5Pclose(fcpl) < 0 )
+    if (H5Pclose(fcpl) < 0)
         TEST_ERROR;
-    
+
     PASSED();
 
     return 0;
@@ -6890,12 +6262,11 @@ error:
     return -1;
 } /* vfd_swmr_load_string_config_err_check_6() */
 
-
 /*******************************************************************************
  *
  * vfd_swmr_config_check_err_check_1()
  *
- * Test that H5P_check_vfd_swmr_config() errors when H5F_vfd_swmr_config_t 
+ * Test that H5P_check_vfd_swmr_config() errors when H5F_vfd_swmr_config_t
  * contains invalid values.
  *
  *                                              Cody S. -- 5/14/26
@@ -6905,31 +6276,27 @@ error:
  *    None.
  *
  *******************************************************************************/
-static herr_t 
+static herr_t
 vfd_swmr_config_check_err_check_1(void)
 {
     /* Invalid version number */
-    H5F_vfd_swmr_config_t invalid_config_1 =
-    {
-        /* version                 = */ -1,
-        /* tick_len                = */ 4,
-        /* max_lag                 = */ 7,
-        /* presume_posix_semantics = */ true,
-        /* writer                  = */ true,
-        /* maintain_metadata_file  = */ true,
-        /* generate_updater_files  = */ false,
-        /* flush_raw_data          = */ true,
-        /* md_pages_reserved       = */ 128,
-        /* pb_expansion_threshold  = */ 0,
-        /* md_file_path            = */ "./md_dir/",
-        /* md_file_name            = */ "md_file",
-        /* updater_file_path       = */ "",
-        /* log_file_path           = */ ""
-    };
+    H5F_vfd_swmr_config_t invalid_config_1 = {/* version                 = */ -1,
+                                              /* tick_len                = */ 4,
+                                              /* max_lag                 = */ 7,
+                                              /* presume_posix_semantics = */ true,
+                                              /* writer                  = */ true,
+                                              /* maintain_metadata_file  = */ true,
+                                              /* generate_updater_files  = */ false,
+                                              /* flush_raw_data          = */ true,
+                                              /* md_pages_reserved       = */ 128,
+                                              /* pb_expansion_threshold  = */ 0,
+                                              /* md_file_path            = */ "./md_dir/",
+                                              /* md_file_name            = */ "md_file",
+                                              /* updater_file_path       = */ "",
+                                              /* log_file_path           = */ ""};
 
     /* max_lag less than 3 */
-    H5F_vfd_swmr_config_t invalid_config_2 =
-    {
+    H5F_vfd_swmr_config_t invalid_config_2 = {
         /* version                 = */ H5F__CURR_VFD_SWMR_CONFIG_VERSION,
         /* tick_len                = */ 4,
         /* max_lag                 = */ 2,
@@ -6943,12 +6310,10 @@ vfd_swmr_config_check_err_check_1(void)
         /* md_file_path            = */ "./md_dir/",
         /* md_file_name            = */ "md_file",
         /* updater_file_path       = */ "",
-        /* log_file_path           = */ ""
-    };
+        /* log_file_path           = */ ""};
 
     /* md_pages_reserved less than 2 */
-    H5F_vfd_swmr_config_t invalid_config_3 =
-    {
+    H5F_vfd_swmr_config_t invalid_config_3 = {
         /* version                 = */ H5F__CURR_VFD_SWMR_CONFIG_VERSION,
         /* tick_len                = */ 4,
         /* max_lag                 = */ 7,
@@ -6957,17 +6322,15 @@ vfd_swmr_config_check_err_check_1(void)
         /* maintain_metadata_file  = */ true,
         /* generate_updater_files  = */ false,
         /* flush_raw_data          = */ true,
-        /* md_pages_reserved       = */ 1, 
+        /* md_pages_reserved       = */ 1,
         /* pb_expansion_threshold  = */ 0,
         /* md_file_path            = */ "./md_dir/",
         /* md_file_name            = */ "md_file",
         /* updater_file_path       = */ "",
-        /* log_file_path           = */ ""
-    };
+        /* log_file_path           = */ ""};
 
     /* pb_expansion_threshold greater than 100 (must be in range [0,100]) */
-    H5F_vfd_swmr_config_t invalid_config_4 =
-    {
+    H5F_vfd_swmr_config_t invalid_config_4 = {
         /* version                 = */ H5F__CURR_VFD_SWMR_CONFIG_VERSION,
         /* tick_len                = */ 4,
         /* max_lag                 = */ 7,
@@ -6981,13 +6344,11 @@ vfd_swmr_config_check_err_check_1(void)
         /* md_file_path            = */ "./md_dir/",
         /* md_file_name            = */ "md_file",
         /* updater_file_path       = */ "",
-        /* log_file_path           = */ ""
-    };
+        /* log_file_path           = */ ""};
 
-    /* Both maintain_metadata_file and generate_updater_files set to false even 
+    /* Both maintain_metadata_file and generate_updater_files set to false even
      * though writer == true */
-    H5F_vfd_swmr_config_t invalid_config_5 =
-    {
+    H5F_vfd_swmr_config_t invalid_config_5 = {
         /* version                 = */ H5F__CURR_VFD_SWMR_CONFIG_VERSION,
         /* tick_len                = */ 4,
         /* max_lag                 = */ 7,
@@ -7001,12 +6362,10 @@ vfd_swmr_config_check_err_check_1(void)
         /* md_file_path            = */ "./md_dir/",
         /* md_file_name            = */ "md_file",
         /* updater_file_path       = */ "",
-        /* log_file_path           = */ ""
-    };
+        /* log_file_path           = */ ""};
 
     /* updater_file_path empty while generate_updater_files == true */
-    H5F_vfd_swmr_config_t invalid_config_6 =
-    {
+    H5F_vfd_swmr_config_t invalid_config_6 = {
         /* version                 = */ H5F__CURR_VFD_SWMR_CONFIG_VERSION,
         /* tick_len                = */ 4,
         /* max_lag                 = */ 7,
@@ -7020,10 +6379,8 @@ vfd_swmr_config_check_err_check_1(void)
         /* md_file_path            = */ "",
         /* md_file_name            = */ "",
         /* updater_file_path       = */ "",
-        /* log_file_path           = */ ""
-    };
+        /* log_file_path           = */ ""};
 
-   
     /* Test for oversized md_file_name + md_file_path strings */
     char long_md_path[600];
     char long_md_name[500];
@@ -7036,8 +6393,7 @@ vfd_swmr_config_check_err_check_1(void)
     long_md_name[sizeof(long_md_name) - 1] = '\0';
 
     /* md_file_path + md_file_name combined length > 1024 */
-    H5F_vfd_swmr_config_t invalid_config_7 =
-    {
+    H5F_vfd_swmr_config_t invalid_config_7 = {
         /* version                 = */ H5F__CURR_VFD_SWMR_CONFIG_VERSION,
         /* tick_len                = */ 4,
         /* max_lag                 = */ 7,
@@ -7051,8 +6407,7 @@ vfd_swmr_config_check_err_check_1(void)
         /* md_file_path            = */ "",
         /* md_file_name            = */ "",
         /* updater_file_path       = */ "",
-        /* log_file_path           = */ ""
-    };
+        /* log_file_path           = */ ""};
     strcpy(invalid_config_7.md_file_path, long_md_path);
     strcpy(invalid_config_7.md_file_name, long_md_name);
 
@@ -7060,116 +6415,90 @@ vfd_swmr_config_check_err_check_1(void)
     bool verbose = true;
 #endif
 
-
     TESTING("H5P_check_vfd_swmr_config() err detect 1");
 
-    if ( H5P_check_vfd_swmr_config(NULL) >= 0 )
-    {
+    if (H5P_check_vfd_swmr_config(NULL) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, 
-                                              "NULL config_ptr on entry",
-                                              verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, "NULL config_ptr on entry", verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    if ( H5P_check_vfd_swmr_config(&invalid_config_1) >= 0 )
-    {
+    if (H5P_check_vfd_swmr_config(&invalid_config_1) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, 
-                                              "Unknown config version",
-                                              verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, "Unknown config version", verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    if ( H5P_check_vfd_swmr_config(&invalid_config_2) >= 0 )
-    {
+    if (H5P_check_vfd_swmr_config(&invalid_config_2) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, 
-                                              "max_lag must be at least 3",
-                                              verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 !=
+             cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, "max_lag must be at least 3", verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    if ( H5P_check_vfd_swmr_config(&invalid_config_3) >= 0 )
-    {
+    if (H5P_check_vfd_swmr_config(&invalid_config_3) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, 
-                                              "md_pages_reserved must be at least 2",
-                                              verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, "md_pages_reserved must be at least 2",
+                                             verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    if ( H5P_check_vfd_swmr_config(&invalid_config_4) >= 0 )
-    {
+    if (H5P_check_vfd_swmr_config(&invalid_config_4) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, 
-                                              "pb_expansion_threshold out of range",
-                                              verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, "pb_expansion_threshold out of range",
+                                             verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    if ( H5P_check_vfd_swmr_config(&invalid_config_5) >= 0 )
-    {
+    if (H5P_check_vfd_swmr_config(&invalid_config_5) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, 
-                                              "either maintain_metadata_file or generate_updater_files must be true",
-                                              verbose) )
-    {
-        TEST_ERROR;
-    }
-#endif
-
-    if ( H5P_check_vfd_swmr_config(&invalid_config_6) >= 0 )
-    {
-        TEST_ERROR;
-    }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, 
-                                              "updater_file_path is empty",
-                                              verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(
+                      H5E_PLIST, H5E_BADVALUE,
+                      "either maintain_metadata_file or generate_updater_files must be true", verbose)) {
         TEST_ERROR;
     }
 #endif
 
-    if ( H5P_check_vfd_swmr_config(&invalid_config_7) >= 0 )
-    {
+    if (H5P_check_vfd_swmr_config(&invalid_config_6) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, 
-                                              "md_file_name + md_file_path is too long",
-                                              verbose) )
-    {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 !=
+             cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE, "updater_file_path is empty", verbose)) {
+        TEST_ERROR;
+    }
+#endif
+
+    if (H5P_check_vfd_swmr_config(&invalid_config_7) >= 0) {
+        TEST_ERROR;
+    }
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_PLIST, H5E_BADVALUE,
+                                             "md_file_name + md_file_path is too long", verbose)) {
         TEST_ERROR;
     }
 #endif
 
     /* Cannot test updater_file_path/log_file_path upper length bounds here,
-    * because the struct fields are fixed-size arrays that cap valid strlen().
-    */
+     * because the struct fields are fixed-size arrays that cap valid strlen().
+     */
 
     PASSED();
 
@@ -7180,12 +6509,11 @@ error:
     return -1;
 } /* vfd_swmr_config_check_err_check_1() */
 
-
 /*******************************************************************************
  *
  * cl_load_string_from_file_smoke_check()
  *
- * Initial smoke check for the H5CL_load_config_string_from_file() function.  
+ * Initial smoke check for the H5CL_load_config_string_from_file() function.
  * Note that this test does not trigger any errors in that function.
  *
  *                                              Cody S. -- 5/10/26
@@ -7198,64 +6526,60 @@ error:
 static herr_t
 cl_load_string_from_file_smoke_check(void)
 {
-    const char *expected_file_str = 
-        "( vfd_swmr_config_data\n"
-        "  (\n"
-        "    ( H5F_vfd_swmr_config\n"
-        "      (\n"
-        "        ( version 1 )\n"
-        "        ( tick_len 4 )\n"
-        "        ( max_lag 7 )\n"
-        "        ( presume_posix_semantics 1 )\n"
-        "        ( maintain_metadata_file 1 )\n"
-        "        ( generate_updater_files 0 )\n"
-        "        ( flush_raw_data 1 )\n"
-        "        ( md_pages_reserved 128 )\n"
-        "        ( md_file_path \"./md_dir/\" )\n"
-        "        ( md_file_name \"md_file\" )\n"
-        "        ( updater_file_path \"\" )\n"
-        "        ( log_file_path \"\" )\n"
-        "        ( pb_expansion_threshold 0 )\n"
-        "      )\n"
-        "    )\n"
-        "    ( page_buffer_config\n"
-        "      (\n"
-        "        ( page_buf_size 4096 )\n"
-        "        ( metadata_pages_only 1 )\n"
-        "      )\n"
-        "    )\n"
-        "    ( file_space_strategy_config\n"
-        "      (\n"
-        "        ( persist 0 )\n"
-        "      )\n"
-        "    )\n"
-        "    ( file_space_page_size\n"
-        "      (\n"
-        "        ( page_size 4096 )\n"
-        "      )\n"
-        "    )\n"
-        "  )\n"
-        ")";
-    char       *actual_file_str = NULL;
+    const char *expected_file_str = "( vfd_swmr_config_data\n"
+                                    "  (\n"
+                                    "    ( H5F_vfd_swmr_config\n"
+                                    "      (\n"
+                                    "        ( version 1 )\n"
+                                    "        ( tick_len 4 )\n"
+                                    "        ( max_lag 7 )\n"
+                                    "        ( presume_posix_semantics 1 )\n"
+                                    "        ( maintain_metadata_file 1 )\n"
+                                    "        ( generate_updater_files 0 )\n"
+                                    "        ( flush_raw_data 1 )\n"
+                                    "        ( md_pages_reserved 128 )\n"
+                                    "        ( md_file_path \"./md_dir/\" )\n"
+                                    "        ( md_file_name \"md_file\" )\n"
+                                    "        ( updater_file_path \"\" )\n"
+                                    "        ( log_file_path \"\" )\n"
+                                    "        ( pb_expansion_threshold 0 )\n"
+                                    "      )\n"
+                                    "    )\n"
+                                    "    ( page_buffer_config\n"
+                                    "      (\n"
+                                    "        ( page_buf_size 4096 )\n"
+                                    "        ( metadata_pages_only 1 )\n"
+                                    "      )\n"
+                                    "    )\n"
+                                    "    ( file_space_strategy_config\n"
+                                    "      (\n"
+                                    "        ( persist 0 )\n"
+                                    "      )\n"
+                                    "    )\n"
+                                    "    ( file_space_page_size\n"
+                                    "      (\n"
+                                    "        ( page_size 4096 )\n"
+                                    "      )\n"
+                                    "    )\n"
+                                    "  )\n"
+                                    ")";
+    char       *actual_file_str   = NULL;
 
     TESTING("H5CL_load_config_string_from_file() -- Initial Smoke Check");
 
-    if ( create_config_file(TEST_CONFIG_FILE_NAME, 
-                            expected_file_str, 
-                            strlen(expected_file_str)) < 0 )
-    {
+    if (create_config_file(TEST_CONFIG_FILE_NAME, expected_file_str, strlen(expected_file_str)) < 0) {
         TEST_ERROR;
     }
-    
-    if ( H5CL_load_config_string_from_file(TEST_CONFIG_FILE_NAME, &actual_file_str) < 0 )
+
+    if (H5CL_load_config_string_from_file(TEST_CONFIG_FILE_NAME, &actual_file_str) < 0)
         TEST_ERROR;
 
     /* Ensure string loaded from file matches expected string */
-    if (0 != strcmp(actual_file_str, expected_file_str) )
+    if (0 != strcmp(actual_file_str, expected_file_str))
         TEST_ERROR;
 
     /* Remove the created config file */
-    if ( remove(TEST_CONFIG_FILE_NAME) != 0 ) {
+    if (remove(TEST_CONFIG_FILE_NAME) != 0) {
         perror("Error deleting file");
     }
 
@@ -7271,17 +6595,16 @@ error:
 
     if (actual_file_str)
         free(actual_file_str);
-    
+
     return -1;
 } /* cl_load_string_from_file_smoke_check() */
-
 
 /*******************************************************************************
  *
  * cl_load_string_from_file_err_check_1()
  *
- * Verify that the function for loading config language strings from files 
- * detects and reports errors as expected. 
+ * Verify that the function for loading config language strings from files
+ * detects and reports errors as expected.
  * Specifically, test that H5CL_load_config_string_from_file() errors when
  * unsupported files/filenames are passed to it.
  *
@@ -7295,23 +6618,21 @@ error:
 static herr_t
 cl_load_string_from_file_err_check_1(void)
 {
-    
+
     char *loaded_str = NULL;
 #if VERIFY_ERROR_STACK_SUPPORTED
-    bool  verbose    = true;
+    bool verbose = true;
 #endif
 
     TESTING("H5CL_load_config_string_from_file err detect 1");
 
     /* FIRST: Test blank file name */
 
-    if ( H5CL_load_config_string_from_file("", &loaded_str) >= 0 ) {
+    if (H5CL_load_config_string_from_file("", &loaded_str) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "file_name cannot be blank",
-                                              verbose) ) {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, "file_name cannot be blank", verbose)) {
 
         TEST_ERROR;
     }
@@ -7319,13 +6640,11 @@ cl_load_string_from_file_err_check_1(void)
 
     /* SECOND: test a non existing file */
 
-    if ( H5CL_load_config_string_from_file("FILE_THAT_DOES_NOT_EXIST", &loaded_str) >= 0 ) {
+    if (H5CL_load_config_string_from_file("FILE_THAT_DOES_NOT_EXIST", &loaded_str) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "could not stat file",
-                                              verbose) ) {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, "could not stat file", verbose)) {
 
         TEST_ERROR;
     }
@@ -7333,25 +6652,23 @@ cl_load_string_from_file_err_check_1(void)
 
     /* THIRD: test a non regular file */
 
-    if ( mkdir(NON_REGULAR_CONFIG_FILE_NAME, 0700) != 0 ) {
+    if (mkdir(NON_REGULAR_CONFIG_FILE_NAME, 0700) != 0) {
         perror("mkdir error");
         TEST_ERROR;
     }
-    
+
     /* use directory name to trip non-regular file check */
-    if ( H5CL_load_config_string_from_file(NON_REGULAR_CONFIG_FILE_NAME, &loaded_str) >= 0 ) {
+    if (H5CL_load_config_string_from_file(NON_REGULAR_CONFIG_FILE_NAME, &loaded_str) >= 0) {
         TEST_ERROR;
     }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-    else if ( 0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, 
-                                              "not a regular file",
-                                              verbose) ) {
+#if VERIFY_ERROR_STACK_SUPPORTED
+    else if (0 != cl_test_verify_error_stack(H5E_ARGS, H5E_BADVALUE, "not a regular file", verbose)) {
 
         TEST_ERROR;
     }
 #endif
 
-    if ( rmdir(NON_REGULAR_CONFIG_FILE_NAME) != 0) {
+    if (rmdir(NON_REGULAR_CONFIG_FILE_NAME) != 0) {
         perror("rmdir error");
     }
 
@@ -7367,20 +6684,19 @@ error:
 
     if (loaded_str)
         free(loaded_str);
-    
+
     return -1;
 } /* cl_load_string_from_file_err_check_1() */
-
 
 /*******************************************************************************
  *
  * cl_load_string_from_file_err_check_2()
  *
- * Verify that the function for loading config language strings from files 
- * detects and reports errors as expected. 
+ * Verify that the function for loading config language strings from files
+ * detects and reports errors as expected.
  * Specifically, test that H5CL_load_config_string_from_file() errors when
  * file contents are unsupported.
- * 
+ *
  *                                              Cody S. -- 5/12/26
  *
  * Changes:
@@ -7404,7 +6720,7 @@ cl_load_string_from_file_err_check_2(void)
             /* *config_str       = */ "",
             /*  config_len       = */ 0,
             /* *expected_err_msg = */ "file is empty",
-        },  
+        },
         {
             /* *config_str       = */ "( NON_ASCII_VALUE éàöñç )",
             /*  config_len       = */ strlen("( NON_ASCII_VALUE éàöñç )"),
@@ -7412,35 +6728,31 @@ cl_load_string_from_file_err_check_2(void)
         },
         {
             /* *config_str       = */ "( NUL_BYTE \0 )",
-            /*  config_len       = */ sizeof("( NUL_BYTE \0 )") - 1, /* use sizeof() - 1 for str containing nul */
+            /*  config_len       = */ sizeof("( NUL_BYTE \0 )") -
+                1, /* use sizeof() - 1 for str containing nul */
             /* *expected_err_msg = */ "NUL byte in file",
-        }
-    };
-    
+        }};
+
     char *loaded_str = NULL;
 #if VERIFY_ERROR_STACK_SUPPORTED
-    bool  verbose    = true;
+    bool verbose = true;
 #endif
-    int   i;
+    int i;
 
     TESTING("H5CL_load_config_string_from_file err detect 2");
 
-    for ( i = 0; i < 3; i++) {
-        if ( create_config_file(TEST_CONFIG_FILE_NAME, 
-                                config_test[i].config_str,
-                                config_test[i].config_len) < 0 )
-        {
+    for (i = 0; i < 3; i++) {
+        if (create_config_file(TEST_CONFIG_FILE_NAME, config_test[i].config_str, config_test[i].config_len) <
+            0) {
             TEST_ERROR;
         }
 
-        if ( H5CL_load_config_string_from_file(TEST_CONFIG_FILE_NAME, &loaded_str) >= 0 ) {
+        if (H5CL_load_config_string_from_file(TEST_CONFIG_FILE_NAME, &loaded_str) >= 0) {
             TEST_ERROR;
         }
-#if VERIFY_ERROR_STACK_SUPPORTED    
-        else if ( 0 != cl_test_verify_error_stack(H5E_FILE, H5E_BADFILE, 
-                                                  config_test[i].expected_err_msg,
-                                                  verbose) ) 
-        {
+#if VERIFY_ERROR_STACK_SUPPORTED
+        else if (0 != cl_test_verify_error_stack(H5E_FILE, H5E_BADFILE, config_test[i].expected_err_msg,
+                                                 verbose)) {
 
             TEST_ERROR;
         }
@@ -7453,7 +6765,7 @@ cl_load_string_from_file_err_check_2(void)
     }
 
     /* Remove the created config file */
-    if ( remove(TEST_CONFIG_FILE_NAME) != 0 ) {
+    if (remove(TEST_CONFIG_FILE_NAME) != 0) {
         perror("Error deleting file");
     }
 
@@ -7467,16 +6779,15 @@ error:
 
     if (loaded_str)
         free(loaded_str);
-    
+
     return -1;
 } /* cl_load_string_from_file_err_check_2() */
-
 
 /*******************************************************************************
  *
  * vfd_swmr_load_file_config_smoke_check()
  *
- * Initial smoke check for the H5Fswmr_config_file() function.  
+ * Initial smoke check for the H5Fswmr_config_file() function.
  * Note that this test does not trigger any errors in that function
  *
  *                                              Cody S. -- 5/8/26
@@ -7486,49 +6797,48 @@ error:
  *    None.
  *
  *******************************************************************************/
-static herr_t 
+static herr_t
 vfd_swmr_load_file_config_smoke_check(void)
 {
-    const char *file_str = 
-        "( vfd_swmr_config_data"
-        "  ("
-        "    ( H5F_vfd_swmr_config"
-        "      ("
-        "        ( version 1 )"
-        "        ( tick_len 4 )"
-        "        ( max_lag 7 )"
-        "        ( presume_posix_semantics 1 )"
-        "        ( maintain_metadata_file 1 )"
-        "        ( generate_updater_files 0 )"
-        "        ( flush_raw_data 1 )"
-        "        ( md_pages_reserved 128 )"
-        "        ( md_file_path \"./md_dir/\" )"
-        "        ( md_file_name \"md_file\" )"
-        "        ( updater_file_path \"\" )"
-        "        ( log_file_path \"\" )"
-        "        ( pb_expansion_threshold 0 )"
-        "      )"
-        "    )"
-        "    ( page_buffer_config"
-        "      ("
-        "        ( page_buf_size 4096 )"
-        "        ( metadata_pages_only 1 )"
-        "      )"
-        "    )"
-        "    ( file_space_strategy_config"
-        "      ("
-        "        ( persist 0 )"
-        "      )"
-        "    )"
-        "    ( file_space_page_size"
-        "      ("
-        "        ( page_size 4096 )"
-        "      )"
-        "    )"
-        "  )"
-        ")";
+    const char *file_str = "( vfd_swmr_config_data"
+                           "  ("
+                           "    ( H5F_vfd_swmr_config"
+                           "      ("
+                           "        ( version 1 )"
+                           "        ( tick_len 4 )"
+                           "        ( max_lag 7 )"
+                           "        ( presume_posix_semantics 1 )"
+                           "        ( maintain_metadata_file 1 )"
+                           "        ( generate_updater_files 0 )"
+                           "        ( flush_raw_data 1 )"
+                           "        ( md_pages_reserved 128 )"
+                           "        ( md_file_path \"./md_dir/\" )"
+                           "        ( md_file_name \"md_file\" )"
+                           "        ( updater_file_path \"\" )"
+                           "        ( log_file_path \"\" )"
+                           "        ( pb_expansion_threshold 0 )"
+                           "      )"
+                           "    )"
+                           "    ( page_buffer_config"
+                           "      ("
+                           "        ( page_buf_size 4096 )"
+                           "        ( metadata_pages_only 1 )"
+                           "      )"
+                           "    )"
+                           "    ( file_space_strategy_config"
+                           "      ("
+                           "        ( persist 0 )"
+                           "      )"
+                           "    )"
+                           "    ( file_space_page_size"
+                           "      ("
+                           "        ( page_size 4096 )"
+                           "      )"
+                           "    )"
+                           "  )"
+                           ")";
 
-    /* Parameters for config load function */           
+    /* Parameters for config load function */
     hid_t   fapl        = H5I_INVALID_HID;
     hid_t   fcpl        = H5I_INVALID_HID;
     hbool_t writer      = true;
@@ -7536,28 +6846,27 @@ vfd_swmr_load_file_config_smoke_check(void)
 
     /* Output values for testing PL setup */
     H5F_fspace_strategy_t  strategy;
-    hbool_t                persist; 
+    hbool_t                persist;
     hsize_t                threshold;
     hsize_t                fsp_size;
     H5F_libver_t           libver_low;
     H5F_libver_t           libver_high;
     size_t                 page_buf_size;
-    unsigned int           min_meta_perc; 
+    unsigned int           min_meta_perc;
     unsigned int           min_raw_perc;
     H5F_vfd_swmr_config_t *actual_config = NULL;
 
     /* Expected values */
     H5F_fspace_strategy_t expected_strategy      = H5F_FSPACE_STRATEGY_PAGE;
-    hbool_t               expected_persist       = false; 
+    hbool_t               expected_persist       = false;
     hsize_t               expected_threshold     = 1;
     hsize_t               expected_fsp_size      = 4096;
     H5F_libver_t          expected_libver_low    = H5F_LIBVER_LATEST;
     H5F_libver_t          expected_libver_high   = H5F_LIBVER_LATEST;
     size_t                expected_page_buf_size = 4096;
-    unsigned int          expected_min_meta_perc = 100; 
+    unsigned int          expected_min_meta_perc = 100;
     unsigned int          expected_min_raw_perc  = 0;
-    H5F_vfd_swmr_config_t expected_config =
-    {
+    H5F_vfd_swmr_config_t expected_config        = {
         /* version                 = */ H5F__CURR_VFD_SWMR_CONFIG_VERSION,
         /* tick_len                = */ 4,
         /* max_lag                 = */ 7,
@@ -7571,12 +6880,11 @@ vfd_swmr_load_file_config_smoke_check(void)
         /* md_file_path            = */ "./md_dir/",
         /* md_file_name            = */ "md_file",
         /* updater_file_path       = */ "",
-        /* log_file_path           = */ ""
-    };
+        /* log_file_path           = */ ""};
 
     bool verbose = true;
 
-    if ( NULL == (actual_config = HDcalloc(1, sizeof(H5F_vfd_swmr_config_t))) ) {
+    if (NULL == (actual_config = HDcalloc(1, sizeof(H5F_vfd_swmr_config_t)))) {
         TEST_ERROR;
     }
     HDmemset(actual_config, 0, sizeof(H5F_vfd_swmr_config_t));
@@ -7584,51 +6892,43 @@ vfd_swmr_load_file_config_smoke_check(void)
     TESTING("H5Fswmr_config_file() -- Initial Smoke Check");
 
     /* Initialize property lists */
-    if ( (fapl = h5_fileaccess()) < 0 )
+    if ((fapl = h5_fileaccess()) < 0)
         TEST_ERROR;
-    if ( (fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0 )
+    if ((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
         TEST_ERROR;
 
     /* Create config string file */
-    if ( create_config_file(TEST_CONFIG_FILE_NAME, 
-                            file_str,
-                            strlen(file_str)) < 0 )
-    {
+    if (create_config_file(TEST_CONFIG_FILE_NAME, file_str, strlen(file_str)) < 0) {
         TEST_ERROR;
     }
 
     /* Use cl file to setup property lists */
-    if ( H5Fswmr_config_file(TEST_CONFIG_FILE_NAME, fapl, fcpl, writer, create_file) < 0 )
+    if (H5Fswmr_config_file(TEST_CONFIG_FILE_NAME, fapl, fcpl, writer, create_file) < 0)
         TEST_ERROR;
 
     /* Get configured values */
-    if ( H5Pget_file_space_strategy(fcpl, &strategy, &persist, &threshold) < 0 )
+    if (H5Pget_file_space_strategy(fcpl, &strategy, &persist, &threshold) < 0)
         TEST_ERROR;
 
-    if ( H5Pget_file_space_page_size(fcpl, &fsp_size) < 0 )
+    if (H5Pget_file_space_page_size(fcpl, &fsp_size) < 0)
         TEST_ERROR;
 
-    if ( H5Pget_libver_bounds(fapl, &libver_low, &libver_high) < 0 )
+    if (H5Pget_libver_bounds(fapl, &libver_low, &libver_high) < 0)
         TEST_ERROR;
 
-    if ( H5Pget_page_buffer_size(fapl, &page_buf_size, &min_meta_perc, &min_raw_perc) < 0 )
+    if (H5Pget_page_buffer_size(fapl, &page_buf_size, &min_meta_perc, &min_raw_perc) < 0)
         TEST_ERROR;
 
-    if ( H5Pget_vfd_swmr_config(fapl, actual_config) < 0 )
+    if (H5Pget_vfd_swmr_config(fapl, actual_config) < 0)
         TEST_ERROR;
 
     /* Test returned values */
-    if ( ( strategy != expected_strategy ) || 
-         ( persist != expected_persist ) || 
-         ( threshold != expected_threshold ) ||
-         ( fsp_size != expected_fsp_size ) ||
-         ( libver_low != expected_libver_low ) ||
-         ( libver_high != expected_libver_high ) ||
-         ( page_buf_size != expected_page_buf_size ) || 
-         ( min_meta_perc != expected_min_meta_perc ) ||
-         ( min_raw_perc != expected_min_raw_perc ) ||
-         ( vfd_swmr_test_verify_config(actual_config, &expected_config, verbose) > 0 ) ) 
-    {
+    if ((strategy != expected_strategy) || (persist != expected_persist) ||
+        (threshold != expected_threshold) || (fsp_size != expected_fsp_size) ||
+        (libver_low != expected_libver_low) || (libver_high != expected_libver_high) ||
+        (page_buf_size != expected_page_buf_size) || (min_meta_perc != expected_min_meta_perc) ||
+        (min_raw_perc != expected_min_raw_perc) ||
+        (vfd_swmr_test_verify_config(actual_config, &expected_config, verbose) > 0)) {
 
         TEST_ERROR;
     }
@@ -7636,20 +6936,20 @@ vfd_swmr_load_file_config_smoke_check(void)
     /* Cleanup */
 
     /* Close property lists */
-    if ( H5Pclose(fapl) < 0 )
+    if (H5Pclose(fapl) < 0)
         TEST_ERROR;
-    if ( H5Pclose(fcpl) < 0 )
+    if (H5Pclose(fcpl) < 0)
         TEST_ERROR;
-    
+
     /* Free allocated config struct */
-    if ( actual_config )
+    if (actual_config)
         free(actual_config);
 
     /* remove config string file */
-    if ( remove(TEST_CONFIG_FILE_NAME) != 0 ) {
+    if (remove(TEST_CONFIG_FILE_NAME) != 0) {
         perror("Error deleting file");
     }
-    
+
     PASSED();
 
     return 0;
@@ -7659,14 +6959,13 @@ error:
     H5Pclose(fapl);
     H5Pclose(fcpl);
 
-    if ( actual_config )
+    if (actual_config)
         free(actual_config);
-    
+
     remove(TEST_CONFIG_FILE_NAME);
 
     return -1;
 } /* vfd_swmr_load_file_config_smoke_check */
-
 
 /*-------------------------------------------------------------------------
  * Function:    main
@@ -7680,7 +6979,7 @@ error:
 int
 main(void)
 {
-    int         nerrors = 0;
+    int nerrors = 0;
 
     h5_test_init();
 
@@ -7725,10 +7024,10 @@ main(void)
     nerrors += cl_load_string_from_file_err_check_1() < 0 ? 1 : 0;
     nerrors += cl_load_string_from_file_err_check_2() < 0 ? 1 : 0;
     nerrors += vfd_swmr_load_file_config_smoke_check() < 0 ? 1 : 0;
-    
+
     if (nerrors) {
-        printf("***** %d Virtual File Driver Configuration Language TEST%s FAILED! *****\n", 
-               nerrors, nerrors > 1 ? "S" : "");
+        printf("***** %d Virtual File Driver Configuration Language TEST%s FAILED! *****\n", nerrors,
+               nerrors > 1 ? "S" : "");
         return EXIT_FAILURE;
     }
 

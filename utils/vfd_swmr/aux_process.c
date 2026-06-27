@@ -25,9 +25,9 @@
 
 /* Macro to disable switch case fallthrough warning on supported systems */
 #if defined(__clang__) || defined(__GNUC__)
-#  define FALLTHROUGH __attribute__((fallthrough))
+#define FALLTHROUGH __attribute__((fallthrough))
 #else
-#  define FALLTHROUGH ((void)0)
+#define FALLTHROUGH ((void)0)
 #endif
 
 #define FILE_NAME_LEN                  1024
@@ -72,21 +72,21 @@
  * the future */
 #define UINT16DECODE(p, i)                                                                                   \
     {                                                                                                        \
-        (i) = (uint16_t)(*(p)&0xff);                                                                         \
+        (i) = (uint16_t)(*(p) & 0xff);                                                                       \
         (p)++;                                                                                               \
-        (i) |= (uint16_t)((*(p)&0xff) << 8);                                                                 \
+        (i) |= (uint16_t)((*(p) & 0xff) << 8);                                                               \
         (p)++;                                                                                               \
     }
 
 #define UINT32DECODE(p, i)                                                                                   \
     {                                                                                                        \
-        (i) = (uint32_t)(*(p)&0xff);                                                                         \
+        (i) = (uint32_t)(*(p) & 0xff);                                                                       \
         (p)++;                                                                                               \
-        (i) |= ((uint32_t)(*(p)&0xff) << 8);                                                                 \
+        (i) |= ((uint32_t)(*(p) & 0xff) << 8);                                                               \
         (p)++;                                                                                               \
-        (i) |= ((uint32_t)(*(p)&0xff) << 16);                                                                \
+        (i) |= ((uint32_t)(*(p) & 0xff) << 16);                                                              \
         (p)++;                                                                                               \
-        (i) |= ((uint32_t)(*(p)&0xff) << 24);                                                                \
+        (i) |= ((uint32_t)(*(p) & 0xff) << 24);                                                              \
         (p)++;                                                                                               \
     }
 
@@ -155,19 +155,19 @@ typedef struct {
     bool  verbose;        /* print out the details of this program                                        */
     bool  skip_aux;       /* skip this program in the case of VDS across multiple files (not implemented) */
     int   tick_len;       /* tick length in tenths of a second (default is 4)                             */
-    // char *vfd_config;     /* configuration string for the VFD stack to be used (default is sec2)          */
+    // char *vfd_config;     /* configuration string for the VFD stack to be used (default is sec2) */
     char *updater_path;   /* path name for the updater files                                              */
     char *md_file_path;   /* path name for the metadata file                                              */
     char *md_chksum_path; /* path name for file containing the checksum values for the metadata file      */
     FILE *md_file;        /* pointer to the metadata file                                                 */
     FILE *md_chksum_file; /* pointer to the file containing the checksum values for the metadata file     */
     unsigned int num_mdfile_checksums; /* number of checksum values for the metadata file */
-    uint32_t *   md_file_checksums;    /* list of checksum values for the metadata file    */
+    uint32_t    *md_file_checksums;    /* list of checksum values for the metadata file    */
 } handler_t;
 
 /* Structure for the entry of change list in the updater file */
 typedef struct {
-    void *   data; /* buffer for the data (changes)                                                */
+    void    *data; /* buffer for the data (changes)                                                */
     uint32_t ud_file_page_offset; /* page offset of the data in the updater file */
     uint32_t md_file_page_offset; /* page offset of the the data in the metadata file */
     uint32_t h5_file_page_offset; /* page offset of the data in the HDF5 file (future usage) */
@@ -177,7 +177,7 @@ typedef struct {
 
 /* updater file header related fields */
 typedef struct {
-    FILE *         file;
+    FILE          *file;
     unsigned char  ud_header_buf[UD_HEADER_LEN];
     unsigned char  ud_cl_top_buf[UD_CL_TOP_LEN];
     unsigned char *cl_buf;
@@ -201,13 +201,13 @@ typedef struct {
     uint32_t md_file_header_ud_page_offset;
     uint32_t md_file_header_len;
     uint32_t md_file_header_chksum;
-    void *   md_file_header_buf;
+    void    *md_file_header_buf;
 
     uint32_t md_file_index_ud_page_offset;
     uint64_t md_file_index_md_file_offset;
     uint32_t md_file_index_len;
     uint32_t md_file_index_chksum;
-    void *   md_file_index_buf;
+    void    *md_file_index_buf;
 
     uint32_t received_cl_checksum;
     uint32_t verified_cl_checksum;
@@ -255,7 +255,7 @@ enum aux_arg_level {
  * end.
  */
 typedef struct {
-    const char *       name;     /* Name of the long option */
+    const char        *name;     /* Name of the long option */
     enum aux_arg_level has_arg;  /* Whether we should look for an arg */
     char               shortval; /* The shortname equivalent of long arg
                                   * this gets returned from get_option
@@ -300,7 +300,7 @@ aux_get_options(int argc, char **argv, const char *opts, const aux_long_options 
         /* long command line option */
         int        i;
         const char ch      = '=';
-        char *     arg     = strdup(&argv[aux_optind][2]);
+        char      *arg     = strdup(&argv[aux_optind][2]);
         size_t     arg_len = 0;
 
         aux_optarg = strchr(&argv[aux_optind][2], ch);
@@ -468,7 +468,8 @@ usage(void)
     printf("    [-h --help]: this help page\n");
     printf("    [-a --skip_aux]: exit if VDS across multiple file is being enabled (to be implemented in the "
            "future)\n");
-    // printf("    [-c --vfd_config]: quoted string containing the configuration string for the VFD stack to be "
+    // printf("    [-c --vfd_config]: quoted string containing the configuration string for the VFD stack to
+    // be "
     //        "used (default is sec2)\n");
     printf("    [-l --log_file_path]: path to the log file (default is no log file)\n");
     printf(
@@ -499,7 +500,7 @@ usage(void)
 static int
 parse_command_line(int argc, char *argv[], handler_t *hand)
 {
-    int              opt;
+    int opt;
     // aux_long_options long_options[] = {{"vfd_config=", require_arg, 'c'},
     //                                    {"help", no_arg, 'h'},
     aux_long_options long_options[] = {{"help", no_arg, 'h'},
@@ -513,14 +514,14 @@ parse_command_line(int argc, char *argv[], handler_t *hand)
                                        {NULL, 0, 0}};
 
     /* Initialize the command line options */
-    hand->log_file_path        = NULL;
-    hand->log_file             = NULL;
-    hand->output               = NULL;
-    hand->polls_per_tick       = 10;
-    hand->print_stats          = false;
-    hand->tick_len             = 4;
-    hand->verbose              = false;
-    hand->skip_aux             = false;
+    hand->log_file_path  = NULL;
+    hand->log_file       = NULL;
+    hand->output         = NULL;
+    hand->polls_per_tick = 10;
+    hand->print_stats    = false;
+    hand->tick_len       = 4;
+    hand->verbose        = false;
+    hand->skip_aux       = false;
     // hand->vfd_config           = NULL;
     hand->updater_path         = NULL;
     hand->md_file_path         = NULL;
@@ -776,7 +777,7 @@ verify_md_file_chksum(handler_t *hand, uint64_t ud_seq_num)
 {
     long int md_file_size = 0;   /* size of the metadata file                 */
     uint32_t verified_checksum;  /* calculated checksum for the metadata file */
-    void *   md_file_buf = NULL; /* buffer for the entire metadata file       */
+    void    *md_file_buf = NULL; /* buffer for the entire metadata file       */
 
     /* Seek the end of the metadata file */
     if (fseek(hand->md_file, 0, SEEK_END) != 0) {
@@ -1105,7 +1106,7 @@ copy_data(handler_t *hand, FILE *src_file, FILE *dst_file, uint32_t src_file_off
           uint32_t data_len, uint32_t received_checksum)
 {
     uint32_t verified_checksum;           /* calculated checksum for the data being copied */
-    void *   data_buf = malloc(data_len); /* buffer for the data being copied              */
+    void    *data_buf = malloc(data_len); /* buffer for the data being copied              */
 
     /* Seek and read in the data from the source file */
     if (fseek(src_file, src_file_offset, SEEK_SET) != 0) {
@@ -1391,7 +1392,7 @@ get_md_file_chksums(handler_t *hand)
     long int       file_size = 0;
     unsigned char *file_buf  = NULL;
     unsigned int   pair_size = 8 + 4;
-    uint64_t *     seq_nums  = NULL;
+    uint64_t      *seq_nums  = NULL;
     unsigned char *ptr       = NULL;
     unsigned int   i;
 

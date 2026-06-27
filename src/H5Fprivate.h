@@ -600,7 +600,7 @@ typedef struct eot_queue_entry {
     hbool_t         vfd_swmr_writer;
     uint64_t        tick_num;
     struct timespec end_of_tick;
-    H5F_t *         vfd_swmr_file;
+    H5F_t          *vfd_swmr_file;
     TAILQ_ENTRY(eot_queue_entry) link;
 } eot_queue_entry_t;
 
@@ -616,7 +616,7 @@ typedef TAILQ_HEAD(eot_queue, eot_queue_entry) eot_queue_t;
  *----------------------------------------------------------------------------
  */
 typedef struct H5F_vfd_swmr_updater_cl_entry_t {
-    void *   entry_image_ptr;
+    void    *entry_image_ptr;
     uint32_t entry_image_ud_file_page_offset;
     uint32_t entry_image_md_file_page_offset;
     uint32_t entry_image_h5_file_page_offset;
@@ -639,17 +639,17 @@ typedef struct H5F_vfd_swmr_updater_t {
     uint32_t page_size;
     uint64_t sequence_number;
     uint64_t tick_num;
-    void *   header_image_ptr;
+    void    *header_image_ptr;
     size_t   header_image_len;
-    void *   change_list_image_ptr;
+    void    *change_list_image_ptr;
     uint64_t change_list_offset;
     size_t   change_list_len;
     /* Updater file change list related fields */
-    void *                           md_file_header_image_ptr;
+    void                            *md_file_header_image_ptr;
     uint32_t                         md_file_header_image_chksum;
     uint32_t                         md_file_header_ud_file_page_offset;
     size_t                           md_file_header_len;
-    void *                           md_file_index_image_ptr;
+    void                            *md_file_index_image_ptr;
     uint32_t                         md_file_index_image_chksum;
     uint64_t                         md_file_index_md_file_offset;
     uint32_t                         md_file_index_ud_file_page_offset;
@@ -863,15 +863,15 @@ H5_DLL herr_t   H5F_vfd_swmr_remove_entry_eot(H5F_t *f);
 H5_DLL herr_t   H5F_vfd_swmr_insert_entry_eot(H5F_t *f);
 H5_DLL void     H5F_vfd_swmr_update_entry_eot(eot_queue_entry_t *entry);
 H5_DLL herr_t   H5F_dump_eot_queue(void);
-H5_DLL herr_t   H5F_shadow_image_defer_free(H5F_shared_t *shared,
+H5_DLL herr_t   H5F_shadow_image_defer_free(H5F_shared_t                           *shared,
                                             const struct H5FD_vfd_swmr_idx_entry_t *entry);
 H5_DLL struct H5FD_vfd_swmr_idx_entry_t *H5F_vfd_swmr_enlarge_shadow_index(H5F_t *f);
-H5_DLL herr_t   H5F_load_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_t fcpl_id,
-                                                 hbool_t writer, hbool_t create_file);
-H5_DLL herr_t   H5Fswmr_config_file(const char *file_path, hid_t fapl_id, hid_t fcpl_id,
-                                    hbool_t writer, hbool_t create_file);
-H5_DLL herr_t   H5Fswmr_config_env(hid_t fapl_id, hid_t fcpl_id, hbool_t writer,
-                                   hbool_t create_file, const char *env_var_name);
+H5_DLL herr_t H5F_load_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_t fcpl_id,
+                                               hbool_t writer, hbool_t create_file);
+H5_DLL herr_t H5Fswmr_config_file(const char *file_path, hid_t fapl_id, hid_t fcpl_id, hbool_t writer,
+                                  hbool_t create_file);
+H5_DLL herr_t H5Fswmr_config_env(hid_t fapl_id, hid_t fcpl_id, hbool_t writer, hbool_t create_file,
+                                 const char *env_var_name);
 
 /* EOT queue global */
 H5_DLL extern eot_queue_t eot_queue_g;

@@ -305,7 +305,7 @@ done:
 herr_t
 H5F__vfd_swmr_writer_create_open_flush_test(hid_t file_id, hbool_t file_create)
 {
-    H5F_t *                 f;                   /* File pointer */
+    H5F_t                  *f;                   /* File pointer */
     h5_stat_t               stat_buf;            /* Buffer for stat info */
     H5FD_vfd_swmr_md_header md_hdr;              /* Header for the metadata file */
     H5FD_vfd_swmr_md_index  md_idx;              /* Indedx for the metadata file */
@@ -325,7 +325,8 @@ H5F__vfd_swmr_writer_create_open_flush_test(hid_t file_id, hbool_t file_create)
         HGOTO_ERROR(H5E_FILE, H5E_BADFILE, FAIL, "unable to stat the metadata file");
     if (file_create) { /* Creating file */
         if (stat_buf.st_size != 0)
-            HGOTO_ERROR(H5E_FILE, H5E_READERROR, FAIL, "metadata file should be empty for file create");    }
+            HGOTO_ERROR(H5E_FILE, H5E_READERROR, FAIL, "metadata file should be empty for file create");
+    }
     else { /* Opening or flushing the file */
 
         memset(&md_hdr, 0, sizeof(H5FD_vfd_swmr_md_header));
@@ -506,7 +507,8 @@ H5F__vfd_swmr_verify_md_hdr_and_idx(H5F_t *f, H5FD_vfd_swmr_md_header *md_hdr, H
     if (num_entries == 0) {
         /* Verify the index is empty */
         if (md_idx->entries != NULL)
-            HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "incorrect entries in index");    }
+            HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "incorrect entries in index");
+    }
     else {
         /* Verify entries */
         for (i = 0; i < num_entries; i++) {
@@ -519,7 +521,8 @@ H5F__vfd_swmr_verify_md_hdr_and_idx(H5F_t *f, H5FD_vfd_swmr_md_header *md_hdr, H
                 HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL,
                             "incorrect md_file_page_offset read from metadata file");
             if (md_idx->entries[i].checksum != index[i].checksum)
-                HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "incorrect checksum read from metadata file");        }
+                HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "incorrect checksum read from metadata file");
+        }
     }
 
 done:
@@ -567,7 +570,7 @@ herr_t
 H5F__vfd_swmr_writer_md_test(hid_t file_id, unsigned num_entries, H5FD_vfd_swmr_idx_entry_t *index,
                              unsigned nshadow_defrees)
 {
-    H5F_t *                 f;                   /* File pointer */
+    H5F_t                  *f;                   /* File pointer */
     int                     md_fd = -1;          /* The metadata file descriptor */
     H5FD_vfd_swmr_md_header md_hdr;              /* Header for the metadata file */
     H5FD_vfd_swmr_md_index  md_idx;              /* Index for the metadata file */

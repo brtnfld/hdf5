@@ -17,7 +17,7 @@
 #endif
 
 /* This line causes compilation failure on macOS; commented out.
-   size_t strlcpy(char *, const char *, size_t); 
+   size_t strlcpy(char *, const char *, size_t);
 */
 
 #define timespeccmp(tsp, usp, cmp)                                                                           \

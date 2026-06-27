@@ -326,10 +326,10 @@ create_datasets(hid_t file_id, int min_dset, int max_dset)
                                 if (verbose) {
 
                                     fprintf(stdout, "data_chunk[%0d][%0d] = %0d, expect %0d.\n", k, l,
-                                              data_chunk[k][l],
-                                              ((DSET_SIZE * DSET_SIZE * m) + (DSET_SIZE * (i + k)) + j + l));
+                                            data_chunk[k][l],
+                                            ((DSET_SIZE * DSET_SIZE * m) + (DSET_SIZE * (i + k)) + j + l));
                                     fprintf(stdout, "m = %d, i = %d, j = %d, k = %d, l = %d\n", m, i, j, k,
-                                              l);
+                                            l);
                                 }
                             }
                         }
@@ -1133,10 +1133,10 @@ verify_datasets(hid_t file_id, int min_dset, int max_dset)
                                 if (verbose) {
 
                                     fprintf(stdout, "data_chunk[%0d][%0d] = %0d, expect %0d.\n", k, l,
-                                              data_chunk[k][l],
-                                              ((DSET_SIZE * DSET_SIZE * m) + (DSET_SIZE * (i + k)) + j + l));
+                                            data_chunk[k][l],
+                                            ((DSET_SIZE * DSET_SIZE * m) + (DSET_SIZE * (i + k)) + j + l));
                                     fprintf(stdout, "m = %d, i = %d, j = %d, k = %d, l = %d\n", m, i, j, k,
-                                              l);
+                                            l);
                                 }
                             }
                         }
@@ -4641,8 +4641,10 @@ cache_image_smoke_check_5(bool single_file_vfd)
 
     /* 3) Construct a "zoo" in the above group, and validate it. */
     if (pass)
-        pass = create_zoo(file_id, process_group_name, &lastmsgtime,
-            (zoo_config_t){.proc_num = min_group, .skip_varlen = false, .skip_compact = false, .msgival = {0, 0}});
+        pass = create_zoo(
+            file_id, process_group_name, &lastmsgtime,
+            (zoo_config_t){
+                .proc_num = min_group, .skip_varlen = false, .skip_compact = false, .msgival = {0, 0}});
 
 #if H5C_COLLECT_CACHE_STATS
     if (pass) {
@@ -4709,8 +4711,10 @@ cache_image_smoke_check_5(bool single_file_vfd)
 
         /* 6) Validate the "zoo" created in the previous file open. */
         if (pass)
-            pass = validate_zoo(file_id, process_group_name, &lastmsgtime,
-                (zoo_config_t){.proc_num = max_group, .skip_varlen = false, .skip_compact = false, .msgival = {0, 0}});
+            pass = validate_zoo(
+                file_id, process_group_name, &lastmsgtime,
+                (zoo_config_t){
+                    .proc_num = max_group, .skip_varlen = false, .skip_compact = false, .msgival = {0, 0}});
 
 #if H5C_COLLECT_CACHE_STATS
         if (pass) {
@@ -4724,8 +4728,7 @@ cache_image_smoke_check_5(bool single_file_vfd)
 #endif /* H5C_COLLECT_CACHE_STATS */
 
         if (show_progress)
-            fprintf(stdout, "%s:L2 cp = %d, max_group = %d, pass = %d.\n", fcn_name, cp + 1, max_group,
-                      pass);
+            fprintf(stdout, "%s:L2 cp = %d, max_group = %d, pass = %d.\n", fcn_name, cp + 1, max_group, pass);
 
         /* 7) Create a process specific group for this file open */
         if (pass) {
@@ -4743,17 +4746,17 @@ cache_image_smoke_check_5(bool single_file_vfd)
         }
 
         if (show_progress)
-            fprintf(stdout, "%s:L3 cp = %d, max_group = %d, pass = %d.\n", fcn_name, cp + 2, max_group,
-                      pass);
+            fprintf(stdout, "%s:L3 cp = %d, max_group = %d, pass = %d.\n", fcn_name, cp + 2, max_group, pass);
 
         /* 8) Construct a "zoo" in the above group, and validate it. */
         if (pass)
-            pass = create_zoo(file_id, process_group_name, &lastmsgtime,
-                (zoo_config_t){.proc_num = max_group, .skip_varlen = false, .skip_compact = false, .msgival = {0, 0}});
+            pass = create_zoo(
+                file_id, process_group_name, &lastmsgtime,
+                (zoo_config_t){
+                    .proc_num = max_group, .skip_varlen = false, .skip_compact = false, .msgival = {0, 0}});
 
         if (show_progress)
-            fprintf(stdout, "%s:L4 cp = %d, max_group = %d, pass = %d.\n", fcn_name, cp + 3, max_group,
-                      pass);
+            fprintf(stdout, "%s:L4 cp = %d, max_group = %d, pass = %d.\n", fcn_name, cp + 3, max_group, pass);
 
         /* 9) Close the file. */
 
@@ -4776,8 +4779,7 @@ cache_image_smoke_check_5(bool single_file_vfd)
         }
 
         if (show_progress)
-            fprintf(stdout, "%s:L5 cp = %d, max_group = %d, pass = %d.\n", fcn_name, cp + 4, max_group,
-                      pass);
+            fprintf(stdout, "%s:L5 cp = %d, max_group = %d, pass = %d.\n", fcn_name, cp + 4, max_group, pass);
     } /* end while */
     cp += 5;
 
@@ -4807,7 +4809,8 @@ cache_image_smoke_check_5(bool single_file_vfd)
     i = min_group;
     while (pass && i <= max_group) {
         snprintf(process_group_name, sizeof(process_group_name), "/process_%d", i);
-        pass = validate_zoo(file_id, process_group_name, &lastmsgtime,
+        pass = validate_zoo(
+            file_id, process_group_name, &lastmsgtime,
             (zoo_config_t){.proc_num = i++, .skip_varlen = false, .skip_compact = false, .msgival = {0, 0}});
     }
 
@@ -4860,7 +4863,8 @@ cache_image_smoke_check_5(bool single_file_vfd)
     while ((pass) && (i <= max_group)) {
 
         snprintf(process_group_name, sizeof(process_group_name), "/process_%d", i);
-        pass = validate_zoo(file_id, process_group_name, &lastmsgtime,
+        pass = validate_zoo(
+            file_id, process_group_name, &lastmsgtime,
             (zoo_config_t){.proc_num = i++, .skip_varlen = false, .skip_compact = false, .msgival = {0, 0}});
     }
 
@@ -4921,7 +4925,8 @@ cache_image_smoke_check_5(bool single_file_vfd)
     i = min_group;
     while ((pass) && (i <= max_group)) {
         snprintf(process_group_name, sizeof(process_group_name), "/process_%d", i);
-        pass = validate_zoo(file_id, process_group_name, &lastmsgtime,
+        pass = validate_zoo(
+            file_id, process_group_name, &lastmsgtime,
             (zoo_config_t){.proc_num = i++, .skip_varlen = false, .skip_compact = false, .msgival = {0, 0}});
     }
 
@@ -7676,7 +7681,7 @@ evict_on_close_test(bool H5_ATTR_PARALLEL_UNUSED single_file_vfd)
         assert(cache_ptr->magic == H5C__H5C_T_MAGIC);
 
         fprintf(stdout, "index size / index dirty size = %lld / %lld\n", (long long)(cache_ptr->index_size),
-                  (long long)(cache_ptr->dirty_index_size));
+                (long long)(cache_ptr->dirty_index_size));
     }
 
     if (show_progress)

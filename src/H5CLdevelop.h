@@ -29,15 +29,14 @@
 /* stored in an instance of H5CL_nv_pair_t.                                    */
 /*******************************************************************************/
 
-#define H5CL_VAL_NONE                             0
-#define H5CL_VAL_INT                              1
-#define H5CL_VAL_FLOAT                            2
-#define H5CL_VAL_QSTR                             3
-#define H5CL_VAL_BB                               4
-#define H5CL_VAL_LIST                             5
+#define H5CL_VAL_NONE  0
+#define H5CL_VAL_INT   1
+#define H5CL_VAL_FLOAT 2
+#define H5CL_VAL_QSTR  3
+#define H5CL_VAL_BB    4
+#define H5CL_VAL_LIST  5
 
-#define H5CL_MAX_VAL_CODE                         5
-
+#define H5CL_MAX_VAL_CODE 5
 
 /*******************/
 /* Public Typedefs */
@@ -53,8 +52,8 @@
  * The fields in the structure are discussed individually below.
  *
  * struct_tag:  unsigned integer which must always contain the the value
- *              H5CL_NV_PAIR_STRUCT_TAG.  The struct_tag field allows us to 
- *              verify that a pointer to struct H5FD_cl_nv_pair_t does in fact 
+ *              H5CL_NV_PAIR_STRUCT_TAG.  The struct_tag field allows us to
+ *              verify that a pointer to struct H5FD_cl_nv_pair_t does in fact
  *              point to an instance of same.
  *
  * name_ptr:    Pointer to a dynamically allocated string containing the
@@ -103,20 +102,20 @@
  *
  * vlen_val_ptr: void pointer whose value depends on the value of val_type.
  *
- *              If val_type == H5CL_VAL_QSTR, vlen_val_ptr points to a 
- *              dynamically allocated  vector of char containing a text string 
- *              of length len.  In this case, the string contains a quote string 
- *              less its leading and trailing double quotes.  Note that any 
- *              escape sequences in the string have not been resolved by the 
+ *              If val_type == H5CL_VAL_QSTR, vlen_val_ptr points to a
+ *              dynamically allocated  vector of char containing a text string
+ *              of length len.  In this case, the string contains a quote string
+ *              less its leading and trailing double quotes.  Note that any
+ *              escape sequences in the string have not been resolved by the
  *              lexer.
  *
- *              If val_type == H5CL_VAL_BB, vlen_val_ptr points to a 
- *              dynamically allocated vector of uint8_t that contains a 
+ *              If val_type == H5CL_VAL_BB, vlen_val_ptr points to a
+ *              dynamically allocated vector of uint8_t that contains a
  *              binary blob of length len.
  *
- *              If val_type == H5CL_VAL_LIST, vlen_val_ptr points to a 
- *              dynamically allocated vector of char containing a sub-expression 
- *              in the configuration language expressed as a null terminated C 
+ *              If val_type == H5CL_VAL_LIST, vlen_val_ptr points to a
+ *              dynamically allocated vector of char containing a sub-expression
+ *              in the configuration language expressed as a null terminated C
  *              string.  This sub-expression will typically contain configuration
  *              data for underlying VFD(s).  The length of this string
  *              (less the terminating null char) is stored in len..
@@ -128,89 +127,81 @@
  *
  *******************************************************************************/
 
-#define H5CL_NV_PAIR_STRUCT_TAG           0x007A
-#define H5CL_INVALID_NV_PAIR_STRUCT_TAG   0x07A0
+#define H5CL_NV_PAIR_STRUCT_TAG         0x007A
+#define H5CL_INVALID_NV_PAIR_STRUCT_TAG 0x07A0
 
+typedef struct H5CL_nv_pair_t {
+    uint32_t struct_tag;
 
-typedef struct H5CL_nv_pair_t
-{
-        uint32_t struct_tag;
+    char *name_ptr;
 
-        char *name_ptr;
+    int val_type;
 
-        int val_type;
+    int64_t int_val;
 
-        int64_t int_val;
+    double f_val;
 
-        double f_val;
+    void *vlen_val_ptr;
 
-        void *vlen_val_ptr;
-
-        size_t len;
+    size_t len;
 
 } H5CL_nv_pair_t;
-             
 
 /*******************************************************************************
  *
  * struct H5CL_config_spec
  *
  * Arrays of instances of H5CL_config_spec are used to pass arrays of instances
- * of H5CL_nv_pair_t and the associated configuration names and max number of 
- * parameters into H5CL_parse_config_group(). 
+ * of H5CL_nv_pair_t and the associated configuration names and max number of
+ * parameters into H5CL_parse_config_group().
  *
- * The fields in the structure are discussed individually below. 
+ * The fields in the structure are discussed individually below.
  *
  * struct_tag:  unsigned integer which must always contain the the value
  *      H5CL_CONFIG_SPEC_STRUCT_TAG.  The struct_tag field allows us to
  *      verify that a pointer to struct H5CL_config_spec does in fact
  *      point to an instance of same.
  *
- * config_name: Pointer to a string containing the name of the target 
+ * config_name: Pointer to a string containing the name of the target
  *      configuration.
  *
- * max_num_params: Integer field containing the length of the array of 
+ * max_num_params: Integer field containing the length of the array of
  *      instances of H5CL_nv_pair_t pointed to by nv_pairs (below).  Note
- *      that this value must be greater than or equal to the maximum 
+ *      that this value must be greater than or equal to the maximum
  *      number of parameters that may appear in the target configuration.
- * 
+ *
  * nv_pairs: Base address of the array of H5CL_nv_pair_t prepared to receive
  *      the name value pairs in the configuration as they are parsed.  Note
- *      that the tag field of each entry in this array must be set to 
+ *      that the tag field of each entry in this array must be set to
  *      H5CL_NV_PAIR_STRUCT_TAG on entry.
  *
- * parsed: Boolean flag used to track whether the indication configuration 
- *      has been parsed and its name value pairs have been loaded into 
+ * parsed: Boolean flag used to track whether the indication configuration
+ *      has been parsed and its name value pairs have been loaded into
  *      the array of H5CL_nv_pair_t pointed to by the nv_pairs field above.
  *
  *******************************************************************************/
 
-#define H5CL_CONFIG_SPEC_STRUCT_TAG  0x008A
+#define H5CL_CONFIG_SPEC_STRUCT_TAG 0x008A
 
-typedef struct H5CL_config_spec
-{
-    unsigned         struct_tag;
+typedef struct H5CL_config_spec {
+    unsigned struct_tag;
 
-    char *           config_name;
+    char *config_name;
 
-    int              max_num_params;
+    int max_num_params;
 
-    H5CL_nv_pair_t * nv_pairs;
+    H5CL_nv_pair_t *nv_pairs;
 
-    bool             parsed;
+    bool parsed;
 
 } H5CL_config_spec;
-
 
 /********************/
 /* Public Variables */
 /********************/
 
-
 /*********************/
 /* Public Prototypes */
 /*********************/
 
-
 #endif /* H5CL_develop_H */
-

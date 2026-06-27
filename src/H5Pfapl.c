@@ -557,8 +557,8 @@ static const uint64_t H5F_def_rfic_flags_g = H5F_ACS_RFIC_FLAGS_DEF; /* Default 
 /* The VFD SWMR struct contains multiple large strings and triggers size
  * warnings. We'll disable this for now and revisit later.
  */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wlarger-than="
+#pragma GCC diagnostic             push
+#pragma GCC diagnostic             ignored "-Wlarger-than="
 static const H5F_vfd_swmr_config_t H5F_def_vfd_swmr_config_g =
     H5F_ACS_VFD_SWMR_CONFIG_DEF; /* Default vfd swmr configuration */
 #pragma GCC diagnostic pop
@@ -6525,10 +6525,9 @@ H5P__facc_vfd_swmr_config_enc(const void *value, void **_pp, size_t *size)
         memcpy(*pp, (const uint8_t *)(config->md_file_name), (size_t)(H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1));
         *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
         memcpy(*pp, (const uint8_t *)(config->updater_file_path),
-                 (size_t)(H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1));
+               (size_t)(H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1));
         *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
-        memcpy(*pp, (const uint8_t *)(config->log_file_path),
-                 (size_t)(H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1));
+        memcpy(*pp, (const uint8_t *)(config->log_file_path), (size_t)(H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1));
         *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
 
     } /* end if */
@@ -6556,7 +6555,7 @@ static herr_t
 H5P__facc_vfd_swmr_config_dec(const void **_pp, void *_value)
 {
     H5F_vfd_swmr_config_t *config = (H5F_vfd_swmr_config_t *)_value;
-    const uint8_t **       pp     = (const uint8_t **)_pp;
+    const uint8_t        **pp     = (const uint8_t **)_pp;
 
     FUNC_ENTER_PACKAGE_NOERR
 
@@ -6612,8 +6611,8 @@ H5P__facc_vfd_swmr_config_dec(const void **_pp, void *_value)
 herr_t
 H5P_check_vfd_swmr_config(H5F_vfd_swmr_config_t *config_ptr)
 {
-    size_t          name_len;
-    herr_t          ret_value = SUCCEED; /* return value */
+    size_t name_len;
+    herr_t ret_value = SUCCEED; /* return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
@@ -6648,8 +6647,10 @@ H5P_check_vfd_swmr_config(H5F_vfd_swmr_config_t *config_ptr)
         /* Must provide the path and base name of the metadata updater files */
         name_len = strlen(config_ptr->updater_file_path);
         if (name_len == 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "updater_file_path is empty");        else if (name_len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN)
-            HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "updater_file_path is too long");    }
+            HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "updater_file_path is empty");
+        else if (name_len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN)
+            HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "updater_file_path is too long");
+    }
 
     name_len = strlen(config_ptr->log_file_path);
     if (name_len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN)
@@ -6672,7 +6673,7 @@ done:
 herr_t
 H5Pset_vfd_swmr_config(hid_t plist_id, H5F_vfd_swmr_config_t *config_ptr)
 {
-    H5P_genplist_t *plist; /* Property list pointer */
+    H5P_genplist_t *plist;               /* Property list pointer */
     herr_t          ret_value = SUCCEED; /* return value */
 
     FUNC_ENTER_API(FAIL)

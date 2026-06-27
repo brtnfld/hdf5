@@ -213,8 +213,8 @@ read_records(const char *filename, unsigned verbose, unsigned long nseconds, uns
 {
     time_t                 start_time;      /* Starting time */
     time_t                 curr_time;       /* Current time */
-    symbol_info_t **       sym_com  = NULL; /* Pointers to array of common dataset IDs */
-    symbol_info_t **       sym_rand = NULL; /* Pointers to array of random dataset IDs */
+    symbol_info_t        **sym_com  = NULL; /* Pointers to array of common dataset IDs */
+    symbol_info_t        **sym_rand = NULL; /* Pointers to array of random dataset IDs */
     hid_t                  dapl     = H5I_INVALID_HID;
     hid_t                  mem_sid  = H5I_INVALID_HID; /* Memory dataspace ID */
     hid_t                  fid      = H5I_INVALID_HID; /* SWMR test file ID */

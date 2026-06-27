@@ -557,7 +557,7 @@ vrfy_ns_grp_c(hid_t fid, const char *group_name, unsigned nlinks)
             }
         }
         else {
-            void *      elinkval;
+            void       *elinkval;
             const char *file = NULL;
             const char *path = NULL;
 
@@ -905,7 +905,7 @@ vrfy_ns_grp_d(hid_t fid, const char *group_name, unsigned nlinks)
             }
         }
         else {
-            void *      elinkval;
+            void       *elinkval;
             const char *file = NULL;
             const char *path = NULL;
 
@@ -1465,7 +1465,7 @@ rm_ds_ctg_i(hid_t fid, const char *dset_name, hbool_t H5_ATTR_UNUSED write_data)
 hbool_t
 ds_ctg_i(hid_t fid, const char *dset_name, hbool_t write_data)
 {
-    int *    wdata = NULL;
+    int     *wdata = NULL;
     unsigned u;
     hid_t    dsid    = -1;
     hid_t    sid     = -1;
@@ -1543,7 +1543,7 @@ ds_ctg_i(hid_t fid, const char *dset_name, hbool_t write_data)
 hbool_t
 vrfy_ds_ctg_i(hid_t fid, const char *dset_name, hbool_t write_data)
 {
-    int *              rdata = NULL;
+    int               *rdata = NULL;
     unsigned           u;
     hid_t              dsid = -1;
     hid_t              sid  = -1;
@@ -1725,7 +1725,7 @@ rm_ds_chk_i(hid_t fid, const char *dset_name, hbool_t H5_ATTR_UNUSED write_data)
 hbool_t
 ds_chk_i(hid_t fid, const char *dset_name, hbool_t write_data)
 {
-    int *    wdata = NULL;
+    int     *wdata = NULL;
     unsigned u;
     hid_t    dsid          = -1;
     hid_t    dcpl          = -1;
@@ -1824,7 +1824,7 @@ ds_chk_i(hid_t fid, const char *dset_name, hbool_t write_data)
 hbool_t
 vrfy_ds_chk_i(hid_t fid, const char *dset_name, hbool_t write_data)
 {
-    int *              rdata = NULL;
+    int               *rdata = NULL;
     unsigned           u;
     hid_t              dsid = -1;
     hid_t              sid  = -1;
@@ -2014,7 +2014,7 @@ rm_ds_cpt_i(hid_t fid, const char *dset_name, hbool_t H5_ATTR_UNUSED write_data)
 hbool_t
 ds_cpt_i(hid_t fid, const char *dset_name, hbool_t write_data)
 {
-    int *    wdata = NULL;
+    int     *wdata = NULL;
     unsigned u;
     hid_t    dsid    = -1;
     hid_t    dcpl    = -1;
@@ -2114,7 +2114,7 @@ ds_cpt_i(hid_t fid, const char *dset_name, hbool_t write_data)
 hbool_t
 vrfy_ds_cpt_i(hid_t fid, const char *dset_name, hbool_t write_data)
 {
-    int *              rdata = NULL;
+    int               *rdata = NULL;
     unsigned           u;
     hid_t              dsid = -1;
     hid_t              sid  = -1;
@@ -2294,7 +2294,7 @@ ds_ctg_v(hid_t fid, const char *dset_name, hbool_t write_data)
     hid_t    tid     = -1;
     hsize_t  dims[1] = {DSET_SMALL_DIMS};
     herr_t   ret;
-    hvl_t *  wdata = NULL;
+    hvl_t   *wdata = NULL;
     unsigned u;
 
     sid = H5Screate_simple(1, dims, NULL);
@@ -2327,7 +2327,7 @@ ds_ctg_v(hid_t fid, const char *dset_name, hbool_t write_data)
         }
 
         for (u = 0; u < DSET_SMALL_DIMS; u++) {
-            int *    tdata;
+            int     *tdata;
             unsigned len;
             unsigned v;
 
@@ -2422,7 +2422,7 @@ vrfy_ds_ctg_v(hid_t fid, const char *dset_name, hbool_t write_data)
     int                ndims;
     hsize_t            dims[1], max_dims[1];
     htri_t             type_equal;
-    hvl_t *            rdata = NULL;
+    hvl_t             *rdata = NULL;
     unsigned           u;
     herr_t             ret;
 
@@ -2723,11 +2723,11 @@ static hbool_t
 tend_zoo(hid_t fid, const char *base_path, struct timespec *lastmsgtime, zoo_config_t config,
          const phase_t *phase, size_t nphases)
 {
-    char             full_path[1024];
-    int              i, nwritten;
-    size_t           j;
-    char *           leafp;
-    hbool_t          ok = true;
+    char               full_path[1024];
+    int                i, nwritten;
+    size_t             j;
+    char              *leafp;
+    hbool_t            ok                = true;
     static const char *last_failure_mssg = "";
 
     nwritten = snprintf(full_path, sizeof(full_path), "%s/*", base_path);

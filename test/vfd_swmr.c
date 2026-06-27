@@ -160,7 +160,7 @@ void
 check_endian(hbool_t *little_endian)
 {
     short int word = 0x0001;
-    char *    byte = (char *)&word;
+    char     *byte = (char *)&word;
 
     if (byte[0] == 1)
         /* little endian */
@@ -767,7 +767,7 @@ test_file_end_tick(hid_t orig_fapl)
     H5F_vfd_swmr_config_t *config1 = NULL;            /* Configuration for VFD SWMR */
     H5F_vfd_swmr_config_t *config2 = NULL;            /* Configuration for VFD SWMR */
     H5F_vfd_swmr_config_t *config3 = NULL;            /* Configuration for VFD SWMR */
-    H5F_t *                f1, *f2, *f3;              /* File pointer */
+    H5F_t                 *f1, *f2, *f3;              /* File pointer */
     uint64_t               s1 = 0;                    /* Saved tick_num */
     uint64_t               s2 = 0;                    /* Saved tick_num */
     uint64_t               s3 = 0;                    /* Saved tick_num */
@@ -1127,19 +1127,19 @@ test_writer_md(hid_t orig_fapl)
     hid_t          fcpl        = H5I_INVALID_HID;                      /* File creation property list */
     const unsigned num_entries = 10;                                   /* index size */
     unsigned       i           = 0;                                    /* Local index variables */
-    uint8_t *      buf         = NULL;                                 /* Data page from the page buffer */
+    uint8_t       *buf         = NULL;                                 /* Data page from the page buffer */
     hid_t          dcpl        = H5I_INVALID_HID;                      /* Dataset creation property list */
     hid_t          sid         = H5I_INVALID_HID;                      /* Dataspace ID */
     hid_t          did         = H5I_INVALID_HID;                      /* Dataset ID */
-    int *          rwbuf       = NULL;                                 /* Data buffer for writing */
+    int           *rwbuf       = NULL;                                 /* Data buffer for writing */
     H5O_info2_t    oinfo;                                              /* Object metadata information */
     char           dname[100];                                         /* Name of dataset */
     hsize_t        dims[2]           = {50, 20};                       /* Dataset dimension sizes */
     hsize_t        max_dims[2]       = {H5S_UNLIMITED, H5S_UNLIMITED}; /* Dataset maximum dimension sizes */
     hsize_t        chunk_dims[2]     = {2, 5};                         /* Dataset chunked dimension sizes */
     H5FD_vfd_swmr_idx_entry_t *index = NULL;                           /* Pointer to the index entries */
-    H5F_vfd_swmr_config_t *    my_config = NULL;                       /* Configuration for VFD SWMR */
-    H5F_t *                    f         = NULL;                       /* Internal file object pointer */
+    H5F_vfd_swmr_config_t     *my_config = NULL;                       /* Configuration for VFD SWMR */
+    H5F_t                     *f         = NULL;                       /* Internal file object pointer */
 
     TESTING("Verify the metadata file for VFD SWMR writer");
 
@@ -1435,11 +1435,11 @@ test_reader_md_concur(hid_t orig_fapl)
 {
     char        filename[FILE_NAME_LEN]; /* Filename to use */
     unsigned    i     = 0;               /* Local index variables */
-    uint8_t *   buf   = NULL;            /* Data page from the page buffer */
+    uint8_t    *buf   = NULL;            /* Data page from the page buffer */
     hid_t       dcpl  = H5I_INVALID_HID; /* Dataset creation property list */
     hid_t       sid   = H5I_INVALID_HID; /* Dataspace ID */
     hid_t       did   = H5I_INVALID_HID; /* Dataset ID */
-    int *       rwbuf = NULL;            /* Data buffer for writing */
+    int        *rwbuf = NULL;            /* Data buffer for writing */
     H5O_info2_t oinfo;                   /* Object metadata information */
     char        dname[100];              /* Name of dataset */
     hsize_t     dims[2]     = {50, 20};  /* Dataset dimension sizes */
@@ -1519,8 +1519,8 @@ test_reader_md_concur(hid_t orig_fapl)
         int                        child_notify = 0;               /* Notification between child and parent */
         hid_t                      fid_reader   = H5I_INVALID_HID; /* File ID for reader */
         hid_t                      fapl_reader  = H5I_INVALID_HID; /* File access property list for reader */
-        H5F_t *                    file_reader;                    /* File pointer for reader */
-        H5F_vfd_swmr_config_t *    config_reader     = NULL;       /* VFD SWMR configuration for reader */
+        H5F_t                     *file_reader;                    /* File pointer for reader */
+        H5F_vfd_swmr_config_t     *config_reader     = NULL;       /* VFD SWMR configuration for reader */
         unsigned                   child_num_entries = 0;          /* Number of entries passed to reader */
         H5FD_vfd_swmr_idx_entry_t *child_index       = NULL;       /* Index passed to reader */
 
@@ -2097,8 +2097,8 @@ test_multiple_file_opens_concur(hid_t orig_fapl)
     hid_t                  fapl2   = H5I_INVALID_HID;
     H5F_vfd_swmr_config_t *config1 = NULL; /* VFD SWMR configuration */
     H5F_vfd_swmr_config_t *config2 = NULL; /* VFD SWMR configuration */
-    H5F_t *                f1, *f2;        /* File pointer */
-    eot_queue_entry_t *    curr;
+    H5F_t                 *f1, *f2;        /* File pointer */
+    eot_queue_entry_t     *curr;
 
     TESTING("EOT queue entries when opening files concurrently with VFD SWMR");
 
@@ -2475,8 +2475,8 @@ test_enable_disable_eot_concur(hid_t orig_fapl)
         hid_t                  fid_reader3   = H5I_INVALID_HID; /* File ID for reader */
         hid_t                  fapl_reader   = H5I_INVALID_HID; /* File access property list for reader */
         H5F_vfd_swmr_config_t *config_reader = NULL;            /* VFD SWMR configuration */
-        H5F_t *                file_reader;                     /* File pointer */
-        eot_queue_entry_t *    curr;                            /* Pointer to an entry on the EOT queue */
+        H5F_t                 *file_reader;                     /* File pointer */
+        eot_queue_entry_t     *curr;                            /* Pointer to an entry on the EOT queue */
         unsigned               count = 0;                       /* Counter */
 
         /* Close unused write end for writer pipe */
@@ -2773,7 +2773,7 @@ test_file_end_tick_concur(hid_t orig_fapl)
         hid_t                  fid_reader3   = H5I_INVALID_HID; /* File ID for reader */
         hid_t                  fapl_reader   = H5I_INVALID_HID; /* File access property list for reader */
         H5F_vfd_swmr_config_t *config_reader = NULL;            /* VFD SWMR configuration */
-        H5F_t *                f1, *f2, *f3;                    /* File pointer */
+        H5F_t                 *f1, *f2, *f3;                    /* File pointer */
         uint64_t               s1 = 0;                          /* Saved tick_num */
         uint64_t               s2 = 0;                          /* Saved tick_num */
         uint64_t               s3 = 0;                          /* Saved tick_num */
@@ -2997,7 +2997,7 @@ test_make_believe_multiple_file_opens_concur(hid_t orig_fapl)
     hid_t                  fid    = H5I_INVALID_HID;
     hid_t                  fapl   = H5I_INVALID_HID;
     H5F_vfd_swmr_config_t *config = NULL; /* VFD SWMR configuration */
-    H5F_t *                f;             /* File pointer */
+    H5F_t                 *f;             /* File pointer */
 
     TESTING("Verify make-believe-data when opening files concurrently as VFD SWMR reader and then as VFD "
             "SWMR writer");
@@ -3258,10 +3258,10 @@ test_multiple_file_opens(hid_t orig_fapl)
     hid_t                  fcpl  = H5I_INVALID_HID;     /* File creation property list ID */
     hid_t                  fapl1 = H5I_INVALID_HID;     /* File access property list ID */
     hid_t                  fapl2 = H5I_INVALID_HID;     /* File access property list ID */
-    H5F_t *                f1, *f2, *f;                 /* File pointer */
+    H5F_t                 *f1, *f2, *f;                 /* File pointer */
     H5F_vfd_swmr_config_t *config1 = NULL;              /* Configuration for VFD SWMR */
     H5F_vfd_swmr_config_t *config2 = NULL;              /* Configuration for VFD SWMR */
-    eot_queue_entry_t *    curr;
+    eot_queue_entry_t     *curr;
 
     TESTING("EOT queue entries when opening files with/without VFD SWMR");
 
@@ -3863,8 +3863,8 @@ test_shadow_index_lookup(void)
     unsigned                   i, j, failj = UINT_MAX;
     hbool_t                    have_failj = false;
     unsigned long              tmpl;
-    const char *               seedvar = "H5_SHADOW_INDEX_SEED";
-    const char *               failvar = "H5_SHADOW_INDEX_FAIL";
+    const char                *seedvar = "H5_SHADOW_INDEX_SEED";
+    const char                *failvar = "H5_SHADOW_INDEX_FAIL";
 
     TESTING("Shadow-index lookups");
 
@@ -3968,11 +3968,11 @@ test_enable_disable_eot(hid_t orig_fapl)
     hid_t                  fapl1 = H5I_INVALID_HID;     /* File access property list ID */
     hid_t                  fapl2 = H5I_INVALID_HID;     /* File access property list ID */
     hid_t                  fapl3 = H5I_INVALID_HID;     /* File access property list ID */
-    H5F_t *                f1, *f2, *f3;                /* File pointer */
+    H5F_t                 *f1, *f2, *f3;                /* File pointer */
     H5F_vfd_swmr_config_t *config1 = NULL;              /* Configuration for VFD SWMR */
     H5F_vfd_swmr_config_t *config2 = NULL;              /* Configuration for VFD SWMR */
     H5F_vfd_swmr_config_t *config3 = NULL;              /* Configuration for VFD SWMR */
-    eot_queue_entry_t *    curr;                        /* Pointer to an entry on the EOT queue */
+    eot_queue_entry_t     *curr;                        /* Pointer to an entry on the EOT queue */
     unsigned               count = 0;                   /* Counter */
     herr_t                 ret;                         /* Return value */
 
@@ -4239,7 +4239,7 @@ error:
 static herr_t
 verify_updater_flags(char *ud_name, uint16_t expected_flags)
 {
-    FILE *   ud_fp         = NULL;  /* Updater file pointer */
+    FILE    *ud_fp         = NULL;  /* Updater file pointer */
     uint16_t flags         = 0;     /* The "flags" field in the updater file */
     uint16_t swapped_flags = 0;     /* The "flags" field in the updater file */
     hbool_t  little_endian = false; /* Endianness of a machine */
@@ -4634,8 +4634,8 @@ verify_ud_chk(char *md_file_path, char *ud_file_path)
 {
     char     chk_name[FILE_NAME_LEN]; /* Checksum file name */
     char     ud_name[FILE_NAME_LEN];  /* Updater file name */
-    FILE *   chk_fp = NULL;           /* Checksum file pointer */
-    FILE *   ud_fp  = NULL;           /* Updater file pointer */
+    FILE    *chk_fp = NULL;           /* Checksum file pointer */
+    FILE    *ud_fp  = NULL;           /* Updater file pointer */
     uint64_t i;                       /* Local index variable */
     long     size = 0;                /* Size of the file */
 
@@ -4764,10 +4764,10 @@ error:
 static herr_t
 md_ck_cb(char *md_file_path, uint64_t updater_seq_num)
 {
-    FILE *   md_fp  = NULL;           /* Metadata file pointer */
-    FILE *   chk_fp = NULL;           /* Checksum file pointer */
+    FILE    *md_fp  = NULL;           /* Metadata file pointer */
+    FILE    *chk_fp = NULL;           /* Checksum file pointer */
     long     size   = 0;              /* File size returned from HDftell() */
-    void *   buf    = NULL;           /* Buffer for holding the metadata file content */
+    void    *buf    = NULL;           /* Buffer for holding the metadata file content */
     uint32_t chksum = 0;              /* The checksum generated for the metadata file */
     char     chk_name[FILE_NAME_LEN]; /* Buffer for the checksum file name */
     size_t   ret;                     /* Return value */
@@ -4868,10 +4868,10 @@ test_updater_generate_md_checksums(hid_t orig_fapl, hbool_t file_create)
     hid_t                   fid    = H5I_INVALID_HID; /* File ID */
     hid_t                   fcpl   = H5I_INVALID_HID; /* File creation property list ID */
     hid_t                   fapl   = H5I_INVALID_HID; /* File access property list ID */
-    H5F_vfd_swmr_config_t * config = NULL;            /* Configuration for VFD SWMR */
+    H5F_vfd_swmr_config_t  *config = NULL;            /* Configuration for VFD SWMR */
     H5F_generate_md_ck_cb_t cb_info;                  /* Callback */
-    H5F_t *                 f                 = NULL; /* Internal file object pointer */
-    char *                  md_file_path_name = NULL;
+    H5F_t                  *f                 = NULL; /* Internal file object pointer */
+    char                   *md_file_path_name = NULL;
 
     if (file_create) {
         TESTING("VFD SWMR updater generate checksums for metadata file with H5Fcreate");
@@ -4994,7 +4994,7 @@ test_auto_generate_md(hid_t orig_fapl, const char *md_path)
     hid_t                  fcpl = H5I_INVALID_HID;     /* File creation property list ID */
     hid_t                  fapl = H5I_INVALID_HID; /* File access property list ID associated with the file */
     H5F_vfd_swmr_config_t *config = NULL;          /* Configuration for VFD SWMR */
-    H5F_t *                f;                      /* File pointer */
+    H5F_t                 *f;                      /* File pointer */
 
     TESTING("Automatic generation of metadata file name with/without md_path");
 
@@ -5575,8 +5575,8 @@ main(void)
     hid_t fapl = H5I_INVALID_HID;      /* File access property list for */
                                        /* data files                    */
     unsigned      nerrors      = 0;    /* Cumulative error count */
-    char *        lock_env_var = NULL; /* File locking env var pointer */
-    const char *  env_h5_drvr  = NULL; /* File Driver value from environment */
+    char         *lock_env_var = NULL; /* File locking env var pointer */
+    const char   *env_h5_drvr  = NULL; /* File Driver value from environment */
     hbool_t       use_file_locking;    /* Read from env var */
     hid_t         driver_id    = -1;   /* ID for this VFD */
     unsigned long driver_flags = 0;    /* VFD feature flags */

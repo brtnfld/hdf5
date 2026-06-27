@@ -2756,7 +2756,7 @@ done:
 herr_t
 H5Fvfd_swmr_end_tick(hid_t file_id)
 {
-    H5VL_object_t *      vol_obj = NULL;      /* File */
+    H5VL_object_t       *vol_obj = NULL;      /* File */
     H5VL_optional_args_t vol_cb_args;         /* Arguments to VOL callback */
     herr_t               ret_value = SUCCEED; /* Return value */
 
@@ -2792,7 +2792,7 @@ done:
 herr_t
 H5Fvfd_swmr_disable_end_of_tick(hid_t file_id)
 {
-    H5VL_object_t *      vol_obj = NULL;      /* File */
+    H5VL_object_t       *vol_obj = NULL;      /* File */
     H5VL_optional_args_t vol_cb_args;         /* Arguments to VOL callback */
     herr_t               ret_value = SUCCEED; /* Return value */
 
@@ -2826,7 +2826,7 @@ done:
 herr_t
 H5Fvfd_swmr_enable_end_of_tick(hid_t file_id)
 {
-    H5VL_object_t *      vol_obj = NULL;      /* File */
+    H5VL_object_t       *vol_obj = NULL;      /* File */
     H5VL_optional_args_t vol_cb_args;         /* Arguments to VOL callback */
     herr_t               ret_value = SUCCEED; /* Return value */
 

@@ -44,9 +44,9 @@
 #define H5C_FLUSH_DEP_PARENT_INIT 8
 
 /* Page index hash table size for VFD SWMR reader */
-#define H5C__PAGE_HASH_TABLE_LEN (4 * 1024)  /* must be a power of 2 */
-#define H5C__PI_HASH_MASK ((uint64_t)(H5C__PAGE_HASH_TABLE_LEN - 1))
-#define H5C__PI_HASH_FCN(x) (int)(((uint64_t)(x)) & H5C__PI_HASH_MASK)
+#define H5C__PAGE_HASH_TABLE_LEN (4 * 1024) /* must be a power of 2 */
+#define H5C__PI_HASH_MASK        ((uint64_t)(H5C__PAGE_HASH_TABLE_LEN - 1))
+#define H5C__PI_HASH_FCN(x)      (int)(((uint64_t)(x)) & H5C__PI_HASH_MASK)
 
 /* Extra space allocated for memory sanity checks on cache images */
 #if H5C_DO_MEMORY_SANITY_CHECKS
@@ -57,24 +57,23 @@
 #endif
 
 /* Page buffer hint maintenance macros */
-#define H5C__SET_PB_READ_HINTS(cache_ptr, type, may_be_speculative)                         \
-    {                                                                                        \
-        assert(cache_ptr);                                                                   \
-        assert((cache_ptr)->curr_io_type == NULL);                                           \
-        assert(type);                                                                        \
-        (cache_ptr)->curr_io_type = (type);                                                  \
-        (cache_ptr)->curr_read_speculative =                                                 \
-            (may_be_speculative) && ((cache_ptr)->curr_io_type->flags & H5AC__CLASS_SPECULATIVE_LOAD_FLAG); \
+#define H5C__SET_PB_READ_HINTS(cache_ptr, type, may_be_speculative)                                          \
+    {                                                                                                        \
+        assert(cache_ptr);                                                                                   \
+        assert((cache_ptr)->curr_io_type == NULL);                                                           \
+        assert(type);                                                                                        \
+        (cache_ptr)->curr_io_type = (type);                                                                  \
+        (cache_ptr)->curr_read_speculative =                                                                 \
+            (may_be_speculative) && ((cache_ptr)->curr_io_type->flags & H5AC__CLASS_SPECULATIVE_LOAD_FLAG);  \
     } /* H5C__SET_PB_READ_HINTS() */
 
-#define H5C__RESET_PB_READ_HINTS(cache_ptr)                                                 \
-    {                                                                                        \
-        assert(cache_ptr);                                                                   \
-        assert((cache_ptr)->curr_io_type);                                                   \
-        (cache_ptr)->curr_io_type          = NULL;                                           \
-        (cache_ptr)->curr_read_speculative = false;                                          \
+#define H5C__RESET_PB_READ_HINTS(cache_ptr)                                                                  \
+    {                                                                                                        \
+        assert(cache_ptr);                                                                                   \
+        assert((cache_ptr)->curr_io_type);                                                                   \
+        (cache_ptr)->curr_io_type          = NULL;                                                           \
+        (cache_ptr)->curr_read_speculative = false;                                                          \
     } /* H5C__RESET_PB_READ_HINTS() */
-
 
 /****************************************************************************
  *
@@ -2924,9 +2923,9 @@ struct H5C_t {
     H5C_cache_entry_t *il_tail;
 
     /* Fields supporting VFD SWMR */
-    hbool_t             vfd_swmr_reader;
-    H5C_cache_entry_t * page_index[H5C__PAGE_HASH_TABLE_LEN];
-    hsize_t             page_size;
+    hbool_t            vfd_swmr_reader;
+    H5C_cache_entry_t *page_index[H5C__PAGE_HASH_TABLE_LEN];
+    hsize_t            page_size;
 
     /* Fields to detect entries removed during scans */
     int64_t            entries_removed_counter;
@@ -3042,8 +3041,8 @@ struct H5C_t {
     bool mdfsm_settled;
 
     /* Fields supporting page buffer hints */
-    const H5C_class_t * curr_io_type;
-    hbool_t             curr_read_speculative;
+    const H5C_class_t *curr_io_type;
+    hbool_t            curr_read_speculative;
 
 #if H5C_COLLECT_CACHE_STATS
     /* stats fields */

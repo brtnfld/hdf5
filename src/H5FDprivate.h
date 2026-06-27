@@ -42,38 +42,38 @@
 #define H5FD_SIZEOF_CHKSUM   4      /* Size of checksum */
 
 /* Size of the header in the metadata file */
-#define H5FD_MD_HEADER_SIZE \
-    (H5_SIZEOF_MAGIC      /* Signature */         \
-     + 4                  /* Page size */          \
-     + 8                  /* Tick number */        \
-     + 8                  /* Index offset */       \
-     + 8                  /* Index length */       \
-     + H5FD_SIZEOF_CHKSUM /* Header checksum */   \
+#define H5FD_MD_HEADER_SIZE                                                                                  \
+    (H5_SIZEOF_MAGIC      /* Signature */                                                                    \
+     + 4                  /* Page size */                                                                    \
+     + 8                  /* Tick number */                                                                  \
+     + 8                  /* Index offset */                                                                 \
+     + 8                  /* Index length */                                                                 \
+     + H5FD_SIZEOF_CHKSUM /* Header checksum */                                                              \
     )
 
 /* Size of an index entry in the metadata file */
-#define H5FD_MD_INDEX_ENTRY_SIZE \
-    (4                    /* HDF5 file page offset */  \
-     + 4                  /* MD file page offset */    \
-     + 4                  /* Length */                 \
-     + H5FD_SIZEOF_CHKSUM /* Entry checksum */        \
+#define H5FD_MD_INDEX_ENTRY_SIZE                                                                             \
+    (4                    /* HDF5 file page offset */                                                        \
+     + 4                  /* MD file page offset */                                                          \
+     + 4                  /* Length */                                                                       \
+     + H5FD_SIZEOF_CHKSUM /* Entry checksum */                                                               \
     )
 
 /* Metadata file index magic */
 #define H5FD_MD_INDEX_MAGIC "VIDX"
 
 /* Size of the metadata file index (N = number of entries) */
-#define H5FD_MD_INDEX_SIZE(N) \
-    (H5_SIZEOF_MAGIC                  /* Signature */          \
-     + 8                              /* Tick num */           \
-     + 4                              /* Number of entries */  \
-     + ((N) * H5FD_MD_INDEX_ENTRY_SIZE) /* Index entries */   \
-     + H5FD_SIZEOF_CHKSUM             /* Index checksum */    \
+#define H5FD_MD_INDEX_SIZE(N)                                                                                \
+    (H5_SIZEOF_MAGIC                    /* Signature */                                                      \
+     + 8                                /* Tick num */                                                       \
+     + 4                                /* Number of entries */                                              \
+     + ((N) * H5FD_MD_INDEX_ENTRY_SIZE) /* Index entries */                                                  \
+     + H5FD_SIZEOF_CHKSUM               /* Index checksum */                                                 \
     )
 
 /* Retries for metadata file */
-#define H5FD_VFD_SWMR_MD_FILE_RETRY_MAX 50
-#define H5FD_VFD_SWMR_MD_LOAD_RETRY_MAX 120
+#define H5FD_VFD_SWMR_MD_FILE_RETRY_MAX  50
+#define H5FD_VFD_SWMR_MD_LOAD_RETRY_MAX  120
 #define H5FD_VFD_SWMR_MD_INDEX_RETRY_MAX 5
 
 #ifdef H5_HAVE_PARALLEL
@@ -142,7 +142,7 @@ typedef struct H5FD_vfd_swmr_idx_entry_t {
     uint64_t md_file_page_offset;
     uint32_t length;
     uint32_t checksum;
-    void *   entry_ptr;
+    void    *entry_ptr;
     uint64_t tick_of_last_change;
     hbool_t  clean;
     uint64_t tick_of_last_flush;
@@ -275,8 +275,8 @@ H5_DLL herr_t H5FD_sort_selection_io_req(bool *selection_was_sorted, size_t coun
  * in the HDF5 file.  Returns NULL if no match.
  */
 static inline H5FD_vfd_swmr_idx_entry_t *
-H5FD_vfd_swmr_pageno_to_mdf_idx_entry(H5FD_vfd_swmr_idx_entry_t *idx, uint32_t nentries,
-                                      uint64_t target_page, bool reuse_garbage)
+H5FD_vfd_swmr_pageno_to_mdf_idx_entry(H5FD_vfd_swmr_idx_entry_t *idx, uint32_t nentries, uint64_t target_page,
+                                      bool reuse_garbage)
 {
     uint32_t top;
     uint32_t bottom;
@@ -303,8 +303,8 @@ H5FD_vfd_swmr_pageno_to_mdf_idx_entry(H5FD_vfd_swmr_idx_entry_t *idx, uint32_t n
 }
 
 /* Function prototypes for VFD SWMR */
-H5_DLL herr_t  H5FD_vfd_swmr_get_tick_and_idx(H5FD_t *_file, hbool_t read_index, uint64_t *tick_ptr,
-                                              uint32_t *num_entries_ptr, H5FD_vfd_swmr_idx_entry_t index[]);
+H5_DLL herr_t H5FD_vfd_swmr_get_tick_and_idx(H5FD_t *_file, hbool_t read_index, uint64_t *tick_ptr,
+                                             uint32_t *num_entries_ptr, H5FD_vfd_swmr_idx_entry_t index[]);
 
 /* Function prototypes for MPI based VFDs*/
 #ifdef H5_HAVE_PARALLEL

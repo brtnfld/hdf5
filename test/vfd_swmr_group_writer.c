@@ -47,11 +47,11 @@ typedef struct {
     uint32_t     pbs;
 #ifdef H5_USE_SOCKETS
     socket_state_t sock;
-#else /* H5_USE_SOCKETS */
-    int          np_fd_w_to_r;
-    int          np_fd_r_to_w;
-    int          np_notify;
-    int          np_verify;
+#else  /* H5_USE_SOCKETS */
+    int np_fd_w_to_r;
+    int np_fd_r_to_w;
+    int np_notify;
+    int np_verify;
 #endif /* H5_USE_SOCKETS */
 } state_t;
 
@@ -98,51 +98,49 @@ usage(const char *progname)
               "                                       deleted, the storage changed to\n"
               "                                       compact\n"
               "              `modify`               - An attribute added then modified\n",
-            progname);
+              progname);
     /* Need to split this print function to remove compiler warnings (print too large) */
-    HDfprintf(stderr, 
-              "              `add-vstr`             - A VL string attribute added\n"
-              "              `remove-vstr`          - A VL string attribute added then\n"
-              "                                       deleted\n"
-              "              `modify-vstr`          - A VL string attribute added then \n"
-              "                                       modified \n"
-              "              `add-ohr-block`        - An attribute is added and this forces\n"
-              "                                       the creation of object header\n"
-              "                                       continuation block \n"
-              "              `del-ohr-block`        - An attribute is added and this forces\n"
-              "                                       the creation of object header\n"
-              "                                       continuation block and then this \n"
-              "                                       attribute is deleted so the \n"
-              "                                       object header continuation block is \n"
-              "                                       removed. \n"
-              "-O grp_op_pattern:  `grp_op_pattern' for different group operation tests\n"
-              "              The value of `grp_op_pattern` is one of the following:\n"
-              "              `grp-creation`         - A group is created.\n"
-              "              `grp-deletion`         - An existing group is deleted.\n"
-              "              `grp-move`             - A group is moved to become \n"
-              "                                       another group. \n"
-              "              `grp-ins-links`        - Links are inserted, including\n"
-              "                                       both hard and soft links. \n"
-              "              `grp-del-links`        - Links are deleted, including\n"
-              "                                       both hard ans soft links. \n"
-              "              `grp-compact-t-dense`  - Links are inserted to the group.\n"
-              "                                       The link storage of this group \n"
-              "                                       changed from compact to dense. \n"
-              "                                       The links include both hard and\n"
-              "                                       soft links.                    \n"
-              "              `grp-dense-t-compact`  - Links are inserted to the group\n"
-              "                                       The link storage of this group \n"
-              "                                       changed from compact to dense. \n"
-              "                                       Then several links are deleted.\n"
-              "                                       The link storage changed from  \n"
-              "                                       dense to compact again.        \n"
-              "                                       The links include both hard and\n"
-              "                                       soft links.                    \n"
-              "-q:             silence printouts, few messages\n"
-              "\n");
+    HDfprintf(stderr, "              `add-vstr`             - A VL string attribute added\n"
+                      "              `remove-vstr`          - A VL string attribute added then\n"
+                      "                                       deleted\n"
+                      "              `modify-vstr`          - A VL string attribute added then \n"
+                      "                                       modified \n"
+                      "              `add-ohr-block`        - An attribute is added and this forces\n"
+                      "                                       the creation of object header\n"
+                      "                                       continuation block \n"
+                      "              `del-ohr-block`        - An attribute is added and this forces\n"
+                      "                                       the creation of object header\n"
+                      "                                       continuation block and then this \n"
+                      "                                       attribute is deleted so the \n"
+                      "                                       object header continuation block is \n"
+                      "                                       removed. \n"
+                      "-O grp_op_pattern:  `grp_op_pattern' for different group operation tests\n"
+                      "              The value of `grp_op_pattern` is one of the following:\n"
+                      "              `grp-creation`         - A group is created.\n"
+                      "              `grp-deletion`         - An existing group is deleted.\n"
+                      "              `grp-move`             - A group is moved to become \n"
+                      "                                       another group. \n"
+                      "              `grp-ins-links`        - Links are inserted, including\n"
+                      "                                       both hard and soft links. \n"
+                      "              `grp-del-links`        - Links are deleted, including\n"
+                      "                                       both hard ans soft links. \n"
+                      "              `grp-compact-t-dense`  - Links are inserted to the group.\n"
+                      "                                       The link storage of this group \n"
+                      "                                       changed from compact to dense. \n"
+                      "                                       The links include both hard and\n"
+                      "                                       soft links.                    \n"
+                      "              `grp-dense-t-compact`  - Links are inserted to the group\n"
+                      "                                       The link storage of this group \n"
+                      "                                       changed from compact to dense. \n"
+                      "                                       Then several links are deleted.\n"
+                      "                                       The link storage changed from  \n"
+                      "                                       dense to compact again.        \n"
+                      "                                       The links include both hard and\n"
+                      "                                       soft links.                    \n"
+                      "-q:             silence printouts, few messages\n"
+                      "\n");
     HDexit(EXIT_FAILURE);
 }
-
 
 #ifdef H5_USE_SOCKETS
 static hbool_t
@@ -151,33 +149,30 @@ state_init(state_t *s, int argc, char **argv)
     unsigned long          tmp;
     int                    opt;
     const hsize_t          dims  = 1;
-    char *                 tfile = NULL;
-    char *                 end;
-    const char *           s_opts   = "SGa:bc:i:n:Nqu:t:m:B:s:A:O:";
-    struct h5_long_options l_opts[] = {
-        {"ip_addr", require_arg, 'i'},
-        {NULL, 0, '\0'}
-    };
+    char                  *tfile = NULL;
+    char                  *end;
+    const char            *s_opts   = "SGa:bc:i:n:Nqu:t:m:B:s:A:O:";
+    struct h5_long_options l_opts[] = {{"ip_addr", require_arg, 'i'}, {NULL, 0, '\0'}};
 
-    s->file            = H5I_INVALID_HID;
-    s->one_by_one_sid  = H5I_INVALID_HID;
-    s->filetype        = H5T_NATIVE_UINT32;
-    s->asteps          = 10;
-    s->csteps          = 10;
-    s->nsteps          = 100;
-    s->update_interval = READER_WAIT_TICKS;
-    s->use_vfd_swmr    = true;
-    s->old_style_grp   = false;
+    s->file              = H5I_INVALID_HID;
+    s->one_by_one_sid    = H5I_INVALID_HID;
+    s->filetype          = H5T_NATIVE_UINT32;
+    s->asteps            = 10;
+    s->csteps            = 10;
+    s->nsteps            = 100;
+    s->update_interval   = READER_WAIT_TICKS;
+    s->use_vfd_swmr      = true;
+    s->old_style_grp     = false;
     s->use_communication = true;
-    s->grp_op_pattern  = ' ';
-    s->grp_op_test     = false;
-    s->at_pattern      = ' ';
-    s->attr_test       = false;
-    s->tick_len        = 4;
-    s->max_lag         = 7;
-    s->ps              = 4096;
-    s->pbs             = 4096;
-    
+    s->grp_op_pattern    = ' ';
+    s->grp_op_test       = false;
+    s->at_pattern        = ' ';
+    s->attr_test         = false;
+    s->tick_len          = 4;
+    s->max_lag           = 7;
+    s->ps                = 4096;
+    s->pbs               = 4096;
+
     if (!socket_init(&s->sock)) {
         HDprintf("socket_init failed\n");
         TEST_ERROR;
@@ -251,11 +246,11 @@ state_init(state_t *s, int argc, char **argv)
                 break;
             case 'i':
                 if (HDstrlen(H5_optarg) >= MAX_IP_ADDR_LEN) {
-                        HDfprintf(stderr, "-i,--ip_addr argument %s is too long\n", H5_optarg);
-                        TEST_ERROR;
-                    }
-                    s->sock.ip_address = H5_optarg;
-                    break;
+                    HDfprintf(stderr, "-i,--ip_addr argument %s is too long\n", H5_optarg);
+                    TEST_ERROR;
+                }
+                s->sock.ip_address = H5_optarg;
+                break;
             case 'N':
                 s->use_communication = false;
                 break;
@@ -485,7 +480,7 @@ sock_rd_send(state_t *s)
         AT();
         HDprintf("send failed\n");
         return false;
-    } 
+    }
     else {
         return true;
     }
@@ -524,37 +519,33 @@ state_init(state_t *s, int argc, char **argv)
     unsigned long          tmp;
     int                    opt;
     const hsize_t          dims  = 1;
-    char *                 tfile = NULL;
-    char *                 end;
-    const char *           s_opts   = "SGa:bc:i:n:Nqu:t:m:B:s:A:O:";
-    struct h5_long_options l_opts[] = {
-        {"ip_addr", require_arg, 'i'},
-        {NULL, 0, '\0'}
-    };
+    char                  *tfile = NULL;
+    char                  *end;
+    const char            *s_opts   = "SGa:bc:i:n:Nqu:t:m:B:s:A:O:";
+    struct h5_long_options l_opts[] = {{"ip_addr", require_arg, 'i'}, {NULL, 0, '\0'}};
 
-    s->file            = H5I_INVALID_HID;
-    s->one_by_one_sid  = H5I_INVALID_HID;
-    s->filetype        = H5T_NATIVE_UINT32;
-    s->asteps          = 10;
-    s->csteps          = 10;
-    s->nsteps          = 100;
-    s->update_interval = READER_WAIT_TICKS;
-    s->use_vfd_swmr    = true;
-    s->old_style_grp   = false;
+    s->file              = H5I_INVALID_HID;
+    s->one_by_one_sid    = H5I_INVALID_HID;
+    s->filetype          = H5T_NATIVE_UINT32;
+    s->asteps            = 10;
+    s->csteps            = 10;
+    s->nsteps            = 100;
+    s->update_interval   = READER_WAIT_TICKS;
+    s->use_vfd_swmr      = true;
+    s->old_style_grp     = false;
     s->use_communication = true;
-    s->grp_op_pattern  = ' ';
-    s->grp_op_test     = false;
-    s->at_pattern      = ' ';
-    s->attr_test       = false;
-    s->tick_len        = 4;
-    s->max_lag         = 7;
-    s->ps              = 4096;
-    s->pbs             = 4096;
-    s->np_fd_w_to_r    = -1;
-    s->np_fd_r_to_w    = -1;
-    s->np_notify       = 0;
-    s->np_verify       = 0;
-
+    s->grp_op_pattern    = ' ';
+    s->grp_op_test       = false;
+    s->at_pattern        = ' ';
+    s->attr_test         = false;
+    s->tick_len          = 4;
+    s->max_lag           = 7;
+    s->ps                = 4096;
+    s->pbs               = 4096;
+    s->np_fd_w_to_r      = -1;
+    s->np_fd_r_to_w      = -1;
+    s->np_notify         = 0;
+    s->np_verify         = 0;
 
     HDmemset(s->filename, 0, PATH_MAX);
     HDmemset(s->progname, 0, PATH_MAX);
@@ -732,8 +723,7 @@ error:
     if (tfile)
         HDfree(tfile);
     return false;
-}/* state_init() */
-
+} /* state_init() */
 
 /* Named Pipe Subroutine: np_wr_send_receive
  * Description:
@@ -1061,7 +1051,7 @@ error2:
 
     return false;
 }
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
  * Function:    add_attr
  *
@@ -1438,7 +1428,7 @@ error:
 error2:
     return false;
 }
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
  * Function:    add_vlstr_attr
  *
@@ -1897,7 +1887,7 @@ error:
 error2:
     return false;
 }
-#else/* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
  * Function:    modify_attr
  *
@@ -2202,7 +2192,7 @@ add_attrs_compact(state_t *s, hid_t g, hid_t gcpl, unsigned int which)
     return add_attr(s, g, which, max_compact, aname_format, which);
 
 error:
-    if (s->use_communication && s->attr_test == true){
+    if (s->use_communication && s->attr_test == true) {
         sock_send_error(s);
     }
     return false;
@@ -2267,7 +2257,6 @@ error:
         sock_send_error(s);
     return false;
 }
-
 
 /*-------------------------------------------------------------------------
  * Function:    del_attrs_compact_dense_compact
@@ -2378,7 +2367,7 @@ error:
 error2:
     return false;
 }
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
  * Function:    add_attrs_compact
  *
@@ -2715,7 +2704,7 @@ error:
         sock_send_error(s);
     return false;
 }
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
  * Function:    add_del_attrs_compact_dense
  *
@@ -3130,7 +3119,7 @@ error2:
 
     return false;
 }
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
  * Function:    write_group
  *
@@ -3479,7 +3468,7 @@ error:
 error2:
     return false;
 }
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
  * Function:    vrfy_attr
  *
@@ -3686,7 +3675,7 @@ verify_modify_attr(state_t *s, hid_t g, unsigned int which)
 {
 
     hbool_t      ret       = false;
-    const char * aname_fmt = "attr-%u";
+    const char  *aname_fmt = "attr-%u";
     unsigned int read_which;
     hid_t        aid    = H5I_INVALID_HID;
     hid_t        amtype = H5I_INVALID_HID;
@@ -4023,7 +4012,7 @@ error:
 error2:
     return false;
 }
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
  * Function:    verify_modify_attr
  *
@@ -4055,7 +4044,7 @@ verify_modify_attr(state_t *s, hid_t g, unsigned int which)
 {
 
     hbool_t      ret       = false;
-    const char * aname_fmt = "attr-%u";
+    const char  *aname_fmt = "attr-%u";
     unsigned int read_which;
     hid_t        aid    = H5I_INVALID_HID;
     hid_t        amtype = H5I_INVALID_HID;
@@ -4928,7 +4917,6 @@ error:
     }
     return false;
 }
-
 
 /*-------------------------------------------------------------------------
  * Function:    verify_group
@@ -8294,9 +8282,9 @@ main(int argc, char **argv)
     hid_t                  fapl = H5I_INVALID_HID, fcpl = H5I_INVALID_HID;
     unsigned               step;
     hbool_t                writer = false;
-    state_t *              s      = NULL;
-    const char *           personality;
-    H5F_vfd_swmr_config_t *config                = NULL;
+    state_t               *s      = NULL;
+    const char            *personality;
+    H5F_vfd_swmr_config_t *config = NULL;
     hbool_t                wg_ret = false;
     hbool_t                vg_ret = false;
 
@@ -8497,18 +8485,18 @@ error:
 
     return EXIT_FAILURE;
 }
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 int
 main(int argc, char **argv)
 {
     hid_t                  fapl = H5I_INVALID_HID, fcpl = H5I_INVALID_HID;
     unsigned               step;
     hbool_t                writer = false;
-    state_t *              s      = NULL;
-    const char *           personality;
+    state_t               *s      = NULL;
+    const char            *personality;
     H5F_vfd_swmr_config_t *config                = NULL;
-    const char *           fifo_writer_to_reader = "./fifo_group_writer_to_reader";
-    const char *           fifo_reader_to_writer = "./fifo_group_reader_to_writer";
+    const char            *fifo_writer_to_reader = "./fifo_group_writer_to_reader";
+    const char            *fifo_reader_to_writer = "./fifo_group_reader_to_writer";
     int                    fd_writer_to_reader = -1, fd_reader_to_writer = -1;
     int                    notify = 0, verify = 0;
     hbool_t                wg_ret = false;

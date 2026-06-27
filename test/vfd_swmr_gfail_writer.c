@@ -133,10 +133,10 @@ typedef struct {
     unsigned int pbs;
     bool         del_grp;
 #ifndef H5_USE_SOCKETS
-    int          np_fd_w_to_r;
-    int          np_fd_r_to_w;
-    int          np_notify;
-    int          np_verify;
+    int np_fd_w_to_r;
+    int np_fd_r_to_w;
+    int np_notify;
+    int np_verify;
 #endif /* !H5_USE_SOCKETS */
 } state_t;
 
@@ -175,7 +175,6 @@ usage(const char *progname)
     HDexit(EXIT_FAILURE);
 }
 
-
 #ifdef H5_USE_SOCKETS
 static bool
 state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
@@ -183,23 +182,22 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
     unsigned long tmp;
     int           ch;
     const hsize_t dims  = 1;
-    char *        tfile = NULL;
-    char *        end;
+    char         *tfile = NULL;
+    char         *end;
 
-    s->file            = H5I_INVALID_HID;
-    s->one_by_one_sid  = H5I_INVALID_HID;
-    s->filetype        = H5T_NATIVE_UINT32;
-    s->nsteps          = 1000;
-    s->use_vfd_swmr    = true;
-    s->old_style_grp   = false;
+    s->file              = H5I_INVALID_HID;
+    s->one_by_one_sid    = H5I_INVALID_HID;
+    s->filetype          = H5T_NATIVE_UINT32;
+    s->nsteps            = 1000;
+    s->use_vfd_swmr      = true;
+    s->old_style_grp     = false;
     s->use_communication = true;
-    s->w_sleep_len     = 112;
-    s->tick_len        = 4;
-    s->max_lag         = 7;
-    s->ps              = 4096;
-    s->pbs             = 4096;
-    s->del_grp         = false;
-
+    s->w_sleep_len       = 112;
+    s->tick_len          = 4;
+    s->max_lag           = 7;
+    s->ps                = 4096;
+    s->pbs               = 4096;
+    s->del_grp           = false;
 
     HDmemset(s->filename, 0, PATH_MAX);
     HDmemset(s->progname, 0, PATH_MAX);
@@ -446,34 +444,33 @@ sock_send_error(socket_state_t *sock)
     else
         return true;
 }
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 static bool
 state_init(state_t *s, int argc, char **argv)
 {
     unsigned long tmp;
     int           ch;
     const hsize_t dims  = 1;
-    char *        tfile = NULL;
-    char *        end;
+    char         *tfile = NULL;
+    char         *end;
 
-    s->file            = H5I_INVALID_HID;
-    s->one_by_one_sid  = H5I_INVALID_HID;
-    s->filetype        = H5T_NATIVE_UINT32;
-    s->nsteps          = 1000;
-    s->use_vfd_swmr    = true;
-    s->old_style_grp   = false;
+    s->file              = H5I_INVALID_HID;
+    s->one_by_one_sid    = H5I_INVALID_HID;
+    s->filetype          = H5T_NATIVE_UINT32;
+    s->nsteps            = 1000;
+    s->use_vfd_swmr      = true;
+    s->old_style_grp     = false;
     s->use_communication = true;
-    s->w_sleep_len     = 112;
-    s->tick_len        = 4;
-    s->max_lag         = 7;
-    s->ps              = 4096;
-    s->pbs             = 4096;
-    s->del_grp         = false;
-    s->np_fd_w_to_r    = -1;
-    s->np_fd_r_to_w    = -1;
-    s->np_notify       = 0;
-    s->np_verify       = 0;
-
+    s->w_sleep_len       = 112;
+    s->tick_len          = 4;
+    s->max_lag           = 7;
+    s->ps                = 4096;
+    s->pbs               = 4096;
+    s->del_grp           = false;
+    s->np_fd_w_to_r      = -1;
+    s->np_fd_r_to_w      = -1;
+    s->np_notify         = 0;
+    s->np_verify         = 0;
 
     HDmemset(s->filename, 0, PATH_MAX);
     HDmemset(s->progname, 0, PATH_MAX);
@@ -805,7 +802,6 @@ error:
     return false;
 }
 
-
 #ifdef H5_USE_SOCKETS
 int
 main(int argc, char **argv)
@@ -814,15 +810,14 @@ main(int argc, char **argv)
     hid_t                  fcpl = H5I_INVALID_HID;
     unsigned               step;
     bool                   writer = false;
-    state_t *              s      = NULL;
-    const char *           personality;
-    H5F_vfd_swmr_config_t *config                = NULL;
+    state_t               *s      = NULL;
+    const char            *personality;
+    H5F_vfd_swmr_config_t *config = NULL;
     bool                   wg_ret = false;
-    socket_state_t        *sock = NULL;
+    socket_state_t        *sock   = NULL;
 
     struct timespec start_time, end_time;
     double          temp_time;
-
 
     if (NULL == (sock = HDcalloc(1, sizeof(socket_state_t)))) {
         TEST_ERROR;
@@ -830,14 +825,14 @@ main(int argc, char **argv)
     if (NULL == (s = HDcalloc(1, sizeof(state_t)))) {
         TEST_ERROR;
     }
-    if (NULL == (config = HDcalloc(1, sizeof(H5F_vfd_swmr_config_t)))){
+    if (NULL == (config = HDcalloc(1, sizeof(H5F_vfd_swmr_config_t)))) {
         TEST_ERROR;
     }
 
     if (!socket_init(sock)) {
         HDprintf("socket_init failed\n");
         TEST_ERROR;
-    } 
+    }
 
     if (!state_init(s, sock, argc, argv)) {
         HDprintf("state_init failed\n");
@@ -1023,7 +1018,7 @@ error:
 
     return EXIT_FAILURE;
 }
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 int
 main(int argc, char **argv)
 {
@@ -1031,11 +1026,11 @@ main(int argc, char **argv)
     hid_t                  fcpl = H5I_INVALID_HID;
     unsigned               step;
     bool                   writer = false;
-    state_t *              s      = NULL;
-    const char *           personality;
+    state_t               *s      = NULL;
+    const char            *personality;
     H5F_vfd_swmr_config_t *config                = NULL;
-    const char *           fifo_writer_to_reader = "./fifo_group_writer_to_reader";
-    const char *           fifo_reader_to_writer = "./fifo_group_reader_to_writer";
+    const char            *fifo_writer_to_reader = "./fifo_group_writer_to_reader";
+    const char            *fifo_reader_to_writer = "./fifo_group_reader_to_writer";
     int                    fd_writer_to_reader = -1, fd_reader_to_writer = -1;
     int                    notify = 0, verify = 0;
     bool                   wg_ret = false;

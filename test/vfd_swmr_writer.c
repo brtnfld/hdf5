@@ -280,13 +280,13 @@ main(int argc, char *const *argv)
     long                   nrecords        = 0;     /* # of records to append */
     long                   flush_count     = 10000; /* # of records to write between flushing file */
     hbool_t                verbose         = true;  /* Whether to emit some informational messages */
-    FILE *                 verbose_file    = NULL;  /* File handle for verbose output */
+    FILE                  *verbose_file    = NULL;  /* File handle for verbose output */
     hbool_t                old             = false; /* Whether to use non-latest-format when opening file */
     hbool_t                use_seed        = false; /* Set to true if a seed was set on the command line */
     hbool_t                wait_for_signal = true;
     unsigned               random_seed     = 0; /* Random # seed */
     int                    opt, temp;
-    const char *           s_opts   = "Wf:qr:o";
+    const char            *s_opts   = "Wf:qr:o";
     struct h5_long_options l_opts[] = {{NULL, 0, '\0'}};
 
     block_signals(&oldset);

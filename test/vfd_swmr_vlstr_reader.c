@@ -64,17 +64,17 @@ main(int argc, char **argv)
     hid_t                  space      = H5I_INVALID_HID;
     hid_t                  type       = H5I_INVALID_HID;
     hid_t                  dset[2]    = {H5I_INVALID_HID, H5I_INVALID_HID};
-    char *                 content[2] = {NULL, NULL};
+    char                  *content[2] = {NULL, NULL};
     char                   name[2][96];
     int                    opt;
     int                    ntimes = 100;
     unsigned long          tmp;
     hbool_t                use_vfd_swmr = true;
-    char *                 end;
+    char                  *end;
     const uint64_t         delay_ns = 1100 * 1000; /* 1.1 ms */
     testsel_t              sel      = TEST_NONE;
     H5F_vfd_swmr_config_t *config;
-    const char *           s_opts   = "Sn:qt:";
+    const char            *s_opts   = "Sn:qt:";
     struct h5_long_options l_opts[] = {{NULL, 0, '\0'}};
 
     HDassert(H5T_C_S1 != H5I_INVALID_HID);

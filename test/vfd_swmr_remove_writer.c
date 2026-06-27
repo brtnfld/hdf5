@@ -89,7 +89,8 @@ open_skeleton(const char *filename, unsigned verbose, unsigned old H5_ATTR_UNUSE
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
      * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
      * md_file_path, md_file_name, updater_file_path */
-    init_vfd_swmr_config(config, 4, 5, false, true, true, true, true, 128, NULL, "rw-shadow", "remove-updater");
+    init_vfd_swmr_config(config, 4, 5, false, true, true, true, true, 128, NULL, "rw-shadow",
+                         "remove-updater");
 
     /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */
     if ((fapl = vfd_swmr_create_fapl(true, true, false, 4096, config)) < 0)

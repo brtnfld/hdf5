@@ -213,7 +213,7 @@ typedef union H5VL_native_dataset_optional_args_t {
 #define H5VL_NATIVE_FILE_GET_MPI_ATOMICITY 26 /**< H5Fget_mpi_atomicity \since 1.12.0                 */
 #define H5VL_NATIVE_FILE_SET_MPI_ATOMICITY 27 /**< H5Fset_mpi_atomicity \since 1.12.0                 */
 #endif
-#define H5VL_NATIVE_FILE_POST_OPEN             28 /**< Adjust file after open, with wrapping context \since 1.12.0 */
+#define H5VL_NATIVE_FILE_POST_OPEN            28 /**< Adjust file after open, with wrapping context \since 1.12.0 */
 #define H5VL_NATIVE_FILE_VFD_SWMR_DISABLE_EOT 29 /* H5Fvfd_swmr_disable_end_of_tick */
 #define H5VL_NATIVE_FILE_VFD_SWMR_ENABLE_EOT  30 /* H5Fvfd_swmr_enable_end_of_tick  */
 #define H5VL_NATIVE_FILE_VFD_SWMR_END_TICK    31 /* H5Fvfd_swmr_end_tick            */

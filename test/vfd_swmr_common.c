@@ -461,9 +461,9 @@ vfd_swmr_create_fcpl(H5F_fspace_strategy_t fs_strategy, hsize_t fs_page_size)
 int
 fetch_env_ulong(const char *varname, unsigned long limit, unsigned long *valp)
 {
-    char *        end;
+    char         *end;
     unsigned long ul;
-    char *        tmp;
+    char         *tmp;
 
     if ((tmp = getenv(varname)) == NULL)
         return 0;
@@ -497,10 +497,10 @@ socket_init(socket_state_t *sock)
         fprintf(stderr, "socket state structure is NULL\n");
         return false;
     }
-    
+
     sock->ip_address = "127.0.0.1";
-    
-    sock->comm_fd = INVALID_SOCKET;
+
+    sock->comm_fd   = INVALID_SOCKET;
     sock->listen_fd = INVALID_SOCKET;
 
     sock->notify = 0;
@@ -513,17 +513,18 @@ socket_init(socket_state_t *sock)
  * If server is true, open a listening socket and wait for a connection.
  * If server is false, open a client socket and connect to the server at `ip_address`.
  * If `ip_address` is NULL, default to localhost (127.0.0.1).
- * 
+ *
  * Note: Only supports IPv4 sockets, and only a single connection at a time.
  */
-hbool_t 
-socket_connect(socket_state_t *sock, bool server) {
+hbool_t
+socket_connect(socket_state_t *sock, bool server)
+{
     struct sockaddr_in servaddr;
 
     /* Initilaize sock address structure memory */
     memset(&servaddr, 0, sizeof(servaddr));
 
-    if (server){ /* Server Code */
+    if (server) { /* Server Code */
         struct sockaddr_in client;
 
         /* Create listening socket */
@@ -533,9 +534,9 @@ socket_connect(socket_state_t *sock, bool server) {
         }
 
         /* Configure server socket info */
-        servaddr.sin_family         = AF_INET;
-        servaddr.sin_addr.s_addr    = htonl(INADDR_ANY);
-        servaddr.sin_port           = htons(DEFAULT_PORT);
+        servaddr.sin_family      = AF_INET;
+        servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+        servaddr.sin_port        = htons(DEFAULT_PORT);
 
         /* Make address reusable so rerunning this program won't error if the previous run left
          * our chosen Address:Port for the listen socket in a TIME_WAIT state */
@@ -546,33 +547,34 @@ socket_connect(socket_state_t *sock, bool server) {
         }
 
         /* Bind socket */
-        if(bind(sock->listen_fd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0){
+        if (bind(sock->listen_fd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
             fprintf(stderr, "error binding server socket\n");
             goto error;
         }
 
         /* Start listening on open socket */
-        if (listen(sock->listen_fd, 1) < 0){
+        if (listen(sock->listen_fd, 1) < 0) {
             fprintf(stderr, "error listening to server socket\n");
             goto error;
         }
-        
+
         /* Accept a connection */
         socklen_t len = sizeof(client);
-        sock->comm_fd = accept(sock->listen_fd, (struct sockaddr *) &client, &len);
+        sock->comm_fd = accept(sock->listen_fd, (struct sockaddr *)&client, &len);
         if (sock->comm_fd == INVALID_SOCKET) {
             fprintf(stderr, "error accepting client connection\n");
             goto error;
         }
 #ifdef DEBUG_SOCKETS
-        fprintf(stderr, "SERVER SOCKET: Accepted connection from client with IP: %s\n", inet_ntoa(client.sin_addr));
+        fprintf(stderr, "SERVER SOCKET: Accepted connection from client with IP: %s\n",
+                inet_ntoa(client.sin_addr));
 #endif
-        
+
         /* Close the listening socket, we don't need it anymore */
         close(sock->listen_fd);
         sock->listen_fd = INVALID_SOCKET;
-
-    } else { /* Client Code */
+    }
+    else { /* Client Code */
         /* Create TCP socket */
         if (INVALID_SOCKET == (sock->comm_fd = socket(AF_INET, SOCK_STREAM, 0))) {
             fprintf(stderr, "error creating client socket\n");
@@ -588,9 +590,9 @@ socket_connect(socket_state_t *sock, bool server) {
             fprintf(stderr, "socket communication inet_pton error\n");
             goto error;
         }
-        
+
         /* Attempt server connection */
-        if (connect(sock->comm_fd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
+        if (connect(sock->comm_fd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
             fprintf(stderr, "socket communication connection error\n");
             goto error;
         }
@@ -598,7 +600,7 @@ socket_connect(socket_state_t *sock, bool server) {
         fprintf(stderr, "CLIENT SOCKET: Connected to server with IP: %s\n", sock->ip_address);
 #endif
     }
-    
+
     return true;
 
 error:
@@ -610,15 +612,15 @@ error:
     return false;
 } /* socket_init() */
 
-
 /* Safely close the sockets */
-void socket_close(socket_state_t *sock) {
+void
+socket_close(socket_state_t *sock)
+{
     if (sock == NULL) { /* Redundant check  */
         return;
     }
 
-    if (sock->comm_fd != INVALID_SOCKET && sock->comm_fd > 2) 
-    {
+    if (sock->comm_fd != INVALID_SOCKET && sock->comm_fd > 2) {
         close(sock->comm_fd);
     }
     if (sock->listen_fd != INVALID_SOCKET && sock->listen_fd > 2) {
@@ -626,6 +628,6 @@ void socket_close(socket_state_t *sock) {
     }
 
     sock->ip_address = NULL;
-    sock->comm_fd = INVALID_SOCKET;
-    sock->listen_fd = INVALID_SOCKET;
+    sock->comm_fd    = INVALID_SOCKET;
+    sock->listen_fd  = INVALID_SOCKET;
 } /* socket_close() */

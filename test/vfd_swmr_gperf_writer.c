@@ -194,8 +194,8 @@ state_init(state_t *s, int argc, char **argv)
     unsigned long tmp;
     int           ch;
     const hsize_t dims  = 1;
-    char *        tfile = NULL;
-    char *        end;
+    char         *tfile = NULL;
+    char         *end;
 
     s->file           = H5I_INVALID_HID;
     s->one_by_one_sid = H5I_INVALID_HID;
@@ -2794,8 +2794,8 @@ main(int argc, char **argv)
     hid_t                  fapl = H5I_INVALID_HID, fcpl = H5I_INVALID_HID;
     unsigned               step;
     bool                   writer = false;
-    state_t *              s      = NULL;
-    const char *           personality;
+    state_t               *s      = NULL;
+    const char            *personality;
     H5F_vfd_swmr_config_t *config = NULL;
     bool                   wg_ret = false;
     struct timespec        start_time, end_time;

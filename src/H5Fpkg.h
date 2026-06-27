@@ -276,10 +276,10 @@ typedef struct H5F_super_t {
  * bytes in the shadow file to release after max_lag ticks.
  */
 typedef struct shadow_defree {
-    uint64_t offset;                  /* offset of the region in *bytes* */
-    uint32_t length;                  /* length of the region in *bytes* */
-    uint64_t tick_num;                /* tick number when the free was deferred */
-    TAILQ_ENTRY(shadow_defree) link;  /* deferred-free queue linkage */
+    uint64_t offset;                 /* offset of the region in *bytes* */
+    uint32_t length;                 /* length of the region in *bytes* */
+    uint64_t tick_num;               /* tick number when the free was deferred */
+    TAILQ_ENTRY(shadow_defree) link; /* deferred-free queue linkage */
 } shadow_defree_t;
 
 /* Queue of deferred-free records for the shadow file, sorted head-to-tail
@@ -434,33 +434,33 @@ struct H5F_shared_t {
     char *extpath; /* Path for searching target external link file                 */
 
     /* VFD SWMR fields */
-    H5F_vfd_swmr_config_t vfd_swmr_config; /* Copy of the VFD SWMR configuration */
-    haddr_t               writer_index_offset; /* Current byte offset of the shadow index */
-    hbool_t               vfd_swmr;         /* File is opened with VFD SWMR configured */
-    hbool_t               vfd_swmr_writer;  /* This is the VFD SWMR writer */
-    uint64_t              tick_num;         /* Number of the current tick */
-    uint64_t              max_jump_ticks;   /* Max # of jumps in tick number */
-    struct timespec       end_of_tick;      /* End time of the current tick */
-    lower_defree_queue_t  lower_defrees;    /* Records of lower-file space awaiting reclamation */
-    shadow_defree_queue_t shadow_defrees;   /* Records of shadow-file space awaiting reclamation */
-    H5FD_vfd_swmr_idx_entry_t *mdf_idx;    /* Pointer to metadata file index array */
-    uint32_t              mdf_idx_len;      /* Number of entries in mdf_idx */
-    uint32_t              mdf_idx_entries_used; /* Number of entries in use */
-    H5FD_vfd_swmr_idx_entry_t *old_mdf_idx;    /* Previous version of the metadata file index */
-    uint32_t              old_mdf_idx_len;
-    uint32_t              old_mdf_idx_entries_used;
-    int                   vfd_swmr_md_fd;   /* File descriptor for the metadata file */
-    char *                md_file_path_name; /* Name of the metadata file */
-    H5F_generate_md_ck_t  generate_md_ck_cb; /* Testing callback to generate MD checksum */
-    haddr_t               vfd_swmr_md_eoa;   /* EOA for the metadata file */
-    uint64_t              updater_seq_num;    /* Sequence number of the next updater file */
-    H5FS_t *              fs_man_md;          /* Free-space manager for the metadata file */
-    H5F_fs_state_t        fs_state_md;        /* State of the metadata file free-space manager */
+    H5F_vfd_swmr_config_t      vfd_swmr_config;      /* Copy of the VFD SWMR configuration */
+    haddr_t                    writer_index_offset;  /* Current byte offset of the shadow index */
+    hbool_t                    vfd_swmr;             /* File is opened with VFD SWMR configured */
+    hbool_t                    vfd_swmr_writer;      /* This is the VFD SWMR writer */
+    uint64_t                   tick_num;             /* Number of the current tick */
+    uint64_t                   max_jump_ticks;       /* Max # of jumps in tick number */
+    struct timespec            end_of_tick;          /* End time of the current tick */
+    lower_defree_queue_t       lower_defrees;        /* Records of lower-file space awaiting reclamation */
+    shadow_defree_queue_t      shadow_defrees;       /* Records of shadow-file space awaiting reclamation */
+    H5FD_vfd_swmr_idx_entry_t *mdf_idx;              /* Pointer to metadata file index array */
+    uint32_t                   mdf_idx_len;          /* Number of entries in mdf_idx */
+    uint32_t                   mdf_idx_entries_used; /* Number of entries in use */
+    H5FD_vfd_swmr_idx_entry_t *old_mdf_idx;          /* Previous version of the metadata file index */
+    uint32_t                   old_mdf_idx_len;
+    uint32_t                   old_mdf_idx_entries_used;
+    int                        vfd_swmr_md_fd;    /* File descriptor for the metadata file */
+    char                      *md_file_path_name; /* Name of the metadata file */
+    H5F_generate_md_ck_t       generate_md_ck_cb; /* Testing callback to generate MD checksum */
+    haddr_t                    vfd_swmr_md_eoa;   /* EOA for the metadata file */
+    uint64_t                   updater_seq_num;   /* Sequence number of the next updater file */
+    H5FS_t                    *fs_man_md;         /* Free-space manager for the metadata file */
+    H5F_fs_state_t             fs_state_md;       /* State of the metadata file free-space manager */
 
     /* Log file for VFD SWMR */
-    FILE *     vfd_swmr_log_file_ptr;     /* File pointer for the log file */
-    hbool_t    vfd_swmr_log_on;           /* Flag to indicate if the log file is active */
-    H5_timer_t vfd_swmr_log_start_time;   /* Starting time for log message timestamps */
+    FILE      *vfd_swmr_log_file_ptr;   /* File pointer for the log file */
+    hbool_t    vfd_swmr_log_on;         /* Flag to indicate if the log file is active */
+    H5_timer_t vfd_swmr_log_start_time; /* Starting time for log message timestamps */
 
 #ifdef H5_HAVE_PARALLEL
     H5P_coll_md_read_flag_t coll_md_read;  /* Do all metadata reads collectively */
@@ -592,13 +592,12 @@ H5_DLL herr_t H5F__reparse_file_lock_variable_test(void);
 /* VFD SWMR testing functions */
 H5_DLL herr_t H5F__vfd_swmr_writer_create_open_flush_test(hid_t file_id, hbool_t create);
 H5_DLL herr_t H5F__vfd_swmr_writer_md_test(hid_t file_id, unsigned num_entries,
-                                            struct H5FD_vfd_swmr_idx_entry_t *index,
-                                            unsigned nshadow_defrees);
+                                           struct H5FD_vfd_swmr_idx_entry_t *index, unsigned nshadow_defrees);
 #endif /* H5F_TESTING */
 
 /* VFD SWMR functions (used from other modules) */
 H5_DLL herr_t H5F_update_vfd_swmr_metadata_file(H5F_t *f, uint32_t num_entries,
-                                                 H5FD_vfd_swmr_idx_entry_t *index);
+                                                H5FD_vfd_swmr_idx_entry_t *index);
 H5_DLL herr_t H5F__vfd_swmr_end_tick(H5F_t *f);
 H5_DLL herr_t H5F__vfd_swmr_disable_end_of_tick(H5F_t *f);
 H5_DLL herr_t H5F__vfd_swmr_enable_end_of_tick(H5F_t *f);

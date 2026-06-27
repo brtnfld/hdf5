@@ -217,7 +217,7 @@ static herr_t
 H5MV__sect_merge(H5FS_section_info_t **_sect1, H5FS_section_info_t *_sect2, void H5_ATTR_UNUSED *_udata)
 {
     H5MV_free_section_t **sect1     = (H5MV_free_section_t **)_sect1; /* File free section */
-    H5MV_free_section_t * sect2     = (H5MV_free_section_t *)_sect2;  /* File free section */
+    H5MV_free_section_t  *sect2     = (H5MV_free_section_t *)_sect2;  /* File free section */
     herr_t                ret_value = SUCCEED;                        /* Return value */
 
     FUNC_ENTER_PACKAGE
@@ -253,8 +253,8 @@ htri_t
 H5MV__sect_can_shrink(const H5FS_section_info_t *_sect, void *_udata)
 {
     const H5MV_free_section_t *sect   = (const H5MV_free_section_t *)_sect; /* File free section */
-    H5F_t *                    f      = (H5F_t *)_udata;
-    H5F_shared_t *             shared = f->shared;
+    H5F_t                     *f      = (H5F_t *)_udata;
+    H5F_shared_t              *shared = f->shared;
     haddr_t                    eoa;               /* End of address space in the file */
     haddr_t                    end;               /* End of section to extend */
     htri_t                     ret_value = false; /* Return value */
@@ -292,8 +292,8 @@ done:
 herr_t
 H5MV__sect_shrink(H5FS_section_info_t **_sect, void *_udata)
 {
-    H5F_t *               f         = (H5F_t *)_udata;
-    H5F_shared_t *        shared    = f->shared;
+    H5F_t                *f         = (H5F_t *)_udata;
+    H5F_shared_t         *shared    = f->shared;
     H5MV_free_section_t **sect      = (H5MV_free_section_t **)_sect; /* File free section */
     herr_t                ret_value = SUCCEED;                       /* Return value */
 

@@ -24,7 +24,7 @@ typedef struct {
 #elif defined(HG_UTIL_HAS_STDATOMIC_H)
 #ifndef __cplusplus
 #include <stdatomic.h>
-typedef atomic_int  hg_atomic_int32_t;
+typedef atomic_int hg_atomic_int32_t;
 #if (HG_UTIL_ATOMIC_LONG_WIDTH == 8) && !defined(__APPLE__)
 typedef atomic_long hg_atomic_int64_t;
 #else
@@ -32,7 +32,7 @@ typedef atomic_llong hg_atomic_int64_t;
 #endif
 #else
 #include <atomic>
-typedef std::atomic_int  hg_atomic_int32_t;
+typedef std::atomic_int hg_atomic_int32_t;
 #if (HG_UTIL_ATOMIC_LONG_WIDTH == 8) && !defined(__APPLE__)
 typedef std::atomic_long hg_atomic_int64_t;
 #else
@@ -283,7 +283,7 @@ hg_atomic_get32(hg_atomic_int32_t *ptr)
 #elif defined(HG_UTIL_HAS_STDATOMIC_H)
     ret = atomic_load_explicit(ptr, memory_order_acquire);
 #elif defined(__APPLE__)
-    ret        = ptr->value;
+    ret = ptr->value;
 #else
     ret = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
 #endif
@@ -302,7 +302,7 @@ hg_atomic_incr32(hg_atomic_int32_t *ptr)
 #elif defined(HG_UTIL_HAS_STDATOMIC_H)
     ret = atomic_fetch_add_explicit(ptr, 1, memory_order_acq_rel) + 1;
 #elif defined(__APPLE__)
-    ret        = OSAtomicIncrement32(&ptr->value);
+    ret = OSAtomicIncrement32(&ptr->value);
 #else
     ret = __atomic_fetch_add(ptr, 1, __ATOMIC_ACQ_REL) + 1;
 #endif
@@ -321,7 +321,7 @@ hg_atomic_decr32(hg_atomic_int32_t *ptr)
 #elif defined(HG_UTIL_HAS_STDATOMIC_H)
     ret = atomic_fetch_sub_explicit(ptr, 1, memory_order_acq_rel) - 1;
 #elif defined(__APPLE__)
-    ret        = OSAtomicDecrement32(&ptr->value);
+    ret = OSAtomicDecrement32(&ptr->value);
 #else
     ret = __atomic_fetch_sub(ptr, 1, __ATOMIC_ACQ_REL) - 1;
 #endif
@@ -340,7 +340,7 @@ hg_atomic_or32(hg_atomic_int32_t *ptr, int32_t value)
 #elif defined(HG_UTIL_HAS_STDATOMIC_H)
     ret = atomic_fetch_or_explicit(ptr, value, memory_order_acq_rel);
 #elif defined(__APPLE__)
-    ret        = OSAtomicOr32Orig((uint32_t)value, (volatile uint32_t *)&ptr->value);
+    ret = OSAtomicOr32Orig((uint32_t)value, (volatile uint32_t *)&ptr->value);
 #else
     ret = __atomic_fetch_or(ptr, value, __ATOMIC_ACQ_REL);
 #endif
@@ -359,7 +359,7 @@ hg_atomic_xor32(hg_atomic_int32_t *ptr, int32_t value)
 #elif defined(HG_UTIL_HAS_STDATOMIC_H)
     ret = atomic_fetch_xor_explicit(ptr, value, memory_order_acq_rel);
 #elif defined(__APPLE__)
-    ret        = OSAtomicXor32Orig((uint32_t)value, (volatile uint32_t *)&ptr->value);
+    ret = OSAtomicXor32Orig((uint32_t)value, (volatile uint32_t *)&ptr->value);
 #else
     ret = __atomic_fetch_xor(ptr, value, __ATOMIC_ACQ_REL);
 #endif
@@ -378,7 +378,7 @@ hg_atomic_and32(hg_atomic_int32_t *ptr, int32_t value)
 #elif defined(HG_UTIL_HAS_STDATOMIC_H)
     ret = atomic_fetch_and_explicit(ptr, value, memory_order_acq_rel);
 #elif defined(__APPLE__)
-    ret        = OSAtomicAnd32Orig((uint32_t)value, (volatile uint32_t *)&ptr->value);
+    ret = OSAtomicAnd32Orig((uint32_t)value, (volatile uint32_t *)&ptr->value);
 #else
     ret = __atomic_fetch_and(ptr, value, __ATOMIC_ACQ_REL);
 #endif
@@ -398,7 +398,7 @@ hg_atomic_cas32(hg_atomic_int32_t *ptr, int32_t compare_value, int32_t swap_valu
     ret = atomic_compare_exchange_strong_explicit(ptr, &compare_value, swap_value, memory_order_acq_rel,
                                                   memory_order_acquire);
 #elif defined(__APPLE__)
-    ret        = OSAtomicCompareAndSwap32(compare_value, swap_value, &ptr->value);
+    ret = OSAtomicCompareAndSwap32(compare_value, swap_value, &ptr->value);
 #else
     ret = __atomic_compare_exchange_n(ptr, &compare_value, swap_value, false, __ATOMIC_ACQ_REL,
                                       __ATOMIC_ACQUIRE);
@@ -463,7 +463,7 @@ hg_atomic_incr64(hg_atomic_int64_t *ptr)
 #elif defined(HG_UTIL_HAS_STDATOMIC_H)
     ret = atomic_fetch_add_explicit(ptr, (int64_t)1, memory_order_acq_rel) + 1;
 #elif defined(__APPLE__)
-    ret        = OSAtomicIncrement64(&ptr->value);
+    ret = OSAtomicIncrement64(&ptr->value);
 #else
     ret = __atomic_fetch_add(ptr, (int64_t)1, __ATOMIC_ACQ_REL) + 1;
 #endif
@@ -482,7 +482,7 @@ hg_atomic_decr64(hg_atomic_int64_t *ptr)
 #elif defined(HG_UTIL_HAS_STDATOMIC_H)
     ret = atomic_fetch_sub_explicit(ptr, (int64_t)1, memory_order_acq_rel) - 1;
 #elif defined(__APPLE__)
-    ret        = OSAtomicDecrement64(&ptr->value);
+    ret = OSAtomicDecrement64(&ptr->value);
 #else
     ret = __atomic_fetch_sub(ptr, (int64_t)1, __ATOMIC_ACQ_REL) - 1;
 #endif
@@ -501,7 +501,7 @@ hg_atomic_or64(hg_atomic_int64_t *ptr, int64_t value)
 #elif defined(HG_UTIL_HAS_STDATOMIC_H)
     ret = atomic_fetch_or_explicit(ptr, value, memory_order_acq_rel);
 #else
-    ret        = __atomic_fetch_or(ptr, value, __ATOMIC_ACQ_REL);
+    ret = __atomic_fetch_or(ptr, value, __ATOMIC_ACQ_REL);
 #endif
 
     return ret;
@@ -518,7 +518,7 @@ hg_atomic_xor64(hg_atomic_int64_t *ptr, int64_t value)
 #elif defined(HG_UTIL_HAS_STDATOMIC_H)
     ret = atomic_fetch_xor_explicit(ptr, value, memory_order_acq_rel);
 #else
-    ret        = __atomic_fetch_xor(ptr, value, __ATOMIC_ACQ_REL);
+    ret = __atomic_fetch_xor(ptr, value, __ATOMIC_ACQ_REL);
 #endif
 
     return ret;
@@ -535,7 +535,7 @@ hg_atomic_and64(hg_atomic_int64_t *ptr, int64_t value)
 #elif defined(HG_UTIL_HAS_STDATOMIC_H)
     ret = atomic_fetch_and_explicit(ptr, value, memory_order_acq_rel);
 #else
-    ret        = __atomic_fetch_and(ptr, value, __ATOMIC_ACQ_REL);
+    ret = __atomic_fetch_and(ptr, value, __ATOMIC_ACQ_REL);
 #endif
 
     return ret;
@@ -553,7 +553,7 @@ hg_atomic_cas64(hg_atomic_int64_t *ptr, int64_t compare_value, int64_t swap_valu
     ret = atomic_compare_exchange_strong_explicit(ptr, &compare_value, swap_value, memory_order_acq_rel,
                                                   memory_order_acquire);
 #elif defined(__APPLE__)
-    ret        = OSAtomicCompareAndSwap64(compare_value, swap_value, &ptr->value);
+    ret = OSAtomicCompareAndSwap64(compare_value, swap_value, &ptr->value);
 #else
     ret = __atomic_compare_exchange_n(ptr, &compare_value, swap_value, false, __ATOMIC_ACQ_REL,
                                       __ATOMIC_ACQUIRE);

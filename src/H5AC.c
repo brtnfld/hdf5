@@ -2606,7 +2606,8 @@ H5AC_set_vfd_swmr_reader(H5AC_t *cache_ptr, hbool_t vfd_swmr_reader, hsize_t pag
 
     if (cache_ptr->page_size != page_size) {
         if (H5C_set_vfd_swmr_reader((H5C_t *)cache_ptr, vfd_swmr_reader, page_size) < 0)
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTSET, FAIL, "can't set page_size for VFD SWMR reader");    }
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTSET, FAIL, "can't set page_size for VFD SWMR reader");
+    }
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

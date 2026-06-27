@@ -38,9 +38,8 @@
 
 #ifndef H5_HAVE_WIN32_API
 
-
-/* Controls whether vfd configuration settings should be set 
- * using configuration file instead of using hardcoded 
+/* Controls whether vfd configuration settings should be set
+ * using configuration file instead of using hardcoded
  * configurations */
 /* Configuration file usage disabled for now so we don't have to update build tests yet. \
  * Will be implemented in the future -- Cody S. 6/18/26 */
@@ -124,7 +123,7 @@ typedef struct {
 static bool state_init(state_t *, socket_state_t *, int, char **);
 
 static bool sock_writer(bool result, unsigned step, const state_t *s, socket_state_t *sock,
-                      H5F_vfd_swmr_config_t *config);
+                        H5F_vfd_swmr_config_t *config);
 static bool sock_reader(bool result, unsigned step, const state_t *s, socket_state_t *sock);
 static bool sock_confirm_verify_notify(unsigned step, const state_t *s, socket_state_t *sock);
 
@@ -162,7 +161,7 @@ static bool verify_dsets_extent(unsigned action, const state_t *s, const dsets_s
 static bool verify_dset_extent_real(unsigned action, hid_t did, unsigned rows, unsigned cols, unsigned which);
 
 static bool closing_on_noflush(bool writer, state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *config,
-                                 socket_state_t *sock);
+                               socket_state_t *sock);
 
 static void
 usage(const char *progname)
@@ -203,9 +202,8 @@ usage(const char *progname)
         "-b:              write data in big-endian byte order\n"
         "                 (default is H5T_NATIVE_UINT32)\n\n"
         "-o:              enable compression (deflate filter) for the datasets\n"
-        "-I --ip_addr <address>:\n" 
-        "                 IP address for socket communication (reader only)\n"
-    );
+        "-I --ip_addr <address>:\n"
+        "                 IP address for socket communication (reader only)\n");
     HDfprintf(
         stderr,
         "\n"
@@ -244,13 +242,10 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
 {
     unsigned long          tmp;
     int                    opt;
-    char *                 tfile = NULL;
-    char *                 end;
-    const char *           s_opts   = "sI:iferom:n:x:y:g:p:t:l:bqSNUu:c:";
-    struct h5_long_options l_opts[] = {
-        {"ip_addr", require_arg, 'I'},
-        {NULL, 0, '\0'}
-    };
+    char                  *tfile = NULL;
+    char                  *end;
+    const char            *s_opts   = "sI:iferom:n:x:y:g:p:t:l:bqSNUu:c:";
+    struct h5_long_options l_opts[] = {{"ip_addr", require_arg, 'I'}, {NULL, 0, '\0'}};
 
     s->file              = H5I_INVALID_HID;
     s->filetype          = H5T_NATIVE_UINT32;
@@ -295,11 +290,11 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
             case 's': /* A chunked dataset with single index */
                 s->single_index = true;
                 break;
-            
+
             case 'I': /* IP address for socket communication */
                 if (HDstrlen(H5_optarg) >= MAX_IP_ADDR_LEN) {
-                        HDfprintf(stderr, "-i,--ip_addr argument %s is too long\n", H5_optarg);
-                        TEST_ERROR;
+                    HDfprintf(stderr, "-i,--ip_addr argument %s is too long\n", H5_optarg);
+                    TEST_ERROR;
                 }
                 sock->ip_address = H5_optarg;
                 break;
@@ -1407,7 +1402,6 @@ error:
 
 } /* write_dset_single() */
 
-
 /*
  * Reader
  */
@@ -1429,8 +1423,8 @@ error:
  * --DECR_EXT: verify the decrease to dataset dimensions sizes
  */
 static bool
-verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *config,
-                        socket_state_t *sock, bool fileclosed)
+verify_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *config, socket_state_t *sock,
+                        bool fileclosed)
 {
     unsigned step;
     unsigned allowed_writes;
@@ -2120,7 +2114,8 @@ error:
  *      Verify the data
  */
 static bool
-closing_on_noflush(bool writer, state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *config, socket_state_t *sock)
+closing_on_noflush(bool writer, state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *config,
+                   socket_state_t *sock)
 {
     HDassert(s->use_communication);
 
@@ -2198,11 +2193,11 @@ main(int argc, char **argv)
     hid_t                  fapl   = H5I_INVALID_HID;
     hid_t                  fcpl   = H5I_INVALID_HID;
     bool                   writer = false;
-    state_t *              s      = NULL;
-    const char *           personality;
+    state_t               *s      = NULL;
+    const char            *personality;
     H5F_vfd_swmr_config_t *config = NULL;
     dsets_state_t          ds;
-    socket_state_t        *sock   = NULL;
+    socket_state_t        *sock = NULL;
 
     if (NULL == (sock = HDcalloc(1, sizeof(socket_state_t)))) {
         HDprintf("memory allocation failed");
@@ -2217,7 +2212,6 @@ main(int argc, char **argv)
         TEST_ERROR;
     }
 
-    
     if (!socket_init(sock)) {
         HDfprintf(stderr, "socket_init failed\n");
         TEST_ERROR;
@@ -2243,17 +2237,17 @@ main(int argc, char **argv)
 
     if (!s->use_vfd_swmr) {
         /* When VFD SWMR is disabled, perform only the normal FAPL/FCPL setup.
-         * The configuration-file initialization sets the VFD SWMR configuration 
-         * on the property lists, which should not happen when use_vfd_swmr is 
+         * The configuration-file initialization sets the VFD SWMR configuration
+         * on the property lists, which should not happen when use_vfd_swmr is
          * false. The config structure is still populated and used elsewhere in
          * the test, regardless of whether VFD SWMR is enabled. -- Cody S.
          */
-        
+
         /* config, tick_len, max_lag, presume_posix_semantics, writer,
-        * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
-        * md_file_path, md_file_name, updater_file_path */
+         * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
+         * md_file_path, md_file_name, updater_file_path */
         init_vfd_swmr_config(config, 4, 7, false, writer, true, false, s->flush_raw_data, 128, "./",
-                            "dsetchks-shadow", NULL);
+                             "dsetchks-shadow", NULL);
 
         /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */
         if ((fapl = vfd_swmr_create_fapl(true, s->use_vfd_swmr, true, 4096, config)) < 0) {
@@ -2266,9 +2260,8 @@ main(int argc, char **argv)
             HDprintf("vfd_swmr_create_fcpl() failed");
             TEST_ERROR;
         }
-
-
-    } else {
+    }
+    else {
         /* This was originally called in vfd_swmr_create_fapl() */
         if ((fapl = h5_fileaccess()) < 0) {
             HDprintf("h5_fileaccess() failed\n");
@@ -2284,7 +2277,7 @@ main(int argc, char **argv)
             HDprintf("H5Fswmr_config_env() failed\n");
             TEST_ERROR;
         }
-    
+
         /* config values are still needed later in this program */
         if (H5Pget_vfd_swmr_config(fapl, config) < 0) {
             HDprintf("H5Pget_vfd_swmr_config() failed\n");
@@ -2292,8 +2285,8 @@ main(int argc, char **argv)
         }
     }
 
-#else /* USE_CONFIGURATION_FILE */
-    
+#else  /* USE_CONFIGURATION_FILE */
+
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
      * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
      * md_file_path, md_file_name, updater_file_path */
@@ -2395,7 +2388,7 @@ main(int argc, char **argv)
             TEST_ERROR;
         }
 
-        if (s->use_communication ) {
+        if (s->use_communication) {
             socket_close(sock);
         }
     }

@@ -54,7 +54,7 @@ typedef struct _mat {
 /* Structure to hold the information of various parameters used in the program. */
 typedef struct {
     hid_t        file[2];
-    const char * filename[2];
+    const char  *filename[2];
     char         progname[PATH_MAX];
     hid_t        r_dsetid;
     hid_t        dtype, fapl, fcpl;
@@ -225,10 +225,10 @@ state_init(state_t *s, int argc, char **argv)
 {
     unsigned long          tmp;
     int                    opt;
-    char *                 tfile = NULL;
-    char *                 end;
-    const char *           personality;
-    const char *           s_opts   = "Sqc:r:t:m:B:s:u:";
+    char                  *tfile = NULL;
+    char                  *end;
+    const char            *personality;
+    const char            *s_opts   = "Sqc:r:t:m:B:s:u:";
     struct h5_long_options l_opts[] = {{NULL, 0, '\0'}};
 
     s->file[0]        = H5I_INVALID_HID;
@@ -631,7 +631,7 @@ main(int argc, char **argv)
 {
     hbool_t  writer = true;
     state_t *s      = NULL;
-    mat_t *  mat    = NULL;
+    mat_t   *mat    = NULL;
     hbool_t  ret    = false;
 
     if (NULL == (s = HDcalloc(1, sizeof(state_t))))

@@ -645,11 +645,11 @@ H5C_evict_or_refresh_all_entries_in_page(H5F_t *f, uint64_t page, uint32_t lengt
     int                i;
     size_t             image_len;
     size_t             original_image_len;
-    void *             image_ptr     = NULL;
-    void *             new_image_ptr = NULL;
+    void              *image_ptr     = NULL;
+    void              *new_image_ptr = NULL;
     unsigned           flush_flags   = (H5C__FLUSH_INVALIDATE_FLAG | H5C__FLUSH_CLEAR_ONLY_FLAG);
     haddr_t            tag;
-    H5C_t *            cache_ptr = NULL;
+    H5C_t             *cache_ptr = NULL;
     H5C_cache_entry_t *entry_ptr;
     H5C_cache_entry_t *follow_ptr = NULL;
     herr_t             ret_value  = SUCCEED; /* Return value */
@@ -681,7 +681,7 @@ H5C_evict_or_refresh_all_entries_in_page(H5F_t *f, uint64_t page, uint32_t lengt
             assert(entry_ptr->addr >= (haddr_t)(page * cache_ptr->page_size));
             assert(entry_ptr->addr < (haddr_t)((page + 1) * cache_ptr->page_size));
             assert(length == cache_ptr->page_size ||
-                     page * cache_ptr->page_size + length <= entry_ptr->addr + entry_ptr->size);
+                   page * cache_ptr->page_size + length <= entry_ptr->addr + entry_ptr->size);
 
             /* since end of tick occurs only on API call entry in
              * the VFD SWMR reader case, the entry must not be protected.
@@ -717,7 +717,8 @@ H5C_evict_or_refresh_all_entries_in_page(H5F_t *f, uint64_t page, uint32_t lengt
                      */
                     if (H5C_evict_tagged_entries(f, tag, true) < 0)
 
-                        HGOTO_ERROR(H5E_CACHE, H5E_CANTEXPUNGE, FAIL, "can't evict pinned and tagged entries");
+                        HGOTO_ERROR(H5E_CACHE, H5E_CANTEXPUNGE, FAIL,
+                                    "can't evict pinned and tagged entries");
                     /* Both follow_ptr and entry_ptr may have been removed.
                      * Set both to NULL to force the scan to restart.
                      */
@@ -774,7 +775,8 @@ H5C_evict_or_refresh_all_entries_in_page(H5F_t *f, uint64_t page, uint32_t lengt
                         0) {
 
                         H5C__RESET_PB_READ_HINTS(cache_ptr)
-                        HGOTO_ERROR(H5E_CACHE, H5E_READERROR, FAIL, "Can't read image (1)");                    }
+                        HGOTO_ERROR(H5E_CACHE, H5E_READERROR, FAIL, "Can't read image (1)");
+                    }
                     H5C__RESET_PB_READ_HINTS(cache_ptr)
 
                     /* 3) Call the refresh callback.  If it doesn't
@@ -808,7 +810,8 @@ H5C_evict_or_refresh_all_entries_in_page(H5F_t *f, uint64_t page, uint32_t lengt
 
                             H5C__RESET_PB_READ_HINTS(cache_ptr)
 
-                            HGOTO_ERROR(H5E_CACHE, H5E_READERROR, FAIL, "Can't read image (2)");                        }
+                            HGOTO_ERROR(H5E_CACHE, H5E_READERROR, FAIL, "Can't read image (2)");
+                        }
                         H5C__RESET_PB_READ_HINTS(cache_ptr)
 
                         /* 5) Call the refresh callback again.  Requesting
@@ -820,7 +823,8 @@ H5C_evict_or_refresh_all_entries_in_page(H5F_t *f, uint64_t page, uint32_t lengt
                             HGOTO_ERROR(H5E_CACHE, H5E_CANTLOAD, FAIL, "Can't refresh entry (2)");
                         if (image_len != original_image_len)
 
-                            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "2nd refresh call changed image_len.");                    }
+                            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "2nd refresh call changed image_len.");
+                    }
 
                     /* 6) Mark the entry as having been looked at this
                      *    this tick to accooadate later sanity chackes.

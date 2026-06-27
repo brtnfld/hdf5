@@ -30,8 +30,8 @@
 
 #define SWMR_TICK_LEN 4 /* in 100 ms */
 
-/* Controls whether vfd configuration settings should be set 
- * using configuration file instead of using hardcoded 
+/* Controls whether vfd configuration settings should be set
+ * using configuration file instead of using hardcoded
  * configurations */
 #define USE_CONFIGURATION_FILE 1
 
@@ -53,7 +53,7 @@ typedef struct {
 static const hsize_t         original_dims[RANK] = {0, ROWS, COLS};
 static const hsize_t         max_dims[RANK]      = {H5S_UNLIMITED, ROWS, COLS};
 static const hsize_t         frame_dims[RANK]    = {1, ROWS, COLS};
-static const hsize_t *       chunk_dims          = frame_dims;
+static const hsize_t        *chunk_dims          = frame_dims;
 static volatile sig_atomic_t unbroken            = 1;
 
 typedef struct {
@@ -101,7 +101,7 @@ state_init(state_t *s, int argc, char **argv)
 {
     int           ch;
     char          tfile[PATH_MAX];
-    char *        end;
+    char         *end;
     unsigned long millis;
 
     *s = ALL_HID_INITIALIZER;
@@ -526,8 +526,8 @@ move_centers(vec_t *center, vec_t *direction, size_t ncenters)
 static void
 matrix_open(state_t *s, bool rw)
 {
-    const char *          func;
-    hid_t                 fapl, fcpl;
+    const char *func;
+    hid_t       fapl, fcpl;
 
     fapl = H5Pcreate(H5P_FILE_ACCESS);
     if (fapl < 0) {
@@ -545,18 +545,18 @@ matrix_open(state_t *s, bool rw)
     if (H5Fswmr_config_env(fapl, fcpl, rw, rw, NULL) < 0) {
         errx(EXIT_FAILURE, "%s.%d: H5Fswmr_config_env() failed", __func__, __LINE__);
     }
-# else /* USE_CONFIGURATION_FILE */
+#else  /* USE_CONFIGURATION_FILE */
     H5F_vfd_swmr_config_t config;
     memset(&config, '\0', sizeof(config));
 
-    config.version           = H5F__CURR_VFD_SWMR_CONFIG_VERSION;
-    config.tick_len          = SWMR_TICK_LEN;
-    config.max_lag           = 5;
-    config.writer            = rw;
-    config.flush_raw_data = true;
+    config.version                = H5F__CURR_VFD_SWMR_CONFIG_VERSION;
+    config.tick_len               = SWMR_TICK_LEN;
+    config.max_lag                = 5;
+    config.writer                 = rw;
+    config.flush_raw_data         = true;
     config.maintain_metadata_file = true;
     config.pb_expansion_threshold = 50;
-    config.md_pages_reserved = 128;
+    config.md_pages_reserved      = 128;
     strlcpy(config.md_file_path, "./", sizeof(config.md_file_path));
     strlcpy(config.md_file_name, "./gaussians_md_file", sizeof(config.md_file_path));
 
@@ -617,7 +617,7 @@ main(int argc, char **argv)
     vec_t            center[2]    = {{.x = .5, .y = .5}, {.x = ROWS - .5, .y = COLS - .5}};
     vec_t            direction[2] = {{.x = 3, .y = 7}, {.x = 43, .y = 41}};
     struct sigaction osa;
-    WINDOW *         topw = NULL, *w = NULL;
+    WINDOW          *topw = NULL, *w = NULL;
     personality_t    personality;
     state_t          s;
 

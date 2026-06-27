@@ -1585,9 +1585,9 @@ H5PB_vfd_swmr__set_tick(H5F_shared_t H5_ATTR_UNUSED *f_sh)
 
 herr_t
 H5PB_vfd_swmr__update_index(H5F_t H5_ATTR_UNUSED *f, uint32_t H5_ATTR_UNUSED *idx_ent_added_ptr,
-                             uint32_t H5_ATTR_UNUSED *idx_ent_modified_ptr,
-                             uint32_t H5_ATTR_UNUSED *idx_ent_not_in_tl_ptr,
-                             uint32_t H5_ATTR_UNUSED *idx_ent_not_in_tl_flushed_ptr)
+                            uint32_t H5_ATTR_UNUSED *idx_ent_modified_ptr,
+                            uint32_t H5_ATTR_UNUSED *idx_ent_not_in_tl_ptr,
+                            uint32_t H5_ATTR_UNUSED *idx_ent_not_in_tl_flushed_ptr)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
     FUNC_LEAVE_NOAPI(SUCCEED)

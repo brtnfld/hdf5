@@ -1685,17 +1685,17 @@
 
 struct H5PB_entry_t {
 
-    uint32_t   magic;
-    H5PB_t *   page_buf;
-    haddr_t    addr;
-    uint64_t   page;
-    size_t     size;
-    void *     image_ptr;
-    void *     page_buf_ptr; /* M3 compat: alias for image_ptr */
-    H5FD_mem_t mem_type;
-    H5F_mem_page_t type;     /* M3 compat: page memory type */
-    hbool_t    is_metadata;
-    hbool_t    is_dirty;
+    uint32_t       magic;
+    H5PB_t        *page_buf;
+    haddr_t        addr;
+    uint64_t       page;
+    size_t         size;
+    void          *image_ptr;
+    void          *page_buf_ptr; /* M3 compat: alias for image_ptr */
+    H5FD_mem_t     mem_type;
+    H5F_mem_page_t type; /* M3 compat: page memory type */
+    hbool_t        is_metadata;
+    hbool_t        is_dirty;
 
     /* fields supporting the hash table: */
     struct H5PB_entry_t *ht_next;

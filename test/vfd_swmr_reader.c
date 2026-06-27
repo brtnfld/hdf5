@@ -231,8 +231,8 @@ read_records(const char *filename, hbool_t verbose, FILE *verbose_file, unsigned
 {
     time_t                 start_time;                 /* Starting time */
     time_t                 curr_time;                  /* Current time */
-    symbol_info_t **       sym_com  = NULL;            /* Pointers to array of common dataset IDs */
-    symbol_info_t **       sym_rand = NULL;            /* Pointers to array of random dataset IDs */
+    symbol_info_t        **sym_com  = NULL;            /* Pointers to array of common dataset IDs */
+    symbol_info_t        **sym_rand = NULL;            /* Pointers to array of random dataset IDs */
     hid_t                  mem_sid  = H5I_INVALID_HID; /* Memory dataspace ID */
     hid_t                  fid      = H5I_INVALID_HID; /* SWMR test file ID */
     hid_t                  fapl     = H5I_INVALID_HID; /* file access property list */
@@ -500,7 +500,7 @@ main(int argc, const char *argv[])
     int      ncommon      = 5;     /* # of common symbols to poll */
     int      nrandom      = 10;    /* # of random symbols to poll */
     hbool_t  verbose      = true;  /* Whether to emit some informational messages */
-    FILE *   verbose_file = NULL;  /* File handle for verbose output */
+    FILE    *verbose_file = NULL;  /* File handle for verbose output */
     hbool_t  use_seed     = false; /* Set to 1 if a seed was set on the command line */
     unsigned random_seed  = 0;     /* Random # seed */
     unsigned u;                    /* Local index variables */
