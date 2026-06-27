@@ -25,7 +25,8 @@
 #define H5_MY_PKG_ERR  H5E_VFL
 #define H5_MY_PKG_INIT NO
 /**
- * \defgroup H5VFD Virtual File Driver Configuration Language Features
+ * \defgroup H5VFDCL VFD SWMR Configuration Language Features
+ * \ingroup H5VFD
  *
  */
 

@@ -30,6 +30,9 @@
 /***********/
 #include "H5private.h"   /* Generic Functions            */
 #include "H5ACprivate.h" /* Metadata Cache               */
+#ifdef H5_HAVE_PARALLEL
+#include "H5ACpkg.h"     /* Metadata Cache internals (H5AC_aux_t for parallel debug) */
+#endif
 #include "H5Cpkg.h"      /* Cache                        */
 #include "H5Eprivate.h"  /* Error Handling               */
 #include "H5SLprivate.h" /* Skip Lists                               */
@@ -362,7 +365,7 @@ H5C_dump_coll_write_list(H5C_t *cache_ptr, char *calling_fcn)
 
     while (entry_ptr != NULL) {
 
-        HDassert(entry_ptr->magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
+        HDassert(entry_ptr != NULL);
 
         HDfprintf(stdout, "%s%d       0x%016llx  %4lld    %d/%d       %d    %s\n", cache_ptr->prefix, i,
                   (long long)(entry_ptr->addr), (long long)(entry_ptr->size), (int)(entry_ptr->is_protected),

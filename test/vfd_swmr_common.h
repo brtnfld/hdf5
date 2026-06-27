@@ -19,10 +19,16 @@
 
 #include "h5test.h"
 
-/* Posix socket headers */
+/* Posix socket headers (not available on Windows) */
+#ifdef H5_HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
+#endif
+#ifdef H5_HAVE_NETINET_IN_H
 #include <netinet/in.h>
+#endif
+#ifdef H5_HAVE_ARPA_INET_H
 #include <arpa/inet.h>
+#endif
 
 /**********/
 /* Macros */

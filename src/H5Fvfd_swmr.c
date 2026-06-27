@@ -48,6 +48,11 @@
 #include "H5Tprivate.h"  /* Datatypes                                */
 #include "H5CLprivate.h"
 
+/* TIME_UTC is C11 but may be missing on some MinGW builds */
+#ifndef TIME_UTC
+#define TIME_UTC 1
+#endif
+
 /****************/
 /* Local Macros */
 /****************/

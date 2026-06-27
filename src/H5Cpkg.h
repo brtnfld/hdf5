@@ -3187,6 +3187,7 @@ H5_DLL herr_t H5C__validate_protected_entry_list(H5C_t *cache_ptr);
 /* Testing functions */
 #ifdef H5C_TESTING
 H5_DLL herr_t H5C__verify_cork_tag_test(hid_t fid, H5O_token_t tag_token, bool status);
+H5_DLL void   H5C_set_curr_io_type_splitable(H5C_t *cache_ptr, hbool_t set_splitable);
 #endif /* H5C_TESTING */
 
 #endif /* H5Cpkg_H */

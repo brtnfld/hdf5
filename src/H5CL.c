@@ -2094,7 +2094,7 @@ done:
 herr_t
 H5CL_load_config_string_from_file(const char *file_path, char **cfg_str_ptr_ptr)
 {
-    struct stat st;
+    h5_stat_t st;
     size_t      num_chars;
     char       *dst;
     FILE       *file      = NULL;

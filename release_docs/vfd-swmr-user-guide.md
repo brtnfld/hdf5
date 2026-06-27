@@ -46,8 +46,8 @@ few limitations -- most notably:
 
 * The current implementation of variable length data in datasets
   is fundamentally incompatible with VFD SWMR, as it stores variable 
-  length data as metadata. This limtation will be lifted when reimplemnttaion of
-  variable length data storge is available.
+  length data as metadata. This limitation will be lifted when reimplemnttaion of
+  variable length data storage is available.
 
 * At present the Virtual Data Set (VDS) feature is not 
   well integrated with VFD SWMR. Please see 
@@ -484,7 +484,7 @@ using its preferred file-access properties, including independent metadata
 filenames for each source file.  As long as the virtual dataset remains
 in use, the application should leave each of the pre-opened files open.
 In this way the library, when it tries to open the source files, will
-always find them already open and re-use the already-open files with the
+always find them already open and reuse the already-open files with the
 file-access properties established on first open.
 
 ## Pushing HDF5 raw data to reader visibility
