@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -37,7 +37,7 @@
 /* Number of entries in an error stack */
 #define H5E_MAX_ENTRIES 32
 
-#ifdef H5_HAVE_THREADSAFE
+#ifdef H5_HAVE_THREADSAFE_API
 /*
  * The per-thread error stack.
  *
@@ -45,12 +45,12 @@
  * by "H5E_stack_t *estack =".
  */
 #define H5E__get_my_stack() H5TS_get_err_stack()
-#else /* H5_HAVE_THREADSAFE */
+#else /* H5_HAVE_THREADSAFE_API */
 /*
  * The current error stack.
  */
 #define H5E__get_my_stack() (H5E_stack_g + 0)
-#endif /* H5_HAVE_THREADSAFE */
+#endif /* H5_HAVE_THREADSAFE_API */
 
 /****************************/
 /* Package Private Typedefs */
@@ -118,7 +118,7 @@ typedef struct H5E_stack_t {
 /* Package Private Variables */
 /*****************************/
 
-#ifndef H5_HAVE_THREADSAFE
+#ifndef H5_HAVE_THREADSAFE_API
 /*
  * The current error stack.
  */
@@ -153,6 +153,6 @@ H5_DLL herr_t       H5E__get_auto(const H5E_stack_t *estack, H5E_auto_op_t *op, 
 H5_DLL herr_t       H5E__set_auto(H5E_stack_t *estack, const H5E_auto_op_t *op, void *client_data);
 H5_DLL herr_t       H5E__pop(H5E_stack_t *err_stack, size_t count);
 H5_DLL herr_t       H5E__append_stack(H5E_stack_t *dst_estack, const H5E_stack_t *src_stack);
-H5_DLL herr_t       H5E__clear_stack(H5E_stack_t *estack);
+H5_DLL herr_t       H5E__destroy_stack(H5E_stack_t *estack);
 
 #endif /* H5Epkg_H */

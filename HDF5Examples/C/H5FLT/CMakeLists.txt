@@ -32,6 +32,14 @@ else ()
   set (BLOSC_AVAILABLE 0)
 endif ()
 
+option (ENABLE_BITGROOM "Enable Library Building for bitgroom plugin" ON)
+if (ENABLE_BITGROOM)
+  set (BITGROOM_AVAILABLE 1)
+  set (dyn_examples ${dyn_examples} h5ex_d_bitgroom)
+else ()
+  set (BITGROOM_AVAILABLE 0)
+endif ()
+
 option (ENABLE_BSHUF "Enable Library Building for bshuf plugin" ON)
 if (ENABLE_BSHUF)
   if (NOT CMAKE_C_COMPILER_ID STREQUAL "Intel")
@@ -165,7 +173,7 @@ foreach (example ${dyn_examples})
           "$<$<BOOL:${${EXAMPLE_VARNAME}_USE_110_API}>:-DH5_USE_110_API>"
           "$<$<BOOL:${${EXAMPLE_VARNAME}_USE_112_API}>:-DH5_USE_112_API>"
           "$<$<BOOL:${${EXAMPLE_VARNAME}_USE_114_API}>:-DH5_USE_114_API>"
-          "$<$<BOOL:${${EXAMPLE_VARNAME}_USE_116_API}>:-DH5_USE_116_API>"
+          "$<$<BOOL:${${EXAMPLE_VARNAME}_USE_200_API}>:-DH5_USE_200_API>"
   )
   if (H5_HAVE_PARALLEL)
     target_include_directories (${EXAMPLE_VARNAME}_${example} PUBLIC ${MPI_C_INCLUDE_DIRS})
@@ -250,7 +258,7 @@ if (H5EX_BUILD_TESTING)
                 -D "TEST_FOLDER=${PROJECT_BINARY_DIR}"
                 -D "TEST_OUTPUT=${testname}.ddl.out"
                 -D "TEST_FILTER=PARAMS { ([0-9]) [-]?[0-9]+ ([0-9] [0-9] [0-9] [0-9] [0-9] [0-9]) }\n"
-                -D "TEST_FILTER_REPLACE=PARAMS { \\1 XXXX \\2 }\n"
+                -D "TEST_FILTER_REPLACE=PARAMS { \\\\1 XXXX \\\\2 }\n"
                 -D "TEST_EXPECT=0"
                 -D "TEST_REFERENCE=${testname}.ddl"
                 -D "TEST_ENV_VAR=HDF5_PLUGIN_PATH"
@@ -299,7 +307,7 @@ if (H5EX_BUILD_TESTING)
   add_custom_target(${EXAMPLE_VARNAME}_example_files ALL COMMENT "Copying files needed by example tests" DEPENDS ${example_files_list})
 
   foreach (h5_file ${dyn_examples})
-    if (NOT HDF5_USING_ANALYSIS_TOOL)
+    if (NOT HDF5_ENABLE_USING_MEMCHECKER)
       if (${h5_file} MATCHES "h5ex_d_zfp")
         ## special filter
         ADD_H5_TEST (h5ex_d_zfp FILTERALL)

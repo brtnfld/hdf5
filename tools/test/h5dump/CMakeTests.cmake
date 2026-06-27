@@ -4,7 +4,7 @@
 #
 # This file is part of HDF5.  The full HDF5 copyright notice, including
 # terms governing use, modification, and redistribution, is contained in
-# the COPYING file, which can be found at the root of the source code
+# the LICENSE file, which can be found at the root of the source code
 # distribution tree, or in https://www.hdfgroup.org/licenses.
 # If you do not have access to either file, you may request a copy from
 # help@hdfgroup.org.
@@ -77,6 +77,10 @@
       tcmpdintarray.ddl
       tcmpdints.ddl
       tcmpdintsize.ddl
+      tcomplex.ddl
+      tcomplex_be.ddl
+      tcomplex_be_info.ddl
+      tcomplex_info.ddl
       tcompound_complex2.ddl
       tcomp-1.ddl
       tcomp-2.ddl
@@ -103,8 +107,7 @@
       tfamily.ddl
       tfill.ddl
       tfletcher32.ddl
-      #tfloatsattrs.ddl #native
-      #tfloatsattrs.wddl #special for windows
+      tfloatsattrs.ddl
       tfloat16.ddl
       tfloat16_be.ddl
       tfpformat.ddl
@@ -269,6 +272,8 @@
       tcmpdintarray.h5
       tcmpdints.h5
       tcmpdintsize.h5
+      tcomplex.h5
+      tcomplex_be.h5
       tcompound.h5
       tcompound_complex.h5
       tcompound_complex2.h5
@@ -399,14 +404,11 @@
   # --------------------------------------------------------------------
   HDFTEST_COPY_FILE("${PROJECT_SOURCE_DIR}/expected/tbin1.ddl" "${PROJECT_BINARY_DIR}/testfiles/std/tbin1LE.ddl" "h5dump_std_files")
 
-  if (WIN32 AND CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION VERSION_LESS 10.0.18362.0)
+  # Certain versions of Visual Studio produce rounding differences compared with the reference data of the tfloatsattr test
+  if (WIN32 AND (CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION VERSION_LESS 10.0.18362.0))
     configure_file(${PROJECT_SOURCE_DIR}/exportfiles/tbinregR.exp ${PROJECT_BINARY_DIR}/testfiles/std/tbinregR.exp NEWLINE_STYLE CRLF)
-    #file (READ ${PROJECT_SOURCE_DIR}/exportfiles/tbinregR.exp TEST_STREAM)
-    #file (WRITE ${PROJECT_BINARY_DIR}/testfiles/std/tbinregR.exp "${TEST_STREAM}")
-    HDFTEST_COPY_FILE("${PROJECT_SOURCE_DIR}/expected/tfloatsattrs.wddl" "${PROJECT_BINARY_DIR}/testfiles/std/tfloatsattrs.ddl" "h5dump_std_files")
   else ()
     HDFTEST_COPY_FILE("${PROJECT_SOURCE_DIR}/exportfiles/tbinregR.exp" "${PROJECT_BINARY_DIR}/testfiles/std/tbinregR.exp" "h5dump_std_files")
-    HDFTEST_COPY_FILE("${PROJECT_SOURCE_DIR}/expected/tfloatsattrs.ddl" "${PROJECT_BINARY_DIR}/testfiles/std/tfloatsattrs.ddl" "h5dump_std_files")
   endif ()
   add_custom_target(h5dump_std_files ALL COMMENT "Copying files needed by h5dump_std tests" DEPENDS ${h5dump_std_files_list})
 
@@ -418,7 +420,7 @@
 
   macro (ADD_HELP_TEST testname resultcode)
     # If using memchecker add tests without using scripts
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       add_test (NAME H5DUMP-${testname} COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:h5dump> ${ARGN})
     else ()
       add_test (
@@ -458,7 +460,7 @@
 
   macro (ADD_H5_TEST resultfile resultcode)
     # If using memchecker add tests without using scripts
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       add_test (NAME H5DUMP-${resultfile} COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:h5dump> ${ARGN})
       if (${resultcode})
         set_tests_properties (H5DUMP-${resultfile} PROPERTIES WILL_FAIL "true")
@@ -490,7 +492,7 @@
 
   macro (ADD_H5_COMP_TEST resultfile resultcode resultvalue)
     # If using memchecker add tests without using scripts
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       add_test (NAME H5DUMP-${resultfile} COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:h5dump> ${ARGN})
       if (${resultcode})
         set_tests_properties (H5DUMP-${resultfile} PROPERTIES WILL_FAIL "true")
@@ -532,7 +534,7 @@
         WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/testfiles/std"
     )
     # If using memchecker add tests without using scripts
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       add_test (NAME H5DUMP-N-${resultfile} COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:h5dump> ${ARGN})
       if (${resultcode})
         set_tests_properties (H5DUMP-N-${resultfile} PROPERTIES WILL_FAIL "true")
@@ -581,7 +583,7 @@
         WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/testfiles/std"
     )
     # If using memchecker add tests without using scripts
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       add_test (NAME H5DUMP-${resultfile} COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:h5dump> ${ARGN} ${resultfile}.txt ${targetfile})
       if (${resultcode})
         set_tests_properties (H5DUMP-${resultfile} PROPERTIES WILL_FAIL "true")
@@ -626,7 +628,7 @@
         COMMAND ${CMAKE_COMMAND} -E remove
             ${resultfile}.txt
     )
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       set_tests_properties (H5DUMP-${resultfile}-clean-objects PROPERTIES
           DEPENDS H5DUMP-${resultfile}
           WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/testfiles/std"
@@ -650,7 +652,7 @@
         WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/testfiles/std"
     )
     # If using memchecker add tests without using scripts
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       add_test (NAME H5DUMP-${resultfile} COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:h5dump> --ddl=${ddlfile}.txt ${ARGN} ${resultfile}.txt ${targetfile})
       if (${resultcode})
         set_tests_properties (H5DUMP-${resultfile} PROPERTIES WILL_FAIL "true")
@@ -705,7 +707,7 @@
             ${ddlfile}.txt
             ${resultfile}.txt
     )
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       set_tests_properties (H5DUMP-${resultfile}-clean-objects PROPERTIES
           DEPENDS H5DUMP-${resultfile}
           WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/testfiles/std"
@@ -719,7 +721,7 @@
   endmacro ()
 
   macro (ADD_H5_EXPORT_TEST resultfile targetfile resultcode)
-    if (NOT HDF5_USING_ANALYSIS_TOOL)
+    if (NOT HDF5_ENABLE_USING_MEMCHECKER)
       add_test (
           NAME H5DUMP-output-${resultfile}-clear-objects
           COMMAND ${CMAKE_COMMAND} -E remove
@@ -763,7 +765,7 @@
   endmacro ()
 
   macro (ADD_H5_MASK_TEST resultfile resultcode)
-    if (NOT HDF5_USING_ANALYSIS_TOOL)
+    if (NOT HDF5_ENABLE_USING_MEMCHECKER)
       add_test (
           NAME H5DUMP-${resultfile}
           COMMAND "${CMAKE_COMMAND}"
@@ -787,7 +789,7 @@
   endmacro ()
 
   macro (ADD_H5_GREP_TEST resultfile resultcode result_check)
-    if (NOT HDF5_USING_ANALYSIS_TOOL)
+    if (NOT HDF5_ENABLE_USING_MEMCHECKER)
       add_test (
           NAME H5DUMP-${resultfile}
           COMMAND "${CMAKE_COMMAND}"
@@ -798,7 +800,8 @@
               -D "TEST_OUTPUT=${resultfile}.out"
               -D "TEST_EXPECT=${resultcode}"
               -D "TEST_REFERENCE=${result_check}"
-              -P "${HDF_RESOURCES_DIR}/grepTest.cmake"
+              -D "TEST_GREP_COMPARE=TRUE"
+              -P "${HDF_RESOURCES_DIR}/runTest.cmake"
       )
       set_tests_properties (H5DUMP-${resultfile} PROPERTIES
           WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/testfiles/std"
@@ -810,7 +813,7 @@
   endmacro ()
 
   macro (ADD_H5ERR_MASK_TEST resultfile resultcode result_errcheck)
-    if (NOT HDF5_USING_ANALYSIS_TOOL)
+    if (NOT HDF5_ENABLE_USING_MEMCHECKER)
       add_test (
           NAME H5DUMP-${resultfile}
           COMMAND "${CMAKE_COMMAND}"
@@ -822,7 +825,7 @@
               -D "TEST_EXPECT=${resultcode}"
               -D "TEST_REFERENCE=${resultfile}.ddl"
               -D "TEST_ERRREF=${result_errcheck}"
-              -P "${HDF_RESOURCES_DIR}/grepTest.cmake"
+              -P "${HDF_RESOURCES_DIR}/runTest.cmake"
       )
       set_tests_properties (H5DUMP-${resultfile} PROPERTIES
           WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/testfiles/std"
@@ -834,7 +837,7 @@
   endmacro ()
 
   macro (ADD_H5ERR_MASK_ENV_TEST resultfile resultcode result_errcheck envvar envval)
-    if (NOT HDF5_USING_ANALYSIS_TOOL)
+    if (NOT HDF5_ENABLE_USING_MEMCHECKER)
       add_test (
           NAME H5DUMP-${resultfile}
           COMMAND "${CMAKE_COMMAND}"
@@ -848,7 +851,7 @@
               -D "TEST_ERRREF=${result_errcheck}"
               -D "TEST_ENV_VAR:STRING=${envvar}"
               -D "TEST_ENV_VALUE:STRING=${envval}"
-              -P "${HDF_RESOURCES_DIR}/grepTest.cmake"
+              -P "${HDF_RESOURCES_DIR}/runTest.cmake"
       )
       set_tests_properties (H5DUMP-${resultfile} PROPERTIES
           WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/testfiles/std"
@@ -860,7 +863,7 @@
   endmacro ()
 
   macro (ADD_H5_BIN_EXPORT conffile resultcode testfile)
-    if (NOT HDF5_USING_ANALYSIS_TOOL)
+    if (NOT HDF5_ENABLE_USING_MEMCHECKER)
       add_test (
           NAME H5DUMP-BIN_EXPORT-${conffile}-clear-objects
           COMMAND ${CMAKE_COMMAND} -E remove
@@ -901,7 +904,7 @@
 
   macro (ADD_H5_TEST_IMPORT conffile resultfile testfile resultcode)
     # If using memchecker add tests without using scripts
-    if (NOT HDF5_USING_ANALYSIS_TOOL)
+    if (NOT HDF5_ENABLE_USING_MEMCHECKER)
       add_test (
           NAME H5DUMP-IMPORT-${resultfile}-clear-objects
           COMMAND ${CMAKE_COMMAND} -E remove
@@ -960,7 +963,7 @@
   endmacro ()
 
   macro (ADD_H5_UD_TEST testname resultcode resultfile)
-    if (NOT HDF5_USING_ANALYSIS_TOOL)
+    if (NOT HDF5_ENABLE_USING_MEMCHECKER)
       add_test (
           NAME H5DUMP_UD-${testname}-${resultfile}
           COMMAND "${CMAKE_COMMAND}"
@@ -1310,13 +1313,34 @@
   ADD_H5_TEST (zerodim 0 --enable-error-stack zerodim.h5)
 
   # test for long double (some systems do not have long double)
-  ADD_H5_TEST (tfloatsattrs 0 -p --enable-error-stack tfloatsattrs.h5)
+  ADD_H5_TEST (tfloatsattrs 0 -p --format=%.4g --lformat=%.4Lg --width=80 --enable-error-stack tfloatsattrs.h5)
   ADD_H5_TEST (tldouble 0 --enable-error-stack tldouble.h5)
   ADD_H5_TEST (tldouble_scalar 0 -p --enable-error-stack tldouble_scalar.h5)
 
   # Add tests for _Float16 type
   ADD_H5_TEST (tfloat16 0 --enable-error-stack tfloat16.h5)
   ADD_H5_TEST (tfloat16_be 0 --enable-error-stack tfloat16_be.h5)
+
+  # Add tests for complex numbers. For portability, use a fixed floating-point
+  # precision and skip dumping of the "long double _Complex" dataset. The "long
+  # double _Complex" dataset may display differently across platforms, e.g.
+  # between Linux and Windows, due to the size of "long double" and is only
+  # affected by the fixed floating-point precision option when
+  # sizeof(long double) != sizeof(double). Use -w80 after the floating-point
+  # format option since specifying a fixed floating-point precision resets h5dump's
+  # default number of columns value.
+  ADD_H5_TEST (tcomplex 0 --enable-error-stack -m %.6f -w80 -d ArrayDatasetFloatComplex
+               -d CompoundDatasetFloatComplex -d DatasetDoubleComplex -d DatasetFloatComplex
+               -d VariableLengthDatasetFloatComplex tcomplex.h5)
+  ADD_H5_TEST (tcomplex_info 0 --enable-error-stack -p -H -m %.6f -w80 -d ArrayDatasetFloatComplex
+               -d CompoundDatasetFloatComplex -d DatasetDoubleComplex -d DatasetFloatComplex
+               -d VariableLengthDatasetFloatComplex tcomplex.h5)
+  ADD_H5_TEST (tcomplex_be 0 --enable-error-stack -m %.6f -w80 -d ArrayDatasetFloatComplex
+               -d CompoundDatasetFloatComplex -d DatasetDoubleComplex -d DatasetFloatComplex
+               -d VariableLengthDatasetFloatComplex tcomplex_be.h5)
+  ADD_H5_TEST (tcomplex_be_info 0 --enable-error-stack -p -H -m %.6f -w80 -d ArrayDatasetFloatComplex
+               -d CompoundDatasetFloatComplex -d DatasetDoubleComplex -d DatasetFloatComplex
+               -d VariableLengthDatasetFloatComplex tcomplex_be.h5)
 
   # test for vms
   ADD_H5_TEST (tvms 0 --enable-error-stack tvms.h5)
@@ -1331,14 +1355,14 @@
   # NATIVE default. the NATIVE test can be validated with h5import/h5diff
 #  ADD_H5_TEST_IMPORT (tbin1 out1D tbinary.h5 0 --enable-error-stack -d integer -b)
 
-  if (NOT HDF5_USING_ANALYSIS_TOOL)
+  if (NOT HDF5_ENABLE_USING_MEMCHECKER)
     ADD_H5_BIN_EXPORT (tbin2 0 tbinary.h5 --enable-error-stack -b BE -d float)
   endif ()
 
   # the NATIVE test can be validated with h5import/h5diff
 #  ADD_H5_TEST_IMPORT (tbin3 out3D tbinary.h5 0 --enable-error-stack -d integer -b NATIVE)
 
-  if (NOT HDF5_USING_ANALYSIS_TOOL)
+  if (NOT HDF5_ENABLE_USING_MEMCHECKER)
     ADD_H5_BIN_EXPORT (tbin4 0 tbinary.h5 --enable-error-stack -d double -b FILE)
   endif ()
 

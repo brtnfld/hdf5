@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -35,7 +35,7 @@
 #include "H5Eprivate.h" /* Error handling                      */
 #include "H5TSpkg.h"    /* Threadsafety                        */
 
-#ifdef H5_HAVE_THREADSAFE
+#ifdef H5_HAVE_THREADSAFE_API
 
 /****************/
 /* Local Macros */
@@ -67,10 +67,12 @@ H5TS_api_info_t H5TS_api_info_p;
 /*--------------------------------------------------------------------------
  * Function:    H5TSmutex_acquire
  *
- * Purpose:     Attempts to acquire the HDF5 library global lock
+ * Purpose:     Attempts to acquire the HDF5 library global lock. Should be preceded by a call to
+ *              H5TSmutex_release().
  *
- * Note:        On success, the 'acquired' flag indicates if the HDF5 library
- *              global lock was acquired.
+ * Parameters:
+ *              lock_count; IN: The lock count that was held on the mutex before its release
+ *              acquired; OUT: Whether the HDF5 library global lock was acquired
  *
  * Return:      Non-negative on success / Negative on failure
  *
@@ -118,10 +120,17 @@ H5TSmutex_get_attempt_count(unsigned *count)
 /*--------------------------------------------------------------------------
  * Function:    H5TSmutex_release
  *
- * Purpose:     Releases the HDF5 library global lock
+ * Purpose:     Releases the HDF5 library global lock. Should be followed by a call to H5TSmutex_acquire().
+ *
+ *              This should be used by applications to temporarily release the lock in order to either perform
+ *              multi-threaded work of their own or yield control to another thread using HDF5. The value
+ *              returned in lock_count should be provided to H5TSmutex_acquire() in order to resume a
+ *              consistent library state.
+ *
+ * Parameters:
+ *              lock_count; OUT: The current lock count for the calling thread.
  *
  * Return:      Non-negative on success / Negative on failure
- *
  *--------------------------------------------------------------------------
  */
 herr_t
@@ -138,4 +147,4 @@ H5TSmutex_release(unsigned *lock_count)
 
     FUNC_LEAVE_API_NAMECHECK_ONLY(ret_value)
 } /* end H5TSmutex_release() */
-#endif /* H5_HAVE_THREADSAFE */
+#endif /* H5_HAVE_THREADSAFE_API */

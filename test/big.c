@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -239,13 +239,6 @@ error:
  *
  *-------------------------------------------------------------------------
  */
-/* Disable warning for "format not a string literal" here -QAK */
-/*
- *      This pragma only needs to surround the snprintf() calls with
- *      'name' in the code below, but early (4.4.7, at least) gcc only
- *      allows diagnostic pragmas to be toggled outside of functions.
- */
-H5_GCC_CLANG_DIAG_OFF("format-nonliteral")
 static int
 enough_room(hid_t fapl)
 {
@@ -264,7 +257,9 @@ enough_room(hid_t fapl)
 
     /* Create files */
     for (i = 0; i < NELMTS(fd); i++) {
+        H5_WARN_FORMAT_NONLITERAL_OFF
         snprintf(name, sizeof(name), filename, i);
+        H5_WARN_FORMAT_NONLITERAL_ON
         if ((fd[i] = HDopen(name, O_RDWR | O_CREAT | O_TRUNC, H5_POSIX_CREATE_MODE_RW)) < 0) {
             goto done;
         }
@@ -279,7 +274,9 @@ enough_room(hid_t fapl)
 
 done:
     for (i = 0; i < NELMTS(fd) && fd[i] >= 0; i++) {
+        H5_WARN_FORMAT_NONLITERAL_OFF
         snprintf(name, sizeof(name), filename, i);
+        H5_WARN_FORMAT_NONLITERAL_ON
         if (HDclose(fd[i]) < 0)
             ret_value = 0;
         HDremove(name);
@@ -287,7 +284,6 @@ done:
 
     return ret_value;
 }
-H5_GCC_CLANG_DIAG_ON("format-nonliteral")
 
 /*-------------------------------------------------------------------------
  * Function:    writer

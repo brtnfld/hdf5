@@ -116,7 +116,6 @@ if (BUILD_STATIC_LIBS)
       BYPRODUCTS ${HDF5_HL_F90_BINARY_DIR}/static/H5LTff_gen.F90 ${HDF5_HL_F90_BINARY_DIR}/static/H5TBff_gen.F90
       COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:H5HL_buildiface>
       WORKING_DIRECTORY ${HDF5_HL_F90_BINARY_DIR}/static
-      DEPENDS ${HDF5_HL_F90_F_BASE_SOURCES}
       COMMENT "Generating the H5LTff_gen.F90, H5TBff_gen.F90 files"
   )
   add_custom_target (H5HLgen ALL
@@ -133,7 +132,6 @@ if (BUILD_SHARED_LIBS)
       BYPRODUCTS ${HDF5_HL_F90_BINARY_DIR}/shared/H5LTff_gen.F90 ${HDF5_HL_F90_BINARY_DIR}/shared/H5TBff_gen.F90
       COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:H5HL_buildiface>
       WORKING_DIRECTORY ${HDF5_HL_F90_BINARY_DIR}/shared
-      DEPENDS ${HDF5_HL_F90_F_BASE_SOURCES}
       COMMENT "Generating the H5LTff_gen.F90, H5TBff_gen.F90 shared files"
   )
   add_custom_target (H5HLgenSH ALL
@@ -361,13 +359,9 @@ install (
 )
 
 if (NOT WIN32 AND NOT MINGW)
-  if (HDF5_ENABLE_PARALLEL AND MPI_Fortran_FOUND)
-    set (_PKG_CONFIG_COMPILER ${MPI_Fortran_COMPILER})
-  else ()
-    set (_PKG_CONFIG_COMPILER ${CMAKE_Fortran_COMPILER})
-  endif ()
+  set (_PKG_CONFIG_COMPILER ${HDF5_H5CC_Fortran_COMPILER})
   configure_file (
-      ${HDF_RESOURCES_DIR}/libh5cc.in
+      ${HDF_CONFIG_DIR}/libh5cc.in
       ${HDF5_BINARY_DIR}/CMakeFiles/h5hlfc
       @ONLY
   )

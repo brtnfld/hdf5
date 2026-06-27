@@ -19,7 +19,7 @@ foreach (example_name ${common_examples})
           "$<$<BOOL:${${EXAMPLE_VARNAME}_USE_110_API}>:-DH5_USE_110_API>"
           "$<$<BOOL:${${EXAMPLE_VARNAME}_USE_112_API}>:-DH5_USE_112_API>"
           "$<$<BOOL:${${EXAMPLE_VARNAME}_USE_114_API}>:-DH5_USE_114_API>"
-          "$<$<BOOL:${${EXAMPLE_VARNAME}_USE_116_API}>:-DH5_USE_116_API>"
+          "$<$<BOOL:${${EXAMPLE_VARNAME}_USE_200_API}>:-DH5_USE_200_API>"
   )
   if (H5_HAVE_PARALLEL)
     target_include_directories (${EXAMPLE_VARNAME}_${example_name} PUBLIC ${MPI_C_INCLUDE_DIRS})
@@ -45,7 +45,7 @@ endforeach ()
 #            "$<$<BOOL:${${EXAMPLE_VARNAME}_USE_110_API}>:-DH5_USE_110_API>"
 #            "$<$<BOOL:${${EXAMPLE_VARNAME}_USE_112_API}>:-DH5_USE_112_API>"
 #            "$<$<BOOL:${${EXAMPLE_VARNAME}_USE_114_API}>:-DH5_USE_114_API>"
-#            "$<$<BOOL:${${EXAMPLE_VARNAME}_USE_116_API}>:-DH5_USE_116_API>"
+#            "$<$<BOOL:${${EXAMPLE_VARNAME}_USE_200_API}>:-DH5_USE_200_API>"
 #    )
 #    if (H5_HAVE_PARALLEL)
 #      target_include_directories (${EXAMPLE_VARNAME}_${example_name} PUBLIC ${MPI_C_INCLUDE_DIRS})
@@ -97,18 +97,18 @@ endforeach ()
 #    endif ()
 #  endforeach ()
 #endif ()
-#if (HDF5_VERSION_MAJOR VERSION_GREATER_EQUAL "1.16")
-#  foreach (example_name ${1_16_examples})
-#    if (H5EX_BUILD_TESTING)
+if (HDF5_VERSION_MAJOR VERSION_GREATER_EQUAL "2.0")
+  foreach (example_name ${2_0_examples})
+    if (H5EX_BUILD_TESTING)
 #      add_custom_command (
 #          TARGET     ${EXAMPLE_VARNAME}_${example_name}
 #          POST_BUILD
 #          COMMAND    ${CMAKE_COMMAND}
-#          ARGS       -E copy_if_different ${PROJECT_SOURCE_DIR}/tfiles/116/${example_name}.tst ${PROJECT_BINARY_DIR}/${example_name}.tst
+#          ARGS       -E copy_if_different ${PROJECT_SOURCE_DIR}/tfiles/200/${example_name}.tst ${PROJECT_BINARY_DIR}/${example_name}.tst
 #      )
-#    endif ()
-#  endforeach ()
-#endif ()
+    endif ()
+  endforeach ()
+endif ()
 
 if (HDF5_BUILD_TOOLS)
   foreach (example_name ${common_examples})
@@ -321,12 +321,12 @@ if (HDF5_BUILD_TOOLS)
       #      ARGS       -E copy_if_different ${PROJECT_SOURCE_DIR}/tfiles/114/${example_name}.ddl ${PROJECT_BINARY_DIR}/${example_name}.ddl
       #  )
       #endif ()
-      #if (HDF5_VERSION_MAJOR VERSION_GREATER_EQUAL "1.16")
+      #if (HDF5_VERSION_MAJOR VERSION_GREATER_EQUAL "2.0")
       #  add_custom_command (
       #      TARGET     ${EXAMPLE_VARNAME}_${example_name}
       #      POST_BUILD
       #      COMMAND    ${CMAKE_COMMAND}
-      #      ARGS       -E copy_if_different ${PROJECT_SOURCE_DIR}/tfiles/116/${example_name}.ddl ${PROJECT_BINARY_DIR}/${example_name}.ddl
+      #      ARGS       -E copy_if_different ${PROJECT_SOURCE_DIR}/tfiles/200/${example_name}.ddl ${PROJECT_BINARY_DIR}/${example_name}.ddl
       #  )
       #endif ()
 #  endforeach ()
@@ -336,7 +336,13 @@ if (HDF5_BUILD_TOOLS)
 #  endforeach ()
 #  foreach (example_name ${1_14_examples})
 #  endforeach ()
-#  foreach (example_name ${1_16_examples})
+#  foreach (example_name ${2_0_examples})
+  #  add_custom_command (
+  #      TARGET     ${EXAMPLE_VARNAME}_${example_name}
+  #      POST_BUILD
+  #      COMMAND    ${CMAKE_COMMAND}
+  #      ARGS       -E copy_if_different ${PROJECT_SOURCE_DIR}/tfiles/200/${example_name}.ddl ${PROJECT_BINARY_DIR}/${example_name}.ddl
+  #  )
 #  endforeach ()
 endif ()
 
@@ -348,7 +354,7 @@ if (H5EX_BUILD_TESTING)
             -E remove
             ${testname}.h5
     )
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       add_test (NAME ${EXAMPLE_VARNAME}_${testname} COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:${EXAMPLE_VARNAME}_${testname}>)
       set_tests_properties (${EXAMPLE_VARNAME}_${testname} PROPERTIES DEPENDS ${EXAMPLE_VARNAME}_${testname}-clearall)
     else ()
@@ -392,7 +398,7 @@ if (H5EX_BUILD_TESTING)
             -E remove
             ${testname}.h5
     )
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       add_test (NAME ${EXAMPLE_VARNAME}_${testname} COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:${EXAMPLE_VARNAME}_${testname}>)
       set_tests_properties (${EXAMPLE_VARNAME}_${testname} PROPERTIES DEPENDS ${EXAMPLE_VARNAME}_${testname}-clearall)
     else ()
@@ -422,4 +428,8 @@ if (H5EX_BUILD_TESTING)
       ADD_H5_TEST (${example_name})
     endif ()
   endforeach ()
+
+#  foreach (example_name ${2_0_examples})
+#      ADD_H5_TEST (${example_name})
+#  endforeach ()
 endif ()

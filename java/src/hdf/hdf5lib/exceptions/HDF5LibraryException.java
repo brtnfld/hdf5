@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -16,7 +16,7 @@ import hdf.hdf5lib.H5;
 import hdf.hdf5lib.HDF5Constants;
 
 /**
- * @page ERRORSLIB HDF5 Library Errors and Exceptions
+ * \page ERRORSLIB HDF5 Library Errors and Exceptions
  * The class HDF5LibraryException returns errors raised by the HDF5 library.
  *
  * Each major error code from the HDF5 Library is represented by a sub-class of

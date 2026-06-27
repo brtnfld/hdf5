@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -35,6 +35,7 @@
  * Indicates that the buffer provided in a call to @ref H5Dread or @ref H5Dwrite
  * is a single contiguous block of memory, with the same number of elements
  * as the file dataspace. Used in place of a memory dataspace @ref hid_t value.
+ * \since 1.14.0
  */
 #define H5S_BLOCK 1
 
@@ -42,13 +43,14 @@
  * Used with @ref H5Dread and @ref H5Dwrite to indicate that the file dataspace
  * selection was set via @ref H5Pset_dataset_io_hyperslab_selection calls.
  * Used in place of a file dataspace @ref hid_t value.
+ * \since 1.14.0
  */
 #define H5S_PLIST 2
 
 #define H5S_UNLIMITED HSIZE_UNDEF /**< Value for 'unlimited' dimensions */
 
 /**
- * The maximum dataspace rank or number of dimensions
+ * The maximum number of dimensions in a dataspace or array datatype
  */
 #define H5S_MAX_RANK 32
 
@@ -60,6 +62,8 @@
             * increasing offset order. Note that the order is only increasing                                \
             * for each call to H5Sget_seq_list(), the next set of sequences                                  \
             * could start with an earlier offset than the previous one.                                      \
+            *                                                                                                \
+            * \since 1.12.0                                                                                  \
             */
 #define H5S_SEL_ITER_SHARE_WITH_DATASPACE                                                                    \
     0x0002 /**< Don't copy the dataspace selection when creating the selection                               \
@@ -67,24 +71,26 @@
             * but the dataspace \Bold{MUST NOT} be modified or closed until the                              \
             * selection iterator is closed or the iterator's behavior will be                                \
             * undefined.                                                                                     \
+            *                                                                                                \
+            * \since 1.12.0                                                                                  \
             */
 
 /**
  * Types of dataspaces
  */
 typedef enum H5S_class_t {
-    H5S_NO_CLASS = -1, /**< Error                                      */
-    H5S_SCALAR   = 0,  /**< Singleton (scalar)                         */
-    H5S_SIMPLE   = 1,  /**< Regular grid                               */
-    H5S_NULL     = 2   /**< Empty set                                  */
+    H5S_NO_CLASS = -1, /**< Error \since 1.0.0                         */
+    H5S_SCALAR   = 0,  /**< Singleton (scalar) \since 1.0.0            */
+    H5S_SIMPLE   = 1,  /**< Regular grid \since 1.0.0                  */
+    H5S_NULL     = 2   /**< Empty set \since 1.8.0                     */
 } H5S_class_t;
 
 /**
  * Different ways of combining selections
  */
 typedef enum H5S_seloper_t {
-    H5S_SELECT_NOOP = -1, /**< Error                                     */
-    H5S_SELECT_SET  = 0,  /**< Select "set" operation 		             */
+    H5S_SELECT_NOOP = -1, /**< Error \since 1.0.0                        */
+    H5S_SELECT_SET  = 0,  /**< Select "set" operation \since 1.0.0       */
     H5S_SELECT_OR,        /**< Binary "or" operation for hyperslabs
                            * (add new selection to existing selection)
                            * \code
@@ -92,6 +98,8 @@ typedef enum H5S_seloper_t {
                            * New region:             BBBBBBBBBB
                            * A or B:           CCCCCCCCCCCCCCCC
                            * \endcode
+                           *
+                           * \since 1.0.0
                            */
     H5S_SELECT_AND,       /**< Binary "and" operation for hyperslabs
                            * (only leave overlapped regions in selection)
@@ -100,6 +108,8 @@ typedef enum H5S_seloper_t {
                            * New region:             BBBBBBBBBB
                            * A and B:                CCCC
                            * \endcode
+                           *
+                           * \since 1.6.0
                            */
     H5S_SELECT_XOR,       /**< Binary "xor" operation for hyperslabs
                            * (only leave non-overlapped regions in selection)
@@ -108,6 +118,8 @@ typedef enum H5S_seloper_t {
                            * New region:             BBBBBBBBBB
                            * A xor B:          CCCCCC    CCCCCC
                            * \endcode
+                           *
+                           * \since 1.6.0
                            */
     H5S_SELECT_NOTB,      /**< Binary "not" operation for hyperslabs
                            * (only leave non-overlapped regions in original selection)
@@ -116,6 +128,8 @@ typedef enum H5S_seloper_t {
                            * New region:             BBBBBBBBBB
                            * A not B:          CCCCCC
                            * \endcode
+                           *
+                           * \since 1.6.0
                            */
     H5S_SELECT_NOTA,      /**< Binary "not" operation for hyperslabs
                            * (only leave non-overlapped regions in new selection)
@@ -124,22 +138,24 @@ typedef enum H5S_seloper_t {
                            * New region:             BBBBBBBBBB
                            * B not A:                    CCCCCC
                            * \endcode
+                           *
+                           * \since 1.6.0
                            */
-    H5S_SELECT_APPEND,    /**< Append elements to end of point selection */
-    H5S_SELECT_PREPEND,   /**< Prepend elements to beginning of point selection */
-    H5S_SELECT_INVALID    /**< Invalid upper bound on selection operations */
+    H5S_SELECT_APPEND,    /**< Append elements to end of point selection \since 1.4.0 */
+    H5S_SELECT_PREPEND,   /**< Prepend elements to beginning of point selection \since 1.4.0 */
+    H5S_SELECT_INVALID    /**< Invalid upper bound on selection operations \since 1.0.0 */
 } H5S_seloper_t;
 
 /**
  * Selection type
  */
 typedef enum {
-    H5S_SEL_ERROR      = -1, /**< Error                                 */
-    H5S_SEL_NONE       = 0,  /**< Empty selection                       */
-    H5S_SEL_POINTS     = 1,  /**< Set of points                         */
-    H5S_SEL_HYPERSLABS = 2,  /**< Hyperslab                             */
-    H5S_SEL_ALL        = 3,  /**< Everything	                        */
-    H5S_SEL_N                /**< Sentinel \internal THIS MUST BE LAST	*/
+    H5S_SEL_ERROR      = -1, /**< Error \since 1.0.0                                */
+    H5S_SEL_NONE       = 0,  /**< Empty selection \since 1.0.0                      */
+    H5S_SEL_POINTS     = 1,  /**< Set of points \since 1.0.0                        */
+    H5S_SEL_HYPERSLABS = 2,  /**< Hyperslab \since 1.0.0                            */
+    H5S_SEL_ALL        = 3,  /**< Everything \since 1.0.0                           */
+    H5S_SEL_N                /**< Sentinel \internal THIS MUST BE LAST \since 1.0.0 */
 } H5S_sel_type;
 
 #ifdef __cplusplus
@@ -190,6 +206,8 @@ H5_DLL herr_t H5Sclose(hid_t space_id);
  *          composing the entire current extent). If either \p stride or
  *          \p block is NULL, then it will be set to \p 1.
  *
+ *          See H5Sselect_hyperslab() for valid operators (\p op).
+ *
  * \since 1.10.6
  *
  */
@@ -212,6 +230,8 @@ H5_DLL hid_t H5Scombine_hyperslab(hid_t space_id, H5S_seloper_t op, const hsize_
  *          new dataspace with the resulting selection. The dataspace extent
  *          from \p space1_id is copied for the dataspace extent of the
  *          newly created dataspace.
+ *
+ *          See H5Sselect_hyperslab() for valid operators (\p op).
  *
  * \since 1.10.6
  *
@@ -251,10 +271,10 @@ H5_DLL hid_t H5Scopy(hid_t space_id);
  *          Further dataspace types may be added later.
  *
  *          A scalar dataspace, #H5S_SCALAR, has a single element, though that
- *          element may be of a complex datatype, such as a compound or array
+ *          element may be of a composite datatype, such as a compound or array
  *          datatype. By convention, the rank of a scalar dataspace is always \p 0
  *          (zero); think of it geometrically as a single, dimensionless point,
- *          though that point can be complex.
+ *          though that point can be composite.
  *
  *          A simple dataspace, #H5S_SIMPLE, consists of a regular array of elements.
  *
@@ -390,7 +410,7 @@ H5_DLL hid_t H5Sdecode(const void *buf);
  *
  * \note Motivation: This function was introduced in HDF5-1.12 as part of the
  *       H5Sencode() format change to enable 64-bit selection encodings and
- *       a dataspace selection that is tied to a file. See the \ref_news_112
+ *       a dataspace selection that is tied to a file. See the \ref sec_rel_spec_112_feat
  *       as well as the \ref_sencode_fmt_change.
  *
  * \since 1.12.0
@@ -815,6 +835,8 @@ H5_DLL htri_t H5Sis_simple(hid_t space_id);
  *          \p space1_id with an operation \p op, using a second hyperslab
  *          \p space2_id. The first selection is modified to contain the
  *          result of \p space1_id operated on by \p space2_id.
+ *
+ *          See H5Sselect_hyperslab() for valid operators (\p op).
  *
  * \since 1.10.6
  *
@@ -1292,7 +1314,7 @@ H5_DLL hid_t H5Sselect_project_intersection(hid_t src_space_id, hid_t dst_space_
  *          This is primarily used for reading the entire selection in
  *          one swoop.
  *
- * \since 1.10.6
+ * \since 1.10.7
  *
  */
 H5_DLL htri_t H5Sselect_shape_same(hid_t space1_id, hid_t space2_id);

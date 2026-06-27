@@ -5,7 +5,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -27,7 +27,7 @@ namespace H5 {
     Wrappers for H5A functions stay in H5Object.
 */
 // Inheritance: IdComponent
-class H5_DLLCPP H5Location : public IdComponent {
+class H5CPP_DLL H5Location : public IdComponent {
   public:
     // Checks if a link of a given name exists in a location
     bool nameExists(const char *name, const LinkAccPropList &lapl = LinkAccPropList::DEFAULT) const;

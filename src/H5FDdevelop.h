@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -92,41 +92,49 @@
 /**
  * Extensible array header block; it is mapped to 'ohdr' type file memory to
  * benefit from their similarity.
+ * \since 1.10.0
  */
 #define H5FD_MEM_EARRAY_HDR H5FD_MEM_OHDR
 /**
  * Extensible array index block; it is mapped to 'ohdr' type file memory because
  * these index blocks are similar to extensible array header blocks.
+ * \since 1.10.0
  */
 #define H5FD_MEM_EARRAY_IBLOCK H5FD_MEM_OHDR
 /**
  * Extensible array super block; it is mappend to 'btree' type file memory
  * because the indices are similar enough to B-tree nodes.
+ * \since 1.10.0
  */
 #define H5FD_MEM_EARRAY_SBLOCK H5FD_MEM_BTREE
 /**
  * Extensible array data block; it is mapped to 'lheap' type file memory
  * because it is similar enough to local heap info.
+ * \since 1.10.0
  */
 #define H5FD_MEM_EARRAY_DBLOCK H5FD_MEM_LHEAP
 /**
  * Extensible array data block & page; it is mapped to 'lheap' type file memory
  * because it is similar enough to local heap info.
+ * \since 1.10.0
  */
 #define H5FD_MEM_EARRAY_DBLK_PAGE H5FD_MEM_LHEAP
 /**
  * Fixed array header block; it is mapped to 'ohdr' type file memory to
  * benefit their similarity.
+ * \since 1.10.0
  */
 #define H5FD_MEM_FARRAY_HDR H5FD_MEM_OHDR
 /**
  * Fixed array data block; it is mapped to 'lheap' type file memory
  * because it is similar enough to local heap info.
+ * \since 1.10.0
  */
 #define H5FD_MEM_FARRAY_DBLOCK H5FD_MEM_LHEAP
 /**
  * Fixed array data block & page; it is mapped to 'lheap' type file memory
  * because it is similar enough to local heap info.
+ * \since 1.10.0
  */
 #define H5FD_MEM_FARRAY_DBLK_PAGE H5FD_MEM_LHEAP
 
@@ -359,7 +367,6 @@ typedef hid_t (*H5FD_init_t)(void);
 extern "C" {
 #endif
 
-H5_DLL hid_t   H5FDperform_init(H5FD_init_t op);
 H5_DLL hid_t   H5FDregister(const H5FD_class_t *cls);
 H5_DLL htri_t  H5FDis_driver_registered_by_name(const char *driver_name);
 H5_DLL htri_t  H5FDis_driver_registered_by_value(H5FD_class_value_t driver_value);

@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -191,7 +191,7 @@ H5R__encode_token_region_compat(H5F_t *f, const H5O_token_t *obj_token, size_t t
          * file libver bounds, this is later retrieved in H5S hyper encode */
         H5CX_set_libver_bounds(f);
 
-        /* Zero the heap ID out, may leak heap space if user is re-using
+        /* Zero the heap ID out, may leak heap space if user is reusing
          * reference and doesn't have garbage collection turned on
          */
         memset(buf, 0, buf_size);
@@ -267,12 +267,12 @@ H5Rget_obj_type1(hid_t id, H5R_type_t ref_type, const void *ref)
 
     /* Check if using native VOL connector */
     if (H5VL_object_is_native(vol_obj, &is_native_vol_obj) < 0)
-        HGOTO_ERROR(H5E_REFERENCE, H5E_CANTGET, FAIL,
+        HGOTO_ERROR(H5E_REFERENCE, H5E_CANTGET, H5G_UNKNOWN,
                     "can't determine if VOL object is native connector object");
 
     /* Must use native VOL connector for this operation */
     if (!is_native_vol_obj)
-        HGOTO_ERROR(H5E_REFERENCE, H5E_VOL, FAIL,
+        HGOTO_ERROR(H5E_REFERENCE, H5E_VOL, H5G_UNKNOWN,
                     "H5Rget_obj_type1 is only meant to be used with the native VOL connector");
 
     /* Get object type */
@@ -341,12 +341,12 @@ H5Rdereference1(hid_t obj_id, H5R_type_t ref_type, const void *ref)
 
     /* Check if using native VOL connector */
     if (H5VL_object_is_native(vol_obj, &is_native_vol_obj) < 0)
-        HGOTO_ERROR(H5E_REFERENCE, H5E_CANTGET, FAIL,
+        HGOTO_ERROR(H5E_REFERENCE, H5E_CANTGET, H5I_INVALID_HID,
                     "can't determine if VOL object is native connector object");
 
     /* Must use native VOL connector for this operation */
     if (!is_native_vol_obj)
-        HGOTO_ERROR(H5E_REFERENCE, H5E_VOL, FAIL,
+        HGOTO_ERROR(H5E_REFERENCE, H5E_VOL, H5I_INVALID_HID,
                     "H5Rdereference1 is only meant to be used with the native VOL connector");
 
     /* Get object type */
@@ -368,7 +368,7 @@ H5Rdereference1(hid_t obj_id, H5R_type_t ref_type, const void *ref)
         HGOTO_ERROR(H5E_REFERENCE, H5E_CANTOPENOBJ, H5I_INVALID_HID, "unable to open object by token");
 
     /* Register object */
-    if ((ret_value = H5VL_register(opened_type, opened_obj, vol_obj->connector, true)) < 0)
+    if ((ret_value = H5VL_register(opened_type, opened_obj, H5VL_OBJ_CONNECTOR(vol_obj), true)) < 0)
         HGOTO_ERROR(H5E_REFERENCE, H5E_CANTREGISTER, H5I_INVALID_HID, "unable to register object handle");
 
 done:
@@ -614,12 +614,12 @@ H5Rdereference2(hid_t obj_id, hid_t oapl_id, H5R_type_t ref_type, const void *re
 
     /* Check if using native VOL connector */
     if (H5VL_object_is_native(vol_obj, &is_native_vol_obj) < 0)
-        HGOTO_ERROR(H5E_REFERENCE, H5E_CANTGET, FAIL,
+        HGOTO_ERROR(H5E_REFERENCE, H5E_CANTGET, H5I_INVALID_HID,
                     "can't determine if VOL object is native connector object");
 
     /* Must use native VOL connector for this operation */
     if (!is_native_vol_obj)
-        HGOTO_ERROR(H5E_REFERENCE, H5E_VOL, FAIL,
+        HGOTO_ERROR(H5E_REFERENCE, H5E_VOL, H5I_INVALID_HID,
                     "H5Rdereference2 is only meant to be used with the native VOL connector");
 
     /* Get object type */
@@ -641,7 +641,7 @@ H5Rdereference2(hid_t obj_id, hid_t oapl_id, H5R_type_t ref_type, const void *re
         HGOTO_ERROR(H5E_REFERENCE, H5E_CANTOPENOBJ, H5I_INVALID_HID, "unable to open object by token");
 
     /* Register object */
-    if ((ret_value = H5VL_register(opened_type, opened_obj, vol_obj->connector, true)) < 0)
+    if ((ret_value = H5VL_register(opened_type, opened_obj, H5VL_OBJ_CONNECTOR(vol_obj), true)) < 0)
         HGOTO_ERROR(H5E_REFERENCE, H5E_CANTREGISTER, H5I_INVALID_HID, "unable to register object handle");
 
 done:
@@ -694,7 +694,7 @@ H5Rget_region(hid_t id, H5R_type_t ref_type, const void *ref)
                     "can't query if file uses native VOL connector");
 
     if (!is_native_vol_obj)
-        HGOTO_ERROR(H5E_REFERENCE, H5E_VOL, FAIL,
+        HGOTO_ERROR(H5E_REFERENCE, H5E_VOL, H5I_INVALID_HID,
                     "H5Rget_region is only meant to be used with the native VOL connector");
 
     /* Get object type */

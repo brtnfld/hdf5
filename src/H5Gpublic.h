@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -127,8 +127,8 @@ H5_DLL hid_t H5Gcreate2(hid_t loc_id, const char *name, hid_t lcpl_id, hid_t gcp
 H5_DLL hid_t H5Gcreate_async(const char *app_file, const char *app_func, unsigned app_line, hid_t loc_id,
                              const char *name, hid_t lcpl_id, hid_t gcpl_id, hid_t gapl_id, hid_t es_id);
 #else
-H5_DLL hid_t  H5Gcreate_async(hid_t loc_id, const char *name, hid_t lcpl_id, hid_t gcpl_id, hid_t gapl_id,
-                              hid_t es_id);
+H5_DLL hid_t H5Gcreate_async(hid_t loc_id, const char *name, hid_t lcpl_id, hid_t gcpl_id, hid_t gapl_id,
+                             hid_t es_id);
 #endif
 
 /**
@@ -222,7 +222,7 @@ H5_DLL hid_t H5Gopen2(hid_t loc_id, const char *name, hid_t gapl_id);
 H5_DLL hid_t H5Gopen_async(const char *app_file, const char *app_func, unsigned app_line, hid_t loc_id,
                            const char *name, hid_t gapl_id, hid_t es_id);
 #else
-H5_DLL hid_t  H5Gopen_async(hid_t loc_id, const char *name, hid_t gapl_id, hid_t es_id);
+H5_DLL hid_t H5Gopen_async(hid_t loc_id, const char *name, hid_t gapl_id, hid_t es_id);
 #endif
 
 /**
@@ -692,9 +692,9 @@ H5_DLL hid_t H5Gopen1(hid_t loc_id, const char *name);
  *          If \p link_type is #H5G_LINK_SOFT, then \p cur_name can be anything
  *          and is interpreted at lookup time relative to the group which
  *          contains the final component of \p new_name. For instance, if \p
- *          cur_name is \Code{./foo}, \p new_name is \Code{./x/y/bar}, and a
- *          request is made for \Code{./x/y/bar}, then the actual object looked
- *          up is \Code{./x/y/./foo}.
+ *          cur_name is \TText{./foo}, \p new_name is \TText{./x/y/bar}, and a
+ *          request is made for \TText{./x/y/bar}, then the actual object looked
+ *          up is \TText{./x/y/./foo}.
 
  * \version 1.8.0 Function deprecated in this release.
  *
@@ -730,9 +730,9 @@ H5_DLL herr_t H5Glink(hid_t cur_loc_id, H5G_link_t type, const char *cur_name, c
  *          If \p link_type is #H5G_LINK_SOFT, then \p cur_name can be anything
  *          and is interpreted at lookup time relative to the group which
  *          contains the final component of \p new_name. For instance, if \p
- *          current_name is \Code{./foo}, \p new_name is \Code{./x/y/bar}, and a
- *          request is made for \Code{./x/y/bar}, then the actual object looked
- *          up is \Code{./x/y/./foo}.
+ *          current_name is \TText{./foo}, \p new_name is \TText{./x/y/bar}, and a
+ *          request is made for \TText{./x/y/bar}, then the actual object looked
+ *          up is \TText{./x/y/./foo}.
  *
  * \version 1.8.0 Function deprecated in this release.
  *
@@ -838,7 +838,7 @@ H5_DLL herr_t H5Gmove2(hid_t src_loc_id, const char *src_name, hid_t dst_loc_id,
  *          the \ref UG for further details.
  *
  * \attention Exercise care in moving groups as it is possible to render data in
- *            a file inaccessible with H5Gunlink(). See The Group Interface in the
+ *            a file inaccessible with H5Gunlink(). See \ref sec_group in the
  *            \ref UG.
  *
  * \version 1.8.0 Function deprecated in this release.
@@ -895,7 +895,7 @@ H5_DLL herr_t H5Gget_linkval(hid_t loc_id, const char *name, size_t size, char *
  *
  * \fgdt_loc_id
  * \param[in] name Name of the object whose comment is to be set or reset
- *                 name must be \Code{'.'} (dot) if \p loc_id fully specifies
+ *                 name must be \TText{'.'} (dot) if \p loc_id fully specifies
  *                 the object for which the comment is to be set.
  * \param[in] comment The new comment
  *
@@ -937,7 +937,7 @@ H5_DLL herr_t H5Gset_comment(hid_t loc_id, const char *name, const char *comment
  *
  * \fgdt_loc_id
  * \param[in] name Name of the object whose comment is to be set or reset
- *                 name must be \Code{'.'} (dot) if \p loc_id fully specifies
+ *                 name must be \TText{'.'} (dot) if \p loc_id fully specifies
  *                 the object for which the comment is to be set.
  * \param[in] bufsize Maximum number of comment characters to be returned in \p buf.
  * \param[in] buf The comment
@@ -960,12 +960,7 @@ H5_DLL herr_t H5Gset_comment(hid_t loc_id, const char *name, const char *comment
  *              root group
  *          \li A dot (\c .), if \p loc_id fully specifies the object
  *
- *          At most bufsize characters, including a null-terminator, are
- *          returned in \p buf. The returned value is not null-terminated if the
- *          comment is longer than the supplied buffer. If the size of the
- *          comment is unknown, a preliminary \p H5Gget_comment() call will
- *          return the size of the comment, including space for the
- *          null-terminator.
+ *          \details_namelen{comment,H5Gget_comment}
  *
  *          If an object does not have a comment, the empty string is returned
  *          in comment.
@@ -1036,6 +1031,8 @@ H5_DLL int H5Gget_comment(hid_t loc_id, const char *name, size_t bufsize, char *
  *
  * \warning  Adding or removing members to the group during iteration
  *           will lead to undefined behavior.
+ *
+ * \callback_note
  *
  * \version 1.8.0 Function deprecated in this release.
  *
@@ -1160,7 +1157,7 @@ H5_DLL herr_t H5Gget_objinfo(hid_t loc_id, const char *name, hbool_t follow_link
  *
  *          If the size of the provided buffer \p name is less or equal the
  *          actual object name length, the object name is truncated to
- *          \Code{max_size - 1} characters.
+ *          \TText{max_size - 1} characters.
  *
  *          Note that if the size of the object's name is unknown, a preliminary
  *          call to H5Gget_objname_by_idx() with \p name set to \c NULL will

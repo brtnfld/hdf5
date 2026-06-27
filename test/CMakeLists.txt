@@ -353,10 +353,12 @@ set (ttsafe_SOURCES
     ${HDF5_TEST_SOURCE_DIR}/ttsafe_dcreate.c
     ${HDF5_TEST_SOURCE_DIR}/ttsafe_develop.c
     ${HDF5_TEST_SOURCE_DIR}/ttsafe_error.c
-    ${HDF5_TEST_SOURCE_DIR}/ttsafe_rec_rw_lock.c
+    ${HDF5_TEST_SOURCE_DIR}/ttsafe_rwlock.c
+    ${HDF5_TEST_SOURCE_DIR}/ttsafe_rec_rwlock.c
     ${HDF5_TEST_SOURCE_DIR}/ttsafe_semaphore.c
     ${HDF5_TEST_SOURCE_DIR}/ttsafe_thread_id.c
     ${HDF5_TEST_SOURCE_DIR}/ttsafe_thread_pool.c
+    ${HDF5_TEST_SOURCE_DIR}/ttsafe_error_stacks.c
 )
 
 set (H5_EXPRESS_TESTS
@@ -484,6 +486,12 @@ endforeach ()
 ##############################################################################
 ######### Also special handling of link libs #############
 #-- Adding test for chunk_info
+if (H5_ZLIB_HEADER)
+  message(STATUS "H5_ZLIB_HEADER=${H5_ZLIB_HEADER}")
+  set_source_files_properties(${HDF5_TEST_SOURCE_DIR}/chunk_info.c
+               PROPERTIES COMPILE_DEFINITIONS H5_ZLIB_HEADER="${H5_ZLIB_HEADER}"
+  )
+endif ()
 add_executable (chunk_info ${HDF5_TEST_SOURCE_DIR}/chunk_info.c)
 target_compile_options(chunk_info PRIVATE "${HDF5_CMAKE_C_FLAGS}")
 target_compile_definitions(chunk_info PRIVATE "${HDF5_TEST_COMPILE_DEFS_PRIVATE}")
@@ -505,6 +513,13 @@ if (HDF5_ENABLE_FORMATTERS)
 endif ()
 
 #-- Adding test for direct_chunk
+if (H5_ZLIB_HEADER)
+  message(VERBOSE "H5_ZLIB_HEADER for direct_chunk=${H5_ZLIB_HEADER}")
+
+  set_source_files_properties(${HDF5_TEST_SOURCE_DIR}/direct_chunk.c
+               PROPERTIES COMPILE_DEFINITIONS H5_ZLIB_HEADER="${H5_ZLIB_HEADER}"
+  )
+endif ()
 add_executable (direct_chunk ${HDF5_TEST_SOURCE_DIR}/direct_chunk.c)
 target_compile_options(direct_chunk PRIVATE "${HDF5_CMAKE_C_FLAGS}")
 target_compile_definitions(direct_chunk PRIVATE "${HDF5_TEST_COMPILE_DEFS_PRIVATE}")
@@ -576,12 +591,9 @@ target_include_directories (ttsafe PRIVATE "${HDF5_SRC_INCLUDE_DIRS};${HDF5_SRC_
 if (NOT BUILD_SHARED_LIBS)
   TARGET_C_PROPERTIES (ttsafe STATIC)
   target_link_libraries (ttsafe PRIVATE ${HDF5_TEST_LIB_TARGET})
-  if (NOT WIN32)
-    target_link_libraries (ttsafe PRIVATE "$<$<BOOL:${HDF5_ENABLE_THREADSAFE}>:Threads::Threads>")
-  endif ()
 else ()
   TARGET_C_PROPERTIES (ttsafe SHARED)
-  target_link_libraries (ttsafe PRIVATE ${HDF5_TEST_LIBSH_TARGET} "$<$<BOOL:${HDF5_ENABLE_THREADSAFE}>:Threads::Threads>")
+  target_link_libraries (ttsafe PRIVATE ${HDF5_TEST_LIBSH_TARGET})
 endif ()
 set_target_properties (ttsafe PROPERTIES FOLDER test)
 

@@ -2,6 +2,12 @@ cmake_minimum_required (VERSION 3.18)
 project (HDF5_F90_SRC C Fortran)
 
 #-----------------------------------------------------------------------------
+if (H5_NO_DEPRECATED_SYMBOLS)
+  set (CMAKE_NO_DEPRECATED_SYMBOLS 0)
+else ()
+  set (CMAKE_NO_DEPRECATED_SYMBOLS 1)
+endif ()
+
 # configure def file for shared libs on windows
 if (WIN32)
   if (BUILD_SHARED_LIBS)
@@ -14,9 +20,7 @@ if (WIN32)
       if (NOT H5_FORTRAN_C_LONG_DOUBLE_IS_UNIQUE)
         set (H5_DBL_NOT_UNIQUE_EXP ";")
       endif ()
-      set (CMAKE_NO_DEPRECATED_SYMBOLS 0)
       if (NOT H5_NO_DEPRECATED_SYMBOLS)
-        set (CMAKE_NO_DEPRECATED_SYMBOLS 1)
         set (DLL_NO_DEPRECATED_SYMBOLS ";")
       endif ()
       configure_file (${HDF5_F90_SRC_SOURCE_DIR}/hdf5_fortrandll.def.in ${HDF5_F90_SRC_BINARY_DIR}/hdf5_fortrandll.def @ONLY)
@@ -133,7 +137,6 @@ add_custom_command (TARGET H5match_types POST_BUILD
     BYPRODUCTS ${HDF5_F90_BINARY_DIR}/H5f90i_gen.h ${HDF5_F90_BINARY_DIR}/H5fortran_types.F90
     COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:H5match_types>
     WORKING_DIRECTORY ${HDF5_F90_BINARY_DIR}
-    DEPENDS H5match_types
 )
 
 if (BUILD_STATIC_LIBS)
@@ -144,7 +147,6 @@ if (BUILD_STATIC_LIBS)
       COMMAND    ${CMAKE_COMMAND}
       ARGS       -E copy_if_different ${HDF5_F90_BINARY_DIR}/H5fortran_types.F90 ${HDF5_F90_BINARY_DIR}/static/H5fortran_types.F90
       WORKING_DIRECTORY ${HDF5_F90_BINARY_DIR}/static
-      DEPENDS H5_buildiface H5match_types ${HDF5_F90_BINARY_DIR}/H5f90i_gen.h
   )
   set_source_files_properties (${HDF5_F90_BINARY_DIR}/static/H5f90i_gen.h PROPERTIES GENERATED TRUE)
   set_source_files_properties (${HDF5_F90_BINARY_DIR}/static/H5fortran_types.F90 PROPERTIES GENERATED TRUE)
@@ -157,7 +159,6 @@ if (BUILD_SHARED_LIBS)
       COMMAND    ${CMAKE_COMMAND}
       ARGS       -E copy_if_different ${HDF5_F90_BINARY_DIR}/H5fortran_types.F90 ${HDF5_F90_BINARY_DIR}/shared/H5fortran_types.F90
       WORKING_DIRECTORY ${HDF5_F90_BINARY_DIR}/shared
-      DEPENDS H5_buildiface H5match_types ${HDF5_F90_BINARY_DIR}/H5f90i_gen.h
   )
   set_source_files_properties (${HDF5_F90_BINARY_DIR}/shared/H5f90i_gen.h PROPERTIES GENERATED TRUE)
   set_source_files_properties (${HDF5_F90_BINARY_DIR}/shared/H5fortran_types.F90 PROPERTIES GENERATED TRUE)
@@ -286,7 +287,6 @@ add_custom_command (TARGET H5_buildiface POST_BUILD
     BYPRODUCTS ${HDF5_F90_BINARY_DIR}/H5_gen.F90
     COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:H5_buildiface>
     WORKING_DIRECTORY ${HDF5_F90_BINARY_DIR}
-    DEPENDS H5_buildiface ${f90_F_GEN_SOURCES}
     COMMENT "Generating the H5_gen.F90 file"
 )
 if (BUILD_STATIC_LIBS)
@@ -295,7 +295,6 @@ if (BUILD_STATIC_LIBS)
       COMMAND    ${CMAKE_COMMAND}
       ARGS       -E copy_if_different ${HDF5_F90_BINARY_DIR}/H5_gen.F90 ${HDF5_F90_BINARY_DIR}/static/H5_gen.F90
       WORKING_DIRECTORY ${HDF5_F90_BINARY_DIR}/static
-      DEPENDS H5_buildiface ${HDF5_F90_BINARY_DIR}/H5_gen.F90
       COMMENT "Generating the H5_gen.F90 file"
   )
   add_custom_target (H5gen ALL
@@ -310,7 +309,6 @@ if (BUILD_SHARED_LIBS)
       COMMAND    ${CMAKE_COMMAND}
       ARGS       -E copy_if_different ${HDF5_F90_BINARY_DIR}/H5_gen.F90 ${HDF5_F90_BINARY_DIR}/shared/H5_gen.F90
       WORKING_DIRECTORY ${HDF5_F90_BINARY_DIR}/shared
-      DEPENDS ${HDF5_F90_BINARY_DIR}/H5_gen.F90
       COMMENT "Generating the H5_gen.F90 shared file"
   )
   add_custom_target (H5genSH ALL
@@ -458,7 +456,6 @@ if (BUILD_STATIC_LIBS)
   install (
       FILES
           ${HDF5_F90_BINARY_DIR}/static/H5f90i_gen.h
-          ${HDF5_F90_BINARY_DIR}/static/H5fortran_types.F90
           ${HDF5_F90_BINARY_DIR}/H5config_f.inc
       DESTINATION
           ${HDF5_INSTALL_INCLUDE_DIR}
@@ -469,7 +466,6 @@ else ()
   install (
       FILES
           ${HDF5_F90_BINARY_DIR}/shared/H5f90i_gen.h
-          ${HDF5_F90_BINARY_DIR}/shared/H5fortran_types.F90
           ${HDF5_F90_BINARY_DIR}/H5config_f.inc
       DESTINATION
           ${HDF5_INSTALL_INCLUDE_DIR}
@@ -622,13 +618,9 @@ install (
 )
 
 if (NOT WIN32 AND NOT MINGW)
-  if (HDF5_ENABLE_PARALLEL AND MPI_Fortran_FOUND)
-    set (_PKG_CONFIG_COMPILER ${MPI_Fortran_COMPILER})
-  else ()
-    set (_PKG_CONFIG_COMPILER ${CMAKE_Fortran_COMPILER})
-  endif ()
+  set (_PKG_CONFIG_COMPILER ${HDF5_H5CC_Fortran_COMPILER})
   configure_file (
-      ${HDF_RESOURCES_DIR}/libh5cc.in
+      ${HDF_CONFIG_DIR}/libh5cc.in
       ${HDF5_BINARY_DIR}/CMakeFiles/h5fc
       @ONLY
   )
@@ -640,7 +632,7 @@ if (NOT WIN32 AND NOT MINGW)
   )
   if (HDF5_ENABLE_PARALLEL AND MPI_Fortran_FOUND)
     configure_file (
-        ${HDF_RESOURCES_DIR}/libh5cc.in
+        ${HDF_CONFIG_DIR}/libh5cc.in
         ${HDF5_BINARY_DIR}/CMakeFiles/h5pfc
         @ONLY
     )

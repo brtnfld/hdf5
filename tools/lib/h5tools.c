@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -691,12 +691,6 @@ h5tools_set_fapl_vfd(hid_t fapl_id, h5tools_vfd_info_t *vfd_info)
     }
 
 done:
-    if (ret_value < 0) {
-        /* Clear error message unless asked for */
-        if ((H5tools_ERR_STACK_g >= 0) && (enable_error_stack <= 1))
-            H5Epop(H5tools_ERR_STACK_g, 1);
-    }
-
     return ret_value;
 }
 
@@ -731,12 +725,8 @@ h5tools_set_fapl_vol(hid_t fapl_id, h5tools_vol_info_t *vol_info)
                 /* Check for VOL connectors that ship with the library, then try
                  * registering by name if that fails.
                  */
-                if (!strcmp(vol_info->u.name, H5VL_NATIVE_NAME)) {
-                    connector_id = H5VL_NATIVE;
-                }
-                else if (!strcmp(vol_info->u.name, H5VL_PASSTHRU_NAME)) {
+                if (!strcmp(vol_info->u.name, H5VL_PASSTHRU_NAME))
                     connector_id = H5VL_PASSTHRU;
-                }
                 else {
                     /* NOTE: Not being able to pass in a VIPL may be a limitation for some
                      * connectors.
@@ -758,12 +748,8 @@ h5tools_set_fapl_vol(hid_t fapl_id, h5tools_vol_info_t *vol_info)
             }
             else {
                 /* Check for VOL connectors that ship with the library */
-                if (vol_info->u.value == H5VL_NATIVE_VALUE) {
-                    connector_id = H5VL_NATIVE;
-                }
-                else if (vol_info->u.value == H5VL_PASSTHRU_VALUE) {
+                if (vol_info->u.value == H5VL_PASSTHRU_VALUE)
                     connector_id = H5VL_PASSTHRU;
-                }
                 else {
                     /* NOTE: Not being able to pass in a VIPL may be a limitation for some
                      * connectors.
@@ -796,10 +782,6 @@ done:
     if (ret_value < 0) {
         if (connector_id >= 0 && H5Idec_ref(connector_id) < 0)
             H5TOOLS_ERROR(FAIL, "failed to decrement refcount on VOL connector ID");
-
-        /* Clear error message unless asked for */
-        if ((H5tools_ERR_STACK_g >= 0) && (enable_error_stack <= 1))
-            H5Epop(H5tools_ERR_STACK_g, 1);
     }
 
     return ret_value;
@@ -843,10 +825,6 @@ done:
             H5Pclose(new_fapl_id);
             new_fapl_id = H5I_INVALID_HID;
         }
-
-        /* Clear error message unless asked for */
-        if ((H5tools_ERR_STACK_g >= 0) && (enable_error_stack <= 1))
-            H5Epop(H5tools_ERR_STACK_g, 1);
     }
 
     return ret_value;
@@ -1003,7 +981,9 @@ h5tools_fopen(const char *fname, unsigned flags, hid_t fapl_id, bool use_specifi
     hid_t    tmp_fapl_id  = H5I_INVALID_HID;
     hid_t    used_fapl_id = H5I_INVALID_HID;
     unsigned volnum, drivernum;
-    hid_t    ret_value = H5I_INVALID_HID;
+    bool     lib_errors_paused   = false;
+    bool     tools_errors_paused = false;
+    hid_t    ret_value           = H5I_INVALID_HID;
 
     /*
      * First try to open the file using just the given FAPL. If the
@@ -1039,6 +1019,17 @@ h5tools_fopen(const char *fname, unsigned flags, hid_t fapl_id, bool use_specifi
      */
     if (use_specific_driver)
         H5TOOLS_GOTO_ERROR(H5I_INVALID_HID, "failed to open file using specified FAPL");
+
+    /*
+     * Pause errors on the library and tools error stacks to prevent a
+     * flood of unhelpful error messages from the section below.
+     */
+    if (H5Epause_stack(H5tools_ERR_STACK_g) < 0)
+        H5TOOLS_GOTO_ERROR(H5I_INVALID_HID, "failed to pause errors for tools error stack");
+    tools_errors_paused = true;
+    if (H5Epause_stack(H5E_DEFAULT) < 0)
+        H5TOOLS_GOTO_ERROR(H5I_INVALID_HID, "failed to pause errors for library error stack");
+    lib_errors_paused = true;
 
     /*
      * As a final resort, try to open the file using each of the available
@@ -1103,11 +1094,7 @@ h5tools_fopen(const char *fname, unsigned flags, hid_t fapl_id, bool use_specifi
                 }
 
                 /* Can we open the file with this combo? */
-                H5E_BEGIN_TRY
-                {
-                    fid = h5tools_fopen(fname, flags, tmp_fapl_id, true, drivername, drivername_size);
-                }
-                H5E_END_TRY
+                fid = h5tools_fopen(fname, flags, tmp_fapl_id, true, drivername, drivername_size);
 
                 if (fid >= 0) {
                     used_fapl_id = tmp_fapl_id;
@@ -1151,6 +1138,11 @@ h5tools_fopen(const char *fname, unsigned flags, hid_t fapl_id, bool use_specifi
     ret_value = H5I_INVALID_HID;
 
 done:
+    if (lib_errors_paused && H5Eresume_stack(H5E_DEFAULT) < 0)
+        H5TOOLS_ERROR(H5I_INVALID_HID, "failed to unpause errors for library error stack");
+    if (tools_errors_paused && H5Eresume_stack(H5tools_ERR_STACK_g) < 0)
+        H5TOOLS_ERROR(H5I_INVALID_HID, "failed to unpause errors for tools error stack");
+
     /* Save the driver name if using a native-terminal VOL connector */
     if (drivername && drivername_size && ret_value >= 0)
         if (used_fapl_id >= 0 &&
@@ -1159,12 +1151,6 @@ done:
 
     if (tmp_fapl_id >= 0)
         H5Pclose(tmp_fapl_id);
-
-    /* Clear error message unless asked for */
-    if (ret_value < 0) {
-        if ((H5tools_ERR_STACK_g >= 0) && (enable_error_stack <= 1))
-            H5Epop(H5tools_ERR_STACK_g, 1);
-    }
 
     return ret_value;
 }
@@ -2063,6 +2049,28 @@ render_bin_output(FILE *stream, hid_t container, hid_t tid, void *_mem, hsize_t 
                 H5TOOLS_DEBUG("H5T_STD_REF_OBJ");
             }
         } break;
+
+        case H5T_COMPLEX: {
+            hid_t memb = H5I_INVALID_HID;
+
+            H5TOOLS_DEBUG("H5T_COMPLEX");
+
+            /* get the base datatype for each complex number element */
+            memb = H5Tget_super(tid);
+
+            for (block_index = 0; block_index < block_nelmts; block_index++) {
+                mem = ((unsigned char *)_mem) + block_index * size;
+
+                /* dump the complex number element */
+                if (render_bin_output(stream, container, memb, mem, 2) < 0) {
+                    H5Tclose(memb);
+                    H5TOOLS_THROW((-1), "render_bin_output failed");
+                }
+            }
+
+            H5Tclose(memb);
+            break;
+        }
 
         case H5T_TIME:
         case H5T_OPAQUE:

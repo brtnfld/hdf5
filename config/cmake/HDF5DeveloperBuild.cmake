@@ -4,7 +4,7 @@
 #
 # This file is part of HDF5.  The full HDF5 copyright notice, including
 # terms governing use, modification, and redistribution, is contained in
-# the COPYING file, which can be found at the root of the source code
+# the LICENSE file, which can be found at the root of the source code
 # distribution tree, or in https://www.hdfgroup.org/licenses.
 # If you do not have access to either file, you may request a copy from
 # help@hdfgroup.org.
@@ -15,14 +15,6 @@
 # Set CMake C++ flags based off of Debug build flags
 set (CMAKE_CXX_FLAGS_DEVELOPER ${CMAKE_CXX_FLAGS_DEBUG} CACHE STRING
   "Flags used by the C++ compiler during developer builds." FORCE
-)
-
-# Set CMake C flags based off of Debug build flags. Add in -Og
-# option to disable some GCC optimizations that might affect
-# debugging negatively and also include some GCC compiler passes
-# that collect debugging information
-set (CMAKE_C_FLAGS_DEVELOPER "${CMAKE_C_FLAGS_DEBUG} -Og" CACHE STRING
-  "Flags used by the C compiler during developer builds." FORCE
 )
 
 # Set CMake binary linker flags based off of Debug binary linker flags

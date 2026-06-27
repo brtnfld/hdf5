@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -75,11 +75,11 @@
 /**
  * For major interface/format changes
  */
-#define H5_VERS_MAJOR 1
+#define H5_VERS_MAJOR 2
 /**
  * For minor interface/format changes
  */
-#define H5_VERS_MINOR 15
+#define H5_VERS_MINOR 0
 /**
  * For tweaks, bug-fixes, or development
  */
@@ -91,11 +91,11 @@
 /**
  * Short version string
  */
-#define H5_VERS_STR "1.15.0"
+#define H5_VERS_STR "2.0.0"
 /**
  * Full version string
  */
-#define H5_VERS_INFO "HDF5 library version: 1.15.0"
+#define H5_VERS_INFO "HDF5 library version: 2.0.0"
 
 #define H5check() H5check_version(H5_VERS_MAJOR, H5_VERS_MINOR, H5_VERS_RELEASE)
 
@@ -127,7 +127,7 @@
  *          The #H5_VERSION_GE macro compares the version of the HDF5 library
  *          being used against the version number specified in the parameters.
  *
- *          For more information about release versioning, see \ref_h5lib_relver.
+ *          For more information about release versioning, see \ref RELVERSION.
  *
  * \since 1.8.7
  *
@@ -163,7 +163,7 @@
  *          The #H5_VERSION_LE macro compares the version of the HDF5 library
  *          being used against the version number specified in the parameters.
  *
- *          For more information about release versioning, see \ref_h5lib_relver.
+ *          For more information about release versioning, see \ref RELVERSION.
  *
  * \since 1.8.7
  *
@@ -173,16 +173,21 @@
      ((H5_VERS_MAJOR == Maj) && (H5_VERS_MINOR < Min)) || (H5_VERS_MAJOR < Maj))
 
 /* Macros for various environment variables that HDF5 interprets */
+
 /**
  * Used to specify the name of an HDF5 Virtual File Driver to use as
  * the default file driver for file access. Setting this environment
  * variable overrides the default file driver for File Access Property
  * Lists.
+ *
+ * \since 1.14.0
  */
 #define HDF5_DRIVER "HDF5_DRIVER"
 /**
  * Used to specify a configuration string for the HDF5 Virtual File
  * Driver being used for file access.
+ *
+ * \since 1.14.0
  */
 #define HDF5_DRIVER_CONFIG "HDF5_DRIVER_CONFIG"
 /**
@@ -190,12 +195,16 @@
  * to use as the default VOL connector for file access. Setting this
  * environment variable overrides the default VOL connector for File
  * Access Property Lists.
+ *
+ * \since 1.14.0
  */
 #define HDF5_VOL_CONNECTOR "HDF5_VOL_CONNECTOR"
 /**
  * Used to specify a delimiter-separated (currently, ';' for Windows
  * and ':' for other systems) list of paths that HDF5 should search
  * when loading plugins.
+ *
+ * \since 1.14.0
  */
 #define HDF5_PLUGIN_PATH "HDF5_PLUGIN_PATH"
 /**
@@ -204,6 +213,8 @@
  * in H5PLpublic.h as H5PL_NO_PLUGIN), then dynamic loading of any
  * HDF5 plugins will be disabled. No other values are valid for this
  * environment variable.
+ *
+ * \since 1.14.0
  */
 #define HDF5_PLUGIN_PRELOAD "HDF5_PLUGIN_PRELOAD"
 /**
@@ -217,10 +228,14 @@
  *                     that any locking errors caused by file
  *                     locking being disabled on the system
  *                     should be ignored
+ *
+ * \since 1.14.0
  */
 #define HDF5_USE_FILE_LOCKING "HDF5_USE_FILE_LOCKING"
 /**
  * Used to instruct HDF5 not to cleanup files created during testing.
+ *
+ * \since 1.14.0
  */
 #define HDF5_NOCLEANUP "HDF5_NOCLEANUP"
 
@@ -301,14 +316,14 @@ typedef long long ssize_t;
 typedef uint64_t hsize_t;
 
 /* off_t exists on Windows, but is always a 32-bit long, even on 64-bit Windows,
- * so on Windows we define HDoff_t to be __int64, which is the type of the
- * st_size field of the _stati64 struct.
+ * so on Windows we define HDoff_t to be int64_t, which is equivalent to __int64,
+ * the type of the st_size field of the _stati64 struct.
  */
 #ifdef H5_HAVE_WIN32_API
 /**
  * Platform-independent offset
  */
-typedef __int64 HDoff_t;
+typedef int64_t HDoff_t;
 #else
 /**
  * Platform-independent offset
@@ -327,15 +342,22 @@ typedef off_t HDoff_t;
  * should be discouraged in new code.
  */
 typedef int64_t hssize_t;
-#define PRIdHSIZE          PRId64
-#define PRIiHSIZE          PRIi64
-#define PRIoHSIZE          PRIo64
-#define PRIuHSIZE          PRIu64
-#define PRIxHSIZE          PRIx64
+/** d print conversion specifier for signed integer type \since 1.10.8 */
+#define PRIdHSIZE PRId64
+/** i print conversion specifier for signed integer type \since 1.10.8 */
+#define PRIiHSIZE PRIi64
+/** o print conversion specifier for signed integer type \since 1.10.8 */
+#define PRIoHSIZE PRIo64
+/** u print conversion specifier for signed integer type \since 1.10.8 */
+#define PRIuHSIZE PRIu64
+/** x print conversion specifier for signed integer type \since 1.10.8 */
+#define PRIxHSIZE PRIx64
+/** X print conversion specifier for signed integer type \since 1.10.8 */
 #define PRIXHSIZE          PRIX64
 #define H5_SIZEOF_HSIZE_T  8
 #define H5_SIZEOF_HSSIZE_T 8
-#define HSIZE_UNDEF        UINT64_MAX
+/** Represents the largest possible value of uint64_t \since 1.10.0 */
+#define HSIZE_UNDEF UINT64_MAX
 
 /**
  * The address of an object in the file.
@@ -343,10 +365,15 @@ typedef int64_t hssize_t;
  * \internal Defined as a (minimum) 64-bit unsigned integer type.
  */
 typedef uint64_t haddr_t;
-#define PRIdHADDR           PRId64
-#define PRIoHADDR           PRIo64
-#define PRIuHADDR           PRIu64
-#define PRIxHADDR           PRIx64
+/** d print conversion specifier for unsigned integer type \since 1.8.23 */
+#define PRIdHADDR PRId64
+/** o print conversion specifier for unsigned integer type \since 1.8.23 */
+#define PRIoHADDR PRIo64
+/** u print conversion specifier for unsigned integer type \since 1.8.23 */
+#define PRIuHADDR PRIu64
+/** x print conversion specifier for unsigned integer type \since 1.8.23 */
+#define PRIxHADDR PRIx64
+/** X print conversion specifier for unsigned integer type \since 1.8.23 */
 #define PRIXHADDR           PRIX64
 #define H5_SIZEOF_HADDR_T   8
 #define HADDR_UNDEF         UINT64_MAX
@@ -407,6 +434,8 @@ typedef struct H5_ih_info_t {
  * \details Tokens are unique and permanent identifiers that are
  *          used to reference HDF5 objects in a container. This allows
  *          for 128-bit tokens
+ *
+ * \since 1.12.0
  */
 #define H5O_MAX_TOKEN_SIZE (16)
 
@@ -430,9 +459,42 @@ typedef void (*H5_atclose_func_t)(void *ctx);
 /* API adapter header (defines H5_DLL, etc.) */
 #include "H5api_adpt.h"
 
+/*
+ * Does the compiler support the __builtin_expect() syntax?
+ * It's not a problem if not.
+ */
+#if H5_HAVE_BUILTIN_EXPECT
+#define H5_LIKELY(expression)   __builtin_expect(!!(expression), 1)
+#define H5_UNLIKELY(expression) __builtin_expect(!!(expression), 0)
+#else
+#define H5_LIKELY(expression)   (expression)
+#define H5_UNLIKELY(expression) (expression)
+#endif
+
+/* Definition of H5OPEN macro used for returning library defined IDs to
+ * applications with macros, e.g. H5FD_SEC2.  Will only call H5open() for
+ * the application  once per library init/term epoch, and will not call
+ * H5open() when a macro that uses it is used within the library.
+ * Note: for library source, this coding pattern requires that H5private.h
+ * is the first library private header file included in the source file.
+ */
+#undef H5OPEN
+#ifndef H5private_H
+#define H5OPEN (H5_UNLIKELY(!H5_libinit_g && !H5_libterm_g) ? H5open() : 0),
+#else /* H5private_H */
+#define H5OPEN
+#endif /* H5private_H */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/** @private
+ *
+ * \brief Library init / term status (global)
+ */
+H5_DLLVAR bool H5_libinit_g; /* Has the library been initialized? */
+H5_DLLVAR bool H5_libterm_g; /* Is the library being shutdown? */
 
 /* Functions in H5.c */
 /**
@@ -443,7 +505,7 @@ extern "C" {
  * \details H5open() initializes the HDF5 library.
  *
  * \details When the HDF5 library is used in a C application, the library is
- *          automatically initialized when the first HDf5 function call is
+ *          automatically initialized when the first HDF5 function call is
  *          issued. If one finds that an HDF5 library function is failing
  *          inexplicably, H5open() can be called first. It is safe to call
  *          H5open() before an application issues any other function calls to
@@ -651,7 +713,7 @@ H5_DLL herr_t H5get_libversion(unsigned *majnum, unsigned *minnum, unsigned *rel
  *          example:
  *
  *          An official HDF5 release is labelled as follows:
- *          HDF5 Release \Code{\<majnum\>.\<minnum\>.\<relnum\>}\n
+ *          HDF5 Release \TText{\<majnum\>.\<minnum\>.\<relnum\>}\n
  *          For example, in HDF5 Release 1.8.5:
  *          \li 1 is the major version number, \p majnum.
  *          \li 8 is the minor version number, \p minnum.
@@ -835,15 +897,15 @@ H5_DLL void *H5allocate_memory(size_t size, hbool_t clear);
  *          This function is intended to have the semantics of realloc():
  *
  *          <table>
- *            <tr><td>\Code{H5resize_memory(buffer, size)}</td>
+ *            <tr><td>\TText{H5resize_memory(buffer, size)}</td>
  *                <td>Resizes buffer. Returns pointer to resized buffer.</td></tr>
- *            <tr><td>\Code{H5resize_memory(NULL, size)}</td>
+ *            <tr><td>\TText{H5resize_memory(NULL, size)}</td>
  *                <td>Allocates memory using HDF5 Library allocator.
  *                    Returns pointer to new buffer</td></tr>
- *            <tr><td>\Code{H5resize_memory(buffer, 0)}</td>
+ *            <tr><td>\TText{H5resize_memory(buffer, 0)}</td>
  *                <td>Frees memory using HDF5 Library allocator.
  *                    Returns NULL.</td></tr>
- *            <tr><td>\Code{H5resize_memory(NULL, 0)}</td>
+ *            <tr><td>\TText{H5resize_memory(NULL, 0)}</td>
  *                <td>Returns NULL (undefined in C standard).</td></tr>
  *          </table>
  *

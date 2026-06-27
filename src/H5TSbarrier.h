@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -57,7 +57,7 @@
  *
  * Purpose:     Wait at a barrier.
  *
- * Note:     	Similar to pthread_barrier_wait, a barrier may be re-used
+ * Note:     	Similar to pthread_barrier_wait, a barrier may be reused
  *		multiple times without intervening calls to H5TS_barrier_init.
  *
  * Return:      Non-negative on success / Negative on failure

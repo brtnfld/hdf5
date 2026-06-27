@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -14,11 +14,15 @@
  * Generic code for integrating an HDF5 VFD with the subfiling feature
  */
 
-#include "H5subfiling_common.h"
+#include "H5FDmodule.h" /* This source code file is part of the H5FD module */
 
-#include "H5Eprivate.h"
-#include "H5MMprivate.h"
-#include "H5TSprivate.h" /* Threadsafety                             */
+#include "H5private.h"   /* Generic Functions        */
+#include "H5Eprivate.h"  /* Error handling           */
+#include "H5FDpkg.h"     /* File drivers             */
+#include "H5Iprivate.h"  /* IDs                      */
+#include "H5MMprivate.h" /* Memory management        */
+#include "H5TSprivate.h" /* Threadsafety             */
+#include "H5subfiling_common.h"
 
 typedef struct {            /* Format of a context map entry  */
     uint64_t file_id;       /* key value (linear search of the cache) */
@@ -94,7 +98,7 @@ static int64_t
 H5FD__subfiling_new_object_id(sf_obj_type_t obj_type)
 {
     int64_t index_val = 0;
-    int64_t ret_value;
+    int64_t ret_value = 0;
 
     FUNC_ENTER_PACKAGE
 
@@ -518,7 +522,7 @@ H5FD__subfiling_open_stub_file(const char *name, unsigned flags, MPI_Comm file_c
 
         if ((fapl_id = H5P_create_id(H5P_CLS_FILE_ACCESS_g, false)) < 0)
             HGOTO_ERROR(H5E_VFL, H5E_CANTREGISTER, FAIL, "can't create FAPL for stub file");
-        if (NULL == (plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS)))
+        if (NULL == (plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS, true)))
             HGOTO_ERROR(H5E_VFL, H5E_BADTYPE, FAIL, "not a file access property list");
 
         /* Use MPI I/O driver for stub file to allow access to vector I/O */

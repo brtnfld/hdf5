@@ -247,17 +247,18 @@ set (H5FD_SOURCES
     ${HDF5_SRC_DIR}/H5FDmpi.c
     ${HDF5_SRC_DIR}/H5FDmpio.c
     ${HDF5_SRC_DIR}/H5FDmulti.c
+    ${HDF5_SRC_DIR}/H5FDmulti_int.c
     ${HDF5_SRC_DIR}/H5FDonion.c
     ${HDF5_SRC_DIR}/H5FDonion_header.c
     ${HDF5_SRC_DIR}/H5FDonion_history.c
     ${HDF5_SRC_DIR}/H5FDonion_index.c
-    ${HDF5_SRC_DIR}/H5FDperform.c
     ${HDF5_SRC_DIR}/H5FDros3.c
-    ${HDF5_SRC_DIR}/H5FDs3comms.c
+    ${HDF5_SRC_DIR}/H5FDros3_s3comms.c
     ${HDF5_SRC_DIR}/H5FDsec2.c
     ${HDF5_SRC_DIR}/H5FDspace.c
     ${HDF5_SRC_DIR}/H5FDsplitter.c
     ${HDF5_SRC_DIR}/H5FDstdio.c
+    ${HDF5_SRC_DIR}/H5FDstdio_int.c
     ${HDF5_SRC_DIR}/H5FDtest.c
     ${HDF5_SRC_DIR}/H5FDvfd_swmr.c
     ${HDF5_SRC_DIR}/H5FDwindows.c
@@ -277,7 +278,6 @@ set (H5FD_HDRS
     ${HDF5_SRC_DIR}/H5FDonion.h
     ${HDF5_SRC_DIR}/H5FDpublic.h
     ${HDF5_SRC_DIR}/H5FDros3.h
-    ${HDF5_SRC_DIR}/H5FDs3comms.h
     ${HDF5_SRC_DIR}/H5FDsec2.h
     ${HDF5_SRC_DIR}/H5FDsplitter.h
     ${HDF5_SRC_DIR}/H5FDstdio.h
@@ -398,6 +398,7 @@ IDE_GENERATED_PROPERTIES ("H5HL" "${H5HL_HDRS}" "${H5HL_SOURCES}" )
 set (H5I_SOURCES
     ${HDF5_SRC_DIR}/H5I.c
     ${HDF5_SRC_DIR}/H5Idbg.c
+    ${HDF5_SRC_DIR}/H5Ideprec.c
     ${HDF5_SRC_DIR}/H5Iint.c
     ${HDF5_SRC_DIR}/H5Itest.c
 )
@@ -620,17 +621,19 @@ set (H5T_SOURCES
     ${HDF5_SRC_DIR}/H5Tarray.c
     ${HDF5_SRC_DIR}/H5Tbit.c
     ${HDF5_SRC_DIR}/H5Tcommit.c
+    ${HDF5_SRC_DIR}/H5Tcomplex.c
     ${HDF5_SRC_DIR}/H5Tcompound.c
     ${HDF5_SRC_DIR}/H5Tconv.c
-    ${HDF5_SRC_DIR}/H5Tconv_integer.c
-    ${HDF5_SRC_DIR}/H5Tconv_float.c
-    ${HDF5_SRC_DIR}/H5Tconv_string.c
-    ${HDF5_SRC_DIR}/H5Tconv_bitfield.c
-    ${HDF5_SRC_DIR}/H5Tconv_compound.c
-    ${HDF5_SRC_DIR}/H5Tconv_reference.c
-    ${HDF5_SRC_DIR}/H5Tconv_enum.c
-    ${HDF5_SRC_DIR}/H5Tconv_vlen.c
     ${HDF5_SRC_DIR}/H5Tconv_array.c
+    ${HDF5_SRC_DIR}/H5Tconv_bitfield.c
+    ${HDF5_SRC_DIR}/H5Tconv_complex.c
+    ${HDF5_SRC_DIR}/H5Tconv_compound.c
+    ${HDF5_SRC_DIR}/H5Tconv_enum.c
+    ${HDF5_SRC_DIR}/H5Tconv_float.c
+    ${HDF5_SRC_DIR}/H5Tconv_integer.c
+    ${HDF5_SRC_DIR}/H5Tconv_reference.c
+    ${HDF5_SRC_DIR}/H5Tconv_string.c
+    ${HDF5_SRC_DIR}/H5Tconv_vlen.c
     ${HDF5_SRC_DIR}/H5Tcset.c
     ${HDF5_SRC_DIR}/H5Tdbg.c
     ${HDF5_SRC_DIR}/H5Tdeprec.c
@@ -671,6 +674,7 @@ set (H5TS_SOURCES
     ${HDF5_SRC_DIR}/H5TSonce.c
     ${HDF5_SRC_DIR}/H5TSpool.c
     ${HDF5_SRC_DIR}/H5TSpthread.c
+    ${HDF5_SRC_DIR}/H5TSrec_rwlock.c
     ${HDF5_SRC_DIR}/H5TSrwlock.c
     ${HDF5_SRC_DIR}/H5TSsemaphore.c
     ${HDF5_SRC_DIR}/H5TSthread.c
@@ -707,6 +711,8 @@ set (H5VL_SOURCES
     ${HDF5_SRC_DIR}/H5VLnative_object.c
     ${HDF5_SRC_DIR}/H5VLnative_token.c
     ${HDF5_SRC_DIR}/H5VLpassthru.c
+    ${HDF5_SRC_DIR}/H5VLpassthru_int.c
+    ${HDF5_SRC_DIR}/H5VLquery.c
     ${HDF5_SRC_DIR}/H5VLtest.c
 )
 set (H5VL_HDRS
@@ -745,8 +751,10 @@ set (H5Z_SOURCES
     ${HDF5_SRC_DIR}/H5Ztrans.c
 )
 if (H5_ZLIB_HEADER)
-  SET_PROPERTY(SOURCE ${HDF5_SRC_DIR}/H5Zdeflate.c PROPERTY
-      COMPILE_DEFINITIONS H5_ZLIB_HEADER="${H5_ZLIB_HEADER}")
+  message(VERBOSE "H5_ZLIB_HEADER for library=${H5_ZLIB_HEADER}")
+  set_source_files_properties(${HDF5_SRC_DIR}/H5Zdeflate.c
+               PROPERTIES COMPILE_DEFINITIONS H5_ZLIB_HEADER="${H5_ZLIB_HEADER}"
+  )
 endif ()
 
 
@@ -770,7 +778,6 @@ set (H5_MODULE_HEADERS
     ${HDF5_SRC_DIR}/H5ESmodule.h
     ${HDF5_SRC_DIR}/H5Fmodule.h
     ${HDF5_SRC_DIR}/H5FAmodule.h
-    ${HDF5_SRC_DIR}/H5FDdrvr_module.h
     ${HDF5_SRC_DIR}/H5FDmodule.h
     ${HDF5_SRC_DIR}/H5FLmodule.h
     ${HDF5_SRC_DIR}/H5FSmodule.h
@@ -883,6 +890,8 @@ set (H5_PUBLIC_HEADERS
 
 set (H5_PRIVATE_HEADERS
     ${HDF5_SRC_DIR}/H5private.h
+    ${HDF5_SRC_DIR}/H5timer.h
+    ${HDF5_SRC_DIR}/H5warnings.h
 
     ${HDF5_SRC_DIR}/H5Apkg.h
     ${HDF5_SRC_DIR}/H5Aprivate.h
@@ -995,6 +1004,7 @@ set (H5_PRIVATE_HEADERS
     ${HDF5_SRC_DIR}/H5Tconv.h
     ${HDF5_SRC_DIR}/H5Tconv_array.h
     ${HDF5_SRC_DIR}/H5Tconv_bitfield.h
+    ${HDF5_SRC_DIR}/H5Tconv_complex.h
     ${HDF5_SRC_DIR}/H5Tconv_compound.h
     ${HDF5_SRC_DIR}/H5Tconv_enum.h
     ${HDF5_SRC_DIR}/H5Tconv_float.h
@@ -1042,7 +1052,7 @@ set (H5_PUBLIC_GENERATED_HEADERS
     ${HDF5_SRC_DIR}/H5overflow.h
 )
 
-option (HDF5_GENERATE_HEADERS "Rebuild Generated Files" ON)
+option (HDF5_GENERATE_HEADERS "Rebuild Generated Files" OFF)
 if (HDF5_GENERATE_HEADERS)
   set_source_files_properties(${H5_GENERATED_HEADERS} PROPERTIES GENERATED TRUE)
   if (H5_PERL_FOUND)
@@ -1122,7 +1132,7 @@ if (BUILD_STATIC_LIBS)
   TARGET_C_PROPERTIES (${HDF5_LIB_TARGET} STATIC)
   target_link_libraries (${HDF5_LIB_TARGET}
       PRIVATE ${LINK_LIBS} ${LINK_COMP_LIBS}
-      PUBLIC "$<$<NOT:$<PLATFORM_ID:Windows>>:${CMAKE_DL_LIBS}>" "$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:MPI::MPI_C>"
+      PUBLIC "$<$<PLATFORM_ID:Windows>:${LINK_PUB_LIBS}>" "$<$<NOT:$<PLATFORM_ID:Windows>>:${CMAKE_DL_LIBS}>" "$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:MPI::MPI_C>"
   )
   if (NOT WIN32)
     target_link_libraries (${HDF5_LIB_TARGET}
@@ -1158,8 +1168,7 @@ if (BUILD_SHARED_LIBS)
   TARGET_C_PROPERTIES (${HDF5_LIBSH_TARGET} SHARED)
   target_link_libraries (${HDF5_LIBSH_TARGET}
       PRIVATE ${LINK_LIBS} ${LINK_COMP_LIBS}
-              "$<$<OR:$<BOOL:${HDF5_ENABLE_THREADSAFE}>,$<BOOL:${HDF5_ENABLE_SUBFILING_VFD}>>:Threads::Threads>"
-      PUBLIC "$<$<NOT:$<PLATFORM_ID:Windows>>:${CMAKE_DL_LIBS}>" "$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:MPI::MPI_C>"
+      PUBLIC "$<$<PLATFORM_ID:Windows>:${LINK_PUB_LIBS}>" "$<$<NOT:$<PLATFORM_ID:Windows>>:${CMAKE_DL_LIBS}>" "$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:MPI::MPI_C>" "$<$<OR:$<BOOL:${HDF5_ENABLE_THREADS}>,$<BOOL:${HDF5_ENABLE_SUBFILING_VFD}>>:Threads::Threads>"
   )
   set_global_variable (HDF5_LIBRARIES_TO_EXPORT "${HDF5_LIBRARIES_TO_EXPORT};${HDF5_LIBSH_TARGET}")
   H5_SET_LIB_OPTIONS (${HDF5_LIBSH_TARGET} ${HDF5_LIB_NAME} SHARED "LIB")
@@ -1266,13 +1275,9 @@ install (
 )
 
 if (NOT WIN32)
-  if (HDF5_ENABLE_PARALLEL AND MPI_C_FOUND)
-    set (_PKG_CONFIG_COMPILER ${MPI_C_COMPILER})
-  else ()
-    set (_PKG_CONFIG_COMPILER ${CMAKE_C_COMPILER})
-  endif ()
+  set (_PKG_CONFIG_COMPILER ${HDF5_H5CC_C_COMPILER})
   configure_file (
-      ${HDF_RESOURCES_DIR}/libh5cc.in
+      ${HDF_CONFIG_DIR}/libh5cc.in
       ${HDF5_BINARY_DIR}/CMakeFiles/h5cc
       @ONLY
   )
@@ -1285,7 +1290,7 @@ if (NOT WIN32)
   if (HDF5_ENABLE_PARALLEL AND MPI_C_FOUND)
     #legacy requires a different name
     configure_file (
-        ${HDF_RESOURCES_DIR}/libh5cc.in
+        ${HDF_CONFIG_DIR}/libh5cc.in
         ${HDF5_BINARY_DIR}/CMakeFiles/h5pcc
         @ONLY
     )

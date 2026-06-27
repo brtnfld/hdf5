@@ -4,7 +4,7 @@
 #
 # This file is part of HDF5.  The full HDF5 copyright notice, including
 # terms governing use, modification, and redistribution, is contained in
-# the COPYING file, which can be found at the root of the source code
+# the LICENSE file, which can be found at the root of the source code
 # distribution tree, or in https://www.hdfgroup.org/licenses.
 # If you do not have access to either file, you may request a copy from
 # help@hdfgroup.org.
@@ -346,7 +346,7 @@ set (H5TEST_SEPARATE_TESTS
 )
 foreach (h5_test ${H5_EXPRESS_TESTS})
   if (NOT h5_test IN_LIST H5TEST_SEPARATE_TESTS)
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       add_test (NAME H5TESTXPR-${h5_test} COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:${h5_test}>)
       set_tests_properties (H5TESTXPR-${h5_test} PROPERTIES
           FIXTURES_REQUIRED clear_H5TEST
@@ -379,7 +379,7 @@ foreach (h5_test ${H5_EXPRESS_TESTS})
 endforeach ()
 foreach (h5_test ${H5_TESTS})
   if (NOT h5_test IN_LIST H5TEST_SEPARATE_TESTS)
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       add_test (NAME H5TEST-${h5_test} COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:${h5_test}>)
       set_tests_properties (H5TEST-${h5_test} PROPERTIES
           FIXTURES_REQUIRED clear_H5TEST
@@ -438,7 +438,7 @@ if (NOT CYGWIN)
       WORKING_DIRECTORY ${HDF5_TEST_BINARY_DIR}/H5TEST
   )
   set_tests_properties (H5TEST-cache-clean-objects PROPERTIES FIXTURES_CLEANUP clear_cache)
-  if (HDF5_USING_ANALYSIS_TOOL)
+  if (HDF5_ENABLE_USING_MEMCHECKER)
     add_test (NAME H5TEST-cache COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:cache>)
   else ()
     add_test (NAME H5TEST-cache COMMAND "${CMAKE_COMMAND}"
@@ -512,7 +512,7 @@ add_test (
     WORKING_DIRECTORY ${HDF5_TEST_BINARY_DIR}/H5TEST
 )
 set_tests_properties (H5TEST-external_env-clean-objects PROPERTIES FIXTURES_CLEANUP clear_external_env)
-if (HDF5_USING_ANALYSIS_TOOL)
+if (HDF5_ENABLE_USING_MEMCHECKER)
   add_test (NAME H5TEST-external_env COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:external_env>)
 else ()
   add_test (NAME H5TEST-external_env COMMAND "${CMAKE_COMMAND}"
@@ -547,7 +547,7 @@ add_test (
         ${HDF5_TEST_BINARY_DIR}/H5TEST
 )
 set_tests_properties (H5TEST-vds_env-clean-objects PROPERTIES FIXTURES_CLEANUP clear_vds_env)
-if (HDF5_USING_ANALYSIS_TOOL)
+if (HDF5_ENABLE_USING_MEMCHECKER)
   add_test (NAME H5TEST-vds_env COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:vds_env>)
 else ()
   add_test (NAME H5TEST-vds_env COMMAND "${CMAKE_COMMAND}"
@@ -594,7 +594,7 @@ add_test (NAME H5TEST-flush-clean-objects
     WORKING_DIRECTORY ${HDF5_TEST_BINARY_DIR}/H5TEST
 )
 set_tests_properties (H5TEST-flush-clean-objects PROPERTIES FIXTURES_CLEANUP clear_flush)
-if (HDF5_USING_ANALYSIS_TOOL)
+if (HDF5_ENABLE_USING_MEMCHECKER)
   add_test (NAME H5TEST-flush1 COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:flush1>)
 else ()
   add_test (NAME H5TEST-flush1 COMMAND "${CMAKE_COMMAND}"
@@ -616,7 +616,7 @@ set_tests_properties (H5TEST-flush1 PROPERTIES
 if ("H5TEST-flush1" MATCHES "${HDF5_DISABLE_TESTS_REGEX}")
   set_tests_properties (H5TEST-flush1 PROPERTIES DISABLED true)
 endif ()
-if (HDF5_USING_ANALYSIS_TOOL)
+if (HDF5_ENABLE_USING_MEMCHECKER)
   add_test (NAME H5TEST-flush2 COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:flush2>)
 else ()
   add_test (NAME H5TEST-flush2 COMMAND "${CMAKE_COMMAND}"
@@ -784,7 +784,7 @@ if ("H5TEST-err_compat" MATCHES "${HDF5_DISABLE_TESTS_REGEX}")
 endif ()
 
 #-- Adding test for error_test
-if (DEFAULT_API_VERSION MATCHES "v16" OR MINGW)
+if (HDF5_DEFAULT_API_VERSION MATCHES "v16" OR MINGW)
   add_test (NAME H5TEST-error_test COMMAND "${CMAKE_COMMAND}"
       -D "TEST_EMULATOR=${CMAKE_CROSSCOMPILING_EMULATOR}"
       -D "TEST_PROGRAM=$<TARGET_FILE:error_test>"
@@ -850,7 +850,7 @@ add_test (NAME H5TEST-links_env-clean-objects
         ${HDF5_TEST_BINARY_DIR}/H5TEST
 )
 set_tests_properties (H5TEST-links_env-clean-objects PROPERTIES FIXTURES_CLEANUP clear_links_env)
-if (HDF5_USING_ANALYSIS_TOOL)
+if (HDF5_ENABLE_USING_MEMCHECKER)
   add_test (NAME H5TEST-links_env COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:links_env>)
 else ()
   add_test (NAME H5TEST-links_env COMMAND "${CMAKE_COMMAND}"
@@ -906,7 +906,7 @@ if (BUILD_SHARED_LIBS)
 
   add_test (NAME H5PLUGIN-filter_plugin COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:filter_plugin>)
   set_tests_properties (H5PLUGIN-filter_plugin PROPERTIES
-      ENVIRONMENT "HDF5_PLUGIN_PATH=${CMAKE_BINARY_DIR}/filter_plugin_dir1${CMAKE_SEP}${CMAKE_BINARY_DIR}/filter_plugin_dir2;srcdir=${HDF5_TEST_BINARY_DIR}"
+      ENVIRONMENT "HDF5_PLUGIN_PATH=${CMAKE_BINARY_DIR}/filter_plugin_dir1${CMAKE_SEP}${CMAKE_BINARY_DIR}/filter_plugin_dir2${CMAKE_SEP};HDF5_VOL_CONNECTOR=;srcdir=${HDF5_TEST_BINARY_DIR}"
       WORKING_DIRECTORY ${HDF5_TEST_BINARY_DIR}
   )
   if ("H5PLUGIN-filter_plugin" MATCHES "${HDF5_DISABLE_TESTS_REGEX}")
@@ -914,8 +914,8 @@ if (BUILD_SHARED_LIBS)
   endif ()
 endif ()
 
-option (TEST_SHELL_SCRIPTS "Enable shell script tests" ON)
-if (TEST_SHELL_SCRIPTS)
+option (HDF5_TEST_SHELL_SCRIPTS "Enable shell script tests" ON)
+if (HDF5_TEST_SHELL_SCRIPTS)
   include (ShellTests.cmake)
 endif()
 
@@ -1005,7 +1005,7 @@ if (BUILD_SHARED_LIBS)
 
   add_test (NAME H5PLUGIN-vol_plugin COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:vol_plugin>)
   set_tests_properties (H5PLUGIN-vol_plugin PROPERTIES
-      ENVIRONMENT "HDF5_PLUGIN_PATH=${CMAKE_BINARY_DIR}/null_vol_plugin_dir;srcdir=${HDF5_TEST_BINARY_DIR}"
+      ENVIRONMENT "HDF5_PLUGIN_PATH=${CMAKE_BINARY_DIR}/null_vol_plugin_dir;srcdir=${HDF5_TEST_BINARY_DIR};HDF5_VOL_CONNECTOR="
       WORKING_DIRECTORY ${HDF5_TEST_BINARY_DIR}
   )
   if ("H5PLUGIN-vol_plugin" MATCHES "${HDF5_DISABLE_TESTS_REGEX}")
@@ -1023,12 +1023,17 @@ endif ()
 ##############################################################################
 ##############################################################################
 
-if (HDF5_BUILD_GENERATORS AND BUILD_STATIC_LIBS)
+if (HDF5_BUILD_GENERATORS)
   macro (ADD_H5_GENERATOR genfile)
     add_executable (${genfile} ${HDF5_TEST_SOURCE_DIR}/${genfile}.c)
     target_include_directories (${genfile} PRIVATE "${HDF5_SRC_INCLUDE_DIRS};${HDF5_SRC_BINARY_DIR};$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:${MPI_C_INCLUDE_DIRS}>")
-    TARGET_C_PROPERTIES (${genfile} STATIC)
-    target_link_libraries (${genfile} PRIVATE ${HDF5_TEST_LIB_TARGET} ${HDF5_LIB_TARGET})
+    if (NOT BUILD_SHARED_LIBS)
+      TARGET_C_PROPERTIES (${genfile} STATIC)
+      target_link_libraries (${genfile} PRIVATE ${HDF5_TEST_LIB_TARGET} ${HDF5_LIB_TARGET})
+    else ()
+      TARGET_C_PROPERTIES (${genfile} SHARED)
+      target_link_libraries (${genfile} PRIVATE ${HDF5_TEST_LIBSH_TARGET} ${HDF5_LIBSH_TARGET})
+    endif ()
     set_target_properties (${genfile} PROPERTIES FOLDER generator/test)
 
     #-----------------------------------------------------------------------------

@@ -4,7 +4,7 @@
 #
 # This file is part of HDF5.  The full HDF5 copyright notice, including
 # terms governing use, modification, and redistribution, is contained in
-# the COPYING file, which can be found at the root of the source code
+# the LICENSE file, which can be found at the root of the source code
 # distribution tree, or in https://www.hdfgroup.org/licenses.
 # If you do not have access to either file, you may request a copy from
 # help@hdfgroup.org.
@@ -55,7 +55,7 @@
 ##############################################################################
 
   macro (ADD_H5_TEST resultfile resultcode resultoption)
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       add_test (
           NAME H5MKGRP-${resultfile}
           COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:h5mkgrp> ${resultoption} ${resultfile}.h5 ${ARGN}
@@ -91,7 +91,6 @@
               -D "TEST_FOLDER=${PROJECT_BINARY_DIR}/testfiles"
               -D "TEST_OUTPUT=${resultfile}.out"
               -D "TEST_EXPECT=${resultcode}"
-              -D "TEST_MASK_MOD=true"
               -D "TEST_REFERENCE=${resultfile}.ls"
               -P "${HDF_RESOURCES_DIR}/runTest.cmake"
       )
@@ -103,7 +102,7 @@
   endmacro ()
 
   macro (ADD_H5_CMP resultfile resultcode)
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       add_test (NAME H5MKGRP_CMP-${resultfile} COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:h5mkgrp> ${ARGN})
     else ()
       add_test (
@@ -139,7 +138,7 @@
 ###           T H E   T E S T S                                            ###
 ##############################################################################
 ##############################################################################
-  if (HDF5_USING_ANALYSIS_TOOL)
+  if (HDF5_ENABLE_USING_MEMCHECKER)
     add_test (
         NAME H5MKGRP-clearall-objects
         COMMAND ${CMAKE_COMMAND} -E remove

@@ -4,7 +4,7 @@
 #
 # This file is part of HDF5.  The full HDF5 copyright notice, including
 # terms governing use, modification, and redistribution, is contained in
-# the COPYING file, which can be found at the root of the source code
+# the LICENSE file, which can be found at the root of the source code
 # distribution tree, or in https://www.hdfgroup.org/licenses.
 # If you do not have access to either file, you may request a copy from
 # help@hdfgroup.org.
@@ -82,7 +82,7 @@
   # Need special dependencies for tests that use the same reference file
   # This is an issue on Windows
   macro (ADD_H5_CMP testname resultfile resultcode)
-    if (NOT HDF5_USING_ANALYSIS_TOOL)
+    if (NOT HDF5_ENABLE_USING_MEMCHECKER)
       add_test (
           NAME H5CLEAR_CMP-${testname}
           COMMAND "${CMAKE_COMMAND}"
@@ -106,7 +106,7 @@
   endmacro ()
 
   macro (ADD_H5_ERR_CMP testname resultfile resultcode result_errcheck)
-    if (NOT HDF5_USING_ANALYSIS_TOOL)
+    if (NOT HDF5_ENABLE_USING_MEMCHECKER)
       add_test (
           NAME H5CLEAR_CMP-${testname}
           COMMAND "${CMAKE_COMMAND}"
@@ -119,7 +119,7 @@
               -D "TEST_REFERENCE=${resultfile}.mty"
               -D "TEST_ERRREF=${result_errcheck}"
               -D "TEST_SKIP_COMPARE=true"
-              -P "${HDF_RESOURCES_DIR}/grepTest.cmake"
+              -P "${HDF_RESOURCES_DIR}/runTest.cmake"
       )
       if ("H5CLEAR_CMP-${testname}" MATCHES "${HDF5_DISABLE_TESTS_REGEX}")
         set_tests_properties (H5CLEAR_CMP-${testname} PROPERTIES DISABLED true)
@@ -132,7 +132,7 @@
   endmacro ()
 
   macro (ADD_H5_CMP_WITH_COPY testname resultcode resultfile testfile)
-    if (NOT HDF5_USING_ANALYSIS_TOOL)
+    if (NOT HDF5_ENABLE_USING_MEMCHECKER)
       add_test (
           NAME H5CLEAR_CMP-${testname}-clear-objects
           COMMAND ${CMAKE_COMMAND} -E remove testfiles/${testfile}
@@ -167,7 +167,7 @@
   endmacro ()
 
   macro (ADD_H5_ERR_CMP_WITH_COPY testname resultcode resultfile testfile)
-    if (NOT HDF5_USING_ANALYSIS_TOOL)
+    if (NOT HDF5_ENABLE_USING_MEMCHECKER)
       add_test (
           NAME H5CLEAR_CMP-${testname}-clear-objects
           COMMAND ${CMAKE_COMMAND} -E remove testfiles/${testfile}
@@ -203,7 +203,7 @@
   endmacro ()
 
   macro (ADD_H5_RETTEST testname resultcode)
-    if (NOT HDF5_USING_ANALYSIS_TOOL)
+    if (NOT HDF5_ENABLE_USING_MEMCHECKER)
       add_test (
           NAME H5CLEAR_RET-${testname}
           COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:h5clear> ${ARGN}
@@ -219,7 +219,7 @@
   endmacro ()
 
   macro (ADD_H5_FILESIZE_TEST testname resultcode resultfile incr_size)
-    if (NOT HDF5_USING_ANALYSIS_TOOL)
+    if (NOT HDF5_ENABLE_USING_MEMCHECKER)
       add_test (
           NAME H5CLEAR_FILESIZE_TEST-${testname}-clear-objects
           COMMAND ${CMAKE_COMMAND} -E remove testfiles/${testname}.h5
@@ -291,7 +291,7 @@
   endmacro ()
 
   macro (ADD_H5_FILESIZE_FAIL_TEST testname resultcode resultfile incr_size)
-    if (NOT HDF5_USING_ANALYSIS_TOOL)
+    if (NOT HDF5_ENABLE_USING_MEMCHECKER)
       add_test (
           NAME H5CLEAR_FILESIZE_FAIL_TEST-${testname}-clear-objects
           COMMAND ${CMAKE_COMMAND} -E remove testfiles/${testname}.h5
@@ -365,7 +365,7 @@
   endmacro ()
 
   macro (ADD_H5_TEST testname testfile resultcode)
-    if (NOT HDF5_USING_ANALYSIS_TOOL)
+    if (NOT HDF5_ENABLE_USING_MEMCHECKER)
       add_test (
           NAME H5CLEAR-clr_open_chk-copy_${testname}.h5
           COMMAND ${CMAKE_COMMAND} -E copy_if_different

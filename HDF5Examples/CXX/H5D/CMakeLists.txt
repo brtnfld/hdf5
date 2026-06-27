@@ -16,7 +16,7 @@ if (HDF5_VERSION_MAJOR VERSION_GREATER_EQUAL "1.8")
             "$<$<BOOL:${${EXAMPLE_VARNAME}_USE_110_API}>:-DH5_USE_110_API>"
             "$<$<BOOL:${${EXAMPLE_VARNAME}_USE_112_API}>:-DH5_USE_112_API>"
             "$<$<BOOL:${${EXAMPLE_VARNAME}_USE_114_API}>:-DH5_USE_114_API>"
-            "$<$<BOOL:${${EXAMPLE_VARNAME}_USE_116_API}>:-DH5_USE_116_API>"
+            "$<$<BOOL:${${EXAMPLE_VARNAME}_USE_200_API}>:-DH5_USE_200_API>"
     )
     if (H5_HAVE_PARALLEL)
       target_include_directories (${EXAMPLE_VARNAME}_cpp_ex_${example_name} PUBLIC ${MPI_C_INCLUDE_DIRS})
@@ -53,7 +53,7 @@ if (H5EX_BUILD_TESTING)
   )
 
   macro (ADD_H5_TEST testname)
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       add_test (NAME ${EXAMPLE_VARNAME}_cpp_ex_${testname} COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:${EXAMPLE_VARNAME}_cpp_ex_${testname}>)
     else ()
       add_test (

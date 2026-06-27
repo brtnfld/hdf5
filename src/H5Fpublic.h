@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -20,68 +20,55 @@
 #include "H5ACpublic.h" /* Metadata Cache                           */
 #include "H5Ipublic.h"  /* Identifiers                              */
 
-/* When this header is included from a private header, don't make calls to H5check() */
-#undef H5CHECK
-#ifndef H5private_H
-#define H5CHECK H5check(),
-#else /* H5private_H */
-#define H5CHECK
-#endif /* H5private_H */
-
-/* When this header is included from a private HDF5 header, don't make calls to H5open() */
-#undef H5OPEN
-#ifndef H5private_H
-#define H5OPEN H5open(),
-#else /* H5private_H */
-#define H5OPEN
-#endif /* H5private_H */
-
 /*
  * These are the bits that can be passed to the `flags' argument of
  * H5Fcreate() and H5Fopen(). Use the bit-wise OR operator (|) to combine
- * them as needed.  As a side effect, they call H5check_version() to make sure
- * that the application is compiled with a version of the hdf5 header files
- * which are compatible with the library to which the application is linked.
- * We're assuming that these constants are used rather early in the hdf5
- * session.
+ * them as needed.
  */
-#define H5F_ACC_RDONLY (H5CHECK H5OPEN 0x0000u) /**< Absence of RDWR: read-only */
-#define H5F_ACC_RDWR   (H5CHECK H5OPEN 0x0001u) /**< Open for read and write    */
-#define H5F_ACC_TRUNC  (H5CHECK H5OPEN 0x0002u) /**< Overwrite existing files   */
-#define H5F_ACC_EXCL   (H5CHECK H5OPEN 0x0004u) /**< Fail if file already exists*/
+#define H5F_ACC_RDONLY (0x0000u) /**< Absence of RDWR: read-only */
+#define H5F_ACC_RDWR   (0x0001u) /**< Open for read and write    */
+#define H5F_ACC_TRUNC  (0x0002u) /**< Overwrite existing files   */
+#define H5F_ACC_EXCL   (0x0004u) /**< Fail if file already exists*/
 /* NOTE: 0x0008u was H5F_ACC_DEBUG, now deprecated */
-#define H5F_ACC_CREAT (H5CHECK H5OPEN 0x0010u) /**< Create non-existing files  */
+#define H5F_ACC_CREAT (0x0010u) /**< Create non-existing files  */
 #define H5F_ACC_SWMR_WRITE                                                                                   \
-    (H5CHECK 0x0020u) /**< Indicate that this file is open for writing in a                                  \
-                       *   single-writer/multi-reader (SWMR)  scenario.                                      \
-                       *   Note that the process(es) opening the file for reading                            \
-                       *   must open the file with #H5F_ACC_RDONLY and use the                               \
-                       *   #H5F_ACC_SWMR_READ access flag. */
+    (0x0020u) /**< Indicates that this file is open for writing in a                                         \
+               *   single-writer/multi-reader (SWMR)  scenario.                                              \
+               *   Note that the process(es) opening the file for reading                                    \
+               *   must open the file with #H5F_ACC_RDONLY and use the                                       \
+               *   #H5F_ACC_SWMR_READ access flag. */
 #define H5F_ACC_SWMR_READ                                                                                    \
-    (H5CHECK 0x0040u) /**< Indicate that this file is open for reading in a                                  \
-                       * single-writer/multi-reader (SWMR) scenario. Note that                               \
-                       * the process(es) opening the file for SWMR reading must                              \
-                       * also open the file with the #H5F_ACC_RDONLY flag.  */
+    (0x0040u) /**< Indicates that this file is open for reading in a                                         \
+               * single-writer/multi-reader (SWMR) scenario. Note that                                       \
+               * the process(es) opening the file for SWMR reading must                                      \
+               * also open the file with the #H5F_ACC_RDONLY flag.  */
 
 /**
- * Default property list identifier
+ * Default file access
  *
  * \internal Value passed to H5Pset_elink_acc_flags to cause flags to be taken from the parent file.
  * \internal ignore setting on lapl
+ * \since 1.8.3
  */
-#define H5F_ACC_DEFAULT (H5CHECK H5OPEN 0xffffu)
+#define H5F_ACC_DEFAULT (0xffffu)
 
 /* Flags for H5Fget_obj_count() & H5Fget_obj_ids() calls */
-#define H5F_OBJ_FILE     (0x0001u) /**< File objects */
-#define H5F_OBJ_DATASET  (0x0002u) /**< Dataset objects */
-#define H5F_OBJ_GROUP    (0x0004u) /**< Group objects */
-#define H5F_OBJ_DATATYPE (0x0008u) /**< Datatype objects */
-#define H5F_OBJ_ATTR     (0x0010u) /**< Attribute objects */
-#define H5F_OBJ_ALL      (H5F_OBJ_FILE | H5F_OBJ_DATASET | H5F_OBJ_GROUP | H5F_OBJ_DATATYPE | H5F_OBJ_ATTR)
-#define H5F_OBJ_LOCAL                                                                                        \
-    (0x0020u) /**< Restrict search to objects opened through current file ID                                 \
-                   (as opposed to objects opened through any file ID accessing this file) */
+#define H5F_OBJ_FILE     (0x0001u) /**< File objects \since 1.6.0 */
+#define H5F_OBJ_DATASET  (0x0002u) /**< Dataset objects \since 1.6.0 */
+#define H5F_OBJ_GROUP    (0x0004u) /**< Group objects \since 1.6.0 */
+#define H5F_OBJ_DATATYPE (0x0008u) /**< Datatype objects \since 1.6.0 */
+#define H5F_OBJ_ATTR     (0x0010u) /**< Attribute objects \since 1.6.0 */
+/** All objects \since 1.6.0 */
+#define H5F_OBJ_ALL (H5F_OBJ_FILE | H5F_OBJ_DATASET | H5F_OBJ_GROUP | H5F_OBJ_DATATYPE | H5F_OBJ_ATTR)
 
+/**
+ * Restrict search to objects opened through current file ID (as opposed to
+ * objects opened through any file ID accessing this file) \since 1.6.5 */
+#define H5F_OBJ_LOCAL (0x0020u)
+
+/**
+ * Default value to pass into H5Pset_fapl_family() when the size of each file
+ * member is unknown \since 1.8.0 */
 #define H5F_FAMILY_DEFAULT 0 /* (hsize_t) */
 
 #ifdef H5_HAVE_PARALLEL
@@ -183,16 +170,15 @@ typedef struct H5F_sect_info_t {
  */
 typedef enum H5F_libver_t {
     H5F_LIBVER_ERROR    = -1,
-    H5F_LIBVER_EARLIEST = 0, /**< Use the earliest possible format for storing objects */
-    H5F_LIBVER_V18      = 1, /**< Use the latest v18 format for storing objects */
-    H5F_LIBVER_V110     = 2, /**< Use the latest v110 format for storing objects */
-    H5F_LIBVER_V112     = 3, /**< Use the latest v112 format for storing objects */
-    H5F_LIBVER_V114     = 4, /**< Use the latest v114 format for storing objects */
-    H5F_LIBVER_V116     = 5, /**< Use the latest v116 format for storing objects */
+    H5F_LIBVER_EARLIEST = 0, /**< Use the earliest possible file format for storing objects */
+    H5F_LIBVER_V18      = 1, /**< Use the 1.8 file format for storing objects */
+    H5F_LIBVER_V110     = 2, /**< Use the 1.10 file format for storing objects */
+    H5F_LIBVER_V112     = 3, /**< Use the 1.12 file format for storing objects */
+    H5F_LIBVER_V114     = 4, /**< Use the 1.14 file format for storing objects */
+    H5F_LIBVER_V200     = 5, /**< Use the 2.0 file format for storing objects */
+    H5F_LIBVER_LATEST   = 5, /**< Use the latest file format for storing objects */
     H5F_LIBVER_NBOUNDS       /**< Sentinel */
 } H5F_libver_t;
-
-#define H5F_LIBVER_LATEST H5F_LIBVER_V116
 
 /**
  * File space handling strategy
@@ -225,6 +211,7 @@ typedef enum H5F_file_space_type_t {
 } H5F_file_space_type_t;
 
 //! <!-- [H5F_retry_info_t_snip] -->
+/** Total number of metadata read retry types \since 1.10.0 */
 #define H5F_NUM_METADATA_READ_RETRY_TYPES 21
 
 /**
@@ -250,11 +237,12 @@ typedef herr_t (*H5F_flush_cb_t)(hid_t object_id, void *udata);
 #define H5F_RFIC_UNUSUAL_NUM_UNUSED_NUMERIC_BITS                                                             \
     (0x0001u) /**< Suppress errors for numeric datatypes with an unusually                                   \
                *   high number of unused bits.  See documentation for                                        \
-               *   H5Pset_relax_file_integrity_checks for details. */
+               *   H5Pset_relax_file_integrity_checks() for details. */
 #define H5F_RFIC_ALL                                                                                         \
-    (H5F_RFIC_UNUSUAL_NUM_UNUSED_NUMERIC_BITS) /**< Suppress all format integrity check errors.  See         \
-                                                *   documentation for H5Pset_relax_file_integrity_checks     \
-                                                *   for details. */
+    (H5F_RFIC_UNUSUAL_NUM_UNUSED_NUMERIC_BITS) /**< Suppress all format integrity check                      \
+                                                * errors.  See documentation for                             \
+                                                * H5Pset_relax_file_integrity_checks()                       \
+                                                * for details. */
 
 /* VFD SWMR configuration data used by H5Pset/get_vfd_swmr_config */
 #define H5F__CURR_VFD_SWMR_CONFIG_VERSION 1
@@ -732,6 +720,9 @@ H5_DLL hid_t H5Fget_create_plist(hid_t file_id);
  * \details H5Fget_access_plist() returns the file access property list
  *          identifier of the specified file.
  *
+ *          The creation property list identifier should be released with
+ *          H5Pclose().
+ *
  * \since 1.0.0
  *
  */
@@ -896,7 +887,7 @@ H5_DLL herr_t H5Fget_vfd_handle(hid_t file_id, hid_t fapl, void **file_handle);
  *
  * \brief Mounts an HDF5 file
  *
- * \loc_id{loc}
+ * \fg_loc_id{loc_id}
  * \param[in] name Name of the group onto which the file specified by \p child
  *                 is to be mounted
  * \file_id{child}
@@ -920,13 +911,13 @@ H5_DLL herr_t H5Fget_vfd_handle(hid_t file_id, hid_t fapl, void **file_handle);
  * \since 1.0.0
  *
  */
-H5_DLL herr_t H5Fmount(hid_t loc, const char *name, hid_t child, hid_t plist);
+H5_DLL herr_t H5Fmount(hid_t loc_id, const char *name, hid_t child, hid_t plist);
 /**
  * \ingroup H5F
  *
- * \brief Unounts an HDF5 file
+ * \brief Un-mounts an HDF5 file
  *
- * \loc_id{loc}
+ * \fg_loc_id{loc_id}
  * \param[in] name Name of the mount point
  *
  * \return \herr_t
@@ -944,7 +935,7 @@ H5_DLL herr_t H5Fmount(hid_t loc, const char *name, hid_t child, hid_t plist);
  * \since 1.0.0
  *
  */
-H5_DLL herr_t H5Funmount(hid_t loc, const char *name);
+H5_DLL herr_t H5Funmount(hid_t loc_id, const char *name);
 /**
  * \ingroup H5F
  *
@@ -1065,7 +1056,7 @@ H5_DLL herr_t H5Fincrement_filesize(hid_t file_id, hsize_t increment);
  *
  * \note \Bold{Recommended Reading:} This function is part of the file image
  *       operations feature set. It is highly recommended to study the guide
- *       \ref_file_image_ops before using this feature set.
+ *       \ref H5FIM_UG before using this feature set.
  *
  * \attention H5Pget_file_image() will fail, returning a negative value, if the
  *            file is too large for the supplied buffer.
@@ -1135,7 +1126,7 @@ H5_DLL herr_t H5Fset_mdc_config(hid_t file_id, const H5AC_cache_config_t *config
  * \return \herr_t
  *
  * \details H5Fget_mdc_hit_rate() queries the metadata cache of the target file to obtain its hit rate
- *          \Code{(cache hits / (cache hits + cache misses))} since the last time hit rate statistics
+ *          \TText{(cache hits / (cache hits + cache misses))} since the last time hit rate statistics
  *          were reset. If the cache has not been accessed since the last time the hit rate stats were
  *          reset, the hit rate is defined to be 0.0.
  *
@@ -1204,7 +1195,7 @@ H5_DLL herr_t H5Fget_mdc_size(hid_t file_id, size_t *max_size_ptr, size_t *min_c
  * is enabled. However, the call should be useful if you choose to control metadata cache size from your
  * program.
  *
- * See \ref_mdc_in_hdf5 for details about the metadata cache and the adaptive cache resizing
+ * See \ref TNMDC for details about the metadata cache and the adaptive cache resizing
  * algorithms. If you have not read, understood, and thought about the material covered in that
  * documentation,
  * you should not be using this API call.
@@ -1315,22 +1306,22 @@ H5_DLL herr_t H5Fget_info2(hid_t obj_id, H5F_info2_t *file_info);
  *          library and logarithmic base 10.
  *
  *          If read retries are incurred for a metadata entry \c i, the library will
- *          allocate memory for \Code{retries[i] (nbins * sizeof(uint32_t)} and store
+ *          allocate memory for \TText{retries[i] (nbins * sizeof(uint32_t)} and store
  *          the collection of retries there. If there are no retries for a metadata entry
- *          \c i, \Code{retries[i]} will be NULL. After a call to this routine, users should
- *          free each \Code{retries[i]} that is non-NULL, otherwise resource leak will occur.
+ *          \c i, \TText{retries[i]} will be NULL. After a call to this routine, users should
+ *          free each \TText{retries[i]} that is non-NULL, otherwise resource leak will occur.
  *
  *          For the library default read attempts of 100 for SWMR access, nbins will be 2
  *          as depicted below:
- *          \li \Code{retries[i][0]} is the number of 1 to 9 read retries.
- *          \li \Code{retries[i][1]} is the number of 10 to 99 read retries.
+ *          \li \TText{retries[i][0]} is the number of 1 to 9 read retries.
+ *          \li \TText{retries[i][1]} is the number of 10 to 99 read retries.
  *          For the library default read attempts of 1 for non-SWMR access, \c nbins will
- *          be 0 and each \Code{retries[i]} will be NULL.
+ *          be 0 and each \TText{retries[i]} will be NULL.
  *
- *          The following table lists the 21 metadata entries of \Code{retries[]}:
+ *          The following table lists the 21 metadata entries of \TText{retries[]}:
  *          <table>
  *          <tr>
- *          <th>Index for \Code{retries[]}</th>
+ *          <th>Index for \TText{retries[]}</th>
  *          <th>Metadata entries<sup>*</sup></th>
  *          </tr>
  *          <tr><td>0</td><td>Object header (version 2)</td></tr>
@@ -1540,7 +1531,7 @@ H5_DLL herr_t H5Fset_libver_bounds(hid_t file_id, H5F_libver_t low, H5F_libver_t
  *          list, and H5Fget_mdc_logging_status() will return the current state of
  *          the logging flags.
  *
- *          The log format is described in the \ref_mdc_logging document.
+ *          The log format is described in the \ref_rfc20140224 document.
  *
  * \note Logging can only be started or stopped if metadata cache logging was enabled
  *       via H5Pset_mdc_log_options().\n
@@ -1590,7 +1581,7 @@ H5_DLL herr_t H5Fstart_mdc_logging(hid_t file_id);
  *          list, and H5Fget_mdc_logging_status() will return the current state of
  *          the logging flags.
  *
- *          The log format is described in the \ref_mdc_logging document.
+ *          The log format is described in the \ref_rfc20140224 document.
  *
  * \note Logging can only be started or stopped if metadata cache logging was enabled
  *       via H5Pset_mdc_log_options().\n
@@ -1636,7 +1627,7 @@ H5_DLL herr_t H5Fstop_mdc_logging(hid_t file_id);
  *          list, and H5Fget_mdc_logging_status() will return the current state of
  *          the logging flags.
  *
- *          The log format is described in the \ref_mdc_logging document.
+ *          The log format is described in the \ref_rfc20140224 document.
  *
  * \note Unlike H5Fstart_mdc_logging() and H5Fstop_mdc_logging(), this function can
  *       be called on any open file identifier.
@@ -1806,20 +1797,20 @@ H5_DLL herr_t H5Fset_dset_no_attrs_hint(hid_t file_id, hbool_t minimize);
  * pass the same values for \p file_id and \p flag.
  *
  * This function is available only when the HDF5 library is configured with parallel support
- * (\Code{--enable-parallel | HDF5_ENABLE_PARALLEL}). It is useful only when used with the #H5FD_MPIO driver
+ * (\TText{--enable-parallel | HDF5_ENABLE_PARALLEL}). It is useful only when used with the #H5FD_MPIO driver
  * (see H5Pset_fapl_mpio()).
  * \endparblock
  *
  * \attention
  * \parblock
- * H5Fset_mpi_atomicity() calls \Code{MPI_File_set_atomicity} underneath and is not supported
- * if the execution platform does not support \Code{MPI_File_set_atomicity}. When it is
+ * H5Fset_mpi_atomicity() calls \TText{MPI_File_set_atomicity} underneath and is not supported
+ * if the execution platform does not support \TText{MPI_File_set_atomicity}. When it is
  * supported and used, the performance of data access operations may drop significantly.
  *
- * In certain scenarios, even when \Code{MPI_File_set_atomicity} is supported, setting
+ * In certain scenarios, even when \TText{MPI_File_set_atomicity} is supported, setting
  * atomicity with H5Fset_mpi_atomicity() and \p flag set to 1 does not always yield
  * strictly atomic updates. For example, some H5Dwrite() calls translate to multiple
- * \Code{MPI_File_write_at} calls. This happens in all cases where the high-level file
+ * \TText{MPI_File_write_at} calls. This happens in all cases where the high-level file
  * access routine translates to multiple lower level file access routines.
  * The following scenarios will raise this issue:
  * \li Non-contiguous file access using independent I/O
@@ -1900,7 +1891,7 @@ H5_DLL herr_t H5Fformat_convert(hid_t fid);
 #ifndef H5_NO_DEPRECATED_SYMBOLS
 
 /* Macros */
-#define H5F_ACC_DEBUG (H5CHECK H5OPEN 0x0000u) /**< Print debug info \deprecated In which version? */
+#define H5F_ACC_DEBUG (0x0000u) /**< Print debug info \deprecated In which version? */
 
 /* Typedefs */
 

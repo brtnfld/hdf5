@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -49,13 +49,13 @@
  *           encoded into the datatype message header.
  */
 typedef enum {
-    H5R_BADTYPE         = (-1), /**< Invalid reference type           */
-    H5R_OBJECT1         = 0,    /**< Backward compatibility (object)  */
-    H5R_DATASET_REGION1 = 1,    /**< Backward compatibility (region)  */
-    H5R_OBJECT2         = 2,    /**< Object reference                 */
-    H5R_DATASET_REGION2 = 3,    /**< Region reference                 */
-    H5R_ATTR            = 4,    /**< Attribute Reference              */
-    H5R_MAXTYPE         = 5     /**< Highest type (invalid)           */
+    H5R_BADTYPE         = (-1), /**< Invalid reference type \since 1.0.0           */
+    H5R_OBJECT1         = 0,    /**< Backward compatibility (object) \since 1.12.0 */
+    H5R_DATASET_REGION1 = 1,    /**< Backward compatibility (region) \since 1.12.0 */
+    H5R_OBJECT2         = 2,    /**< Object reference \since 1.12.0                */
+    H5R_DATASET_REGION2 = 3,    /**< Region reference \since 1.12.0                */
+    H5R_ATTR            = 4,    /**< Attribute Reference \since 1.12.0             */
+    H5R_MAXTYPE         = 5     /**< Highest type (invalid) \since 1.0.0           */
 } H5R_type_t;
 //! <!-- [H5R_type_t_snip] -->
 
@@ -589,7 +589,7 @@ H5_DLL ssize_t H5Rget_obj_name(H5R_ref_t *ref_ptr, hid_t rapl_id, char *name, si
  * \details H5Rget_attr_name() retrieves the attribute name for the
  *          attribute reference pointed to by \p ref_ptr.
  *
- *          \details_namelen_plusone{attribute,H5Rget_attr_name}
+ *          \details_namelen{attribute,H5Rget_attr_name}
  *
  * \since 1.12.0
  *

@@ -4,7 +4,7 @@
 #
 # This file is part of HDF5.  The full HDF5 copyright notice, including
 # terms governing use, modification, and redistribution, is contained in
-# the COPYING file, which can be found at the root of the source code
+# the LICENSE file, which can be found at the root of the source code
 # distribution tree, or in https://www.hdfgroup.org/licenses.
 # If you do not have access to either file, you may request a copy from
 # help@hdfgroup.org.
@@ -20,6 +20,7 @@
   # Copy all the test files from source directory to test directory
   # --------------------------------------------------------------------
   set (LIST_HDF5_TESTLS_FILES
+      tdset2.h5
       tdset_idx.h5
   )
 
@@ -28,6 +29,8 @@
       tarray1.h5
       tattr2.h5
       tattrreg.h5
+      tcomplex.h5
+      tcomplex_be.h5
       tcompound.h5
       tdatareg.h5
       tdset.h5
@@ -58,15 +61,23 @@
       nosuchfile.ls
       tall-1.ls
       tall-2.ls
+      tall-3.ls
       tarray1.ls
       tattr2.ls
       tattrreg_le.ls
       tattrreg_be.ls
       tcomp-1.ls
+      tcomplex.ls
+      tcomplex_be.ls
+      tcomplex_be_nosupport.ls
+      tcomplex_nosupport.ls
       tdataregbe.ls
       tdataregle.ls
       tdset-1.ls
-      tdset_idx.ls
+      tdset2-1.ls
+      tdset2-2.ls
+      tdset_idx-1.ls
+      tdset_idx-2.ls
       tempty.ls
       textlink-1.ls
       textlinksrc-1.ls
@@ -139,7 +150,7 @@
 
   macro (ADD_H5_TEST resultfile resultcode)
     # If using memchecker add tests without using scripts
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       add_test (NAME H5LS-${resultfile} COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:h5ls> ${ARGN})
       set_tests_properties (H5LS-${resultfile} PROPERTIES
           WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/testfiles"
@@ -172,7 +183,7 @@
 
   macro (ADD_H5_ERR_TEST resultfile resultcode result_errcheck)
     # If using memchecker add tests without using scripts
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       add_test (NAME H5LS-${resultfile} COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:h5ls> ${ARGN})
       set_tests_properties (H5LS-${resultfile} PROPERTIES WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/testfiles")
       if ("${resultcode}" STREQUAL "1")
@@ -191,7 +202,7 @@
               -D "TEST_REFERENCE=${resultfile}.ls"
               -D "TEST_ERRREF=${result_errcheck}"
               -D "TEST_SKIP_COMPARE=true"
-              -P "${HDF_RESOURCES_DIR}/grepTest.cmake"
+              -P "${HDF_RESOURCES_DIR}/runTest.cmake"
       )
     endif ()
     set_tests_properties (H5LS-${resultfile} PROPERTIES
@@ -203,7 +214,7 @@
   endmacro ()
 
   macro (ADD_H5_UD_TEST testname resultcode resultfile)
-    if (NOT HDF5_USING_ANALYSIS_TOOL)
+    if (NOT HDF5_ENABLE_USING_MEMCHECKER)
       add_test (
           NAME H5LS_UD-${testname}-${resultfile}
           COMMAND "${CMAKE_COMMAND}"
@@ -255,6 +266,7 @@
   # test simple command
   ADD_H5_TEST (tall-1 0 -w80 tall.h5)
   ADD_H5_TEST (tall-2 0 -w80 -r -d tall.h5)
+  ADD_H5_TEST (tall-3 0 -w80 -r -d -v -a tall.h5)
   ADD_H5_TEST (tgroup 0 -w80 tgroup.h5)
   ADD_H5_TEST (tgroup-3 0 -w80 tgroup.h5/g1)
 
@@ -272,6 +284,10 @@
 
   # test for displaying simple space datasets
   ADD_H5_TEST (tdset-1 0 -w80 -r -d tdset.h5)
+
+  # tests for displaying chunked datasets
+  ADD_H5_TEST (tdset2-1 0 -w80 -r -d tdset2.h5)
+  ADD_H5_TEST (tdset2-2 0 -w80 -r -d -v -a tdset2.h5)
 
   # test for displaying soft links (dangle)
   ADD_H5_TEST (tslink-1 0 -w80 -r tslink.h5)
@@ -338,6 +354,44 @@
     set_tests_properties (H5LS-tfloat16_be PROPERTIES WILL_FAIL "true")
     ADD_H5_TEST (tfloat16_nosupport 0 -w80 -v tfloat16.h5)
     ADD_H5_TEST (tfloat16_be_nosupport 0 -w80 -v tfloat16_be.h5)
+  endif ()
+
+  # tests for complex numbers
+  if (${${HDF_PREFIX}_HAVE_COMPLEX_NUMBERS})
+    # If support is available for complex numbers, the second test
+    # will fail as the type will be printed out as "native float _Complex",
+    # for example, rather than "complex number of native float".
+    if (H5_WORDS_BIGENDIAN)
+      ADD_H5_TEST (tcomplex_be 0 -w80 -v tcomplex_be.h5)
+      ADD_H5_TEST (tcomplex_be_nosupport 0 -w80 -v tcomplex_be.h5)
+      set_tests_properties (H5LS-tcomplex_be_nosupport PROPERTIES WILL_FAIL "true")
+    else ()
+      ADD_H5_TEST (tcomplex 0 -w80 -v tcomplex.h5)
+      ADD_H5_TEST (tcomplex_nosupport 0 -w80 -v tcomplex.h5)
+      set_tests_properties (H5LS-tcomplex_nosupport PROPERTIES WILL_FAIL "true")
+    endif ()
+  else ()
+    # If support is NOT available for complex numbers, the first two tests
+    # will fail as the types will be printed out as "complex number of native float"
+    # or "complex number of IEEE 32-bit little-endian float", for example, rather
+    # than "native float _Complex". One of the second two tests will also fail,
+    # depending on the endian-ness of the machine, as the types will be printed
+    # out as "complex number of IEEE 32-bit little-endian float", for example,
+    # rather than "complex number of native float".
+    ADD_H5_TEST (tcomplex 0 -w80 -v tcomplex.h5)
+    set_tests_properties (H5LS-tcomplex PROPERTIES WILL_FAIL "true")
+    ADD_H5_TEST (tcomplex_be 0 -w80 -v tcomplex_be.h5)
+    set_tests_properties (H5LS-tcomplex_be PROPERTIES WILL_FAIL "true")
+
+    if (H5_WORDS_BIGENDIAN)
+      ADD_H5_TEST (tcomplex_nosupport 0 -w80 -v tcomplex.h5)
+      set_tests_properties (H5LS-tcomplex_nosupport PROPERTIES WILL_FAIL "true")
+      ADD_H5_TEST (tcomplex_be_nosupport 0 -w80 -v tcomplex_be.h5)
+    else ()
+      ADD_H5_TEST (tcomplex_nosupport 0 -w80 -v tcomplex.h5)
+      ADD_H5_TEST (tcomplex_be_nosupport 0 -w80 -v tcomplex_be.h5)
+      set_tests_properties (H5LS-tcomplex_be_nosupport PROPERTIES WILL_FAIL "true")
+    endif ()
   endif ()
 
 # test for wildcards in filename (does not work with cmake)
@@ -413,7 +467,8 @@
 # test for file with datasets that use Fixed Array chunk indices
   if (USE_FILTER_DEFLATE)
     # data read internal filters
-    ADD_H5_TEST (tdset_idx 0 -w80 -d tdset_idx.h5)
+    ADD_H5_TEST (tdset_idx-1 0 -w80 -d tdset_idx.h5)
+    ADD_H5_TEST (tdset_idx-2 0 -w80 -d -v -a tdset_idx.h5)
   endif ()
 
 

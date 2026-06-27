@@ -1,6 +1,7 @@
 /** \page DDLBNF114 DDL in BNF for HDF5 1.14.4 and above
 
-\todo Revise this & break it up!
+Navigate back: \ref index "Main" / \ref SPEC
+<hr>
 
 \section intro114 Introduction
 
@@ -650,5 +651,8 @@ GROUP "/" {
 }
 }
 \endcode
+
+<hr>
+Navigate back: \ref index "Main" / \ref SPEC
 
 */

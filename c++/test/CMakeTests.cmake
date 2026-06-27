@@ -4,7 +4,7 @@
 #
 # This file is part of HDF5.  The full HDF5 copyright notice, including
 # terms governing use, modification, and redistribution, is contained in
-# the COPYING file, which can be found at the root of the source code
+# the LICENSE file, which can be found at the root of the source code
 # distribution tree, or in https://www.hdfgroup.org/licenses.
 # If you do not have access to either file, you may request a copy from
 # help@hdfgroup.org.
@@ -17,7 +17,7 @@ add_custom_target(cpp_testhdf5_files ALL COMMENT "Copying files needed by cpp_te
 ###           T E S T I N G                                                ###
 ##############################################################################
 ##############################################################################
-if (HDF5_USING_ANALYSIS_TOOL)
+if (HDF5_ENABLE_USING_MEMCHECKER)
   add_test (NAME CPP_testhdf5 COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:cpp_testhdf5>)
 else ()
   add_test (NAME CPP_testhdf5 COMMAND "${CMAKE_COMMAND}"

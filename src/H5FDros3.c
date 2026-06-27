@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -17,21 +17,19 @@
  * Relies on "s3comms" utility layer to implement the AWS REST API.
  */
 
-#ifdef H5_HAVE_ROS3_VFD
-/* This source code file is part of the H5FD driver module */
-#include "H5FDdrvr_module.h"
-#endif
+#include "H5FDmodule.h" /* This source code file is part of the H5FD module */
 
-#include "H5private.h"   /* Generic Functions        */
-#include "H5Eprivate.h"  /* Error handling           */
-#include "H5FDprivate.h" /* File drivers             */
-#include "H5FDros3.h"    /* ros3 file driver         */
-#include "H5FLprivate.h" /* Free Lists               */
-#include "H5Iprivate.h"  /* IDs                      */
-#include "H5MMprivate.h" /* Memory management        */
-#include "H5FDs3comms.h" /* S3 Communications        */
+#include "H5private.h" /* Generic Functions        */
 
 #ifdef H5_HAVE_ROS3_VFD
+
+#include "H5Eprivate.h"       /* Error handling           */
+#include "H5FDpkg.h"          /* File drivers             */
+#include "H5FDros3.h"         /* ros3 file driver         */
+#include "H5FDros3_s3comms.h" /* S3 Communications        */
+#include "H5FLprivate.h"      /* Free Lists               */
+#include "H5Iprivate.h"       /* IDs                      */
+#include "H5MMprivate.h"      /* Memory management        */
 
 /* Define to turn on stats collection and reporting */
 /* #define ROS3_STATS */
@@ -40,7 +38,12 @@
 #define ROS3_MAX_CACHE_SIZE 16777216
 
 /* The driver identification number, initialized at runtime */
-static hid_t H5FD_ROS3_g = 0;
+hid_t H5FD_ROS3_id_g = H5I_INVALID_HID;
+
+/* Flag to indicate whether global driver resources & settings have been
+ *      initialized.
+ */
+static bool H5FD_ros3_init_s = false;
 
 /* Session/security token property name */
 #define ROS3_TOKEN_PROP_NAME "ros3_token_prop"
@@ -74,27 +77,34 @@ typedef struct H5FD_ros3_stats_bin {
  * Stores all information needed to maintain access to a single HDF5 file
  * that has been stored as a S3 object.
  *
- * `pub` (H5FD_t)
+ * pub
  *
  *     Instance of H5FD_t which contains all fields common to all VFDs.
  *     It must be the first item in this structure, since at higher levels,
  *     this structure will be treated as an instance of H5FD_t.
  *
- * `fa` (H5FD_ros3_fapl_t)
+ * fa
  *
  *     Instance of `H5FD_ros3_fapl_t` containing the S3 configuration data
  *     needed to "open" the HDF5 file.
  *
- * `eoa` (haddr_t)
+ * eoa
  *
  *     End of addressed space in file. After open, it should always
  *     equal the file size.
  *
- * `s3r_handle` (s3r_t *)
+ * s3r_handle
  *
  *     Instance of S3 Request handle associated with the target resource.
  *     Responsible for communicating with remote host and presenting file
  *     contents as indistinguishable from a file on the local filesystem.
+ *
+ * cache
+ * cache_size (in bytes)
+ *
+ *     A simple cache of the first N bytes of the file. Especially useful
+ *     at file open, when we perform several reads that would otherwise
+ *     be uncached.
  *
  * *** present only if ROS3_SATS is set to enable stats collection ***
  *
@@ -115,8 +125,8 @@ typedef struct H5FD_ros3_stats_bin {
  ***************************************************************************/
 typedef struct H5FD_ros3_t {
     H5FD_t           pub;
-    H5FD_ros3_fapl_t fa;
     haddr_t          eoa;
+    H5FD_ros3_fapl_t fa;
     s3r_t           *s3r_handle;
     uint8_t         *cache;
     size_t           cache_size;
@@ -125,18 +135,6 @@ typedef struct H5FD_ros3_t {
     H5FD_ros3_stats_bin_t raw[ROS3_STATS_BIN_COUNT + 1];
 #endif
 } H5FD_ros3_t;
-
-/* These macros check for overflow of various quantities.  These macros
- * assume that HDoff_t is signed and haddr_t and size_t are unsigned.
- *
- * ADDR_OVERFLOW:   Checks whether a file address of type `haddr_t'
- *                  is too large to be represented by the second argument
- *                  of the file seek function.
- *                  Only included if it may be used -- ROS3 VFD is enabled.
- *
- */
-#define MAXADDR          (((haddr_t)1 << (8 * sizeof(HDoff_t) - 1)) - 1)
-#define ADDR_OVERFLOW(A) (HADDR_UNDEF == (A) || ((A) & ~(haddr_t)MAXADDR))
 
 /* Prototypes */
 static herr_t  H5FD__ros3_term(void);
@@ -174,7 +172,7 @@ static const H5FD_class_t H5FD_ros3_g = {
     H5FD_CLASS_VERSION,       /* struct version       */
     H5FD_ROS3_VALUE,          /* value                */
     "ros3",                   /* name                 */
-    MAXADDR,                  /* maxaddr              */
+    H5FD_MAXADDR,             /* maxaddr              */
     H5F_CLOSE_WEAK,           /* fc_degree            */
     H5FD__ros3_term,          /* terminate            */
     NULL,                     /* sb_size              */
@@ -217,58 +215,104 @@ static const H5FD_class_t H5FD_ros3_g = {
 H5FL_DEFINE_STATIC(H5FD_ros3_t);
 
 /*-------------------------------------------------------------------------
- * Function:    H5FD_ros3_init
+ * Function:    H5FD__ros3_register
  *
- * Purpose:     Initialize this driver by registering the driver with the
- *              library.
+ * Purpose:     Register the driver with the library.
  *
- * Return:      Success:    The driver ID for the ros3 driver
- *              Failure:    H5I_INVALID_HID
+ * Return:      SUCCEED/FAIL
+ *
  *-------------------------------------------------------------------------
  */
-hid_t
-H5FD_ros3_init(void)
+herr_t
+H5FD__ros3_register(void)
 {
-    hid_t ret_value = H5I_INVALID_HID;
+    herr_t ret_value = SUCCEED; /* Return value */
 
-    FUNC_ENTER_NOAPI(H5I_INVALID_HID)
+    FUNC_ENTER_PACKAGE
 
-    if (H5I_VFL != H5I_get_type(H5FD_ROS3_g)) {
-        H5FD_ROS3_g = H5FD_register(&H5FD_ros3_g, sizeof(H5FD_class_t), false);
-        if (H5I_INVALID_HID == H5FD_ROS3_g) {
-            HGOTO_ERROR(H5E_ID, H5E_CANTREGISTER, H5I_INVALID_HID, "unable to register ros3");
-        }
-
-#ifdef ROS3_STATS
-        /* Pre-compute stats bin boundaries on powers of 2 >= 10 */
-        for (int i = 0; i < ROS3_STATS_BIN_COUNT; i++)
-            ros3_stats_boundaries_g[i] = 1 << (10 + i);
-#endif
-    }
-
-    ret_value = H5FD_ROS3_g;
+    if (H5I_VFL != H5I_get_type(H5FD_ROS3_id_g))
+        if ((H5FD_ROS3_id_g = H5FD_register(&H5FD_ros3_g, sizeof(H5FD_class_t), false)) < 0)
+            HGOTO_ERROR(H5E_VFL, H5E_CANTREGISTER, FAIL, "unable to register ros3 driver");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5FD_ros3_init() */
+} /* end H5FD__ros3_register() */
 
 /*---------------------------------------------------------------------------
- * Function:    H5FD__ros3_term
+ * Function:    H5FD__ros3_unregister
  *
- * Purpose:     Shut down the VFD
+ * Purpose:     Reset library driver info.
  *
  * Returns:     SUCCEED (Can't fail)
+ *
  *---------------------------------------------------------------------------
  */
-static herr_t
-H5FD__ros3_term(void)
+herr_t
+H5FD__ros3_unregister(void)
 {
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Reset VFL ID */
-    H5FD_ROS3_g = 0;
+    H5FD_ROS3_id_g = H5I_INVALID_HID;
 
     FUNC_LEAVE_NOAPI(SUCCEED)
+} /* end H5FD__ros3_unregister() */
+
+/*-------------------------------------------------------------------------
+ * Function:    H5FD__ros3_init
+ *
+ * Purpose:     Singleton to initialize global driver settings & resources.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5FD__ros3_init(void)
+{
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    if (H5FD__s3comms_init() < 0)
+        HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, FAIL, "unable to initialize S3 communications interface");
+
+#ifdef ROS3_STATS
+    /* Pre-compute stats bin boundaries on powers of 2 >= 10 */
+    for (int i = 0; i < ROS3_STATS_BIN_COUNT; i++)
+        ros3_stats_boundaries_g[i] = 1 << (10 + i);
+#endif
+
+    /* Indicate that driver is set up */
+    H5FD_ros3_init_s = true;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5FD__ros3_init() */
+
+/*-------------------------------------------------------------------------
+ * Function:    H5FD__ros3_term
+ *
+ * Purpose:     Terminate access with the ROS3 VFD.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5FD__ros3_term(void)
+{
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    if (H5FD_ros3_init_s) {
+        if (H5FD__s3comms_term() < 0)
+            HGOTO_ERROR(H5E_VFL, H5E_CANTRELEASE, FAIL, "unable to terminate S3 communications interface");
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FD__ros3_term() */
 
 /*-------------------------------------------------------------------------
@@ -290,11 +334,11 @@ H5Pset_fapl_ros3(hid_t fapl_id, const H5FD_ros3_fapl_t *fa)
 
     assert(fa != NULL);
 
-    plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS);
+    plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS, false);
     if (plist == NULL)
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list");
 
-    if (FAIL == H5FD__ros3_validate_config(fa))
+    if (H5FD__ros3_validate_config(fa) < 0)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid ros3 config");
 
     ret_value = H5P_set_driver(plist, H5FD_ROS3, (const void *)fa, NULL);
@@ -324,11 +368,6 @@ H5FD__ros3_validate_config(const H5FD_ros3_fapl_t *fa)
     if (fa->version != H5FD_CURR_ROS3_FAPL_T_VERSION)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Unknown H5FD_ros3_fapl_t version");
 
-    /* if set to authenticate, region and secret_id cannot be empty strings */
-    if (fa->authenticate == true)
-        if ((fa->aws_region[0] == '\0') || (fa->secret_id[0] == '\0'))
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Inconsistent authentication information");
-
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FD__ros3_validate_config() */
@@ -352,7 +391,7 @@ H5Pget_fapl_ros3(hid_t fapl_id, H5FD_ros3_fapl_t *fa_dst /*out*/)
 
     if (fa_dst == NULL)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "fa_dst is NULL");
-    if (NULL == (plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS)))
+    if (NULL == (plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS, true)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access list");
     if (H5FD_ROS3 != H5P_peek_driver(plist))
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "fapl not set to use the ros3 VFD");
@@ -484,7 +523,7 @@ H5Pget_fapl_ros3_token(hid_t fapl_id, size_t size, char *token_dst /*out*/)
     if (token_dst == NULL)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "token_dst is NULL");
 
-    if (NULL == (plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS)))
+    if (NULL == (plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS, true)))
         HGOTO_ERROR(H5E_PLIST, H5E_BADTYPE, FAIL, "not a file access property list");
     if (H5FD_ROS3 != H5P_peek_driver(plist))
         HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "incorrect VFL driver");
@@ -636,7 +675,7 @@ H5Pset_fapl_ros3_token(hid_t fapl_id, const char *token)
 
     if (fapl_id == H5P_DEFAULT)
         HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "can't set values in default property list");
-    if (NULL == (plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS)))
+    if (NULL == (plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS, false)))
         HGOTO_ERROR(H5E_PLIST, H5E_BADTYPE, FAIL, "not a file access property list");
     if (H5FD_ROS3 != H5P_peek_driver(plist))
         HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "incorrect VFL driver");
@@ -671,9 +710,9 @@ done:
 /*-------------------------------------------------------------------------
  * Function:    H5FD__ros3_open
  *
- * Purpose:     Create and/or open a file as an HDF5 file.
+ * Purpose:     Create and/or open a file as an HDF5 file
  *
- *     Any flag except H5F_ACC_RDONLY will cause an error.
+ *     Any flag except H5F_ACC_RDONLY will cause an error
  *
  *     `url` param (as received from `H5FD_open()`) must conform to web url:
  *         NAME   :: HTTP "://" DOMAIN [PORT] ["/" [URI] [QUERY] ]
@@ -690,16 +729,12 @@ done:
 static H5FD_t *
 H5FD__ros3_open(const char *url, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
 {
-    H5FD_ros3_t            *file = NULL;
-    struct tm              *now  = NULL;
-    char                    iso8601now[ISO8601_SIZE];
-    unsigned char           signing_key[SHA256_DIGEST_LENGTH];
-    s3r_t                  *handle = NULL;
-    const H5FD_ros3_fapl_t *fa     = NULL;
-    H5P_genplist_t         *plist  = NULL;
-    htri_t                  token_exists;
-    char                   *token;
-    H5FD_t                 *ret_value = NULL;
+    H5FD_ros3_t            *file       = NULL;
+    s3r_t                  *handle     = NULL;
+    const H5FD_ros3_fapl_t *fa         = NULL;
+    H5P_genplist_t         *plist      = NULL;
+    char                   *fapl_token = NULL;
+    H5FD_t                 *ret_value  = NULL;
 
     FUNC_ENTER_PACKAGE
 
@@ -708,62 +743,42 @@ H5FD__ros3_open(const char *url, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "invalid file name");
     if (0 == maxaddr || HADDR_UNDEF == maxaddr)
         HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, NULL, "bogus maxaddr");
-    if (ADDR_OVERFLOW(maxaddr))
+    if (H5FD_ADDR_OVERFLOW(maxaddr))
         HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, NULL, "bogus maxaddr");
     if (flags != H5F_ACC_RDONLY)
         HGOTO_ERROR(H5E_ARGS, H5E_UNSUPPORTED, NULL, "only Read-Only access allowed");
-    if (NULL == (plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS)))
+    if (NULL == (plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS, true)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a file access property list");
 
-    /* Init curl */
-    if (CURLE_OK != curl_global_init(CURL_GLOBAL_DEFAULT))
-        HGOTO_ERROR(H5E_VFL, H5E_BADVALUE, NULL, "unable to initialize curl global (placeholder flags)");
+    /* Initialize driver, if it's not yet */
+    if (!H5FD_ros3_init_s)
+        if (H5FD__ros3_init() < 0)
+            HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, NULL, "can't initialize driver");
 
     /* Get ros3 driver info */
     if (NULL == (fa = (const H5FD_ros3_fapl_t *)H5P_peek_driver_info(plist)))
         HGOTO_ERROR(H5E_VFL, H5E_CANTGET, NULL, "could not get ros3 VFL driver info");
 
-    /* Session/security token */
-    if ((token_exists = H5P_exist_plist(plist, ROS3_TOKEN_PROP_NAME)) < 0)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTGET, NULL, "failed check for property token in plist");
-    if (token_exists) {
-        if (H5P_get(plist, ROS3_TOKEN_PROP_NAME, &token) < 0)
-            HGOTO_ERROR(H5E_VFL, H5E_CANTGET, NULL, "unable to get token value");
+    /* Get the token, if it exists */
+    if (fa->authenticate) {
+        htri_t token_exists;
+
+        /* Does the token exist in the fapl? */
+        if ((token_exists = H5P_exist_plist(plist, ROS3_TOKEN_PROP_NAME)) < 0)
+            HGOTO_ERROR(H5E_VFL, H5E_CANTGET, NULL, "failed check for property token in plist");
+
+        /* If so, get it */
+        if (token_exists) {
+            if (H5P_get(plist, ROS3_TOKEN_PROP_NAME, &fapl_token) < 0)
+                HGOTO_ERROR(H5E_VFL, H5E_CANTGET, NULL, "unable to get token value");
+        }
     }
 
     /* Open file; procedure depends on whether or not the fapl instructs to
      * authenticate requests or not.
      */
-    if (fa->authenticate == true) {
-        /* Compute signing key (part of AWS/S3 REST API). Can be re-used by
-         * user/key for 7 days after creation.
-         *
-         * TODO: Find way to reuse/share?
-         */
-        now = gmnow();
-        assert(now != NULL);
-        if (ISO8601NOW(iso8601now, now) != (ISO8601_SIZE - 1))
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "problem while writing iso8601 timestamp");
-        if (FAIL == H5FD_s3comms_signing_key(signing_key, (const char *)fa->secret_key,
-                                             (const char *)fa->aws_region, (const char *)iso8601now))
-            HGOTO_ERROR(H5E_VFL, H5E_BADVALUE, NULL, "problem while computing signing key");
-
-        if (token_exists)
-            handle = H5FD_s3comms_s3r_open(url, (const char *)fa->aws_region, (const char *)fa->secret_id,
-                                           (const unsigned char *)signing_key, (const char *)token);
-        else
-            handle = H5FD_s3comms_s3r_open(url, (const char *)fa->aws_region, (const char *)fa->secret_id,
-                                           (const unsigned char *)signing_key, "");
-    }
-    else
-        handle = H5FD_s3comms_s3r_open(url, NULL, NULL, NULL, NULL);
-
-    if (handle == NULL)
-        /* If we want to check CURL's say on the matter in a controlled
-         * fashion, this is the place to do it, but would need to make a
-         * few minor changes to s3comms `s3r_t` and `s3r_read()`.
-         */
-        HGOTO_ERROR(H5E_VFL, H5E_CANTOPENFILE, NULL, "could not open");
+    if (NULL == (handle = H5FD__s3comms_s3r_open(url, fa, fapl_token)))
+        HGOTO_ERROR(H5E_VFL, H5E_CANTOPENFILE, NULL, "s3r_open failed");
 
     /* Create new file struct */
     if (NULL == (file = H5FL_CALLOC(H5FD_ros3_t)))
@@ -773,19 +788,19 @@ H5FD__ros3_open(const char *url, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
     H5MM_memcpy(&(file->fa), fa, sizeof(H5FD_ros3_fapl_t));
 
 #ifdef ROS3_STATS
-    if (FAIL == H5FD__ros3_reset_stats(file))
+    if (H5FD__ros3_reset_stats(file) < 0)
         HGOTO_ERROR(H5E_VFL, H5E_UNINITIALIZED, NULL, "unable to reset file statistics");
 #endif
 
     /* Cache the initial bytes of the file */
     {
-        size_t filesize = H5FD_s3comms_s3r_get_filesize(file->s3r_handle);
+        size_t filesize = H5FD__s3comms_s3r_get_filesize(file->s3r_handle);
 
         file->cache_size = (filesize < ROS3_MAX_CACHE_SIZE) ? filesize : ROS3_MAX_CACHE_SIZE;
 
         if (NULL == (file->cache = (uint8_t *)H5MM_calloc(file->cache_size)))
             HGOTO_ERROR(H5E_VFL, H5E_NOSPACE, NULL, "unable to allocate cache memory");
-        if (H5FD_s3comms_s3r_read(file->s3r_handle, 0, file->cache_size, file->cache) < 0)
+        if (H5FD__s3comms_s3r_read(file->s3r_handle, 0, file->cache_size, file->cache, file->cache_size) < 0)
             HGOTO_ERROR(H5E_VFL, H5E_READERROR, NULL, "unable to execute read");
     }
 
@@ -794,13 +809,12 @@ H5FD__ros3_open(const char *url, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
 done:
     if (ret_value == NULL) {
         if (handle != NULL)
-            if (FAIL == H5FD_s3comms_s3r_close(handle))
+            if (H5FD__s3comms_s3r_close(handle) < 0)
                 HDONE_ERROR(H5E_VFL, H5E_CANTCLOSEFILE, NULL, "unable to close s3 file handle");
         if (file != NULL) {
-            H5MM_xfree(file->cache);
-            file = H5FL_FREE(H5FD_ros3_t, file);
+            file->cache = H5MM_xfree(file->cache);
+            file        = H5FL_FREE(H5FD_ros3_t, file);
         }
-        curl_global_cleanup();
     }
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -826,21 +840,19 @@ H5FD__ros3_close(H5FD_t H5_ATTR_UNUSED *_file)
     assert(file->s3r_handle != NULL);
 
 #ifdef ROS3_STATS
-    if (H5FD__ros3_print_stats(stdout, file) == FAIL)
+    if (H5FD__ros3_print_stats(stdout, file) < 0)
         HGOTO_ERROR(H5E_INTERNAL, H5E_ERROR, FAIL, "problem while writing file statistics");
 #endif
 
     /* Close the underlying request handle */
-    if (FAIL == H5FD_s3comms_s3r_close(file->s3r_handle))
+    if (H5FD__s3comms_s3r_close(file->s3r_handle) < 0)
         HGOTO_ERROR(H5E_VFL, H5E_CANTCLOSEFILE, FAIL, "unable to close S3 request handle");
 
     /* Release the file info */
-    H5MM_xfree(file->cache);
-    file = H5FL_FREE(H5FD_ros3_t, file);
+    file->cache = H5MM_xfree(file->cache);
+    file        = H5FL_FREE(H5FD_ros3_t, file);
 
 done:
-    curl_global_cleanup();
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FD__ros3_close() */
 
@@ -1044,7 +1056,7 @@ H5FD__ros3_get_eof(const H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type)
 
     FUNC_ENTER_PACKAGE_NOERR
 
-    FUNC_LEAVE_NOAPI(H5FD_s3comms_s3r_get_filesize(file->s3r_handle))
+    FUNC_LEAVE_NOAPI(H5FD__s3comms_s3r_get_filesize(file->s3r_handle))
 } /* end H5FD__ros3_get_eof() */
 
 /*-------------------------------------------------------------------------
@@ -1097,7 +1109,7 @@ H5FD__ros3_read(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, hid_t H5_ATTR_UNU
     assert(file->s3r_handle);
     assert(buf);
 
-    filesize = H5FD_s3comms_s3r_get_filesize(file->s3r_handle);
+    filesize = H5FD__s3comms_s3r_get_filesize(file->s3r_handle);
 
     if ((addr > filesize) || ((addr + size) > filesize))
         HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL, "range exceeds file address");
@@ -1105,11 +1117,15 @@ H5FD__ros3_read(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, hid_t H5_ATTR_UNU
     /* Copy from the cache when accessing the first N bytes of the file.
      * Saves network I/O operations when opening files.
      */
-    if (addr + size < file->cache_size) {
+    if (addr + size <= file->cache_size) {
         memcpy(buf, file->cache + addr, size);
     }
     else {
-        if (H5FD_s3comms_s3r_read(file->s3r_handle, addr, size, buf) == FAIL)
+        /*
+         * Note that the VFD interface doesn't specify the size of buf.
+         * Assume that the caller knows what they're doing.
+         */
+        if (H5FD__s3comms_s3r_read(file->s3r_handle, addr, size, buf, size) < 0)
             HGOTO_ERROR(H5E_VFL, H5E_READERROR, FAIL, "unable to execute read");
 
 #ifdef ROS3_STATS

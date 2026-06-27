@@ -4,7 +4,7 @@
 #
 # This file is part of HDF5.  The full HDF5 copyright notice, including
 # terms governing use, modification, and redistribution, is contained in
-# the COPYING file, which can be found at the root of the source code
+# the LICENSE file, which can be found at the root of the source code
 # distribution tree, or in https://www.hdfgroup.org/licenses.
 # If you do not have access to either file, you may request a copy from
 # help@hdfgroup.org.
@@ -259,7 +259,7 @@
         COMMAND ${CMAKE_COMMAND} -E remove ./testfiles/${testname}.out.h5
     )
     # If using memchecker add tests without using scripts
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       add_test (NAME H5COPY-CMP-${testname} COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:h5copy> -i ./testfiles/${infile} -o ./testfiles/${testname}.out.h5 ${vparam} ${sparam} ${srcname} ${dparam} ${dstname} ${ARGN})
       if ("${resultcode}" STREQUAL "1")
         set_tests_properties (H5COPY-CMP-${testname} PROPERTIES WILL_FAIL "true")
@@ -276,8 +276,8 @@
               -D "TEST_EXPECT=${resultcode}"
               -D "TEST_REFERENCE=./testfiles/${testname}.out"
               -D "TEST_ERRREF=${result_errcheck}"
-              -D "TEST_MASK_STORE=true"
-              -P "${HDF_RESOURCES_DIR}/grepTest.cmake"
+              -D "TEST_GREP_COMPARE=TRUE"
+              -P "${HDF_RESOURCES_DIR}/runTest.cmake"
       )
     endif ()
     set_tests_properties (H5COPY-CMP-${testname} PROPERTIES DEPENDS H5COPY-CMP-${testname}-clear-objects)
@@ -292,7 +292,7 @@
   endmacro ()
 
   macro (ADD_H5_UD_TEST testname resultcode infile sparam srcname dparam dstname cmpfile)
-    if (NOT HDF5_USING_ANALYSIS_TOOL)
+    if (NOT HDF5_ENABLE_USING_MEMCHECKER)
       # Remove any output file left over from previous test run
       add_test (
           NAME H5COPY_UD-${testname}-clear-objects
@@ -309,7 +309,6 @@
                 -D "TEST_OUTPUT=./testfiles/${infile}.out"
                 -D "TEST_EXPECT=${resultcode}"
                 -D "TEST_REFERENCE=./testfiles/${infile}.txt"
-                -D "TEST_APPEND=EXIT CODE:"
                 -D "TEST_ENV_VAR=HDF5_PLUGIN_PATH"
                 -D "TEST_ENV_VALUE=${CMAKE_BINARY_DIR}"
                 -D "TEST_LIBRARY_DIRECTORY=${CMAKE_TEST_OUTPUT_DIRECTORY}"
@@ -326,7 +325,6 @@
                 -D "TEST_OUTPUT=./testfiles/${infile}.out"
                 -D "TEST_EXPECT=${resultcode}"
                 -D "TEST_REFERENCE=./testfiles/${infile}.txt"
-                -D "TEST_APPEND=EXIT CODE:"
                 -D "TEST_ENV_VAR=HDF5_PLUGIN_PATH"
                 -D "TEST_ENV_VALUE=${CMAKE_BINARY_DIR}/plugins"
                 -D "TEST_LIBRARY_DIRECTORY=${CMAKE_TEST_OUTPUT_DIRECTORY}"
@@ -347,7 +345,6 @@
               -D "TEST_OUTPUT=./testfiles/${testname}.out.h5.out"
               -D "TEST_EXPECT=${resultcode}"
               -D "TEST_REFERENCE=./testfiles/${testname}.out.h5.txt"
-              -D "TEST_APPEND=EXIT CODE:"
               -D "TEST_ENV_VAR=HDF5_PLUGIN_PATH"
               -D "TEST_ENV_VALUE=${CMAKE_BINARY_DIR}/plugins"
               -D "TEST_LIBRARY_DIRECTORY=${CMAKE_TEST_OUTPUT_DIRECTORY}"
@@ -366,7 +363,7 @@
   endmacro ()
 
   macro (ADD_H5_UD_ERR_TEST testname resultcode infile sparam srcname dparam dstname cmpfile)
-    if (NOT HDF5_USING_ANALYSIS_TOOL)
+    if (NOT HDF5_ENABLE_USING_MEMCHECKER)
       # Remove any output file left over from previous test run
       add_test (
           NAME H5COPY_UD_ERR-${testname}-clear-objects
@@ -384,7 +381,6 @@
                 -D "TEST_EXPECT=0"
                 -D "TEST_REFERENCE=./testfiles/${infile}_ERR.txt"
                 -D "TEST_MASK_ERROR=true"
-                -D "TEST_APPEND=EXIT CODE:"
                 -D "TEST_ENV_VAR=HDF5_PLUGIN_PATH"
                 -D "TEST_ENV_VALUE=${CMAKE_BINARY_DIR}"
                 -D "TEST_LIBRARY_DIRECTORY=${CMAKE_TEST_OUTPUT_DIRECTORY}"
@@ -402,7 +398,6 @@
                 -D "TEST_EXPECT=${resultcode}"
                 -D "TEST_REFERENCE=./testfiles/${infile}_ERR.txt"
                 -D "TEST_MASK_ERROR=true"
-                -D "TEST_APPEND=EXIT CODE:"
                 -D "TEST_ENV_VAR=HDF5_PLUGIN_PATH"
                 -D "TEST_ENV_VALUE=${CMAKE_BINARY_DIR}/plugins"
                 -D "TEST_LIBRARY_DIRECTORY=${CMAKE_TEST_OUTPUT_DIRECTORY}"
@@ -423,7 +418,6 @@
               -D "TEST_OUTPUT=./testfiles/${testname}_ERR.out.h5.out"
               -D "TEST_EXPECT=0"
               -D "TEST_REFERENCE=./testfiles/${testname}_ERR.out.h5.txt"
-              -D "TEST_APPEND=EXIT CODE:"
               -D "TEST_ENV_VAR=HDF5_PLUGIN_PATH"
               -D "TEST_ENV_VALUE=${CMAKE_BINARY_DIR}/plugins"
               -D "TEST_LIBRARY_DIRECTORY=${CMAKE_TEST_OUTPUT_DIRECTORY}"
@@ -443,12 +437,12 @@
 
   macro (ADD_SIMPLE_TEST resultfile resultcode)
     # If using memchecker add tests without using scripts
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       add_test (NAME H5COPY-${resultfile} COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:h5copy> ${ARGN})
       if (${resultcode})
         set_tests_properties (H5COPY-${resultfile} PROPERTIES WILL_FAIL "true")
       endif ()
-    else (HDF5_USING_ANALYSIS_TOOL)
+    else ()
       add_test (
           NAME H5COPY-${resultfile}
           COMMAND "${CMAKE_COMMAND}"

@@ -4,7 +4,7 @@
 #
 # This file is part of HDF5.  The full HDF5 copyright notice, including
 # terms governing use, modification, and redistribution, is contained in
-# the COPYING file, which can be found at the root of the source code
+# the LICENSE file, which can be found at the root of the source code
 # distribution tree, or in https://www.hdfgroup.org/licenses.
 # If you do not have access to either file, you may request a copy from
 # help@hdfgroup.org.
@@ -17,11 +17,17 @@ macro (EXTERNAL_ZLIB_LIBRARY compress_type)
     set (zlib_folder "ZLIB")
   endif ()
   if (${compress_type} MATCHES "GIT")
+    if (${ZLIB_BRANCH} MATCHES "develop")
+      set (ZLIB_FILE "devCMakeLists")
+    else ()
+      set (ZLIB_FILE "CMakeLists")
+    endif ()
+    message (STATUS "Filter ZLIB file ${ZLIB_URL}")
     FetchContent_Declare (HDF5_ZLIB
         GIT_REPOSITORY ${ZLIB_URL}
         GIT_TAG ${ZLIB_BRANCH}
         PATCH_COMMAND ${CMAKE_COMMAND} -E copy
-            ${HDF_RESOURCES_DIR}/${zlib_folder}/CMakeLists.txt
+            ${HDF_RESOURCES_DIR}/${zlib_folder}/${ZLIB_FILE}.txt
             <SOURCE_DIR>/CMakeLists.txt
     )
   elseif (${compress_type} MATCHES "TGZ")
@@ -40,6 +46,15 @@ macro (EXTERNAL_ZLIB_LIBRARY compress_type)
   add_library(${HDF_PACKAGE_NAMESPACE}zlib-static ALIAS zlib-static)
   set (H5_ZLIB_STATIC_LIBRARY "${HDF_PACKAGE_NAMESPACE}zlib-static")
   set (H5_ZLIB_LIBRARIES ${H5_ZLIB_STATIC_LIBRARY})
+  if (HDF5_USE_ZLIB_NG)
+    if (ZLIB_COMPAT)
+      set (H5_ZLIB_HEADER "zlib.h")
+    else ()
+      set (H5_ZLIB_HEADER "zlib-ng.h")
+    endif ()
+  else ()
+    set (H5_ZLIB_HEADER "zlib.h")
+  endif ()
 
   set (H5_ZLIB_INCLUDE_DIR_GEN "${hdf5_zlib_BINARY_DIR}")
   set (H5_ZLIB_INCLUDE_DIR "${hdf5_zlib_SOURCE_DIR}")

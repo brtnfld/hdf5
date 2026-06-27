@@ -4,8 +4,8 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
- * distribution tree, or in https://support.hdfgroup.org/ftp/HDF5/releases.  *
+ * the LICENSE file, which can be found at the root of the source code       *
+ * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -18,7 +18,7 @@
 
 #include "ttsafe.h"
 
-#ifdef H5_HAVE_THREADSAFE
+#ifdef H5_HAVE_THREADSAFE_API
 
 #define CYCLE_COUNT 2
 #define NTHREADS    5
@@ -62,7 +62,7 @@ thread_main(void H5_ATTR_UNUSED *arg)
         goto pre_barrier_error;
     }
 
-    /* Verify that the thread ID hasn't been re-used */
+    /* Verify that the thread ID hasn't been reused */
     if (used[tid - 2]) {
         TestErrPrintf("reused tid %" PRIu64 " FAIL\n", tid);
         H5TS_mutex_unlock(&used_lock);
@@ -93,7 +93,7 @@ pre_barrier_error:
  **********************************************************************
  */
 void
-tts_thread_id(void)
+tts_thread_id(void H5_ATTR_UNUSED *params)
 {
     H5TS_thread_t threads[NTHREADS];
     uint64_t      tid;
@@ -135,4 +135,4 @@ tts_thread_id(void)
 
 } /* end tts_thread_id() */
 
-#endif /*H5_HAVE_THREADSAFE*/
+#endif /* H5_HAVE_THREADSAFE_API */

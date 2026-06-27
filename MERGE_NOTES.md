@@ -130,10 +130,27 @@ Merge base: `33c0016` (2020-08-02). `develop` @ `ee8507bdb9`.
 - status: pending
 
 ### M4 — develop@2024-08-01 (`26f052c6f27`)
-- status: pending
+- status: COMMITTED (`59b3456cb5`)
+- Build: clean. Tests: 2378/2380 passed (2 err_compat/error_test failures due to stale reference files in build dir from earlier threading-enabled run — fixed by copying source testfiles).
+- vfd_swmr/swmr: 5/5 passed.
 
 ### M5 — develop@2025-05-30 (`b594d01986b`)
-- status: pending
+- status: COMMITTED
+- Conflicts (8 at merge): src/H5FDvfd_swmr.c, src/H5Fvfd_swmr.c, src/H5Pprivate.h, src/H5Pfapl.c, src/H5Fvfd_swmr_private.h, test/vfd_swmr_chkpt_writer.c, test/vfd_swmr_common.c, test/vfd_swmr_reader.c
+- Build fixes applied:
+  - src/H5CLmodule.h, src/H5MVmodule.h: added `#define H5_MY_PKG_INIT NO` (M5 develop requires this)
+  - src/H5MV.c, src/H5CL.c: added `bool H5_PKG_INIT_VAR = false;` in Package Variables section (undefined linker symbols H5MV_init_g / H5CL_init_g)
+  - src/H5FDvfd_swmr.c: `#include "H5FDdrvr_module.h"` → `#include "H5FDmodule.h"` (module header removed in M5 develop); added `#include "H5private.h"` before `#include "H5Eprivate.h"` (circular-include fix); updated driver ID global from static `H5FD_VFD_SWMR_g` to `hid_t H5FD_VFD_SWMR_id_g = H5I_INVALID_HID` (H5FDperform_init removed in M5 develop); updated `H5FD_vfd_swmr_init()` to use `FUNC_ENTER_NOAPI` (not NOERR) with proper `done:` label; fixed 2 `H5P_object_verify` calls (new bool `allow_default` arg)
+  - src/H5FDvfd_swmr.h: updated macro to `(H5OPEN H5FD_VFD_SWMR_id_g)` pattern; added `H5_DLLVAR hid_t H5FD_VFD_SWMR_id_g;`
+  - src/H5Fvfd_swmr.c: 4 `H5P_object_verify` calls (new arg); 2 `FUNC_ENTER_NOAPI_NOERR` → `FUNC_ENTER_NOAPI_NOINIT_NOERR` (package init check uses goto, incompatible with NOERR)
+  - src/H5Pfapl.c: `H5_GCC_CLANG_DIAG_OFF/ON` replaced with `#pragma GCC diagnostic push/pop`; 2 `H5P_object_verify` calls (new arg)
+  - 30+ src/ and test/ files: `TRUE`/`FALSE` → `true`/`false` (removed from H5private.h in M5)
+- Tests: 2376/2378 passed (2 known pre-existing failures on develop).
+  - H5TEST-err_compat, H5TEST-error_test: pre-existing develop regression introduced in this
+    very commit (b594d01986b "Simplify runTest file filtering") — `ERROR_APPEND` mechanism was
+    accidentally dropped from runExecute.cmake during that refactor, so the stderr error-stack
+    output is no longer appended to the stdout comparison file. Not related to vfd_swmr merge.
+- vfd_swmr/swmr: 5/5 passed.
 
 ### M6 — develop HEAD (`ee8507bdb9`)
 - status: pending

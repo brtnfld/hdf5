@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -2716,13 +2716,16 @@ H5D__cmp_piece_addr(const void *piece_info1, const void *piece_info2)
 {
     haddr_t addr1;
     haddr_t addr2;
+    int     ret_value = 0;
 
     FUNC_ENTER_PACKAGE_NOERR
 
     addr1 = (*((const H5D_piece_info_t *const *)piece_info1))->faddr;
     addr2 = (*((const H5D_piece_info_t *const *)piece_info2))->faddr;
 
-    FUNC_LEAVE_NOAPI(H5_addr_cmp(addr1, addr2))
+    ret_value = H5_addr_cmp(addr1, addr2);
+
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__cmp_chunk_addr() */
 
 /*-------------------------------------------------------------------------
@@ -2744,9 +2747,9 @@ H5D__cmp_filtered_collective_io_info_entry(const void *filtered_collective_io_in
 {
     const H5D_filtered_collective_chunk_info_t *entry1;
     const H5D_filtered_collective_chunk_info_t *entry2;
-    haddr_t                                     addr1 = HADDR_UNDEF;
-    haddr_t                                     addr2 = HADDR_UNDEF;
-    int                                         ret_value;
+    haddr_t                                     addr1     = HADDR_UNDEF;
+    haddr_t                                     addr2     = HADDR_UNDEF;
+    int                                         ret_value = 0;
 
     FUNC_ENTER_PACKAGE_NOERR
 
@@ -2803,7 +2806,7 @@ H5D__cmp_chunk_redistribute_info(const void *_entry1, const void *_entry2)
     const H5D_chunk_redistribute_info_t *entry2;
     haddr_t                              oloc_addr1;
     haddr_t                              oloc_addr2;
-    int                                  ret_value;
+    int                                  ret_value = 0;
 
     FUNC_ENTER_PACKAGE_NOERR
 
@@ -2863,9 +2866,9 @@ H5D__cmp_chunk_redistribute_info_orig_owner(const void *_entry1, const void *_en
 {
     const H5D_chunk_redistribute_info_t *entry1;
     const H5D_chunk_redistribute_info_t *entry2;
-    int                                  owner1 = -1;
-    int                                  owner2 = -1;
-    int                                  ret_value;
+    int                                  owner1    = -1;
+    int                                  owner2    = -1;
+    int                                  ret_value = 0;
 
     FUNC_ENTER_PACKAGE_NOERR
 
@@ -4339,18 +4342,12 @@ H5D__mpio_share_chunk_modification_data(H5D_filtered_collective_io_info_t *chunk
         else {
             int all_sends_completed;
 
-            /* Determine if all send requests have completed
-             *
-             * gcc 11 complains about passing MPI_STATUSES_IGNORE as an MPI_Status
-             * array. See the discussion here:
-             *
-             * https://github.com/pmodels/mpich/issues/5687
-             */
-            H5_GCC_DIAG_OFF("stringop-overflow")
+            /* Determine if all send requests have completed */
+            H5_WARN_MPI_STATUSES_IGNORE_OFF
             if (MPI_SUCCESS != (mpi_code = MPI_Testall((int)num_send_requests, send_requests,
                                                        &all_sends_completed, MPI_STATUSES_IGNORE)))
                 HMPI_GOTO_ERROR(FAIL, "MPI_Testall failed", mpi_code)
-            H5_GCC_DIAG_ON("stringop-overflow")
+            H5_WARN_MPI_STATUSES_IGNORE_ON
 
             if (all_sends_completed) {
                 /* Post non-blocking barrier */
@@ -4384,16 +4381,11 @@ H5D__mpio_share_chunk_modification_data(H5D_filtered_collective_io_info_t *chunk
      * in the order that chunks are processed. So, the safest way to
      * support both I/O modes is to simply make sure all messages
      * are available.
-     *
-     * gcc 11 complains about passing MPI_STATUSES_IGNORE as an MPI_Status
-     * array. See the discussion here:
-     *
-     * https://github.com/pmodels/mpich/issues/5687
      */
-    H5_GCC_DIAG_OFF("stringop-overflow")
+    H5_WARN_MPI_STATUSES_IGNORE_OFF
     if (MPI_SUCCESS != (mpi_code = MPI_Waitall((int)num_recv_requests, recv_requests, MPI_STATUSES_IGNORE)))
         HMPI_GOTO_ERROR(FAIL, "MPI_Waitall failed", mpi_code)
-    H5_GCC_DIAG_ON("stringop-overflow")
+    H5_WARN_MPI_STATUSES_IGNORE_ON
 
     /* Set the new number of locally-selected chunks */
     chunk_list->num_chunk_infos = last_assigned_idx;

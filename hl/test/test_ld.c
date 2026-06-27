@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -33,7 +33,7 @@
 #define DSET_SCALAR      "DSET_SCALAR"
 
 /* Selected compound field members for testing */
-#define VALID_FIELDS1 "field1,field2.a,field3,field4" /* TEMPORORAY */
+#define VALID_FIELDS1 "field1,field2.a,field3,field4" /* TEMPORARY */
 #define VALID_FIELDS2 "field2.b.a,field2.c,field4.b"
 
 #define INVALID_FIELDS1 "field2.k.a,field2.c,field4.k"

@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -467,7 +467,7 @@ H5D__chunk_disjoint(unsigned n, const hsize_t *scaled1, const hsize_t *scaled2)
     assert(scaled1);
     assert(scaled2);
 
-    /* Loop over two chunks, detecting disjointness and getting out quickly */
+    /* Loop over two chunks, detecting disjointedness and getting out quickly */
     for (u = 0; u < n; u++)
         if ((scaled1[u] + 1) <= scaled2[u] || (scaled2[u] + 1) <= scaled1[u])
             HGOTO_DONE(true);

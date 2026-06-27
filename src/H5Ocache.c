@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -781,6 +781,10 @@ H5O__cache_chk_serialize(const H5F_t *f, void *image, size_t len, void *_thing)
     /* copy the chunk into the image -- this is potentially expensive.
      * Can we rework things so that the chunk and the cache share a buffer?
      */
+    /* Ensure len does not exceed the size of the source buffer */
+    if (len > chk_proxy->oh->chunk[chk_proxy->chunkno].size)
+        HGOTO_ERROR(H5E_OHDR, H5E_OVERFLOW, FAIL, "buffer overflow detected");
+
     H5MM_memcpy(image, chk_proxy->oh->chunk[chk_proxy->chunkno].image, len);
 
 done:
@@ -1339,9 +1343,9 @@ H5O__chunk_deserialize(H5O_t *oh, haddr_t addr, size_t chunk_size, const uint8_t
             mesg->flags   = flags;
             mesg->crt_idx = crt_idx;
             mesg->native  = NULL;
-            H5_GCC_CLANG_DIAG_OFF("cast-qual")
+            H5_WARN_CAST_AWAY_CONST_OFF
             mesg->raw = (uint8_t *)chunk_image;
-            H5_GCC_CLANG_DIAG_ON("cast-qual")
+            H5_WARN_CAST_AWAY_CONST_ON
             mesg->raw_size = mesg_size;
             mesg->chunkno  = chunkno;
 
@@ -1545,10 +1549,10 @@ H5O__chunk_serialize(const H5F_t *f, H5O_t *oh, unsigned chunkno)
     /* Encode any dirty messages in this chunk */
     for (u = 0, curr_msg = &oh->mesg[0]; u < oh->nmesgs; u++, curr_msg++)
         if (curr_msg->dirty && curr_msg->chunkno == chunkno) {
-            H5_GCC_CLANG_DIAG_OFF("cast-qual")
+            H5_WARN_CAST_AWAY_CONST_OFF
             if (H5O_msg_flush((H5F_t *)f, oh, curr_msg) < 0)
                 HGOTO_ERROR(H5E_OHDR, H5E_CANTENCODE, FAIL, "unable to encode object header message");
-            H5_GCC_CLANG_DIAG_ON("cast-qual")
+            H5_WARN_CAST_AWAY_CONST_ON
         }
 
     /* Sanity checks */

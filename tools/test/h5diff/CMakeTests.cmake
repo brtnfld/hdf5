@@ -4,7 +4,7 @@
 #
 # This file is part of HDF5.  The full HDF5 copyright notice, including
 # terms governing use, modification, and redistribution, is contained in
-# the COPYING file, which can be found at the root of the source code
+# the LICENSE file, which can be found at the root of the source code
 # distribution tree, or in https://www.hdfgroup.org/licenses.
 # If you do not have access to either file, you may request a copy from
 # help@hdfgroup.org.
@@ -411,7 +411,7 @@
 
   macro (ADD_SH5_TEST resultfile resultcode)
     # If using memchecker add tests without using scripts
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       add_test (NAME H5DIFF-${resultfile} COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:h5diff> ${ARGN})
       if (${resultcode})
         set_tests_properties (H5DIFF-${resultfile} PROPERTIES WILL_FAIL "true")
@@ -427,7 +427,6 @@
               -D "TEST_OUTPUT=${resultfile}.out"
               -D "TEST_EXPECT=${resultcode}"
               -D "TEST_REFERENCE=${resultfile}.txt"
-              -D "TEST_APPEND=EXIT CODE:"
               -P "${HDF_RESOURCES_DIR}/runTest.cmake"
       )
     endif ()
@@ -441,7 +440,7 @@
 
   macro (ADD_PH5_TEST resultfile resultcode)
     # If using memchecker add tests without using scripts
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       add_test (NAME MPI_TEST_H5DIFF-${resultfile} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_PREFLAGS} $<TARGET_FILE:ph5diff> ${MPIEXEC_POSTFLAGS} ${ARGN})
       set_tests_properties (MPI_TEST_H5DIFF-${resultfile} PROPERTIES WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/PAR/testfiles")
       if (${resultcode})
@@ -459,9 +458,7 @@
               -D "TEST_EXPECT=0" # ph5diff currently always exits with a zero status code due to
                                  # output from some MPI implementations from a non-zero exit code
               -D "TEST_REFERENCE=${resultfile}.txt"
-              -D "TEST_APPEND=EXIT CODE:"
-              -D "TEST_REF_APPEND=EXIT CODE: [0-9]"
-              -D "TEST_REF_FILTER=EXIT CODE: 0"
+              -D "TEST_REF_FILTER="
               -D "TEST_SORT_COMPARE=TRUE"
               -P "${HDF_RESOURCES_DIR}/runTest.cmake"
       )
@@ -485,7 +482,7 @@
 
   macro (ADD_SH5_CMP_TEST resultfile resultcode result_errcheck)
     # If using memchecker add tests without using scripts
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       add_test (NAME H5DIFF-${resultfile} COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:h5diff> ${ARGN})
       if (${resultcode})
         set_tests_properties (H5DIFF-${resultfile} PROPERTIES WILL_FAIL "true")
@@ -502,8 +499,7 @@
               -D "TEST_EXPECT=${resultcode}"
               -D "TEST_REFERENCE=${resultfile}.txt"
               -D "TEST_ERRREF=${result_errcheck}"
-              -D "TEST_APPEND=EXIT CODE:"
-              -P "${HDF_RESOURCES_DIR}/grepTest.cmake"
+              -P "${HDF_RESOURCES_DIR}/runTest.cmake"
       )
     endif ()
     set_tests_properties (H5DIFF-${resultfile} PROPERTIES
@@ -516,7 +512,7 @@
 
   macro (ADD_PH5_CMP_TEST resultfile resultcode result_errcheck)
     # If using memchecker add tests without using scripts
-    if (HDF5_USING_ANALYSIS_TOOL)
+    if (HDF5_ENABLE_USING_MEMCHECKER)
       add_test (NAME MPI_TEST_H5DIFF-${resultfile} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_PREFLAGS} $<TARGET_FILE:ph5diff> ${MPIEXEC_POSTFLAGS} ${ARGN})
       set_tests_properties (MPI_TEST_H5DIFF-${resultfile} PROPERTIES WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/PAR/testfiles")
       if (${resultcode})
@@ -533,13 +529,10 @@
               #-D "TEST_EXPECT=${resultcode}"
               -D "TEST_EXPECT=0" # ph5diff currently always exits with a zero status code due to
                                  # output from some MPI implementations from a non-zero exit code
-              -D "TEST_REFERENCE=${resultfile}.txt"
-              -D "TEST_ERRREF=${result_errcheck}"
-              -D "TEST_APPEND=EXIT CODE:"
-              -D "TEST_REF_APPEND=EXIT CODE: [0-9]"
-              -D "TEST_REF_FILTER=EXIT CODE: 0"
+              -D "TEST_REFERENCE=${result_errcheck}"
               -D "TEST_SORT_COMPARE=TRUE"
-              -P "${HDF_RESOURCES_DIR}/grepTest.cmake"
+              -D "TEST_GREP_COMPARE=TRUE"
+              -P "${HDF_RESOURCES_DIR}/runTest.cmake"
       )
     endif ()
     set_tests_properties (MPI_TEST_H5DIFF-${resultfile} PROPERTIES
@@ -551,7 +544,7 @@
   endmacro ()
 
   macro (ADD_H5_UD_TEST testname resultcode resultfile)
-    if (NOT HDF5_USING_ANALYSIS_TOOL)
+    if (NOT HDF5_ENABLE_USING_MEMCHECKER)
       if ("${resultcode}" STREQUAL "2")
         add_test (
             NAME H5DIFF_UD-${testname}
@@ -564,11 +557,10 @@
                 -D "TEST_EXPECT=${resultcode}"
                 -D "TEST_REFERENCE=${resultfile}.txt"
                 -D "TEST_ERRREF=user defined filter is not available"
-                -D "TEST_APPEND=EXIT CODE:"
                 -D "TEST_ENV_VAR=HDF5_PLUGIN_PATH"
                 -D "TEST_ENV_VALUE=${CMAKE_BINARY_DIR}"
                 -D "TEST_LIBRARY_DIRECTORY=${CMAKE_TEST_OUTPUT_DIRECTORY}"
-                -P "${HDF_RESOURCES_DIR}/grepTest.cmake"
+                -P "${HDF_RESOURCES_DIR}/runTest.cmake"
         )
       else ()
         add_test (
@@ -581,7 +573,6 @@
                 -D "TEST_OUTPUT=${resultfile}.out"
                 -D "TEST_EXPECT=${resultcode}"
                 -D "TEST_REFERENCE=${resultfile}.txt"
-                -D "TEST_APPEND=EXIT CODE:"
                 -D "TEST_ENV_VAR=HDF5_PLUGIN_PATH"
                 -D "TEST_ENV_VALUE=${CMAKE_BINARY_DIR}/plugins"
                 -D "TEST_LIBRARY_DIRECTORY=${CMAKE_TEST_OUTPUT_DIRECTORY}"
@@ -808,7 +799,7 @@ ADD_H5_TEST (h5diff_63 1 -v ${STRINGS1} ${STRINGS2} string4 string4)
 ADD_H5_TEST (h5diff_600 1 ${FILE1})
 
 # 6.1: Check if non-exist object name is specified
-ADD_H5_CMP_TEST (h5diff_601 2 "Object could not be found" ${FILE1} ${FILE1} nono_obj)
+ADD_H5_CMP_TEST (h5diff_601 2 "could not be found" ${FILE1} ${FILE1} nono_obj)
 
 # ##############################################################################
 # # -d

@@ -8,7 +8,11 @@
 <!--BEGIN PROJECT_NAME--><title>$projectname: $title</title><!--END PROJECT_NAME-->
 <!--BEGIN !PROJECT_NAME--><title>$title</title><!--END !PROJECT_NAME-->
 <link href="$relpath^tabs.css" rel="stylesheet" type="text/css"/>
+<!--BEGIN DISABLE_INDEX-->
+  <!--BEGIN FULL_SIDEBAR-->
 <script type="text/javascript">var page_layout=1;</script>
+  <!--END FULL_SIDEBAR-->
+<!--END DISABLE_INDEX-->
 <script type="text/javascript" src="$relpath^jquery.js"></script>
 <script type="text/javascript" src="$relpath^dynsections.js"></script>
 $treeview
@@ -20,7 +24,11 @@ $extrastylesheet
 <script type="text/javascript" src="$relpath$hdf5_navtree_hacks.js"></script>
 
 <div style="background:#FFDDDD;font-size:120%;text-align:center;margin:0;padding:5px">Please, help us to better serve our user community by answering the following short survey:  <a href="https://www.hdfgroup.org/website-survey/">https://www.hdfgroup.org/website-survey/</a></div>
-
+<!-- ... other metadata & script includes ... -->
+<script type="text/javascript" src="$relpath^doxygen-awesome-tabs.js"></script>
+<script type="text/javascript">
+    DoxygenAwesomeTabs.init()
+</script>
 </head>
 <body>
 <!--BEGIN DISABLE_INDEX-->

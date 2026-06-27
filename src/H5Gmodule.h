@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -22,10 +22,14 @@
  *      reporting macros.
  */
 #define H5G_MODULE
-#define H5_MY_PKG     H5G
-#define H5_MY_PKG_ERR H5E_SYM
+#define H5_MY_PKG      H5G
+#define H5_MY_PKG_ERR  H5E_SYM
+#define H5_MY_PKG_INIT YES
 
 /**  \page H5G_UG HDF5 Groups
+ *
+ * Navigate back: \ref index "Main" / \ref UG
+ * <hr>
  *
  * \section sec_group HDF5 Groups
  * \subsection subsec_group_intro Introduction
@@ -316,15 +320,12 @@
  * stored in either the original indexed format or the compact-or-indexed format.
  *
  * \subsection subsec_group_h5dump Using h5dump
- * You can use h5dump, the command-line utility distributed with HDF5, to examine a file for
+ * You can use \ref sec_cltools_h5dump, the command-line utility distributed with HDF5, to examine a file for
  * purposes either of determining where to create an object within an HDF5 file or to verify that
  * you have created an object in the intended place.
  *
- * In the case of the new group created later in this chapter, the following h5dump command will
- * display the contents of FileA.h5:
- * \code
- * h5dump FileA.h5
- * \endcode
+ * In the case of the new group created later in this chapter, the following \ref sec_cltools_h5dump command
+ * will display the contents of FileA.h5: \code h5dump FileA.h5 \endcode
  *
  * For more information, @see @ref subsubsec_group_program_create.
  *
@@ -341,9 +342,9 @@
  * }
  * \endcode
  *
- * h5dump is described on the “HDF5 Tools” page of the \ref RM.
+ * \ref sec_cltools_h5dump is described on the \ref sec_cltools page of the \ref UG.
  *
- * The HDF5 DDL grammar is described in the @ref DDLBNF114.
+ * The HDF5 DDL grammar is described in the @ref DDLBNF200.
  *
  * \subsection subsec_group_function Group Function Summaries
  * Functions that can be used with groups (\ref H5G functions) and property list functions that can used
@@ -722,7 +723,7 @@
  *
  * <h4>Mounting a File</h4>
  * An external link is a permanent connection between two files. A temporary connection can be set
- * up with the #H5Fmount function. For more information, @see sec_file.
+ * up with the #H5Fmount function. For more information, @see \ref sec_file.
  * For more information, see the #H5Fmount function in the \ref RM.
  *
  * \subsubsection subsubsec_group_program_info Discovering Information about Objects
@@ -851,6 +852,9 @@
  * </table>
  *
  * Previous Chapter \ref sec_file - Next Chapter \ref sec_dataset
+ *
+ * <hr>
+ * Navigate back: \ref index "Main" / \ref UG
  *
  */
 

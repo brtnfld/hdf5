@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -559,7 +559,7 @@ typedef struct H5AC_cache_config_t {
      * The value must lie in the interval [0.0, 1.0]. 0.01 is a good place to
      * start in the serial case. In the parallel case, a larger value is needed
      * -- see the overview of the metadata cache in the
-     * “Metadata Caching in HDF5” section of the -- <em>\ref UG</em>
+     * \ref TNMDC section of the -- <em>\ref UG</em>
      * for details. */
 
     size_t max_size;
@@ -719,8 +719,18 @@ typedef struct H5AC_cache_config_t {
 
 #define H5AC__CURR_CACHE_IMAGE_CONFIG_VERSION 1
 
+/**
+ * No limit on number of times a prefetched entry can appear in subsequent
+ * cache images
+ * \since 1.10.1
+ */
 #define H5AC__CACHE_IMAGE__ENTRY_AGEOUT__NONE -1
-#define H5AC__CACHE_IMAGE__ENTRY_AGEOUT__MAX  100
+/**
+ * Limit on number of times a prefetched entry can appear in subsequent
+ * cache images
+ * \since 1.10.1
+ */
+#define H5AC__CACHE_IMAGE__ENTRY_AGEOUT__MAX 100
 
 //! <!-- [H5AC_cache_image_config_t_snip] -->
 /**

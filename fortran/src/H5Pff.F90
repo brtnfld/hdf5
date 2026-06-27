@@ -16,7 +16,7 @@
 !                                                                             *
 !   This file is part of HDF5.  The full HDF5 copyright notice, including     *
 !   terms governing use, modification, and redistribution, is contained in    *
-!   the COPYING file, which can be found at the root of the source code       *
+!   the LICENSE file, which can be found at the root of the source code       *
 !   distribution tree, or in https://www.hdfgroup.org/licenses.               *
 !   If you do not have access to either file, you may request a copy from     *
 !   help@hdfgroup.org.                                                        *
@@ -3470,17 +3470,17 @@ CONTAINS
     INTEGER, INTENT(IN) :: crt_order_flags
     INTEGER, INTENT(OUT) :: hdferr
     INTERFACE
-       INTEGER FUNCTION h5pset_link_creation_order_c(gcpl_id, crt_order_flags) &
-            BIND(C,NAME='h5pset_link_creation_order_c')
-         IMPORT :: HID_T
+       INTEGER FUNCTION h5pset_link_creation_order(gcpl_id, crt_order_flags) &
+            BIND(C,NAME='H5Pset_link_creation_order')
+         IMPORT :: HID_T, C_INT
          IMPLICIT NONE
-         INTEGER(HID_T), INTENT(IN) :: gcpl_id
-         INTEGER, INTENT(IN) :: crt_order_flags
+         INTEGER(HID_T), VALUE :: gcpl_id
+         INTEGER(C_INT), VALUE :: crt_order_flags
 
-       END FUNCTION H5pset_link_creation_order_c
+       END FUNCTION H5pset_link_creation_order
     END INTERFACE
 
-    hdferr = h5pset_link_creation_order_c(gcpl_id, crt_order_flags)
+    hdferr = h5pset_link_creation_order(gcpl_id, INT(crt_order_flags, C_INT))
 
   END SUBROUTINE h5pset_link_creation_order_f
 
@@ -3634,18 +3634,21 @@ CONTAINS
     INTEGER(HID_T), INTENT(IN) :: gcpl_id
     INTEGER, INTENT(OUT) :: crt_order_flags
     INTEGER, INTENT(OUT) :: hdferr
-    INTERFACE
-       INTEGER FUNCTION h5pget_link_creation_order_c(gcpl_id, crt_order_flags) &
-            BIND(C,NAME='h5pget_link_creation_order_c')
-         IMPORT :: HID_T
-         IMPLICIT NONE
-         INTEGER(HID_T), INTENT(IN) :: gcpl_id
-         INTEGER, INTENT(OUT) :: crt_order_flags
 
-       END FUNCTION H5pget_link_creation_order_c
+    INTEGER(C_INT) :: c_crt_order_flags
+    INTERFACE
+       INTEGER FUNCTION h5pget_link_creation_order(gcpl_id, crt_order_flags) &
+            BIND(C,NAME='H5Pget_link_creation_order')
+         IMPORT :: HID_T, C_INT
+         IMPLICIT NONE
+         INTEGER(HID_T), VALUE :: gcpl_id
+         INTEGER(C_INT) :: crt_order_flags
+
+       END FUNCTION H5pget_link_creation_order
     END INTERFACE
 
-    hdferr = h5pget_link_creation_order_c(gcpl_id, crt_order_flags)
+    hdferr = h5pget_link_creation_order(gcpl_id, c_crt_order_flags)
+    crt_order_flags = INT(c_crt_order_flags)
 
   END SUBROUTINE h5pget_link_creation_order_f
 

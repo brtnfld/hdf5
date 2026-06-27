@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -985,7 +985,7 @@ test_array_fill(size_t lo, size_t hi)
     TESTING(s);
 
     /* Initialize */
-    if (NULL == (dst = (int *)calloc(sizeof(int), ARRAY_FILL_SIZE * hi)))
+    if (NULL == (dst = (int *)calloc((ARRAY_FILL_SIZE * hi), sizeof(int))))
         TEST_ERROR;
 
     /* Setup */
@@ -1150,9 +1150,9 @@ main(int argc, char *argv[])
      * Open the library explicitly for thread-safe builds, so per-thread
      * things are initialized correctly.
      */
-#ifdef H5_HAVE_THREADSAFE
+#ifdef H5_HAVE_THREADSAFE_API
     H5open();
-#endif /* H5_HAVE_THREADSAFE */
+#endif /* H5_HAVE_THREADSAFE_API */
 
     /*
      *------------------------------
@@ -1353,9 +1353,9 @@ main(int argc, char *argv[])
 
     printf("All hyperslab tests passed.\n");
 
-#ifdef H5_HAVE_THREADSAFE
+#ifdef H5_HAVE_THREADSAFE_API
     H5close();
-#endif /* H5_HAVE_THREADSAFE */
+#endif /* H5_HAVE_THREADSAFE_API */
 
     exit(EXIT_SUCCESS);
 }

@@ -1,4 +1,4 @@
-/** @page GettingStarted Getting Started with HDF5
+/** \page GettingStarted Getting Started with HDF5
 
 Navigate back: \ref index "Main"
 <hr>
@@ -38,7 +38,7 @@ Step by step instructions for learning HDF5 that include programming examples
 
 \subsection subsec_learn_tutor The HDF Group Tutorials and Examples
 These tutorials and examples are available for learning about the HDF5 High Level APIs, tools,
-Parallel HDF5, and the HDF5-1.10 VDS and SWMR new features:
+Parallel HDF5, and the VDS and SWMR features:
 <table>
 <tr>
 <td style="background-color:#F5F5F5">
@@ -50,7 +50,7 @@ The high-level HDF5 library includes several sets of convenience and standard-us
 </tr>
 <tr>
 <td style="background-color:#F5F5F5">
-\ref IntroParHDF5
+@ref IntroParHDF5
 </td>
 <td>
 A brief introduction to Parallel HDF5. If you are new to HDF5 please see the @ref LearnBasics topic first.
@@ -58,7 +58,7 @@ A brief introduction to Parallel HDF5. If you are new to HDF5 please see the @re
 </tr>
 <tr>
 <td style="background-color:#F5F5F5">
-\ref ViewTools
+@ref ViewTools
 </td>
 <td>
 \li @ref LearnHDFView
@@ -68,11 +68,11 @@ A brief introduction to Parallel HDF5. If you are new to HDF5 please see the @re
 </tr>
 <tr>
 <td style="background-color:#F5F5F5">
-HDF5-1.10 New Features
+New Features since HDF5-1.10
 </td>
 <td>
-\li \ref VDS
-\li \ref SWMR
+\li @ref VDSTN
+\li @ref SWMRTN
 </td>
 </tr>
 <tr>
@@ -80,7 +80,7 @@ HDF5-1.10 New Features
 Example Programs
 </td>
 <td>
-\ref HDF5Examples
+@ref HDF5Examples
 </td>
 </tr>
 <tr>

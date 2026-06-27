@@ -4,7 +4,7 @@
 #
 # This file is part of HDF5.  The full HDF5 copyright notice, including
 # terms governing use, modification, and redistribution, is contained in
-# the COPYING file, which can be found at the root of the source code
+# the LICENSE file, which can be found at the root of the source code
 # distribution tree, or in https://www.hdfgroup.org/licenses.
 # If you do not have access to either file, you may request a copy from
 # help@hdfgroup.org.
@@ -28,7 +28,7 @@ set (H5P_VFD_subfiling_TESTS_SKIP
 )
 
 macro (ADD_VFD_TEST vfdname resultcode)
-  if (NOT HDF5_USING_ANALYSIS_TOOL)
+  if (NOT HDF5_ENABLE_USING_MEMCHECKER)
     foreach (h5_test ${H5P_VFD_TESTS})
       if (NOT "${h5_test}" IN_LIST H5P_VFD_${vfdname}_TESTS_SKIP)
         add_test (
