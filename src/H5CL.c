@@ -428,8 +428,8 @@ herr_t
 H5CL_parse_config_group(const char *input_str_ptr, char *config_group_name_ptr, int num_configs,
                         H5CL_config_spec configs[])
 {
-    int             i;
-    int             j;
+    int i;
+    int j;
 #define H5CL_MAX_NUM_CONFIGS 8
     H5CL_nv_pair_t  top_pair;
     H5CL_nv_pair_t  configs_mv_pairs[H5CL_MAX_NUM_CONFIGS];
