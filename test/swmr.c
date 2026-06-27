@@ -6703,7 +6703,7 @@ test_file_locking(hid_t in_fapl, bool turn_locking_on, bool env_var_override)
 
     /* If requested, set the environment variable */
     if (env_var_override) {
-        if (HDsetenv(HDF5_USE_FILE_LOCKING, turn_locking_on ? "false" : "true", true) < 0)
+        if (HDsetenv(HDF5_USE_FILE_LOCKING, turn_locking_on ? "FALSE" : "TRUE", true) < 0)
             TEST_ERROR;
         if (H5F__reparse_file_lock_variable_test() < 0)
             TEST_ERROR;

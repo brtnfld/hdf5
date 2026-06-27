@@ -516,6 +516,7 @@ socket_init(socket_state_t *sock)
  *
  * Note: Only supports IPv4 sockets, and only a single connection at a time.
  */
+#ifndef H5_HAVE_WIN32_API
 hbool_t
 socket_connect(socket_state_t *sock, bool server)
 {
@@ -610,7 +611,7 @@ error:
     }
 
     return false;
-} /* socket_init() */
+} /* socket_connect() */
 
 /* Safely close the sockets */
 void
@@ -631,3 +632,18 @@ socket_close(socket_state_t *sock)
     sock->comm_fd    = INVALID_SOCKET;
     sock->listen_fd  = INVALID_SOCKET;
 } /* socket_close() */
+
+#else /* H5_HAVE_WIN32_API */
+
+hbool_t
+socket_connect(socket_state_t H5_ATTR_UNUSED *sock, bool H5_ATTR_UNUSED server)
+{
+    return false;
+}
+
+void
+socket_close(socket_state_t H5_ATTR_UNUSED *sock)
+{
+}
+
+#endif /* H5_HAVE_WIN32_API */
