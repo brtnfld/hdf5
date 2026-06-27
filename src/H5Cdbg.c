@@ -31,7 +31,7 @@
 #include "H5private.h"   /* Generic Functions            */
 #include "H5ACprivate.h" /* Metadata Cache               */
 #ifdef H5_HAVE_PARALLEL
-#include "H5ACpkg.h"     /* Metadata Cache internals (H5AC_aux_t for parallel debug) */
+#include "H5ACpkg.h" /* Metadata Cache internals (H5AC_aux_t for parallel debug) */
 #endif
 #include "H5Cpkg.h"      /* Cache                        */
 #include "H5Eprivate.h"  /* Error Handling               */
