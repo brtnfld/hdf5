@@ -521,7 +521,7 @@ socket_connect(socket_state_t *sock, bool server)
 {
     struct sockaddr_in servaddr;
 
-    /* Initilaize sock address structure memory */
+    /* Initialize sock address structure memory */
     memset(&servaddr, 0, sizeof(servaddr));
 
     if (server) { /* Server Code */

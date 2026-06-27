@@ -21,7 +21,7 @@ all code that maintains on disk metadata. For more information, and specifically
 for the limitations of the original SWMR, see
  [Introduction to Single-Writer/Multiple-Reader (SWMR)](https://https://support.hdfgroup.org/documentation/hdf5/latest/_s_w_m_r_t_n.html)
 
-VFD SWMR is designed to address the limitations of the initial SWMR implemtation and 
+VFD SWMR is designed to address the limitations of the initial SWMR implementation and 
 be a more maintainable.  It functions by taking 
 regular snapshots of HDF5 file metadata on the writer side, and using 
 a specialized virtual file driver (VFD) on the reader side to 

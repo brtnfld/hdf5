@@ -90,7 +90,7 @@ usage(const char *progname)
               "                                       attribute deleted, in compact \n"
               "              `dense-del`            - Attributes added until the storage\n"
               "                                       is dense then an attribute deleted\n"
-              "                                       the storge still in dense\n"
+              "                                       the storage still in dense\n"
               "              `compact-add-to-dense` - Attributes added first in compact\n"
               "                                       then in dense storage\n"
               "              `dense-del-to-compact` - Attributes added until the storage\n"
@@ -4481,7 +4481,7 @@ verify_modify_vlstr_attr(state_t *s, hid_t g, unsigned int which)
  *              hid_t g
  *              HDF5 object ID (in this file: means group ID)
  *
- *              unsigend max_c
+ *              unsigned max_c
  *              The maximal number of attributes the compact storage
  *              can hold
  *
@@ -4532,7 +4532,7 @@ verify_attrs_compact(state_t *s, hid_t g, unsigned max_c, unsigned int which)
  *              hid_t g
  *              HDF5 object ID (in this file: means group ID)
  *
- *              unsigend max_c
+ *              unsigned max_c
  *              The maximal number of attributes the compact storage
  *              can hold
  *
@@ -4581,7 +4581,7 @@ verify_attrs_compact_dense(state_t *s, hid_t g, unsigned max_c, unsigned int whi
  *              hid_t g
  *              HDF5 object ID (in this file: means group ID)
  *
- *              unsigend max_c
+ *              unsigned max_c
  *              The maximal number of attributes the compact storage
  *              can hold
  *
@@ -4632,7 +4632,7 @@ verify_del_attrs_compact(state_t *s, hid_t g, unsigned max_c, unsigned int which
  *              hid_t g
  *              HDF5 object ID (in this file: means group ID)
  *
- *              unsigend max_c
+ *              unsigned max_c
  *              The maximal number of attributes the compact storage
  *              can hold
  *
@@ -4685,11 +4685,11 @@ verify_del_attrs_compact_dense(state_t *s, hid_t g, unsigned max_c, unsigned int
  *              hid_t g
  *              HDF5 object ID (in this file: means group ID)
  *
- *              unsigend max_c
+ *              unsigned max_c
  *              The maximal number of attributes the compact storage
  *              can hold
  *
- *              unsigend min_d
+ *              unsigned min_d
  *              The minimal number of attributes to be stored in
  *              dense storage
  *

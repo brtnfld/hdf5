@@ -304,7 +304,7 @@ H5CL_parse_config(const char *input_str_ptr, char *expected_name_ptr, H5CL_nv_pa
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't take down lex_vars 1.");
 
     /* setup lex_vars for the parsing the list in the top level name value pair.
-     * Since we are re-using lex_vars, we must re-initialize the struct tag since
+     * Since we are reusing lex_vars, we must re-initialize the struct tag since
      * it was set to an invalid value by H5CL__take_down_lex_vars()..
      */
     lex_vars.struct_tag = H5CL_LEX_VARS_STRUCT_TAG;
@@ -396,7 +396,7 @@ done:
  *
  *              configs[]: an array of instances of H5CL_config_spec of length num_configs
  *                      containing the names, max number of parameters, and a pointer to
- *                      the associated array of H5CL_nv_pair_t for the configuarations
+ *                      the associated array of H5CL_nv_pair_t for the configurations
  *                      that may appear in the configuration group.
  *
  *                      See the definition of H5CL_config_spec in H5CLdevelop.h for
@@ -406,7 +406,7 @@ done:
  *              matches the supplied expected value. It then parses the associated
  *              name value pair list to obtain name value pair lists for each of the
  *              configurations.  Finally, it uses the configs array to match arrays
- *              of H5CL_nv_pair_t with each of the configuratins, and parses the
+ *              of H5CL_nv_pair_t with each of the configurations, and parses the
  *              the associated name value pair lists into these arrays.
  *
  *              The function throws an error if any configuration has a name that
@@ -516,7 +516,7 @@ H5CL_parse_config_group(const char *input_str_ptr, char *config_group_name_ptr, 
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't take down lex_vars 1.");
 
     /* setup lex_vars for the parsing the list of configurations associated with the config group name.
-     * Since we are re-using lex_vars, we must re-initialize the struct tag since
+     * Since we are reusing lex_vars, we must re-initialize the struct tag since
      * it was set to an invalid value by H5CL__take_down_lex_vars()..
      */
     lex_vars.struct_tag = H5CL_LEX_VARS_STRUCT_TAG;
@@ -531,7 +531,7 @@ H5CL_parse_config_group(const char *input_str_ptr, char *config_group_name_ptr, 
     if (H5CL__take_down_lex_vars(&lex_vars) < 0)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't take down lex_vars 2.");
 
-    /* must now itterate through configs_mv_pairs[] and configs[] to match entries in
+    /* must now iterate through configs_mv_pairs[] and configs[] to match entries in
      * configs_mv_pairs with entries in configs[], and then parse the name value pair
      * lists into the appropriate entries in configs[].
      */
@@ -755,7 +755,7 @@ done:
  *
  * Purpose:     Using the current value of next_char_ptr as the point
  *              at which the error was detected, construct the error
- *              context string with the error roughtly centered.
+ *              context string with the error roughly centered.
  *
  *              The error context string is used to construct the error
  *              messages.
@@ -914,7 +914,7 @@ H5CL__lex_get_non_blank(H5CL_lex_vars_t *lex_vars_ptr)
             }
             else if (isspace(next_char)) {
 
-                /* next_char is either space, tab, new line(\n), carrage return (\r),
+                /* next_char is either space, tab, new line(\n), carriage return (\r),
                  * vertical tab (\v), or form feed (\f) -- just increment
                  * lex_vars_ptr->next_char_ptr.
                  */
@@ -1075,7 +1075,7 @@ done:
  * Function:    H5CL__lex_read_token
  *
  * Purpose:     Read the next token from the input string in lex_vars, load it
- *              into instace of H5CL_token_t incorporated into *lex_vars_ptr,
+ *              into instance of H5CL_token_t incorporated into *lex_vars_ptr,
  *              and return a pointer to same in *token_ptr_ptr..
  *
  *                                                      JRM - 12/7/25
@@ -1213,7 +1213,7 @@ H5CL__lex_read_token(bool value_expected, bool eoi_expected, H5CL_token_t **toke
     }
     else if ('"' == next_char) { /* quote string */
 
-        /* Load the quote string token into lex_vars_ptr->token verbatum but
+        /* Load the quote string token into lex_vars_ptr->token verbatim but
          * without the leading and trailing double quotes.  Note that
          * embedded double quotes are allowed, but they must be escaped
          * with a leading backslash -- i.e. \".
@@ -1221,7 +1221,7 @@ H5CL__lex_read_token(bool value_expected, bool eoi_expected, H5CL_token_t **toke
          * Note that no embedded escape sequences are resolved including
          * escaped double quotes.  While I doubt that this is a significant
          * issue for the target application, it is a departure from common
-         * practice.  It is made in defference to THGs decision to avoid
+         * practice.  It is made in deference to THGs decision to avoid
          * choosing a standard VFD configuration language.  By not cooking
          * the contents of the quote string, we should make it easier to
          * embed a string in an arbitrary configuration language in a
@@ -1337,7 +1337,7 @@ H5CL__lex_read_token(bool value_expected, bool eoi_expected, H5CL_token_t **toke
 
         if ((have_high_nibble) && (!have_low_nibble)) {
 
-            /* binary blob contains a odd number of hex characters -- finsih up */
+            /* binary blob contains a odd number of hex characters -- finish up */
 
             next_byte = (uint8_t)strtoll(byte_str, NULL, 16);
 

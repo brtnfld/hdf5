@@ -3017,7 +3017,7 @@ H5F__load_vfd_swmr_fs_strategy_config(H5CL_nv_pair_t *nv_pairs, hbool_t *fs_stra
 {
     int i;
 
-    /* flag for tracking that required paramater is set (+ duplication tracking if more parameters are added)
+    /* flag for tracking that required parameter is set (+ duplication tracking if more parameters are added)
      */
     hbool_t seen_fs_strategy_persist = false;
 
@@ -3079,7 +3079,7 @@ H5F__load_vfd_swmr_fs_page_size_config(H5CL_nv_pair_t *nv_pairs, hsize_t *fs_pag
 {
     int i;
 
-    /* flag for tracking that required paramater is set (+ duplication tracking if more parameters are added)
+    /* flag for tracking that required parameter is set (+ duplication tracking if more parameters are added)
      */
     hbool_t seen_fs_page_size = false;
 

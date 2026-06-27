@@ -1779,7 +1779,7 @@ test_reader_md_concur(hid_t orig_fapl)
      *  --update the metadata file with the index
      */
 
-    /* Wait for notification 2 from reader that the verifcation is complete */
+    /* Wait for notification 2 from reader that the verification is complete */
     while (notify != 2) {
         if (HDread(child_pfd[0], &notify, sizeof(int)) < 0)
             FAIL_STACK_ERROR;
@@ -1859,7 +1859,7 @@ test_reader_md_concur(hid_t orig_fapl)
      *  --update the metadata file with the index
      */
 
-    /* Wait for notification 4 from reader that the verifcation is complete */
+    /* Wait for notification 4 from reader that the verification is complete */
     while (notify != 4) {
         if (HDread(child_pfd[0], &notify, sizeof(int)) < 0)
             FAIL_STACK_ERROR;
@@ -1920,7 +1920,7 @@ test_reader_md_concur(hid_t orig_fapl)
      *  --update the metadata file with the index
      */
 
-    /* Wait for notification 6 from reader that the verifcation is complete */
+    /* Wait for notification 6 from reader that the verification is complete */
     while (notify != 6) {
         if (HDread(child_pfd[0], &notify, sizeof(int)) < 0)
             FAIL_STACK_ERROR;
@@ -1974,7 +1974,7 @@ test_reader_md_concur(hid_t orig_fapl)
      * --update the metadata file with an empty index
      */
 
-    /* Wait for notification 8 from reader that the verifcation is complete */
+    /* Wait for notification 8 from reader that the verification is complete */
     while (notify != 8) {
         if (HDread(child_pfd[0], &notify, sizeof(int)) < 0)
             FAIL_STACK_ERROR;
@@ -4962,7 +4962,7 @@ error:
     }
     H5E_END_TRY;
 
-    /*  It's important to clean up the chechsum and updater files. */
+    /*  It's important to clean up the checksum and updater files. */
     if (md_file_path_name && config)
         clean_chk_ud_files(md_file_path_name, config->updater_file_path);
 

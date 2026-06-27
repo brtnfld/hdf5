@@ -135,7 +135,7 @@ usage(const char *progname)
         "                                       attribute deleted, in compact \n"
         "              `dense-del`            - Attributes added until the storage\n"
         "                                       is dense then an attribute deleted\n"
-        "                                       the storge still in dense\n"
+        "                                       the storage still in dense\n"
         "              `compact-add-to-dense` - Attributes added first in compact\n"
         "                                       then in dense storage\n"
         "              `dense-del-to-compact` - Attributes added until the storage\n"

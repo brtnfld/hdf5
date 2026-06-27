@@ -219,7 +219,7 @@ Merge base: `33c0016` (2020-08-02). `develop` @ `ee8507bdb9`.
   placeholder ("XXX... lets VFD SWMR development proceed... not going to sweat it now"). Current
   develop HEAD independently extended this same function with a *different* new parameter
   (`apl_id`, access property list) at the call site instead. These are divergent, incompatible
-  extensions to the same function signature -- when the milestone reachs develop's apl_id addition
+  extensions to the same function signature -- when the milestone reaches develop's apl_id addition
   (likely H5Oflush.c/H5Oprivate.h too), real reconciliation is needed: decide whether VFD SWMR's
   refresh path should adopt `apl_id` support or keep the NULL placeholder.
   Also: feature added root-group tagged-metadata expunge cleanup on failed file open

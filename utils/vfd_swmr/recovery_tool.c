@@ -902,7 +902,7 @@ copy_data(handler_t *hand, FILE *src_file, int dst_fd, off_t src_file_offset, of
 
                 int myerrno = errno;
 
-                fprintf(stderr, "Write to HDF5 file at offset 0x%llx failes.  errno = %d (%s)\n",
+                fprintf(stderr, "Write to HDF5 file at offset 0x%llx fails.  errno = %d (%s)\n",
                         (unsigned long long)dst_file_offset, errno, strerror(myerrno));
                 goto error;
 

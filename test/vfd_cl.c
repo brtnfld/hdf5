@@ -856,7 +856,7 @@ cl_lexer_detail_check(void)
     int             token_num    = 0;
     const char     *input_string = "(()())/* comment */)A1 1+1-1 2A2 1.1.1 +.2-.3\"i\"A/**/B\"\\\"\")"
                                    "--0--123 --aAb --AaB --0ff)(/* commenta can appear in lists)"
-                                   "(ilegal characters, i.e.!@#$%^;:&*, can appear in lists)"
+                                   "(illegal characters, i.e.!@#$%^;:&*, can appear in lists)"
                                    "( and ()(((arbitrary))nesting of((parens))))";
     uint8_t         bb_0[]       = {0};
     uint8_t         bb_1[]       = {18, 48};
@@ -1089,7 +1089,7 @@ cl_lexer_detail_check(void)
         TEST_ERROR;
 
     if (0 != cl_lexer_test_verify_token(token_ptr, token_num++, H5CL_LIST_TOK,
-                                        "(ilegal characters, i.e.!@#$%^;:&*, can appear in lists)", 0, 0.0,
+                                        "(illegal characters, i.e.!@#$%^;:&*, can appear in lists)", 0, 0.0,
                                         NULL, 0, true))
         TEST_ERROR;
 
@@ -1454,7 +1454,7 @@ cl_lexer_error_check_2(void)
 #if VERIFY_ERROR_STACK_SUPPORTED
     else if (0 != cl_test_verify_error_stack(
                       H5E_ARGS, H5E_BADVALUE,
-                      "Ill-formed numerical constant.  Context: ...alues */ + - . +. -. (an unter...",
+                      "Ill-formed numerical constant.  Context: ...values */ + - . +. -. (an under...",
                       verbose)) {
 
         TEST_ERROR;
@@ -1671,7 +1671,7 @@ error:
  * cl_parse_name_val_pair_smoke_check()
  *
  * Initial set of parse tests designed to verify basic functionality of the
- * function that parses name value pairs.  Note that theses tests do not
+ * function that parses name value pairs.  Note that these tests do not
  * trigger any error conditinos in the parser.
  *
  *                                              JRM -- 12/17/25
@@ -2427,7 +2427,7 @@ error:
  * cl_parse_name_val_pair_list_smoke_check()
  *
  * Initial set of parse tests designed to verify basic functionality of the
- * function that parses name value pair lists.  Note that theses tests do not
+ * function that parses name value pair lists.  Note that these tests do not
  * trigger any error conditinos in the parser.
  *
  *                                              JRM -- 12/20/25
@@ -2883,7 +2883,7 @@ error:
  *
  * cl_parser_smoke_check()
  *
- * Initial full configuraion language parser smoke checks. Note that theses
+ * Initial full configuration language parser smoke checks. Note that these
  * tests do not trigger any error conditinos in the parser.
  *
  *                                              JRM -- 12/20/25
@@ -4829,7 +4829,7 @@ error:
  * Verify that the VFD SWMR property list setup function detects and reports
  * errors as expected.
  * Specifically, test that H5F_load_swmr_config_from_string() errors when
- * any of the required configuration paramaters are missing.
+ * any of the required configuration parameters are missing.
  *
  *                                              Cody S. -- 4/30/26
  *

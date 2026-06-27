@@ -330,7 +330,7 @@ read_records(const char *filename, hbool_t verbose, FILE *verbose_file, unsigned
         goto error;
     }
 
-    /* Log I/O when verbose output it enbabled */
+    /* Log I/O when verbose output it enabled */
     if (use_log_vfd) {
         char verbose_name[1024];
 

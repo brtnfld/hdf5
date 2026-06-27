@@ -179,7 +179,7 @@ Examples:
     ./test_crash_recovery.sh -v -k bigset       # Run bigset test with verbose output and keep files
     ./test_crash_recovery.sh bigset sparse      # Run only bigset and sparse tests
 
-Note: The script should automatically select the correct project dir, but will fail if you move relavant files 
+Note: The script should automatically select the correct project dir, but will fail if you move relevant files 
 from their expected spots.
 ALSO NOTE: Only the 'remove' test currently works.
 

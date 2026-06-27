@@ -249,7 +249,7 @@ keep_output_files() {
 #      applying the updater files.)
 #   5. Validates the HDF5 file after recovery using the validation tool.
 #      (This will check if the HDF5 file is readable after recovery.)
-#   6. If $KEEP_OUTPUT_FILES is true: Renames output files so they wont be 
+#   6. If $KEEP_OUTPUT_FILES is true: Renames output files so they won't be
 #      overwritten.
 # - Returns:
 #   0 - Either all tests are successful, or the test encountered a soft error
