@@ -365,6 +365,7 @@ set (H5FD_PUBLIC_HDRS
     ${HDF5_SRC_DIR}/H5FDsec2.h
     ${HDF5_SRC_DIR}/H5FDsplitter.h
     ${HDF5_SRC_DIR}/H5FDstdio.h
+    ${HDF5_SRC_DIR}/H5FDvfd_swmr.h
     ${HDF5_SRC_DIR}/H5FDwindows.h
 )
 
