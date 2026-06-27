@@ -59,9 +59,13 @@ typedef struct H5FD_vfd_swmr_reader_fapl_t {
 extern "C" {
 #endif
 
-H5_DLL hid_t  H5FD_vfd_swmr_init(void);
-H5_DLL herr_t H5P_pop_vfd_swmr_reader_vfd_off_fapl(hid_t fapl_id);
-H5_DLL herr_t H5P_push_vfd_swmr_reader_vfd_on_fapl(hid_t fapl_id);
+H5_DLL hid_t   H5FD_vfd_swmr_init(void);
+H5_DLL herr_t  H5P_pop_vfd_swmr_reader_vfd_off_fapl(hid_t fapl_id);
+H5_DLL herr_t  H5P_push_vfd_swmr_reader_vfd_on_fapl(hid_t fapl_id);
+H5_DLL hbool_t H5FD_vfd_swmr_get_make_believe(H5FD_t *_file);
+H5_DLL void    H5FD_vfd_swmr_set_make_believe(H5FD_t *_file, hbool_t make_believe);
+H5_DLL htri_t  H5FD_vfd_swmr_assess_make_believe(H5FD_t *_file);
+H5_DLL void    H5FD_vfd_swmr_record_elapsed_ticks(H5FD_t *_file, uint64_t elapsed);
 
 #ifdef __cplusplus
 }

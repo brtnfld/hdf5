@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -331,6 +330,11 @@ typedef struct {
 #define MISC35_SPACE_DIM3 13
 #define MISC35_NPOINTS    10
 
+/* Definitions for misc. test #37 */
+/* The test file is formerly named h5_nrefs_POC.
+   See https://nvd.nist.gov/vuln/detail/CVE-2020-10812 */
+#define CVE_2020_10812_FILENAME "cve_2020_10812.h5"
+
 /****************************************************************
 **
 **  test_misc1(): test unlinking a dataset from a group and immediately
@@ -516,8 +520,8 @@ test_misc2_write_attribute(void)
     ret = H5Fclose(file2);
     CHECK(ret, FAIL, "H5Fclose");
 
-    HDfree(string_att1);
-    HDfree(string_att2);
+    free(string_att1);
+    free(string_att2);
 }
 
 static void
@@ -662,7 +666,7 @@ test_misc4(void)
     herr_t      ret;
 
     /* Output message about test being performed */
-    MESSAGE(5, ("Testing fileno working in H5O_info_t\n"));
+    MESSAGE(5, ("Testing fileno working in H5O_info2_t\n"));
 
     file1 = H5Fcreate(MISC4_FILE_1, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
     CHECK(file1, FAIL, "H5Fcreate");
@@ -730,7 +734,7 @@ create_struct3(void)
     misc5_struct3_hndl *str3hndl; /* New 'struct3' created */
     herr_t              ret;      /* For error checking */
 
-    str3hndl = (misc5_struct3_hndl *)HDmalloc(sizeof(misc5_struct3_hndl));
+    str3hndl = (misc5_struct3_hndl *)malloc(sizeof(misc5_struct3_hndl));
     CHECK_PTR(str3hndl, "malloc");
 
     str3hndl->st3h_base = H5Tcreate(H5T_COMPOUND, sizeof(misc5_struct3));
@@ -756,7 +760,7 @@ delete_struct3(misc5_struct3_hndl *str3hndl)
     ret = H5Tclose(str3hndl->st3h_base);
     CHECK(ret, FAIL, "H5Tclose");
 
-    HDfree(str3hndl);
+    free(str3hndl);
 }
 
 static void
@@ -773,8 +777,8 @@ create_struct2(void)
     misc5_struct2_hndl *str2hndl; /* New 'struct2' created */
     herr_t              ret;      /* For error checking */
 
-    str2hndl = (misc5_struct2_hndl *)HDmalloc(sizeof(misc5_struct2_hndl));
-    CHECK_PTR(str2hndl, "HDmalloc");
+    str2hndl = (misc5_struct2_hndl *)malloc(sizeof(misc5_struct2_hndl));
+    CHECK_PTR(str2hndl, "malloc");
 
     str2hndl->st2h_base = H5Tcreate(H5T_COMPOUND, sizeof(misc5_struct2));
     CHECK(str2hndl->st2h_base, FAIL, "H5Tcreate");
@@ -808,7 +812,7 @@ delete_struct2(misc5_struct2_hndl *str2hndl)
     H5Tclose(str2hndl->st2h_base);
     CHECK(ret, FAIL, "H5Tclose");
 
-    HDfree(str2hndl);
+    free(str2hndl);
 }
 
 static void
@@ -819,8 +823,8 @@ set_struct2(misc5_struct2 *buf)
     buf->st2_el1     = MISC5_DBGELVAL2;
     buf->st2_el2.len = MISC5_DBGNELM3;
 
-    buf->st2_el2.p = HDmalloc((buf->st2_el2.len) * sizeof(misc5_struct3));
-    CHECK_PTR(buf->st2_el2.p, "HDmalloc");
+    buf->st2_el2.p = malloc((buf->st2_el2.len) * sizeof(misc5_struct3));
+    CHECK_PTR(buf->st2_el2.p, "malloc");
 
     for (i = 0; i < (buf->st2_el2.len); i++)
         set_struct3(&(((misc5_struct3 *)(buf->st2_el2.p))[i]));
@@ -829,7 +833,7 @@ set_struct2(misc5_struct2 *buf)
 static void
 clear_struct2(misc5_struct2 *buf)
 {
-    HDfree(buf->st2_el2.p);
+    free(buf->st2_el2.p);
 }
 
 /*********************** struct1 ***********************/
@@ -840,8 +844,8 @@ create_struct1(void)
     misc5_struct1_hndl *str1hndl; /* New 'struct1' created */
     herr_t              ret;      /* For error checking */
 
-    str1hndl = (misc5_struct1_hndl *)HDmalloc(sizeof(misc5_struct1_hndl));
-    CHECK_PTR(str1hndl, "HDmalloc");
+    str1hndl = (misc5_struct1_hndl *)malloc(sizeof(misc5_struct1_hndl));
+    CHECK_PTR(str1hndl, "malloc");
 
     str1hndl->st1h_base = H5Tcreate(H5T_COMPOUND, sizeof(misc5_struct1));
     CHECK(str1hndl->st1h_base, FAIL, "H5Tcreate");
@@ -875,7 +879,7 @@ delete_struct1(misc5_struct1_hndl *str1hndl)
     ret = H5Tclose(str1hndl->st1h_base);
     CHECK(ret, FAIL, "H5Tclose");
 
-    HDfree(str1hndl);
+    free(str1hndl);
 }
 
 static void
@@ -886,8 +890,8 @@ set_struct1(misc5_struct1 *buf)
     buf->st1_el1     = MISC5_DBGELVAL1;
     buf->st1_el2.len = MISC5_DBGNELM2;
 
-    buf->st1_el2.p = HDmalloc((buf->st1_el2.len) * sizeof(misc5_struct2));
-    CHECK_PTR(buf->st1_el2.p, "HDmalloc");
+    buf->st1_el2.p = malloc((buf->st1_el2.len) * sizeof(misc5_struct2));
+    CHECK_PTR(buf->st1_el2.p, "malloc");
 
     for (i = 0; i < (buf->st1_el2.len); i++)
         set_struct2(&(((misc5_struct2 *)(buf->st1_el2.p))[i]));
@@ -900,7 +904,7 @@ clear_struct1(misc5_struct1 *buf)
 
     for (i = 0; i < buf->st1_el2.len; i++)
         clear_struct2(&(((misc5_struct2 *)(buf->st1_el2.p))[i]));
-    HDfree(buf->st1_el2.p);
+    free(buf->st1_el2.p);
 }
 
 static void
@@ -937,8 +941,8 @@ test_misc5(void)
 
     /* Create the variable-length buffer */
     buf.len = MISC5_DBGNELM1;
-    buf.p   = HDmalloc((buf.len) * sizeof(misc5_struct1));
-    CHECK_PTR(buf.p, "HDmalloc");
+    buf.p   = malloc((buf.len) * sizeof(misc5_struct1));
+    CHECK_PTR(buf.p, "malloc");
 
     /* Create the top-level VL information */
     for (i = 0; i < MISC5_DBGNELM1; i++)
@@ -953,7 +957,7 @@ test_misc5(void)
         clear_struct1(&(((misc5_struct1 *)(buf.p))[j]));
 
     /* Free the variable-length buffer */
-    HDfree(buf.p);
+    free(buf.p);
 
     /* Close dataset */
     ret = H5Dclose(dataset_id);
@@ -992,16 +996,16 @@ test_misc5(void)
 
     /* Verify the correct information was read in */
     for (i = 0; i < (buf.len); i++) {
-        /* HDprintf("[%d]=%d\n",i, ((misc5_struct1 *)(buf.p))[i].st1_el1); */
+        /* printf("[%d]=%d\n",i, ((misc5_struct1 *)(buf.p))[i].st1_el1); */
         VERIFY(((misc5_struct1 *)(buf.p))[i].st1_el1, MISC5_DBGELVAL1, "H5Dread");
         for (j = 0; j < (((misc5_struct1 *)(buf.p))[i].st1_el2.len); j++) {
-            /* HDprintf("   [%d]=%d\n",j, ((misc5_struct2 *)(((misc5_struct1 *)
+            /* printf("   [%d]=%d\n",j, ((misc5_struct2 *)(((misc5_struct1 *)
              * (buf.p))[i].st1_el2.p))[j].st2_el1); */
             VERIFY(((misc5_struct2 *)(((misc5_struct1 *)(buf.p))[i].st1_el2.p))[j].st2_el1, MISC5_DBGELVAL2,
                    "H5Dread");
             for (k = 0; k < (((misc5_struct2 *)(((misc5_struct1 *)(buf.p))[i].st1_el2.p))[j].st2_el2.len);
                  k++) {
-                /* HDprintf("      [%d]=%d\n",k, ((misc5_struct3 *)(((misc5_struct2 *) (((misc5_struct1
+                /* printf("      [%d]=%d\n",k, ((misc5_struct3 *)(((misc5_struct2 *) (((misc5_struct1
                  * *)(buf.p))[i].  st1_el2.p))[j].st2_el2.p))[k].st3_el1); */
                 VERIFY(((misc5_struct3 *)(((misc5_struct2 *)(((misc5_struct1 *)(buf.p))[i].st1_el2.p))[j]
                                               .st2_el2.p))[k]
@@ -1268,11 +1272,11 @@ test_misc8(void)
     MESSAGE(5, ("Testing dataset storage sizes\n"));
 
     /* Allocate space for the data to write & read */
-    wdata = (int *)HDmalloc(sizeof(int) * MISC8_DIM0 * MISC8_DIM1);
-    CHECK_PTR(wdata, "HDmalloc");
+    wdata = (int *)malloc(sizeof(int) * MISC8_DIM0 * MISC8_DIM1);
+    CHECK_PTR(wdata, "malloc");
 #ifdef VERIFY_DATA
-    rdata = (int *)HDmalloc(sizeof(int) * MISC8_DIM0 * MISC8_DIM1);
-    CHECK_PTR(rdata, "HDmalloc");
+    rdata = (int *)malloc(sizeof(int) * MISC8_DIM0 * MISC8_DIM1);
+    CHECK_PTR(rdata, "malloc");
 #endif /* VERIFY_DATA */
 
     /* Initialize values */
@@ -1408,7 +1412,11 @@ test_misc8(void)
 
     /* Create a contiguous dataset, with space allocation late */
     /* Should fail */
-    did = H5Dcreate2(fid, MISC8_DSETNAME4, H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+    H5E_BEGIN_TRY
+    {
+        did = H5Dcreate2(fid, MISC8_DSETNAME4, H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+    }
+    H5E_END_TRY;
     VERIFY(did, FAIL, "H5Dcreate2");
 
     /* Set the space allocation time to incremental */
@@ -1417,7 +1425,11 @@ test_misc8(void)
 
     /* Create a contiguous dataset, with space allocation incremental */
     /* Should fail */
-    did = H5Dcreate2(fid, MISC8_DSETNAME4, H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+    H5E_BEGIN_TRY
+    {
+        did = H5Dcreate2(fid, MISC8_DSETNAME4, H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+    }
+    H5E_END_TRY;
     VERIFY(did, FAIL, "H5Dcreate2");
 
     /* Set the space allocation time to early */
@@ -1731,9 +1743,9 @@ test_misc8(void)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Free the read & write buffers */
-    HDfree(wdata);
+    free(wdata);
 #ifdef VERIFY_DATA
-    HDfree(rdata);
+    free(rdata);
 #endif /* VERIFY_DATA */
 } /* end test_misc8() */
 
@@ -1758,7 +1770,11 @@ test_misc9(void)
     ret = H5Pset_fapl_core(fapl, (size_t)1024, 0);
     CHECK(ret, FAIL, "H5Pset_fapl_core");
 
-    fid = H5Fopen(MISC9_FILE, H5F_ACC_RDWR, fapl);
+    H5E_BEGIN_TRY
+    {
+        fid = H5Fopen(MISC9_FILE, H5F_ACC_RDWR, fapl);
+    }
+    H5E_END_TRY;
     VERIFY(fid, FAIL, "H5Fopen");
 
     ret = H5Pclose(fapl);
@@ -1794,7 +1810,7 @@ test_misc10(void)
     CHECK(ret, FAIL, "h5_driver_is_default_vfd_compatible");
 
     if (!driver_is_default_compatible) {
-        HDprintf("-- SKIPPED --\n");
+        printf("-- SKIPPED --\n");
         return;
     }
 
@@ -1908,7 +1924,7 @@ test_misc11(void)
     {
         ret = H5Pset_sym_k(fcpl, 32770, 0);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(ret, FAIL, "H5Pset_sym_k");
 
     ret = H5Pset_sym_k(fcpl, MISC11_SYM_IK, MISC11_SYM_LK);
@@ -1919,7 +1935,7 @@ test_misc11(void)
     {
         ret = H5Pset_istore_k(fcpl, 32770);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(ret, FAIL, "H5Pset_istore_k");
 
     ret = H5Pset_istore_k(fcpl, MISC11_ISTORE_IK);
@@ -2192,8 +2208,8 @@ misc13_verify_dataset(hid_t loc_id, const char *name, const unsigned *data)
     herr_t    ret;              /* Generic return value */
 
     /* Create a data buffer for the dataset read */
-    read_data = (unsigned *)HDcalloc(MISC13_DIM1, sizeof(unsigned));
-    CHECK_PTR(read_data, "HDcalloc");
+    read_data = (unsigned *)calloc(MISC13_DIM1, sizeof(unsigned));
+    CHECK_PTR(read_data, "calloc");
 
     /* Open the contiguous dataset in the root group */
     dsid = H5Dopen2(loc_id, name, H5P_DEFAULT);
@@ -2212,7 +2228,7 @@ misc13_verify_dataset(hid_t loc_id, const char *name, const unsigned *data)
     CHECK(ret, FAIL, "H5Dclose");
 
     /* Free the dataset read buffer */
-    HDfree(read_data);
+    free(read_data);
 
 } /* end misc13_verify_dataset() */
 
@@ -2318,48 +2334,48 @@ misc13_insert_user_block(const char *old_name, const char *new_name, const char 
     int    ret;               /* Generic status value */
 
     /* Allocate space for the user block */
-    user_block = HDcalloc(size, (size_t)1);
-    CHECK_PTR(user_block, "HDcalloc");
+    user_block = calloc(size, (size_t)1);
+    CHECK_PTR(user_block, "calloc");
 
     /* Copy in the user block data */
-    HDmemcpy(user_block, str, HDstrlen(str));
+    memcpy(user_block, str, HDstrlen(str));
 
     /* Open the new file */
-    new_fp = HDfopen(new_name, "wb");
-    CHECK_PTR(new_fp, "HDfopen");
+    new_fp = fopen(new_name, "wb");
+    CHECK_PTR(new_fp, "fopen");
 
     /* Write the user block to the new file */
-    written = HDfwrite(user_block, (size_t)1, size, new_fp);
-    VERIFY(written, size, "HDfwrite");
+    written = fwrite(user_block, (size_t)1, size, new_fp);
+    VERIFY(written, size, "fwrite");
 
     /* Open the old file */
-    old_fp = HDfopen(old_name, "rb");
-    CHECK_PTR(old_fp, "HDfopen");
+    old_fp = fopen(old_name, "rb");
+    CHECK_PTR(old_fp, "fopen");
 
     /* Allocate space for the copy buffer */
-    copy_buf = HDmalloc((size_t)MISC13_COPY_BUF_SIZE);
-    CHECK_PTR(copy_buf, "HDmalloc");
+    copy_buf = malloc((size_t)MISC13_COPY_BUF_SIZE);
+    CHECK_PTR(copy_buf, "malloc");
 
     /* Copy data from the old file to the new file */
-    while ((read_in = HDfread(copy_buf, (size_t)1, (size_t)MISC13_COPY_BUF_SIZE, old_fp)) > 0) {
+    while ((read_in = fread(copy_buf, (size_t)1, (size_t)MISC13_COPY_BUF_SIZE, old_fp)) > 0) {
         /* Write the data to the new file */
-        written = HDfwrite(copy_buf, (size_t)1, read_in, new_fp);
-        VERIFY(written, read_in, "HDfwrite");
+        written = fwrite(copy_buf, (size_t)1, read_in, new_fp);
+        VERIFY(written, read_in, "fwrite");
     }
 
     /* Close the old file */
-    ret = HDfclose(old_fp);
-    VERIFY(ret, 0, "HDfclose");
+    ret = fclose(old_fp);
+    VERIFY(ret, 0, "fclose");
 
     /* Close the new file */
-    ret = HDfclose(new_fp);
-    VERIFY(ret, 0, "HDfclose");
+    ret = fclose(new_fp);
+    VERIFY(ret, 0, "fclose");
 
     /* Free the copy buffer */
-    HDfree(copy_buf);
+    free(copy_buf);
 
     /* Free the user block */
-    HDfree(user_block);
+    free(user_block);
 
 } /* end misc13_insert_user_block() */
 
@@ -2487,8 +2503,8 @@ test_misc13(void)
     hbool_t   check_for_new_dataset; /* Whether to check for the post-userblock-creation dataset */
 
     /* Create a data buffer for the datasets */
-    data = (unsigned *)HDcalloc(MISC13_DIM1, sizeof(unsigned));
-    CHECK_PTR(data, "HDcalloc");
+    data = (unsigned *)calloc(MISC13_DIM1, sizeof(unsigned));
+    CHECK_PTR(data, "calloc");
 
     /* Initialize data to write */
     misc13_init_data(data);
@@ -2518,7 +2534,7 @@ test_misc13(void)
     misc13_verify_file(MISC13_FILE_2, data, userblock_size, check_for_new_dataset);
 
     /* Free the dataset buffer */
-    HDfree(data);
+    free(data);
 
 } /* end test_misc13() */
 
@@ -2817,10 +2833,10 @@ test_misc16(void)
 
     /* Initialize the data */
     /* (Note that these are supposed to stress the code, so are a little weird) */
-    HDmemcpy(wdata[0], "1234567", MISC16_STR_SIZE);
-    HDmemcpy(wdata[1], "1234567\0", MISC16_STR_SIZE);
-    HDmemcpy(wdata[2], "12345678", MISC16_STR_SIZE);
-    HDmemcpy(wdata[3], "\0\0\0\0\0\0\0\0", MISC16_STR_SIZE);
+    memcpy(wdata[0], "1234567", MISC16_STR_SIZE);
+    memcpy(wdata[1], "1234567\0", MISC16_STR_SIZE);
+    memcpy(wdata[2], "12345678", MISC16_STR_SIZE);
+    memcpy(wdata[3], "\0\0\0\0\0\0\0\0", MISC16_STR_SIZE);
 
     /* Create the file */
     file = H5Fcreate(MISC16_FILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
@@ -2905,10 +2921,10 @@ test_misc17(void)
 
     /* Initialize the data */
     /* (Note that these are supposed to stress the code, so are a little weird) */
-    HDmemcpy(wdata[0], "1234567", MISC17_SPACE_DIM2);
-    HDmemcpy(wdata[1], "1234567\0", MISC17_SPACE_DIM2);
-    HDmemcpy(wdata[2], "12345678", MISC17_SPACE_DIM2);
-    HDmemcpy(wdata[3], "\0\0\0\0\0\0\0\0", MISC17_SPACE_DIM2);
+    memcpy(wdata[0], "1234567", MISC17_SPACE_DIM2);
+    memcpy(wdata[1], "1234567\0", MISC17_SPACE_DIM2);
+    memcpy(wdata[2], "12345678", MISC17_SPACE_DIM2);
+    memcpy(wdata[3], "\0\0\0\0\0\0\0\0", MISC17_SPACE_DIM2);
 
     /* Create the file */
     file = H5Fcreate(MISC17_FILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
@@ -3187,7 +3203,7 @@ test_misc19(void)
     {
         ret = H5Fclose(fid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(ret, FAIL, "H5Fclose");
 
     /* Check H5I operations on property lists */
@@ -3221,7 +3237,7 @@ test_misc19(void)
     {
         ret = H5Pclose(plid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(ret, FAIL, "H5Pclose");
 
     /* Check H5I operations on property classes */
@@ -3255,7 +3271,7 @@ test_misc19(void)
     {
         ret = H5Pclose_class(pcid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(ret, FAIL, "H5Pclose_class");
 
     /* Check H5I operations on datatypes */
@@ -3289,7 +3305,7 @@ test_misc19(void)
     {
         ret = H5Tclose(tid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(ret, FAIL, "H5Tclose");
 
     /* Check H5I operations on dataspaces */
@@ -3323,7 +3339,7 @@ test_misc19(void)
     {
         ret = H5Sclose(sid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(ret, FAIL, "H5Sclose");
 
     /* Check H5I operations on datasets */
@@ -3365,7 +3381,7 @@ test_misc19(void)
     {
         ret = H5Dclose(did);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(ret, FAIL, "H5Dclose");
 
     /* Close the dataspace */
@@ -3419,7 +3435,7 @@ test_misc19(void)
     {
         ret = H5Aclose(aid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(ret, FAIL, "H5Aclose");
 
     /* Close the root group */
@@ -3469,7 +3485,7 @@ test_misc19(void)
     {
         ret = H5Gclose(gid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(ret, FAIL, "H5Gclose");
 
     /* Close the file */
@@ -3507,7 +3523,7 @@ test_misc19(void)
     {
         ret = H5Eunregister_class(ecid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(ret, FAIL, "H5Eunregister_class");
 
     /* Check H5I operations on error messages */
@@ -3545,7 +3561,7 @@ test_misc19(void)
     {
         ret = H5Eclose_msg(emid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(ret, FAIL, "H5Eclose_msg");
 
     /* Close the error class */
@@ -3583,7 +3599,7 @@ test_misc19(void)
     {
         ret = H5Eclose_stack(esid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(ret, FAIL, "H5Eclose_stack");
 
     /* Check H5I operations on virtual file drivers */
@@ -3621,10 +3637,10 @@ test_misc19(void)
     {
         ret = H5FDunregister(vfdid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(ret, FAIL, "H5FDunregister");
 
-    HDfree(vfd_cls);
+    free(vfd_cls);
 
     /* Check H5I operations on virtual object connectors */
 
@@ -3661,10 +3677,10 @@ test_misc19(void)
     {
         ret = H5VLunregister_connector(volid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(ret, FAIL, "H5VLunregister_connector");
 
-    HDfree(vol_cls);
+    free(vol_cls);
 
 } /* end test_misc19() */
 
@@ -3697,7 +3713,7 @@ test_misc20(void)
     CHECK(ret, FAIL, "h5_driver_is_default_vfd_compatible");
 
     if (!driver_is_default_compatible) {
-        HDprintf("-- SKIPPED --\n");
+        printf("-- SKIPPED --\n");
         return;
     }
 
@@ -3872,8 +3888,8 @@ test_misc21(void)
     MESSAGE(5, ("Testing late allocation time w/chunks & filters\n"));
 
     /* Allocate space for the buffer */
-    buf = (char *)HDcalloc(MISC21_SPACE_DIM0 * MISC21_SPACE_DIM1, 1);
-    CHECK(buf, NULL, "HDcalloc");
+    buf = (char *)calloc(MISC21_SPACE_DIM0 * MISC21_SPACE_DIM1, 1);
+    CHECK(buf, NULL, "calloc");
 
     /* Create the file */
     fid = H5Fcreate(MISC21_FILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
@@ -3913,7 +3929,7 @@ test_misc21(void)
     ret = H5Fclose(fid);
     CHECK(ret, FAIL, "H5Fclose");
 
-    HDfree(buf);
+    free(buf);
 } /* end test_misc21() */
 
 /****************************************************************
@@ -3944,7 +3960,7 @@ test_misc22(void)
     unsigned int flags;
     size_t       cd_nelmts = 32;
     unsigned int cd_values[32];
-    unsigned     correct;
+    size_t       correct;
 
     if (h5_szip_can_encode() != 1)
         return;
@@ -3957,8 +3973,8 @@ test_misc22(void)
     MESSAGE(5, ("Testing datatypes with SZIP filter\n"));
 
     /* Allocate space for the buffer */
-    buf = (char *)HDcalloc(MISC22_SPACE_DIM0 * MISC22_SPACE_DIM1, 8);
-    CHECK(buf, NULL, "HDcalloc");
+    buf = (char *)calloc(MISC22_SPACE_DIM0 * MISC22_SPACE_DIM1, 8);
+    CHECK(buf, NULL, "calloc");
 
     /* Create the file */
     fid = H5Fcreate(MISC22_FILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
@@ -3978,7 +3994,7 @@ test_misc22(void)
                 if ((prec[j] + offsets[k]) > (H5Tget_size(idts[i]) * 8))
                     continue;
 
-                MESSAGE(5, ("  Testing datatypes size=%d precision=%u offset=%d\n", H5Tget_size(idts[i]),
+                MESSAGE(5, ("  Testing datatypes size=%zu precision=%u offset=%d\n", H5Tget_size(idts[i]),
                             (unsigned)prec[j], (unsigned)offsets[k]));
 
                 /* Create the DCPL */
@@ -4038,7 +4054,7 @@ test_misc22(void)
                                            NULL);
                 CHECK(ret, FAIL, "H5Pget_filter_by_id2");
 
-                VERIFY(cd_values[2], correct, "SZIP filter returned value for precision");
+                VERIFY(cd_values[2], (unsigned)correct, "SZIP filter returned value for precision");
 
                 ret = H5Dclose(dsid);
                 CHECK(ret, FAIL, "H5Dclose");
@@ -4064,7 +4080,7 @@ test_misc22(void)
     ret = H5Fclose(fid);
     CHECK(ret, FAIL, "H5Fclose");
 
-    HDfree(buf);
+    free(buf);
 } /* end test_misc22() */
 #endif /* H5_HAVE_FILTER_SZIP */
 
@@ -4111,7 +4127,7 @@ test_misc23(void)
     {
         tmp_id = H5Gcreate1(file_id, "/A/B00a/grp", (size_t)0);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Gcreate1");
 
     /* Make sure that size_hint values that can't fit into a 32-bit
@@ -4123,7 +4139,7 @@ test_misc23(void)
         {
             tmp_id = H5Gcreate1(file_id, "/size_hint_too_large", SIZE_MAX);
         }
-        H5E_END_TRY;
+        H5E_END_TRY
         VERIFY(tmp_id, FAIL, "H5Gcreate1");
     }
 
@@ -4132,7 +4148,7 @@ test_misc23(void)
     {
         tmp_id = H5Gcreate1(file_id, "/largest_size_hint", UINT32_MAX);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     CHECK(tmp_id, FAIL, "H5Gcreate1");
     status = H5Gclose(tmp_id);
     CHECK(status, FAIL, "H5Gclose");
@@ -4146,7 +4162,7 @@ test_misc23(void)
     {
         tmp_id = H5Dcreate1(file_id, "/A/B00c/dset", type_id, space_id, create_id);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Dcreate1");
 
     tmp_id = H5Dcreate1(file_id, "/A/dset", type_id, space_id, create_id);
@@ -4481,84 +4497,84 @@ test_misc24(void)
     {
         tmp_id = H5Dopen2(file_id, MISC24_GROUP_NAME, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Dopen2");
 
     H5E_BEGIN_TRY
     {
         tmp_id = H5Dopen2(file_id, MISC24_GROUP_LINK, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Dopen2");
 
     H5E_BEGIN_TRY
     {
         tmp_id = H5Topen2(file_id, MISC24_GROUP_NAME, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Topen2");
 
     H5E_BEGIN_TRY
     {
         tmp_id = H5Topen2(file_id, MISC24_GROUP_LINK, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Topen2");
 
     H5E_BEGIN_TRY
     {
         tmp_id = H5Gopen2(file_id, MISC24_DATASET_NAME, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Gopen2");
 
     H5E_BEGIN_TRY
     {
         tmp_id = H5Gopen2(file_id, MISC24_DATASET_LINK, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Gopen2");
 
     H5E_BEGIN_TRY
     {
         tmp_id = H5Topen2(file_id, MISC24_DATASET_NAME, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Topen2");
 
     H5E_BEGIN_TRY
     {
         tmp_id = H5Topen2(file_id, MISC24_DATASET_LINK, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Topen2");
 
     H5E_BEGIN_TRY
     {
         tmp_id = H5Gopen2(file_id, MISC24_DATATYPE_NAME, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Gopen2");
 
     H5E_BEGIN_TRY
     {
         tmp_id = H5Gopen2(file_id, MISC24_DATATYPE_LINK, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Gopen2");
 
     H5E_BEGIN_TRY
     {
         tmp_id = H5Dopen2(file_id, MISC24_DATATYPE_NAME, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Dopen2");
 
     H5E_BEGIN_TRY
     {
         tmp_id = H5Dopen2(file_id, MISC24_DATATYPE_LINK, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Dopen2");
 
     /* Try again, with the object already open through valid call */
@@ -4570,28 +4586,28 @@ test_misc24(void)
     {
         tmp_id = H5Dopen2(file_id, MISC24_GROUP_NAME, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Dopen2");
 
     H5E_BEGIN_TRY
     {
         tmp_id = H5Dopen2(file_id, MISC24_GROUP_LINK, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Dopen2");
 
     H5E_BEGIN_TRY
     {
         tmp_id = H5Topen2(file_id, MISC24_GROUP_NAME, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Topen2");
 
     H5E_BEGIN_TRY
     {
         tmp_id = H5Topen2(file_id, MISC24_GROUP_LINK, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Topen2");
 
     ret = H5Gclose(group_id);
@@ -4605,28 +4621,28 @@ test_misc24(void)
     {
         tmp_id = H5Gopen2(file_id, MISC24_DATASET_NAME, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Gopen2");
 
     H5E_BEGIN_TRY
     {
         tmp_id = H5Gopen2(file_id, MISC24_DATASET_LINK, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Gopen2");
 
     H5E_BEGIN_TRY
     {
         tmp_id = H5Topen2(file_id, MISC24_DATASET_NAME, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Topen2");
 
     H5E_BEGIN_TRY
     {
         tmp_id = H5Topen2(file_id, MISC24_DATASET_LINK, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Topen2");
 
     ret = H5Dclose(dset_id);
@@ -4640,28 +4656,28 @@ test_misc24(void)
     {
         tmp_id = H5Gopen2(file_id, MISC24_DATATYPE_NAME, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Gopen2");
 
     H5E_BEGIN_TRY
     {
         tmp_id = H5Gopen2(file_id, MISC24_DATATYPE_LINK, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Gopen2");
 
     H5E_BEGIN_TRY
     {
         tmp_id = H5Dopen2(file_id, MISC24_DATATYPE_NAME, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Dopen2");
 
     H5E_BEGIN_TRY
     {
         tmp_id = H5Dopen2(file_id, MISC24_DATATYPE_LINK, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(tmp_id, FAIL, "H5Dopen2");
 
     ret = H5Tclose(type_id);
@@ -4735,7 +4751,7 @@ test_misc25a(void)
     sid = H5Screate(H5S_SCALAR);
     CHECK(sid, FAIL, "H5Screate");
 
-    /* Create dataype for attribute */
+    /* Create datatype for attribute */
     tid = H5Tcopy(H5T_C_S1);
     CHECK(tid, FAIL, "H5Tcopy");
     ret = H5Tset_size(tid, (size_t)MISC25A_ATTR1_LEN);
@@ -4761,7 +4777,7 @@ test_misc25a(void)
     sid = H5Screate(H5S_SCALAR);
     CHECK(sid, FAIL, "H5Screate");
 
-    /* Create dataype for attribute */
+    /* Create datatype for attribute */
     tid = H5Tcopy(H5T_C_S1);
     CHECK(tid, FAIL, "H5Tcopy");
     ret = H5Tset_size(tid, (size_t)MISC25A_ATTR2_LEN);
@@ -4831,7 +4847,7 @@ test_misc25a(void)
     sid = H5Screate(H5S_SCALAR);
     CHECK(sid, FAIL, "H5Screate");
 
-    /* Create dataype for attribute */
+    /* Create datatype for attribute */
     tid = H5Tcopy(H5T_C_S1);
     CHECK(tid, FAIL, "H5Tcopy");
     ret = H5Tset_size(tid, (size_t)MISC25A_ATTR3_LEN);
@@ -4877,7 +4893,7 @@ test_misc25a(void)
     sid = H5Screate(H5S_SCALAR);
     CHECK(sid, FAIL, "H5Screate");
 
-    /* Create dataype for attribute */
+    /* Create datatype for attribute */
     tid = H5Tcopy(H5T_C_S1);
     CHECK(tid, FAIL, "H5Tcopy");
     ret = H5Tset_size(tid, (size_t)MISC25A_ATTR2_LEN);
@@ -4939,7 +4955,7 @@ test_misc25a(void)
     sid = H5Screate(H5S_SCALAR);
     CHECK(sid, FAIL, "H5Screate");
 
-    /* Create dataype for attribute */
+    /* Create datatype for attribute */
     tid = H5Tcopy(H5T_C_S1);
     CHECK(tid, FAIL, "H5Tcopy");
     ret = H5Tset_size(tid, (size_t)MISC25A_ATTR2_LEN);
@@ -4993,7 +5009,7 @@ test_misc25b(void)
     CHECK(ret, FAIL, "h5_driver_is_default_vfd_compatible");
 
     if (!driver_is_default_compatible) {
-        HDprintf("-- SKIPPED --\n");
+        printf("-- SKIPPED --\n");
         return;
     }
 
@@ -5254,7 +5270,7 @@ test_misc27(void)
     CHECK(ret, FAIL, "h5_driver_is_default_vfd_compatible");
 
     if (!driver_is_default_compatible) {
-        HDprintf("-- SKIPPED --\n");
+        printf("-- SKIPPED --\n");
         return;
     }
 
@@ -5268,7 +5284,7 @@ test_misc27(void)
     {
         gid = H5Gopen2(fid, MISC27_GROUP, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(gid, FAIL, "H5Gopen2");
 #else  /* H5_STRICT_FORMAT_CHECKS */
     /* Open group with incorrect # of object header messages */
@@ -5478,7 +5494,7 @@ test_misc29(void)
     CHECK(ret, FAIL, "h5_driver_is_default_vfd_compatible");
 
     if (!driver_is_default_compatible) {
-        HDprintf("-- SKIPPED --\n");
+        printf("-- SKIPPED --\n");
         return;
     }
 
@@ -5769,7 +5785,7 @@ test_misc33(void)
     CHECK(ret, FAIL, "h5_driver_is_default_vfd_compatible");
 
     if (!driver_is_default_compatible) {
-        HDprintf("-- SKIPPED --\n");
+        printf("-- SKIPPED --\n");
         return;
     }
 
@@ -5782,7 +5798,7 @@ test_misc33(void)
     {
         ret = H5Oget_info_by_name3(fid, "/soft_two", &oinfo, H5O_INFO_BASIC, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(ret, FAIL, "H5Oget_info_by_name3");
 
     /* Case (2) */
@@ -5790,7 +5806,7 @@ test_misc33(void)
     {
         ret = H5Oget_info_by_name3(fid, "/dsetA", &oinfo, H5O_INFO_BASIC, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(ret, FAIL, "H5Oget_info_by_name3");
 
     /* Case (3) */
@@ -5798,7 +5814,7 @@ test_misc33(void)
     {
         ret = H5Oget_info_by_name3(fid, "/soft_one", &oinfo, H5O_INFO_BASIC, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(ret, FAIL, "H5Oget_info_by_name3");
 
     /* Close the file */
@@ -5825,16 +5841,6 @@ test_misc34(void)
     /* H5MM_xfree(): Ensure that passing NULL is allowed and returns NULL */
     mem = H5MM_xfree(mem);
     CHECK_PTR_NULL(mem, "H5MM_xfree");
-
-    /* H5MM_malloc(): Ensure that size 0 returns NULL */
-    mem = H5MM_malloc(sz);
-    CHECK_PTR_NULL(mem, "H5MM_malloc");
-    mem = H5MM_xfree(mem);
-
-    /* H5MM_calloc(): Ensure that size 0 returns NULL */
-    mem = H5MM_calloc(sz);
-    CHECK_PTR_NULL(mem, "H5MM_calloc");
-    mem = H5MM_xfree(mem);
 
     /* H5MM_realloc(): Check behavior:
      *
@@ -5878,16 +5884,15 @@ test_misc35(void)
     hsize_t coord[MISC35_NPOINTS][MISC35_SPACE_RANK] = /* Coordinates for point selection */
         {{0, 10, 5}, {1, 2, 7},  {2, 4, 9}, {0, 6, 11}, {1, 8, 13},
          {2, 12, 0}, {0, 14, 2}, {1, 0, 4}, {2, 1, 6},  {0, 3, 8}};
-    size_t           reg_size_start; /* Initial amount of regular memory allocated */
-    size_t           arr_size_start; /* Initial amount of array memory allocated */
-    size_t           blk_size_start; /* Initial amount of block memory allocated */
-    size_t           fac_size_start; /* Initial amount of factory memory allocated */
-    size_t           reg_size_final; /* Final amount of regular memory allocated */
-    size_t           arr_size_final; /* Final amount of array memory allocated */
-    size_t           blk_size_final; /* Final amount of block memory allocated */
-    size_t           fac_size_final; /* Final amount of factory memory allocated */
-    H5_alloc_stats_t alloc_stats;    /* Memory stats */
-    herr_t           ret;            /* Return value */
+    size_t reg_size_start; /* Initial amount of regular memory allocated */
+    size_t arr_size_start; /* Initial amount of array memory allocated */
+    size_t blk_size_start; /* Initial amount of block memory allocated */
+    size_t fac_size_start; /* Initial amount of factory memory allocated */
+    size_t reg_size_final; /* Final amount of regular memory allocated */
+    size_t arr_size_final; /* Final amount of array memory allocated */
+    size_t blk_size_final; /* Final amount of block memory allocated */
+    size_t fac_size_final; /* Final amount of factory memory allocated */
+    herr_t ret;            /* Return value */
 
     /* Output message about test being performed */
     MESSAGE(5, ("Free-list API calls"));
@@ -5909,19 +5914,19 @@ test_misc35(void)
     ret = H5get_free_list_sizes(&reg_size_start, &arr_size_start, &blk_size_start, &fac_size_start);
     CHECK(ret, FAIL, "H5get_free_list_sizes");
 
-#if !defined H5_USING_MEMCHECKER
+#if !defined H5_NO_FREE_LISTS && !defined H5_USING_MEMCHECKER
     /* All the free list values should be >0 */
     CHECK(reg_size_start, 0, "H5get_free_list_sizes");
     CHECK(arr_size_start, 0, "H5get_free_list_sizes");
     CHECK(blk_size_start, 0, "H5get_free_list_sizes");
     CHECK(fac_size_start, 0, "H5get_free_list_sizes");
-#else  /* H5_MEMORY_ALLOC_SANITY_CHECK */
+#else
     /* All the values should be == 0 */
     VERIFY(reg_size_start, 0, "H5get_free_list_sizes");
     VERIFY(arr_size_start, 0, "H5get_free_list_sizes");
     VERIFY(blk_size_start, 0, "H5get_free_list_sizes");
     VERIFY(fac_size_start, 0, "H5get_free_list_sizes");
-#endif /* H5_MEMORY_ALLOC_SANITY_CHECK */
+#endif
 
     /* Garbage collect the free lists */
     ret = H5garbage_collect();
@@ -5940,30 +5945,6 @@ test_misc35(void)
         ERROR("blk_size_final > blk_size_start");
     if (fac_size_final > fac_size_start)
         ERROR("fac_size_final > fac_size_start");
-
-    /* Retrieve memory allocation statistics */
-    ret = H5get_alloc_stats(&alloc_stats);
-    CHECK(ret, FAIL, "H5get_alloc_stats");
-
-#if defined H5_MEMORY_ALLOC_SANITY_CHECK
-    /* All the values should be >0 */
-    CHECK(alloc_stats.total_alloc_bytes, 0, "H5get_alloc_stats");
-    CHECK(alloc_stats.curr_alloc_bytes, 0, "H5get_alloc_stats");
-    CHECK(alloc_stats.peak_alloc_bytes, 0, "H5get_alloc_stats");
-    CHECK(alloc_stats.max_block_size, 0, "H5get_alloc_stats");
-    CHECK(alloc_stats.total_alloc_blocks_count, 0, "H5get_alloc_stats");
-    CHECK(alloc_stats.curr_alloc_blocks_count, 0, "H5get_alloc_stats");
-    CHECK(alloc_stats.peak_alloc_blocks_count, 0, "H5get_alloc_stats");
-#else  /* H5_MEMORY_ALLOC_SANITY_CHECK */
-    /* All the values should be == 0 */
-    VERIFY(alloc_stats.total_alloc_bytes, 0, "H5get_alloc_stats");
-    VERIFY(alloc_stats.curr_alloc_bytes, 0, "H5get_alloc_stats");
-    VERIFY(alloc_stats.peak_alloc_bytes, 0, "H5get_alloc_stats");
-    VERIFY(alloc_stats.max_block_size, 0, "H5get_alloc_stats");
-    VERIFY(alloc_stats.total_alloc_blocks_count, 0, "H5get_alloc_stats");
-    VERIFY(alloc_stats.curr_alloc_blocks_count, 0, "H5get_alloc_stats");
-    VERIFY(alloc_stats.peak_alloc_blocks_count, 0, "H5get_alloc_stats");
-#endif /* H5_MEMORY_ALLOC_SANITY_CHECK */
 
 } /* end test_misc35() */
 
@@ -6082,6 +6063,47 @@ test_misc36(void)
 
 /****************************************************************
 **
+**  test_misc37():
+**      Test for seg fault issue when closing the provided test file
+**      which has an illegal file size in its cache image.
+**      See HDFFV-11052/CVE-2020-10812 for details.
+**
+****************************************************************/
+static void
+test_misc37(void)
+{
+    const char *testfile = H5_get_srcdir_filename(CVE_2020_10812_FILENAME);
+    hbool_t     driver_is_default_compatible;
+    hid_t       fid;
+    herr_t      ret;
+
+    /* Output message about test being performed */
+    MESSAGE(5, ("Fix for HDFFV-11052/CVE-2020-10812"));
+
+    ret = h5_driver_is_default_vfd_compatible(H5P_DEFAULT, &driver_is_default_compatible);
+    CHECK(ret, FAIL, "h5_driver_is_default_vfd_compatible");
+
+    if (!driver_is_default_compatible) {
+        printf("-- SKIPPED --\n");
+        return;
+    }
+
+    fid = H5Fopen(testfile, H5F_ACC_RDONLY, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* This should fail due to the illegal file size.
+       It should fail gracefully and not seg fault */
+    H5E_BEGIN_TRY
+    {
+        ret = H5Fclose(fid);
+    }
+    H5E_END_TRY;
+    VERIFY(ret, FAIL, "H5Fclose");
+
+} /* end test_misc37() */
+
+/****************************************************************
+**
 **  test_misc(): Main misc. test routine.
 **
 ****************************************************************/
@@ -6147,6 +6169,7 @@ test_misc(void)
     test_misc34(); /* Test behavior of 0 and NULL in H5MM API calls */
     test_misc35(); /* Test behavior of free-list & allocation statistics API calls */
     test_misc36(); /* Exercise H5atclose and H5is_library_terminating */
+    test_misc37(); /* Test for seg fault failure at file close */
 
 } /* test_misc() */
 
@@ -6157,49 +6180,51 @@ test_misc(void)
  *
  * Return:    none
  *
- * Programmer:    Albert Cheng
- *              July 2, 1998
  *-------------------------------------------------------------------------
  */
 void
 cleanup_misc(void)
 {
-    HDremove(MISC1_FILE);
-    HDremove(MISC2_FILE_1);
-    HDremove(MISC2_FILE_2);
-    HDremove(MISC3_FILE);
-    HDremove(MISC4_FILE_1);
-    HDremove(MISC4_FILE_2);
-    HDremove(MISC5_FILE);
-    HDremove(MISC6_FILE);
-    HDremove(MISC7_FILE);
-    HDremove(MISC8_FILE);
-    HDremove(MISC9_FILE);
-    HDremove(MISC10_FILE_NEW);
-    HDremove(MISC11_FILE);
-    HDremove(MISC12_FILE);
-    HDremove(MISC13_FILE_1);
-    HDremove(MISC13_FILE_2);
-    HDremove(MISC14_FILE);
-    HDremove(MISC15_FILE);
-    HDremove(MISC16_FILE);
-    HDremove(MISC17_FILE);
-    HDremove(MISC18_FILE);
-    HDremove(MISC19_FILE);
-    HDremove(MISC20_FILE);
+    H5E_BEGIN_TRY
+    {
+        H5Fdelete(MISC1_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC2_FILE_1, H5P_DEFAULT);
+        H5Fdelete(MISC2_FILE_2, H5P_DEFAULT);
+        H5Fdelete(MISC3_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC4_FILE_1, H5P_DEFAULT);
+        H5Fdelete(MISC4_FILE_2, H5P_DEFAULT);
+        H5Fdelete(MISC5_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC6_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC7_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC8_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC9_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC10_FILE_NEW, H5P_DEFAULT);
+        H5Fdelete(MISC11_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC12_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC13_FILE_1, H5P_DEFAULT);
+        H5Fdelete(MISC13_FILE_2, H5P_DEFAULT);
+        H5Fdelete(MISC14_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC15_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC16_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC17_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC18_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC19_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC20_FILE, H5P_DEFAULT);
 #ifdef H5_HAVE_FILTER_SZIP
-    HDremove(MISC21_FILE);
-    HDremove(MISC22_FILE);
+        H5Fdelete(MISC21_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC22_FILE, H5P_DEFAULT);
 #endif /* H5_HAVE_FILTER_SZIP */
-    HDremove(MISC23_FILE);
-    HDremove(MISC24_FILE);
-    HDremove(MISC25A_FILE);
-    HDremove(MISC25C_FILE);
-    HDremove(MISC26_FILE);
-    HDremove(MISC28_FILE);
-    HDremove(MISC29_COPY_FILE);
-    HDremove(MISC30_FILE);
+        H5Fdelete(MISC23_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC24_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC25A_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC25C_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC26_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC28_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC29_COPY_FILE, H5P_DEFAULT);
+        H5Fdelete(MISC30_FILE, H5P_DEFAULT);
 #ifndef H5_NO_DEPRECATED_SYMBOLS
-    HDremove(MISC31_FILE);
+        H5Fdelete(MISC31_FILE, H5P_DEFAULT);
 #endif /* H5_NO_DEPRECATED_SYMBOLS */
+    }
+    H5E_END_TRY;
 } /* end cleanup_misc() */

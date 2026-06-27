@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -12,9 +11,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:  Quincey Koziol
- *              Jan  5, 2008
- *
  * Purpose:     This program is run to generate an HDF5 data file with a
  *              root group that contains the incorrect # of object header
  *              messages.  It must be built/run with a copy of the library
@@ -111,7 +107,7 @@ error:
         H5Pclose(gcpl);
         H5Fclose(fid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 #else  /* H5O_ENABLE_BAD_MESG_COUNT */
     HDputs("H5O_BAD_MESG_COUNT compiler macro not defined!");
 #endif /* H5O_ENABLE_BAD_MESG_COUNT */

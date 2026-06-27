@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -50,9 +49,6 @@ static herr_t H5T__set_offset(const H5T_t *dt, size_t offset);
  * Return:	Success:	The offset (non-negative)
  *		Failure:	Negative
  *
- * Programmer:	Robb Matzke
- *		Wednesday, January  7, 1998
- *
  *-------------------------------------------------------------------------
  */
 int
@@ -70,7 +66,7 @@ H5Tget_offset(hid_t type_id)
 
     /* Get offset */
     if ((ret_value = H5T_get_offset(dt)) < 0)
-        HGOTO_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL, "cant't get offset for specified datatype")
+        HGOTO_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL, "can't get offset for specified datatype")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -99,9 +95,6 @@ done:
  *
  * Return:	Success:	The offset (non-negative)
  *		Failure:	Negative
- *
- * Programmer:	Quincey Koziol
- *		Wednesday, October 17, 2007
  *
  *-------------------------------------------------------------------------
  */
@@ -154,9 +147,6 @@ done:
  *		zero.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Robb Matzke
- *		Wednesday, January  7, 1998
  *
  *-------------------------------------------------------------------------
  */
@@ -220,9 +210,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Robb Matzke
- *		Wednesday, January  7, 1998
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -233,12 +220,12 @@ H5T__set_offset(const H5T_t *dt, size_t offset)
     FUNC_ENTER_PACKAGE
 
     /* Check args */
-    HDassert(dt);
-    HDassert(H5T_STRING != dt->shared->type || 0 == offset);
-    HDassert(H5T_REFERENCE != dt->shared->type);
-    HDassert(H5T_OPAQUE != dt->shared->type);
-    HDassert(H5T_COMPOUND != dt->shared->type);
-    HDassert(!(H5T_ENUM == dt->shared->type && 0 == dt->shared->u.enumer.nmembs));
+    assert(dt);
+    assert(H5T_STRING != dt->shared->type || 0 == offset);
+    assert(H5T_REFERENCE != dt->shared->type);
+    assert(H5T_OPAQUE != dt->shared->type);
+    assert(H5T_COMPOUND != dt->shared->type);
+    assert(!(H5T_ENUM == dt->shared->type && 0 == dt->shared->u.enumer.nmembs));
 
     if (dt->shared->parent) {
         if (H5T__set_offset(dt->shared->parent, offset) < 0)

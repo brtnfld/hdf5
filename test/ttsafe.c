@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -81,7 +80,7 @@ gen_name(int value)
     int      i;
 
     length                     = num_digits(MAX_NUM_NAME - 1);
-    temp                       = (char *)HDmalloc(NAME_OFFSET + length + 1);
+    temp                       = (char *)malloc(NAME_OFFSET + length + 1);
     temp                       = HDstrcpy(temp, "attrib");
     temp[NAME_OFFSET + length] = '\0';
 
@@ -114,7 +113,7 @@ main(int argc, char *argv[])
 
 #else /* H5_HAVE_THREADSAFE */
 
-    HDprintf("Most thread-safety tests skipped because THREADSAFE not enabled\n");
+    printf("Most thread-safety tests skipped because THREADSAFE not enabled\n");
 
 #endif /* H5_HAVE_THREADSAFE */
 

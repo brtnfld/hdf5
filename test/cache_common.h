@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -11,9 +10,7 @@
  * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* Programmer:  John Mainzer
- *              10/27/05
- *
+/*
  *        This file contains common #defines, type definitions, and
  *        externs for tests of the cache implemented in H5C.c
  */
@@ -139,11 +136,6 @@
  *
  * Return:      N/A
  *
- * Programmer:  John Mainzer
- *              5/14/20
- *
- * Changes:     None.
- *
  ***********************************************************************/
 
 #define H5C_FLUSH_CACHE(file, flags, fail_mssg)                                                              \
@@ -253,7 +245,7 @@ typedef struct flush_op {
 
 typedef enum test_entry_action_t {
     TEST_ENTRY_ACTION_NUL = 0, /* No action on entry */
-    TEST_ENTRY_ACTION_MOVE     /* Entry is beging moved */
+    TEST_ENTRY_ACTION_MOVE     /* Entry is being moved */
 } test_entry_action_t;
 
 typedef struct test_entry_t {
@@ -372,7 +364,7 @@ typedef struct test_entry_t {
                                                       * been resized by a resize flush
                                                       * op, and the flush function has
                                                       * not yet returned,  This field is
-                                                      * used to turn off overactive santity
+                                                      * used to turn off overactive sanity
                                                       * checking code that would otherwise
                                                       * cause a false test failure.
                                                       */
@@ -405,59 +397,40 @@ typedef struct test_entry_t {
     unsigned verify_ct;                 /* Count the # of checksum verification for an entry */
 } test_entry_t;
 
-/* The following are cut down test versions of the hash table manipulation
- * macros from H5Cpkg.h, which have been further modified to avoid references
- * to the error reporting macros.  Needless to say, these macros must be
- * updated as necessary.
- */
-
-#define H5C__HASH_MASK ((size_t)(H5C__HASH_TABLE_LEN - 1) << 3)
-
 #define H5C_TEST__PRE_HT_SEARCH_SC(cache_ptr, Addr)                                                          \
-    if (((cache_ptr) == NULL) || ((cache_ptr)->magic != H5C__H5C_T_MAGIC) ||                                 \
-        ((cache_ptr)->index_size != ((cache_ptr)->clean_index_size + (cache_ptr)->dirty_index_size)) ||      \
-        (!H5F_addr_defined(Addr)) || (H5C__HASH_FCN(Addr) < 0) ||                                            \
-        (H5C__HASH_FCN(Addr) >= H5C__HASH_TABLE_LEN)) {                                                      \
-        HDfprintf(stdout, "Pre HT search SC failed.\n");                                                     \
+    if (H5C__PRE_HT_SEARCH_SC_CMP(cache_ptr, Addr)) {                                                        \
+        fprintf(stdout, "Pre HT search SC failed.\n");                                                       \
     }
 
 #define H5C_TEST__POST_SUC_HT_SEARCH_SC(cache_ptr, entry_ptr, k)                                             \
-    if (((cache_ptr) == NULL) || ((cache_ptr)->magic != H5C__H5C_T_MAGIC) || ((cache_ptr)->index_len < 1) || \
-        ((entry_ptr) == NULL) || ((cache_ptr)->index_size < (entry_ptr)->size) ||                            \
-        ((cache_ptr)->index_size != ((cache_ptr)->clean_index_size + (cache_ptr)->dirty_index_size)) ||      \
-        ((entry_ptr)->size <= 0) || (((cache_ptr)->index)[k] == NULL) ||                                     \
-        ((((cache_ptr)->index)[k] != (entry_ptr)) && ((entry_ptr)->ht_prev == NULL)) ||                      \
-        ((((cache_ptr)->index)[k] == (entry_ptr)) && ((entry_ptr)->ht_prev != NULL)) ||                      \
-        (((entry_ptr)->ht_prev != NULL) && ((entry_ptr)->ht_prev->ht_next != (entry_ptr))) ||                \
-        (((entry_ptr)->ht_next != NULL) && ((entry_ptr)->ht_next->ht_prev != (entry_ptr)))) {                \
-        HDfprintf(stdout, "Post successful HT search SC failed.\n");                                         \
+    if (H5C__POST_SUC_HT_SEARCH_SC_CMP(cache_ptr, entry_ptr, k)) {                                           \
+        fprintf(stdout, "Post successful HT search SC failed.\n");                                           \
     }
 
-#define H5C_TEST__POST_HT_SHIFT_TO_FRONT(cache_ptr, entry_ptr, k)                                            \
-    if (((cache_ptr) == NULL) || (((cache_ptr)->index)[k] != (entry_ptr)) ||                                 \
-        ((entry_ptr)->ht_prev != NULL)) {                                                                    \
-        HDfprintf(stdout, "Post HT shift to front failed.\n");                                               \
+#define H5C_TEST__POST_HT_SHIFT_TO_FRONT_SC(cache_ptr, entry_ptr, k)                                         \
+    if (H5C__POST_HT_SHIFT_TO_FRONT_SC_CMP(cache_ptr, entry_ptr, k)) {                                       \
+        fprintf(stdout, "Post HT shift to front failed.\n");                                                 \
     }
 
 #define H5C_TEST__SEARCH_INDEX(cache_ptr, Addr, entry_ptr)                                                   \
     {                                                                                                        \
         int k;                                                                                               \
         H5C_TEST__PRE_HT_SEARCH_SC(cache_ptr, Addr)                                                          \
-        k         = H5C__HASH_FCN(Addr);                                                                     \
-        entry_ptr = ((cache_ptr)->index)[k];                                                                 \
+        k           = H5C__HASH_FCN(Addr);                                                                   \
+        (entry_ptr) = (cache_ptr)->index[k];                                                                 \
         while (entry_ptr) {                                                                                  \
-            if (H5F_addr_eq(Addr, (entry_ptr)->addr)) {                                                      \
+            if (H5_addr_eq(Addr, (entry_ptr)->addr)) {                                                       \
                 H5C_TEST__POST_SUC_HT_SEARCH_SC(cache_ptr, entry_ptr, k)                                     \
-                if (entry_ptr != ((cache_ptr)->index)[k]) {                                                  \
+                if ((entry_ptr) != (cache_ptr)->index[k]) {                                                  \
                     if ((entry_ptr)->ht_next)                                                                \
                         (entry_ptr)->ht_next->ht_prev = (entry_ptr)->ht_prev;                                \
-                    HDassert((entry_ptr)->ht_prev != NULL);                                                  \
-                    (entry_ptr)->ht_prev->ht_next    = (entry_ptr)->ht_next;                                 \
-                    ((cache_ptr)->index)[k]->ht_prev = (entry_ptr);                                          \
-                    (entry_ptr)->ht_next             = ((cache_ptr)->index)[k];                              \
-                    (entry_ptr)->ht_prev             = NULL;                                                 \
-                    ((cache_ptr)->index)[k]          = (entry_ptr);                                          \
-                    H5C_TEST__POST_HT_SHIFT_TO_FRONT(cache_ptr, entry_ptr, k)                                \
+                    assert((entry_ptr)->ht_prev != NULL);                                                    \
+                    (entry_ptr)->ht_prev->ht_next  = (entry_ptr)->ht_next;                                   \
+                    (cache_ptr)->index[k]->ht_prev = (entry_ptr);                                            \
+                    (entry_ptr)->ht_next           = (cache_ptr)->index[k];                                  \
+                    (entry_ptr)->ht_prev           = NULL;                                                   \
+                    (cache_ptr)->index[k]          = (entry_ptr);                                            \
+                    H5C_TEST__POST_HT_SHIFT_TO_FRONT_SC(cache_ptr, entry_ptr, k)                             \
                 }                                                                                            \
                 break;                                                                                       \
             }                                                                                                \
@@ -570,11 +543,6 @@ H5TEST_DLL void add_flush_op(int target_type, int target_idx, int op_code, int t
                              size_t size, unsigned *order);
 
 H5TEST_DLL void addr_to_type_and_index(haddr_t addr, int32_t *type_ptr, int32_t *index_ptr);
-
-#if 0 /* keep this for a while -- it may be useful */
-H5TEST_DLL haddr_t type_and_index_to_addr(int32_t type,
-                               int32_t idx);
-#endif
 
 H5TEST_DLL void dirty_entry(H5F_t *file_ptr, int32_t type, int32_t idx, hbool_t dirty_pin);
 

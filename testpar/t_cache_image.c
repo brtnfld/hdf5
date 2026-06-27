@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -11,12 +10,11 @@
  * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* Programmer:  John Mainzer
- *              7/13/15
- *
- *              This file contains tests specific to the cache image
- *        feature implemented in H5C.c
+/*
+ *      This file contains tests specific to the cache image
+ *      feature implemented in H5C.c
  */
+
 #include "testphdf5.h"
 
 #include "cache_common.h"
@@ -123,13 +121,6 @@ static hbool_t smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank,
  *
  * Return:      void
  *
- * Programmer:  John Mainzer
- *              1/25/17
- *
- * Modifications:
- *
- *        None.
- *
  *-------------------------------------------------------------------------
  */
 
@@ -151,12 +142,12 @@ construct_test_file(int test_file_index)
     pass = TRUE;
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* setup the file name */
     if (pass) {
 
-        HDassert(FILENAMES[test_file_index]);
+        assert(FILENAMES[test_file_index]);
 
         if (h5_fixname(FILENAMES[test_file_index], H5P_DEFAULT, filename, sizeof(filename)) == NULL) {
 
@@ -166,7 +157,7 @@ construct_test_file(int test_file_index)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 1) Create a HDF5 file with the cache image FAPL entry.
      *
@@ -197,7 +188,7 @@ construct_test_file(int test_file_index)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 2) Create a data set in the file. */
 
@@ -218,7 +209,7 @@ construct_test_file(int test_file_index)
 #endif /* H5C_COLLECT_CACHE_STATS */
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 3) Close the file. */
 
@@ -232,7 +223,7 @@ construct_test_file(int test_file_index)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     while ((pass) && (max_dset < MAX_NUM_DSETS)) {
 
@@ -264,7 +255,7 @@ construct_test_file(int test_file_index)
         }
 
         if (show_progress)
-            HDfprintf(stdout, "%s:L1 cp = %d, max_dset = %d, pass = %d.\n", fcn_name, cp, max_dset, pass);
+            fprintf(stdout, "%s:L1 cp = %d, max_dset = %d, pass = %d.\n", fcn_name, cp, max_dset, pass);
 
         /* 5) Create a data set in the file. */
 
@@ -285,7 +276,7 @@ construct_test_file(int test_file_index)
 #endif /* H5C_COLLECT_CACHE_STATS */
 
         if (show_progress)
-            HDfprintf(stdout, "%s:L2 cp = %d, max_dset = %d, pass = %d.\n", fcn_name, cp + 1, max_dset, pass);
+            fprintf(stdout, "%s:L2 cp = %d, max_dset = %d, pass = %d.\n", fcn_name, cp + 1, max_dset, pass);
 
         /* 6) Close the file. */
 
@@ -299,7 +290,7 @@ construct_test_file(int test_file_index)
         }
 
         if (show_progress)
-            HDfprintf(stdout, "%s:L3 cp = %d, max_dset = %d, pass = %d.\n", fcn_name, cp + 2, max_dset, pass);
+            fprintf(stdout, "%s:L3 cp = %d, max_dset = %d, pass = %d.\n", fcn_name, cp + 2, max_dset, pass);
     } /* end while */
     cp += 3;
 
@@ -331,7 +322,7 @@ construct_test_file(int test_file_index)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 8) Open and close all data sets.
      *
@@ -355,7 +346,7 @@ construct_test_file(int test_file_index)
 #endif /* H5C_COLLECT_CACHE_STATS */
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 9) Close the file. */
 
@@ -388,16 +379,6 @@ construct_test_file(int test_file_index)
  *
  * Return:      void
  *
- * Programmer:  John Mainzer
- *              7/15/15
- *
- * Modifications:
- *
- *              Added min_dset and max_dset parameters and supporting
- *        code.  This allows the caller to specify a range of
- *        datasets to create.
- *                        JRM -- 8/20/15
- *
  *-------------------------------------------------------------------------
  */
 
@@ -424,11 +405,11 @@ create_data_sets(hid_t file_id, int min_dset, int max_dset)
     hsize_t     chunk_size[2];
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
+        fprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
 
-    HDassert(0 <= min_dset);
-    HDassert(min_dset <= max_dset);
-    HDassert(max_dset < MAX_NUM_DSETS);
+    assert(0 <= min_dset);
+    assert(min_dset <= max_dset);
+    assert(max_dset < MAX_NUM_DSETS);
 
     /* create the datasets */
 
@@ -505,7 +486,7 @@ create_data_sets(hid_t file_id, int min_dset, int max_dset)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
+        fprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
 
     /* create the mem space to be used to read and write chunks */
     if (pass) {
@@ -522,7 +503,7 @@ create_data_sets(hid_t file_id, int min_dset, int max_dset)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
+        fprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
 
     /* select in memory hyperslab */
     if (pass) {
@@ -541,7 +522,7 @@ create_data_sets(hid_t file_id, int min_dset, int max_dset)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
+        fprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
 
     /* initialize all datasets on a round robin basis */
     i = 0;
@@ -588,7 +569,7 @@ create_data_sets(hid_t file_id, int min_dset, int max_dset)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
+        fprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
 
     /* read data from data sets and validate it */
     i = 0;
@@ -637,11 +618,11 @@ create_data_sets(hid_t file_id, int min_dset, int max_dset)
 
                                 if (verbose) {
 
-                                    HDfprintf(stdout, "data_chunk[%0d][%0d] = %0d, expect %0d.\n", k, l,
-                                              data_chunk[k][l],
-                                              ((DSET_SIZE * DSET_SIZE * m) + (DSET_SIZE * (i + k)) + j + l));
-                                    HDfprintf(stdout, "m = %d, i = %d, j = %d, k = %d, l = %d\n", m, i, j, k,
-                                              l);
+                                    fprintf(stdout, "data_chunk[%0d][%0d] = %0d, expect %0d.\n", k, l,
+                                            data_chunk[k][l],
+                                            ((DSET_SIZE * DSET_SIZE * m) + (DSET_SIZE * (i + k)) + j + l));
+                                    fprintf(stdout, "m = %d, i = %d, j = %d, k = %d, l = %d\n", m, i, j, k,
+                                            l);
                                 }
                             }
                         }
@@ -654,7 +635,7 @@ create_data_sets(hid_t file_id, int min_dset, int max_dset)
 
                         if (verbose) {
 
-                            HDfprintf(stdout, "Chunk (%0d, %0d) in /dset%03d is invalid.\n", i, j, m);
+                            fprintf(stdout, "Chunk (%0d, %0d) in /dset%03d is invalid.\n", i, j, m);
                         }
                     }
                 }
@@ -666,7 +647,7 @@ create_data_sets(hid_t file_id, int min_dset, int max_dset)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
+        fprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
 
     /* close the file spaces */
     i = min_dset;
@@ -721,14 +702,6 @@ create_data_sets(hid_t file_id, int min_dset, int max_dset)
  *
  * Return:      void
  *
- * Programmer:  John Mainzer
- *              10/31/16
- *
- * Modifications:
- *
- *              None.
- *                        JRM -- 8/20/15
- *
  *-------------------------------------------------------------------------
  */
 #if 0
@@ -746,18 +719,18 @@ delete_data_sets(hid_t file_id, int min_dset, int max_dset)
     int cp = 0;
     int i;
 
-    if ( show_progress ) HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
+    if ( show_progress ) fprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
 
-    HDassert(0 <= min_dset);
-    HDassert(min_dset <= max_dset);
-    HDassert(max_dset < MAX_NUM_DSETS);
+    assert(0 <= min_dset);
+    assert(min_dset <= max_dset);
+    assert(max_dset < MAX_NUM_DSETS);
 
-    if ( show_progress ) HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
+    if ( show_progress ) fprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
 
     /* first, verify the contents of the target dataset(s) */
     verify_data_sets(file_id, min_dset, max_dset);
 
-    if ( show_progress ) HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
+    if ( show_progress ) fprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
 
     /* now delete the target datasets */
     if ( pass ) {
@@ -778,7 +751,7 @@ delete_data_sets(hid_t file_id, int min_dset, int max_dset)
         }
     }
 
-    if ( show_progress ) HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
+    if ( show_progress ) fprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
 
     return;
 
@@ -821,17 +794,6 @@ delete_data_sets(hid_t file_id, int min_dset, int max_dset)
  *
  * Return:      void
  *
- * Programmer:  John Mainzer
- *              7/14/15
- *
- * Modifications:
- *
- *              Modified function to handle parallel file creates / opens.
- *
- *                                                 JRM -- 2/1/17
- *
- *              Modified function to handle
- *
  *-------------------------------------------------------------------------
  */
 
@@ -857,7 +819,7 @@ open_hdf5_file(const hbool_t create_file, const hbool_t mdci_sbem_expected, cons
     H5AC_cache_image_config_t cache_image_config = {H5AC__CURR_CACHE_IMAGE_CONFIG_VERSION, TRUE, FALSE,
                                                     H5AC__CACHE_IMAGE__ENTRY_AGEOUT__NONE};
 
-    HDassert(!create_file || config_fsm);
+    assert(!create_file || config_fsm);
 
     if (pass) {
         /* opening the file both read only and with a cache image
@@ -877,12 +839,12 @@ open_hdf5_file(const hbool_t create_file, const hbool_t mdci_sbem_expected, cons
         }
         else if (verbose) {
 
-            HDfprintf(stdout, "%s: HDF file name = \"%s\".\n", fcn_name, hdf_file_name);
+            fprintf(stdout, "%s: HDF file name = \"%s\".\n", fcn_name, hdf_file_name);
         }
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* create a file access property list. */
     if (pass) {
@@ -897,7 +859,7 @@ open_hdf5_file(const hbool_t create_file, const hbool_t mdci_sbem_expected, cons
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* call H5Pset_libver_bounds() on the fapl_id */
     if (pass) {
@@ -910,7 +872,7 @@ open_hdf5_file(const hbool_t create_file, const hbool_t mdci_sbem_expected, cons
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* get metadata cache image config -- verify that it is the default */
     if (pass) {
@@ -934,7 +896,7 @@ open_hdf5_file(const hbool_t create_file, const hbool_t mdci_sbem_expected, cons
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* set metadata cache image fapl entry if indicated */
     if ((pass) && (set_mdci_fapl)) {
@@ -954,7 +916,7 @@ open_hdf5_file(const hbool_t create_file, const hbool_t mdci_sbem_expected, cons
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* setup the persistent free space manager if indicated */
     if ((pass) && (config_fsm)) {
@@ -986,7 +948,7 @@ open_hdf5_file(const hbool_t create_file, const hbool_t mdci_sbem_expected, cons
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* setup the page buffer if indicated */
     if ((pass) && (enable_page_buffer)) {
@@ -999,7 +961,7 @@ open_hdf5_file(const hbool_t create_file, const hbool_t mdci_sbem_expected, cons
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     if ((pass) && (l_facc_type == FACC_MPIO)) {
 
@@ -1012,7 +974,7 @@ open_hdf5_file(const hbool_t create_file, const hbool_t mdci_sbem_expected, cons
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     if ((pass) && (l_facc_type == FACC_MPIO)) {
 
@@ -1024,7 +986,7 @@ open_hdf5_file(const hbool_t create_file, const hbool_t mdci_sbem_expected, cons
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     if ((pass) && (l_facc_type == FACC_MPIO)) {
 
@@ -1036,7 +998,7 @@ open_hdf5_file(const hbool_t create_file, const hbool_t mdci_sbem_expected, cons
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     if ((pass) && (l_facc_type == FACC_MPIO)) {
 
@@ -1061,7 +1023,7 @@ open_hdf5_file(const hbool_t create_file, const hbool_t mdci_sbem_expected, cons
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* open the file */
     if (pass) {
@@ -1101,14 +1063,14 @@ open_hdf5_file(const hbool_t create_file, const hbool_t mdci_sbem_expected, cons
                 failure_mssg = "Can't get file_ptr.";
 
                 if (verbose) {
-                    HDfprintf(stdout, "%s: Can't get file_ptr.\n", fcn_name);
+                    fprintf(stdout, "%s: Can't get file_ptr.\n", fcn_name);
                 }
             }
         }
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* get a pointer to the files internal data structure and then
      * to the cache structure
@@ -1127,7 +1089,7 @@ open_hdf5_file(const hbool_t create_file, const hbool_t mdci_sbem_expected, cons
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* verify expected page buffer status.  At present, page buffering
      * must be disabled in parallel -- hopefully this will change in the
@@ -1149,7 +1111,7 @@ open_hdf5_file(const hbool_t create_file, const hbool_t mdci_sbem_expected, cons
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* verify expected metadata cache status */
 
@@ -1160,15 +1122,15 @@ open_hdf5_file(const hbool_t create_file, const hbool_t mdci_sbem_expected, cons
      */
     if (pass) {
 
-        if (H5C_get_cache_image_config(cache_ptr, &image_ctl) < 0) {
+        if (H5C__get_cache_image_config(cache_ptr, &image_ctl) < 0) {
 
             pass         = FALSE;
-            failure_mssg = "error returned by H5C_get_cache_image_config().";
+            failure_mssg = "error returned by H5C__get_cache_image_config().";
         }
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     if (pass) {
 
@@ -1211,7 +1173,7 @@ open_hdf5_file(const hbool_t create_file, const hbool_t mdci_sbem_expected, cons
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     if ((pass) && (set_mdci_fapl)) {
 
@@ -1225,7 +1187,7 @@ open_hdf5_file(const hbool_t create_file, const hbool_t mdci_sbem_expected, cons
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     if (pass) {
 
@@ -1265,7 +1227,7 @@ open_hdf5_file(const hbool_t create_file, const hbool_t mdci_sbem_expected, cons
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     if (pass) {
 
@@ -1275,10 +1237,10 @@ open_hdf5_file(const hbool_t create_file, const hbool_t mdci_sbem_expected, cons
     }
 
     if (show_progress) {
-        HDfprintf(stdout, "%s: cp = %d, pass = %d -- exiting.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d -- exiting.\n", fcn_name, cp++, pass);
 
         if (!pass)
-            HDfprintf(stdout, "%s: failure_mssg = %s\n", fcn_name, failure_mssg);
+            fprintf(stdout, "%s: failure_mssg = %s\n", fcn_name, failure_mssg);
     }
 
     return;
@@ -1297,13 +1259,6 @@ open_hdf5_file(const hbool_t create_file, const hbool_t mdci_sbem_expected, cons
  *              Do nothing if pass is FALSE on entry.
  *
  * Return:      void
- *
- * Programmer:  John Mainzer
- *              3/4/17
- *
- * Modifications:
- *
- *              None.
  *
  *-------------------------------------------------------------------------
  */
@@ -1337,8 +1292,8 @@ par_create_dataset(int dset_num, hid_t file_id, int mpi_rank, int mpi_size)
     HDsnprintf(dset_name, sizeof(dset_name), "/dset%03d", dset_num);
 
     if (show_progress) {
-        HDfprintf(stdout, "%s: dset name = \"%s\".\n", fcn_name, dset_name);
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: dset name = \"%s\".\n", fcn_name, dset_name);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
     }
 
     if (pass) {
@@ -1357,7 +1312,7 @@ par_create_dataset(int dset_num, hid_t file_id, int mpi_rank, int mpi_size)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* set the dataset creation plist to specify that the raw data is
      * to be partitioned into 1X10X10 element chunks.
@@ -1375,7 +1330,7 @@ par_create_dataset(int dset_num, hid_t file_id, int mpi_rank, int mpi_size)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     if (pass) {
 
@@ -1391,7 +1346,7 @@ par_create_dataset(int dset_num, hid_t file_id, int mpi_rank, int mpi_size)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* create the dataset */
     if (pass) {
@@ -1407,7 +1362,7 @@ par_create_dataset(int dset_num, hid_t file_id, int mpi_rank, int mpi_size)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* get the file space ID */
     if (pass) {
@@ -1422,7 +1377,7 @@ par_create_dataset(int dset_num, hid_t file_id, int mpi_rank, int mpi_size)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* create the mem space to be used to read and write chunks */
     if (pass) {
@@ -1440,7 +1395,7 @@ par_create_dataset(int dset_num, hid_t file_id, int mpi_rank, int mpi_size)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* select in memory hyperslab */
     if (pass) {
@@ -1461,7 +1416,7 @@ par_create_dataset(int dset_num, hid_t file_id, int mpi_rank, int mpi_size)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* setup the DXPL for collective I/O */
     if (pass) {
@@ -1476,7 +1431,7 @@ par_create_dataset(int dset_num, hid_t file_id, int mpi_rank, int mpi_size)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     if (pass) {
 
@@ -1488,7 +1443,7 @@ par_create_dataset(int dset_num, hid_t file_id, int mpi_rank, int mpi_size)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* initialize the dataset with collective writes */
     i = 0;
@@ -1497,7 +1452,7 @@ par_create_dataset(int dset_num, hid_t file_id, int mpi_rank, int mpi_size)
         while ((pass) && (j < DSET_SIZE)) {
 
             if (show_progress)
-                HDfprintf(stdout, "%s: cp = %d.0, pass = %d.\n", fcn_name, cp, pass);
+                fprintf(stdout, "%s: cp = %d.0, pass = %d.\n", fcn_name, cp, pass);
 
             /* initialize the slab */
             for (k = 0; k < CHUNK_SIZE; k++) {
@@ -1508,7 +1463,7 @@ par_create_dataset(int dset_num, hid_t file_id, int mpi_rank, int mpi_size)
             }
 
             if (show_progress)
-                HDfprintf(stdout, "%s: cp = %d.1, pass = %d.\n", fcn_name, cp, pass);
+                fprintf(stdout, "%s: cp = %d.1, pass = %d.\n", fcn_name, cp, pass);
 
             /* select on disk hyperslab */
             offset[0] = (hsize_t)mpi_rank; /* offset of hyperslab in file */
@@ -1526,7 +1481,7 @@ par_create_dataset(int dset_num, hid_t file_id, int mpi_rank, int mpi_size)
             }
 
             if (show_progress)
-                HDfprintf(stdout, "%s: cp = %d.2, pass = %d.\n", fcn_name, cp, pass);
+                fprintf(stdout, "%s: cp = %d.2, pass = %d.\n", fcn_name, cp, pass);
 
             /* write the chunk to file */
             status = H5Dwrite(dset_id, H5T_NATIVE_INT, memspace_id, filespace_id, dxpl_id, data_chunk);
@@ -1538,7 +1493,7 @@ par_create_dataset(int dset_num, hid_t file_id, int mpi_rank, int mpi_size)
             }
 
             if (show_progress)
-                HDfprintf(stdout, "%s: cp = %d.3, pass = %d.\n", fcn_name, cp, pass);
+                fprintf(stdout, "%s: cp = %d.3, pass = %d.\n", fcn_name, cp, pass);
 
             j += CHUNK_SIZE;
         }
@@ -1548,7 +1503,7 @@ par_create_dataset(int dset_num, hid_t file_id, int mpi_rank, int mpi_size)
 
     cp++;
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* read data from data sets and validate it */
     i = 0;
@@ -1596,12 +1551,12 @@ par_create_dataset(int dset_num, hid_t file_id, int mpi_rank, int mpi_size)
 
                             if (verbose) {
 
-                                HDfprintf(stdout, "data_chunk[%0d][%0d] = %0d, expect %0d.\n", k, l,
-                                          data_chunk[0][k][l],
-                                          ((DSET_SIZE * DSET_SIZE * mpi_rank) + (DSET_SIZE * (i + k)) + j +
-                                           l + dset_num));
-                                HDfprintf(stdout, "dset_num = %d, i = %d, j = %d, k = %d, l = %d\n", dset_num,
-                                          i, j, k, l);
+                                fprintf(stdout, "data_chunk[%0d][%0d] = %0d, expect %0d.\n", k, l,
+                                        data_chunk[0][k][l],
+                                        ((DSET_SIZE * DSET_SIZE * mpi_rank) + (DSET_SIZE * (i + k)) + j + l +
+                                         dset_num));
+                                fprintf(stdout, "dset_num = %d, i = %d, j = %d, k = %d, l = %d\n", dset_num,
+                                        i, j, k, l);
                             }
                         }
                     }
@@ -1614,7 +1569,7 @@ par_create_dataset(int dset_num, hid_t file_id, int mpi_rank, int mpi_size)
 
                     if (verbose) {
 
-                        HDfprintf(stdout, "Chunk (%0d, %0d) in /dset%03d is invalid.\n", i, j, dset_num);
+                        fprintf(stdout, "Chunk (%0d, %0d) in /dset%03d is invalid.\n", i, j, dset_num);
                     }
                 }
             }
@@ -1624,7 +1579,7 @@ par_create_dataset(int dset_num, hid_t file_id, int mpi_rank, int mpi_size)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* close the data space */
     if ((pass) && (H5Sclose(dataspace_id) < 0)) {
@@ -1669,7 +1624,7 @@ par_create_dataset(int dset_num, hid_t file_id, int mpi_rank, int mpi_size)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     return;
 
@@ -1687,13 +1642,6 @@ par_create_dataset(int dset_num, hid_t file_id, int mpi_rank, int mpi_size)
  *
  * Return:      void
  *
- * Programmer:  John Mainzer
- *              3/6/17
- *
- * Modifications:
- *
- *              None.
- *
  *-------------------------------------------------------------------------
  */
 
@@ -1710,8 +1658,8 @@ par_delete_dataset(int dset_num, hid_t file_id, int mpi_rank)
     HDsnprintf(dset_name, sizeof(dset_name), "/dset%03d", dset_num);
 
     if (show_progress) {
-        HDfprintf(stdout, "%s: dset name = \"%s\".\n", fcn_name, dset_name);
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: dset name = \"%s\".\n", fcn_name, dset_name);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
     }
 
     /* verify the target dataset */
@@ -1721,7 +1669,7 @@ par_delete_dataset(int dset_num, hid_t file_id, int mpi_rank)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* delete the target dataset */
     if (pass) {
@@ -1734,7 +1682,7 @@ par_delete_dataset(int dset_num, hid_t file_id, int mpi_rank)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     return;
 
@@ -1758,13 +1706,6 @@ par_delete_dataset(int dset_num, hid_t file_id, int mpi_rank)
  *
  * Return:      void
  *
- * Programmer:  John Mainzer
- *              3/8/17
- *
- * Modifications:
- *
- *              None.
- *
  *-------------------------------------------------------------------------
  */
 
@@ -1776,9 +1717,9 @@ par_insert_cache_image(int file_name_idx, int mpi_rank, int mpi_size)
         if (mpi_rank == 0) { /* insert cache image in supplied test file */
 
             if (!serial_insert_cache_image(file_name_idx, mpi_size)) {
-                HDfprintf(stderr, "\n\nCache image insertion failed.\n");
-                HDfprintf(stderr, "  failure mssg = \"%s\"\n", failure_mssg);
-                HDexit(EXIT_FAILURE);
+                fprintf(stderr, "\n\nCache image insertion failed.\n");
+                fprintf(stderr, "  failure mssg = \"%s\"\n", failure_mssg);
+                exit(EXIT_FAILURE);
             }
         }
     }
@@ -1806,13 +1747,6 @@ par_insert_cache_image(int file_name_idx, int mpi_rank, int mpi_size)
  *              Do nothing if pass is FALSE on entry.
  *
  * Return:      void
- *
- * Programmer:  John Mainzer
- *              3/6/17
- *
- * Modifications:
- *
- *              None.
  *
  *-------------------------------------------------------------------------
  */
@@ -1843,8 +1777,8 @@ par_verify_dataset(int dset_num, hid_t file_id, int mpi_rank)
     HDsnprintf(dset_name, sizeof(dset_name), "/dset%03d", dset_num);
 
     if (show_progress) {
-        HDfprintf(stdout, "%s: dset name = \"%s\".\n", fcn_name, dset_name);
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: dset name = \"%s\".\n", fcn_name, dset_name);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
     }
 
     if (pass) {
@@ -1873,7 +1807,7 @@ par_verify_dataset(int dset_num, hid_t file_id, int mpi_rank)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* create the mem space to be used to read */
     if (pass) {
@@ -1891,7 +1825,7 @@ par_verify_dataset(int dset_num, hid_t file_id, int mpi_rank)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* select in memory hyperslab */
     if (pass) {
@@ -1912,7 +1846,7 @@ par_verify_dataset(int dset_num, hid_t file_id, int mpi_rank)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* setup the DXPL for collective I/O */
     if (pass) {
@@ -1927,7 +1861,7 @@ par_verify_dataset(int dset_num, hid_t file_id, int mpi_rank)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     if (pass) {
 
@@ -1939,7 +1873,7 @@ par_verify_dataset(int dset_num, hid_t file_id, int mpi_rank)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* read data from data sets and validate it */
     i = 0;
@@ -1987,12 +1921,12 @@ par_verify_dataset(int dset_num, hid_t file_id, int mpi_rank)
 
                             if (verbose) {
 
-                                HDfprintf(stdout, "data_chunk[%0d][%0d] = %0d, expect %0d.\n", k, l,
-                                          data_chunk[0][k][l],
-                                          ((DSET_SIZE * DSET_SIZE * mpi_rank) + (DSET_SIZE * (i + k)) + j +
-                                           l + dset_num));
-                                HDfprintf(stdout, "dset_num = %d, i = %d, j = %d, k = %d, l = %d\n", dset_num,
-                                          i, j, k, l);
+                                fprintf(stdout, "data_chunk[%0d][%0d] = %0d, expect %0d.\n", k, l,
+                                        data_chunk[0][k][l],
+                                        ((DSET_SIZE * DSET_SIZE * mpi_rank) + (DSET_SIZE * (i + k)) + j + l +
+                                         dset_num));
+                                fprintf(stdout, "dset_num = %d, i = %d, j = %d, k = %d, l = %d\n", dset_num,
+                                        i, j, k, l);
                             }
                         }
                     }
@@ -2005,7 +1939,7 @@ par_verify_dataset(int dset_num, hid_t file_id, int mpi_rank)
 
                     if (verbose) {
 
-                        HDfprintf(stdout, "Chunk (%0d, %0d) in /dset%03d is invalid.\n", i, j, dset_num);
+                        fprintf(stdout, "Chunk (%0d, %0d) in /dset%03d is invalid.\n", i, j, dset_num);
                     }
                 }
             }
@@ -2015,7 +1949,7 @@ par_verify_dataset(int dset_num, hid_t file_id, int mpi_rank)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* close the file space */
     if ((pass) && (H5Sclose(filespace_id) < 0)) {
@@ -2046,7 +1980,7 @@ par_verify_dataset(int dset_num, hid_t file_id, int mpi_rank)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     return;
 
@@ -2064,13 +1998,6 @@ par_verify_dataset(int dset_num, hid_t file_id, int mpi_rank)
  *              return FALSE.
  *
  * Return:      TRUE if succussful, FALSE otherwise.
- *
- * Programmer:  John Mainzer
- *              3/8/17
- *
- * Modifications:
- *
- *              None.
  *
  *-------------------------------------------------------------------------
  */
@@ -2093,22 +2020,22 @@ serial_insert_cache_image(int file_name_idx, int mpi_size)
     pass = TRUE;
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 1) setup the file name */
     if (pass) {
 
-        HDassert(FILENAMES[file_name_idx]);
+        assert(FILENAMES[file_name_idx]);
 
         if (h5_fixname(FILENAMES[file_name_idx], H5P_DEFAULT, filename, sizeof(filename)) == NULL) {
 
             pass = FALSE;
-            HDfprintf(stdout, "h5_fixname() failed.\n");
+            fprintf(stdout, "h5_fixname() failed.\n");
         }
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 2) Open the PHDF5 file with the cache image FAPL entry.
      */
@@ -2135,7 +2062,7 @@ serial_insert_cache_image(int file_name_idx, int mpi_size)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 3) Validate contents of the file */
 
@@ -2147,7 +2074,7 @@ serial_insert_cache_image(int file_name_idx, int mpi_size)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 4) Close the file */
 
@@ -2161,7 +2088,7 @@ serial_insert_cache_image(int file_name_idx, int mpi_size)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     return pass;
 
@@ -2178,13 +2105,6 @@ serial_insert_cache_image(int file_name_idx, int mpi_size)
  *              Do nothing if pass is FALSE on entry.
  *
  * Return:      void
- *
- * Programmer:  John Mainzer
- *              3/6/17
- *
- * Modifications:
- *
- *              None.
  *
  *-------------------------------------------------------------------------
  */
@@ -2211,8 +2131,8 @@ serial_verify_dataset(int dset_num, hid_t file_id, int mpi_size)
     HDsnprintf(dset_name, sizeof(dset_name), "/dset%03d", dset_num);
 
     if (show_progress) {
-        HDfprintf(stdout, "%s: dset name = \"%s\".\n", fcn_name, dset_name);
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: dset name = \"%s\".\n", fcn_name, dset_name);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
     }
 
     if (pass) {
@@ -2241,7 +2161,7 @@ serial_verify_dataset(int dset_num, hid_t file_id, int mpi_size)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* create the mem space to be used to read */
     if (pass) {
@@ -2259,7 +2179,7 @@ serial_verify_dataset(int dset_num, hid_t file_id, int mpi_size)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* select in memory hyperslab */
     if (pass) {
@@ -2280,7 +2200,7 @@ serial_verify_dataset(int dset_num, hid_t file_id, int mpi_size)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* read data from data sets and validate it */
     i = 0;
@@ -2332,13 +2252,12 @@ serial_verify_dataset(int dset_num, hid_t file_id, int mpi_size)
 
                                 if (verbose) {
 
-                                    HDfprintf(stdout, "data_chunk[%0d][%0d] = %0d, expect %0d.\n", j, k,
-                                              data_chunk[0][j][k],
-                                              ((DSET_SIZE * DSET_SIZE * i) + (DSET_SIZE * (j + l)) + k + m +
-                                               dset_num));
-                                    HDfprintf(stdout,
-                                              "dset_num = %d, i = %d, j = %d, k = %d, l = %d, m = %d\n",
-                                              dset_num, i, j, k, l, m);
+                                    fprintf(stdout, "data_chunk[%0d][%0d] = %0d, expect %0d.\n", j, k,
+                                            data_chunk[0][j][k],
+                                            ((DSET_SIZE * DSET_SIZE * i) + (DSET_SIZE * (j + l)) + k + m +
+                                             dset_num));
+                                    fprintf(stdout, "dset_num = %d, i = %d, j = %d, k = %d, l = %d, m = %d\n",
+                                            dset_num, i, j, k, l, m);
                                 }
                             }
                         }
@@ -2351,7 +2270,7 @@ serial_verify_dataset(int dset_num, hid_t file_id, int mpi_size)
 
                         if (verbose) {
 
-                            HDfprintf(stdout, "Chunk (%0d, %0d) in /dset%03d is invalid.\n", j, k, dset_num);
+                            fprintf(stdout, "Chunk (%0d, %0d) in /dset%03d is invalid.\n", j, k, dset_num);
                         }
                     }
                 }
@@ -2363,7 +2282,7 @@ serial_verify_dataset(int dset_num, hid_t file_id, int mpi_size)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* close the file space */
     if ((pass) && (H5Sclose(filespace_id) < 0)) {
@@ -2387,7 +2306,7 @@ serial_verify_dataset(int dset_num, hid_t file_id, int mpi_size)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     return;
 
@@ -2410,16 +2329,6 @@ serial_verify_dataset(int dset_num, hid_t file_id, int mpi_size)
  *              Do nothing if pass is FALSE on entry.
  *
  * Return:      void
- *
- * Programmer:  John Mainzer
- *              7/15/15
- *
- * Modifications:
- *
- *              Added min_dset and max_dset parameters and supporting
- *        code.  This allows the caller to specify a range of
- *        datasets to verify.
- *                        JRM -- 8/20/15
  *
  *-------------------------------------------------------------------------
  */
@@ -2444,11 +2353,11 @@ verify_data_sets(hid_t file_id, int min_dset, int max_dset)
     hsize_t     offset[2];
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
+        fprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
 
-    HDassert(0 <= min_dset);
-    HDassert(min_dset <= max_dset);
-    HDassert(max_dset < MAX_NUM_DSETS);
+    assert(0 <= min_dset);
+    assert(min_dset <= max_dset);
+    assert(max_dset < MAX_NUM_DSETS);
 
     /* open the datasets */
 
@@ -2487,7 +2396,7 @@ verify_data_sets(hid_t file_id, int min_dset, int max_dset)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
+        fprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
 
     /* create the mem space to be used to read and write chunks */
     if (pass) {
@@ -2504,7 +2413,7 @@ verify_data_sets(hid_t file_id, int min_dset, int max_dset)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
+        fprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
 
     /* select in memory hyperslab */
     if (pass) {
@@ -2523,7 +2432,7 @@ verify_data_sets(hid_t file_id, int min_dset, int max_dset)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
+        fprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
 
     /* read data from data sets and validate it */
     i = 0;
@@ -2572,11 +2481,11 @@ verify_data_sets(hid_t file_id, int min_dset, int max_dset)
 
                                 if (verbose) {
 
-                                    HDfprintf(stdout, "data_chunk[%0d][%0d] = %0d, expect %0d.\n", k, l,
-                                              data_chunk[k][l],
-                                              ((DSET_SIZE * DSET_SIZE * m) + (DSET_SIZE * (i + k)) + j + l));
-                                    HDfprintf(stdout, "m = %d, i = %d, j = %d, k = %d, l = %d\n", m, i, j, k,
-                                              l);
+                                    fprintf(stdout, "data_chunk[%0d][%0d] = %0d, expect %0d.\n", k, l,
+                                            data_chunk[k][l],
+                                            ((DSET_SIZE * DSET_SIZE * m) + (DSET_SIZE * (i + k)) + j + l));
+                                    fprintf(stdout, "m = %d, i = %d, j = %d, k = %d, l = %d\n", m, i, j, k,
+                                            l);
                                 }
                             }
                         }
@@ -2589,7 +2498,7 @@ verify_data_sets(hid_t file_id, int min_dset, int max_dset)
 
                         if (verbose) {
 
-                            HDfprintf(stdout, "Chunk (%0d, %0d) in /dset%03d is invalid.\n", i, j, m);
+                            fprintf(stdout, "Chunk (%0d, %0d) in /dset%03d is invalid.\n", i, j, m);
                         }
                     }
                 }
@@ -2601,7 +2510,7 @@ verify_data_sets(hid_t file_id, int min_dset, int max_dset)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
+        fprintf(stdout, "%s: cp = %d.\n", fcn_name, cp++);
 
     /* close the file spaces */
     i = min_dset;
@@ -2675,13 +2584,6 @@ verify_data_sets(hid_t file_id, int min_dset, int max_dset)
  *
  * Return:      void
  *
- * Programmer:  John Mainzer
- *              3/11/17
- *
- * Modifications:
- *
- *        None.
- *
  *-------------------------------------------------------------------------
  */
 
@@ -2720,7 +2622,7 @@ verify_cache_image_RO(int file_name_id, int md_write_strat, int mpi_rank)
     show_progress = ((show_progress) && (mpi_rank == 0));
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* setup the file name */
     if (pass) {
@@ -2733,7 +2635,7 @@ verify_cache_image_RO(int file_name_id, int md_write_strat, int mpi_rank)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 1) Open the test file created at the beginning of this test.
      *
@@ -2762,7 +2664,7 @@ verify_cache_image_RO(int file_name_id, int md_write_strat, int mpi_rank)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 2) Verify that the file contains the expected data.
      *
@@ -2791,7 +2693,7 @@ verify_cache_image_RO(int file_name_id, int md_write_strat, int mpi_rank)
 #endif /* H5C_COLLECT_CACHE_STATS */
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
         /* Verify that all other processes receive the cache image block
          * from process 0.
@@ -2812,7 +2714,7 @@ verify_cache_image_RO(int file_name_id, int md_write_strat, int mpi_rank)
 #endif /* H5C_COLLECT_CACHE_STATS */
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 3) Close the file. */
 
@@ -2826,7 +2728,7 @@ verify_cache_image_RO(int file_name_id, int md_write_strat, int mpi_rank)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 4) Open the file, and verify that it doesn't contain a cache image. */
 
@@ -2852,7 +2754,7 @@ verify_cache_image_RO(int file_name_id, int md_write_strat, int mpi_rank)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 5) Verify that the file contains the expected data. */
 
@@ -2884,7 +2786,7 @@ verify_cache_image_RO(int file_name_id, int md_write_strat, int mpi_rank)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* report results */
     if (mpi_rank == 0) {
@@ -2898,7 +2800,7 @@ verify_cache_image_RO(int file_name_id, int md_write_strat, int mpi_rank)
             H5_FAILED();
 
             if (show_progress) {
-                HDfprintf(stdout, "%s: failure_mssg = \"%s\"\n", fcn_name, failure_mssg);
+                fprintf(stdout, "%s: failure_mssg = \"%s\"\n", fcn_name, failure_mssg);
             }
         }
     }
@@ -2942,13 +2844,6 @@ verify_cache_image_RO(int file_name_id, int md_write_strat, int mpi_rank)
  *
  * Return:      void
  *
- * Programmer:  John Mainzer
- *              1/25/17
- *
- * Modifications:
- *
- *        None.
- *
  *-------------------------------------------------------------------------
  */
 
@@ -2987,7 +2882,7 @@ verify_cache_image_RW(int file_name_id, int md_write_strat, int mpi_rank)
     show_progress = ((show_progress) && (mpi_rank == 0));
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* setup the file name */
     if (pass) {
@@ -3000,7 +2895,7 @@ verify_cache_image_RW(int file_name_id, int md_write_strat, int mpi_rank)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 1) Open the test file created at the beginning of this test.
      *
@@ -3034,7 +2929,7 @@ verify_cache_image_RW(int file_name_id, int md_write_strat, int mpi_rank)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 2) Verify that the file contains the expected data.
      *
@@ -3062,7 +2957,7 @@ verify_cache_image_RW(int file_name_id, int md_write_strat, int mpi_rank)
 #endif /* H5C_COLLECT_CACHE_STATS */
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
         /* Verify that all other processes receive the cache image block
          * from process 0.
@@ -3083,7 +2978,7 @@ verify_cache_image_RW(int file_name_id, int md_write_strat, int mpi_rank)
 #endif /* H5C_COLLECT_CACHE_STATS */
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 3) Close the file. */
 
@@ -3097,7 +2992,7 @@ verify_cache_image_RW(int file_name_id, int md_write_strat, int mpi_rank)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 4) Open the file, and verify that it doesn't contain a cache image. */
 
@@ -3123,7 +3018,7 @@ verify_cache_image_RW(int file_name_id, int md_write_strat, int mpi_rank)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 5) Verify that the file contains the expected data. */
 
@@ -3155,7 +3050,7 @@ verify_cache_image_RW(int file_name_id, int md_write_strat, int mpi_rank)
     }
 
     if (show_progress)
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 7) Delete the file. */
 
@@ -3183,7 +3078,7 @@ verify_cache_image_RW(int file_name_id, int md_write_strat, int mpi_rank)
             H5_FAILED();
 
             if (show_progress) {
-                HDfprintf(stdout, "%s: failure_mssg = \"%s\"\n", fcn_name, failure_mssg);
+                fprintf(stdout, "%s: failure_mssg = \"%s\"\n", fcn_name, failure_mssg);
             }
         }
     }
@@ -3213,8 +3108,6 @@ verify_cache_image_RW(int file_name_id, int md_write_strat, int mpi_rank)
  *
  *              Failure:        FALSE
  *
- * Programmer:  JRM -- 3/6/17
- *
  *****************************************************************************/
 static hbool_t
 smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
@@ -3239,12 +3132,12 @@ smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
     }
 
     if ((mpi_rank == 0) && (show_progress))
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* setup the file name */
     if (pass) {
 
-        HDassert(FILENAMES[test_file_index]);
+        assert(FILENAMES[test_file_index]);
 
         if (h5_fixname(FILENAMES[test_file_index], H5P_DEFAULT, filename, sizeof(filename)) == NULL) {
 
@@ -3254,7 +3147,7 @@ smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
     }
 
     if ((mpi_rank == 0) && (show_progress))
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 1) Create a PHDF5 file without the cache image FAPL entry.
      *
@@ -3283,7 +3176,7 @@ smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
     }
 
     if ((mpi_rank == 0) && (show_progress))
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 2) Create datasets in the file */
 
@@ -3295,7 +3188,7 @@ smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
     }
 
     if ((mpi_rank == 0) && (show_progress))
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 3) Verify the datasets in the file */
 
@@ -3318,7 +3211,7 @@ smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
     }
 
     if ((mpi_rank == 0) && (show_progress))
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 5 Insert a cache image into the file */
 
@@ -3328,7 +3221,7 @@ smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
     }
 
     if ((mpi_rank == 0) && (show_progress))
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 6) Open the file R/O */
 
@@ -3354,7 +3247,7 @@ smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
     }
 
     if ((mpi_rank == 0) && (show_progress))
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 7) Verify the datasets in the file backwards
      *
@@ -3372,7 +3265,7 @@ smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
     }
 
     if ((mpi_rank == 0) && (show_progress))
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
         /* Verify that only process 0 reads the cache image. */
 #if H5C_COLLECT_CACHE_STATS
@@ -3388,7 +3281,7 @@ smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
 #endif /* H5C_COLLECT_CACHE_STATS */
 
     if ((mpi_rank == 0) && (show_progress))
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
         /* Verify that all other processes receive the cache image block
          * from process 0.
@@ -3409,7 +3302,7 @@ smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
 #endif /* H5C_COLLECT_CACHE_STATS */
 
     if ((mpi_rank == 0) && (show_progress))
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 8) Close the file */
 
@@ -3423,7 +3316,7 @@ smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
     }
 
     if ((mpi_rank == 0) && (show_progress))
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 9) Open the file */
 
@@ -3449,7 +3342,7 @@ smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
     }
 
     if ((mpi_rank == 0) && (show_progress))
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 10) Verify the datasets in the file
      *
@@ -3467,7 +3360,7 @@ smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
     }
 
     if ((mpi_rank == 0) && (show_progress))
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
         /* Verify that only process 0 reads the cache image. */
 #if H5C_COLLECT_CACHE_STATS
@@ -3483,7 +3376,7 @@ smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
 #endif /* H5C_COLLECT_CACHE_STATS */
 
     if ((mpi_rank == 0) && (show_progress))
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
         /* Verify that all other processes receive the cache image block
          * from process 0.
@@ -3504,7 +3397,7 @@ smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
 #endif /* H5C_COLLECT_CACHE_STATS */
 
     if ((mpi_rank == 0) && (show_progress))
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 11) Delete the datasets in the file */
 
@@ -3516,7 +3409,7 @@ smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
     }
 
     if ((mpi_rank == 0) && (show_progress))
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 12) Close the file */
 
@@ -3530,7 +3423,7 @@ smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
     }
 
     if ((mpi_rank == 0) && (show_progress))
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 13) Get the size of the file.  Verify that it is less
      *     than 20 KB.  Without deletions and persistent free
@@ -3556,7 +3449,7 @@ smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
     }
 
     if ((mpi_rank == 0) && (show_progress))
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* 14) Delete the file */
 
@@ -3573,7 +3466,7 @@ smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
     }
 
     if ((mpi_rank == 0) && (show_progress))
-        HDfprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
+        fprintf(stdout, "%s: cp = %d, pass = %d.\n", fcn_name, cp++, pass);
 
     /* report results */
     if (mpi_rank == 0) {
@@ -3586,7 +3479,7 @@ smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
 
             H5_FAILED();
 
-            HDfprintf(stdout, "%s: failure_mssg = \"%s\"\n", fcn_name, failure_mssg);
+            fprintf(stdout, "%s: failure_mssg = \"%s\"\n", fcn_name, failure_mssg);
         }
     }
 
@@ -3600,7 +3493,7 @@ smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
  * Purpose:     Run parallel tests on the cache image feature.
  *
  *              At present, cache image is disabled in parallel, and
- *              thus these tests are restructed to verifying that a
+ *              thus these tests are restricted to verifying that a
  *              file with a cache image can be opened in the parallel
  *              case, and verifying that instructions to create a
  *              cache image are ignored in the parallel case.
@@ -3611,11 +3504,6 @@ smoke_check_1(MPI_Comm mpi_comm, MPI_Info mpi_info, int mpi_rank, int mpi_size)
  * Return:      Success: 0
  *
  *              Failure: 1
- *
- * Programmer:  John Mainzer
- *              1/25/17
- *
- * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -3635,50 +3523,50 @@ main(int argc, char **argv)
 
     /* Attempt to turn off atexit post processing so that in case errors
      * happen during the test and the process is aborted, it will not get
-     * hang in the atexit post processing in which it may try to make MPI
+     * hung in the atexit post processing in which it may try to make MPI
      * calls.  By then, MPI calls may not work.
      */
     if (H5dont_atexit() < 0)
-        HDprintf("%d:Failed to turn off atexit processing. Continue.\n", mpi_rank);
+        printf("%d:Failed to turn off atexit processing. Continue.\n", mpi_rank);
 
     H5open();
 
     if (mpi_rank == 0) {
-        HDprintf("===================================\n");
-        HDprintf("Parallel metadata cache image tests\n");
-        HDprintf("        mpi_size     = %d\n", mpi_size);
-        HDprintf("===================================\n");
+        printf("===================================\n");
+        printf("Parallel metadata cache image tests\n");
+        printf("        mpi_size     = %d\n", mpi_size);
+        printf("===================================\n");
     }
 
     if (mpi_size < 2) {
         if (mpi_rank == 0)
-            HDprintf("    Need at least 2 processes.  Exiting.\n");
+            printf("    Need at least 2 processes.  Exiting.\n");
         goto finish;
     }
 
     if (mpi_rank == 0) { /* create test files */
         int i;
 
-        HDfprintf(stdout, "Constructing test files: \n");
-        HDfflush(stdout);
+        fprintf(stdout, "Constructing test files: \n");
+        fflush(stdout);
 
         i = 0;
         while ((FILENAMES[i] != NULL) && (i < TEST_FILES_TO_CONSTRUCT)) {
-            HDfprintf(stdout, "   writing %s ... ", FILENAMES[i]);
-            HDfflush(stdout);
+            fprintf(stdout, "   writing %s ... ", FILENAMES[i]);
+            fflush(stdout);
             construct_test_file(i);
 
             if (pass) {
-                HDprintf("done.\n");
-                HDfflush(stdout);
+                printf("done.\n");
+                fflush(stdout);
             }
             else {
-                HDprintf("failed.\n");
-                HDexit(EXIT_FAILURE);
+                printf("failed.\n");
+                exit(EXIT_FAILURE);
             }
             i++;
         }
-        HDfprintf(stdout, "Test file construction complete.\n");
+        fprintf(stdout, "Test file construction complete.\n");
     }
 
     /* can't start test until test files exist */
@@ -3698,12 +3586,12 @@ finish:
     MPI_Barrier(MPI_COMM_WORLD);
 
     if (mpi_rank == 0) { /* only process 0 reports */
-        HDprintf("===================================\n");
+        printf("===================================\n");
         if (nerrs > 0)
-            HDprintf("***metadata cache image tests detected %d failures***\n", nerrs);
+            printf("***metadata cache image tests detected %d failures***\n", nerrs);
         else
-            HDprintf("metadata cache image tests finished with no failures\n");
-        HDprintf("===================================\n");
+            printf("metadata cache image tests finished with no failures\n");
+        printf("===================================\n");
     }
 
     /* close HDF5 library */

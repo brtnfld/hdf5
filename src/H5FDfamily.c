@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -12,9 +11,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:    Robb Matzke
- *        Monday, November 10, 1997
- *
  * Purpose:    Implements a family of files that acts as a single hdf5
  *        file.  The purpose is to be able to split a huge file on a
  *        64-bit platform, transfer all the <2GB members to a 32-bit
@@ -173,7 +169,7 @@ H5FD__family_get_default_config(H5FD_family_fapl_t *fa_out)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(fa_out);
+    assert(fa_out);
 
     fa_out->memb_size = H5FD_FAM_DEF_MEM_SIZE;
 
@@ -194,7 +190,7 @@ H5FD__family_get_default_config(H5FD_family_fapl_t *fa_out)
 done:
     if (ret_value < 0 && fa_out->memb_fapl_id >= 0) {
         if (H5I_dec_ref(fa_out->memb_fapl_id) < 0)
-            HDONE_ERROR(H5E_VFL, H5E_CANTDEC, FAIL, "can't decrement ref. count on member FAPL ID")
+            HDONE_ERROR(H5E_VFL, H5E_CANTDEC, FAIL, "can't decrement ref. count on member FAPL ID");
     }
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -227,7 +223,7 @@ H5FD__family_get_default_printf_filename(const char *old_filename)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(old_filename);
+    assert(old_filename);
 
     old_filename_len = HDstrlen(old_filename);
     if (0 == old_filename_len)
@@ -279,9 +275,6 @@ done:
  * Return:      Success:    The driver ID for the family driver
  *              Failure:    H5I_INVALID_HID
  *
- * Programmer:  Robb Matzke
- *              Wednesday, August  4, 1999
- *
  *-------------------------------------------------------------------------
  */
 hid_t
@@ -306,9 +299,6 @@ H5FD_family_init(void)
  * Purpose:    Shut down the VFD
  *
  * Returns:     Non-negative on success or negative on failure
- *
- * Programmer:  Quincey Koziol
- *              Friday, Jan 30, 2004
  *
  *---------------------------------------------------------------------------
  */
@@ -335,9 +325,6 @@ H5FD__family_term(void)
  * Return:    Success:    Non-negative
  *
  *            Failure:    Negative
- *
- * Programmer:    Robb Matzke
- *              Wednesday, August  4, 1999
  *
  *-------------------------------------------------------------------------
  */
@@ -385,9 +372,6 @@ done:
  *
  *            Failure:    Negative
  *
- * Programmer:    Robb Matzke
- *              Wednesday, August  4, 1999
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -428,9 +412,6 @@ done:
  *
  *            Failure:    NULL
  *
- * Programmer:    Robb Matzke
- *              Friday, August 13, 1999
- *
  *-------------------------------------------------------------------------
  */
 static void *
@@ -470,9 +451,6 @@ done:
  * Return:    Success:    Ptr to a new property list
  *
  *            Failure:    NULL
- *
- * Programmer:    Robb Matzke
- *              Wednesday, August  4, 1999
  *
  *-------------------------------------------------------------------------
  */
@@ -523,9 +501,6 @@ done:
  *
  *            Failure:    -1
  *
- * Programmer:    Robb Matzke
- *              Wednesday, August  4, 1999
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -554,9 +529,6 @@ done:
  *
  *            Failure:    never fails
  *
- * Programmer:    Raymond Lu
- *              Tuesday, May 10, 2005
- *
  *-------------------------------------------------------------------------
  */
 static hsize_t
@@ -581,9 +553,6 @@ H5FD__family_sb_size(H5FD_t H5_ATTR_UNUSED *_file)
  * Return:    Success:    0
  *
  *            Failure:    -1
- *
- * Programmer:    Raymond Lu
- *              Tuesday, May 10, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -623,9 +592,6 @@ H5FD__family_sb_encode(H5FD_t *_file, char *name /*out*/, unsigned char *buf /*o
  * Return:    Success:    0
  *
  *            Failure:    -1
- *
- * Programmer:    Raymond Lu
- *              Tuesday, May 10, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -677,9 +643,6 @@ done:
  *                caller, which is always H5FD_open().
  *
  *            Failure:    NULL
- *
- * Programmer:    Robb Matzke
- *              Wednesday, August  4, 1999
  *
  *-------------------------------------------------------------------------
  */
@@ -797,7 +760,7 @@ H5FD__family_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxad
             unsigned n = MAX(64, 2 * file->amembs);
             H5FD_t **x;
 
-            HDassert(n > 0);
+            assert(n > 0);
             if (NULL == (x = (H5FD_t **)H5MM_realloc(file->memb, n * sizeof(H5FD_t *))))
                 HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "unable to reallocate members")
             file->amembs = n;
@@ -814,7 +777,7 @@ H5FD__family_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxad
             file->memb[file->nmembs] =
                 H5FDopen(memb_name, (0 == file->nmembs ? flags : t_flags), file->memb_fapl_id, HADDR_UNDEF);
         }
-        H5E_END_TRY;
+        H5E_END_TRY
         if (!file->memb[file->nmembs]) {
             if (0 == file->nmembs)
                 HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open member file")
@@ -857,7 +820,7 @@ done:
         if (file->memb)
             H5MM_xfree(file->memb);
         if (H5I_dec_ref(file->memb_fapl_id) < 0)
-            HDONE_ERROR(H5E_VFL, H5E_CANTDEC, NULL, "can't close driver ID")
+            HDONE_ERROR(H5E_VFL, H5E_CANTDEC, NULL, "can't close driver ID");
         if (file->name)
             H5MM_xfree(file->name);
         H5MM_xfree(file);
@@ -877,9 +840,6 @@ H5_GCC_CLANG_DIAG_ON("format-nonliteral")
  *            Failure:    Negative with as many members closed as
  *                possible. The only subsequent operation
  *                permitted on the file is a close operation.
- *
- * Programmer:    Robb Matzke
- *              Wednesday, August  4, 1999
  *
  *-------------------------------------------------------------------------
  */
@@ -905,12 +865,12 @@ H5FD__family_close(H5FD_t *_file)
     }     /* end for */
     if (nerrors)
         /* Push error, but keep going*/
-        HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "unable to close member files")
+        HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "unable to close member files");
 
     /* Clean up other stuff */
     if (H5I_dec_ref(file->memb_fapl_id) < 0)
         /* Push error, but keep going*/
-        HDONE_ERROR(H5E_VFL, H5E_CANTDEC, FAIL, "can't close driver ID")
+        HDONE_ERROR(H5E_VFL, H5E_CANTDEC, FAIL, "can't close driver ID");
     H5MM_xfree(file->memb);
     H5MM_xfree(file->name);
     H5MM_xfree(file);
@@ -929,9 +889,6 @@ H5FD__family_close(H5FD_t *_file)
  *            Failure:    never fails (arguments were checked by the
  *                caller).
  *
- * Programmer:    Robb Matzke
- *              Wednesday, August  4, 1999
- *
  *-------------------------------------------------------------------------
  */
 static int
@@ -943,8 +900,8 @@ H5FD__family_cmp(const H5FD_t *_f1, const H5FD_t *_f2)
 
     FUNC_ENTER_PACKAGE_NOERR
 
-    HDassert(f1->nmembs >= 1 && f1->memb[0]);
-    HDassert(f2->nmembs >= 1 && f2->memb[0]);
+    assert(f1->nmembs >= 1 && f1->memb[0]);
+    assert(f2->nmembs >= 1 && f2->memb[0]);
 
     ret_value = H5FDcmp(f1->memb[0], f2->memb[0]);
 
@@ -959,9 +916,6 @@ H5FD__family_cmp(const H5FD_t *_f1, const H5FD_t *_f2)
  *
  * Return:    Success:    non-negative
  *            Failure:    negative
- *
- * Programmer:    Quincey Koziol
- *              Friday, August 25, 2000
  *
  *-------------------------------------------------------------------------
  */
@@ -1000,9 +954,6 @@ H5FD__family_query(const H5FD_t *_file, unsigned long *flags /* out */)
  *
  *            Failure:    HADDR_UNDEF
  *
- * Programmer:    Robb Matzke
- *              Wednesday, August  4, 1999
- *
  *-------------------------------------------------------------------------
  */
 static haddr_t
@@ -1023,9 +974,6 @@ H5FD__family_get_eoa(const H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type)
  * Return:    Success:    0
  *
  *            Failure:    -1
- *
- * Programmer:    Robb Matzke
- *              Wednesday, August  4, 1999
  *
  *-------------------------------------------------------------------------
  */
@@ -1075,7 +1023,7 @@ H5FD__family_set_eoa(H5FD_t *_file, H5FD_mem_t type, haddr_t abs_eoa)
                 file->memb[u] = H5FDopen(memb_name, file->flags | H5F_ACC_CREAT, file->memb_fapl_id,
                                          (haddr_t)file->memb_size);
             }
-            H5E_END_TRY;
+            H5E_END_TRY
             if (NULL == file->memb[u])
                 HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL, "unable to open member file")
         } /* end if */
@@ -1118,9 +1066,6 @@ H5_GCC_CLANG_DIAG_ON("format-nonliteral")
  *
  *            Failure:          HADDR_UNDEF
  *
- * Programmer:    Robb Matzke
- *              Wednesday, August  4, 1999
- *
  *-------------------------------------------------------------------------
  */
 static haddr_t
@@ -1138,7 +1083,7 @@ H5FD__family_get_eof(const H5FD_t *_file, H5FD_mem_t type)
      * with `i' equal to that member. If all members have zero EOF then exit
      * loop with i==0.
      */
-    HDassert(file->nmembs > 0);
+    assert(file->nmembs > 0);
     for (i = (int)file->nmembs - 1; i >= 0; --i) {
         if ((eof = H5FD_get_eof(file->memb[i], type)) != 0)
             break;
@@ -1167,9 +1112,6 @@ H5FD__family_get_eof(const H5FD_t *_file, H5FD_mem_t type)
  * Purpose:        Returns the file handle of FAMILY file driver.
  *
  * Returns:        Non-negative if succeed or negative if fails.
- *
- * Programmer:     Raymond Lu
- *                 Sept. 16, 2002
  *
  *-------------------------------------------------------------------------
  */
@@ -1212,9 +1154,6 @@ done:
  *
  *            Failure:    -1, contents of buffer BUF are undefined.
  *
- * Programmer:    Robb Matzke
- *              Wednesday, August  4, 1999
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1253,7 +1192,7 @@ H5FD__family_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, s
             tempreq = SIZE_MAX;
         req = MIN(size, (size_t)tempreq);
 
-        HDassert(u < file->nmembs);
+        assert(u < file->nmembs);
 
         if (H5FDread(file->memb[u], type, dxpl_id, sub, req, buf) < 0)
             HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "member file read failed")
@@ -1277,9 +1216,6 @@ done:
  * Return:    Success:    Zero
  *
  *            Failure:    -1
- *
- * Programmer:    Robb Matzke
- *              Wednesday, August  4, 1999
  *
  *-------------------------------------------------------------------------
  */
@@ -1318,7 +1254,7 @@ H5FD__family_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, 
             tempreq = SIZE_MAX;
         req = MIN(size, (size_t)tempreq);
 
-        HDassert(u < file->nmembs);
+        assert(u < file->nmembs);
 
         if (H5FDwrite(file->memb[u], type, dxpl_id, sub, req, buf) < 0)
             HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "member file write failed")
@@ -1339,9 +1275,6 @@ done:
  *
  * Return:    Success:    0
  *            Failure:    -1, as many files flushed as possible.
- *
- * Programmer:    Robb Matzke
- *              Wednesday, August  4, 1999
  *
  *-------------------------------------------------------------------------
  */
@@ -1373,9 +1306,6 @@ done:
  * Return:    Success:    0
  *
  *            Failure:    -1, as many files truncated as possible.
- *
- * Programmer:    Quincey Koziol
- *              Saturday, February 23, 2008
  *
  *-------------------------------------------------------------------------
  */
@@ -1409,8 +1339,6 @@ done:
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:  Vailin Choi; May 2013
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1437,7 +1365,7 @@ H5FD__family_lock(H5FD_t *_file, hbool_t rw)
         for (v = 0; v < u; v++) {
             if (H5FD_unlock(file->memb[v]) < 0)
                 /* Push error, but keep going */
-                HDONE_ERROR(H5E_IO, H5E_CANTUNLOCKFILE, FAIL, "unable to unlock member files")
+                HDONE_ERROR(H5E_IO, H5E_CANTUNLOCKFILE, FAIL, "unable to unlock member files");
         } /* end for */
         HGOTO_ERROR(H5E_IO, H5E_CANTLOCKFILE, FAIL, "unable to lock member files")
     } /* end if */
@@ -1452,8 +1380,6 @@ done:
  * Purpose:     To remove the existing lock on the file
  *
  * Return:      SUCCEED/FAIL
- *
- * Programmer:  Vailin Choi; May 2013
  *
  *-------------------------------------------------------------------------
  */
@@ -1501,7 +1427,7 @@ H5FD__family_delete(const char *filename, hid_t fapl_id)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(filename);
+    assert(filename);
 
     /* Get the driver info (for the member fapl)
      * The family_open call accepts H5P_DEFAULT, so we'll accept that here, too.
@@ -1567,7 +1493,7 @@ H5FD__family_delete(const char *filename, hid_t fapl_id)
         {
             delete_error = H5FD_delete(member_name, memb_fapl_id);
         }
-        H5E_END_TRY;
+        H5E_END_TRY
         if (FAIL == delete_error) {
             if (0 == current_member)
                 HGOTO_ERROR(H5E_VFL, H5E_CANTDELETEFILE, FAIL, "unable to delete member file")
@@ -1586,7 +1512,7 @@ done:
 
     /* Only close memb_fapl_id if we created one from the default configuration */
     if (default_fa.memb_fapl_id >= 0 && H5I_dec_ref(default_fa.memb_fapl_id) < 0)
-        HDONE_ERROR(H5E_VFL, H5E_CANTDEC, FAIL, "can't decrement ref. count on member FAPL ID")
+        HDONE_ERROR(H5E_VFL, H5E_CANTDEC, FAIL, "can't decrement ref. count on member FAPL ID");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FD__family_delete() */

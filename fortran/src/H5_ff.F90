@@ -1,15 +1,29 @@
-!****h* ROBODoc/H5LIB
-!
-! NAME
-!  MODULE H5LIB
+!> @defgroup FH5 Fortran Library (H5) Interface
+!!
+!! @see H5, C-API
+!!
+!! @see @ref H5_UG, User Guide
+!!
+
+!> @ingroup FH5
+!!
+!! @brief This module provides fortran specific helper functions for the HDF library.
 !
 ! PURPOSE
-!  This module provides fortran specific helper functions for the HDF library
+!  This module is used to pass C stubs for H5 Fortran APIs. The C stubs are
+!  packed into arrays in H5_f.c and these arrays are then passed to Fortran.
+!  This module then uses EQUIVALENCE to assign elements of the arrays to
+!  Fortran equivalent C stubs.
+!
+! NOTES
+!  The size of the C arrays in H5_f.c has to match the values of the variables
+!  declared as PARAMETER, hence if the size of an array in H5_f.c is changed
+!  then the PARAMETER of that corresponding array in Fortran must also be changed.
+!
 !
 ! COPYRIGHT
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 !   Copyright by The HDF Group.                                               *
-!   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
 !   This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -32,13 +46,11 @@
 !  Windows dll file 'hdf5_fortrandll.def.in' in the fortran/src directory.
 !  This is needed for Windows based operating systems.
 !
-!*****
 
 #include <H5config_f.inc>
 
 MODULE H5LIB
 
-  USE, INTRINSIC :: ISO_C_BINDING, ONLY : C_PTR, C_INTPTR_T
   USE H5GLOBAL
   IMPLICIT NONE
 
@@ -64,7 +76,7 @@ MODULE H5LIB
   !
   ! H5D flags declaration
   !
-  INTEGER, PARAMETER :: H5D_FLAGS_LEN = 29
+  INTEGER, PARAMETER :: H5D_FLAGS_LEN = 32
   INTEGER, DIMENSION(1:H5D_FLAGS_LEN) :: H5D_flags
   INTEGER, PARAMETER :: H5D_SIZE_FLAGS_LEN = 2
   INTEGER(SIZE_T), DIMENSION(1:H5D_SIZE_FLAGS_LEN) :: H5D_size_flags
@@ -76,14 +88,21 @@ MODULE H5LIB
   INTEGER, PARAMETER :: H5E_HID_FLAGS_LEN = 1
   INTEGER(HID_T), DIMENSION(1:H5E_HID_FLAGS_LEN) :: H5E_hid_flags
   !
+  ! H5ES flags declaration
+  !
+  INTEGER, PARAMETER :: H5ES_FLAGS_LEN = 4
+  INTEGER, DIMENSION(1:H5ES_FLAGS_LEN) :: H5ES_flags
+  INTEGER, PARAMETER :: H5ES_HID_FLAGS_LEN = 1
+  INTEGER(HID_T), DIMENSION(1:H5ES_HID_FLAGS_LEN) :: H5ES_hid_flags
+  !
   ! H5FD flags declaration
   !
-  INTEGER, PARAMETER :: H5FD_FLAGS_LEN = 11
+  INTEGER, PARAMETER :: H5FD_FLAGS_LEN = 22
   INTEGER, DIMENSION(1:H5FD_FLAGS_LEN) :: H5FD_flags
   !
   ! H5FD file drivers flags declaration
   !
-  INTEGER, PARAMETER :: H5FD_HID_FLAGS_LEN = 7
+  INTEGER, PARAMETER :: H5FD_HID_FLAGS_LEN = 9
   INTEGER(HID_T), DIMENSION(1:H5FD_HID_FLAGS_LEN) :: H5FD_hid_flags
   !
   ! H5I flags declaration
@@ -129,6 +148,13 @@ MODULE H5LIB
   !
   INTEGER, PARAMETER :: H5T_FLAGS_LEN = 35
   INTEGER, DIMENSION(1:H5T_FLAGS_LEN) :: H5T_flags
+  !
+  ! H5VL flags declaration
+  !
+  INTEGER, PARAMETER :: H5VL_FLAGS_LEN = 3
+  INTEGER, DIMENSION(1:H5VL_FLAGS_LEN) :: H5VL_flags
+  INTEGER, PARAMETER :: H5VL_INT64_FLAGS_LEN = 46
+  INTEGER(C_INT64_T), DIMENSION(1:H5VL_INT64_FLAGS_LEN) :: H5VL_int64_flags
 
   !
   ! H5Z flags declaration
@@ -145,36 +171,18 @@ MODULE H5LIB
   PUBLIC :: h5garbage_collect_f, h5check_version_f
 
 CONTAINS
-!****s* H5LIB/h5open_f
-!
-! NAME
-!  h5open_f
-!
-! PURPOSE
-!  Initializes HDF5 Fortran interface.
-!
-! Outputs:
-!  error - Returns 0 if successful and -1 if fails
-!
-! AUTHOR
-!  Elena Pourmal
-!  August 12, 1999
-!
-! HISTORY
-!  Explicit Fortran interfaces were added for
-!  called C functions (it is needed for Windows
-!  port).  February 28, 2001
-!
-! Removed call to h5open_c since this may cause a problem for an
-! application that uses HDF5 library outside HDF5 Fortran APIs.
-! October 13, 2011
-! Fortran90 Interface:
+!>
+!! \ingroup FH5
+!!
+!! \brief Initializes HDF5 Fortran interface.
+!!
+!! \param error \fortran_error
+!!
   SUBROUTINE h5open_f(error)
     USE H5F, ONLY : h5fget_obj_count_f, H5OPEN_NUM_OBJ
     IMPLICIT NONE
     INTEGER, INTENT(OUT) :: error
     INTEGER(SIZE_T) :: H5OPEN_NUM_OBJ_LOC = 0
-!*****
     INTERFACE
 
        INTEGER FUNCTION h5init_types_c(p_types, f_types, i_types) &
@@ -191,6 +199,8 @@ CONTAINS
             i_H5D_size_flags,&
             i_H5E_flags, &
             i_H5E_hid_flags, &
+            i_H5ES_flags, &
+            i_H5ES_hid_flags, &
             i_H5F_flags, &
             i_H5FD_flags, &
             i_H5FD_hid_flags, &
@@ -205,40 +215,48 @@ CONTAINS
             i_H5S_hid_flags, &
             i_H5S_hsize_flags, &
             i_H5T_flags, &
+            i_H5VL_flags, &
+            i_H5VL_int64_flags, &
             i_H5Z_flags, &
             i_H5generic_flags, &
             i_H5generic_haddr_flags) &
             BIND(C,NAME='h5init_flags_c')
-         IMPORT :: HID_T, SIZE_T, HSIZE_T, HADDR_T
+         IMPORT :: HID_T, SIZE_T, HSIZE_T, HADDR_T, C_INT64_T
          IMPORT :: H5D_FLAGS_LEN, H5D_SIZE_FLAGS_LEN, &
               H5E_FLAGS_LEN, H5E_HID_FLAGS_LEN, &
+              H5ES_FLAGS_LEN, H5ES_HID_FLAGS_LEN, &
               H5F_FLAGS_LEN, H5G_FLAGS_LEN, H5FD_FLAGS_LEN, &
               H5FD_HID_FLAGS_LEN, H5I_FLAGS_LEN, H5L_FLAGS_LEN, &
               H5O_FLAGS_LEN, H5P_FLAGS_LEN, H5P_FLAGS_INT_LEN, &
               H5R_FLAGS_LEN, H5S_FLAGS_LEN, H5S_HID_FLAGS_LEN, H5S_HSIZE_FLAGS_LEN, &
-              H5T_FLAGS_LEN, H5Z_FLAGS_LEN, H5generic_FLAGS_LEN, H5generic_haddr_FLAGS_LEN
+              H5T_FLAGS_LEN, H5VL_FLAGS_LEN, H5VL_INT64_FLAGS_LEN, &
+              H5Z_FLAGS_LEN, H5generic_FLAGS_LEN, H5generic_haddr_FLAGS_LEN
          IMPLICIT NONE
-         INTEGER         , DIMENSION(1:H5D_FLAGS_LEN)             :: i_H5D_flags
-         INTEGER(SIZE_T) , DIMENSION(1:H5D_SIZE_FLAGS_LEN)        :: i_H5D_size_flags
-         INTEGER         , DIMENSION(1:H5E_FLAGS_LEN)             :: i_H5E_flags
-         INTEGER(HID_T)  , DIMENSION(1:H5E_HID_FLAGS_LEN)         :: i_H5E_hid_flags
-         INTEGER         , DIMENSION(1:H5F_FLAGS_LEN)             :: i_H5F_flags
-         INTEGER         , DIMENSION(1:H5G_FLAGS_LEN)             :: i_H5G_flags
-         INTEGER         , DIMENSION(1:H5FD_FLAGS_LEN)            :: i_H5FD_flags
-         INTEGER(HID_T)  , DIMENSION(1:H5FD_HID_FLAGS_LEN)        :: i_H5FD_hid_flags
-         INTEGER         , DIMENSION(1:H5I_FLAGS_LEN)             :: i_H5I_flags
-         INTEGER         , DIMENSION(1:H5L_FLAGS_LEN)             :: i_H5L_flags
-         INTEGER         , DIMENSION(1:H5O_FLAGS_LEN)             :: i_H5O_flags
-         INTEGER(HID_T)  , DIMENSION(1:H5P_FLAGS_LEN)             :: i_H5P_flags
-         INTEGER         , DIMENSION(1:H5P_FLAGS_INT_LEN)         :: i_H5P_flags_int
-         INTEGER         , DIMENSION(1:H5R_FLAGS_LEN)             :: i_H5R_flags
-         INTEGER         , DIMENSION(1:H5S_FLAGS_LEN)             :: i_H5S_flags
-         INTEGER(HID_T)  , DIMENSION(1:H5S_HID_FLAGS_LEN)         :: i_H5S_hid_flags
-         INTEGER(HSIZE_T), DIMENSION(1:H5S_HSIZE_FLAGS_LEN)       :: i_H5S_hsize_flags
-         INTEGER         , DIMENSION(1:H5T_FLAGS_LEN)             :: i_H5T_flags
-         INTEGER         , DIMENSION(1:H5Z_FLAGS_LEN)             :: i_H5Z_flags
-         INTEGER         , DIMENSION(1:H5generic_FLAGS_LEN)       :: i_H5generic_flags
-         INTEGER(HADDR_T), DIMENSION(1:H5generic_haddr_FLAGS_LEN) :: i_H5generic_haddr_flags
+         INTEGER           , DIMENSION(1:H5D_FLAGS_LEN)             :: i_H5D_flags
+         INTEGER(SIZE_T)   , DIMENSION(1:H5D_SIZE_FLAGS_LEN)        :: i_H5D_size_flags
+         INTEGER           , DIMENSION(1:H5E_FLAGS_LEN)             :: i_H5E_flags
+         INTEGER(HID_T)    , DIMENSION(1:H5E_HID_FLAGS_LEN)         :: i_H5E_hid_flags
+         INTEGER           , DIMENSION(1:H5ES_FLAGS_LEN)            :: i_H5ES_flags
+         INTEGER(HID_T)    , DIMENSION(1:H5ES_HID_FLAGS_LEN)        :: i_H5ES_hid_flags
+         INTEGER           , DIMENSION(1:H5F_FLAGS_LEN)             :: i_H5F_flags
+         INTEGER           , DIMENSION(1:H5G_FLAGS_LEN)             :: i_H5G_flags
+         INTEGER           , DIMENSION(1:H5FD_FLAGS_LEN)            :: i_H5FD_flags
+         INTEGER(HID_T)    , DIMENSION(1:H5FD_HID_FLAGS_LEN)        :: i_H5FD_hid_flags
+         INTEGER           , DIMENSION(1:H5I_FLAGS_LEN)             :: i_H5I_flags
+         INTEGER           , DIMENSION(1:H5L_FLAGS_LEN)             :: i_H5L_flags
+         INTEGER           , DIMENSION(1:H5O_FLAGS_LEN)             :: i_H5O_flags
+         INTEGER(HID_T)    , DIMENSION(1:H5P_FLAGS_LEN)             :: i_H5P_flags
+         INTEGER           , DIMENSION(1:H5P_FLAGS_INT_LEN)         :: i_H5P_flags_int
+         INTEGER           , DIMENSION(1:H5R_FLAGS_LEN)             :: i_H5R_flags
+         INTEGER           , DIMENSION(1:H5S_FLAGS_LEN)             :: i_H5S_flags
+         INTEGER(HID_T)    , DIMENSION(1:H5S_HID_FLAGS_LEN)         :: i_H5S_hid_flags
+         INTEGER(HSIZE_T)  , DIMENSION(1:H5S_HSIZE_FLAGS_LEN)       :: i_H5S_hsize_flags
+         INTEGER           , DIMENSION(1:H5T_FLAGS_LEN)             :: i_H5T_flags
+         INTEGER           , DIMENSION(1:H5VL_FLAGS_LEN)            :: i_H5VL_flags
+         INTEGER(C_INT64_T), DIMENSION(1:H5VL_INT64_FLAGS_LEN)      :: i_H5VL_int64_flags
+         INTEGER           , DIMENSION(1:H5Z_FLAGS_LEN)             :: i_H5Z_flags
+         INTEGER           , DIMENSION(1:H5generic_FLAGS_LEN)       :: i_H5generic_flags
+         INTEGER(HADDR_T)  , DIMENSION(1:H5generic_haddr_FLAGS_LEN) :: i_H5generic_haddr_flags
        END FUNCTION h5init_flags_c
 
        INTEGER FUNCTION h5init1_flags_c( i_H5LIB_flags ) &
@@ -249,7 +267,7 @@ CONTAINS
        END FUNCTION h5init1_flags_c
 
     END INTERFACE
-
+    error = 0
     ! Check if H5open_f has already been called. If so, skip doing it again.
     IF(H5OPEN_NUM_OBJ .NE. 0) RETURN
 
@@ -308,6 +326,8 @@ CONTAINS
          H5D_size_flags, &
          H5E_flags, &
          H5E_hid_flags, &
+         H5ES_flags, &
+         H5ES_hid_flags, &
          H5F_flags, &
          H5FD_flags, &
          H5FD_hid_flags, &
@@ -322,6 +342,8 @@ CONTAINS
          H5S_hid_flags, &
          H5S_hsize_flags, &
          H5T_flags, &
+         H5VL_flags, &
+         H5VL_int64_flags, &
          H5Z_flags, &
          H5generic_flags,&
          H5generic_haddr_flags)
@@ -385,35 +407,38 @@ CONTAINS
     !
     ! H5D flags
     !
-    H5D_COMPACT_F                  = H5D_flags(1)
-    H5D_CONTIGUOUS_F               = H5D_flags(2)
-    H5D_CHUNKED_F                  = H5D_flags(3)
-    H5D_ALLOC_TIME_ERROR_F         = H5D_flags(4)
-    H5D_ALLOC_TIME_DEFAULT_F       = H5D_flags(5)
-    H5D_ALLOC_TIME_EARLY_F         = H5D_flags(6)
-    H5D_ALLOC_TIME_LATE_F          = H5D_flags(7)
-    H5D_ALLOC_TIME_INCR_F          = H5D_flags(8)
-    H5D_SPACE_STS_ERROR_F          = H5D_flags(9)
-    H5D_SPACE_STS_NOT_ALLOCATED_F  = H5D_flags(10)
-    H5D_SPACE_STS_PART_ALLOCATED_F = H5D_flags(11)
-    H5D_SPACE_STS_ALLOCATED_F      = H5D_flags(12)
-    H5D_FILL_TIME_ERROR_F          = H5D_flags(13)
-    H5D_FILL_TIME_ALLOC_F          = H5D_flags(14)
-    H5D_FILL_TIME_NEVER_F          = H5D_flags(15)
-    H5D_FILL_VALUE_ERROR_F         = H5D_flags(16)
-    H5D_FILL_VALUE_UNDEFINED_F     = H5D_flags(17)
-    H5D_FILL_VALUE_DEFAULT_F       = H5D_flags(18)
-    H5D_FILL_VALUE_USER_DEFINED_F  = H5D_flags(19)
-    H5D_CHUNK_CACHE_W0_DFLT_F      = H5D_flags(20)
-    H5D_MPIO_NO_COLLECTIVE_F       = H5D_flags(21)
-    H5D_MPIO_CHUNK_INDEPENDENT_F   = H5D_flags(22)
-    H5D_MPIO_CHUNK_COLLECTIVE_F    = H5D_flags(23)
-    H5D_MPIO_CHUNK_MIXED_F         = H5D_flags(24)
-    H5D_MPIO_CONTIG_COLLECTIVE_F   = H5D_flags(25)
-    H5D_VDS_ERROR_F                = H5D_flags(26)
-    H5D_VDS_FIRST_MISSING_F        = H5D_flags(27)
-    H5D_VDS_LAST_AVAILABLE_F       = H5D_flags(28)
-    H5D_VIRTUAL_F                  = H5D_flags(29)
+    H5D_COMPACT_F                   = H5D_flags(1)
+    H5D_CONTIGUOUS_F                = H5D_flags(2)
+    H5D_CHUNKED_F                   = H5D_flags(3)
+    H5D_ALLOC_TIME_ERROR_F          = H5D_flags(4)
+    H5D_ALLOC_TIME_DEFAULT_F        = H5D_flags(5)
+    H5D_ALLOC_TIME_EARLY_F          = H5D_flags(6)
+    H5D_ALLOC_TIME_LATE_F           = H5D_flags(7)
+    H5D_ALLOC_TIME_INCR_F           = H5D_flags(8)
+    H5D_SPACE_STS_ERROR_F           = H5D_flags(9)
+    H5D_SPACE_STS_NOT_ALLOCATED_F   = H5D_flags(10)
+    H5D_SPACE_STS_PART_ALLOCATED_F  = H5D_flags(11)
+    H5D_SPACE_STS_ALLOCATED_F       = H5D_flags(12)
+    H5D_FILL_TIME_ERROR_F           = H5D_flags(13)
+    H5D_FILL_TIME_ALLOC_F           = H5D_flags(14)
+    H5D_FILL_TIME_NEVER_F           = H5D_flags(15)
+    H5D_FILL_VALUE_ERROR_F          = H5D_flags(16)
+    H5D_FILL_VALUE_UNDEFINED_F      = H5D_flags(17)
+    H5D_FILL_VALUE_DEFAULT_F        = H5D_flags(18)
+    H5D_FILL_VALUE_USER_DEFINED_F   = H5D_flags(19)
+    H5D_CHUNK_CACHE_W0_DFLT_F       = H5D_flags(20)
+    H5D_MPIO_NO_COLLECTIVE_F        = H5D_flags(21)
+    H5D_MPIO_CHUNK_INDEPENDENT_F    = H5D_flags(22)
+    H5D_MPIO_CHUNK_COLLECTIVE_F     = H5D_flags(23)
+    H5D_MPIO_CHUNK_MIXED_F          = H5D_flags(24)
+    H5D_MPIO_CONTIG_COLLECTIVE_F    = H5D_flags(25)
+    H5D_VDS_ERROR_F                 = H5D_flags(26)
+    H5D_VDS_FIRST_MISSING_F         = H5D_flags(27)
+    H5D_VDS_LAST_AVAILABLE_F        = H5D_flags(28)
+    H5D_VIRTUAL_F                   = H5D_flags(29)
+    H5D_SELECTION_IO_MODE_DEFAULT_F = H5D_flags(30)
+    H5D_SELECTION_IO_MODE_OFF_F     = H5D_flags(31)
+    H5D_SELECTION_IO_MODE_ON_F      = H5D_flags(32)
 
     H5D_CHUNK_CACHE_NSLOTS_DFLT_F = H5D_size_flags(1)
     H5D_CHUNK_CACHE_NBYTES_DFLT_F = H5D_size_flags(2)
@@ -427,29 +452,56 @@ CONTAINS
     H5E_WALK_UPWARD_F   = H5E_flags(3)
     H5E_WALK_DOWNWARD_F = H5E_flags(4)
     !
+    ! H5ES flags
+    !
+    H5ES_NONE_F = H5ES_hid_flags(1)
+
+    H5ES_STATUS_IN_PROGRESS_F = INT(H5ES_flags(1))
+    H5ES_STATUS_SUCCEED_F     = INT(H5ES_flags(2))
+    H5ES_STATUS_CANCELED_F    = INT(H5ES_flags(3))
+    H5ES_STATUS_FAIL_F        = INT(H5ES_flags(4))
+
+    H5ES_WAIT_FOREVER_F = HUGE(0_C_INT64_T)
+    H5ES_WAIT_NONE_F    = 0_C_INT64_T
+
+    !
     ! H5FD flags
     !
-    H5FD_MPIO_INDEPENDENT_F = H5FD_flags(1)
-    H5FD_MPIO_COLLECTIVE_F  = H5FD_flags(2)
-    H5FD_MEM_NOLIST_F       = H5FD_flags(3)
-    H5FD_MEM_DEFAULT_F      = H5FD_flags(4)
-    H5FD_MEM_SUPER_F        = H5FD_flags(5)
-    H5FD_MEM_BTREE_F        = H5FD_flags(6)
-    H5FD_MEM_DRAW_F         = H5FD_flags(7)
-    H5FD_MEM_GHEAP_F        = H5FD_flags(8)
-    H5FD_MEM_LHEAP_F        = H5FD_flags(9)
-    H5FD_MEM_OHDR_F         = H5FD_flags(10)
-    H5FD_MEM_NTYPES_F       = H5FD_flags(11)
+    H5FD_MPIO_INDEPENDENT_F               = H5FD_flags(1)
+    H5FD_MPIO_COLLECTIVE_F                = H5FD_flags(2)
+    H5FD_MEM_NOLIST_F                     = H5FD_flags(3)
+    H5FD_MEM_DEFAULT_F                    = H5FD_flags(4)
+    H5FD_MEM_SUPER_F                      = H5FD_flags(5)
+    H5FD_MEM_BTREE_F                      = H5FD_flags(6)
+    H5FD_MEM_DRAW_F                       = H5FD_flags(7)
+    H5FD_MEM_GHEAP_F                      = H5FD_flags(8)
+    H5FD_MEM_LHEAP_F                      = H5FD_flags(9)
+    H5FD_MEM_OHDR_F                       = H5FD_flags(10)
+    H5FD_MEM_NTYPES_F                     = H5FD_flags(11)
+    H5FD_SUBFILING_CURR_FAPL_VERSION_F    = H5FD_flags(12)
+    H5FD_SUBFILING_FAPL_MAGIC_F           = H5FD_flags(13)
+    H5FD_SUBFILING_DEFAULT_STRIPE_COUNT_F = H5FD_flags(14)
+    H5FD_IOC_FAPL_MAGIC_F                 = H5FD_flags(15)
+    H5FD_IOC_CURR_FAPL_VERSION_F          = H5FD_flags(16)
+    H5FD_IOC_DEFAULT_THREAD_POOL_SIZE_F   = H5FD_flags(17)
+    SELECT_IOC_ONE_PER_NODE_F             = H5FD_flags(18)
+    SELECT_IOC_EVERY_NTH_RANK_F           = H5FD_flags(19)
+    SELECT_IOC_WITH_CONFIG_F              = H5FD_flags(20)
+    SELECT_IOC_TOTAL_F                    = H5FD_flags(21)
+    IOC_SELECTION_OPTIONS_F               = H5FD_flags(22)
+
     !
     ! H5FD file driver flags
     !
-    H5FD_CORE_F   = H5FD_hid_flags(1)
-    H5FD_FAMILY_F = H5FD_hid_flags(2)
-    H5FD_LOG_F    = H5FD_hid_flags(3)
-    H5FD_MPIO_F   = H5FD_hid_flags(4)
-    H5FD_MULTI_F  = H5FD_hid_flags(5)
-    H5FD_SEC2_F   = H5FD_hid_flags(6)
-    H5FD_STDIO_F  = H5FD_hid_flags(7)
+    H5FD_CORE_F      = H5FD_hid_flags(1)
+    H5FD_FAMILY_F    = H5FD_hid_flags(2)
+    H5FD_LOG_F       = H5FD_hid_flags(3)
+    H5FD_MPIO_F      = H5FD_hid_flags(4)
+    H5FD_MULTI_F     = H5FD_hid_flags(5)
+    H5FD_SEC2_F      = H5FD_hid_flags(6)
+    H5FD_STDIO_F     = H5FD_hid_flags(7)
+    H5FD_SUBFILING_F = H5FD_hid_flags(8)
+    H5FD_SUBFILING_DEFAULT_STRIPE_SIZE_F = H5FD_hid_flags(9)
     !
     ! H5I flags declaration
     !
@@ -610,6 +662,61 @@ CONTAINS
     H5T_DIR_ASCEND_F     = H5T_flags(34)
     H5T_DIR_DESCEND_F    = H5T_flags(35)
     !
+    ! H5VL flags
+    !
+    H5VL_VERSION_F   = H5VL_flags(1)
+    H5_VOL_INVALID_F = H5VL_flags(2)
+    H5_VOL_NATIVE_F  = H5VL_flags(3)
+
+    H5VL_CAP_FLAG_NONE_F             = H5VL_int64_flags(1)
+    H5VL_CAP_FLAG_THREADSAFE_F       = H5VL_int64_flags(2)
+    H5VL_CAP_FLAG_ASYNC_F            = H5VL_int64_flags(3)
+    H5VL_CAP_FLAG_NATIVE_FILES_F     = H5VL_int64_flags(4)
+    H5VL_CAP_FLAG_ATTR_BASIC_F       = H5VL_int64_flags(5)
+    H5VL_CAP_FLAG_ATTR_MORE_F        = H5VL_int64_flags(6)
+    H5VL_CAP_FLAG_DATASET_BASIC_F    = H5VL_int64_flags(7)
+    H5VL_CAP_FLAG_DATASET_MORE_F     = H5VL_int64_flags(8)
+    H5VL_CAP_FLAG_FILE_BASIC_F       = H5VL_int64_flags(9)
+    H5VL_CAP_FLAG_FILE_MORE_F        = H5VL_int64_flags(10)
+    H5VL_CAP_FLAG_GROUP_BASIC_F      = H5VL_int64_flags(11)
+    H5VL_CAP_FLAG_GROUP_MORE_F       = H5VL_int64_flags(12)
+    H5VL_CAP_FLAG_LINK_BASIC_F       = H5VL_int64_flags(13)
+    H5VL_CAP_FLAG_LINK_MORE_F        = H5VL_int64_flags(14)
+    H5VL_CAP_FLAG_MAP_BASIC_F        = H5VL_int64_flags(15)
+    H5VL_CAP_FLAG_MAP_MORE_F         = H5VL_int64_flags(16)
+    H5VL_CAP_FLAG_OBJECT_BASIC_F     = H5VL_int64_flags(17)
+    H5VL_CAP_FLAG_OBJECT_MORE_F      = H5VL_int64_flags(18)
+    H5VL_CAP_FLAG_REF_BASIC_F        = H5VL_int64_flags(19)
+    H5VL_CAP_FLAG_REF_MORE_F         = H5VL_int64_flags(20)
+    H5VL_CAP_FLAG_OBJ_REF_F          = H5VL_int64_flags(21)
+    H5VL_CAP_FLAG_REG_REF_F          = H5VL_int64_flags(22)
+    H5VL_CAP_FLAG_ATTR_REF_F         = H5VL_int64_flags(23)
+    H5VL_CAP_FLAG_STORED_DATATYPES_F = H5VL_int64_flags(24)
+    H5VL_CAP_FLAG_CREATION_ORDER_F   = H5VL_int64_flags(25)
+    H5VL_CAP_FLAG_ITERATE_F          = H5VL_int64_flags(26)
+    H5VL_CAP_FLAG_STORAGE_SIZE_F     = H5VL_int64_flags(27)
+    H5VL_CAP_FLAG_BY_IDX_F           = H5VL_int64_flags(28)
+    H5VL_CAP_FLAG_GET_PLIST_F        = H5VL_int64_flags(29)
+    H5VL_CAP_FLAG_FLUSH_REFRESH_F    = H5VL_int64_flags(30)
+    H5VL_CAP_FLAG_EXTERNAL_LINKS_F   = H5VL_int64_flags(31)
+    H5VL_CAP_FLAG_HARD_LINKS_F       = H5VL_int64_flags(32)
+    H5VL_CAP_FLAG_SOFT_LINKS_F       = H5VL_int64_flags(33)
+    H5VL_CAP_FLAG_UD_LINKS_F         = H5VL_int64_flags(34)
+    H5VL_CAP_FLAG_TRACK_TIMES_F      = H5VL_int64_flags(35)
+    H5VL_CAP_FLAG_MOUNT_F            = H5VL_int64_flags(36)
+    H5VL_CAP_FLAG_FILTERS_F          = H5VL_int64_flags(37)
+    H5VL_CAP_FLAG_FILL_VALUES_F      = H5VL_int64_flags(38)
+
+    H5VL_OPT_QUERY_SUPPORTED_F       = H5VL_int64_flags(39)
+    H5VL_OPT_QUERY_READ_DATA_F       = H5VL_int64_flags(40)
+    H5VL_OPT_QUERY_WRITE_DATA_F      = H5VL_int64_flags(41)
+    H5VL_OPT_QUERY_QUERY_METADATA_F  = H5VL_int64_flags(42)
+    H5VL_OPT_QUERY_MODIFY_METADATA_F = H5VL_int64_flags(43)
+    H5VL_OPT_QUERY_COLLECTIVE_F      = H5VL_int64_flags(44)
+    H5VL_OPT_QUERY_NO_ASYNC_F        = H5VL_int64_flags(45)
+    H5VL_OPT_QUERY_MULTI_OBJ_F       = H5VL_int64_flags(46)
+
+    !
     ! H5Z flags
     !
     H5Z_FILTER_ERROR_F           = H5Z_flags(1)
@@ -646,35 +753,17 @@ CONTAINS
 
   END SUBROUTINE h5open_f
 
-!****s* H5LIB/h5close_f
-!
-! NAME
-!  h5close_f
-!
-! PURPOSE
-!  Closes HDF5 Fortran interface.
-!
-! Outputs:
-!  error - Returns 0 if successful and -1 if fails
-!
-! AUTHOR
-!  Elena Pourmal
-!  August 12, 1999
-!
-! HISTORY
-!  Explicit Fortran interfaces were added for
-!  called C functions (it is needed for Windows
-!  port).  February 28, 2001
-!
-! Removed call to h5close_c since this may cause a problem for an
-! application that uses HDF5 library outside HDF5 Fortran APIs.
-!          October 13, 2011
-! Fortran90 Interface:
+!>
+!! \ingroup FH5
+!!
+!! \brief Closes HDF5 Fortran interface.
+!!
+!! \param error \fortran_error
+!!
   SUBROUTINE h5close_f(error)
     USE H5F, ONLY : h5fget_obj_count_f, H5OPEN_NUM_OBJ
     IMPLICIT NONE
     INTEGER, INTENT(OUT) :: error
-!*****
     INTERFACE
        INTEGER FUNCTION h5close_types_c(p_types, P_TYPES_LEN, &
             f_types, F_TYPES_LEN, &
@@ -702,29 +791,19 @@ CONTAINS
 
   END SUBROUTINE h5close_f
 
-!****s* H5LIB/h5get_libversion_f
-!
-! NAME
-!  h5get_libversion_f
-!
-! PURPOSE
-!  Returns the HDF5 LIbrary release number
-!
-! Outputs:
-!  majnum - major version of the library
-!  minnum - minor version of the library
-!  relnum - release version of the library
-!  error  - Returns 0 if successful and -1 if fails
-!
-! AUTHOR
-!  Elena Pourmal
-!  September 24, 2002
-!
-! Fortran90 Interface:
+!>
+!! \ingroup FH5
+!!
+!! \brief Returns the HDF5 LIbrary release number
+!!
+!! \param majnum  Major version of the library.
+!! \param minnum  Minor version of the library.
+!! \param relnum  Release version of the library.
+!! \param error   \fortran_error
+!!
   SUBROUTINE h5get_libversion_f(majnum, minnum, relnum, error)
     IMPLICIT NONE
     INTEGER, INTENT(OUT) :: majnum, minnum, relnum, error
-!*****
     INTERFACE
        INTEGER FUNCTION h5get_libversion_c(majnum, minnum, relnum) &
             BIND(C,NAME='h5get_libversion_c')
@@ -737,32 +816,20 @@ CONTAINS
 
   END SUBROUTINE h5get_libversion_f
 
-!****s* H5LIB/h5check_version_f
-!
-! NAME
-!  h5check_version_f
-!
-! PURPOSE
-!  Verifies that library versions are consistent.
-!
-! Inputs:
-!  majnum - major version of the library
-!  minnum - minor version of the library
-!  relnum - release version of the library
-!
-! Outputs:
-!  error - Returns 0 if successful and -1 if fails
-!
-! AUTHOR
-!  Elena Pourmal
-!  September 24, 2002
-!
-! Fortran90 Interface:
+!>
+!! \ingroup FH5
+!!
+!! \brief Verifies that library versions are consistent.
+!!
+!! \param majnum Major version of the library.
+!! \param minnum Minor version of the library.
+!! \param relnum Release version of the library.
+!! \param error  \fortran_error
+!!
   SUBROUTINE h5check_version_f(majnum, minnum, relnum, error)
     IMPLICIT NONE
     INTEGER, INTENT(IN)  :: majnum, minnum, relnum
     INTEGER, INTENT(OUT) :: error
-!*****
     INTERFACE
        INTEGER FUNCTION h5check_version_c(majnum, minnum, relnum) &
             BIND(C,NAME='h5check_version_c')
@@ -774,58 +841,38 @@ CONTAINS
     error = h5check_version_c(majnum, minnum, relnum)
 
   END SUBROUTINE h5check_version_f
-!****s* H5LIB/h5garbage_collect_f
-!
-! NAME
-!  h5garbage_collect_f
-!
-! PURPOSE
-!  Garbage collects on all free-lists of all types.
-!
-! Outputs:
-!  error - Returns 0 if successful and -1 if fails
-!
-! AUTHOR
-!  Elena Pourmal
-!  September 24, 2002
-!
-! Fortran90 Interface:
+!>
+!! \ingroup FH5
+!!
+!! \brief Garbage collects on all free-lists of all types.
+!!
+!! \param error \fortran_error
+!!
   SUBROUTINE h5garbage_collect_f(error)
     IMPLICIT NONE
     INTEGER, INTENT(OUT) :: error
-!*****
     INTERFACE
-       INTEGER FUNCTION h5garbage_collect_c() &
-            BIND(C,NAME='h5garbage_collect_c')
+       INTEGER FUNCTION h5garbage_collect_c() BIND(C,NAME='h5garbage_collect_c')
+         IMPLICIT NONE
        END FUNCTION h5garbage_collect_c
     END INTERFACE
 
     error = h5garbage_collect_c()
 
   END SUBROUTINE h5garbage_collect_f
-!****s* H5LIB/h5dont_atexit_f
-!
-! NAME
-!  h5dont_atexit_f
-!
-! PURPOSE
-!  Instructs library not to install atexit cleanup routine.
-!
-! Outputs:
-!  error - Returns 0 if successful and -1 if fails
-!
-! AUTHOR
-!  Elena Pourmal
-!  September 24, 2002
-!
-! Fortran90 Interface:
+!>
+!! \ingroup FH5
+!!
+!! \brief Instructs library not to install atexit cleanup routine.
+!!
+!! \param error \fortran_error
+!!
   SUBROUTINE h5dont_atexit_f(error)
     IMPLICIT NONE
     INTEGER, INTENT(OUT) :: error
-!*****
     INTERFACE
-       INTEGER FUNCTION h5dont_atexit_c() &
-            BIND(C,NAME='h5dont_atexit_c')
+       INTEGER FUNCTION h5dont_atexit_c() BIND(C,NAME='h5dont_atexit_c')
+         IMPLICIT NONE
        END FUNCTION h5dont_atexit_c
     END INTERFACE
 
@@ -833,34 +880,23 @@ CONTAINS
 
   END SUBROUTINE h5dont_atexit_f
 
-!****f* H5LIB/h5kind_to_type
-!
-! NAME
-!  h5kind_to_type
-!
-! PURPOSE
-!  Converts the KIND to the correct HDF type
-!
-! Inputs:
-!  kind    - Fortran KIND parameter
-!  flag    - Whether KIND is of type INTEGER or REAL:
-!              H5_INTEGER_KIND - integer
-!              H5_REAL_KIND    - real
-! Outputs:
-!  h5_type - Returns the type
-!
-! AUTHOR
-!  M. Scot Breitenfeld
-!  August 25, 2008
-!
-! Fortran90 Interface:
+!>
+!! \ingroup FH5
+!!
+!! \brief Converts the KIND to the correct HDF type
+!!
+!! \param ikind Fortran KIND parameter
+!! \param flag Whether KIND is of type INTEGER or REAL:
+!!             \li H5_INTEGER_KIND - integer
+!!             \li H5_REAL_KIND    - real
+!! \result h5_type Returns the type.
+!!
   INTEGER(HID_T) FUNCTION h5kind_to_type(ikind, flag) RESULT(h5_type)
     USE ISO_C_BINDING
     IMPLICIT NONE
     INTEGER, INTENT(IN) :: ikind
     INTEGER, INTENT(IN) :: flag
     INTEGER :: i
-!*****
 
 !#if H5_HAVE_Fortran_INTEGER_SIZEOF_16!=0
 !    ! (1) The array index assumes INTEGER*16 the last integer in the series, and
@@ -896,34 +932,20 @@ CONTAINS
 
   END FUNCTION h5kind_to_type
 
-!****f* H5LIB_PROVISIONAL/h5offsetof
-!
-! NAME
-!  h5offsetof
-!
-! PURPOSE
-!  Computes the offset in memory
-!
-! Inputs:
-!  start - starting pointer address
-!  end 	 - ending pointer address
-!
-! Outputs:
-!  offset - offset of a member within the derived type
-!
-! AUTHOR
-!  M. Scot Breitenfeld
-!  Augest 25, 2008
-!
-! ACKNOWLEDGEMENTS
-!  Joe Krahn
-!
-! Fortran2003 Interface:
+!>
+!! \ingroup FH5
+!!
+!! \brief Computes the offset in memory
+!!
+!! \param start  Starting pointer address
+!! \param end    Ending pointer address
+!!
+!! \result offset Offset of a member within the derived type.
+!!
   FUNCTION h5offsetof(start,end) RESULT(offset)
     IMPLICIT NONE
     INTEGER(SIZE_T) :: offset
     TYPE(C_PTR), VALUE, INTENT(IN) :: start, end
-!*****
     INTEGER(C_INTPTR_T) :: int_address_start, int_address_end
     int_address_start = TRANSFER(start, int_address_start)
     int_address_end   = TRANSFER(end  , int_address_end  )
@@ -932,38 +954,26 @@ CONTAINS
 
   END FUNCTION h5offsetof
 
-!****f* H5LIB_PROVISIONAL/h5gmtime
-!
-! NAME
-!  h5gmtime
-!
-! PURPOSE
-!  Convert time_t structure (C) to Fortran DATE AND TIME storage format.
-!
-! Inputs:
-!  stdtime_t - Object of type time_t that contains a time value
-!
-! Outputs:
-!   datetime - A date/time array using Fortran conventions:
-!   datetime(1)     = year
-!   datetime(2)     = month
-!   datetime(3)     = day
-!   datetime(4)     = 0 ! time is expressed as UTC (or GMT timezone) */
-!   datetime(5)     = hour
-!   datetime(6)     = minute
-!   datetime(7)     = second
-!   datetime(8)     = millisecond -- not available, assigned - HUGE(0)
-!
-! AUTHOR
-!  M. Scot Breitenfeld
-!  January, 2019
-!
-! Fortran Interface:
-  FUNCTION h5gmtime(stdtime_t)
+!>
+!! \ingroup FH5
+!!
+!! \brief Convert time_t structure (C) to Fortran DATE AND TIME storage format.
+!!
+!! \param stdtime_t Object of type time_t that contains a time value
+!! \result datetime  A date/time array using Fortran conventions:
+!!                  \li datetime(1) = year
+!!                  \li datetime(2) = month
+!!                  \li datetime(3) = day
+!!                  \li datetime(4) = 0 ! time is expressed as UTC (or GMT timezone)
+!!                  \li datetime(5) = hour
+!!                  \li datetime(6) = minute
+!!                  \li datetime(7) = second
+!!                  \li datetime(8) = millisecond -- not available, assigned - HUGE(0)
+!!
+  FUNCTION h5gmtime(stdtime_t) RESULT(datetime)
     IMPLICIT NONE
     INTEGER(KIND=TIME_T), INTENT(IN) :: stdtime_t
-    INTEGER, DIMENSION(1:8) :: h5gmtime
-!*****
+    INTEGER, DIMENSION(1:8) :: datetime
     TYPE(C_PTR) :: cptr
     INTEGER(C_INT), DIMENSION(:), POINTER :: c_time
 
@@ -979,14 +989,14 @@ CONTAINS
     cptr = gmtime(stdtime_t)
     CALL C_F_POINTER(cptr, c_time, [9])
 
-    h5gmtime(1) = INT(c_time(6)+1900) ! year starts at 1900
-    h5gmtime(2) = INT(c_time(5)+1)    ! month starts at 0 in C
-    h5gmtime(3) = INT(c_time(4))      ! day
-    h5gmtime(4) = 0                   ! time is expressed as UTC (or GMT timezone)
-    h5gmtime(5) = INT(c_time(3))      ! hour
-    h5gmtime(6) = INT(c_time(2))      ! minute
-    h5gmtime(7) = INT(c_time(1))      ! second
-    h5gmtime(8) = -32767              ! millisecond is not available, assign it -HUGE(0)
+    datetime(1) = INT(c_time(6)+1900) ! year starts at 1900
+    datetime(2) = INT(c_time(5)+1)    ! month starts at 0 in C
+    datetime(3) = INT(c_time(4))      ! day
+    datetime(4) = 0                   ! time is expressed as UTC (or GMT timezone)
+    datetime(5) = INT(c_time(3))      ! hour
+    datetime(6) = INT(c_time(2))      ! minute
+    datetime(7) = INT(c_time(1))      ! second
+    datetime(8) = -32767              ! millisecond is not available, assign it -HUGE(0)
 
   END FUNCTION h5gmtime
 

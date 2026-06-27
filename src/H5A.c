@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -120,9 +119,9 @@ H5A__create_common(H5VL_object_t *vol_obj, H5VL_loc_params_t *loc_params, const 
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(vol_obj);
-    HDassert(loc_params);
-    HDassert(attr_name);
+    assert(vol_obj);
+    assert(loc_params);
+    assert(attr_name);
 
     /* Create the attribute */
     if (NULL == (attr = H5VL_attr_create(vol_obj, loc_params, attr_name, type_id, space_id, acpl_id, aapl_id,
@@ -137,7 +136,7 @@ done:
     /* Cleanup on failure */
     if (H5I_INVALID_HID == ret_value)
         if (attr && H5VL_attr_close(vol_obj, H5P_DATASET_XFER_DEFAULT, H5_REQUEST_NULL) < 0)
-            HDONE_ERROR(H5E_ATTR, H5E_CLOSEERROR, H5I_INVALID_HID, "can't close attribute")
+            HDONE_ERROR(H5E_ATTR, H5E_CLOSEERROR, H5I_INVALID_HID, "can't close attribute");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5A__create_common() */
@@ -279,7 +278,7 @@ H5Acreate_async(const char *app_file, const char *app_func, unsigned app_line, h
                         H5ARG_TRACE10(__func__, "*s*sIui*siiiii", app_file, app_func, app_line, loc_id, attr_name, type_id, space_id, acpl_id, aapl_id, es_id)) < 0) {
             /* clang-format on */
             if (H5I_dec_app_ref(ret_value) < 0)
-                HDONE_ERROR(H5E_ATTR, H5E_CANTDEC, H5I_INVALID_HID, "can't decrement count on attribute ID")
+                HDONE_ERROR(H5E_ATTR, H5E_CANTDEC, H5I_INVALID_HID, "can't decrement count on attribute ID");
             HGOTO_ERROR(H5E_ATTR, H5E_CANTINSERT, H5I_INVALID_HID, "can't insert token into event set")
         } /* end if */
 
@@ -428,7 +427,7 @@ H5Acreate_by_name_async(const char *app_file, const char *app_func, unsigned app
                         H5ARG_TRACE12(__func__, "*s*sIui*s*siiiiii", app_file, app_func, app_line, loc_id, obj_name, attr_name, type_id, space_id, acpl_id, aapl_id, lapl_id, es_id)) < 0) {
             /* clang-format on */
             if (H5I_dec_app_ref(ret_value) < 0)
-                HDONE_ERROR(H5E_ATTR, H5E_CANTDEC, H5I_INVALID_HID, "can't decrement count on attribute ID")
+                HDONE_ERROR(H5E_ATTR, H5E_CANTDEC, H5I_INVALID_HID, "can't decrement count on attribute ID");
             HGOTO_ERROR(H5E_ATTR, H5E_CANTINSERT, H5I_INVALID_HID, "can't insert token into event set")
         } /* end if */
 
@@ -456,8 +455,8 @@ H5A__open_common(H5VL_object_t *vol_obj, H5VL_loc_params_t *loc_params, const ch
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(vol_obj);
-    HDassert(loc_params);
+    assert(vol_obj);
+    assert(loc_params);
 
     /* Open the attribute */
     if (NULL ==
@@ -472,7 +471,7 @@ done:
     /* Cleanup on failure */
     if (H5I_INVALID_HID == ret_value)
         if (attr && H5VL_attr_close(vol_obj, H5P_DATASET_XFER_DEFAULT, H5_REQUEST_NULL) < 0)
-            HDONE_ERROR(H5E_ATTR, H5E_CLOSEERROR, H5I_INVALID_HID, "can't close attribute")
+            HDONE_ERROR(H5E_ATTR, H5E_CLOSEERROR, H5I_INVALID_HID, "can't close attribute");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5A__open_common() */
@@ -591,7 +590,7 @@ H5Aopen_async(const char *app_file, const char *app_func, unsigned app_line, hid
                         H5ARG_TRACE7(__func__, "*s*sIui*sii", app_file, app_func, app_line, loc_id, attr_name, aapl_id, es_id)) < 0) {
             /* clang-format on */
             if (H5I_dec_app_ref(ret_value) < 0)
-                HDONE_ERROR(H5E_ATTR, H5E_CANTDEC, H5I_INVALID_HID, "can't decrement count on attribute ID")
+                HDONE_ERROR(H5E_ATTR, H5E_CANTDEC, H5I_INVALID_HID, "can't decrement count on attribute ID");
             HGOTO_ERROR(H5E_ATTR, H5E_CANTINSERT, H5I_INVALID_HID, "can't insert token into event set")
         } /* end if */
 
@@ -722,7 +721,7 @@ H5Aopen_by_name_async(const char *app_file, const char *app_func, unsigned app_l
                         H5ARG_TRACE9(__func__, "*s*sIui*s*siii", app_file, app_func, app_line, loc_id, obj_name, attr_name, aapl_id, lapl_id, es_id)) < 0) {
             /* clang-format on */
             if (H5I_dec_app_ref(ret_value) < 0)
-                HDONE_ERROR(H5E_ATTR, H5E_CANTDEC, H5I_INVALID_HID, "can't decrement count on attribute ID")
+                HDONE_ERROR(H5E_ATTR, H5E_CANTDEC, H5I_INVALID_HID, "can't decrement count on attribute ID");
             HGOTO_ERROR(H5E_ATTR, H5E_CANTINSERT, H5I_INVALID_HID, "can't insert token into event set")
         } /* end if */
 
@@ -862,7 +861,7 @@ H5Aopen_by_idx_async(const char *app_file, const char *app_func, unsigned app_li
                         H5ARG_TRACE11(__func__, "*s*sIui*sIiIohiii", app_file, app_func, app_line, loc_id, obj_name, idx_type, order, n, aapl_id, lapl_id, es_id)) < 0) {
             /* clang-format on */
             if (H5I_dec_app_ref(ret_value) < 0)
-                HDONE_ERROR(H5E_ATTR, H5E_CANTDEC, H5I_INVALID_HID, "can't decrement count on attribute ID")
+                HDONE_ERROR(H5E_ATTR, H5E_CANTDEC, H5I_INVALID_HID, "can't decrement count on attribute ID");
             HGOTO_ERROR(H5E_ATTR, H5E_CANTINSERT, H5I_INVALID_HID, "can't insert token into event set")
         } /* end if */
 
@@ -1206,7 +1205,7 @@ H5Aget_create_plist(hid_t attr_id)
     FUNC_ENTER_API(H5I_INVALID_HID)
     H5TRACE1("i", "i", attr_id);
 
-    HDassert(H5P_LST_ATTRIBUTE_CREATE_ID_g != -1);
+    assert(H5P_LST_ATTRIBUTE_CREATE_ID_g != -1);
 
     /* Check arguments */
     if (NULL == (vol_obj = (H5VL_object_t *)H5I_object_verify(attr_id, H5I_ATTR)))
@@ -1297,9 +1296,6 @@ done:
  *				in NAME buffer
  *		Failure:	Negative
  *
- * Programmer:	Quincey Koziol
- *              February  8, 2007
- *
  *-------------------------------------------------------------------------
  */
 ssize_t
@@ -1370,9 +1366,6 @@ done:
  *
  *		Failure:	Zero
  *
- * Programmer:	Raymond Lu
- *              October 23, 2002
- *
  *-------------------------------------------------------------------------
  */
 hsize_t
@@ -1412,9 +1405,6 @@ done:
  *
  * Return:	Success:	Non-negative
  *		Failure:	Negative
- *
- * Programmer:	Quincey Koziol
- *              February  6, 2007
  *
  *-------------------------------------------------------------------------
  */
@@ -1456,9 +1446,6 @@ done:
  *
  * Return:	Success:	Non-negative
  *		Failure:	Negative
- *
- * Programmer:	Quincey Koziol
- *              February  6, 2007
  *
  *-------------------------------------------------------------------------
  */
@@ -1516,9 +1503,6 @@ done:
  *
  * Return:	Success:	Non-negative with information in AINFO
  *		Failure:	Negative
- *
- * Programmer:	Quincey Koziol
- *              February  8, 2007
  *
  *-------------------------------------------------------------------------
  */
@@ -1590,10 +1574,10 @@ H5A__rename_common(H5VL_object_t *vol_obj, H5VL_loc_params_t *loc_params, const 
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(vol_obj);
-    HDassert(loc_params);
-    HDassert(old_name);
-    HDassert(new_name);
+    assert(vol_obj);
+    assert(loc_params);
+    assert(old_name);
+    assert(new_name);
 
     /* Avoid thrashing things if the names are the same */
     if (HDstrcmp(old_name, new_name) != 0) {
@@ -1665,9 +1649,6 @@ done:
  *
  * Return:      Success:    Non-negative
  *              Failure:    Negative
- *
- * Programmer:	Raymond Lu
- *              October 23, 2002
  *
  *-------------------------------------------------------------------------
  */
@@ -1780,9 +1761,6 @@ done:
  *
  * Return:      Success:    Non-negative
  *              Failure:    Negative
- *
- * Programmer:	Quincey Koziol
- *              February 20, 2007
  *
  *-------------------------------------------------------------------------
  */
@@ -2310,7 +2288,7 @@ H5Aclose_async(const char *app_file, const char *app_func, unsigned app_line, hi
 
 done:
     if (connector && H5VL_conn_dec_rc(connector) < 0)
-        HDONE_ERROR(H5E_ATTR, H5E_CANTDEC, FAIL, "can't decrement ref count on connector")
+        HDONE_ERROR(H5E_ATTR, H5E_CANTDEC, FAIL, "can't decrement ref count on connector");
 
     FUNC_LEAVE_API(ret_value)
 } /* H5Aclose_async() */
@@ -2333,8 +2311,8 @@ H5A__exists_common(H5VL_object_t *vol_obj, H5VL_loc_params_t *loc_params, const 
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(vol_obj);
-    HDassert(loc_params);
+    assert(vol_obj);
+    assert(loc_params);
 
     /* Check arguments */
     if (!attr_name || !*attr_name)
@@ -2402,9 +2380,6 @@ done:
  * Return:	Success:	TRUE/FALSE
  * 		Failure:	Negative
  *
- * Programmer:	Quincey Koziol
- *              Thursday, November 1, 2007
- *
  *-------------------------------------------------------------------------
  */
 htri_t
@@ -2419,7 +2394,7 @@ H5Aexists(hid_t obj_id, const char *attr_name)
     /* Synchronously check if an attribute exists */
     exists = FALSE;
     if (H5A__exists_api_common(obj_id, attr_name, &exists, NULL, NULL) < 0)
-        HGOTO_ERROR(H5E_ATTR, H5E_CANTRENAME, FAIL, "can't synchronously rename attribute")
+        HGOTO_ERROR(H5E_ATTR, H5E_CANTGET, FAIL, "can't synchronously check if attribute exists")
 
     /* Set return value */
     ret_value = (htri_t)exists;
@@ -2454,7 +2429,7 @@ H5Aexists_async(const char *app_file, const char *app_func, unsigned app_line, h
 
     /* Asynchronously check if an attribute exists */
     if (H5A__exists_api_common(obj_id, attr_name, attr_exists, token_ptr, &vol_obj) < 0)
-        HGOTO_ERROR(H5E_ATTR, H5E_CANTRENAME, FAIL, "can't asynchronously check if attribute exists")
+        HGOTO_ERROR(H5E_ATTR, H5E_CANTGET, FAIL, "can't asynchronously check if attribute exists")
 
     /* If a token was created, add the token to the event set */
     if (NULL != token)
@@ -2518,9 +2493,6 @@ done:
  * Return:	Success:	TRUE/FALSE
  * 		    Failure:	Negative
  *
- * Programmer:	Quincey Koziol
- *              Thursday, November 1, 2007
- *
  *-------------------------------------------------------------------------
  */
 htri_t
@@ -2535,7 +2507,7 @@ H5Aexists_by_name(hid_t loc_id, const char *obj_name, const char *attr_name, hid
     /* Synchronously check if an attribute exists */
     exists = FALSE;
     if (H5A__exists_by_name_api_common(loc_id, obj_name, attr_name, &exists, lapl_id, NULL, NULL) < 0)
-        HGOTO_ERROR(H5E_ATTR, H5E_CANTRENAME, FAIL, "can't synchronously rename attribute")
+        HGOTO_ERROR(H5E_ATTR, H5E_CANTGET, FAIL, "can't synchronously determine if attribute exists by name")
 
     /* Set return value */
     ret_value = (htri_t)exists;
@@ -2573,7 +2545,7 @@ H5Aexists_by_name_async(const char *app_file, const char *app_func, unsigned app
     /* Asynchronously check if an attribute exists */
     if (H5A__exists_by_name_api_common(loc_id, obj_name, attr_name, attr_exists, lapl_id, token_ptr,
                                        &vol_obj) < 0)
-        HGOTO_ERROR(H5E_ATTR, H5E_CANTRENAME, FAIL, "can't asynchronously rename attribute")
+        HGOTO_ERROR(H5E_ATTR, H5E_CANTGET, FAIL, "can't asynchronously determine if attribute exists by name")
 
     /* If a token was created, add the token to the event set */
     if (NULL != token)

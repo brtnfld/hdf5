@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -12,9 +11,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:  Robb Matzke
- *              Monday, September 28, 1998
- *
  * Purpose:  Creates a chunked dataset and measures the storage overhead.
  */
 
@@ -60,18 +56,13 @@ typedef enum fill_t { FILL_ALL, FILL_FORWARD, FILL_REVERSE, FILL_INWARD, FILL_OU
  *
  * Return:  never returns
  *
- * Programmer:  Robb Matzke
- *              Wednesday, September 30, 1998
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static void
 usage(const char *prog)
 {
-    HDfprintf(stderr, "usage: %s [STYLE|cache] [LEFT [MIDDLE [RIGHT]]]\n", prog);
-    HDfprintf(stderr, "\
+    fprintf(stderr, "usage: %s [STYLE|cache] [LEFT [MIDDLE [RIGHT]]]\n", prog);
+    fprintf(stderr, "\
     STYLE is the order that the dataset is filled and should be one of:\n\
         forward   --  Fill the dataset from lowest address to highest\n\
                       address. This style tests the right split ratio.\n\
@@ -109,11 +100,6 @@ usage(const char *prog)
  *
  * Return:  void
  *
- * Programmer:  Robb Matzke
- *              Thursday, June  4, 1998
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static void
@@ -132,11 +118,6 @@ cleanup(void)
  * Return:  Success:  0
  *
  *    Failure:  -1
- *
- * Programmer:  Robb Matzke
- *    Wednesday, March  4, 1998
- *
- * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -158,11 +139,6 @@ display_error_cb(hid_t estack, void H5_ATTR_UNUSED *client_data)
  *
  *    Failure:  number of errors
  *
- * Programmer:  Robb Matzke
- *              Wednesday, September 30, 1998
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
@@ -176,7 +152,7 @@ test(fill_t fill_style, const double splits[], hbool_t verbose, hbool_t use_rdcc
     hsize_t     hs_count[1] = {1};             /*hyperslab nelmts  */
     int         fd          = (-1);            /*h5 file direct  */
     int        *had         = NULL;            /*for random filling  */
-    const char *sname       = NULL;            /*fill style nam  */
+    const char *sname       = NULL;            /*fill style name */
     int         mdc_nelmts;                    /*num meta objs to cache*/
     hsize_t     i, k;
     int         j;
@@ -239,7 +215,7 @@ test(fill_t fill_style, const double splits[], hbool_t verbose, hbool_t use_rdcc
                 abort();
             default:
                 /* unknown request */
-                HDfprintf(stderr, "Unknown fill style\n");
+                fprintf(stderr, "Unknown fill style\n");
                 goto error;
                 break;
         }
@@ -295,7 +271,7 @@ test(fill_t fill_style, const double splits[], hbool_t verbose, hbool_t use_rdcc
                 abort();
             default:
                 /* unknown request */
-                HDfprintf(stderr, "Unknown fill style\n");
+                fprintf(stderr, "Unknown fill style\n");
                 goto error;
                 break;
         }
@@ -330,11 +306,6 @@ error:
  * Return:  Success:        zero
  *
  *    Failure:  non-zero
- *
- * Programmer:  Robb Matzke
- *              Monday, September 28, 1998
- *
- * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -405,6 +376,6 @@ main(int argc, char *argv[])
     return 0;
 
 error:
-    HDfprintf(stderr, "*** ERRORS DETECTED ***\n");
+    fprintf(stderr, "*** ERRORS DETECTED ***\n");
     return 1;
 }

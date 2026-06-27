@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -34,6 +33,7 @@
 #include "H5CXprivate.h" /* API Contexts                             */
 #include "H5Eprivate.h"  /* Error handling                           */
 #include "H5Iprivate.h"  /* IDs                                      */
+#include "H5MMprivate.h" /* Memory management                        */
 #include "H5Opkg.h"      /* Object headers                           */
 
 #include "H5VLnative_private.h" /* Native VOL connector                     */
@@ -91,14 +91,14 @@ static herr_t H5O__get_info_old(H5VL_object_t *vol_obj, H5VL_loc_params_t *loc_p
 static herr_t
 H5O__reset_info1(H5O_info1_t *oinfo)
 {
-    FUNC_ENTER_PACKAGE_NOERR;
+    FUNC_ENTER_PACKAGE_NOERR
 
     /* Reset the passed-in info struct */
-    HDmemset(oinfo, 0, sizeof(H5O_info1_t));
+    memset(oinfo, 0, sizeof(H5O_info1_t));
     oinfo->type = H5O_TYPE_UNKNOWN;
     oinfo->addr = HADDR_UNDEF;
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+    FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5O__reset_info1() */
 
 /*-------------------------------------------------------------------------
@@ -109,9 +109,6 @@ H5O__reset_info1(H5O_info1_t *oinfo)
  *
  * Return:      Success:    Non-negative
  *              Failure:    Negative
- *
- * Programmer:  Quincey Koziol
- *              November 26 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -127,8 +124,8 @@ H5O__iterate1_adapter(hid_t obj_id, const char *name, const H5O_info2_t *oinfo2,
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(oinfo2);
-    HDassert(op_data);
+    assert(oinfo2);
+    assert(op_data);
 
     /* Reset the legacy info struct */
     if (H5O__reset_info1(&oinfo) < 0)
@@ -201,7 +198,7 @@ H5O__iterate1_adapter(hid_t obj_id, const char *name, const H5O_info2_t *oinfo2,
     ret_value = (shim_data->real_op)(obj_id, name, &oinfo, shim_data->real_op_data);
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value);
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O__iterate1_adapter() */
 
 /*-------------------------------------------------------------------------
@@ -210,9 +207,6 @@ done:
  * Purpose:     Retrieve deprecated info about an object.
  *
  * Return:      SUCCEED/FAIL
- *
- * Programmer:  Quincey Koziol
- *              December 21 2019
  *
  *-------------------------------------------------------------------------
  */
@@ -226,8 +220,8 @@ H5O__get_info_old(H5VL_object_t *vol_obj, H5VL_loc_params_t *loc_params, H5O_inf
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(vol_obj);
-    HDassert(loc_params);
+    assert(vol_obj);
+    assert(loc_params);
 
     /* Reset the passed-in info struct */
     if (H5O__reset_info1(oinfo) < 0)
@@ -335,9 +329,6 @@ done:
  *
  * Return:	Success:	An open object identifier
  *		Failure:	H5I_INVALID_HID
- *
- * Programmer:	James Laird
- *		July 14 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -494,9 +485,6 @@ done:
  * Return:      Success:    Non-negative
  *              Failure:    Negative
  *
- * Programmer:  Quincey Koziol
- *              November 26 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -553,9 +541,6 @@ done:
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:  Neil Fortner
- *              July 7 2010
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -607,9 +592,6 @@ done:
  *              NOTE: Add a parameter "fields" to indicate selection of object info.
  *
  * Return:      SUCCEED/FAIL
- *
- * Programmer:  Neil Fortner
- *              July 7 2010
  *
  *-------------------------------------------------------------------------
  */
@@ -675,9 +657,6 @@ done:
  *
  * Return:      Success:	Non-negative
  *              Failure:	Negative
- *
- * Programmer:	Quincey Koziol
- *              November 26 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -764,9 +743,6 @@ done:
  *				library, or the negative value returned by one
  *				of the operators.
  *
- * Programmer:	Quincey Koziol
- *              November 25 2007
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -845,9 +821,6 @@ done:
  *              Failure:    Negative if something goes wrong within the
  *				library, or the negative value returned by one
  *				of the operators.
- *
- * Programmer:	Quincey Koziol
- *              November 24 2007
  *
  *-------------------------------------------------------------------------
  */
@@ -931,7 +904,7 @@ done:
  *              iteration index and iteration order given) will be used to in
  *              the callback about the object.
  *
- *              NOTE: Add a a parameter "fields" to indicate selection of
+ *              NOTE: Add a parameter "fields" to indicate selection of
  *              object info to be retrieved to the callback "op".
  *
  * Return:      Success:    The return value of the first operator that
@@ -941,9 +914,6 @@ done:
  *              Failure:    Negative if something goes wrong within the
  *                          library, or the negative value returned by one
  *                          of the operators.
- *
- * Programmer:	Quincey Koziol
- *              November 25 2007
  *
  *-------------------------------------------------------------------------
  */
@@ -1028,7 +998,7 @@ done:
  *              iteration index and iteration order given) will be used to in
  *              the callback about the object.
  *
- *              NOTE: Add a a parameter "fields" to indicate selection of
+ *              NOTE: Add a parameter "fields" to indicate selection of
  *              object info to be retrieved to the callback "op".
  *
  * Return:      Success:    The return value of the first operator that
@@ -1038,9 +1008,6 @@ done:
  *              Failure:    Negative if something goes wrong within the
  *                          library, or the negative value returned by one
  *                          of the operators.
- *
- * Programmer:	Quincey Koziol
- *              November 24 2007
  *
  *-------------------------------------------------------------------------
  */

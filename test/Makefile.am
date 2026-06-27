@@ -1,6 +1,5 @@
 #
 # Copyright by The HDF Group.
-# Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
 # This file is part of HDF5.  The full HDF5 copyright notice, including
@@ -36,9 +35,9 @@ AM_CPPFLAGS+=-I$(top_srcdir)/src -I$(top_builddir)/src
 #       test_vds_swmr.sh: vds_swmr*
 #       test_use_cases.sh: use_append_chunk, use_append_mchunks, use_disable_mdc_flushes
 TEST_SCRIPT = test_abort_fail.sh test_check_version.sh test_error.sh \
-	test_flush_refresh.sh test_external_env.sh test_libinfo.sh \
-	test_links_env.sh test_swmr.sh test_vds_env.sh test_vds_swmr.sh \
-	test_use_cases.sh
+    test_flush_refresh.sh test_external_env.sh test_libinfo.sh \
+    test_links_env.sh test_swmr.sh test_vds_env.sh test_vds_swmr.sh \
+    test_use_cases.sh
 SCRIPT_DEPEND = error_test$(EXEEXT) err_compat$(EXEEXT) links_env$(EXEEXT) \
     external_env$(EXEEXT) filenotclosed$(EXEEXT) del_many_dense_attrs$(EXEEXT) \
     flushrefresh$(EXEEXT) use_append_chunk$(EXEEXT) use_append_mchunks$(EXEEXT) use_disable_mdc_flushes$(EXEEXT) \
@@ -64,13 +63,14 @@ TEST_PROG= testhdf5 \
            cache cache_api cache_image cache_tagging lheap ohdr \
            stab gheap evict_on_close farray earray btree2 fheap \
            accum hyperslab istore bittests dt_arith page_buffer \
-           dtypes dsets chunk_info cmpd_dset cmpd_dtransform filter_fail extend direct_chunk \
+           dtypes dsets chunk_info cmpd_dset mdset cmpd_dtransform filter_fail extend direct_chunk \
            external efc objcopy objcopy_ref links unlink twriteorder big mtime \
-           fillval mount \
+           fillval mount select_io_dset\
            flush1 flush2 app_ref enum set_extent ttsafe enc_dec_plist \
            enc_dec_plist_cross_platform getname vfd ros3 s3comms hdfs ntypes \
            dangle dtransform reserved cross_read freespace mf vds file_image \
-           unregister cache_logging cork swmr thread_id vol timer event_set
+           unregister cache_logging cork swmr thread_id vol timer event_set \
+		   onion
 
 # List programs to be built when testing here
 #
@@ -183,7 +183,7 @@ flush2.chkexe_: flush1.chkexe_
 # specifying a file prefix or low-level driver.  Changing the file
 # prefix or low-level driver with environment variables will influence
 # the temporary file name in ways that the makefile is not aware of.
-CHECK_CLEANFILES+=accum.h5 cmpd_dset.h5 compact_dataset.h5 dataset.h5 dset_offset.h5 \
+CHECK_CLEANFILES+=accum.h5 cmpd_dset.h5 mdset.h5 compact_dataset.h5 dataset.h5 dset_offset.h5 \
     max_compact_dataset.h5 simple.h5 set_local.h5 random_chunks.h5 \
     huge_chunks.h5 chunk_cache.h5 big_chunk.h5 chunk_fast.h5 chunk_expand.h5 \
     chunk_fixed.h5 copy_dcpl_newfile.h5 partial_chunks.h5 layout_extend.h5 \
@@ -230,7 +230,7 @@ CHECK_CLEANFILES+=accum.h5 cmpd_dset.h5 compact_dataset.h5 dataset.h5 dset_offse
 
 # Sources for testhdf5 executable
 testhdf5_SOURCES=testhdf5.c tarray.c tattr.c tchecksum.c tconfig.c tfile.c \
-    tgenprop.c th5o.c th5s.c tcoords.c tid.c titerate.c tmeta.c tmisc.c \
+    tgenprop.c th5o.c th5s.c th5_system.c tcoords.c tid.c titerate.c tmeta.c tmisc.c \
     trefer.c trefer_deprec.c trefstr.c tselect.c tskiplist.c tsohm.c ttime.c tunicode.c \
     tvlstr.c tvltypes.c
 
@@ -241,8 +241,11 @@ use_append_mchunks_SOURCES=use_append_mchunks.c use_common.c
 use_disable_mdc_flushes_SOURCES=use_disable_mdc_flushes.c
 
 # Temporary files.
-DISTCLEANFILES=testerror.sh testlibinfo.sh testcheck_version.sh testlinks_env.sh test_filter_plugin.sh \
-    testexternal_env.sh testswmr.sh testvds_env.sh testvdsswmr.sh test_usecases.sh testflushrefresh.sh \
-    testabort_fail.sh test_vol_plugin.sh test_mirror.sh
+DISTCLEANFILES=test_abort_fail.sh test_check_version.sh test_error.sh test_external_env.sh \
+    test_flush_refresh.sh test_libinfo.sh test_links_env.sh test_plugin.sh \
+    test_swmr.sh test_use_cases.sh test_vds_env.sh test_vds_swmr.sh
+if MIRROR_VFD_CONDITIONAL
+  DISTCLEANFILES+= test_mirror.sh
+endif
 
 include $(top_srcdir)/config/conclude.am

@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -49,9 +48,6 @@ const H5Z_class2_t H5Z_SHUFFLE[1] = {{
  *
  * Return:	Success: Non-negative
  *		Failure: Negative
- *
- * Programmer:	Quincey Koziol
- *              Monday, April  7, 2003
  *
  *-------------------------------------------------------------------------
  */
@@ -105,9 +101,6 @@ done:
  *
  * Return:	Success: Size of buffer filtered
  *		Failure: 0
- *
- * Programmer:	Kent Yang
- *              Wednesday, November 13, 2002
  *
  *-------------------------------------------------------------------------
  */
@@ -172,7 +165,7 @@ H5Z__filter_shuffle(unsigned flags, size_t cd_nelmts, const unsigned cd_values[]
                     duffs_index = (numofelements + 7) / 8;
                     switch (numofelements % 8) {
                         default:
-                            HDassert(0 && "This Should never be executed!");
+                            assert(0 && "This Should never be executed!");
                             break;
                         case 0:
                             do {
@@ -243,7 +236,7 @@ H5Z__filter_shuffle(unsigned flags, size_t cd_nelmts, const unsigned cd_values[]
                     duffs_index = (numofelements + 7) / 8;
                     switch (numofelements % 8) {
                         default:
-                            HDassert(0 && "This Should never be executed!");
+                            assert(0 && "This Should never be executed!");
                             break;
                         case 0:
                             do {

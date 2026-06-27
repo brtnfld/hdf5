@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -37,9 +36,6 @@ static herr_t H5T__enum_valueof(const H5T_t *dt, const char *name, void *value /
  * Return:	Success:	ID of new enumeration data type
  *
  *		Failure:	Negative
- *
- * Programmer:	Robb Matzke
- *              Tuesday, December 22, 1998
  *
  *-------------------------------------------------------------------------
  */
@@ -81,9 +77,6 @@ done:
  *
  *		Failure:        NULL
  *
- * Programmer:	Raymond Lu
- *              October 9, 2002
- *
  *-------------------------------------------------------------------------
  */
 H5T_t *
@@ -93,14 +86,14 @@ H5T__enum_create(const H5T_t *parent)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(parent);
+    assert(parent);
 
     /* Build new type */
     if (NULL == (ret_value = H5T__alloc()))
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
     ret_value->shared->type   = H5T_ENUM;
     ret_value->shared->parent = H5T_copy(parent, H5T_COPY_ALL);
-    HDassert(ret_value->shared->parent);
+    assert(ret_value->shared->parent);
     ret_value->shared->size = ret_value->shared->parent->shared->size;
 
 done:
@@ -120,9 +113,6 @@ done:
  * Return:	Success:	non-negative
  *
  *		Failure:	negative
- *
- * Programmer:	Robb Matzke
- *              Wednesday, December 23, 1998
  *
  *-------------------------------------------------------------------------
  */
@@ -165,9 +155,6 @@ done:
  *
  *		Failure:	negative
  *
- * Programmer:	Robb Matzke
- *              Wednesday, December 23, 1998
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -178,16 +165,15 @@ H5T__enum_insert(const H5T_t *dt, const char *name, const void *value)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(dt);
-    HDassert(name && *name);
-    HDassert(value);
+    assert(dt);
+    assert(name && *name);
+    assert(value);
 
     /* The name and value had better not already exist */
     for (i = 0; i < dt->shared->u.enumer.nmembs; i++) {
         if (!HDstrcmp(dt->shared->u.enumer.name[i], name))
             HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "name redefinition")
-        if (!HDmemcmp((uint8_t *)dt->shared->u.enumer.value + (i * dt->shared->size), value,
-                      dt->shared->size))
+        if (!memcmp((uint8_t *)dt->shared->u.enumer.value + (i * dt->shared->size), value, dt->shared->size))
             HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "value redefinition")
     }
 
@@ -227,9 +213,6 @@ done:
  *
  *		Failure:	negative, VALUE memory is undefined.
  *
- * Programmer:	Robb Matzke
- *              Wednesday, December 23, 1998
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -267,9 +250,6 @@ done:
  *
  *		Failure:	negative, VALUE memory is undefined.
  *
- * Programmer:	Raymond Lu
- *              October 9, 2002
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -277,8 +257,8 @@ H5T__get_member_value(const H5T_t *dt, unsigned membno, void *value /*out*/)
 {
     FUNC_ENTER_PACKAGE_NOERR
 
-    HDassert(dt);
-    HDassert(value);
+    assert(dt);
+    assert(value);
 
     H5MM_memcpy(value, (uint8_t *)dt->shared->u.enumer.value + (membno * dt->shared->size), dt->shared->size);
 
@@ -299,9 +279,6 @@ H5T__get_member_value(const H5T_t *dt, unsigned membno, void *value /*out*/)
  *
  *		Failure:	Negative, first character of NAME is set to
  *				null if SIZE allows it.
- *
- * Programmer:	Robb Matzke
- *              Monday, January  4, 1999
  *
  *-------------------------------------------------------------------------
  */
@@ -334,7 +311,7 @@ done:
 /*-------------------------------------------------------------------------
  * Function:	H5T__enum_nameof
  *
- * Purpose:	Finds the symbol name that corresponds the the specified
+ * Purpose:	Finds the symbol name that corresponds to the specified
  *		VALUE of an enumeration data type DT. At most SIZE characters
  *		of the symbol name are copied into the NAME buffer. If the
  *		entire symbol name and null terminator do not fit in the NAME
@@ -348,9 +325,6 @@ done:
  * Return:	Success:	Pointer to NAME
  *
  *		Failure:	NULL, name[0] is set to null.
- *
- * Programmer:	Robb Matzke
- *              Monday, January  4, 1999
  *
  *-------------------------------------------------------------------------
  */
@@ -366,9 +340,9 @@ H5T__enum_nameof(const H5T_t *dt, const void *value, char *name /*out*/, size_t 
     FUNC_ENTER_PACKAGE
 
     /* Check args */
-    HDassert(dt && H5T_ENUM == dt->shared->type);
-    HDassert(value);
-    HDassert(name || 0 == size);
+    assert(dt && H5T_ENUM == dt->shared->type);
+    assert(value);
+    assert(name || 0 == size);
 
     if (name && size > 0)
         *name = '\0';
@@ -388,8 +362,8 @@ H5T__enum_nameof(const H5T_t *dt, const void *value, char *name /*out*/, size_t 
     rt = copied_dt->shared->u.enumer.nmembs;
     while (lt < rt) {
         md  = (lt + rt) / 2;
-        cmp = HDmemcmp(value, (uint8_t *)copied_dt->shared->u.enumer.value + (md * copied_dt->shared->size),
-                       copied_dt->shared->size);
+        cmp = memcmp(value, (uint8_t *)copied_dt->shared->u.enumer.value + (md * copied_dt->shared->size),
+                     copied_dt->shared->size);
         if (cmp < 0)
             rt = md;
         else if (cmp > 0)
@@ -437,9 +411,6 @@ done:
  *
  *		Failure:	Negative
  *
- * Programmer:	Robb Matzke
- *              Monday, January  4, 1999
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -471,7 +442,7 @@ done:
 /*-------------------------------------------------------------------------
  * Function:	H5T__enum_valueof
  *
- * Purpose:	Finds the value that corresponds the the specified symbol
+ * Purpose:	Finds the value that corresponds to the specified symbol
  *		NAME of an enumeration data type DT and copy it to the VALUE
  *		result buffer. The VALUE should be allocated by the caller to
  *		be large enough for the result.
@@ -479,9 +450,6 @@ done:
  * Return:	Success:	Non-negative, value stored in VALUE.
  *
  *		Failure:	Negative, VALUE is undefined.
- *
- * Programmer:	Robb Matzke
- *              Monday, January  4, 1999
  *
  *-------------------------------------------------------------------------
  */
@@ -496,9 +464,9 @@ H5T__enum_valueof(const H5T_t *dt, const char *name, void *value /*out*/)
     FUNC_ENTER_PACKAGE
 
     /* Check args */
-    HDassert(dt && H5T_ENUM == dt->shared->type);
-    HDassert(name && *name);
-    HDassert(value);
+    assert(dt && H5T_ENUM == dt->shared->type);
+    assert(name && *name);
+    assert(value);
 
     /* Sanity check */
     if (dt->shared->u.enumer.nmembs == 0)
@@ -537,7 +505,7 @@ H5T__enum_valueof(const H5T_t *dt, const char *name, void *value /*out*/)
 done:
     if (copied_dt)
         if (H5T_close_real(copied_dt) < 0)
-            HDONE_ERROR(H5E_DATATYPE, H5E_CANTCLOSEOBJ, FAIL, "unable to close data type")
+            HDONE_ERROR(H5E_DATATYPE, H5E_CANTCLOSEOBJ, FAIL, "unable to close data type");
 
     FUNC_LEAVE_NOAPI(ret_value)
 }

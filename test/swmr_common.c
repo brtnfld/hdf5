@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -111,7 +110,7 @@ choose_dataset(unsigned *levelp, unsigned *offsetp, hbool_t verbose)
 
     ++ncalls;
     if ((ncalls % 1000) == 0 && verbose) {
-        HDfprintf(stderr, "%s: call %u chose level %u offset %u\n", __func__, ncalls, level, offset);
+        fprintf(stderr, "%s: call %u chose level %u offset %u\n", __func__, ncalls, level, offset);
     }
     if (levelp != NULL)
         *levelp = level;
@@ -189,7 +188,7 @@ create_symbol_datatype(void)
 int
 generate_name(char *name_buf, size_t name_buf_length, unsigned level, unsigned count)
 {
-    HDassert(name_buf);
+    assert(name_buf);
 
     HDsnprintf(name_buf, name_buf_length, "%u-%04u", level, count);
 
@@ -199,7 +198,7 @@ generate_name(char *name_buf, size_t name_buf_length, unsigned level, unsigned c
 /*-------------------------------------------------------------------------
  * Function:    generate_symbols
  *
- * Purpose:     Initializes the global dataset infomration arrays.
+ * Purpose:     Initializes the global dataset information arrays.
  *
  * Parameters:  N/A
  *
@@ -214,7 +213,7 @@ generate_symbols(void)
     unsigned u, v; /* Local index variables */
 
     for (u = 0; u < NLEVELS; u++) {
-        symbol_info[u] = HDmalloc(symbol_count[u] * sizeof(symbol_info_t));
+        symbol_info[u] = malloc(symbol_count[u] * sizeof(symbol_info_t));
         for (v = 0; v < symbol_count[u]; v++) {
             char name_buf[64];
 
@@ -248,8 +247,8 @@ shutdown_symbols(void)
     /* Clean up the symbols */
     for (u = 0; u < NLEVELS; u++) {
         for (v = 0; v < symbol_count[u]; v++)
-            HDfree(symbol_info[u][v].name);
-        HDfree(symbol_info[u]);
+            free(symbol_info[u][v].name);
+        free(symbol_info[u]);
     } /* end for */
 
     return 0;
@@ -285,12 +284,12 @@ print_metadata_retries_info(hid_t fid)
         if (NULL == info.retries[i])
             continue;
 
-        HDfprintf(stderr, "Metadata read retries for item %u:\n", i);
+        fprintf(stderr, "Metadata read retries for item %u:\n", i);
         power = 1;
         for (j = 0; j < info.nbins; j++) {
             if (info.retries[i][j])
-                HDfprintf(stderr, "\t# of retries for %u - %u retries: %u\n", power, (power * 10) - 1,
-                          info.retries[i][j]);
+                fprintf(stderr, "\t# of retries for %u - %u retries: %u\n", power, (power * 10) - 1,
+                        info.retries[i][j]);
             power *= 10;
         } /* end for */
     }     /* end for */

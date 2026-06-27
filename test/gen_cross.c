@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -12,9 +11,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:  Raymond Lu
- *              Thursday, March 23, 2006
- *
  *  This program writes floating-point data to the HDF5 file.  It generates
  *  the file to be read by cross_read.c, to test reading data from cross-systems.
  *  Run it on an OpenVMS, a little-endian, and a big-endian machine.  Change the
@@ -85,11 +81,6 @@ int create_nbit_dsets_float(hid_t fid, hid_t fsid, hid_t msid);
  *
  * Return:      Success:        0
  *              Failure:        -1
- *
- * Programmer:  Raymond Lu
- *              Some time ago
- *
- * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -179,7 +170,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 }
@@ -191,11 +182,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        -1
- *
- * Programmer:  Neil Fortner
- *              27 January 2011
- *
- * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -269,7 +255,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 }
@@ -281,11 +267,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        -1
- *
- * Programmer:  Raymond Lu
- *              21 January 2011
- *
- * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -359,7 +340,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 }
@@ -371,11 +352,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        -1
- *
- * Programmer:  Neil Fortner
- *              27 January 2011
- *
- * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -457,7 +433,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 }
@@ -469,11 +445,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        -1
- *
- * Programmer:  Neil Fortner
- *              27 January 2011
- *
- * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -555,7 +526,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 }
@@ -567,11 +538,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        -1
- *
- * Programmer:  Raymond Lu
- *              21 January 2011
- *
- * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -653,7 +619,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 }
@@ -666,11 +632,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        -1
- *
- * Programmer:  Neil Fortner
- *              27 January 2011
- *
- * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -752,7 +713,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 }
@@ -764,11 +725,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        -1
- *
- * Programmer:  Raymond Lu
- *              29 March 2011
- *
- * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -842,7 +798,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 }
@@ -854,11 +810,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        -1
- *
- * Programmer:  Raymond Lu
- *              29 March 2011
- *
- * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -940,7 +891,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 #endif /* H5_HAVE_FILTER_DEFLATE */
@@ -955,11 +906,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        -1
- *
- * Programmer:  Raymond Lu
- *              29 March 2011
- *
- * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -1033,7 +979,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 }
@@ -1046,11 +992,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        -1
- *
- * Programmer:  Raymond Lu
- *              29 March 2011
- *
- * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -1124,7 +1065,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 }
@@ -1136,11 +1077,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        -1
- *
- * Programmer:  Raymond Lu
- *              29 March 2011
- *
- * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -1235,7 +1171,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 }
@@ -1246,8 +1182,6 @@ error:
  * Purpose:     Create a file for cross_read.c test
  *
  * Return:      EXIT_SUCCESS/EXIT_FAILURE
- *
- * Programmer:  Raymond Lu
  *
  *-------------------------------------------------------------------------
  */
@@ -1283,8 +1217,8 @@ main(void)
 
     /* Create memory space.  This does not include the extra row for fill
      * values. */
-    HDassert(dimsf[0] == NX);
-    HDassert(dimsf[1] == NY);
+    assert(dimsf[0] == NX);
+    assert(dimsf[1] == NY);
     if ((memspace = H5Screate_simple(RANK, dimsf, NULL)) < 0)
         TEST_ERROR;
 
@@ -1350,8 +1284,8 @@ main(void)
     if (H5Fclose(file) < 0)
         TEST_ERROR;
 
-    HDexit(EXIT_SUCCESS);
+    exit(EXIT_SUCCESS);
 
 error:
-    HDexit(EXIT_FAILURE);
+    exit(EXIT_FAILURE);
 } /* end main() */

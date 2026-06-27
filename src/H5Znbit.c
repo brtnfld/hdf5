@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -116,9 +115,6 @@ H5Z_class2_t H5Z_NBIT[1] = {{
  * Return:	Success: Non-negative
  *		Failure: Negative
  *
- * Programmer:  Xiaowen Wu
- *              Tuesday, December 21, 2004
- *
  *-------------------------------------------------------------------------
  */
 static htri_t
@@ -152,9 +148,6 @@ done:
  *              of datatype that is not integer, nor floating-point, nor
  *              compound, and nor array.
  *
- * Programmer:  Xiaowen Wu
- *              Thursday, March 3, 2005
- *
  *-------------------------------------------------------------------------
  */
 static void
@@ -173,9 +166,6 @@ H5Z__calc_parms_nooptype(size_t *cd_values_actual_nparms)
  * Purpose:     Calculate the number of parameters of array cd_values[]
  *              of atomic datatype whose datatype class is integer
  *              or floating point
- *
- * Programmer:  Xiaowen Wu
- *              Saturday, January 29, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -207,9 +197,6 @@ H5Z__calc_parms_atomic(size_t *cd_values_actual_nparms)
  *
  * Return:      Success: Non-negative
  *              Failure: Negative
- *
- * Programmer:  Xiaowen Wu
- *              Wednesday, January 19, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -275,7 +262,7 @@ H5Z__calc_parms_array(const H5T_t *type, size_t *cd_values_actual_nparms)
 done:
     if (dtype_base)
         if (H5T_close_real(dtype_base) < 0)
-            HDONE_ERROR(H5E_PLINE, H5E_CLOSEERROR, FAIL, "Unable to close base datatype")
+            HDONE_ERROR(H5E_PLINE, H5E_CLOSEERROR, FAIL, "Unable to close base datatype");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5Z__calc_parms_array() */
@@ -289,9 +276,6 @@ done:
  *
  * Return:      Success: Non-negative
  *              Failure: Negative
- *
- * Programmer:  Xiaowen Wu
- *              Wednesday, January 19, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -378,7 +362,7 @@ H5Z__calc_parms_compound(const H5T_t *type, size_t *cd_values_actual_nparms)
 done:
     if (dtype_member)
         if (H5T_close_real(dtype_member) < 0)
-            HDONE_ERROR(H5E_PLINE, H5E_CLOSEERROR, FAIL, "Unable to close member datatype")
+            HDONE_ERROR(H5E_PLINE, H5E_CLOSEERROR, FAIL, "Unable to close member datatype");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5Z_calc_params_compound */
@@ -393,9 +377,6 @@ done:
  *
  * Return:      Success: Non-negative
  *              Failure: Negative
- *
- * Programmer:  Xiaowen Wu
- *              Tuesday, April 5, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -430,9 +411,6 @@ done:
  *
  * Return:      Success: Non-negative
  *              Failure: Negative
- *
- * Programmer:  Xiaowen Wu
- *              Tuesday, January 11, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -522,9 +500,6 @@ done:
  * Return:      Success: Non-negative
  *              Failure: Negative
  *
- * Programmer:  Xiaowen Wu
- *              Tuesday, April 5, 2005
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -611,7 +586,7 @@ H5Z__set_parms_array(const H5T_t *type, unsigned *cd_values_index, unsigned cd_v
 done:
     if (dtype_base)
         if (H5T_close_real(dtype_base) < 0)
-            HDONE_ERROR(H5E_PLINE, H5E_CLOSEERROR, FAIL, "Unable to close base datatype")
+            HDONE_ERROR(H5E_PLINE, H5E_CLOSEERROR, FAIL, "Unable to close base datatype");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5Z__set_parms_array() */
@@ -624,9 +599,6 @@ done:
  *
  * Return:      Success: Non-negative
  *              Failure: Negative
- *
- * Programmer:  Xiaowen Wu
- *              Tuesday, April 5, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -758,7 +730,7 @@ H5Z__set_parms_compound(const H5T_t *type, unsigned *cd_values_index, unsigned c
 done:
     if (dtype_member)
         if (H5T_close_real(dtype_member) < 0)
-            HDONE_ERROR(H5E_PLINE, H5E_CLOSEERROR, FAIL, "Unable to close member datatype")
+            HDONE_ERROR(H5E_PLINE, H5E_CLOSEERROR, FAIL, "Unable to close member datatype");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5Z_set_params_compound */
@@ -770,9 +742,6 @@ done:
  *
  * Return:	Success: Non-negative
  *		Failure: Negative
- *
- * Programmer:	Xiaowen Wu
- *              Tuesday, January 11, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -867,7 +836,7 @@ H5Z__set_local_nbit(hid_t dcpl_id, hid_t type_id, hid_t space_id)
     /* Get total number of elements in the chunk */
     if ((npoints = H5S_GET_EXTENT_NPOINTS(ds)) < 0)
         HGOTO_ERROR(H5E_PLINE, H5E_CANTGET, FAIL, "unable to get number of points in the dataspace")
-    HDassert(npoints);
+    assert(npoints);
 
     /* Initialize index for cd_values array starting from the third entry */
     cd_values_index = 2;
@@ -916,7 +885,7 @@ H5Z__set_local_nbit(hid_t dcpl_id, hid_t type_id, hid_t space_id)
     } /* end switch */
 
     /* Check if calculation of parameters matches with setting of parameters */
-    HDassert(cd_values_actual_nparms == cd_values_index);
+    assert(cd_values_actual_nparms == cd_values_index);
 
     /* Finally set the first two entries of cd_values[] */
     H5_CHECK_OVERFLOW(cd_values_actual_nparms, size_t, unsigned);
@@ -942,9 +911,6 @@ done:
  * Return:	Success: Size of buffer filtered
  *		Failure: 0
  *
- * Programmer:	Xiaowen Wu
- *              Friday, January 21, 2005
- *
  *-------------------------------------------------------------------------
  */
 static size_t
@@ -968,7 +934,7 @@ H5Z__filter_nbit(unsigned flags, size_t cd_nelmts, const unsigned cd_values[], s
      * cd_values[1] stores the flag if true indicating no need to compress
      */
     if (cd_values[1])
-        HGOTO_DONE(*buf_size)
+        HGOTO_DONE(*buf_size);
 
     /* copy a filter parameter to d_nelmts */
     d_nelmts = cd_values[2];
@@ -987,7 +953,7 @@ H5Z__filter_nbit(unsigned flags, size_t cd_nelmts, const unsigned cd_values[], s
     } /* end if */
     /* output; compress */
     else {
-        HDassert(nbytes == d_nelmts * cd_values[4]);
+        assert(nbytes == d_nelmts * cd_values[4]);
 
         size_out = nbytes;
 
@@ -1129,7 +1095,7 @@ H5Z__nbit_decompress_one_atomic(unsigned char *data, size_t data_offset, unsigne
     }
     else { /* big endian */
         /* Sanity check */
-        HDassert(p->order == H5Z_NBIT_ORDER_BE);
+        assert(p->order == H5Z_NBIT_ORDER_BE);
 
         /* calculate begin_i and end_i */
         begin_i = ((unsigned)datatype_len - p->precision - p->offset) / 8;
@@ -1204,7 +1170,7 @@ H5Z__nbit_decompress_one_array(unsigned char *data, size_t data_offset, unsigned
             break;
 
         default:
-            HDassert(0 && "This Should never be executed!");
+            assert(0 && "This Should never be executed!");
     } /* end switch */
 
 done:
@@ -1269,7 +1235,7 @@ H5Z__nbit_decompress_one_compound(unsigned char *data, size_t data_offset, unsig
                 break;
 
             default:
-                HDassert(0 && "This Should never be executed!");
+                assert(0 && "This Should never be executed!");
         } /* end switch */
     }
 
@@ -1292,7 +1258,7 @@ H5Z__nbit_decompress(unsigned char *data, unsigned d_nelmts, unsigned char *buff
     FUNC_ENTER_PACKAGE
 
     /* may not have to initialize to zeros */
-    HDmemset(data, 0, d_nelmts * (size_t)parms[4]);
+    memset(data, 0, d_nelmts * (size_t)parms[4]);
 
     /* initialization before the loop */
     j       = 0;
@@ -1336,7 +1302,7 @@ H5Z__nbit_decompress(unsigned char *data, unsigned d_nelmts, unsigned char *buff
             break;
 
         default:
-            HDassert(0 && "This Should never be executed!");
+            assert(0 && "This Should never be executed!");
     } /* end switch */
 
 done:
@@ -1436,7 +1402,7 @@ H5Z__nbit_compress_one_atomic(unsigned char *data, size_t data_offset, unsigned 
     }
     else { /* big endian */
         /* Sanity check */
-        HDassert(p->order == H5Z_NBIT_ORDER_BE);
+        assert(p->order == H5Z_NBIT_ORDER_BE);
 
         /* calculate begin_i and end_i */
         begin_i = ((unsigned)datatype_len - p->precision - p->offset) / 8;
@@ -1500,7 +1466,7 @@ H5Z__nbit_compress_one_array(unsigned char *data, size_t data_offset, unsigned c
             break;
 
         default:
-            HDassert(0 && "This Should never be executed!");
+            assert(0 && "This Should never be executed!");
     } /* end switch */
 }
 
@@ -1543,7 +1509,7 @@ H5Z__nbit_compress_one_compound(unsigned char *data, size_t data_offset, unsigne
                 break;
 
             default:
-                HDassert(0 && "This Should never be executed!");
+                assert(0 && "This Should never be executed!");
         } /* end switch */
     }
 }
@@ -1562,7 +1528,7 @@ H5Z__nbit_compress(unsigned char *data, unsigned d_nelmts, unsigned char *buffer
     unsigned     parms_index; /* index in array parms used by compression/decompression functions */
 
     /* must initialize buffer to be zeros */
-    HDmemset(buffer, 0, *buffer_size);
+    memset(buffer, 0, *buffer_size);
 
     /* initialization before the loop */
     buf_len = sizeof(unsigned char) * 8;
@@ -1599,7 +1565,7 @@ H5Z__nbit_compress(unsigned char *data, unsigned d_nelmts, unsigned char *buffer
             break;
 
         default:
-            HDassert(0 && "This Should never be executed!");
+            assert(0 && "This Should never be executed!");
     } /* end switch */
 
     /* Update the size to the new value after compression.  If there are any bits hanging over in

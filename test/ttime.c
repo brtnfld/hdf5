@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -177,13 +176,13 @@ test_time_io(void)
     tid = H5Dget_type(dsid);
     CHECK(tid, FAIL, "H5Dget_type");
     if (H5Tget_class(tid) == H5T_TIME)
-        HDfprintf(stderr, "datatype class is H5T_TIME\n");
+        fprintf(stderr, "datatype class is H5T_TIME\n");
     status = H5Tclose(tid);
     CHECK(status, FAIL, "H5Tclose");
 
     status = H5Dread(dsid, H5T_UNIX_D32LE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &timethen);
     CHECK(status, FAIL, "H5Dread");
-    HDfprintf(stderr, "time written was: %s\n", HDctime(&timethen));
+    fprintf(stderr, "time written was: %s\n", HDctime(&timethen));
 
     status = H5Dclose(dsid);
     CHECK(status, FAIL, "H5Dclose");
@@ -218,15 +217,14 @@ test_time(void)
  *
  * Return:    none
  *
- * Programmer:    Quincey Koziol
- *              October 19, 2000
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 void
 cleanup_time(void)
 {
-    HDremove(DATAFILE);
+    H5E_BEGIN_TRY
+    {
+        H5Fdelete(DATAFILE, H5P_DEFAULT);
+    }
+    H5E_END_TRY;
 }

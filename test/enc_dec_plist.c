@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -23,13 +22,12 @@
 #define SRC_DSET  "src_dset"
 
 static int
-test_encode_decode(hid_t orig_pl, H5F_libver_t low, H5F_libver_t high, hbool_t support_virtual)
+test_encode_decode(hid_t orig_pl, H5F_libver_t low, H5F_libver_t high)
 {
     hid_t  pl        = (-1); /* Decoded property list */
     hid_t  fapl      = -1;   /* File access property list */
     void  *temp_buf  = NULL; /* Pointer to encoding buffer */
     size_t temp_size = 0;    /* Size of encoding buffer */
-    herr_t ret;              /* Return value */
 
     /* Create file access property list */
     if ((fapl = H5Pcreate(H5P_FILE_ACCESS)) < 0)
@@ -39,68 +37,58 @@ test_encode_decode(hid_t orig_pl, H5F_libver_t low, H5F_libver_t high, hbool_t s
     if (H5Pset_libver_bounds(fapl, low, high) < 0)
         TEST_ERROR;
 
-    H5E_BEGIN_TRY
-    {
-        ret = H5Pencode2(orig_pl, NULL, &temp_size, fapl);
-    }
-    H5E_END_TRY;
+    if (H5Pencode2(orig_pl, NULL, &temp_size, fapl) < 0)
+        TEST_ERROR;
 
-    if (support_virtual && high < H5F_LIBVER_V110)
-        VERIFY(ret, FAIL, "H5Pencode2");
-    else {
+    /* Allocate the buffer for encoding */
+    if (NULL == (temp_buf = (void *)malloc(temp_size)))
+        TEST_ERROR;
 
-        VERIFY(ret, SUCCEED, "H5Pencode2");
+    /* Encode the property list to the buffer */
+    if (H5Pencode2(orig_pl, temp_buf, &temp_size, fapl) < 0)
+        TEST_ERROR;
 
-        /* Allocate the buffer for encoding */
-        if (NULL == (temp_buf = (void *)HDmalloc(temp_size)))
-            TEST_ERROR;
+    /* Decode the buffer */
+    if ((pl = H5Pdecode(temp_buf)) < 0)
+        STACK_ERROR;
 
-        /* Encode the property list to the buffer */
-        if (H5Pencode2(orig_pl, temp_buf, &temp_size, fapl) < 0)
-            TEST_ERROR;
+    /* Check if the original and the decoded property lists are equal */
+    if (!H5Pequal(orig_pl, pl))
+        PUTS_ERROR("encoding-decoding cycle failed\n");
 
-        /* Decode the buffer */
-        if ((pl = H5Pdecode(temp_buf)) < 0)
-            STACK_ERROR;
+    /* Close the decoded property list */
+    if ((H5Pclose(pl)) < 0)
+        TEST_ERROR;
 
-        /* Check if the original and the decoded property lists are equal */
-        if (!H5Pequal(orig_pl, pl))
-            PUTS_ERROR("encoding-decoding cycle failed\n");
-
-        /* Close the decoded property list */
-        if ((H5Pclose(pl)) < 0)
-            TEST_ERROR;
-
-        /* Free the buffer */
-        if (temp_buf)
-            HDfree(temp_buf);
+    /* Free the buffer */
+    if (temp_buf)
+        free(temp_buf);
 
 #ifndef H5_NO_DEPRECATED_SYMBOLS
-        /* Test H5Pencode1() */
+    /* Test H5Pencode1() */
 
-        /* first call to encode returns only the size of the buffer needed */
-        if (H5Pencode1(orig_pl, NULL, &temp_size) < 0)
-            STACK_ERROR;
+    /* first call to encode returns only the size of the buffer needed */
+    if (H5Pencode1(orig_pl, NULL, &temp_size) < 0)
+        STACK_ERROR;
 
-        if (NULL == (temp_buf = (void *)HDmalloc(temp_size)))
-            TEST_ERROR;
+    if (NULL == (temp_buf = (void *)malloc(temp_size)))
+        TEST_ERROR;
 
-        if (H5Pencode1(orig_pl, temp_buf, &temp_size) < 0)
-            STACK_ERROR;
+    if (H5Pencode1(orig_pl, temp_buf, &temp_size) < 0)
+        STACK_ERROR;
 
-        if ((pl = H5Pdecode(temp_buf)) < 0)
-            STACK_ERROR;
+    if ((pl = H5Pdecode(temp_buf)) < 0)
+        STACK_ERROR;
 
-        if (!H5Pequal(orig_pl, pl))
-            PUTS_ERROR("encoding-decoding cycle failed\n");
+    if (!H5Pequal(orig_pl, pl))
+        PUTS_ERROR("encoding-decoding cycle failed\n");
 
-        if ((H5Pclose(pl)) < 0)
-            STACK_ERROR;
+    if ((H5Pclose(pl)) < 0)
+        STACK_ERROR;
 
-        if (temp_buf)
-            HDfree(temp_buf);
+    if (temp_buf)
+        free(temp_buf);
 #endif /* H5_NO_DEPRECATED_SYMBOLS */
-    }
 
     if ((H5Pclose(fapl)) < 0)
         TEST_ERROR;
@@ -110,14 +98,14 @@ test_encode_decode(hid_t orig_pl, H5F_libver_t low, H5F_libver_t high, hbool_t s
 
 error:
     if (temp_buf)
-        HDfree(temp_buf);
+        free(temp_buf);
 
     H5E_BEGIN_TRY
     {
         H5Pclose(pl);
         H5Pclose(fapl);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return (-1);
 } /* end test_encode_decode() */
@@ -204,7 +192,7 @@ main(void)
             HDputs(msg);
 
             if (VERBOSE_MED)
-                HDprintf("Encode/Decode DCPLs\n");
+                printf("Encode/Decode DCPLs\n");
 
             /******* ENCODE/DECODE DCPLS *****/
             TESTING("Default DCPL Encoding/Decoding");
@@ -212,7 +200,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding default property list */
-            if (test_encode_decode(dcpl, low, high, FALSE) < 0)
+            if (test_encode_decode(dcpl, low, high) < 0)
                 FAIL_PUTS_ERROR("Default DCPL encoding/decoding failed\n");
 
             PASSED();
@@ -242,7 +230,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding property list */
-            if (test_encode_decode(dcpl, low, high, FALSE) < 0)
+            if (test_encode_decode(dcpl, low, high) < 0)
                 FAIL_PUTS_ERROR("DCPL encoding/decoding failed\n");
 
             /* release resource */
@@ -253,31 +241,38 @@ main(void)
 
             /******* ENCODE/DECODE DCPLS *****/
             TESTING("DCPL Encoding/Decoding for virtual layout");
-            if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
-                FAIL_STACK_ERROR;
+            if (high < H5F_LIBVER_V110)
+                printf(" SKIPPED: virtual layout not supported yet\n");
 
-            /* Set virtual layout */
-            if (H5Pset_layout(dcpl, H5D_VIRTUAL) < 0)
-                TEST_ERROR;
+            else {
+                if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
+                    FAIL_STACK_ERROR;
 
-            /* Create source dataspace */
-            if ((srcspace = H5Screate_simple(1, dims, NULL)) < 0)
-                TEST_ERROR;
+                /* Set virtual layout */
+                if (H5Pset_layout(dcpl, H5D_VIRTUAL) < 0)
+                    TEST_ERROR;
 
-            /* Create virtual dataspace */
-            if ((vspace = H5Screate_simple(1, dims, NULL)) < 0)
-                TEST_ERROR;
+                /* Create source dataspace */
+                if ((srcspace = H5Screate_simple(1, dims, NULL)) < 0)
+                    TEST_ERROR;
 
-            /* Add virtual layout mapping */
-            if (H5Pset_virtual(dcpl, vspace, SRC_FNAME, SRC_DSET, srcspace) < 0)
-                TEST_ERROR;
+                /* Create virtual dataspace */
+                if ((vspace = H5Screate_simple(1, dims, NULL)) < 0)
+                    TEST_ERROR;
 
-            if (test_encode_decode(dcpl, low, high, TRUE) < 0)
-                FAIL_PUTS_ERROR("DCPL encoding/decoding failed\n");
+                /* Add virtual layout mapping */
+                if (H5Pset_virtual(dcpl, vspace, SRC_FNAME, SRC_DSET, srcspace) < 0)
+                    TEST_ERROR;
 
-            /* release resource */
-            if ((H5Pclose(dcpl)) < 0)
-                FAIL_STACK_ERROR;
+                if (test_encode_decode(dcpl, low, high) < 0)
+                    FAIL_PUTS_ERROR("DCPL encoding/decoding failed\n");
+
+                /* release resource */
+                if ((H5Pclose(dcpl)) < 0)
+                    FAIL_STACK_ERROR;
+
+                PASSED();
+            }
 
             /******* ENCODE/DECODE DAPLS *****/
             TESTING("Default DAPL Encoding/Decoding");
@@ -285,7 +280,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding default property list */
-            if (test_encode_decode(dapl, low, high, FALSE) < 0)
+            if (test_encode_decode(dapl, low, high) < 0)
                 FAIL_PUTS_ERROR("Default DAPL encoding/decoding failed\n");
 
             PASSED();
@@ -296,7 +291,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding property list */
-            if (test_encode_decode(dapl, low, high, FALSE) < 0)
+            if (test_encode_decode(dapl, low, high) < 0)
                 FAIL_PUTS_ERROR("DAPL encoding/decoding failed\n");
 
             /* release resource */
@@ -311,7 +306,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding default property list */
-            if (test_encode_decode(ocpl, low, high, FALSE) < 0)
+            if (test_encode_decode(ocpl, low, high) < 0)
                 FAIL_PUTS_ERROR("Default OCPL encoding/decoding failed\n");
 
             PASSED();
@@ -328,7 +323,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding property list */
-            if (test_encode_decode(ocpl, low, high, FALSE) < 0)
+            if (test_encode_decode(ocpl, low, high) < 0)
                 FAIL_PUTS_ERROR("OCPL encoding/decoding failed\n");
 
             /* release resource */
@@ -343,7 +338,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding default property list */
-            if (test_encode_decode(dxpl, low, high, FALSE) < 0)
+            if (test_encode_decode(dxpl, low, high) < 0)
                 FAIL_PUTS_ERROR("Default DXPL encoding/decoding failed\n");
 
             PASSED();
@@ -372,8 +367,14 @@ main(void)
             if ((H5Pset_data_transform(dxpl, c_to_f)) < 0)
                 FAIL_STACK_ERROR;
 
+            if (H5Pset_selection_io(dxpl, H5D_SELECTION_IO_MODE_ON) < 0)
+                FAIL_STACK_ERROR;
+
+            if (H5Pset_modify_write_buf(dxpl, TRUE) < 0)
+                FAIL_STACK_ERROR;
+
             /* Test encoding & decoding property list */
-            if (test_encode_decode(dxpl, low, high, FALSE) < 0)
+            if (test_encode_decode(dxpl, low, high) < 0)
                 FAIL_PUTS_ERROR("DXPL encoding/decoding failed\n");
 
             /* release resource */
@@ -388,7 +389,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding default property list */
-            if (test_encode_decode(gcpl, low, high, FALSE) < 0)
+            if (test_encode_decode(gcpl, low, high) < 0)
                 FAIL_PUTS_ERROR("Default GCPL encoding/decoding failed\n");
 
             PASSED();
@@ -412,7 +413,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding property list */
-            if (test_encode_decode(gcpl, low, high, FALSE) < 0)
+            if (test_encode_decode(gcpl, low, high) < 0)
                 FAIL_PUTS_ERROR("GCPL encoding/decoding failed\n");
 
             /* release resource */
@@ -427,7 +428,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding default property list */
-            if (test_encode_decode(lcpl, low, high, FALSE) < 0)
+            if (test_encode_decode(lcpl, low, high) < 0)
                 FAIL_PUTS_ERROR("Default LCPL encoding/decoding failed\n");
 
             PASSED();
@@ -438,7 +439,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding property list */
-            if (test_encode_decode(lcpl, low, high, FALSE) < 0)
+            if (test_encode_decode(lcpl, low, high) < 0)
                 FAIL_PUTS_ERROR("LCPL encoding/decoding failed\n");
 
             /* release resource */
@@ -453,7 +454,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding default property list */
-            if (test_encode_decode(lapl, low, high, FALSE) < 0)
+            if (test_encode_decode(lapl, low, high) < 0)
                 FAIL_PUTS_ERROR("Default LAPL encoding/decoding failed\n");
 
             PASSED();
@@ -483,7 +484,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding property list */
-            if (test_encode_decode(lapl, low, high, FALSE) < 0)
+            if (test_encode_decode(lapl, low, high) < 0)
                 FAIL_PUTS_ERROR("LAPL encoding/decoding failed\n");
 
             /* release resource */
@@ -498,7 +499,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding default property list */
-            if (test_encode_decode(ocpypl, low, high, FALSE) < 0)
+            if (test_encode_decode(ocpypl, low, high) < 0)
                 FAIL_PUTS_ERROR("Default OCPYPL encoding/decoding failed\n");
 
             PASSED();
@@ -514,7 +515,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding property list */
-            if (test_encode_decode(ocpypl, low, high, FALSE) < 0)
+            if (test_encode_decode(ocpypl, low, high) < 0)
                 FAIL_PUTS_ERROR("OCPYPL encoding/decoding failed\n");
 
             /* release resource */
@@ -529,7 +530,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding default property list */
-            if (test_encode_decode(fapl, low, high, FALSE) < 0)
+            if (test_encode_decode(fapl, low, high) < 0)
                 FAIL_PUTS_ERROR("Default FAPL encoding/decoding failed\n");
 
             PASSED();
@@ -564,7 +565,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding property list */
-            if (test_encode_decode(fapl, low, high, FALSE) < 0)
+            if (test_encode_decode(fapl, low, high) < 0)
                 FAIL_PUTS_ERROR("FAPL encoding/decoding failed\n");
 
             /* release resource */
@@ -580,7 +581,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding default property list */
-            if (test_encode_decode(fcpl, low, high, FALSE) < 0)
+            if (test_encode_decode(fcpl, low, high) < 0)
                 FAIL_PUTS_ERROR("Default FCPL encoding/decoding failed\n");
 
             PASSED();
@@ -609,7 +610,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding property list */
-            if (test_encode_decode(fcpl, low, high, FALSE) < 0)
+            if (test_encode_decode(fcpl, low, high) < 0)
                 FAIL_PUTS_ERROR("FCPL encoding/decoding failed\n");
 
             /* release resource */
@@ -625,7 +626,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding default property list */
-            if (test_encode_decode(strcpl, low, high, FALSE) < 0)
+            if (test_encode_decode(strcpl, low, high) < 0)
                 FAIL_PUTS_ERROR("Default STRCPL encoding/decoding failed\n");
 
             PASSED();
@@ -636,7 +637,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding property list */
-            if (test_encode_decode(strcpl, low, high, FALSE) < 0)
+            if (test_encode_decode(strcpl, low, high) < 0)
                 FAIL_PUTS_ERROR("STRCPL encoding/decoding failed\n");
 
             /* release resource */
@@ -652,7 +653,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding default property list */
-            if (test_encode_decode(acpl, low, high, FALSE) < 0)
+            if (test_encode_decode(acpl, low, high) < 0)
                 FAIL_PUTS_ERROR("Default ACPL encoding/decoding failed\n");
 
             PASSED();
@@ -663,7 +664,7 @@ main(void)
                 FAIL_STACK_ERROR;
 
             /* Test encoding & decoding property list */
-            if (test_encode_decode(acpl, low, high, FALSE) < 0)
+            if (test_encode_decode(acpl, low, high) < 0)
                 FAIL_PUTS_ERROR("ACPL encoding/decoding failed\n");
 
             /* release resource */
@@ -678,6 +679,6 @@ main(void)
     return 0;
 
 error:
-    HDprintf("***** Plist Encode/Decode tests FAILED! *****\n");
+    printf("***** Plist Encode/Decode tests FAILED! *****\n");
     return 1;
 }

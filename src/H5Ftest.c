@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -14,8 +13,6 @@
 /*-------------------------------------------------------------------------
  *
  * Created:		H5Ftest.c
- *			Jan  3 2007
- *			Quincey Koziol
  *
  * Purpose:		File testing routines.
  *
@@ -90,9 +87,6 @@ H5FL_SEQ_EXTERN(H5FD_vfd_swmr_idx_entry_t);
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:  Quincey Koziol
- *              Jan  3, 2007
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -119,7 +113,7 @@ H5F__get_sohm_mesg_count_test(hid_t file_id, unsigned type_id, size_t *mesg_coun
 
 done:
     if (api_ctx_pushed && H5CX_pop(FALSE) < 0)
-        HDONE_ERROR(H5E_FILE, H5E_CANTRESET, FAIL, "can't reset API context")
+        HDONE_ERROR(H5E_FILE, H5E_CANTRESET, FAIL, "can't reset API context");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F__get_sohm_mesg_count_test() */
@@ -133,9 +127,6 @@ done:
  *              valid.
  *
  * Return:      SUCCEED/FAIL
- *
- * Programmer:	Neil Fortner
- *	        Mar  31, 2009
  *
  *-------------------------------------------------------------------------
  */
@@ -163,7 +154,7 @@ H5F__check_cached_stab_test(hid_t file_id)
 
 done:
     if (api_ctx_pushed && H5CX_pop(FALSE) < 0)
-        HDONE_ERROR(H5E_FILE, H5E_CANTRESET, FAIL, "can't reset API context")
+        HDONE_ERROR(H5E_FILE, H5E_CANTRESET, FAIL, "can't reset API context");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F__check_cached_stab_test() */
@@ -174,9 +165,6 @@ done:
  * Purpose:     Retrieve the maximum address for a file
  *
  * Return:      SUCCEED/FAIL
- *
- * Programmer:	Quincey Koziol
- *	        Jun 10, 2009
  *
  *-------------------------------------------------------------------------
  */
@@ -207,9 +195,6 @@ done:
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:	Quincey Koziol
- *	        Jul 10, 2016
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -237,9 +222,6 @@ done:
  * Purpose:     Check if two file IDs refer to the same underlying file.
  *
  * Return:      SUCCEED/FAIL
- *
- * Programmer:	Quincey Koziol
- *	        Oct 13, 2018
  *
  *-------------------------------------------------------------------------
  */
@@ -275,9 +257,6 @@ done:
  *              with setnev(3).
  *
  * Return:      SUCCEED/FAIL
- *
- * Programmer:	Dana Robinson
- *              Summer 2020
  *
  *-------------------------------------------------------------------------
  */
@@ -351,8 +330,8 @@ H5F__vfd_swmr_writer_create_open_flush_test(hid_t file_id, hbool_t file_create)
     }
     else { /* Opening or flushing the file */
 
-        HDmemset(&md_hdr, 0, sizeof(H5FD_vfd_swmr_md_header));
-        HDmemset(&md_idx, 0, sizeof(H5FD_vfd_swmr_md_index));
+        memset(&md_hdr, 0, sizeof(H5FD_vfd_swmr_md_header));
+        memset(&md_idx, 0, sizeof(H5FD_vfd_swmr_md_index));
 
         /* Decode the header */
         if (H5F__vfd_swmr_decode_md_hdr(md_fd, &md_hdr) < 0)
@@ -371,7 +350,7 @@ H5F__vfd_swmr_writer_create_open_flush_test(hid_t file_id, hbool_t file_create)
 done:
     /* Free the index entries */
     if (!file_create && md_idx.entries) {
-        HDassert(md_idx.num_entries);
+        assert(md_idx.num_entries);
         H5MM_free(md_idx.entries);
     }
     FUNC_LEAVE_NOAPI(ret_value)
@@ -407,7 +386,7 @@ H5F__vfd_swmr_decode_md_hdr(int md_fd, H5FD_vfd_swmr_md_header *md_hdr)
         HGOTO_ERROR(H5E_FILE, H5E_READERROR, FAIL, "error reading metadata file")
 
     /* Verify magic for header */
-    if (HDmemcmp(p, H5FD_MD_HEADER_MAGIC, (size_t)H5_SIZEOF_MAGIC) != 0)
+    if (memcmp(p, H5FD_MD_HEADER_MAGIC, (size_t)H5_SIZEOF_MAGIC) != 0)
         HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "does not find header magic in the metadata file")
 
     p += H5_SIZEOF_MAGIC;
@@ -460,7 +439,7 @@ H5F__vfd_swmr_decode_md_idx(int md_fd, H5FD_vfd_swmr_md_header *md_hdr, H5FD_vfd
         HGOTO_ERROR(H5E_FILE, H5E_READERROR, FAIL, "error in reading the header in metadata file")
 
     /* Verify magic for index */
-    if (HDmemcmp(p, H5FD_MD_INDEX_MAGIC, H5_SIZEOF_MAGIC) != 0)
+    if (memcmp(p, H5FD_MD_INDEX_MAGIC, H5_SIZEOF_MAGIC) != 0)
         HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "no header magic in the metadata file")
 
     p += H5_SIZEOF_MAGIC;
@@ -493,7 +472,7 @@ done:
     if (ret_value < 0) {
         /* Free the index entries */
         if (md_idx->entries) {
-            HDassert(md_idx->num_entries);
+            assert(md_idx->num_entries);
             H5MM_free(md_idx->entries);
         }
     }
@@ -618,8 +597,8 @@ H5F__vfd_swmr_writer_md_test(hid_t file_id, unsigned num_entries, H5FD_vfd_swmr_
 
     FUNC_ENTER_PACKAGE
 
-    HDmemset(&md_hdr, 0, sizeof(H5FD_vfd_swmr_md_header));
-    HDmemset(&md_idx, 0, sizeof(H5FD_vfd_swmr_md_index));
+    memset(&md_hdr, 0, sizeof(H5FD_vfd_swmr_md_header));
+    memset(&md_idx, 0, sizeof(H5FD_vfd_swmr_md_index));
 
     /* Check arguments */
     if (NULL == (f = (H5F_t *)H5VL_object_verify(file_id, H5I_FILE)))
@@ -653,7 +632,7 @@ H5F__vfd_swmr_writer_md_test(hid_t file_id, unsigned num_entries, H5FD_vfd_swmr_
 done:
     /* Free the index entries */
     if (md_idx.entries) {
-        HDassert(md_idx.num_entries);
+        assert(md_idx.num_entries);
         H5MM_free(md_idx.entries);
     }
     FUNC_LEAVE_NOAPI(ret_value)

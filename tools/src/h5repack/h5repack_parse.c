@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -53,7 +52,7 @@ parse_filter(const char *str, unsigned *n_objs, filter_info_t *filt, pack_opt_t 
     unsigned    pixels_per_block;
 
     /* initialize compression  info */
-    HDmemset(filt, 0, sizeof(filter_info_t));
+    memset(filt, 0, sizeof(filter_info_t));
     *is_glb = 0;
 
     /* check for the end of object list and number of objects */
@@ -78,7 +77,7 @@ parse_filter(const char *str, unsigned *n_objs, filter_info_t *filt, pack_opt_t 
     else
         *n_objs = n;
 
-    obj_list = (obj_list_t *)HDmalloc(n * sizeof(obj_list_t));
+    obj_list = (obj_list_t *)malloc(n * sizeof(obj_list_t));
     if (obj_list == NULL) {
         error_msg("could not allocate object list\n");
         return NULL;
@@ -96,7 +95,7 @@ parse_filter(const char *str, unsigned *n_objs, filter_info_t *filt, pack_opt_t 
                     sobj[k + 1] = '\0';
 
                 HDstrcpy(obj_list[n].obj, sobj);
-                HDmemset(sobj, 0, sizeof(sobj));
+                memset(sobj, 0, sizeof(sobj));
                 n++;
                 k = -1;
             }
@@ -104,9 +103,9 @@ parse_filter(const char *str, unsigned *n_objs, filter_info_t *filt, pack_opt_t 
     /* nothing after : */
     if (end_obj + 1 == (int)len) {
         if (obj_list)
-            HDfree(obj_list);
+            free(obj_list);
         error_msg("input Error: Invalid compression type in <%s>\n", str);
-        HDexit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     }
 
     /* get filter additional parameters */
@@ -133,11 +132,11 @@ parse_filter(const char *str, unsigned *n_objs, filter_info_t *filt, pack_opt_t 
                             u++;             /* skip ',' */
                         }
                         c = str[u];
-                        if (!HDisdigit(c) && l == -1) {
+                        if (!isdigit(c) && l == -1) {
                             if (obj_list)
-                                HDfree(obj_list);
+                                free(obj_list);
                             error_msg("compression parameter not digit in <%s>\n", str);
-                            HDexit(EXIT_FAILURE);
+                            exit(EXIT_FAILURE);
                         }
                         if (l == -1)
                             stype[m] = c;
@@ -153,7 +152,7 @@ parse_filter(const char *str, unsigned *n_objs, filter_info_t *filt, pack_opt_t 
                                     filt->cd_values[j++] = H5_SZIP_EC_OPTION_MASK;
                                 else {
                                     error_msg("szip mask must be 'NN' or 'EC' \n");
-                                    HDexit(EXIT_FAILURE);
+                                    exit(EXIT_FAILURE);
                                 }
                             }
                         }
@@ -183,11 +182,11 @@ parse_filter(const char *str, unsigned *n_objs, filter_info_t *filt, pack_opt_t 
                             u++;             /* skip ',' */
                         }
                         c = str[u];
-                        if (!HDisdigit(c) && l == -1) {
+                        if (!isdigit(c) && l == -1) {
                             if (obj_list)
-                                HDfree(obj_list);
+                                free(obj_list);
                             error_msg("compression parameter is not a digit in <%s>\n", str);
-                            HDexit(EXIT_FAILURE);
+                            exit(EXIT_FAILURE);
                         }
                         if (l == -1)
                             stype[m] = c;
@@ -203,7 +202,7 @@ parse_filter(const char *str, unsigned *n_objs, filter_info_t *filt, pack_opt_t 
                                     filt->cd_values[j++] = H5Z_SO_FLOAT_DSCALE;
                                 else {
                                     error_msg("scale type must be 'IN' or 'DS' \n");
-                                    HDexit(EXIT_FAILURE);
+                                    exit(EXIT_FAILURE);
                                 }
                             }
                         }
@@ -225,35 +224,35 @@ parse_filter(const char *str, unsigned *n_objs, filter_info_t *filt, pack_opt_t 
                         if (str[u] == ',') {
                             stype[q] = '\0'; /* end digit */
                             if (l == -1) {
-                                filt->filtn = HDatoi(stype);
+                                filt->filtn = atoi(stype);
                                 l           = 0;
                             }
                             else if (f == -1) {
-                                filt->filt_flag = (unsigned)HDstrtoul(stype, NULL, 0);
+                                filt->filt_flag = (unsigned)strtoul(stype, NULL, 0);
                                 f               = 0;
                             }
                             else if (p == -1) {
-                                filt->cd_nelmts = HDstrtoull(stype, NULL, 0);
+                                filt->cd_nelmts = strtoull(stype, NULL, 0);
                                 p               = 0;
                             }
                             else {
-                                filt->cd_values[j++] = (unsigned)HDstrtoul(stype, NULL, 0);
+                                filt->cd_values[j++] = (unsigned)strtoul(stype, NULL, 0);
                             }
                             q = 0;
                             u++; /* skip ',' */
                         }
                         c = str[u];
-                        if (!HDisdigit(c) && l == -1) {
+                        if (!isdigit(c) && l == -1) {
                             if (obj_list)
-                                HDfree(obj_list);
+                                free(obj_list);
                             error_msg("filter number parameter is not a digit in <%s>\n", str);
-                            HDexit(EXIT_FAILURE);
+                            exit(EXIT_FAILURE);
                         }
-                        else if (!HDisdigit(c) && f == -1) {
+                        else if (!isdigit(c) && f == -1) {
                             if (obj_list)
-                                HDfree(obj_list);
+                                free(obj_list);
                             error_msg("filter flag parameter is not a digit in <%s>\n", str);
-                            HDexit(EXIT_FAILURE);
+                            exit(EXIT_FAILURE);
                         }
                         stype[q] = c;
                     } /* for u */
@@ -268,11 +267,11 @@ parse_filter(const char *str, unsigned *n_objs, filter_info_t *filt, pack_opt_t 
                     /* here we could have 1 or 2 digits  */
                     for (m = 0, u = i + 1; u < len; u++, m++) {
                         c = str[u];
-                        if (!HDisdigit(c)) {
+                        if (!isdigit(c)) {
                             if (obj_list)
-                                HDfree(obj_list);
+                                free(obj_list);
                             error_msg("compression parameter is not a digit in <%s>\n", str);
-                            HDexit(EXIT_FAILURE);
+                            exit(EXIT_FAILURE);
                         }
                         stype[m] = c;
                     } /* u */
@@ -280,7 +279,7 @@ parse_filter(const char *str, unsigned *n_objs, filter_info_t *filt, pack_opt_t 
                     stype[m] = '\0';
                 } /*if */
 
-                filt->cd_values[j++] = (unsigned)HDstrtoul(stype, NULL, 0);
+                filt->cd_values[j++] = (unsigned)strtoul(stype, NULL, 0);
                 if (filt->cd_nelmts == 0)
                     j = 0;
                 i += m; /* jump */
@@ -313,9 +312,9 @@ parse_filter(const char *str, unsigned *n_objs, filter_info_t *filt, pack_opt_t 
                 filt->cd_nelmts = 1;
                 if (no_param) { /*no more parameters, GZIP must have parameter */
                     if (obj_list)
-                        HDfree(obj_list);
+                        free(obj_list);
                     error_msg("missing compression parameter in <%s>\n", str);
-                    HDexit(EXIT_FAILURE);
+                    exit(EXIT_FAILURE);
                 }
             }
 
@@ -328,9 +327,9 @@ parse_filter(const char *str, unsigned *n_objs, filter_info_t *filt, pack_opt_t 
                 filt->cd_nelmts = 2;
                 if (no_param) { /*no more parameters, SZIP must have parameter */
                     if (obj_list)
-                        HDfree(obj_list);
+                        free(obj_list);
                     error_msg("missing compression parameter in <%s>\n", str);
-                    HDexit(EXIT_FAILURE);
+                    exit(EXIT_FAILURE);
                 }
             }
 
@@ -343,9 +342,9 @@ parse_filter(const char *str, unsigned *n_objs, filter_info_t *filt, pack_opt_t 
                 filt->cd_nelmts = 0;
                 if (m > 0) { /*shuffle does not have parameter */
                     if (obj_list)
-                        HDfree(obj_list);
+                        free(obj_list);
                     error_msg("extra parameter in SHUF <%s>\n", str);
-                    HDexit(EXIT_FAILURE);
+                    exit(EXIT_FAILURE);
                 }
             }
             /*-------------------------------------------------------------------------
@@ -357,9 +356,9 @@ parse_filter(const char *str, unsigned *n_objs, filter_info_t *filt, pack_opt_t 
                 filt->cd_nelmts = 0;
                 if (m > 0) { /*shuffle does not have parameter */
                     if (obj_list)
-                        HDfree(obj_list);
+                        free(obj_list);
                     error_msg("extra parameter in FLET <%s>\n", str);
-                    HDexit(EXIT_FAILURE);
+                    exit(EXIT_FAILURE);
                 }
             }
             /*-------------------------------------------------------------------------
@@ -371,9 +370,9 @@ parse_filter(const char *str, unsigned *n_objs, filter_info_t *filt, pack_opt_t 
                 filt->cd_nelmts = 0;
                 if (m > 0) { /*nbit does not have parameter */
                     if (obj_list)
-                        HDfree(obj_list);
+                        free(obj_list);
                     error_msg("extra parameter in NBIT <%s>\n", str);
-                    HDexit(EXIT_FAILURE);
+                    exit(EXIT_FAILURE);
                 }
             }
             /*-------------------------------------------------------------------------
@@ -385,9 +384,9 @@ parse_filter(const char *str, unsigned *n_objs, filter_info_t *filt, pack_opt_t 
                 filt->cd_nelmts = 2;
                 if (no_param) { /*no more parameters, SOFF must have parameter */
                     if (obj_list)
-                        HDfree(obj_list);
+                        free(obj_list);
                     error_msg("missing compression parameter in <%s>\n", str);
-                    HDexit(EXIT_FAILURE);
+                    exit(EXIT_FAILURE);
                 }
             }
             /*-------------------------------------------------------------------------
@@ -398,16 +397,16 @@ parse_filter(const char *str, unsigned *n_objs, filter_info_t *filt, pack_opt_t 
                 /* parameters does not match count */
                 if (filt->cd_nelmts != j) {
                     if (obj_list)
-                        HDfree(obj_list);
+                        free(obj_list);
                     error_msg("incorrect number of compression parameters in <%s>\n", str);
-                    HDexit(EXIT_FAILURE);
+                    exit(EXIT_FAILURE);
                 }
             }
             else {
                 if (obj_list)
-                    HDfree(obj_list);
+                    free(obj_list);
                 error_msg("invalid filter type in <%s>\n", str);
-                HDexit(EXIT_FAILURE);
+                exit(EXIT_FAILURE);
             }
             break;
         }
@@ -426,9 +425,9 @@ parse_filter(const char *str, unsigned *n_objs, filter_info_t *filt, pack_opt_t 
         case H5Z_FILTER_DEFLATE:
             if (filt->cd_values[0] > 9) {
                 if (obj_list)
-                    HDfree(obj_list);
+                    free(obj_list);
                 error_msg("invalid compression parameter in <%s>\n", str);
-                HDexit(EXIT_FAILURE);
+                exit(EXIT_FAILURE);
             }
             break;
             /*-------------------------------------------------------------------------
@@ -439,26 +438,26 @@ parse_filter(const char *str, unsigned *n_objs, filter_info_t *filt, pack_opt_t 
             pixels_per_block = filt->cd_values[0];
             if ((pixels_per_block % 2) == 1) {
                 if (obj_list)
-                    HDfree(obj_list);
+                    free(obj_list);
                 error_msg("pixels_per_block is not even in <%s>\n", str);
-                HDexit(EXIT_FAILURE);
+                exit(EXIT_FAILURE);
             }
             if (pixels_per_block > H5_SZIP_MAX_PIXELS_PER_BLOCK) {
                 if (obj_list)
-                    HDfree(obj_list);
+                    free(obj_list);
                 error_msg("pixels_per_block is too large in <%s>\n", str);
-                HDexit(EXIT_FAILURE);
+                exit(EXIT_FAILURE);
             }
             if ((HDstrcmp(smask, "NN") != 0) && (HDstrcmp(smask, "EC") != 0)) {
                 if (obj_list)
-                    HDfree(obj_list);
+                    free(obj_list);
                 error_msg("szip mask must be 'NN' or 'EC' \n");
-                HDexit(EXIT_FAILURE);
+                exit(EXIT_FAILURE);
             }
             break;
         default:
             break;
-    };
+    }
 
     return obj_list;
 }
@@ -478,10 +477,6 @@ parse_filter(const char *str, unsigned *n_objs, filter_info_t *filt, pack_opt_t 
  * Example:
  * "AA,B,CDE:CHUNK=10X10"
  *
- * Programmer: Pedro Vicente
- *
- * Date: December 30, 2003
- *
  *-------------------------------------------------------------------------
  */
 obj_list_t *
@@ -497,9 +492,9 @@ parse_layout(const char *str, unsigned *n_objs, pack_info_t *pack, /* info about
     char        sdim[10];
     char        slayout[10];
 
-    HDmemset(sdim, '\0', sizeof(sdim));
-    HDmemset(sobj, '\0', sizeof(sobj));
-    HDmemset(slayout, '\0', sizeof(slayout));
+    memset(sdim, '\0', sizeof(sdim));
+    memset(sobj, '\0', sizeof(sobj));
+    memset(slayout, '\0', sizeof(slayout));
 
     /* check for the end of object list and number of objects */
     for (i = 0, n = 0; i < len; i++) {
@@ -515,7 +510,7 @@ parse_layout(const char *str, unsigned *n_objs, pack_info_t *pack, /* info about
     }
 
     n++;
-    obj_list = (obj_list_t *)HDmalloc(n * sizeof(obj_list_t));
+    obj_list = (obj_list_t *)malloc(n * sizeof(obj_list_t));
     if (obj_list == NULL) {
         error_msg("could not allocate object list\n");
         return NULL;
@@ -533,7 +528,7 @@ parse_layout(const char *str, unsigned *n_objs, pack_info_t *pack, /* info about
                 else
                     sobj[k + 1] = '\0';
                 HDstrcpy(obj_list[n].obj, sobj);
-                HDmemset(sobj, 0, sizeof(sobj));
+                memset(sobj, 0, sizeof(sobj));
                 n++;
                 k = -1;
             }
@@ -542,9 +537,9 @@ parse_layout(const char *str, unsigned *n_objs, pack_info_t *pack, /* info about
     /* nothing after : */
     if (end_obj + 1 == (int)len) {
         if (obj_list)
-            HDfree(obj_list);
+            free(obj_list);
         error_msg("in parse layout, no characters after : in <%s>\n", str);
-        HDexit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     }
 
     /* get layout info */
@@ -559,7 +554,7 @@ parse_layout(const char *str, unsigned *n_objs, pack_info_t *pack, /* info about
                 pack->layout = H5D_CHUNKED;
             else {
                 error_msg("in parse layout, not a valid layout in <%s>\n", str);
-                HDexit(EXIT_FAILURE);
+                exit(EXIT_FAILURE);
             }
         }
         else {
@@ -576,9 +571,9 @@ parse_layout(const char *str, unsigned *n_objs, pack_info_t *pack, /* info about
         k = 0;
         if (j > len) {
             if (obj_list)
-                HDfree(obj_list);
+                free(obj_list);
             error_msg("in parse layout,  <%s> Chunk dimensions missing\n", str);
-            HDexit(EXIT_FAILURE);
+            exit(EXIT_FAILURE);
         }
 
         for (i = j, c_index = 0; i < len; i++) {
@@ -586,23 +581,23 @@ parse_layout(const char *str, unsigned *n_objs, pack_info_t *pack, /* info about
             sdim[k] = c;
             k++; /*increment sdim index */
 
-            if (!HDisdigit(c) && c != 'x' && c != 'N' && c != 'O' && c != 'N' && c != 'E') {
+            if (!isdigit(c) && c != 'x' && c != 'N' && c != 'O' && c != 'N' && c != 'E') {
                 if (obj_list)
-                    HDfree(obj_list);
+                    free(obj_list);
                 error_msg("in parse layout, <%s> Not a valid character in <%s>\n", sdim, str);
-                HDexit(EXIT_FAILURE);
+                exit(EXIT_FAILURE);
             }
 
             if (c == 'x' || i == len - 1) {
                 if (c == 'x') {
                     sdim[k - 1]                        = '\0';
                     k                                  = 0;
-                    pack->chunk.chunk_lengths[c_index] = HDstrtoull(sdim, NULL, 0);
+                    pack->chunk.chunk_lengths[c_index] = strtoull(sdim, NULL, 0);
                     if (pack->chunk.chunk_lengths[c_index] == 0) {
                         if (obj_list)
-                            HDfree(obj_list);
+                            free(obj_list);
                         error_msg("in parse layout, <%s> conversion to number in <%s>\n", sdim, str);
-                        HDexit(EXIT_FAILURE);
+                        exit(EXIT_FAILURE);
                     }
                     c_index++;
                 }
@@ -613,12 +608,12 @@ parse_layout(const char *str, unsigned *n_objs, pack_info_t *pack, /* info about
                         pack->chunk.rank = -2;
                     }
                     else {
-                        pack->chunk.chunk_lengths[c_index] = HDstrtoull(sdim, NULL, 0);
+                        pack->chunk.chunk_lengths[c_index] = strtoull(sdim, NULL, 0);
                         if (pack->chunk.chunk_lengths[c_index] == 0) {
                             if (obj_list)
-                                HDfree(obj_list);
+                                free(obj_list);
                             error_msg("in parse layout, <%s> conversion to number in <%s>\n", sdim, str);
-                            HDexit(EXIT_FAILURE);
+                            exit(EXIT_FAILURE);
                         }
                         pack->chunk.rank = c_index + 1;
                     }

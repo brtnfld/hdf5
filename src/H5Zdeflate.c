@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -10,11 +9,6 @@
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-/*
- * Programmer:  Robb Matzke
- *              Friday, August 27, 1999
- */
 
 #include "H5Zmodule.h" /* This source code file is part of the H5Z module */
 
@@ -59,9 +53,6 @@ const H5Z_class2_t H5Z_DEFLATE[1] = {{
  * Return:	Success: Size of buffer filtered
  *		Failure: 0
  *
- * Programmer:	Robb Matzke
- *              Thursday, April 16, 1998
- *
  *-------------------------------------------------------------------------
  */
 static size_t
@@ -75,9 +66,9 @@ H5Z__filter_deflate(unsigned flags, size_t cd_nelmts, const unsigned cd_values[]
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(*buf_size > 0);
-    HDassert(buf);
-    HDassert(*buf);
+    assert(*buf_size > 0);
+    assert(buf);
+    assert(*buf);
 
     /* Check arguments */
     if (cd_nelmts != 1 || cd_values[0] > 9)
@@ -93,7 +84,7 @@ H5Z__filter_deflate(unsigned flags, size_t cd_nelmts, const unsigned cd_values[]
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, 0, "memory allocation failed for deflate uncompression")
 
         /* Set the uncompression parameters */
-        HDmemset(&z_strm, 0, sizeof(z_strm));
+        memset(&z_strm, 0, sizeof(z_strm));
         z_strm.next_in = (Bytef *)*buf;
         H5_CHECKED_ASSIGN(z_strm.avail_in, unsigned, nbytes, size_t);
         z_strm.next_out = (Bytef *)outbuf;

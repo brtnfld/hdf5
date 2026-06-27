@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -14,8 +13,6 @@
 /*-------------------------------------------------------------------------
  *
  * Created:	H5Fdeprec.c
- *		October 1 2009
- *		Quincey Koziol
  *
  * Purpose:	Deprecated functions from the H5F interface.  These
  *              functions are here for compatibility purposes and may be
@@ -205,8 +202,6 @@ done:
  *              See also RFC: Setting Bounds for Object Creation in HDF5 1.10.0.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Vailin Choi; December 2017
  *
  *-------------------------------------------------------------------------
  */

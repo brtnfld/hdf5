@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -89,9 +88,6 @@ H5FL_DEFINE(H5D_copy_file_ud_t);
  *
  *		Failure:	NULL
  *
- * Programmer:	Quincey Koziol
- *              Monday, November 21, 2005
- *
  *-------------------------------------------------------------------------
  */
 static void *
@@ -117,9 +113,6 @@ done:
  *
  * Return:	<none>
  *
- * Programmer:	Quincey Koziol
- *              Monday, November 21, 2005
- *
  *-------------------------------------------------------------------------
  */
 static void
@@ -130,7 +123,7 @@ H5O__dset_free_copy_file_udata(void *_udata)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(udata);
+    assert(udata);
 
     /* Release copy of dataset's dataspace extent, if it was set */
     if (udata->src_space_extent)
@@ -162,9 +155,6 @@ H5O__dset_free_copy_file_udata(void *_udata)
  *		Failure:	FAIL if the existence of certain messages
  *				cannot be determined.
  *
- * Programmer:	Robb Matzke
- *              Monday, November  2, 1998
- *
  *-------------------------------------------------------------------------
  */
 static htri_t
@@ -175,19 +165,19 @@ H5O__dset_isa(const H5O_t *oh)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(oh);
+    assert(oh);
 
     /* Datatype */
     if ((exists = H5O_msg_exists_oh(oh, H5O_DTYPE_ID)) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to read object header")
     else if (!exists)
-        HGOTO_DONE(FALSE)
+        HGOTO_DONE(FALSE);
 
     /* Layout */
     if ((exists = H5O_msg_exists_oh(oh, H5O_SDSPACE_ID)) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to read object header")
     else if (!exists)
-        HGOTO_DONE(FALSE)
+        HGOTO_DONE(FALSE);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -201,9 +191,6 @@ done:
  * Return:	Success:	Open object identifier
  *		Failure:	Negative
  *
- * Programmer:	Quincey Koziol
- *              Monday, November  6, 2006
- *
  *-------------------------------------------------------------------------
  */
 static void *
@@ -215,7 +202,7 @@ H5O__dset_open(const H5G_loc_t *obj_loc, H5I_type_t *opened_type)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(obj_loc);
+    assert(obj_loc);
 
     *opened_type = H5I_DATASET;
 
@@ -251,7 +238,7 @@ H5O__dset_open(const H5G_loc_t *obj_loc, H5I_type_t *opened_type)
 done:
     if (NULL == ret_value)
         if (dset && H5D_close(dset) < 0)
-            HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, NULL, "unable to release dataset")
+            HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, NULL, "unable to release dataset");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O__dset_open() */
@@ -263,9 +250,6 @@ done:
  *
  * Return:	Success:	Pointer to the dataset data structure
  *		Failure:	NULL
- *
- * Programmer:	Quincey Koziol
- *              Wednesday, April 11, 2007
  *
  *-------------------------------------------------------------------------
  */
@@ -279,11 +263,11 @@ H5O__dset_create(H5F_t *f, void *_crt_info, H5G_loc_t *obj_loc)
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(f);
-    HDassert(crt_info);
-    HDassert(obj_loc);
+    assert(f);
+    assert(crt_info);
+    assert(obj_loc);
 
-    /* Create the the dataset */
+    /* Create the dataset */
     if (NULL ==
         (dset = H5D__create(f, crt_info->type_id, crt_info->space, crt_info->dcpl_id, crt_info->dapl_id)))
         HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, NULL, "unable to create dataset")
@@ -300,7 +284,7 @@ H5O__dset_create(H5F_t *f, void *_crt_info, H5G_loc_t *obj_loc)
 done:
     if (ret_value == NULL)
         if (dset && H5D_close(dset) < 0)
-            HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, NULL, "unable to release dataset")
+            HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, NULL, "unable to release dataset");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O__dset_create() */
@@ -312,9 +296,6 @@ done:
  *
  * Return:	Success:	Pointer to object header location
  *		Failure:	NULL
- *
- * Programmer:	Quincey Koziol
- *              Monday, November  6, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -347,9 +328,6 @@ done:
  * Return:      Success:        non-negative
  *              Failure:        negative
  *
- * Programmer:  Vailin Choi
- *              July 11, 2007
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -365,11 +343,11 @@ H5O__dset_bh_info(const H5O_loc_t *loc, H5O_t *oh, H5_ih_info_t *bh_info)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(loc);
-    HDassert(loc->file);
-    HDassert(H5F_addr_defined(loc->addr));
-    HDassert(oh);
-    HDassert(bh_info);
+    assert(loc);
+    assert(loc->file);
+    assert(H5_addr_defined(loc->addr));
+    assert(oh);
+    assert(bh_info);
 
     /* Get the layout message from the object header */
     if (NULL == H5O_msg_read_oh(loc->file, oh, H5O_LAYOUT_ID, &layout))
@@ -400,7 +378,7 @@ H5O__dset_bh_info(const H5O_loc_t *loc, H5O_t *oh, H5_ih_info_t *bh_info)
 
     if (exists && H5D__efl_is_space_alloc(&layout.storage)) {
         /* Start with clean EFL info */
-        HDmemset(&efl, 0, sizeof(efl));
+        memset(&efl, 0, sizeof(efl));
 
         /* Get External File List message from the object header */
         if (NULL == H5O_msg_read_oh(loc->file, oh, H5O_EFL_ID, &efl))
@@ -415,9 +393,9 @@ H5O__dset_bh_info(const H5O_loc_t *loc, H5O_t *oh, H5_ih_info_t *bh_info)
 done:
     /* Free messages, if they've been read in */
     if (layout_read && H5O_msg_reset(H5O_LAYOUT_ID, &layout) < 0)
-        HDONE_ERROR(H5E_DATASET, H5E_CANTRESET, FAIL, "unable to reset data storage layout message")
+        HDONE_ERROR(H5E_DATASET, H5E_CANTRESET, FAIL, "unable to reset data storage layout message");
     if (efl_read && H5O_msg_reset(H5O_EFL_ID, &efl) < 0)
-        HDONE_ERROR(H5E_DATASET, H5E_CANTRESET, FAIL, "unable to reset external file list message")
+        HDONE_ERROR(H5E_DATASET, H5E_CANTRESET, FAIL, "unable to reset external file list message");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O__dset_bh_info() */
@@ -430,9 +408,6 @@ done:
  * Return:      Success:        non-negative
  *              Failure:        negative
  *
- * Programmer:  Vailin Choi
- *              February 2012
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -444,8 +419,8 @@ H5O__dset_flush(void *_obj_ptr)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(dset);
-    HDassert(&dset->oloc);
+    assert(dset);
+    assert(&dset->oloc);
 
     /* Check that the object found is the correct type */
     if (H5O_obj_type(&dset->oloc, &obj_type) < 0)
@@ -454,7 +429,7 @@ H5O__dset_flush(void *_obj_ptr)
         HGOTO_ERROR(H5E_DATASET, H5E_BADTYPE, FAIL, "not a dataset")
 
     if (H5D__flush_real(dset) < 0)
-        HDONE_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "unable to flush cached dataset info")
+        HDONE_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "unable to flush cached dataset info");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

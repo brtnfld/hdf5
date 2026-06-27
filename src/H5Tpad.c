@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -31,9 +30,6 @@
  *		arguments, either of which may be the null pointer.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Robb Matzke
- *		Friday, January	 9, 1998
  *
  *-------------------------------------------------------------------------
  */
@@ -70,9 +66,6 @@ done:
  * Purpose:	Sets the LSB and MSB pad types.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Robb Matzke
- *		Friday, January	 9, 1998
  *
  *-------------------------------------------------------------------------
  */

@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -37,9 +36,6 @@
  *				returned through the arguments.
  *
  *		Failure:	Negative
- *
- * Programmer:	Robb Matzke
- *		Wednesday, January  7, 1998
  *
  *-------------------------------------------------------------------------
  */
@@ -89,9 +85,6 @@ done:
  *		precision, nor are they allowed to overlap with one another.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Robb Matzke
- *		Wednesday, January  7, 1998
  *
  *-------------------------------------------------------------------------
  */
@@ -148,9 +141,6 @@ done:
  *
  *		Failure:	0
  *
- * Programmer:	Robb Matzke
- *		Wednesday, January  7, 1998
- *
  *-------------------------------------------------------------------------
  */
 size_t
@@ -183,9 +173,6 @@ done:
  * Purpose:	Sets the exponent bias of a floating-point type.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Robb Matzke
- *		Wednesday, January  7, 1998
  *
  *-------------------------------------------------------------------------
  */
@@ -225,9 +212,6 @@ done:
  *
  *		Failure:	H5T_NORM_ERROR (Negative)
  *
- * Programmer:	Robb Matzke
- *		Wednesday, January  7, 1998
- *
  *-------------------------------------------------------------------------
  */
 H5T_norm_t
@@ -261,9 +245,6 @@ done:
  *		datatype.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Robb Matzke
- *		Wednesday, January  7, 1998
  *
  *-------------------------------------------------------------------------
  */
@@ -307,9 +288,6 @@ done:
  *
  *		Failure:	H5T_PAD_ERROR (Negative)
  *
- * Programmer:	Robb Matzke
- *		Friday, January	 9, 1998
- *
  *-------------------------------------------------------------------------
  */
 H5T_pad_t
@@ -345,9 +323,6 @@ done:
  *		according to the value of this property.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Robb Matzke
- *		Friday, January	 9, 1998
  *
  *-------------------------------------------------------------------------
  */

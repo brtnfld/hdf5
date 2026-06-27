@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -170,7 +169,7 @@ H5FD__free_cls(H5FD_class_t *cls, void H5_ATTR_UNUSED **request)
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(cls);
+    assert(cls);
 
     /* If the file driver has a terminate callback, call it to give the file
      * driver a chance to free singletons or other resources which will become
@@ -266,13 +265,13 @@ H5FD_register(const void *_cls, size_t size, hbool_t app_ref)
     FUNC_ENTER_NOAPI(H5I_INVALID_HID)
 
     /* Sanity checks */
-    HDassert(cls);
-    HDassert(cls->open && cls->close);
-    HDassert(cls->get_eoa && cls->set_eoa);
-    HDassert(cls->get_eof);
-    HDassert(cls->read && cls->write);
+    assert(cls);
+    assert(cls->open && cls->close);
+    assert(cls->get_eoa && cls->set_eoa);
+    assert(cls->get_eof);
+    assert(cls->read && cls->write);
     for (type = H5FD_MEM_DEFAULT; type < H5FD_MEM_NTYPES; type++) {
-        HDassert(cls->fl_map[type] >= H5FD_MEM_NOLIST && cls->fl_map[type] < H5FD_MEM_NTYPES);
+        assert(cls->fl_map[type] >= H5FD_MEM_NOLIST && cls->fl_map[type] < H5FD_MEM_NTYPES);
     }
 
     /* Copy the class structure so the caller can reuse or free it */
@@ -450,8 +449,8 @@ H5FD_sb_size(H5FD_t *file)
     FUNC_ENTER_NOAPI_NOERR
 
     /* Sanity checks */
-    HDassert(file);
-    HDassert(file->cls);
+    assert(file);
+    assert(file->cls);
 
     /* Dispatch to driver */
     if (file->cls->sb_size)
@@ -482,8 +481,8 @@ H5FD_sb_encode(H5FD_t *file, char *name /*out*/, uint8_t *buf)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
-    HDassert(file);
-    HDassert(file->cls);
+    assert(file);
+    assert(file->cls);
 
     /* Dispatch to driver */
     if (file->cls->sb_encode && (file->cls->sb_encode)(file, name /*out*/, buf /*out*/) < 0)
@@ -510,8 +509,8 @@ H5FD__sb_decode(H5FD_t *file, const char *name, const uint8_t *buf)
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(file);
-    HDassert(file->cls);
+    assert(file);
+    assert(file->cls);
 
     /* Dispatch to driver */
     if (file->cls->sb_decode && (file->cls->sb_decode)(file, name, buf) < 0)
@@ -538,8 +537,8 @@ H5FD_sb_load(H5FD_t *file, const char *name, const uint8_t *buf)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
-    HDassert(file);
-    HDassert(file->cls);
+    assert(file);
+    assert(file->cls);
 
     /* Check if driver matches driver information saved. Unfortunately, we can't push this
      * function to each specific driver because we're checking if the driver is correct.
@@ -587,8 +586,8 @@ H5FD_fapl_get(H5FD_t *file)
     FUNC_ENTER_NOAPI_NOERR
 
     /* Sanity checks */
-    HDassert(file);
-    HDassert(file->cls);
+    assert(file);
+    assert(file->cls);
 
     /* Dispatch to driver */
     if (file->cls->fapl_get)
@@ -758,8 +757,8 @@ H5FD_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get file image info")
 
     /* If an image is provided, make sure the driver supports this feature */
-    HDassert(((file_image_info.buffer != NULL) && (file_image_info.size > 0)) ||
-             ((file_image_info.buffer == NULL) && (file_image_info.size == 0)));
+    assert(((file_image_info.buffer != NULL) && (file_image_info.size > 0)) ||
+           ((file_image_info.buffer == NULL) && (file_image_info.size == 0)));
     if ((file_image_info.buffer != NULL) && !(driver_flags & H5FD_FEAT_ALLOW_FILE_IMAGE))
         HGOTO_ERROR(H5E_VFL, H5E_UNSUPPORTED, NULL, "file image set, but not supported.")
 
@@ -861,8 +860,8 @@ H5FD_close(H5FD_t *file)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
-    HDassert(file);
-    HDassert(file->cls);
+    assert(file);
+    assert(file->cls);
 
     /* Prepare to close file by clearing all public fields */
     driver = file->cls;
@@ -872,7 +871,7 @@ H5FD_close(H5FD_t *file)
     /* Dispatch to the driver for actual close. If the driver fails to
      * close the file then the file will be in an unusable state.
      */
-    HDassert(driver->close);
+    assert(driver->close);
     if ((driver->close)(file) < 0)
         HGOTO_ERROR(H5E_VFL, H5E_CANTCLOSEFILE, FAIL, "close failed")
 
@@ -919,16 +918,6 @@ done:
  *
  * Purpose:     Private version of H5FDcmp()
  *
- *              Uses H5FD_ctl() to obtain the terminal VFDs for f1 and f2.
- *              Typically, these are the same thing, however, if there is an
- *              intervening pass through VFD (i.e. splitter or VFD SWMR
- *              reader), using the terminal VFD for the comparison will avoid
- *              some false negatives.
- *
- *              Note, however, that we will still fail to detect the
- *              case in which a given file is opened twice with different
- *              terminal VFDs.
- *
  * Return:      Success:    A value like strcmp()
  *
  *              Failure:    Must never fail.
@@ -938,96 +927,32 @@ done:
 int
 H5FD_cmp(const H5FD_t *f1, const H5FD_t *f2)
 {
-    const H5FD_t *term_f1 = f1;
-    const H5FD_t *term_f2 = f2;
-    herr_t        ctl_result;
-    int           ret_value = -1; /* Return value */
+    int ret_value = -1; /* Return value */
 
-    FUNC_ENTER_NOAPI_NOERR; /* return value is arbitrary */
+    FUNC_ENTER_NOAPI_NOERR /* return value is arbitrary */
 
-    /* For each of f1 and f2, check to see if the ctl call is defined.  If it is,
-     * use the ctl call to try to obtain the terminal VFD.  Since this function
-     * is not allowed to fail, discard the error stack if either of the ctl call
-     * fail.
-     */
-    if ((f1) && (f1->cls) && (f1->cls->ctl)) {
-
-        H5E_BEGIN_TRY
-        {
-            /* Using the generic ctl callback, which takes non-const parameters,
-             * to work with const data is going to cause the compiler to complain.
-             */
-            H5_GCC_CLANG_DIAG_OFF("discarded-qualifiers")
-            H5_GCC_CLANG_DIAG_OFF("cast-qual")
-            ctl_result = H5FD_ctl(f1, H5FD_CTL_GET_TERMINAL_VFD,
-                                  H5FD_CTL_FAIL_IF_UNKNOWN_FLAG | H5FD_CTL_ROUTE_TO_TERMINAL_VFD_FLAG, NULL,
-                                  (void **)(&term_f1));
-            H5_GCC_CLANG_DIAG_ON("discarded-qualifiers")
-            H5_GCC_CLANG_DIAG_ON("cast-qual")
-        }
-        H5E_END_TRY;
-
-        /* if the ctl call failed, set term_f1 equal to f1.  This will probably be
-         * wrong -- but it will be no worse than using the top level VFD unconditionally.
-         */
-        if (ctl_result != SUCCEED) {
-
-            H5E_clear_stack(NULL);
-
-            term_f1 = f1;
-        }
-    }
-
-    if ((f2) && (f2->cls) && (f2->cls->ctl)) {
-
-        H5E_BEGIN_TRY
-        {
-            /* Using the generic ctl callback, which takes non-const parameters,
-             * to work with const data is going to cause the compiler to complain.
-             */
-            H5_GCC_CLANG_DIAG_OFF("discarded-qualifiers")
-            H5_GCC_CLANG_DIAG_OFF("cast-qual")
-            ctl_result = H5FD_ctl(f2, H5FD_CTL_GET_TERMINAL_VFD,
-                                  H5FD_CTL_FAIL_IF_UNKNOWN_FLAG | H5FD_CTL_ROUTE_TO_TERMINAL_VFD_FLAG, NULL,
-                                  (void **)(&term_f2));
-            H5_GCC_CLANG_DIAG_ON("discarded-qualifiers")
-            H5_GCC_CLANG_DIAG_ON("cast-qual")
-        }
-        H5E_END_TRY;
-
-        /* if the ctl call failed, set term_f1 equal to f1.  This will probably be
-         * wrong -- but it will be no worse than using the top level VFD unconditionally.
-         */
-        if (ctl_result != SUCCEED) {
-
-            H5E_clear_stack(NULL);
-
-            term_f2 = f2;
-        }
-    }
-
-    if ((!term_f1 || !term_f1->cls) && (!term_f2 || !term_f2->cls))
-        HGOTO_DONE(0)
-    if (!term_f1 || !term_f1->cls)
-        HGOTO_DONE(-1)
-    if (!term_f2 || !term_f2->cls)
-        HGOTO_DONE(1)
-    if (term_f1->cls < term_f2->cls)
-        HGOTO_DONE(-1)
-    if (term_f1->cls > term_f2->cls)
-        HGOTO_DONE(1)
+    if ((!f1 || !f1->cls) && (!f2 || !f2->cls))
+        HGOTO_DONE(0);
+    if (!f1 || !f1->cls)
+        HGOTO_DONE(-1);
+    if (!f2 || !f2->cls)
+        HGOTO_DONE(1);
+    if (f1->cls < f2->cls)
+        HGOTO_DONE(-1);
+    if (f1->cls > f2->cls)
+        HGOTO_DONE(1);
 
     /* Files are same driver; no cmp callback */
-    if (!term_f1->cls->cmp) {
-        if (term_f1 < term_f2)
-            HGOTO_DONE(-1)
-        if (term_f1 > term_f2)
-            HGOTO_DONE(1)
-        HGOTO_DONE(0)
+    if (!f1->cls->cmp) {
+        if (f1 < f2)
+            HGOTO_DONE(-1);
+        if (f1 > f2)
+            HGOTO_DONE(1);
+        HGOTO_DONE(0);
     }
 
     /* Dispatch to driver */
-    ret_value = (term_f1->cls->cmp)(term_f1, term_f2);
+    ret_value = (f1->cls->cmp)(f1, f2);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1084,9 +1009,9 @@ H5FD__query(const H5FD_t *file, unsigned long *flags /*out*/)
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(file);
-    HDassert(file->cls);
-    HDassert(flags);
+    assert(file);
+    assert(file->cls);
+    assert(flags);
 
     /* Dispatch to driver (if available) */
     if (file->cls->query) {
@@ -1292,7 +1217,7 @@ H5FDset_eoa(H5FD_t *file, H5FD_mem_t type, haddr_t addr)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "file class pointer cannot be NULL")
     if (type < H5FD_MEM_DEFAULT || type >= H5FD_MEM_NTYPES)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid file type")
-    if (!H5F_addr_defined(addr) || addr > file->maxaddr)
+    if (!H5_addr_defined(addr) || addr > file->maxaddr)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid end-of-address value")
 
     /* Call private function */
@@ -1368,7 +1293,7 @@ H5FD_get_maxaddr(const H5FD_t *file)
     FUNC_ENTER_NOAPI_NOERR
 
     /* Sanity checks */
-    HDassert(file);
+    assert(file);
 
     /* Set return value */
     ret_value = file->maxaddr;
@@ -1391,8 +1316,8 @@ H5FD_get_feature_flags(const H5FD_t *file, unsigned long *feature_flags)
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* Sanity checks */
-    HDassert(file);
-    HDassert(feature_flags);
+    assert(file);
+    assert(feature_flags);
 
     /* Set feature flags to return */
     *feature_flags = file->feature_flags;
@@ -1415,7 +1340,7 @@ H5FD_set_feature_flags(H5FD_t *file, unsigned long feature_flags)
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* Sanity checks */
-    HDassert(file);
+    assert(file);
 
     /* Set the file's feature flags */
     file->feature_flags = feature_flags;
@@ -1440,9 +1365,9 @@ H5FD_get_fs_type_map(const H5FD_t *file, H5FD_mem_t *type_map)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
-    HDassert(file);
-    HDassert(file->cls);
-    HDassert(type_map);
+    assert(file);
+    assert(file->cls);
+    assert(type_map);
 
     /* Check for VFD class providing a type map retrieval routine */
     if (file->cls->get_type_map) {
@@ -1574,10 +1499,6 @@ done:
  *              Failure:    FAIL
  *                          The contents of supplied buffers are undefined.
  *
- * Programmer:  JRM -- 6/10/20
- *
- * Changes:     None.
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1653,10 +1574,6 @@ done:
  *
  *              Failure:    FAIL
  *                          One or more of the writes failed.
- *
- * Programmer:  JRM -- 6/10/20
- *
- * Changes:     None.
  *
  *-------------------------------------------------------------------------
  */
@@ -1750,10 +1667,6 @@ done:
  *
  *              Failure:    FAIL
  *                          The contents of supplied buffers are undefined.
- *
- * Programmer:  NAF -- 5/19/21
- *
- * Changes:     None.
  *
  *-------------------------------------------------------------------------
  */
@@ -1851,10 +1764,6 @@ done:
  *
  *              Failure:    FAIL
  *                          One or more of the writes failed.
- *
- * Programmer:  NAF -- 5/14/21
- *
- * Changes:     None.
  *
  *-------------------------------------------------------------------------
  */
@@ -1976,8 +1885,8 @@ H5FD_flush(H5FD_t *file, hbool_t closing)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
-    HDassert(file);
-    HDassert(file->cls);
+    assert(file);
+    assert(file->cls);
 
     /* Dispatch to driver */
     if (file->cls->flush && (file->cls->flush)(file, H5CX_get_dxpl(), closing) < 0)
@@ -2042,8 +1951,8 @@ H5FD_truncate(H5FD_t *file, hbool_t closing)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
-    HDassert(file);
-    HDassert(file->cls);
+    assert(file);
+    assert(file->cls);
 
     /* Dispatch to driver */
     if (file->cls->truncate && (file->cls->truncate)(file, H5CX_get_dxpl(), closing) < 0)
@@ -2101,8 +2010,8 @@ H5FD_lock(H5FD_t *file, hbool_t rw)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
-    HDassert(file);
-    HDassert(file->cls);
+    assert(file);
+    assert(file->cls);
 
     /* Dispatch to driver */
     if (file->cls->lock && (file->cls->lock)(file, rw) < 0)
@@ -2160,8 +2069,8 @@ H5FD_unlock(H5FD_t *file)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
-    HDassert(file);
-    HDassert(file->cls);
+    assert(file);
+    assert(file->cls);
 
     /* Dispatch to driver */
     if (file->cls->unlock && (file->cls->unlock)(file) < 0)
@@ -2186,8 +2095,6 @@ done:
  *              input and output
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  JRM -- 8/3/21
  *
  *-------------------------------------------------------------------------
  */
@@ -2237,8 +2144,6 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  JRM -- 8/3/21
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -2249,8 +2154,8 @@ H5FD_ctl(H5FD_t *file, uint64_t op_code, uint64_t flags, const void *input, void
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
-    HDassert(file);
-    HDassert(file->cls);
+    assert(file);
+    assert(file->cls);
 
     /* Dispatch to driver if the ctl function exists.
      *
@@ -2293,8 +2198,8 @@ H5FD_get_fileno(const H5FD_t *file, unsigned long *filenum)
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* Sanity checks */
-    HDassert(file);
-    HDassert(filenum);
+    assert(file);
+    assert(filenum);
 
     /* Retrieve the file's serial number */
     *filenum = file->fileno;
@@ -2360,9 +2265,9 @@ H5FD_get_vfd_handle(H5FD_t *file, hid_t fapl_id, void **file_handle)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
-    HDassert(file);
-    HDassert(file->cls);
-    HDassert(file_handle);
+    assert(file);
+    assert(file->cls);
+    assert(file_handle);
 
     /* Dispatch to driver */
     if (NULL == file->cls->get_handle)
@@ -2389,8 +2294,8 @@ H5FD_set_base_addr(H5FD_t *file, haddr_t base_addr)
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* Sanity checks */
-    HDassert(file);
-    HDassert(H5F_addr_defined(base_addr));
+    assert(file);
+    assert(H5_addr_defined(base_addr));
 
     /* Set the file's base address */
     file->base_addr = base_addr;
@@ -2414,7 +2319,7 @@ H5FD_get_base_addr(const H5FD_t *file)
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* Sanity checks */
-    HDassert(file);
+    assert(file);
 
     /* Return the file's base address */
     FUNC_LEAVE_NOAPI(file->base_addr)
@@ -2435,7 +2340,7 @@ H5FD_set_paged_aggr(H5FD_t *file, hbool_t paged)
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* Sanity checks */
-    HDassert(file);
+    assert(file);
 
     /* Indicate whether paged aggregation for handling file space is enabled or not */
     file->paged_aggr = paged;

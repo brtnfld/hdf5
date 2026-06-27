@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -19,9 +18,9 @@ static void usage(void);
 static void
 usage(void)
 {
-    HDfprintf(stdout, "\n");
-    HDfprintf(stdout, "Usage error!\n");
-    HDfprintf(stdout, "Usage: clear_open_chk filename\n");
+    fprintf(stdout, "\n");
+    fprintf(stdout, "Usage error!\n");
+    fprintf(stdout, "Usage: clear_open_chk filename\n");
 } /* usage() */
 
 /*-------------------------------------------------------------------------
@@ -32,8 +31,6 @@ usage(void)
  *
  * Return:    0 on success
  *        1 on failure
- *
- * Programmer:    Vailin Choi; July 2013
  *
  *-------------------------------------------------------------------------
  */
@@ -46,7 +43,7 @@ main(int argc, char *argv[])
     /* Check the # of arguments */
     if (argc != 2) {
         usage();
-        HDexit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     }
 
     /* Get the file name */
@@ -54,18 +51,18 @@ main(int argc, char *argv[])
 
     /* Try opening the file */
     if ((fid = h5tools_fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT, FALSE, NULL, (size_t)0)) < 0) {
-        HDfprintf(stderr, "clear_open_chk: unable to open the file\n");
-        HDfree(fname);
-        HDexit(EXIT_FAILURE);
+        fprintf(stderr, "clear_open_chk: unable to open the file\n");
+        free(fname);
+        exit(EXIT_FAILURE);
     }
-    HDfree(fname);
+    free(fname);
 
     /* Close the file */
     if (H5Fclose(fid) < 0) {
-        HDfprintf(stderr, "clear_open_chk: cannot close the file\n");
-        HDexit(EXIT_FAILURE);
+        fprintf(stderr, "clear_open_chk: cannot close the file\n");
+        exit(EXIT_FAILURE);
     }
 
     /* Return success */
-    HDexit(EXIT_SUCCESS);
+    exit(EXIT_SUCCESS);
 } /* main() */

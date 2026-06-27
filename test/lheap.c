@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -12,9 +11,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:  Robb Matzke
- *              Tuesday, November 24, 1998
- *
  * Purpose:    Test local heaps used by symbol tables (groups).
  */
 #include "h5test.h"
@@ -25,7 +21,7 @@
 #include "H5Iprivate.h"
 #include "H5VLprivate.h" /* Virtual Object Layer                     */
 
-const char *FILENAME[] = {"lheap", NULL};
+static const char *FILENAME[] = {"lheap", NULL};
 
 #define TESTFILE "tsizeslheap.h5"
 
@@ -39,9 +35,6 @@ const char *FILENAME[] = {"lheap", NULL};
  *              local heap, close the file.
  *
  * Return:      EXIT_SUCCESS/EXIT_FAILURE
- *
- * Programmer:  Robb Matzke
- *              Tuesday, November 24, 1998
  *
  *-------------------------------------------------------------------------
  */
@@ -158,9 +151,9 @@ main(void)
 
         if (HDstrcmp(s, buf) != 0) {
             H5_FAILED();
-            HDprintf("    i=%d, heap offset=%lu\n", i, (unsigned long)(obj[i]));
-            HDprintf("    got: \"%s\"\n", s);
-            HDprintf("    ans: \"%s\"\n", buf);
+            printf("    i=%d, heap offset=%lu\n", i, (unsigned long)(obj[i]));
+            printf("    got: \"%s\"\n", s);
+            printf("    ans: \"%s\"\n", buf);
             goto error;
         }
 
@@ -195,7 +188,7 @@ main(void)
             }
             else {
                 H5_FAILED();
-                HDprintf("***cannot open the pre-created non-default sizes test file (%s)\n", testfile);
+                printf("***cannot open the pre-created non-default sizes test file (%s)\n", testfile);
                 goto error;
             } /* end else */
         }
@@ -222,7 +215,7 @@ error:
     {
         H5Fclose(file);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     if (api_ctx_pushed)
         H5CX_pop(FALSE);

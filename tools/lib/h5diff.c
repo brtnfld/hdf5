@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -113,11 +112,11 @@ print_incoming_data(void)
     do {
         MPI_Iprobe(MPI_ANY_SOURCE, MPI_TAG_PRINT_DATA, MPI_COMM_WORLD, &incomingMessage, &Status);
         if (incomingMessage) {
-            HDmemset(data, 0, PRINT_DATA_MAX_SIZE + 1);
+            memset(data, 0, PRINT_DATA_MAX_SIZE + 1);
             MPI_Recv(data, PRINT_DATA_MAX_SIZE, MPI_CHAR, Status.MPI_SOURCE, MPI_TAG_PRINT_DATA,
                      MPI_COMM_WORLD, &Status);
 
-            HDprintf("%s", data);
+            printf("%s", data);
         }
     } while (incomingMessage);
 }
@@ -182,7 +181,7 @@ is_exclude_path(char *path, h5trav_type_t type, diff_opt_t *opts)
 
     /* search objects in exclude list */
     while (NULL != exclude_path_ptr) {
-        /* if exclude path is is group, exclude its members as well */
+        /* if exclude path is in group, exclude its members as well */
         if (exclude_path_ptr->obj_type == H5TRAV_TYPE_GROUP) {
             ret_cmp = HDstrncmp(exclude_path_ptr->obj_path, path, HDstrlen(exclude_path_ptr->obj_path));
             if (ret_cmp == 0) { /* found matching members */
@@ -246,7 +245,7 @@ is_exclude_attr(const char *path, h5trav_type_t type, diff_opt_t *opts)
 
     /* search objects in exclude list */
     while (NULL != exclude_ptr) {
-        /* if exclude path is is group, exclude its members as well */
+        /* if exclude path is in group, exclude its members as well */
         if (exclude_ptr->obj_type == H5TRAV_TYPE_GROUP) {
             ret_cmp = HDstrncmp(exclude_ptr->obj_path, path, HDstrlen(exclude_ptr->obj_path));
             if (ret_cmp == 0) { /* found matching members */
@@ -298,7 +297,7 @@ free_exclude_path_list(diff_opt_t *opts)
 
     while (NULL != curr) {
         next = curr->next;
-        HDfree(curr);
+        free(curr);
         curr = next;
     }
 }
@@ -316,7 +315,7 @@ free_exclude_attr_list(diff_opt_t *opts)
 
     while (NULL != curr) {
         next = curr->next;
-        HDfree(curr);
+        free(curr);
         curr = next;
     }
 }
@@ -495,7 +494,7 @@ trav_grp_symlinks(const char *path, const H5L_info2_t *linfo, void *udata)
 
     H5TOOLS_START_DEBUG(" ");
     /* init linkinfo struct */
-    HDmemset(&lnk_info, 0, sizeof(h5tool_link_info_t));
+    memset(&lnk_info, 0, sizeof(h5tool_link_info_t));
 
     if (!opts->follow_links) {
         trav_info_visit_lnk(path, linfo, tinfo);
@@ -576,7 +575,7 @@ trav_grp_symlinks(const char *path, const H5L_info2_t *linfo, void *udata)
 
 done:
     if (lnk_info.trg_path)
-        HDfree(lnk_info.trg_path);
+        free(lnk_info.trg_path);
     H5TOOLS_ENDDEBUG(" ");
     return ret_value;
 }
@@ -629,10 +628,10 @@ h5diff(const char *fname1, const char *fname2, const char *objname1, const char 
 
     H5TOOLS_START_DEBUG(" ");
     /* init filenames */
-    HDmemset(filenames, 0, MAX_FILENAME * 2);
+    memset(filenames, 0, MAX_FILENAME * 2);
     /* init link info struct */
-    HDmemset(&trg_linfo1, 0, sizeof(h5tool_link_info_t));
-    HDmemset(&trg_linfo2, 0, sizeof(h5tool_link_info_t));
+    memset(&trg_linfo1, 0, sizeof(h5tool_link_info_t));
+    memset(&trg_linfo2, 0, sizeof(h5tool_link_info_t));
 
     /*-------------------------------------------------------------------------
      * check invalid combination of options
@@ -648,8 +647,15 @@ h5diff(const char *fname1, const char *fname2, const char *objname1, const char 
      *-------------------------------------------------------------------------
      */
     /* open file 1 */
+    if (opts->vfd_info[0].u.name) {
+        if ((fapl1_id = h5tools_get_fapl(H5P_DEFAULT, NULL, &(opts->vfd_info[0]))) < 0) {
+            parallel_print("h5diff: unable to create fapl for input file\n");
+            H5TOOLS_GOTO_ERROR(H5DIFF_ERR, "unable to create input fapl\n");
+        }
+    }
+
     if (opts->custom_vol[0] || opts->custom_vfd[0]) {
-        if ((fapl1_id = h5tools_get_fapl(H5P_DEFAULT, opts->custom_vol[0] ? &(opts->vol_info[0]) : NULL,
+        if ((fapl1_id = h5tools_get_fapl(fapl1_id, opts->custom_vol[0] ? &(opts->vol_info[0]) : NULL,
                                          opts->custom_vfd[0] ? &(opts->vfd_info[0]) : NULL)) < 0) {
             parallel_print("h5diff: unable to create fapl for input file\n");
             H5TOOLS_GOTO_ERROR(H5DIFF_ERR, "unable to create input fapl\n");
@@ -664,9 +670,15 @@ h5diff(const char *fname1, const char *fname2, const char *objname1, const char 
     H5TOOLS_DEBUG("file1_id = %s", fname1);
 
     /* open file 2 */
+    if (opts->vfd_info[1].u.name) {
+        if ((fapl2_id = h5tools_get_fapl(H5P_DEFAULT, NULL, &(opts->vfd_info[1]))) < 0) {
+            parallel_print("h5diff: unable to create fapl for output file\n");
+            H5TOOLS_GOTO_ERROR(H5DIFF_ERR, "unable to create output fapl\n");
+        }
+    }
 
     if (opts->custom_vol[1] || opts->custom_vfd[1]) {
-        if ((fapl2_id = h5tools_get_fapl(H5P_DEFAULT, opts->custom_vol[1] ? &(opts->vol_info[1]) : NULL,
+        if ((fapl2_id = h5tools_get_fapl(fapl2_id, opts->custom_vol[1] ? &(opts->vol_info[1]) : NULL,
                                          opts->custom_vfd[1] ? &(opts->vfd_info[1]) : NULL)) < 0) {
             parallel_print("h5diff: unable to create fapl for output file\n");
             H5TOOLS_GOTO_ERROR(H5DIFF_ERR, "unable to create output fapl\n");
@@ -694,11 +706,11 @@ h5diff(const char *fname1, const char *fname2, const char *objname1, const char 
         if (HDstrncmp(objname1, "/", 1) != 0) {
 #ifdef H5_HAVE_ASPRINTF
             /* Use the asprintf() routine, since it does what we're trying to do below */
-            if (HDasprintf(&obj1fullname, "/%s", objname1) < 0)
+            if (asprintf(&obj1fullname, "/%s", objname1) < 0)
                 H5TOOLS_GOTO_ERROR(H5DIFF_ERR, "name buffer allocation failed");
 #else  /* H5_HAVE_ASPRINTF */
             /* (malloc 2 more for "/" and end-of-line) */
-            if ((obj1fullname = (char *)HDmalloc(HDstrlen(objname1) + 2)) == NULL)
+            if ((obj1fullname = (char *)malloc(HDstrlen(objname1) + 2)) == NULL)
                 H5TOOLS_GOTO_ERROR(H5DIFF_ERR, "name buffer allocation failed");
 
             HDstrcpy(obj1fullname, "/");
@@ -713,11 +725,11 @@ h5diff(const char *fname1, const char *fname2, const char *objname1, const char 
         if (HDstrncmp(objname2, "/", 1) != 0) {
 #ifdef H5_HAVE_ASPRINTF
             /* Use the asprintf() routine, since it does what we're trying to do below */
-            if (HDasprintf(&obj2fullname, "/%s", objname2) < 0)
+            if (asprintf(&obj2fullname, "/%s", objname2) < 0)
                 H5TOOLS_GOTO_ERROR(H5DIFF_ERR, "name buffer allocation failed");
 #else  /* H5_HAVE_ASPRINTF */
             /* (malloc 2 more for "/" and end-of-line) */
-            if ((obj2fullname = (char *)HDmalloc(HDstrlen(objname2) + 2)) == NULL)
+            if ((obj2fullname = (char *)malloc(HDstrlen(objname2) + 2)) == NULL)
                 H5TOOLS_GOTO_ERROR(H5DIFF_ERR, "name buffer allocation failed");
             HDstrcpy(obj2fullname, "/");
             HDstrcat(obj2fullname, objname2);
@@ -764,7 +776,7 @@ h5diff(const char *fname1, const char *fname2, const char *objname1, const char 
                 obj1type = (h5trav_type_t)oinfo1.type;
                 trav_info_add(info1_obj, obj1fullname, obj1type);
                 idx = info1_obj->nused - 1;
-                HDmemcpy(&info1_obj->paths[idx].obj_token, &oinfo1.token, sizeof(H5O_token_t));
+                memcpy(&info1_obj->paths[idx].obj_token, &oinfo1.token, sizeof(H5O_token_t));
                 info1_obj->paths[idx].fileno = oinfo1.fileno;
             }
             else if (src_linfo1.type == H5L_TYPE_SOFT) {
@@ -814,7 +826,7 @@ h5diff(const char *fname1, const char *fname2, const char *objname1, const char 
                 obj2type = (h5trav_type_t)oinfo2.type;
                 trav_info_add(info2_obj, obj2fullname, obj2type);
                 idx = info2_obj->nused - 1;
-                HDmemcpy(&info2_obj->paths[idx].obj_token, &oinfo2.token, sizeof(H5O_token_t));
+                memcpy(&info2_obj->paths[idx].obj_token, &oinfo2.token, sizeof(H5O_token_t));
                 info2_obj->paths[idx].fileno = oinfo2.fileno;
             }
             else if (src_linfo2.type == H5L_TYPE_SOFT) {
@@ -884,7 +896,7 @@ h5diff(const char *fname1, const char *fname2, const char *objname1, const char 
                 size_t idx = info1_lp->nused - 1;
 
                 H5TOOLS_DEBUG("h5diff ... ... ... info1_obj not null");
-                HDmemcpy(&info1_lp->paths[idx].obj_token, &trg_linfo1.obj_token, sizeof(H5O_token_t));
+                memcpy(&info1_lp->paths[idx].obj_token, &trg_linfo1.obj_token, sizeof(H5O_token_t));
                 info1_lp->paths[idx].type   = (h5trav_type_t)trg_linfo1.trg_type;
                 info1_lp->paths[idx].fileno = trg_linfo1.fileno;
             }
@@ -924,7 +936,7 @@ h5diff(const char *fname1, const char *fname2, const char *objname1, const char 
                 size_t idx = info2_lp->nused - 1;
 
                 H5TOOLS_DEBUG("h5diff ... ... ... info2_obj not null");
-                HDmemcpy(&info2_lp->paths[idx].obj_token, &trg_linfo2.obj_token, sizeof(H5O_token_t));
+                memcpy(&info2_lp->paths[idx].obj_token, &trg_linfo2.obj_token, sizeof(H5O_token_t));
                 info2_lp->paths[idx].type   = (h5trav_type_t)trg_linfo2.trg_type;
                 info2_lp->paths[idx].fileno = trg_linfo2.fileno;
             }
@@ -985,8 +997,7 @@ h5diff(const char *fname1, const char *fname2, const char *objname1, const char 
         int i;
 
         if ((HDstrlen(fname1) > MAX_FILENAME) || (HDstrlen(fname2) > MAX_FILENAME)) {
-            HDfprintf(stderr, "The parallel diff only supports path names up to %d characters\n",
-                      MAX_FILENAME);
+            fprintf(stderr, "The parallel diff only supports path names up to %d characters\n", MAX_FILENAME);
             MPI_Abort(MPI_COMM_WORLD, 0);
         } /* end if */
 
@@ -1056,15 +1067,15 @@ done:
 
     /* free buffers */
     if (obj1fullname)
-        HDfree(obj1fullname);
+        free(obj1fullname);
     if (obj2fullname)
-        HDfree(obj2fullname);
+        free(obj2fullname);
 
     /* free link info buffer */
     if (trg_linfo1.trg_path)
-        HDfree(trg_linfo1.trg_path);
+        free(trg_linfo1.trg_path);
     if (trg_linfo2.trg_path)
-        HDfree(trg_linfo2.trg_path);
+        free(trg_linfo2.trg_path);
 
     /* close */
     H5E_BEGIN_TRY
@@ -1076,7 +1087,7 @@ done:
         if (fapl2_id != H5P_DEFAULT)
             H5Pclose(fapl2_id);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     H5TOOLS_ENDDEBUG(" - errstat:%d", opts->err_stat);
 
@@ -1093,10 +1104,6 @@ done:
  *
  * Return:   Number of differences found
  *
- * Modifications: Compare the graph and make h5diff return 1 for difference if
- *           1) the number of objects in file1 is not the same as in file2
- *           2) the graph does not match, i.e same names (absolute path)
- *           3) objects with the same name are not of the same type
  *-------------------------------------------------------------------------
  */
 hsize_t
@@ -1157,7 +1164,7 @@ diff_match(hid_t file1_id, const char *grp1, trav_info_t *info1, hid_t file2_id,
      */
 #ifdef H5_HAVE_PARALLEL
     {
-        char                *workerTasks = (char *)HDmalloc((size_t)(g_nTasks - 1) * sizeof(char));
+        char                *workerTasks = (char *)malloc((size_t)(g_nTasks - 1) * sizeof(char));
         int                  n;
         int                  busyTasks = 0;
         struct diffs_found   nFoundbyWorker;
@@ -1166,7 +1173,7 @@ diff_match(hid_t file1_id, const char *grp1, trav_info_t *info1, hid_t file2_id,
         MPI_Status           Status;
 
         /*set all tasks as free */
-        HDmemset(workerTasks, 1, (size_t)(g_nTasks - 1) * sizeof(char));
+        memset(workerTasks, 1, (size_t)(g_nTasks - 1) * sizeof(char));
 #endif
 
         for (i = 0; i < table->nobjs; i++) {
@@ -1175,11 +1182,11 @@ diff_match(hid_t file1_id, const char *grp1, trav_info_t *info1, hid_t file2_id,
                 /* make full path for obj1 */
 #ifdef H5_HAVE_ASPRINTF
                 /* Use the asprintf() routine, since it does what we're trying to do below */
-                if (HDasprintf(&obj1_fullpath, "%s%s", grp1_path, table->objs[i].name) < 0) {
+                if (asprintf(&obj1_fullpath, "%s%s", grp1_path, table->objs[i].name) < 0) {
                     H5TOOLS_ERROR(H5DIFF_ERR, "name buffer allocation failed");
                 }
 #else  /* H5_HAVE_ASPRINTF */
-            if ((obj1_fullpath = (char *)HDmalloc(HDstrlen(grp1_path) + HDstrlen(table->objs[i].name) + 1)) ==
+            if ((obj1_fullpath = (char *)malloc(HDstrlen(grp1_path) + HDstrlen(table->objs[i].name) + 1)) ==
                 NULL) {
                 H5TOOLS_ERROR(H5DIFF_ERR, "name buffer allocation failed");
             }
@@ -1193,11 +1200,11 @@ diff_match(hid_t file1_id, const char *grp1, trav_info_t *info1, hid_t file2_id,
                 /* make full path for obj2 */
 #ifdef H5_HAVE_ASPRINTF
                 /* Use the asprintf() routine, since it does what we're trying to do below */
-                if (HDasprintf(&obj2_fullpath, "%s%s", grp2_path, table->objs[i].name) < 0) {
+                if (asprintf(&obj2_fullpath, "%s%s", grp2_path, table->objs[i].name) < 0) {
                     H5TOOLS_ERROR(H5DIFF_ERR, "name buffer allocation failed");
                 }
 #else  /* H5_HAVE_ASPRINTF */
-            if ((obj2_fullpath = (char *)HDmalloc(HDstrlen(grp2_path) + HDstrlen(table->objs[i].name) + 1)) ==
+            if ((obj2_fullpath = (char *)malloc(HDstrlen(grp2_path) + HDstrlen(table->objs[i].name) + 1)) ==
                 NULL) {
                 H5TOOLS_ERROR(H5DIFF_ERR, "name buffer allocation failed");
             }
@@ -1240,7 +1247,7 @@ diff_match(hid_t file1_id, const char *grp1, trav_info_t *info1, hid_t file2_id,
 
                     /*Set up args to pass to worker task. */
                     if (HDstrlen(obj1_fullpath) > 255 || HDstrlen(obj2_fullpath) > 255) {
-                        HDprintf("The parallel diff only supports object names up to 255 characters\n");
+                        printf("The parallel diff only supports object names up to 255 characters\n");
                         MPI_Abort(MPI_COMM_WORLD, 0);
                     } /* end if */
 
@@ -1385,7 +1392,7 @@ diff_match(hid_t file1_id, const char *grp1, trav_info_t *info1, hid_t file2_id,
                                          MPI_COMM_WORLD);
                             } /* end else-if */
                             else {
-                                HDprintf("ERROR: Invalid tag (%d) received \n", Status.MPI_TAG);
+                                printf("ERROR: Invalid tag (%d) received \n", Status.MPI_TAG);
                                 MPI_Abort(MPI_COMM_WORLD, 0);
                                 MPI_Finalize();
                             } /* end else */
@@ -1394,9 +1401,9 @@ diff_match(hid_t file1_id, const char *grp1, trav_info_t *info1, hid_t file2_id,
                 }             /* end else */
 #endif                        /* H5_HAVE_PARALLEL */
                 if (obj1_fullpath)
-                    HDfree(obj1_fullpath);
+                    free(obj1_fullpath);
                 if (obj2_fullpath)
-                    HDfree(obj2_fullpath);
+                    free(obj2_fullpath);
             } /* end if */
         }     /* end for */
         H5TOOLS_DEBUG("done with for loop - errstat:%d", opts->err_stat);
@@ -1465,15 +1472,15 @@ diff_match(hid_t file1_id, const char *grp1, trav_info_t *info1, hid_t file2_id,
                 } /* end else-if */
                 else if (Status.MPI_TAG == MPI_TAG_PRINT_DATA) {
                     char data[PRINT_DATA_MAX_SIZE + 1];
-                    HDmemset(data, 0, PRINT_DATA_MAX_SIZE + 1);
+                    memset(data, 0, PRINT_DATA_MAX_SIZE + 1);
 
                     MPI_Recv(data, PRINT_DATA_MAX_SIZE, MPI_CHAR, Status.MPI_SOURCE, MPI_TAG_PRINT_DATA,
                              MPI_COMM_WORLD, &Status);
 
-                    HDprintf("%s", data);
+                    printf("%s", data);
                 } /* end else-if */
                 else {
-                    HDprintf("ph5diff-manager: ERROR!! Invalid tag (%d) received \n", Status.MPI_TAG);
+                    printf("ph5diff-manager: ERROR!! Invalid tag (%d) received \n", Status.MPI_TAG);
                     MPI_Abort(MPI_COMM_WORLD, 0);
                 } /* end else */
             }     /* end while */
@@ -1486,7 +1493,7 @@ diff_match(hid_t file1_id, const char *grp1, trav_info_t *info1, hid_t file2_id,
         } /* end if */
         H5TOOLS_DEBUG("done with if block");
 
-        HDfree(workerTasks);
+        free(workerTasks);
     }
 #endif /* H5_HAVE_PARALLEL */
 
@@ -1541,8 +1548,8 @@ diff(hid_t file1_id, const char *path1, hid_t file2_id, const char *path2, diff_
     H5TOOLS_START_DEBUG(" - errstat:%d", opts->err_stat);
 
     /*init link info struct */
-    HDmemset(&linkinfo1, 0, sizeof(h5tool_link_info_t));
-    HDmemset(&linkinfo2, 0, sizeof(h5tool_link_info_t));
+    memset(&linkinfo1, 0, sizeof(h5tool_link_info_t));
+    memset(&linkinfo2, 0, sizeof(h5tool_link_info_t));
 
     /* pass how to handle printing warnings to linkinfo option */
     if (print_warn(opts))
@@ -1826,7 +1833,7 @@ diff(hid_t file1_id, const char *path1, hid_t file2_id, const char *path2, diff_
             if (linkinfo1.linfo.type == H5L_TYPE_EXTERNAL && linkinfo2.linfo.type == H5L_TYPE_EXTERNAL) {
                 /* If the buffers are the same size, compare them */
                 if (linkinfo1.linfo.u.val_size == linkinfo2.linfo.u.val_size) {
-                    status = HDmemcmp(linkinfo1.trg_path, linkinfo2.trg_path, linkinfo1.linfo.u.val_size);
+                    status = memcmp(linkinfo1.trg_path, linkinfo2.trg_path, linkinfo1.linfo.u.val_size);
                 }
                 else
                     status = 1;
@@ -1905,9 +1912,9 @@ done:
 
     /* free link info buffer */
     if (linkinfo1.trg_path)
-        HDfree(linkinfo1.trg_path);
+        free(linkinfo1.trg_path);
     if (linkinfo2.trg_path)
-        HDfree(linkinfo2.trg_path);
+        free(linkinfo2.trg_path);
 
     /* close */
     /* disable error reporting */
@@ -1921,7 +1928,7 @@ done:
         H5Gclose(grp2_id);
         /* enable error reporting */
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     H5TOOLS_ENDDEBUG(": %d - errstat:%d", nfound, opts->err_stat);
 

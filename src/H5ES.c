@@ -13,8 +13,6 @@
 /*-------------------------------------------------------------------------
  *
  * Created:     H5ES.c
- *              Apr  6 2020
- *              Quincey Koziol
  *
  * Purpose:     Implements an "event set" for managing asynchronous
  *                      operations.
@@ -77,9 +75,6 @@
  * Return:      Success:    An ID for the event set
  *              Failure:    H5I_INVALID_HID
  *
- * Programmer:  Quincey Koziol
- *              Wednesday, April 8, 2020
- *
  *-------------------------------------------------------------------------
  */
 hid_t
@@ -113,9 +108,6 @@ done:
  *
  * Return:      SUCCEED / FAIL
  *
- * Programmer:	Quincey Koziol
- *              Friday, December 11, 2020
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -147,7 +139,7 @@ done:
     if (ret_value < 0)
         /* Release newly created connector */
         if (connector && H5VL_conn_dec_rc(connector) < 0)
-            HDONE_ERROR(H5E_EVENTSET, H5E_CANTDEC, FAIL, "unable to decrement ref count on VOL connector")
+            HDONE_ERROR(H5E_EVENTSET, H5E_CANTDEC, FAIL, "unable to decrement ref count on VOL connector");
 
     FUNC_LEAVE_API(ret_value)
 } /* end H5ESinsert_request() */
@@ -160,9 +152,6 @@ done:
  * Note:        H5ES_NONE is a valid value for 'es_id', but functions as a no-op
  *
  * Return:      SUCCEED / FAIL
- *
- * Programmer:  Quincey Koziol
- *              Wednesday, April 8, 2020
  *
  *-------------------------------------------------------------------------
  */
@@ -204,9 +193,6 @@ done:
  * Note:        H5ES_NONE is a valid value for 'es_id', but functions as a no-op
  *
  * Return:      SUCCEED / FAIL
- *
- * Programmer:  Quincey Koziol
- *              Fiiday, November 6, 2020
  *
  *-------------------------------------------------------------------------
  */
@@ -255,9 +241,6 @@ done:
  *              newest/most recent.
  *
  * Return:      SUCCEED / FAIL
- *
- * Programmer:  Neil Fortner
- *              Tuesday, November 23, 2021
  *
  *-------------------------------------------------------------------------
  */
@@ -313,9 +296,6 @@ done:
  *
  * Return:      SUCCEED / FAIL
  *
- * Programmer:  Quincey Koziol
- *              Monday, July 13, 2020
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -355,9 +335,6 @@ done:
  * Note:        H5ES_NONE is a valid value for 'es_id', but functions as a no-op
  *
  * Return:      SUCCEED / FAIL
- *
- * Programmer:	Quincey Koziol
- *              Thursday, December 10, 2020
  *
  *-------------------------------------------------------------------------
  */
@@ -399,9 +376,6 @@ done:
  *
  * Return:      SUCCEED / FAIL
  *
- * Programmer:  Quincey Koziol
- *              Thursday, October 15, 2020
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -440,9 +414,6 @@ done:
  * Note:        H5ES_NONE is a valid value for 'es_id', but functions as a no-op
  *
  * Return:      SUCCEED / FAIL
- *
- * Programmer:  Quincey Koziol
- *              Thursday, October 15, 2020
  *
  *-------------------------------------------------------------------------
  */
@@ -487,9 +458,6 @@ done:
  *
  * Return:      SUCCEED / FAIL
  *
- * Programmer:  Quincey Koziol
- *              Friday, November 6, 2020
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -530,9 +498,6 @@ done:
  * Purpose:     Convenience routine to free 1+ H5ES_err_info_t structs.
  *
  * Return:      SUCCEED / FAIL
- *
- * Programmer:  Quincey Koziol
- *              Friday, March 5, 2021
  *
  *-------------------------------------------------------------------------
  */
@@ -578,9 +543,6 @@ done:
  *
  * Return:      SUCCEED / FAIL
  *
- * Programmer:	Quincey Koziol
- *              Friday, December 11, 2020
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -623,9 +585,6 @@ done:
  *
  * Return:      SUCCEED / FAIL
  *
- * Programmer:	Quincey Koziol
- *              Friday, December 11, 2020
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -665,9 +624,6 @@ done:
  * Note:        H5ES_NONE is a valid value for 'es_id', but functions as a no-op
  *
  * Return:      SUCCEED / FAIL
- *
- * Programmer:  Quincey Koziol
- *              Wednesday, April 8, 2020
  *
  *-------------------------------------------------------------------------
  */

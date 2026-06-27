@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -12,9 +11,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:  Robb Matzke
- *              Friday, November 20, 1998
- *
  * Purpose:     Test support stuff.
  */
 #ifndef H5TEST_H
@@ -91,7 +87,7 @@ H5TEST_DLLVAR MPI_Info h5_io_info_g; /* MPI INFO object for IO */
  */
 #define AT()                                                                                                 \
     do {                                                                                                     \
-        HDprintf("   at %s:%d in %s()...\n", __FILE__, __LINE__, __func__);                                  \
+        printf("   at %s:%d in %s()...\n", __FILE__, __LINE__, __func__);                                    \
     } while (0)
 
 /*
@@ -105,33 +101,38 @@ H5TEST_DLLVAR MPI_Info h5_io_info_g; /* MPI INFO object for IO */
  */
 #define TESTING(WHAT)                                                                                        \
     do {                                                                                                     \
-        HDprintf("Testing %-62s", WHAT);                                                                     \
-        HDfflush(stdout);                                                                                    \
+        printf("Testing %-62s", WHAT);                                                                       \
+        fflush(stdout);                                                                                      \
+        n_tests_run_g++;                                                                                     \
     } while (0)
 #define TESTING_2(WHAT)                                                                                      \
     do {                                                                                                     \
-        HDprintf("  Testing %-60s", WHAT);                                                                   \
-        HDfflush(stdout);                                                                                    \
+        printf("  Testing %-60s", WHAT);                                                                     \
+        fflush(stdout);                                                                                      \
+        n_tests_run_g++;                                                                                     \
     } while (0)
 #define PASSED()                                                                                             \
     do {                                                                                                     \
         HDputs(" PASSED");                                                                                   \
-        HDfflush(stdout);                                                                                    \
+        fflush(stdout);                                                                                      \
+        n_tests_passed_g++;                                                                                  \
     } while (0)
 #define H5_FAILED()                                                                                          \
     do {                                                                                                     \
         HDputs("*FAILED*");                                                                                  \
-        HDfflush(stdout);                                                                                    \
+        fflush(stdout);                                                                                      \
+        n_tests_failed_g++;                                                                                  \
     } while (0)
 #define H5_WARNING()                                                                                         \
     do {                                                                                                     \
         HDputs("*WARNING*");                                                                                 \
-        HDfflush(stdout);                                                                                    \
+        fflush(stdout);                                                                                      \
     } while (0)
 #define SKIPPED()                                                                                            \
     do {                                                                                                     \
         HDputs(" -SKIP-");                                                                                   \
-        HDfflush(stdout);                                                                                    \
+        fflush(stdout);                                                                                      \
+        n_tests_skipped_g++;                                                                                 \
     } while (0)
 #define PUTS_ERROR(s)                                                                                        \
     do {                                                                                                     \
@@ -163,6 +164,66 @@ H5TEST_DLLVAR MPI_Info h5_io_info_g; /* MPI INFO object for IO */
         AT();                                                                                                \
         HDputs(s);                                                                                           \
         goto error;                                                                                          \
+    } while (0)
+
+/*
+ * Testing macros used for multi-part tests.
+ */
+#define TESTING_MULTIPART(WHAT)                                                                              \
+    do {                                                                                                     \
+        printf("Testing %-62s", WHAT);                                                                       \
+        HDputs("");                                                                                          \
+        fflush(stdout);                                                                                      \
+    } while (0)
+
+/*
+ * Begin and end an entire section of multi-part tests. By placing all the
+ * parts of a test between these macros, skipping to the 'error' cleanup
+ * section of a test is deferred until all parts have finished.
+ */
+#define BEGIN_MULTIPART                                                                                      \
+    {                                                                                                        \
+        int part_nerrors = 0;
+
+#define END_MULTIPART                                                                                        \
+    if (part_nerrors > 0)                                                                                    \
+        goto error;                                                                                          \
+    }
+
+/*
+ * Begin, end and handle errors within a single part of a multi-part test.
+ * The PART_END macro creates a goto label based on the given "part name".
+ * When a failure occurs in the current part, the PART_ERROR macro uses
+ * this label to skip to the next part of the multi-part test. The PART_ERROR
+ * macro also increments the error count so that the END_MULTIPART macro
+ * knows to skip to the test's 'error' label once all test parts have finished.
+ */
+#define PART_BEGIN(part_name) {
+#define PART_END(part_name)                                                                                  \
+    }                                                                                                        \
+    part_##part_name##_end:
+#define PART_ERROR(part_name)                                                                                \
+    do {                                                                                                     \
+        n_tests_failed_g++;                                                                                  \
+        part_nerrors++;                                                                                      \
+        goto part_##part_name##_end;                                                                         \
+    } while (0)
+#define PART_TEST_ERROR(part_name)                                                                           \
+    do {                                                                                                     \
+        H5_FAILED();                                                                                         \
+        AT();                                                                                                \
+        part_nerrors++;                                                                                      \
+        goto part_##part_name##_end;                                                                         \
+    } while (0)
+
+/*
+ * Simply skips to the goto label for this test part and moves on to the
+ * next test part. Useful for when a test part needs to be skipped for
+ * some reason or is currently unimplemented and empty.
+ */
+#define PART_EMPTY(part_name)                                                                                \
+    do {                                                                                                     \
+        goto part_##part_name##_end;                                                                         \
     } while (0)
 
 /* Number of seconds to wait before killing a test (requires alarm(2)) */
@@ -202,7 +263,7 @@ extern "C" {
  * an equivalent non-const pointer around) is far messier.
  */
 #ifndef h5_free_const
-#define h5_free_const(mem) HDfree((void *)(uintptr_t)mem)
+#define h5_free_const(mem) free((void *)(uintptr_t)mem)
 #endif
 
 /* Generally useful testing routines */
@@ -286,7 +347,12 @@ H5TEST_DLL char *getenv_all(MPI_Comm comm, int root, const char *name);
 #endif
 
 /* Extern global variables */
-H5TEST_DLLVAR int TestVerbosity;
+H5TEST_DLLVAR int      TestVerbosity;
+H5TEST_DLLVAR size_t   n_tests_run_g;
+H5TEST_DLLVAR size_t   n_tests_passed_g;
+H5TEST_DLLVAR size_t   n_tests_failed_g;
+H5TEST_DLLVAR size_t   n_tests_skipped_g;
+H5TEST_DLLVAR uint64_t vol_cap_flags_g;
 
 H5TEST_DLL void   h5_send_message(const char *file, const char *arg1, const char *arg2);
 H5TEST_DLL herr_t h5_wait_message(const char *file);

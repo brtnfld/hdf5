@@ -10,7 +10,6 @@
 ! COPYRIGHT
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 !   Copyright by The HDF Group.                                               *
-!   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
 !   This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -42,11 +41,6 @@ MODULE visit_cb
   !
   ! Return:      Success:        0
   !              Failure:        -1
-  !
-  ! Programmer:  M.S. Breitenfeld
-  !              July 12, 2012
-  !              Adopted from C test.
-  !
   !-------------------------------------------------------------------------
   !
   ! Object visit structs
@@ -441,7 +435,7 @@ SUBROUTINE test_obj_visit(total_error)
   ! Construct "interesting" file to visit
   CALL build_visit_file(fid)
 
-  ! Inialize udata for testing purposes
+  ! Initialize udata for testing purposes
   udata%info(1)%path(1:1) ="."
   udata%info(1)%type_obj = H5O_TYPE_GROUP_F
   udata%info(2)%path(1:12) = &
@@ -703,11 +697,6 @@ END SUBROUTINE test_obj_info
 ! Function:    build_visit_file
 !
 ! Purpose:     Build an "interesting" file to use for visiting links & objects
-!
-! Programmer:  M. Scot Breitenfeld
-!              July 12, 2012
-!              NOTE: Adapted from C test.
-!
 !-------------------------------------------------------------------------
 !
 

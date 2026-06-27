@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -14,8 +13,6 @@
 /*-------------------------------------------------------------------------
  *
  * Created:             H5Fio.c
- *                      Jan 10 2008
- *                      Quincey Koziol
  *
  * Purpose:             File I/O routines.
  *
@@ -75,31 +72,27 @@
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Robb Matzke
- *		Jul 10 1997
- *
  *-------------------------------------------------------------------------
  */
 herr_t
 H5F_shared_block_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, void *buf /*out*/)
 {
-    H5FD_mem_t map_type  = type;    /* Mapped memory type */
+    H5FD_mem_t map_type;            /* Mapped memory type */
     herr_t     ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
-    HDassert(f_sh);
-    HDassert(buf);
-    HDassert(H5F_addr_defined(addr));
+    assert(f_sh);
+    assert(buf);
+    assert(H5_addr_defined(addr));
 
     /* Check for attempting I/O on 'temporary' file address */
-    if (H5F_addr_le(f_sh->tmp_addr, (addr + size)))
+    if (H5_addr_le(f_sh->tmp_addr, (addr + size)))
         HGOTO_ERROR(H5E_IO, H5E_BADRANGE, FAIL, "attempting I/O in temporary file space")
 
-    if (!H5F_SHARED_USE_VFD_SWMR(f_sh))
-        /* Treat global heap as raw data */
-        map_type = (type == H5FD_MEM_GHEAP) ? H5FD_MEM_DRAW : type;
+    /* Treat global heap as raw data */
+    map_type = (type == H5FD_MEM_GHEAP) ? H5FD_MEM_DRAW : type;
 
     /* Pass through page buffer layer */
     if (H5PB_read(f_sh, map_type, addr, size, buf) < 0)
@@ -118,15 +111,35 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Robb Matzke
- *		Jul 10 1997
- *
  *-------------------------------------------------------------------------
  */
 herr_t
 H5F_block_read(H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size, void *buf /*out*/)
 {
-    return H5F_shared_block_read(f->shared, type, addr, size, buf);
+    H5FD_mem_t map_type;            /* Mapped memory type */
+    herr_t     ret_value = SUCCEED; /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Sanity checks */
+    assert(f);
+    assert(f->shared);
+    assert(buf);
+    assert(H5_addr_defined(addr));
+
+    /* Check for attempting I/O on 'temporary' file address */
+    if (H5_addr_le(f->shared->tmp_addr, (addr + size)))
+        HGOTO_ERROR(H5E_IO, H5E_BADRANGE, FAIL, "attempting I/O in temporary file space")
+
+    /* Treat global heap as raw data */
+    map_type = (type == H5FD_MEM_GHEAP) ? H5FD_MEM_DRAW : type;
+
+    /* Pass through page buffer layer */
+    if (H5PB_read(f->shared, map_type, addr, size, buf) < 0)
+        HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "read through page buffer failed")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F_block_read() */
 
 /*-------------------------------------------------------------------------
@@ -138,32 +151,28 @@ H5F_block_read(H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size, void *buf /
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Robb Matzke
- *		Jul 10 1997
- *
  *-------------------------------------------------------------------------
  */
 herr_t
 H5F_shared_block_write(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, const void *buf)
 {
-    H5FD_mem_t map_type  = type;    /* Mapped memory type */
+    H5FD_mem_t map_type;            /* Mapped memory type */
     herr_t     ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
-    HDassert(f_sh);
-    HDassert(H5F_SHARED_INTENT(f_sh) & H5F_ACC_RDWR);
-    HDassert(buf);
-    HDassert(H5F_addr_defined(addr));
+    assert(f_sh);
+    assert(H5F_SHARED_INTENT(f_sh) & H5F_ACC_RDWR);
+    assert(buf);
+    assert(H5_addr_defined(addr));
 
     /* Check for attempting I/O on 'temporary' file address */
-    if (H5F_addr_le(f_sh->tmp_addr, (addr + size)))
+    if (H5_addr_le(f_sh->tmp_addr, (addr + size)))
         HGOTO_ERROR(H5E_IO, H5E_BADRANGE, FAIL, "attempting I/O in temporary file space")
 
-    if (!H5F_SHARED_USE_VFD_SWMR(f_sh))
-        /* Treat global heap as raw data */
-        map_type = (type == H5FD_MEM_GHEAP) ? H5FD_MEM_DRAW : type;
+    /* Treat global heap as raw data */
+    map_type = (type == H5FD_MEM_GHEAP) ? H5FD_MEM_DRAW : type;
 
     /* Pass through page buffer layer */
     if (H5PB_write(f_sh, map_type, addr, size, buf) < 0)
@@ -182,15 +191,35 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Robb Matzke
- *		Jul 10 1997
- *
  *-------------------------------------------------------------------------
  */
 herr_t
 H5F_block_write(H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size, const void *buf)
 {
-    return H5F_shared_block_write(f->shared, type, addr, size, buf);
+    H5FD_mem_t map_type;            /* Mapped memory type */
+    herr_t     ret_value = SUCCEED; /* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Sanity checks */
+    assert(f);
+    assert(f->shared);
+    assert(H5F_INTENT(f) & H5F_ACC_RDWR);
+    assert(buf);
+    assert(H5_addr_defined(addr));
+
+    /* Check for attempting I/O on 'temporary' file address */
+    if (H5_addr_le(f->shared->tmp_addr, (addr + size)))
+        HGOTO_ERROR(H5E_IO, H5E_BADRANGE, FAIL, "attempting I/O in temporary file space")
+
+    /* Treat global heap as raw data */
+    map_type = (type == H5FD_MEM_GHEAP) ? H5FD_MEM_DRAW : type;
+
+    /* Pass through page buffer layer */
+    if (H5PB_write(f->shared, map_type, addr, size, buf) < 0)
+        HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "write through page buffer failed")
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F_block_write() */
 
 /*-------------------------------------------------------------------------
@@ -204,9 +233,6 @@ H5F_block_write(H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size, const void
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Neil Fortner
- *              May 3 2021
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -219,12 +245,12 @@ H5F_shared_select_read(H5F_shared_t *f_sh, H5FD_mem_t type, uint32_t count, H5S_
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
-    HDassert(f_sh);
-    HDassert((mem_spaces) || (count == 0));
-    HDassert((file_spaces) || (count == 0));
-    HDassert((offsets) || (count == 0));
-    HDassert((element_sizes) || (count == 0));
-    HDassert((bufs) || (count == 0));
+    assert(f_sh);
+    assert((mem_spaces) || (count == 0));
+    assert((file_spaces) || (count == 0));
+    assert((offsets) || (count == 0));
+    assert((element_sizes) || (count == 0));
+    assert((bufs) || (count == 0));
 
     /* Treat global heap as raw data */
     map_type = (type == H5FD_MEM_GHEAP) ? H5FD_MEM_DRAW : type;
@@ -249,9 +275,6 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Neil Fortner
- *              May 4 2021
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -264,12 +287,12 @@ H5F_shared_select_write(H5F_shared_t *f_sh, H5FD_mem_t type, uint32_t count, H5S
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
-    HDassert(f_sh);
-    HDassert((mem_spaces) || (count == 0));
-    HDassert((file_spaces) || (count == 0));
-    HDassert((offsets) || (count == 0));
-    HDassert((element_sizes) || (count == 0));
-    HDassert((bufs) || (count == 0));
+    assert(f_sh);
+    assert((mem_spaces) || (count == 0));
+    assert((file_spaces) || (count == 0));
+    assert((offsets) || (count == 0));
+    assert((element_sizes) || (count == 0));
+    assert((bufs) || (count == 0));
 
     /* Treat global heap as raw data */
     map_type = (type == H5FD_MEM_GHEAP) ? H5FD_MEM_DRAW : type;
@@ -283,7 +306,6 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F_shared_select_write() */
 
-
 herr_t
 H5F_shared_vector_read(H5F_shared_t *f_sh, uint32_t count, H5FD_mem_t types[], haddr_t addrs[],
                        size_t sizes[], void *bufs[])
@@ -293,11 +315,11 @@ H5F_shared_vector_read(H5F_shared_t *f_sh, uint32_t count, H5FD_mem_t types[], h
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
-    HDassert(f_sh);
-    HDassert((types) || (count == 0));
-    HDassert((addrs) || (count == 0));
-    HDassert((sizes) || (count == 0));
-    HDassert((bufs) || (count == 0));
+    assert(f_sh);
+    assert((types) || (count == 0));
+    assert((addrs) || (count == 0));
+    assert((sizes) || (count == 0));
+    assert((bufs) || (count == 0));
 
     /*
      * Note that we don't try to map global heap data to raw
@@ -307,7 +329,7 @@ H5F_shared_vector_read(H5F_shared_t *f_sh, uint32_t count, H5FD_mem_t types[], h
      */
 #ifndef NDEBUG
     for (uint32_t i = 0; i < count; i++)
-        HDassert(types[i] != H5FD_MEM_GHEAP);
+        assert(types[i] != H5FD_MEM_GHEAP);
 #endif
 
     /* Pass down to file driver layer (bypass page buffer for now) */
@@ -338,11 +360,11 @@ H5F_shared_vector_write(H5F_shared_t *f_sh, uint32_t count, H5FD_mem_t types[], 
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
-    HDassert(f_sh);
-    HDassert((types) || (count == 0));
-    HDassert((addrs) || (count == 0));
-    HDassert((sizes) || (count == 0));
-    HDassert((bufs) || (count == 0));
+    assert(f_sh);
+    assert((types) || (count == 0));
+    assert((addrs) || (count == 0));
+    assert((sizes) || (count == 0));
+    assert((bufs) || (count == 0));
 
     /*
      * Note that we don't try to map global heap data to raw
@@ -352,7 +374,7 @@ H5F_shared_vector_write(H5F_shared_t *f_sh, uint32_t count, H5FD_mem_t types[], 
      */
 #ifndef NDEBUG
     for (uint32_t i = 0; i < count; i++)
-        HDassert(types[i] != H5FD_MEM_GHEAP);
+        assert(types[i] != H5FD_MEM_GHEAP);
 #endif
 
     /* Pass down to file driver layer (bypass page buffer for now) */
@@ -370,9 +392,6 @@ done:
  *              to disk.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:	Mike McGreevy
- *              September 9, 2010
  *
  *-------------------------------------------------------------------------
  */
@@ -396,35 +415,8 @@ H5F_flush_tagged_metadata(H5F_t *f, haddr_t tag)
         HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "low level flush failed")
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value);
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F_flush_tagged_metadata */
-
-/*-------------------------------------------------------------------------
- * Function:    H5F_evict_tagged_metadata
- *
- * Purpose:     Evicts metadata from the cache with specified tag.
- *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:	Mike McGreevy
- *              September 9, 2010
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5F_evict_tagged_metadata(H5F_t *f, haddr_t tag)
-{
-    herr_t ret_value = SUCCEED;
-
-    FUNC_ENTER_NOAPI(FAIL)
-
-    /* Evict the object's metadata */
-    if (H5AC_evict_tagged_metadata(f, tag, TRUE) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTEXPUNGE, FAIL, "unable to evict tagged metadata")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
-} /* end H5F_evict_tagged_metadata */
 
 /*-------------------------------------------------------------------------
  * Function:    H5F__evict_cache_entries
@@ -432,9 +424,6 @@ done:
  * Purpose:     To evict all cache entries except the pinned superblock entry
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Vailin Choi
- *		Dec 2013
  *
  *-------------------------------------------------------------------------
  */
@@ -445,8 +434,8 @@ H5F__evict_cache_entries(H5F_t *f)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(f);
-    HDassert(f->shared);
+    assert(f);
+    assert(f->shared);
 
     /* Evict all except pinned entries in the cache */
     if (H5AC_evict(f) < 0)
@@ -476,7 +465,7 @@ H5F__evict_cache_entries(H5F_t *f)
 #endif /* NDEBUG */
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value);
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F__evict_cache_entries() */
 
 /*-------------------------------------------------------------------------
@@ -489,9 +478,6 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:	Vailin Choi
- *		Sept 2013
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -500,8 +486,8 @@ H5F_get_checksums(const uint8_t *buf, size_t buf_size, uint32_t *s_chksum /*out*
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* Check arguments */
-    HDassert(buf);
-    HDassert(buf_size);
+    assert(buf);
+    assert(buf_size);
 
     /* Return the stored checksum */
     if (s_chksum) {

@@ -12,7 +12,7 @@
 
 /*
  * Purpose:     The Virtual Object Layer as described in documentation.
- *              The pupose is to provide an abstraction on how to access the
+ *              The purpose is to provide an abstraction on how to access the
  *              underlying HDF5 container, whether in a local file with
  *              a specific file format, or remotely on other machines, etc...
  */
@@ -201,9 +201,6 @@ done:
  *              0 if a VOL connector with that name has NOT been registered
  *              <0 on errors
  *
- * Programmer:  Dana Robinson
- *              June 17, 2017
- *
  *-------------------------------------------------------------------------
  */
 htri_t
@@ -260,9 +257,6 @@ done:
  *
  *              H5I_INVALID_HID on error.
  *
- * Programmer:  Dana Robinson
- *              June 17, 2017
- *
  *-------------------------------------------------------------------------
  */
 hid_t
@@ -292,9 +286,6 @@ done:
  *
  *              H5I_INVALID_HID on error or if a VOL connector of that
  *              name has not been registered.
- *
- * Programmer:  Dana Robinson
- *              June 17, 2017
  *
  *-------------------------------------------------------------------------
  */
@@ -750,9 +741,9 @@ done:
     /* Cleanup on error */
     if (ret_value < 0) {
         if (file_vol_obj && H5VL_free_object(file_vol_obj) < 0)
-            HDONE_ERROR(H5E_VOL, H5E_CANTDEC, FAIL, "unable to free VOL object")
+            HDONE_ERROR(H5E_VOL, H5E_CANTDEC, FAIL, "unable to free VOL object");
         if (file_type_id >= 0 && H5I_dec_ref(file_type_id) < 0)
-            HDONE_ERROR(H5E_VOL, H5E_CANTDEC, FAIL, "unable to close file datatype")
+            HDONE_ERROR(H5E_VOL, H5E_CANTDEC, FAIL, "unable to close file datatype");
     } /* end if */
 
     FUNC_LEAVE_API(ret_value)
@@ -769,9 +760,6 @@ done:
  *
  * Return:      Success:    Non-negative, *state set
  *              Failure:    Negative, *state unset
- *
- * Programmer:  Quincey Koziol
- *              Thursday, January 10, 2019
  *
  *---------------------------------------------------------------------------
  */
@@ -807,9 +795,6 @@ done:
  * Return:      Success:    Non-negative
  *              Failure:    Negative
  *
- * Programmer:  Quincey Koziol
- *              Friday, February 5, 2021
- *
  *---------------------------------------------------------------------------
  */
 herr_t
@@ -839,9 +824,6 @@ done:
  *
  * Return:      Success:    Non-negative
  *              Failure:    Negative
- *
- * Programmer:  Quincey Koziol
- *              Thursday, January 10, 2019
  *
  *---------------------------------------------------------------------------
  */
@@ -882,9 +864,6 @@ done:
  * Return:      Success:    Non-negative
  *              Failure:    Negative
  *
- * Programmer:  Quincey Koziol
- *              Saturday, February 23, 2019
- *
  *---------------------------------------------------------------------------
  */
 herr_t
@@ -917,9 +896,6 @@ done:
  *
  * Return:      Success:    Non-negative
  *              Failure:    Negative
- *
- * Programmer:  Quincey Koziol
- *              Thursday, January 10, 2019
  *
  *---------------------------------------------------------------------------
  */
@@ -967,7 +943,7 @@ H5VLquery_optional(hid_t obj_id, H5VL_subclass_t subcls, int opt_type, uint64_t 
     /* Check args */
     if (NULL == flags)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid 'flags' pointer")
-    if (NULL == (vol_obj = (H5VL_object_t *)H5I_object(obj_id)))
+    if (NULL == (vol_obj = H5VL_vol_object(obj_id)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid object identifier")
 
     /* Query the connector */

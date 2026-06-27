@@ -5,14 +5,14 @@
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
  * the COPYING file, which can be found at the root of the source code       *
- * distribution tree, or in https://support.hdfgroup.org/ftp/HDF5/releases.  *
+ * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
  * Purpose:     The Virtual Object Layer as described in documentation.
- *              The pupose is to provide an abstraction on how to access the
+ *              The purpose is to provide an abstraction on how to access the
  *              underlying HDF5 container, whether in a local file with
  *              a specific file format, or remotely on other machines, etc...
  */
@@ -195,8 +195,8 @@ H5VL__register_opt_operation(H5VL_subclass_t subcls, const char *op_name, int *o
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(op_val);
-    HDassert(op_name && *op_name);
+    assert(op_val);
+    assert(op_name && *op_name);
 
     /* Check for duplicate operation */
     if (H5VL_opt_ops_g[subcls]) {
@@ -270,8 +270,8 @@ H5VL__find_opt_operation(H5VL_subclass_t subcls, const char *op_name, int *op_va
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(op_val);
-    HDassert(op_name && *op_name);
+    assert(op_val);
+    assert(op_name && *op_name);
 
     /* Check for dynamic operations in the VOL subclass */
     if (H5VL_opt_ops_g[subcls]) {
@@ -309,7 +309,7 @@ H5VL__unregister_opt_operation(H5VL_subclass_t subcls, const char *op_name)
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(op_name && *op_name);
+    assert(op_name && *op_name);
 
     /* Check for dynamic operations in the VOL subclass */
     if (H5VL_opt_ops_g[subcls]) {

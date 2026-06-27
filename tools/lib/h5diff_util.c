@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -322,7 +321,7 @@ print_found(hsize_t nfound)
     if (g_Parallel)
         parallel_print("%" PRIuHSIZE " differences found\n", nfound);
     else
-        HDfprintf(stdout, "%" PRIuHSIZE " differences found\n", nfound);
+        fprintf(stdout, "%" PRIuHSIZE " differences found\n", nfound);
 }
 
 /*-----------------------------------------------------------------

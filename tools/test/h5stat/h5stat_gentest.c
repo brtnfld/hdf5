@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -144,7 +143,7 @@ error:
         H5Gclose(gid);
         H5Fclose(fid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return FAIL;
 } /* gen_newgrat_file() */
@@ -349,7 +348,7 @@ error:
         H5Sclose(sid4);
         H5Fclose(fid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return FAIL;
 
@@ -454,7 +453,7 @@ error:
         H5Dclose(did2);
 #endif
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return FAIL;
 
@@ -576,7 +575,7 @@ error:
         H5Aclose(aid2);
         H5Fclose(fid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     if (fd >= 0)
         HDclose(fd);
@@ -627,6 +626,6 @@ main(void)
     return EXIT_SUCCESS;
 
 error:
-    HDfprintf(stderr, "h5stat test generator FAILED\n");
+    fprintf(stderr, "h5stat test generator FAILED\n");
     return EXIT_FAILURE;
 }

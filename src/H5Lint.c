@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -197,9 +196,6 @@ static H5L_class_t *H5L_table_g       = NULL;
  *
  *              Failure:	negative
  *
- * Programmer:	James Laird
- *              Thursday, July 13, 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -223,9 +219,6 @@ done:
  * Purpose:     Terminate any resources allocated in H5L_init.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:	James Laird
- *              Tuesday, January 24, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -256,9 +249,6 @@ H5L_term_package(void)
  *                              link class table.
  *		Failure:	Negative
  *
- * Programmer:	James Laird
- *              Monday, July 10, 2006
- *
  *-------------------------------------------------------------------------
  */
 static int
@@ -271,7 +261,7 @@ H5L__find_class_idx(H5L_type_t id)
 
     for (i = 0; i < H5L_table_used_g; i++)
         if (H5L_table_g[i].id == id)
-            HGOTO_DONE((int)i)
+            HGOTO_DONE((int)i);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -285,9 +275,6 @@ done:
  *
  * Return:	Success:	Ptr to entry in global link class table.
  *		Failure:	NULL
- *
- * Programmer:	James Laird
- *              Monday, July 10, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -320,9 +307,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	James Laird
- *              Monday, July 10, 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -333,8 +317,8 @@ H5L_register(const H5L_class_t *cls)
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(cls);
-    HDassert(cls->id >= 0 && cls->id <= H5L_TYPE_MAX);
+    assert(cls);
+    assert(cls->id >= 0 && cls->id <= H5L_TYPE_MAX);
 
     /* Is the link type already registered? */
     for (i = 0; i < H5L_table_used_g; i++)
@@ -372,9 +356,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	James Laird
- *              Monday, July 10, 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -385,7 +366,7 @@ H5L_unregister(H5L_type_t id)
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(id >= 0 && id <= H5L_TYPE_MAX);
+    assert(id >= 0 && id <= H5L_TYPE_MAX);
 
     /* Is the filter already registered? */
     for (i = 0; i < H5L_table_used_g; i++)
@@ -398,7 +379,7 @@ H5L_unregister(H5L_type_t id)
 
     /* Remove filter from table */
     /* Don't worry about shrinking table size (for now) */
-    HDmemmove(&H5L_table_g[i], &H5L_table_g[i + 1], sizeof(H5L_class_t) * ((H5L_table_used_g - 1) - i));
+    memmove(&H5L_table_g[i], &H5L_table_g[i + 1], sizeof(H5L_class_t) * ((H5L_table_used_g - 1) - i));
     H5L_table_used_g--;
 
 done:
@@ -423,7 +404,7 @@ H5L_is_registered(H5L_type_t id, hbool_t *is_registered)
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* Check args */
-    HDassert(is_registered);
+    assert(is_registered);
 
     /* Is the link class already registered? */
     *is_registered = FALSE;
@@ -444,9 +425,6 @@ H5L_is_registered(H5L_type_t id, hbool_t *is_registered)
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	James Laird
- *              Tuesday, December 13, 2005
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -458,9 +436,9 @@ H5L_link(const H5G_loc_t *new_loc, const char *new_name, H5G_loc_t *obj_loc, hid
     FUNC_ENTER_NOAPI_NOINIT
 
     /* Check args */
-    HDassert(new_loc);
-    HDassert(obj_loc);
-    HDassert(new_name && *new_name);
+    assert(new_loc);
+    assert(obj_loc);
+    assert(new_name && *new_name);
 
     /* The link callback will check that the object isn't being hard linked
      * into a different file, so we don't need to do it here (there could be
@@ -486,9 +464,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *              Monday, April 9, 2007
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -500,9 +475,9 @@ H5L_link_object(const H5G_loc_t *new_loc, const char *new_name, H5O_obj_create_t
     FUNC_ENTER_NOAPI_NOINIT
 
     /* Check args */
-    HDassert(new_loc);
-    HDassert(new_name && *new_name);
-    HDassert(ocrt_info);
+    assert(new_loc);
+    assert(new_name && *new_name);
+    assert(ocrt_info);
 
     /* The link callback will check that the object isn't being hard linked
      * into a different file, so we don't need to do it here (there could be
@@ -526,9 +501,6 @@ done:
  * Purpose:	Callback for creating a link to an object.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Monday, September 19, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -652,23 +624,23 @@ done:
         H5O_loc_t oloc; /* Object location for created object */
 
         /* Set up object location */
-        HDmemset(&oloc, 0, sizeof(oloc));
+        memset(&oloc, 0, sizeof(oloc));
         oloc.file = grp_loc->oloc->file;
         oloc.addr = udata->lnk->u.hard.addr;
 
         /* Decrement refcount on new object's object header in memory */
         if (H5O_dec_rc_by_loc(&oloc) < 0)
-            HDONE_ERROR(H5E_LINK, H5E_CANTDEC, FAIL, "unable to decrement refcount on newly created object")
+            HDONE_ERROR(H5E_LINK, H5E_CANTDEC, FAIL, "unable to decrement refcount on newly created object");
     } /* end if */
 
     /* Close the location given to the user callback if it was created */
     if (grp_id >= 0) {
         if (H5I_dec_app_ref(grp_id) < 0)
-            HDONE_ERROR(H5E_LINK, H5E_CANTRELEASE, FAIL, "unable to close ID from UD callback")
+            HDONE_ERROR(H5E_LINK, H5E_CANTRELEASE, FAIL, "unable to close ID from UD callback");
     } /* end if */
     else if (grp != NULL) {
         if (H5G_close(grp) < 0)
-            HDONE_ERROR(H5E_LINK, H5E_CANTRELEASE, FAIL, "unable to close group given to UD callback")
+            HDONE_ERROR(H5E_LINK, H5E_CANTRELEASE, FAIL, "unable to close group given to UD callback");
     } /* end if */
     else if (temp_loc_init)
         H5G_loc_free(&temp_loc);
@@ -694,9 +666,6 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Quincey Koziol
- *              Monday, December  5, 2005
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -712,10 +681,10 @@ H5L__create_real(const H5G_loc_t *link_loc, const char *link_name, H5G_name_t *o
     FUNC_ENTER_PACKAGE
 
     /* Check args */
-    HDassert(link_loc);
-    HDassert(link_name && *link_name);
-    HDassert(lnk);
-    HDassert(lnk->type >= H5L_TYPE_HARD && lnk->type <= H5L_TYPE_MAX);
+    assert(link_loc);
+    assert(link_name && *link_name);
+    assert(lnk);
+    assert(lnk->type >= H5L_TYPE_HARD && lnk->type <= H5L_TYPE_MAX);
 
     /* Get normalized link name */
     if ((norm_link_name = H5G_normalize(link_name)) == NULL)
@@ -774,9 +743,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Robb Matzke
- *              Monday, April  6, 1998
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -795,10 +761,10 @@ H5L__create_hard(H5G_loc_t *cur_loc, const char *cur_name, const H5G_loc_t *link
     FUNC_ENTER_PACKAGE
 
     /* Check args */
-    HDassert(cur_loc);
-    HDassert(cur_name && *cur_name);
-    HDassert(link_loc);
-    HDassert(link_name && *link_name);
+    assert(cur_loc);
+    assert(cur_name && *cur_name);
+    assert(link_loc);
+    assert(link_name && *link_name);
 
     /* Get normalized copy of the current name */
     if ((norm_cur_name = H5G_normalize(cur_name)) == NULL)
@@ -830,7 +796,7 @@ done:
     /* Free the object header location */
     if (loc_valid)
         if (H5G_loc_free(&obj_loc) < 0)
-            HDONE_ERROR(H5E_LINK, H5E_CANTRELEASE, FAIL, "unable to free location")
+            HDONE_ERROR(H5E_LINK, H5E_CANTRELEASE, FAIL, "unable to free location");
 
     /* Free the normalized path name */
     if (norm_cur_name)
@@ -846,9 +812,6 @@ done:
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:	Robb Matzke
- *              Monday, April  6, 1998
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -861,9 +824,9 @@ H5L__create_soft(const char *target_path, const H5G_loc_t *link_loc, const char 
     FUNC_ENTER_PACKAGE
 
     /* Check args */
-    HDassert(link_loc);
-    HDassert(target_path && *target_path);
-    HDassert(link_name && *link_name);
+    assert(link_loc);
+    assert(target_path && *target_path);
+    assert(link_name && *link_name);
 
     /* Get normalized copy of the link target */
     if ((norm_target = H5G_normalize(target_path)) == NULL)
@@ -893,9 +856,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	James Laird
- *              Friday, May 19, 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -908,10 +868,10 @@ H5L__create_ud(const H5G_loc_t *link_loc, const char *link_name, const void *ud_
     FUNC_ENTER_PACKAGE
 
     /* Check args */
-    HDassert(type >= H5L_TYPE_UD_MIN && type <= H5L_TYPE_MAX);
-    HDassert(link_loc);
-    HDassert(link_name && *link_name);
-    HDassert(ud_data_size == 0 || ud_data);
+    assert(type >= H5L_TYPE_UD_MIN && type <= H5L_TYPE_MAX);
+    assert(link_loc);
+    assert(link_name && *link_name);
+    assert(ud_data_size == 0 || ud_data);
 
     /* Initialize the link struct's pointer to its udata buffer */
     lnk.u.ud.udata = NULL;
@@ -949,9 +909,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *              Monday, November 13 2006
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -962,7 +919,7 @@ H5L__get_val_real(const H5O_link_t *lnk, void *buf, size_t size)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(lnk);
+    assert(lnk);
 
     /* Check for soft link */
     if (H5L_TYPE_SOFT == lnk->type) {
@@ -1003,9 +960,6 @@ done:
  * Purpose:	Callback for retrieving link value or udata.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Tuesday, September 20, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -1048,9 +1002,6 @@ done:
  *
  *		Failure:	Negative
  *
- * Programmer:	Robb Matzke
- *              Monday, April 13, 1998
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1062,8 +1013,8 @@ H5L__get_val(const H5G_loc_t *loc, const char *name, void *buf /*out*/, size_t s
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(loc);
-    HDassert(name && *name);
+    assert(loc);
+    assert(name && *name);
 
     /* Set up user data for retrieving information */
     udata.size = size;
@@ -1084,9 +1035,6 @@ done:
  *              index's order.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Monday, November 13 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -1135,9 +1083,6 @@ done:
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:	Quincey Koziol
- *		December 27, 2017
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1150,8 +1095,8 @@ H5L__get_val_by_idx(const H5G_loc_t *loc, const char *name, H5_index_t idx_type,
     FUNC_ENTER_PACKAGE
 
     /* Check arguments */
-    HDassert(loc);
-    HDassert(name && *name);
+    assert(loc);
+    assert(name && *name);
 
     /* Set up user data for retrieving information */
     udata.idx_type = idx_type;
@@ -1175,9 +1120,6 @@ done:
  *              actually deletes the link
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Monday, September 19, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -1224,9 +1166,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Robb Matzke
- *              Thursday, September 17, 1998
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1238,8 +1177,8 @@ H5L__delete(const H5G_loc_t *loc, const char *name)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(loc);
-    HDassert(name && *name);
+    assert(loc);
+    assert(name && *name);
 
     /* Get normalized copy of the name */
     if ((norm_name = H5G_normalize(name)) == NULL)
@@ -1264,9 +1203,6 @@ done:
  * Purpose:	Callback for removing a link according to an index's order.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Monday, November 13 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -1305,9 +1241,6 @@ done:
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:	Quincey Koziol
- *		December 27, 2017
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1320,8 +1253,8 @@ H5L__delete_by_idx(const H5G_loc_t *loc, const char *name, H5_index_t idx_type, 
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(loc);
-    HDassert(name && *name);
+    assert(loc);
+    assert(name && *name);
 
     /* Set up user data for unlink operation */
     udata.idx_type = idx_type;
@@ -1345,9 +1278,6 @@ done:
  *              It is called by H5L__move_cb.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	James Laird
- *              Monday, April 3, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -1375,7 +1305,7 @@ H5L__move_dest_cb(H5G_loc_t *grp_loc /*in*/, const char *name, const H5O_link_t 
             HGOTO_ERROR(H5E_LINK, H5E_CANTINIT, FAIL, "moving a link across files is not allowed")
 
     /* Give the object its new name */
-    HDassert(udata->lnk->name == NULL);
+    assert(udata->lnk->name == NULL);
     H5_GCC_CLANG_DIAG_OFF("cast-qual")
     udata->lnk->name = (char *)name;
     H5_GCC_CLANG_DIAG_ON("cast-qual")
@@ -1430,11 +1360,11 @@ done:
     /* Close the location given to the user callback if it was created */
     if (grp_id >= 0) {
         if (H5I_dec_app_ref(grp_id) < 0)
-            HDONE_ERROR(H5E_LINK, H5E_CANTRELEASE, FAIL, "unable to close ID from UD callback")
+            HDONE_ERROR(H5E_LINK, H5E_CANTRELEASE, FAIL, "unable to close ID from UD callback");
     } /* end if */
     else if (grp != NULL) {
         if (H5G_close(grp) < 0)
-            HDONE_ERROR(H5E_LINK, H5E_CANTRELEASE, FAIL, "unable to close group given to UD callback")
+            HDONE_ERROR(H5E_LINK, H5E_CANTRELEASE, FAIL, "unable to close group given to UD callback");
     } /* end if */
     else if (temp_loc_init)
         H5G_loc_free(&temp_loc);
@@ -1458,9 +1388,6 @@ done:
  *              in the path
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	James Laird
- *              Friday, April 3, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -1518,7 +1445,7 @@ H5L__move_cb(H5G_loc_t *grp_loc /*in*/, const char *name, const H5O_link_t *lnk,
 
         /* Make certain that the destination name is a full (not relative) path */
         if (*(udata->dst_name) != '/') {
-            HDassert(udata->dst_loc->path->full_path_r);
+            assert(udata->dst_loc->path->full_path_r);
 
             /* Create reference counted string for full dst path */
             if ((dst_name_r = H5G_build_fullpath_refstr_str(udata->dst_loc->path->full_path_r,
@@ -1527,7 +1454,7 @@ H5L__move_cb(H5G_loc_t *grp_loc /*in*/, const char *name, const H5O_link_t *lnk,
         } /* end if */
         else
             dst_name_r = H5RS_wrap(udata->dst_name);
-        HDassert(dst_name_r);
+        assert(dst_name_r);
 
         /* Fix names up */
         if (H5G_name_replace(lnk, H5G_NAME_MOVE, obj_loc->oloc->file, obj_loc->path->full_path_r,
@@ -1579,9 +1506,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	James Laird
- *              Monday, May 1, 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1597,10 +1521,10 @@ H5L__move(const H5G_loc_t *src_loc, const char *src_name, const H5G_loc_t *dst_l
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(src_loc);
-    HDassert(dst_loc);
-    HDassert(src_name && *src_name);
-    HDassert(dst_name && *dst_name);
+    assert(src_loc);
+    assert(dst_loc);
+    assert(src_name && *src_name);
+    assert(dst_name && *dst_name);
 
     /* Check for flags present in creation property list */
     if (lcpl_id != H5P_DEFAULT) {
@@ -1652,9 +1576,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *              Friday, March 16 2007
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1684,9 +1605,6 @@ H5L__exists_final_cb(H5G_loc_t H5_ATTR_UNUSED *grp_loc /*in*/, const char H5_ATT
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *              Thursday, December 31 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1703,7 +1621,7 @@ H5L__exists_inter_cb(H5G_loc_t H5_ATTR_UNUSED *grp_loc /*in*/, const char H5_ATT
     if (lnk != NULL) {
         /* Check for more components to the path */
         if (udata->sep) {
-            H5G_traverse_t cb_func; /* Callback function for tranversal */
+            H5G_traverse_t cb_func; /* Callback function for traversal */
             char          *next;    /* Pointer to next component name */
 
             /* Look for another separator */
@@ -1745,16 +1663,13 @@ done:
  *
  * Return:	Non-negative (TRUE/FALSE) on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *              Thursday, December 31 2015
- *
  *-------------------------------------------------------------------------
  */
 herr_t
 H5L_exists_tolerant(const H5G_loc_t *loc, const char *name, hbool_t *exists)
 {
     H5L_trav_le_t  udata;               /* User data for traversal */
-    H5G_traverse_t cb_func;             /* Callback function for tranversal */
+    H5G_traverse_t cb_func;             /* Callback function for traversal */
     char          *name_copy = NULL;    /* Duplicate of name */
     char          *name_trav;           /* Name to traverse */
     herr_t         ret_value = SUCCEED; /* Return value */
@@ -1762,9 +1677,9 @@ H5L_exists_tolerant(const H5G_loc_t *loc, const char *name, hbool_t *exists)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
-    HDassert(loc);
-    HDassert(name);
-    HDassert(exists);
+    assert(loc);
+    assert(name);
+    assert(exists);
 
     /* Copy the name and skip leading '/'s */
     name_trav = name_copy = H5MM_strdup(name);
@@ -1810,9 +1725,6 @@ done:
  *
  * Return:	Non-negative on success, with *exists set/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *              Friday, March 16 2007
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1824,9 +1736,9 @@ H5L__exists(const H5G_loc_t *loc, const char *name, hbool_t *exists)
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(loc);
-    HDassert(name);
-    HDassert(exists);
+    assert(loc);
+    assert(name);
+    assert(exists);
 
     /* A path of "/" will always exist in a file */
     if (0 == HDstrcmp(name, "/"))
@@ -1848,9 +1760,6 @@ done:
  * Purpose:	Callback for retrieving a link's metadata
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	James Laird
- *              Monday, April 17 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -1886,9 +1795,6 @@ done:
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:	James Laird
- *              Monday, April 17 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1916,9 +1822,6 @@ done:
  *              index's order.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Monday, November  6 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -1979,9 +1882,9 @@ H5L__get_info_by_idx(const H5G_loc_t *loc, const char *name, H5_index_t idx_type
     FUNC_ENTER_PACKAGE
 
     /* Check arguments */
-    HDassert(loc);
-    HDassert(name && *name);
-    HDassert(linfo);
+    assert(loc);
+    assert(name && *name);
+    assert(linfo);
 
     /* Set up user data for callback */
     udata.idx_type = idx_type;
@@ -2004,9 +1907,6 @@ done:
  *              index's order.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Saturday, November 11 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -2057,9 +1957,9 @@ H5L__get_name_by_idx(const H5G_loc_t *loc, const char *group_name, H5_index_t id
     FUNC_ENTER_PACKAGE
 
     /* Check arguments */
-    HDassert(loc);
-    HDassert(group_name && *group_name);
-    HDassert(link_name_len);
+    assert(loc);
+    assert(group_name && *group_name);
+    assert(link_name_len);
 
     /* Set up user data for callback */
     udata.idx_type = idx_type;
@@ -2089,9 +1989,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *		Sep 29 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -2110,10 +2007,10 @@ H5L__link_copy_file(H5F_t *dst_file, const H5O_link_t *_src_lnk, const H5O_loc_t
     FUNC_ENTER_PACKAGE
 
     /* check arguments */
-    HDassert(dst_file);
-    HDassert(src_lnk);
-    HDassert(dst_lnk);
-    HDassert(cpy_info);
+    assert(dst_file);
+    assert(src_lnk);
+    assert(dst_lnk);
+    assert(cpy_info);
 
     /* Expand soft or external link, if requested */
     if ((H5L_TYPE_SOFT == src_lnk->type && cpy_info->expand_soft_link) ||
@@ -2181,7 +2078,7 @@ H5L__link_copy_file(H5F_t *dst_file, const H5O_link_t *_src_lnk, const H5O_loc_t
             tmp_src_oloc.file = src_oloc->file;
             tmp_src_oloc.addr = src_lnk->u.hard.addr;
         } /* end if */
-        HDassert(H5F_addr_defined(tmp_src_oloc.addr));
+        assert(H5_addr_defined(tmp_src_oloc.addr));
 
         /* Copy the shared object from source to destination */
         /* Don't care about obj_type or udata because those are only important
@@ -2196,7 +2093,7 @@ H5L__link_copy_file(H5F_t *dst_file, const H5O_link_t *_src_lnk, const H5O_loc_t
 done:
     /* Check if we used a temporary src link */
     if (src_lnk != _src_lnk) {
-        HDassert(src_lnk == &tmp_src_lnk);
+        assert(src_lnk == &tmp_src_lnk);
         H5O_msg_reset(H5O_LINK_ID, &tmp_src_lnk);
     } /* end if */
     if (ret_value < 0)
@@ -2205,7 +2102,7 @@ done:
     /* Check if we need to free the temp source oloc */
     if (expanded_link_open)
         if (H5G_loc_free(&tmp_src_loc) < 0)
-            HDONE_ERROR(H5E_LINK, H5E_CANTFREE, FAIL, "unable to free object")
+            HDONE_ERROR(H5E_LINK, H5E_CANTFREE, FAIL, "unable to free object");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5L__link_copy_file() */
@@ -2231,9 +2128,9 @@ H5L_iterate(H5G_loc_t *loc, const char *group_name, H5_index_t idx_type, H5_iter
     FUNC_ENTER_NOAPI_NOINIT
 
     /* Sanity checks */
-    HDassert(loc);
-    HDassert(group_name);
-    HDassert(op);
+    assert(loc);
+    assert(group_name);
+    assert(op);
 
     /* Set up iteration beginning/end info */
     idx      = (idx_p == NULL ? 0 : *idx_p);

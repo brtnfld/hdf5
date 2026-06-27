@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -218,10 +217,6 @@ done:
  *                          library, or the negative value returned by one
  *                          of the operators.
  *
- *
- * Programmer:  Quincey Koziol
- *              Thursday, November 16, 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -302,9 +297,6 @@ done:
  *
  * Return:      Success:    Non-negative with information in LINFO
  *              Failure:    Negative
- *
- * Programmer:  James Laird
- *              Wednesday, June 21, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -389,9 +381,6 @@ done:
  *
  * Return:      Success:    Non-negative with information in LINFO
  *              Failure:    Negative
- *
- * Programmer:  Quincey Koziol
- *              Monday, November  6, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -499,9 +488,6 @@ done:
  *                          library, or the negative value returned by one
  *                          of the operators.
  *
- * Programmer:  Quincey Koziol
- *              November 24 2007
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -590,9 +576,6 @@ done:
  *              Failure:    Negative if something goes wrong within the
  *                          library, or the negative value returned by one
  *                          of the operators.
- *
- * Programmer:  Quincey Koziol
- *              November 3 2007
  *
  *-------------------------------------------------------------------------
  */

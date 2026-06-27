@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -93,7 +92,7 @@ int              H5I_next_type_g = (int)H5I_NTYPES;
 H5FL_DEFINE_STATIC(H5I_id_info_t);
 
 /* Whether deletes are actually marks (for mark-and-sweep) */
-hbool_t H5I_marking_g = FALSE;
+static hbool_t H5I_marking_s = FALSE;
 
 /*****************************/
 /* Library Private Variables */
@@ -137,7 +136,7 @@ H5I_term_package(void)
         for (i = 0; i < H5I_next_type_g; i++) {
             type_info = H5I_type_info_array_g[i];
             if (type_info) {
-                HDassert(NULL == type_info->hash_table);
+                assert(NULL == type_info->hash_table);
                 type_info                = H5MM_xfree(type_info);
                 H5I_type_info_array_g[i] = NULL;
                 in_use++;
@@ -168,8 +167,8 @@ H5I_register_type(const H5I_class_t *cls)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity check */
-    HDassert(cls);
-    HDassert(cls->type > 0 && (int)cls->type < H5I_MAX_NUM_TYPES);
+    assert(cls);
+    assert(cls->type > 0 && (int)cls->type < H5I_MAX_NUM_TYPES);
 
     /* Initialize the type */
     if (NULL == H5I_type_info_array_g[cls->type]) {
@@ -214,9 +213,6 @@ done:
  *
  *              Failure:    Negative
  *
- * Programmer:  Robb Matzke
- *              Wednesday, March 24, 1999
- *
  *-------------------------------------------------------------------------
  */
 int64_t
@@ -248,9 +244,6 @@ done:
  *
  * Return:      Pointer to the unwrapped pointer (can't fail)
  *
- * Programmer:  Quincey Koziol
- *              Friday, October 19, 2018
- *
  *-------------------------------------------------------------------------
  */
 static void *
@@ -261,7 +254,7 @@ H5I__unwrap(void *object, H5I_type_t type)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity checks */
-    HDassert(object);
+    assert(object);
 
     /* The stored object pointer might be an H5VL_object_t, in which
      * case we'll need to get the wrapped object struct (H5F_t *, etc.).
@@ -290,9 +283,6 @@ H5I__unwrap(void *object, H5I_type_t type)
  *              function for each object regardless of the reference count.
  *
  * Return:      SUCCEED/FAIL
- *
- * Programmer:  Robb Matzke
- *              Wednesday, March 24, 1999
  *
  *-------------------------------------------------------------------------
  */
@@ -324,7 +314,7 @@ H5I_clear_type(H5I_type_t type, hbool_t force, hbool_t app_ref)
      */
 
     /* Set marking flag */
-    H5I_marking_g = TRUE;
+    H5I_marking_s = TRUE;
 
     /* Mark nodes for deletion */
     HASH_ITER(hh, udata.type_info->hash_table, item, tmp)
@@ -335,7 +325,7 @@ H5I_clear_type(H5I_type_t type, hbool_t force, hbool_t app_ref)
     }
 
     /* Unset marking flag */
-    H5I_marking_g = FALSE;
+    H5I_marking_s = FALSE;
 
     /* Perform sweep */
     HASH_ITER(hh, udata.type_info->hash_table, item, tmp)
@@ -358,9 +348,6 @@ done:
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:  Neil Fortner
- *              Friday, July 10, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -373,9 +360,9 @@ H5I__mark_node(void *_info, void H5_ATTR_UNUSED *key, void *_udata)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity checks */
-    HDassert(info);
-    HDassert(udata);
-    HDassert(udata->type_info);
+    assert(info);
+    assert(udata);
+    assert(udata->type_info);
 
     /* Do nothing to the object if the reference count is larger than
      * one and forcing is off.
@@ -389,10 +376,10 @@ H5I__mark_node(void *_info, void H5_ATTR_UNUSED *key, void *_udata)
                 if (udata->force) {
 #ifdef H5I_DEBUG
                     if (H5DEBUG(I)) {
-                        HDfprintf(H5DEBUG(I),
-                                  "H5I: discard type=%d obj=0x%08lx "
-                                  "failure ignored\n",
-                                  (int)udata->type_info->cls->type, (unsigned long)(info->object));
+                        fprintf(H5DEBUG(I),
+                                "H5I: discard type=%d obj=%p "
+                                "failure ignored\n",
+                                (int)udata->type_info->cls->type, info->object);
                     }
 #endif /* H5I_DEBUG */
 
@@ -412,10 +399,10 @@ H5I__mark_node(void *_info, void H5_ATTR_UNUSED *key, void *_udata)
                 if (udata->force) {
 #ifdef H5I_DEBUG
                     if (H5DEBUG(I)) {
-                        HDfprintf(H5DEBUG(I),
-                                  "H5I: free type=%d obj=0x%08lx "
-                                  "failure ignored\n",
-                                  (int)udata->type_info->cls->type, (unsigned long)(info->object));
+                        fprintf(H5DEBUG(I),
+                                "H5I: free type=%d obj=%p "
+                                "failure ignored\n",
+                                (int)udata->type_info->cls->type, info->object);
                     }
 #endif /* H5I_DEBUG */
 
@@ -453,9 +440,6 @@ H5I__mark_node(void *_info, void H5_ATTR_UNUSED *key, void *_udata)
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:  Nathaniel Furrer
- *              James Laird
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -481,9 +465,9 @@ H5I__destroy_type(H5I_type_t type)
     }
     H5E_END_TRY /* don't care about errors */
 
-        /* Check if we should release the ID class */
-        if (type_info->cls->flags & H5I_CLASS_IS_APPLICATION)
-            type_info->cls = H5MM_xfree_const(type_info->cls);
+    /* Check if we should release the ID class */
+    if (type_info->cls->flags & H5I_CLASS_IS_APPLICATION)
+        type_info->cls = H5MM_xfree_const(type_info->cls);
 
     HASH_CLEAR(hh, type_info->hash_table);
     type_info->hash_table = NULL;
@@ -552,7 +536,7 @@ H5I__register(H5I_type_t type, const void *object, hbool_t app_ref, H5I_future_r
     type_info->nextid++;
 
     /* Sanity check for the 'nextid' getting too large and wrapping around */
-    HDassert(type_info->nextid <= ID_MASK);
+    assert(type_info->nextid <= ID_MASK);
 
     /* Set the most recent ID to this object */
     type_info->last_id_info = info;
@@ -582,8 +566,8 @@ H5I_register(H5I_type_t type, const void *object, hbool_t app_ref)
     FUNC_ENTER_NOAPI(H5I_INVALID_HID)
 
     /* Sanity checks */
-    HDassert(type >= H5I_FILE && type < H5I_NTYPES);
-    HDassert(object);
+    assert(type >= H5I_FILE && type < H5I_NTYPES);
+    assert(object);
 
     /* Retrieve ID for object */
     if (H5I_INVALID_HID == (ret_value = H5I__register(type, object, app_ref, NULL, NULL)))
@@ -621,7 +605,7 @@ H5I_register_using_existing_id(H5I_type_t type, void *object, hbool_t app_ref, h
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Check arguments */
-    HDassert(object);
+    assert(object);
 
     /* Make sure ID is not already in use */
     if (NULL != (info = H5I__find_id(existing_id)))
@@ -677,9 +661,6 @@ done:
  * Return:      Success:    Non-NULL previous object pointer associated
  *                          with the specified ID.
  *              Failure:    NULL
- *
- * Programmer:  Quincey Koziol
- *              Saturday, February 27, 2010
  *
  *-------------------------------------------------------------------------
  */
@@ -748,9 +729,6 @@ H5I_object(hid_t id)
  *                          specified ID.
  *              Failure:    NULL
  *
- * Programmer:  Quincey Koziol
- *              Wednesday, July 31, 2002
- *
  *-------------------------------------------------------------------------
  */
 void *
@@ -761,7 +739,7 @@ H5I_object_verify(hid_t id, H5I_type_t type)
 
     FUNC_ENTER_NOAPI_NOERR
 
-    HDassert(type >= 1 && (int)type < H5I_next_type_g);
+    assert(type >= 1 && (int)type < H5I_next_type_g);
 
     /* Verify that the type of the ID is correct & lookup the ID */
     if (type == H5I_TYPE(id) && NULL != (info = H5I__find_id(id))) {
@@ -787,9 +765,6 @@ H5I_object_verify(hid_t id, H5I_type_t type)
  *                          ID types).
  *              Failure:    H5I_BADID
  *
- * Programmer:  Robb Matzke
- *              Friday, February 19, 1999
- *
  *-------------------------------------------------------------------------
  */
 H5I_type_t
@@ -802,7 +777,7 @@ H5I_get_type(hid_t id)
     if (id > 0)
         ret_value = H5I_TYPE(id);
 
-    HDassert(ret_value >= H5I_BADID && (int)ret_value < H5I_next_type_g);
+    assert(ret_value >= H5I_BADID && (int)ret_value < H5I_next_type_g);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5I_get_type() */
@@ -828,7 +803,7 @@ H5I_is_file_object(hid_t id)
     H5I_type_t type      = H5I_get_type(id);
     htri_t     ret_value = FAIL;
 
-    FUNC_ENTER_NOAPI(FAIL);
+    FUNC_ENTER_NOAPI(FAIL)
 
     /* Fail if the ID type is out of range */
     if (type < 1 || type >= H5I_NTYPES)
@@ -852,7 +827,7 @@ H5I_is_file_object(hid_t id)
         ret_value = FALSE;
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value);
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* H5I_is_file_object() */
 
 /*-------------------------------------------------------------------------
@@ -865,9 +840,6 @@ done:
  *                          same pointer which would have been found by
  *                          calling H5I_object().
  *              Failure:    NULL
- *
- * Programmer:  James Laird
- *              Nat Furrer
  *
  *-------------------------------------------------------------------------
  */
@@ -897,9 +869,6 @@ H5I__remove_verify(hid_t id, H5I_type_t type)
  *                          calling H5I_object().
  *              Failure:    NULL
  *
- * Programmer:  Quincey Koziol
- *              October 3, 2013
- *
  *-------------------------------------------------------------------------
  */
 static void *
@@ -911,13 +880,13 @@ H5I__remove_common(H5I_type_info_t *type_info, hid_t id)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(type_info);
+    assert(type_info);
 
     /* Delete or mark the node */
     HASH_FIND(hh, type_info->hash_table, &id, sizeof(hid_t), info);
     if (info) {
-        HDassert(!info->marked);
-        if (!H5I_marking_g)
+        assert(!info->marked);
+        if (!H5I_marking_s)
             HASH_DELETE(hh, type_info->hash_table, info);
         else
             info->marked = TRUE;
@@ -933,7 +902,7 @@ H5I__remove_common(H5I_type_info_t *type_info, hid_t id)
     ret_value = (void *)info->object;
     H5_GCC_CLANG_DIAG_ON("cast-qual")
 
-    if (!H5I_marking_g)
+    if (!H5I_marking_s)
         info = H5FL_FREE(H5I_id_info_t, info);
 
     /* Decrement the number of IDs in the type */
@@ -1005,7 +974,7 @@ H5I__dec_ref(hid_t id, void **request)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(id >= 0);
+    assert(id >= 0);
 
     /* General lookup of the ID */
     if (NULL == (info = H5I__find_id(id)))
@@ -1069,7 +1038,7 @@ H5I_dec_ref(hid_t id)
     FUNC_ENTER_NOAPI((-1))
 
     /* Sanity check */
-    HDassert(id >= 0);
+    assert(id >= 0);
 
     /* Synchronously decrement refcount on ID */
     if ((ret_value = H5I__dec_ref(id, H5_REQUEST_NULL)) < 0)
@@ -1101,7 +1070,7 @@ H5I__dec_app_ref(hid_t id, void **request)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(id >= 0);
+    assert(id >= 0);
 
     /* Call regular decrement reference count routine */
     if ((ret_value = H5I__dec_ref(id, request)) < 0)
@@ -1117,7 +1086,7 @@ H5I__dec_app_ref(hid_t id, void **request)
 
         /* Adjust app_ref */
         --(info->app_count);
-        HDassert(info->count >= info->app_count);
+        assert(info->count >= info->app_count);
 
         /* Set return value */
         ret_value = (int)info->app_count;
@@ -1136,9 +1105,6 @@ done:
  * Return:      Success:    New app. reference count
  *              Failure:    -1
  *
- * Programmer:  Quincey Koziol
- *              Sept 16, 2010
- *
  *-------------------------------------------------------------------------
  */
 int
@@ -1149,7 +1115,7 @@ H5I_dec_app_ref(hid_t id)
     FUNC_ENTER_NOAPI((-1))
 
     /* Sanity check */
-    HDassert(id >= 0);
+    assert(id >= 0);
 
     /* Synchronously decrement refcount on ID */
     if ((ret_value = H5I__dec_app_ref(id, H5_REQUEST_NULL)) < 0)
@@ -1171,9 +1137,6 @@ done:
  * Return:      Success:    New app. reference count
  *              Failure:    -1
  *
- * Programmer:  Houjun Tang
- *              Oct 21, 2019
- *
  *-------------------------------------------------------------------------
  */
 int
@@ -1184,7 +1147,7 @@ H5I_dec_app_ref_async(hid_t id, void **token)
     FUNC_ENTER_NOAPI((-1))
 
     /* Sanity check */
-    HDassert(id >= 0);
+    assert(id >= 0);
 
     /* [Possibly] aynchronously decrement refcount on ID */
     if ((ret_value = H5I__dec_app_ref(id, token)) < 0)
@@ -1216,7 +1179,7 @@ H5I__dec_app_ref_always_close(hid_t id, void **request)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(id >= 0);
+    assert(id >= 0);
 
     /* Call application decrement reference count routine */
     ret_value = H5I__dec_app_ref(id, request);
@@ -1257,7 +1220,7 @@ H5I_dec_app_ref_always_close(hid_t id)
     FUNC_ENTER_NOAPI((-1))
 
     /* Sanity check */
-    HDassert(id >= 0);
+    assert(id >= 0);
 
     /* Synchronously decrement refcount on ID */
     if ((ret_value = H5I__dec_app_ref_always_close(id, H5_REQUEST_NULL)) < 0)
@@ -1289,7 +1252,7 @@ H5I_dec_app_ref_always_close_async(hid_t id, void **token)
     FUNC_ENTER_NOAPI((-1))
 
     /* Sanity check */
-    HDassert(id >= 0);
+    assert(id >= 0);
 
     /* [Possibly] aynchronously decrement refcount on ID */
     if ((ret_value = H5I__dec_app_ref_always_close(id, token)) < 0)
@@ -1318,7 +1281,7 @@ H5I_inc_ref(hid_t id, hbool_t app_ref)
     FUNC_ENTER_NOAPI((-1))
 
     /* Sanity check */
-    HDassert(id >= 0);
+    assert(id >= 0);
 
     /* General lookup of the ID */
     if (NULL == (info = H5I__find_id(id)))
@@ -1355,7 +1318,7 @@ H5I_get_ref(hid_t id, hbool_t app_ref)
     FUNC_ENTER_NOAPI((-1))
 
     /* Sanity check */
-    HDassert(id >= 0);
+    assert(id >= 0);
 
     /* General lookup of the ID */
     if (NULL == (info = H5I__find_id(id)))
@@ -1387,7 +1350,7 @@ H5I__inc_type_ref(H5I_type_t type)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(type > 0 && (int)type < H5I_next_type_g);
+    assert(type > 0 && (int)type < H5I_next_type_g);
 
     /* Check arguments */
     type_info = H5I_type_info_array_g[type];
@@ -1473,7 +1436,7 @@ H5I__get_type_ref(H5I_type_t type)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(type >= 0);
+    assert(type >= 0);
 
     /* Check arguments */
     type_info = H5I_type_info_array_g[type];
@@ -1628,10 +1591,10 @@ H5I__find_id(hid_t id)
     /* Check arguments */
     type = H5I_TYPE(id);
     if (type <= H5I_BADID || (int)type >= H5I_next_type_g)
-        HGOTO_DONE(NULL)
+        HGOTO_DONE(NULL);
     type_info = H5I_type_info_array_g[type];
     if (!type_info || type_info->init_count <= 0)
-        HGOTO_DONE(NULL)
+        HGOTO_DONE(NULL);
 
     /* Check for same ID as we have looked up last time */
     if (type_info->last_id_info && type_info->last_id_info->id == id)
@@ -1652,23 +1615,23 @@ H5I__find_id(hid_t id)
 
         /* Invoke the realize callback, to get the actual object */
         if ((id_info->realize_cb)((void *)id_info->object, &actual_id) < 0)
-            HGOTO_DONE(NULL)
+            HGOTO_DONE(NULL);
 
         /* Verify that we received a valid ID, of the same type */
         if (H5I_INVALID_HID == actual_id)
-            HGOTO_DONE(NULL)
+            HGOTO_DONE(NULL);
         if (H5I_TYPE(id) != H5I_TYPE(actual_id))
-            HGOTO_DONE(NULL)
+            HGOTO_DONE(NULL);
 
         /* Swap the actual object in for the future object */
         future_object = (void *)id_info->object;
         actual_object = H5I__remove_common(type_info, actual_id);
-        HDassert(actual_object);
+        assert(actual_object);
         id_info->object = actual_object;
 
         /* Discard the future object */
         if ((id_info->discard_cb)(future_object) < 0)
-            HGOTO_DONE(NULL)
+            HGOTO_DONE(NULL);
         future_object = NULL;
 
         /* Change the ID from 'future' to 'actual' */
@@ -1707,8 +1670,8 @@ H5I__find_id_cb(void *_item, void H5_ATTR_UNUSED *_key, void *_udata)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(info);
-    HDassert(udata);
+    assert(info);
+    assert(udata);
 
     /* Get a pointer to the VOL connector's data */
     H5_GCC_CLANG_DIAG_OFF("cast-qual")
@@ -1743,7 +1706,7 @@ H5I_find_id(const void *object, H5I_type_t type, hid_t *id)
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(id);
+    assert(id);
 
     *id = H5I_INVALID_HID;
 

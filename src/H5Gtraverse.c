@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -14,8 +13,6 @@
 /*-------------------------------------------------------------------------
  *
  * Created:		H5Gtraverse.c
- *			Sep 13 2005
- *			Quincey Koziol
  *
  * Purpose:		Functions for traversing group hierarchy
  *
@@ -98,9 +95,6 @@ static herr_t H5G__traverse_real(const H5G_loc_t *loc, const char *name, unsigne
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *              Tuesday, September 13, 2005
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -144,9 +138,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *              Tuesday, September 13, 2005
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -166,10 +157,10 @@ H5G__traverse_ud(const H5G_loc_t *grp_loc /*in,out*/, const H5O_link_t *lnk, H5G
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(grp_loc);
-    HDassert(lnk);
-    HDassert(lnk->type >= H5L_TYPE_UD_MIN);
-    HDassert(obj_loc);
+    assert(grp_loc);
+    assert(lnk);
+    assert(lnk->type >= H5L_TYPE_UD_MIN);
+    assert(obj_loc);
 
     /* Get the link class for this type of link. */
     if (NULL == (link_class = H5L_find_class(lnk->type)))
@@ -191,7 +182,7 @@ H5G__traverse_ud(const H5G_loc_t *grp_loc /*in,out*/, const H5O_link_t *lnk, H5G
 
         /* User-defined callback function */
 #ifndef H5_NO_DEPRECATED_SYMBOLS
-    /* (Backwardly compatible with v0 H5L_class_t traverssal callback) */
+    /* (Backwardly compatible with v0 H5L_class_t traversal callback) */
     if (link_class->version == H5L_LINK_CLASS_T_VERS_0)
         cb_return = (((const H5L_class_0_t *)link_class)->trav_func)(lnk->name, cur_grp, lnk->u.ud.udata,
                                                                      lnk->u.ud.size, H5CX_get_lapl());
@@ -247,10 +238,10 @@ H5G__traverse_ud(const H5G_loc_t *grp_loc /*in,out*/, const H5O_link_t *lnk, H5G
 done:
     /* Close location given to callback. */
     if (cur_grp > 0 && H5I_dec_ref(cur_grp) < 0)
-        HDONE_ERROR(H5E_SYM, H5E_CANTRELEASE, FAIL, "unable to close ID for current location")
+        HDONE_ERROR(H5E_SYM, H5E_CANTRELEASE, FAIL, "unable to close ID for current location");
 
     if (ret_value < 0 && cb_return > 0 && H5I_dec_ref(cb_return) < 0)
-        HDONE_ERROR(H5E_SYM, H5E_CANTRELEASE, FAIL, "unable to close ID from UD callback")
+        HDONE_ERROR(H5E_SYM, H5E_CANTRELEASE, FAIL, "unable to close ID from UD callback");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G__traverse_ud() */
@@ -265,9 +256,6 @@ done:
  *				about the object to which the link points
  *
  *		Failure:	Negative
- *
- * Programmer:	Robb Matzke
- *              Friday, April 10, 1998
  *
  *-------------------------------------------------------------------------
  */
@@ -287,9 +275,9 @@ H5G__traverse_slink(const H5G_loc_t *grp_loc, const H5O_link_t *lnk, H5G_loc_t *
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(grp_loc);
-    HDassert(lnk);
-    HDassert(lnk->type == H5L_TYPE_SOFT);
+    assert(grp_loc);
+    assert(lnk);
+    assert(lnk->type == H5L_TYPE_SOFT);
 
     /* Set up temporary location */
     tmp_grp_loc.oloc = &tmp_grp_oloc;
@@ -344,9 +332,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *		Nov 20 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -359,9 +344,9 @@ H5G__traverse_special(const H5G_loc_t *grp_loc, const H5O_link_t *lnk, unsigned 
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(grp_loc);
-    HDassert(lnk);
-    HDassert(obj_loc);
+    assert(grp_loc);
+    assert(lnk);
+    assert(obj_loc);
 
     /* If we found a symbolic link then we should follow it.  But if this
      * is the last component of the name and the H5G_TARGET_SLINK bit of
@@ -421,7 +406,7 @@ H5G__traverse_special(const H5G_loc_t *grp_loc, const H5O_link_t *lnk, unsigned 
      *  the status of the object (into a hard link), so don't use an 'else'
      *  statement here. -QAK)
      */
-    if (H5F_addr_defined(obj_loc->oloc->addr) && (0 == (target & H5G_TARGET_MOUNT) || !last_comp)) {
+    if (H5_addr_defined(obj_loc->oloc->addr) && (0 == (target & H5G_TARGET_MOUNT) || !last_comp)) {
         if (H5F_traverse_mount(obj_loc->oloc /*in,out*/) < 0)
             HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "mount point traversal failed")
     } /* end if */
@@ -447,9 +432,6 @@ done:
  *
  *		Failure:	Negative if the name could not be fully
  *				resolved.
- *
- * Programmer:	Robb Matzke
- *		Aug 11 1997
  *
  *-------------------------------------------------------------------------
  */
@@ -478,9 +460,9 @@ H5G__traverse_real(const H5G_loc_t *_loc, const char *name, unsigned target, H5G
     FUNC_ENTER_PACKAGE
 
     /* Check parameters */
-    HDassert(_loc);
-    HDassert(name);
-    HDassert(op);
+    assert(_loc);
+    assert(name);
+    assert(op);
 
     /*
      * Where does the searching start?  For absolute names it starts at the
@@ -492,7 +474,7 @@ H5G__traverse_real(const H5G_loc_t *_loc, const char *name, unsigned target, H5G
 
         /* Look up root group for starting location */
         root_grp = H5G_rootof(_loc->oloc->file);
-        HDassert(root_grp);
+        assert(root_grp);
 
         /* Set the location entry to the root group's info */
         loc.oloc = &(root_grp->oloc);
@@ -572,8 +554,8 @@ H5G__traverse_real(const H5G_loc_t *_loc, const char *name, unsigned target, H5G
         /* If the lookup was OK, build object location and traverse special links, etc. */
         if (lookup_status) {
             /* Sanity check link and indicate it's valid */
-            HDassert(lnk.type >= H5L_TYPE_HARD);
-            HDassert(!HDstrcmp(comp, lnk.name));
+            assert(lnk.type >= H5L_TYPE_HARD);
+            assert(!HDstrcmp(comp, lnk.name));
             link_valid = TRUE;
 
             /* Build object location from the link */
@@ -604,7 +586,7 @@ H5G__traverse_real(const H5G_loc_t *_loc, const char *name, unsigned target, H5G
                     cb_loc = NULL;
             } /* end if */
             else {
-                HDassert(!obj_loc_valid);
+                assert(!obj_loc_valid);
                 cb_lnk = NULL;
                 cb_loc = NULL;
             } /* end else */
@@ -613,7 +595,7 @@ H5G__traverse_real(const H5G_loc_t *_loc, const char *name, unsigned target, H5G
             if ((op)(&grp_loc, comp, cb_lnk, cb_loc, op_data, &own_loc) < 0)
                 HGOTO_ERROR(H5E_SYM, H5E_CALLBACK, FAIL, "traversal operator failed")
 
-            HGOTO_DONE(SUCCEED)
+            HGOTO_DONE(SUCCEED);
         } /* end if */
 
         /* Handle lookup failures now */
@@ -687,7 +669,7 @@ H5G__traverse_real(const H5G_loc_t *_loc, const char *name, unsigned target, H5G
                 /* XXX: Should we allow user to control the group creation params here? -QAK */
                 gcrt_info.gcpl_id    = H5P_GROUP_CREATE_DEFAULT;
                 gcrt_info.cache_type = H5G_NOTHING_CACHED;
-                HDmemset(&gcrt_info.cache, 0, sizeof(gcrt_info.cache));
+                memset(&gcrt_info.cache, 0, sizeof(gcrt_info.cache));
                 if (H5G__obj_create_real(grp_oloc.file, ginfo, linfo, pline, &gcrt_info,
                                          obj_loc.oloc /*out*/) < 0)
                     HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "unable to create group entry")
@@ -749,14 +731,14 @@ H5G__traverse_real(const H5G_loc_t *_loc, const char *name, unsigned target, H5G
      * Since we don't have a group location or a link to the object we pass in
      * NULL.
      */
-    HDassert(group_copy);
+    assert(group_copy);
     if ((op)(NULL, ".", NULL, &grp_loc, op_data, &own_loc) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_CANTNEXT, FAIL, "traversal operator failed")
 
     /* If the callback took ownership of the object location, it actually has
      * ownership of grp_loc.  It shouldn't have tried to take ownership of
      * the "group location", which was NULL. */
-    HDassert(!(own_loc & H5G_OWN_GRP_LOC));
+    assert(!(own_loc & H5G_OWN_GRP_LOC));
     if (own_loc & H5G_OWN_OBJ_LOC)
         own_loc |= H5G_OWN_GRP_LOC;
 
@@ -775,11 +757,11 @@ done:
     /* If there's valid information in the link, reset it */
     if (link_valid)
         if (H5O_msg_reset(H5O_LINK_ID, &lnk) < 0)
-            HDONE_ERROR(H5E_SYM, H5E_CANTRELEASE, FAIL, "unable to reset link message")
+            HDONE_ERROR(H5E_SYM, H5E_CANTRELEASE, FAIL, "unable to reset link message");
 
     /* Release temporary component buffer */
     if (wb && H5WB_unwrap(wb) < 0)
-        HDONE_ERROR(H5E_SYM, H5E_CANTRELEASE, FAIL, "can't release wrapped buffer")
+        HDONE_ERROR(H5E_SYM, H5E_CANTRELEASE, FAIL, "can't release wrapped buffer");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G__traverse_real() */
@@ -793,9 +775,6 @@ done:
  * Return:	Success:	Non-negative if path can be fully traversed.
  *		Failure:	Negative if the path could not be fully
  *				traversed.
- *
- * Programmer:	Quincey Koziol
- *		Sep 13 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -830,11 +809,11 @@ H5G_traverse(const H5G_loc_t *loc, const char *name, unsigned target, H5G_traver
      * shouldn't be during the traversal. Note that for best tagging assertion
      * coverage, setting H5C_DO_TAGGING_SANITY_CHECKS is advised.
      */
-    H5_BEGIN_TAG(H5AC__INVALID_TAG);
+    H5_BEGIN_TAG(H5AC__INVALID_TAG)
 
     /* Go perform "real" traversal */
     if (H5G__traverse_real(loc, name, target, op, op_data) < 0)
-        HGOTO_ERROR_TAG(H5E_SYM, H5E_NOTFOUND, FAIL, "internal path traversal failed")
+        HGOTO_ERROR_TAG(H5E_SYM, H5E_NOTFOUND, FAIL, "internal path traversal failed");
 
     /* Reset tag after traversal */
     H5_END_TAG

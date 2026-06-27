@@ -5,7 +5,7 @@
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
  * the COPYING file, which can be found at the root of the source code       *
- * distribution tree, or in https://support.hdfgroup.org/ftp/HDF5/releases.  *
+ * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
@@ -22,7 +22,6 @@
 /********************/
 
 #include <stdatomic.h>
-#include <libgen.h>
 
 /**************/
 /* H5 Headers */
@@ -80,15 +79,15 @@
 
 #define H5FD_IOC__Q_APPEND(q_ptr, entry_ptr)                                                      \
 do {                                                                                              \
-    HDassert(q_ptr);                                                                              \
-    HDassert((q_ptr)->magic == H5FD_IOC__IO_Q_MAGIC);                                             \
-    HDassert((((q_ptr)->q_len == 0) && ((q_ptr)->q_head == NULL) && ((q_ptr)->q_tail == NULL)) || \
+    assert(q_ptr);                                                                              \
+    assert((q_ptr)->magic == H5FD_IOC__IO_Q_MAGIC);                                             \
+    assert((((q_ptr)->q_len == 0) && ((q_ptr)->q_head == NULL) && ((q_ptr)->q_tail == NULL)) || \
              (((q_ptr)->q_len > 0) && ((q_ptr)->q_head != NULL) && ((q_ptr)->q_tail != NULL)));   \
-    HDassert(entry_ptr);                                                                          \
-    HDassert((entry_ptr)->magic == H5FD_IOC__IO_Q_ENTRY_MAGIC);                                   \
-    HDassert((entry_ptr)->next == NULL);                                                          \
-    HDassert((entry_ptr)->prev == NULL);                                                          \
-    HDassert((entry_ptr)->in_progress == FALSE);                                                  \
+    assert(entry_ptr);                                                                          \
+    assert((entry_ptr)->magic == H5FD_IOC__IO_Q_ENTRY_MAGIC);                                   \
+    assert((entry_ptr)->next == NULL);                                                          \
+    assert((entry_ptr)->prev == NULL);                                                          \
+    assert((entry_ptr)->in_progress == FALSE);                                                  \
                                                                                                   \
     if ( ((q_ptr)->q_head) == NULL )                                                              \
     {                                                                                             \
@@ -106,15 +105,15 @@ do {                                                                            
 
 #define H5FD_IOC__Q_REMOVE(q_ptr, entry_ptr)                                                                         \
 do {                                                                                                                 \
-    HDassert(q_ptr);                                                                                                 \
-    HDassert((q_ptr)->magic == H5FD_IOC__IO_Q_MAGIC);                                                                \
-    HDassert((((q_ptr)->q_len == 1) && ((q_ptr)->q_head ==((q_ptr)->q_tail)) && ((q_ptr)->q_head == (entry_ptr))) || \
+    assert(q_ptr);                                                                                                 \
+    assert((q_ptr)->magic == H5FD_IOC__IO_Q_MAGIC);                                                                \
+    assert((((q_ptr)->q_len == 1) && ((q_ptr)->q_head ==((q_ptr)->q_tail)) && ((q_ptr)->q_head == (entry_ptr))) || \
              (((q_ptr)->q_len > 0) && ((q_ptr)->q_head != NULL) && ((q_ptr)->q_tail != NULL)));                      \
-    HDassert(entry_ptr);                                                                                             \
-    HDassert((entry_ptr)->magic == H5FD_IOC__IO_Q_ENTRY_MAGIC);                                                      \
-    HDassert((((q_ptr)->q_len == 1) && ((entry_ptr)->next == NULL) && ((entry_ptr)->prev == NULL)) ||                \
+    assert(entry_ptr);                                                                                             \
+    assert((entry_ptr)->magic == H5FD_IOC__IO_Q_ENTRY_MAGIC);                                                      \
+    assert((((q_ptr)->q_len == 1) && ((entry_ptr)->next == NULL) && ((entry_ptr)->prev == NULL)) ||                \
              (((q_ptr)->q_len > 1) && (((entry_ptr)->next != NULL) || ((entry_ptr)->prev != NULL))));                \
-    HDassert((entry_ptr)->in_progress == TRUE);                                                                      \
+    assert((entry_ptr)->in_progress == TRUE);                                                                      \
                                                                                                                      \
     {                                                                                                                \
        if ( (((q_ptr)->q_head)) == (entry_ptr) )                                                                     \
@@ -395,26 +394,15 @@ typedef struct ioc_io_queue {
  * input arguments for the functions which were originally
  * invoked.  See below.
  */
-typedef struct _client_io_args {
-    int         ioc;        /* ID of the IO Concentrator handling this IO.   */
-    int64_t     context_id; /* The context id provided for the read or write */
-    int64_t     offset;     /* The file offset for the IO operation          */
-    int64_t     elements;   /* How many bytes                                */
-    void       *data;       /* A pointer to the (contiguous) data segment    */
-    MPI_Request io_req;     /* An MPI request to allow the code to loop while */
-                            /* making progress on multiple IOs               */
-} io_args_t;
-
-typedef struct _client_io_func {
-    int (*io_function)(void *this_io); /* pointer to a completion function */
-    io_args_t io_args;                 /* arguments passed to the completion function   */
-    int       pending;                 /* The function is complete (0) or pending (1)?  */
-} io_func_t;
-
 typedef struct _io_req {
-    struct _io_req *prev;            /* A simple list structure containing completion */
-    struct _io_req *next;            /* functions. These should get removed as IO ops */
-    io_func_t       completion_func; /* are completed */
+    int         ioc;             /* ID of the IO Concentrator handling this IO.   */
+    int64_t     context_id;      /* The context id provided for the read or write */
+    int64_t     offset;          /* The file offset for the IO operation          */
+    int64_t     elements;        /* How many bytes                                */
+    void       *data;            /* A pointer to the (contiguous) data segment    */
+    MPI_Request io_transfer_req; /* MPI request for Isend/Irecv of I/O data */
+    MPI_Request io_comp_req;     /* MPI request signifying when actual I/O is finished */
+    int         io_comp_tag;     /* MPI tag value used for completed I/O request */
 } io_req_t;
 
 extern int *H5FD_IOC_tag_ub_val_ptr;
@@ -426,10 +414,12 @@ extern "C" {
 H5_DLL int initialize_ioc_threads(void *_sf_context);
 H5_DLL int finalize_ioc_threads(void *_sf_context);
 
-H5_DLL herr_t ioc__write_independent_async(int64_t context_id, int n_io_concentrators, int64_t offset,
-                                           int64_t elements, const void *data, io_req_t **io_req);
-H5_DLL herr_t ioc__read_independent_async(int64_t context_id, int n_io_concentrators, int64_t offset,
-                                          int64_t elements, void *data, io_req_t **io_req);
+H5_DLL herr_t ioc__write_independent_async(int64_t context_id, int64_t offset, int64_t elements,
+                                           const void *data, io_req_t **io_req);
+H5_DLL herr_t ioc__read_independent_async(int64_t context_id, int64_t offset, int64_t elements, void *data,
+                                          io_req_t **io_req);
+
+H5_DLL herr_t ioc__async_completion(MPI_Request *mpi_reqs, size_t num_reqs);
 
 H5_DLL int wait_for_thread_main(void);
 

@@ -223,7 +223,7 @@ vrfy_ns_grp_0(hid_t fid, const char *group_name)
         return false;
     }
 
-    HDmemset(&grp_info, 0, sizeof(grp_info));
+    memset(&grp_info, 0, sizeof(grp_info));
     ret = H5Gget_info(gid, &grp_info);
 
     if (ret < 0) {
@@ -335,7 +335,7 @@ ns_grp_c(hid_t fid, const char *group_name, unsigned nlinks)
     for (u = 0; u < nlinks; u++) {
         char linkname[16];
 
-        HDsprintf(linkname, "%u", u);
+        sprintf(linkname, "%u", u);
 
         if (0 == (u % 3)) {
             ret = H5Lcreate_soft(group_name, gid, linkname, H5P_DEFAULT, H5P_DEFAULT);
@@ -354,7 +354,7 @@ ns_grp_c(hid_t fid, const char *group_name, unsigned nlinks)
             }
         }
         else {
-            HDassert(2 == (u % 3));
+            assert(2 == (u % 3));
             ret = H5Lcreate_external("external.h5", "/ext", gid, linkname, H5P_DEFAULT, H5P_DEFAULT);
 
             if (ret < 0) {
@@ -441,7 +441,7 @@ vrfy_ns_grp_c(hid_t fid, const char *group_name, unsigned nlinks)
         return false;
     }
 
-    HDmemset(&grp_info, 0, sizeof(grp_info));
+    memset(&grp_info, 0, sizeof(grp_info));
     ret = H5Gget_info(gid, &grp_info);
 
     if (ret < 0) {
@@ -470,7 +470,7 @@ vrfy_ns_grp_c(hid_t fid, const char *group_name, unsigned nlinks)
         char        linkname[16];
         htri_t      link_exists;
 
-        HDsprintf(linkname, "%u", u);
+        sprintf(linkname, "%u", u);
         link_exists = H5Lexists(gid, linkname, H5P_DEFAULT);
 
         if (link_exists < 0) {
@@ -478,7 +478,7 @@ vrfy_ns_grp_c(hid_t fid, const char *group_name, unsigned nlinks)
             return false;
         }
 
-        HDmemset(&lnk_info, 0, sizeof(grp_info));
+        memset(&lnk_info, 0, sizeof(grp_info));
         ret = H5Lget_info2(gid, linkname, &lnk_info, H5P_DEFAULT);
 
         if (ret < 0) {
@@ -505,12 +505,12 @@ vrfy_ns_grp_c(hid_t fid, const char *group_name, unsigned nlinks)
                 failure_mssg = "vrfy_ns_grp_c: H5L_TYPE_SOFT != lnk_info.type";
                 return false;
             }
-            else if ((HDstrlen(group_name) + 1) != lnk_info.u.val_size) {
-                failure_mssg = "vrfy_ns_grp_c: (HDstrlen(group_name) + 1) != lnk_info.u.val_size";
+            else if ((strlen(group_name) + 1) != lnk_info.u.val_size) {
+                failure_mssg = "vrfy_ns_grp_c: (strlen(group_name) + 1) != lnk_info.u.val_size";
                 return false;
             }
 
-            slinkval = HDmalloc(lnk_info.u.val_size);
+            slinkval = malloc(lnk_info.u.val_size);
 
             if (!slinkval) {
                 failure_mssg = "vrfy_ns_grp_c: HDmalloc of slinkval failed";
@@ -520,16 +520,16 @@ vrfy_ns_grp_c(hid_t fid, const char *group_name, unsigned nlinks)
             ret = H5Lget_val(gid, linkname, slinkval, lnk_info.u.val_size, H5P_DEFAULT);
             if (ret < 0) {
                 failure_mssg = "vrfy_ns_grp_c: H5Lget_val() failed";
-                HDfree(slinkval);
+                free(slinkval);
                 return false;
             }
-            else if (0 != HDstrcmp(slinkval, group_name)) {
-                failure_mssg = "vrfy_ns_grp_c: 0 != HDstrcmp(slinkval, group_name)";
-                HDfree(slinkval);
+            else if (0 != strcmp(slinkval, group_name)) {
+                failure_mssg = "vrfy_ns_grp_c: 0 != strcmp(slinkval, group_name)";
+                free(slinkval);
                 return false;
             }
 
-            HDfree(slinkval);
+            free(slinkval);
         }
         else if (1 == (u % 3)) {
             H5O_info2_t root_oinfo;
@@ -540,7 +540,7 @@ vrfy_ns_grp_c(hid_t fid, const char *group_name, unsigned nlinks)
                 return false;
             }
 
-            HDmemset(&root_oinfo, 0, sizeof(root_oinfo));
+            memset(&root_oinfo, 0, sizeof(root_oinfo));
             ret = H5Oget_info3(fid, &root_oinfo, H5O_INFO_BASIC);
 
             if (ret < 0) {
@@ -561,14 +561,14 @@ vrfy_ns_grp_c(hid_t fid, const char *group_name, unsigned nlinks)
             const char *file = NULL;
             const char *path = NULL;
 
-            HDassert(2 == (u % 3));
+            assert(2 == (u % 3));
 
             if (H5L_TYPE_EXTERNAL != lnk_info.type) {
                 failure_mssg = "vrfy_ns_grp_c: H5L_TYPE_EXTERNAL != lnk_info.type";
                 return false;
             }
 
-            elinkval = HDmalloc(lnk_info.u.val_size);
+            elinkval = malloc(lnk_info.u.val_size);
 
             if (!elinkval) {
                 failure_mssg = "vrfy_ns_grp_c: HDmalloc of elinkval failed.";
@@ -584,20 +584,20 @@ vrfy_ns_grp_c(hid_t fid, const char *group_name, unsigned nlinks)
             ret = H5Lunpack_elink_val(elinkval, lnk_info.u.val_size, NULL, &file, &path);
             if (ret < 0) {
                 failure_mssg = "vrfy_ns_grp_c: H5Lunpack_elink_val() failed.";
-                HDfree(elinkval);
+                free(elinkval);
                 return false;
             }
-            else if (0 != HDstrcmp(file, "external.h5")) {
-                failure_mssg = "vrfy_ns_grp_c: 0 != HDstrcmp(file, \"external.h5\")";
-                HDfree(elinkval);
+            else if (0 != strcmp(file, "external.h5")) {
+                failure_mssg = "vrfy_ns_grp_c: 0 != strcmp(file, \"external.h5\")";
+                free(elinkval);
                 return false;
             }
-            else if (0 != HDstrcmp(path, "/ext")) {
-                failure_mssg = "vrfy_ns_grp_c: 0 != HDstrcmp(path, \"/ext\")";
-                HDfree(elinkval);
+            else if (0 != strcmp(path, "/ext")) {
+                failure_mssg = "vrfy_ns_grp_c: 0 != strcmp(path, \"/ext\")";
+                free(elinkval);
                 return false;
             }
-            HDfree(elinkval);
+            free(elinkval);
         }
     }
 
@@ -685,7 +685,7 @@ ns_grp_d(hid_t fid, const char *group_name, unsigned nlinks)
     for (u = 0; u < nlinks; u++) {
         char linkname[16];
 
-        HDsprintf(linkname, "%u", u);
+        sprintf(linkname, "%u", u);
 
         if (0 == (u % 3)) {
             ret = H5Lcreate_soft(group_name, gid, linkname, H5P_DEFAULT, H5P_DEFAULT);
@@ -704,7 +704,7 @@ ns_grp_d(hid_t fid, const char *group_name, unsigned nlinks)
             }
         }
         else {
-            HDassert(2 == (u % 3));
+            assert(2 == (u % 3));
 
             ret = H5Lcreate_external("external.h5", "/ext", gid, linkname, H5P_DEFAULT, H5P_DEFAULT);
 
@@ -791,7 +791,7 @@ vrfy_ns_grp_d(hid_t fid, const char *group_name, unsigned nlinks)
         return false;
     }
 
-    HDmemset(&grp_info, 0, sizeof(grp_info));
+    memset(&grp_info, 0, sizeof(grp_info));
     ret = H5Gget_info(gid, &grp_info);
 
     if (ret < 0) {
@@ -820,7 +820,7 @@ vrfy_ns_grp_d(hid_t fid, const char *group_name, unsigned nlinks)
         char        linkname[16];
         htri_t      link_exists;
 
-        HDsprintf(linkname, "%u", u);
+        sprintf(linkname, "%u", u);
         link_exists = H5Lexists(gid, linkname, H5P_DEFAULT);
 
         if (link_exists < 0) {
@@ -828,7 +828,7 @@ vrfy_ns_grp_d(hid_t fid, const char *group_name, unsigned nlinks)
             return false;
         }
 
-        HDmemset(&lnk_info, 0, sizeof(grp_info));
+        memset(&lnk_info, 0, sizeof(grp_info));
         ret = H5Lget_info2(gid, linkname, &lnk_info, H5P_DEFAULT);
 
         if (ret < 0) {
@@ -855,12 +855,12 @@ vrfy_ns_grp_d(hid_t fid, const char *group_name, unsigned nlinks)
                 failure_mssg = "vrfy_ns_grp_d: H5L_TYPE_SOFT != lnk_info.type";
                 return false;
             }
-            else if ((HDstrlen(group_name) + 1) != lnk_info.u.val_size) {
+            else if ((strlen(group_name) + 1) != lnk_info.u.val_size) {
                 failure_mssg = "vrfy_ns_grp_d: H5L_TYPE_SOFT != lnk_info.type";
                 return false;
             }
 
-            slinkval = HDmalloc(lnk_info.u.val_size);
+            slinkval = malloc(lnk_info.u.val_size);
 
             if (!slinkval) {
                 failure_mssg = "vrfy_ns_grp_d: HDmalloc of slinkval failed";
@@ -870,15 +870,15 @@ vrfy_ns_grp_d(hid_t fid, const char *group_name, unsigned nlinks)
             ret = H5Lget_val(gid, linkname, slinkval, lnk_info.u.val_size, H5P_DEFAULT);
             if (ret < 0) {
                 failure_mssg = "vrfy_ns_grp_d: H5Lget_val() failed";
-                HDfree(slinkval);
+                free(slinkval);
                 return false;
             }
-            else if (0 != HDstrcmp(slinkval, group_name)) {
-                failure_mssg = "vrfy_ns_grp_d: 0 != HDstrcmp(slinkval, group_name)";
-                HDfree(slinkval);
+            else if (0 != strcmp(slinkval, group_name)) {
+                failure_mssg = "vrfy_ns_grp_d: 0 != strcmp(slinkval, group_name)";
+                free(slinkval);
                 return false;
             }
-            HDfree(slinkval);
+            free(slinkval);
         }
         else if (1 == (u % 3)) {
             H5O_info2_t root_oinfo;
@@ -889,7 +889,7 @@ vrfy_ns_grp_d(hid_t fid, const char *group_name, unsigned nlinks)
                 return false;
             }
 
-            HDmemset(&root_oinfo, 0, sizeof(root_oinfo));
+            memset(&root_oinfo, 0, sizeof(root_oinfo));
             ret = H5Oget_info3(fid, &root_oinfo, H5O_INFO_BASIC);
             if (ret < 0) {
                 failure_mssg = "vrfy_ns_grp_d: H5Oget_info() failed.";
@@ -909,14 +909,14 @@ vrfy_ns_grp_d(hid_t fid, const char *group_name, unsigned nlinks)
             const char *file = NULL;
             const char *path = NULL;
 
-            HDassert(2 == (u % 3));
+            assert(2 == (u % 3));
 
             if (H5L_TYPE_EXTERNAL != lnk_info.type) {
                 failure_mssg = "vrfy_ns_grp_d: H5L_TYPE_EXTERNAL != lnk_info.type";
                 return false;
             }
 
-            elinkval = HDmalloc(lnk_info.u.val_size);
+            elinkval = malloc(lnk_info.u.val_size);
 
             if (!elinkval) {
                 failure_mssg = "vrfy_ns_grp_d: HDmalloc of elinkval failed.";
@@ -932,20 +932,20 @@ vrfy_ns_grp_d(hid_t fid, const char *group_name, unsigned nlinks)
             ret = H5Lunpack_elink_val(elinkval, lnk_info.u.val_size, NULL, &file, &path);
             if (ret < 0) {
                 failure_mssg = "vrfy_ns_grp_d: H5Lunpack_elink_val failed.";
-                HDfree(elinkval);
+                free(elinkval);
                 return false;
             }
-            else if (0 != HDstrcmp(file, "external.h5")) {
-                failure_mssg = "vrfy_ns_grp_d: 0 != HDstrcmp(file, \"external.h5\").";
-                HDfree(elinkval);
+            else if (0 != strcmp(file, "external.h5")) {
+                failure_mssg = "vrfy_ns_grp_d: 0 != strcmp(file, \"external.h5\").";
+                free(elinkval);
                 return false;
             }
-            else if (0 != HDstrcmp(path, "/ext")) {
-                failure_mssg = "vrfy_ns_grp_d: 0 != HDstrcmp(path, \"/ext\")";
-                HDfree(elinkval);
+            else if (0 != strcmp(path, "/ext")) {
+                failure_mssg = "vrfy_ns_grp_d: 0 != strcmp(path, \"/ext\")";
+                free(elinkval);
                 return false;
             }
-            HDfree(elinkval);
+            free(elinkval);
         }
     }
 
@@ -1102,7 +1102,7 @@ vrfy_os_grp_0(hid_t fid, const char *group_name)
         return false;
     }
 
-    HDmemset(&grp_info, 0, sizeof(grp_info));
+    memset(&grp_info, 0, sizeof(grp_info));
     ret = H5Gget_info(gid, &grp_info);
 
     if (ret < 0) {
@@ -1204,12 +1204,12 @@ os_grp_n(hid_t fid, const char *group_name, int proc_num, unsigned nlinks)
         return false;
     }
 
-    HDassert(nlinks > 0);
+    assert(nlinks > 0);
 
     for (u = 0; u < nlinks; u++) {
         char linkname[32];
 
-        HDsprintf(linkname, "ln%d_%u", proc_num, u);
+        sprintf(linkname, "ln%d_%u", proc_num, u);
 
         if (0 == (u % 2)) {
             ret = H5Lcreate_soft(group_name, gid, linkname, H5P_DEFAULT, H5P_DEFAULT);
@@ -1219,7 +1219,7 @@ os_grp_n(hid_t fid, const char *group_name, int proc_num, unsigned nlinks)
             }
         }
         else {
-            HDassert(1 == (u % 2));
+            assert(1 == (u % 2));
 
             ret = H5Lcreate_hard(fid, "/", gid, linkname, H5P_DEFAULT, H5P_DEFAULT);
             if (ret < 0) {
@@ -1306,7 +1306,7 @@ vrfy_os_grp_n(hid_t fid, const char *group_name, int proc_num, unsigned nlinks)
         return false;
     }
 
-    HDmemset(&grp_info, 0, sizeof(grp_info));
+    memset(&grp_info, 0, sizeof(grp_info));
 
     ret = H5Gget_info(gid, &grp_info);
 
@@ -1336,16 +1336,16 @@ vrfy_os_grp_n(hid_t fid, const char *group_name, int proc_num, unsigned nlinks)
         char        linkname[32];
         htri_t      link_exists;
 
-        HDsprintf(linkname, "ln%d_%u", proc_num, u);
+        sprintf(linkname, "ln%d_%u", proc_num, u);
         link_exists = H5Lexists(gid, linkname, H5P_DEFAULT);
 
         if (link_exists < 0) {
             failure_mssg = "vrfy_os_grp_n: H5Lexists() failed";
             return false;
         }
-        HDassert(link_exists >= 0);
+        assert(link_exists >= 0);
 
-        HDmemset(&lnk_info, 0, sizeof(grp_info));
+        memset(&lnk_info, 0, sizeof(grp_info));
         ret = H5Lget_info2(gid, linkname, &lnk_info, H5P_DEFAULT);
 
         if (ret < 0) {
@@ -1368,12 +1368,12 @@ vrfy_os_grp_n(hid_t fid, const char *group_name, int proc_num, unsigned nlinks)
                 failure_mssg = "vrfy_os_grp_n: H5L_TYPE_SOFT != lnk_info.type";
                 return false;
             }
-            else if ((HDstrlen(group_name) + 1) != lnk_info.u.val_size) {
-                failure_mssg = "vrfy_os_grp_n: (HDstrlen(group_name) + 1) != lnk_info.u.val_size";
+            else if ((strlen(group_name) + 1) != lnk_info.u.val_size) {
+                failure_mssg = "vrfy_os_grp_n: (strlen(group_name) + 1) != lnk_info.u.val_size";
                 return false;
             }
 
-            slinkval = HDmalloc(lnk_info.u.val_size);
+            slinkval = malloc(lnk_info.u.val_size);
 
             if (!slinkval) {
                 failure_mssg = "vrfy_os_grp_n: HDmalloc of slinkval failed";
@@ -1384,28 +1384,28 @@ vrfy_os_grp_n(hid_t fid, const char *group_name, int proc_num, unsigned nlinks)
 
             if (ret < 0) {
                 failure_mssg = "vrfy_os_grp_n: H5Lget_val() failed";
-                HDfree(slinkval);
+                free(slinkval);
                 return false;
             }
-            else if (0 != HDstrcmp(slinkval, group_name)) {
-                failure_mssg = "vrfy_os_grp_n: 0 != HDstrcmp(slinkval, group_name)";
-                HDfree(slinkval);
+            else if (0 != strcmp(slinkval, group_name)) {
+                failure_mssg = "vrfy_os_grp_n: 0 != strcmp(slinkval, group_name)";
+                free(slinkval);
                 return false;
             }
-            HDfree(slinkval);
+            free(slinkval);
         }
         else {
             H5O_info2_t root_oinfo;
             int         token_cmp = 0;
 
-            HDassert(1 == (u % 2));
+            assert(1 == (u % 2));
 
             if (H5L_TYPE_HARD != lnk_info.type) {
                 failure_mssg = "vrfy_os_grp_n: H5L_TYPE_HARD != lnk_info.type";
                 return false;
             }
 
-            HDmemset(&root_oinfo, 0, sizeof(root_oinfo));
+            memset(&root_oinfo, 0, sizeof(root_oinfo));
             ret = H5Oget_info3(fid, &root_oinfo, H5O_INFO_BASIC);
 
             if (ret < 0) {
@@ -1494,7 +1494,7 @@ ds_ctg_i(hid_t fid, const char *dset_name, hbool_t write_data)
     }
 
     if (write_data) {
-        wdata = HDmalloc(sizeof(int) * DSET_DIMS);
+        wdata = malloc(sizeof(int) * DSET_DIMS);
 
         if (!wdata) {
             failure_mssg = "ds_ctg_i: HDmalloc of wdata failed.";
@@ -1506,7 +1506,7 @@ ds_ctg_i(hid_t fid, const char *dset_name, hbool_t write_data)
 
         ret = H5Dwrite(dsid, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, wdata);
 
-        HDfree(wdata);
+        free(wdata);
 
         if (ret < 0) {
             failure_mssg = "ds_ctg_i: H5Dwrite() failed.";
@@ -1659,7 +1659,7 @@ vrfy_ds_ctg_i(hid_t fid, const char *dset_name, hbool_t write_data)
     }
 
     if (write_data) {
-        rdata = HDmalloc(sizeof(int) * DSET_DIMS);
+        rdata = malloc(sizeof(int) * DSET_DIMS);
 
         if (!rdata) {
             failure_mssg = "vrfy_ds_ctg_i: HDmalloc of rdata failed.";
@@ -1675,11 +1675,11 @@ vrfy_ds_ctg_i(hid_t fid, const char *dset_name, hbool_t write_data)
         for (u = 0; u < DSET_DIMS; u++) {
             if ((int)u != rdata[u]) {
                 failure_mssg = "vrfy_ds_ctg_i: u != rdata[u].";
-                HDfree(rdata);
+                free(rdata);
                 return false;
             }
         }
-        HDfree(rdata);
+        free(rdata);
     }
 
     ret = H5Dclose(dsid);
@@ -1777,7 +1777,7 @@ ds_chk_i(hid_t fid, const char *dset_name, hbool_t write_data)
     }
 
     if (write_data) {
-        wdata = HDmalloc(sizeof(int) * DSET_DIMS);
+        wdata = malloc(sizeof(int) * DSET_DIMS);
 
         if (!wdata) {
             failure_mssg = "ds_chk_i: HDmalloc of wdata failed.";
@@ -1788,7 +1788,7 @@ ds_chk_i(hid_t fid, const char *dset_name, hbool_t write_data)
             wdata[u] = (int)u;
 
         ret = H5Dwrite(dsid, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, wdata);
-        HDfree(wdata);
+        free(wdata);
         if (ret < 0) {
             failure_mssg = "ds_chk_i: H5Dwrite() failed.";
             return false;
@@ -1949,7 +1949,7 @@ vrfy_ds_chk_i(hid_t fid, const char *dset_name, hbool_t write_data)
     }
 
     if (write_data) {
-        rdata = HDmalloc(sizeof(int) * DSET_DIMS);
+        rdata = malloc(sizeof(int) * DSET_DIMS);
 
         if (!rdata) {
             failure_mssg = "vrfy_ds_chk_i: HDmalloc of rdata failed.";
@@ -1965,11 +1965,11 @@ vrfy_ds_chk_i(hid_t fid, const char *dset_name, hbool_t write_data)
         for (u = 0; u < DSET_DIMS; u++) {
             if ((int)u != rdata[u]) {
                 failure_mssg = "vrfy_ds_chk_i: u != rdata[u]";
-                HDfree(rdata);
+                free(rdata);
                 return false;
             }
         }
-        HDfree(rdata);
+        free(rdata);
     }
 
     ret = H5Dclose(dsid);
@@ -2065,7 +2065,7 @@ ds_cpt_i(hid_t fid, const char *dset_name, hbool_t write_data)
     }
 
     if (write_data) {
-        wdata = HDmalloc(sizeof(int) * DSET_COMPACT_DIMS);
+        wdata = malloc(sizeof(int) * DSET_COMPACT_DIMS);
 
         if (!wdata) {
             failure_mssg = "ds_cpt_i: HDmalloc of wdata failed.";
@@ -2076,7 +2076,7 @@ ds_cpt_i(hid_t fid, const char *dset_name, hbool_t write_data)
             wdata[u] = (int)u;
 
         ret = H5Dwrite(dsid, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, wdata);
-        HDfree(wdata);
+        free(wdata);
 
         if (ret < 0) {
             failure_mssg = "ds_cpt_i: H5Dwrite() failed.";
@@ -2224,7 +2224,7 @@ vrfy_ds_cpt_i(hid_t fid, const char *dset_name, hbool_t write_data)
     }
 
     if (write_data) {
-        rdata = HDmalloc(sizeof(int) * DSET_COMPACT_DIMS);
+        rdata = malloc(sizeof(int) * DSET_COMPACT_DIMS);
 
         if (!rdata) {
             failure_mssg = "vrfy_ds_cpt_i: HDmalloc of rdata failed.";
@@ -2240,11 +2240,11 @@ vrfy_ds_cpt_i(hid_t fid, const char *dset_name, hbool_t write_data)
         for (u = 0; u < DSET_COMPACT_DIMS; u++) {
             if ((int)u != rdata[u]) {
                 failure_mssg = "vrfy_ds_cpt_i: (int)u != rdata[u]";
-                HDfree(rdata);
+                free(rdata);
                 return false;
             }
         }
-        HDfree(rdata);
+        free(rdata);
     }
 
     ret = H5Dclose(dsid);
@@ -2319,7 +2319,7 @@ ds_ctg_v(hid_t fid, const char *dset_name, hbool_t write_data)
     }
 
     if (write_data) {
-        wdata = HDmalloc(sizeof(hvl_t) * DSET_SMALL_DIMS);
+        wdata = malloc(sizeof(hvl_t) * DSET_SMALL_DIMS);
 
         if (!wdata) {
             failure_mssg = "ds_ctg_v: HDmalloc of wdata failed.";
@@ -2332,13 +2332,13 @@ ds_ctg_v(hid_t fid, const char *dset_name, hbool_t write_data)
             unsigned v;
 
             len   = (u % 10) + 1;
-            tdata = HDmalloc(sizeof(int) * len);
+            tdata = malloc(sizeof(int) * len);
 
             if (!tdata) {
                 failure_mssg = "ds_ctg_v: HDmalloc of tdata failed.";
                 while (u > 0)
                     free(wdata[u--].p);
-                HDfree(wdata);
+                free(wdata);
                 return false;
             }
 
@@ -2355,13 +2355,13 @@ ds_ctg_v(hid_t fid, const char *dset_name, hbool_t write_data)
             failure_mssg = "ds_ctg_v: H5Dwrite() failed.";
             for (u = 0; u < DSET_SMALL_DIMS; u++)
                 free(wdata[u].p);
-            HDfree(wdata);
+            free(wdata);
             return false;
         }
 
         ret = H5Treclaim(tid, sid, H5P_DEFAULT, wdata);
 
-        HDfree(wdata);
+        free(wdata);
 
         if (ret < 0) {
             failure_mssg = "ds_ctg_v: H5Treclaim() failed.";
@@ -2527,7 +2527,7 @@ vrfy_ds_ctg_v(hid_t fid, const char *dset_name, hbool_t write_data)
     }
 
     if (write_data) {
-        rdata = HDmalloc(sizeof(hvl_t) * DSET_SMALL_DIMS);
+        rdata = malloc(sizeof(hvl_t) * DSET_SMALL_DIMS);
 
         if (!rdata) {
             failure_mssg = "vrfy_ds_ctg_v: HDmalloc of rdata failed.";
@@ -2562,7 +2562,7 @@ vrfy_ds_ctg_v(hid_t fid, const char *dset_name, hbool_t write_data)
 
         ret = H5Treclaim(tid, sid, H5P_DEFAULT, rdata);
 
-        HDfree(rdata);
+        free(rdata);
 
         if (ret < 0) {
             failure_mssg = "vrfy_ds_ctg_v: H5Treclaim() failed.";
@@ -2730,7 +2730,7 @@ tend_zoo(hid_t fid, const char *base_path, struct timespec *lastmsgtime, zoo_con
     hbool_t          ok = TRUE;
     static const char *last_failure_mssg = "";
 
-    nwritten = HDsnprintf(full_path, sizeof(full_path), "%s/*", base_path);
+    nwritten = snprintf(full_path, sizeof(full_path), "%s/*", base_path);
     if (nwritten < 0 || (size_t)nwritten >= sizeof(full_path)) {
         failure_mssg = "tend_zoo: snprintf failed";
         return FALSE;
@@ -2742,7 +2742,7 @@ tend_zoo(hid_t fid, const char *base_path, struct timespec *lastmsgtime, zoo_con
     }
 
     for (i = 0; ok; i++) {
-        HDassert('A' + i <= 'Z');
+        assert('A' + i <= 'Z');
         *leafp = (char)('A' + i);
         for (j = 0; j < nphases; j++) {
             if (!create_or_validate_selection(fid, full_path, i, config, phase[j], &ok))
@@ -2756,12 +2756,12 @@ out:
     if (!ok) {
         /* Currently not used: this step makes sure the operation doesn't take too long.
          * Any test that sets config.msgival or lastmsgtime to 0 will skip this step */
-        if (HDstrcmp(failure_mssg, last_failure_mssg) != 0 &&
+        if (strcmp(failure_mssg, last_failure_mssg) != 0 &&
             ((config.msgival.tv_sec || config.msgival.tv_nsec)) &&
             (lastmsgtime->tv_sec || lastmsgtime->tv_nsec)) {
             if (below_speed_limit(lastmsgtime, &config.msgival)) {
                 last_failure_mssg = failure_mssg;
-                HDfprintf(stderr, "%s: %s", __func__, failure_mssg);
+                fprintf(stderr, "%s: %s", __func__, failure_mssg);
             }
         }
     }

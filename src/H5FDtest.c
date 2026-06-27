@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -32,6 +31,7 @@
 /* Headers */
 /***********/
 #include "H5private.h"   /* Generic Functions    */
+#include "H5Eprivate.h"  /* Error handling       */
 #include "H5FDpkg.h"     /* File Drivers         */
 #include "H5FLprivate.h" /* Free Lists           */
 
@@ -75,8 +75,6 @@ H5FL_SEQ_EXTERN(H5FD_vfd_swmr_idx_entry_t);
  *              VFD feature flags (which do not exist until the driver
  *              is instantiated).
  *
- *              See test/Makefile.am for a list of the VFD strings.
- *
  *              This function is only intended for use in the test code.
  *
  * Return:	    TRUE (1) if the VFD supports SWMR I/O or vfd_name is
@@ -86,10 +84,6 @@ H5FL_SEQ_EXTERN(H5FD_vfd_swmr_idx_entry_t);
  *
  *              This function cannot fail at this time so there is no
  *              error return value.
- *
- * Programmer:	Dana Robinson
- *              Fall 2014
- *
  *-------------------------------------------------------------------------
  */
 hbool_t

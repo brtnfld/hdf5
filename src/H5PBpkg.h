@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -1692,7 +1691,9 @@ struct H5PB_entry_t {
     uint64_t   page;
     size_t     size;
     void *     image_ptr;
+    void *     page_buf_ptr; /* M3 compat: alias for image_ptr */
     H5FD_mem_t mem_type;
+    H5F_mem_page_t type;     /* M3 compat: page memory type */
     hbool_t    is_metadata;
     hbool_t    is_dirty;
 
@@ -1715,6 +1716,8 @@ struct H5PB_entry_t {
     struct H5PB_entry_t *tl_prev;
 
 }; /* H5PB_entry_t */
+
+typedef struct H5PB_entry_t H5PB_entry_t;
 
 /*****************************/
 /* Package Private Variables */

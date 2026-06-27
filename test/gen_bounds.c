@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -149,7 +148,7 @@ gen_earliest_latest(void)
     /*
      * Add a chunked dataset with layout version 3 (default)
      */
-    buf = (float *)HDmalloc((size_t)DIM1 * (size_t)DIM2 * sizeof(float));
+    buf = (float *)malloc((size_t)DIM1 * (size_t)DIM2 * sizeof(float));
     if (buf == NULL)
         TEST_ERROR;
 
@@ -211,7 +210,7 @@ gen_earliest_latest(void)
         TEST_ERROR;
 
     /* Release allocated buffer */
-    HDfree(buf);
+    free(buf);
     bufp = buf = NULL;
 
     /* Close everything */
@@ -235,9 +234,9 @@ error:
         H5Pclose(fcpl);
         H5Pclose(fapl);
         H5Fclose(fid);
-        HDfree(buf);
+        free(buf);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return FAIL;
 } /* gen_earliest_latest */
 
@@ -294,7 +293,7 @@ gen_earliest_v18(void)
      * Add a chunked dataset with layout version 3 (default)
      */
 
-    buf = (float *)HDmalloc((size_t)DIM1 * (size_t)DIM2 * sizeof(float));
+    buf = (float *)malloc((size_t)DIM1 * (size_t)DIM2 * sizeof(float));
     if (buf == NULL)
         TEST_ERROR;
 
@@ -326,7 +325,7 @@ gen_earliest_v18(void)
         TEST_ERROR;
 
     /* Release allocated buffer */
-    HDfree(buf);
+    free(buf);
     bufp = buf = NULL;
 
     /* Close everything */
@@ -350,9 +349,9 @@ error:
         H5Pclose(fcpl);
         H5Pclose(fapl);
         H5Fclose(fid);
-        HDfree(buf);
+        free(buf);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return FAIL;
 } /* gen_earliest_v18 */
 
@@ -403,7 +402,7 @@ gen_latest_latest(void)
      * Add a chunked dataset with layout version 4 (H5Pset_chunk_opts)
      */
 
-    buf = (float *)HDmalloc((size_t)DIM1 * (size_t)DIM2 * sizeof(float));
+    buf = (float *)malloc((size_t)DIM1 * (size_t)DIM2 * sizeof(float));
     if (buf == NULL)
         TEST_ERROR;
 
@@ -438,7 +437,7 @@ gen_latest_latest(void)
         TEST_ERROR;
 
     /* Release allocated buffer */
-    HDfree(buf);
+    free(buf);
     bufp = buf = NULL;
 
     /* Close everything */
@@ -460,9 +459,9 @@ error:
         H5Sclose(space);
         H5Pclose(dcpl);
         H5Fclose(fid);
-        HDfree(buf);
+        free(buf);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return FAIL;
 } /* gen_latest_latest */
 
@@ -521,7 +520,7 @@ gen_v18_latest(void)
      * Add a chunked dataset with layout version 3 (default)
      */
 
-    buf = (float *)HDmalloc((size_t)DIM1 * (size_t)DIM2 * sizeof(float));
+    buf = (float *)malloc((size_t)DIM1 * (size_t)DIM2 * sizeof(float));
     if (buf == NULL)
         TEST_ERROR;
 
@@ -552,7 +551,7 @@ gen_v18_latest(void)
         TEST_ERROR;
 
     /* Release allocated buffer */
-    HDfree(buf);
+    free(buf);
     bufp = buf = NULL;
 
     /* Close property list and dataset, will reuse dataspace */
@@ -576,9 +575,9 @@ error:
         H5Pclose(fcpl);
         H5Pclose(fapl);
         H5Fclose(fid);
-        HDfree(buf);
+        free(buf);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return FAIL;
 } /* gen_v18_latest */
 
@@ -636,7 +635,7 @@ gen_v18_v18(void)
      * Add a chunked dataset with layout version 3 (default)
      */
 
-    buf = (float *)HDmalloc((size_t)DIM1 * (size_t)DIM2 * sizeof(float));
+    buf = (float *)malloc((size_t)DIM1 * (size_t)DIM2 * sizeof(float));
     if (buf == NULL)
         TEST_ERROR;
 
@@ -713,7 +712,7 @@ gen_v18_v18(void)
         TEST_ERROR;
 
     /* Release allocated buffer */
-    HDfree(buf);
+    free(buf);
     bufp = buf = NULL;
 
     /* Close everything */
@@ -738,9 +737,9 @@ error:
         H5Pclose(fcpl);
         H5Pclose(fapl);
         H5Fclose(fid);
-        HDfree(buf);
+        free(buf);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return FAIL;
 } /* gen_v18_v18 */
 
@@ -953,7 +952,7 @@ error:
         H5Pclose(fapl);
         H5Fclose(fid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return FAIL;
 
@@ -1019,7 +1018,7 @@ gen_ref_files(const char *filename, H5F_libver_t low_bound, H5F_libver_t high_bo
      * Create test file, attribute, group and dataset
      */
 
-    if ((dwbuf = HDcalloc(sizeof(unsigned), 100)) == NULL)
+    if ((dwbuf = calloc(sizeof(unsigned), 100)) == NULL)
         TEST_ERROR;
 
     /* Create the test file */
@@ -1069,7 +1068,7 @@ gen_ref_files(const char *filename, H5F_libver_t low_bound, H5F_libver_t high_bo
         TEST_ERROR;
 
     if (dwbuf) {
-        HDfree(dwbuf);
+        free(dwbuf);
         dwbuf = NULL;
     }
 
@@ -1202,9 +1201,9 @@ error:
         H5Sclose(sid);
         H5Pclose(fapl);
         H5Fclose(fid);
-        HDfree(dwbuf);
+        free(dwbuf);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return FAIL;
 

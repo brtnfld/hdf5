@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -42,6 +41,7 @@
 #include "H5Eprivate.h"  /* Error handling                           */
 #include "H5Gprivate.h"  /* Groups                                   */
 #include "H5Iprivate.h"  /* IDs                                      */
+#include "H5MMprivate.h" /* Memory management                        */
 #include "H5Oprivate.h"  /* Object headers                           */
 #include "H5Rpkg.h"      /* References                               */
 #include "H5Sprivate.h"  /* Dataspaces                               */
@@ -108,7 +108,7 @@ H5R__decode_token_compat(H5VL_object_t *vol_obj, H5I_type_t type, H5R_type_t ref
             HGOTO_ERROR(H5E_REFERENCE, H5E_CANTGET, FAIL, "can't query if file uses native VOL connector")
 
         /* Must use native VOL connector for this operation */
-        HDassert(is_native);
+        assert(is_native);
     }
 #endif /* NDEBUG */
 
@@ -150,7 +150,7 @@ H5R__decode_token_compat(H5VL_object_t *vol_obj, H5I_type_t type, H5R_type_t ref
 
 done:
     if (file_id != H5I_INVALID_HID && H5I_dec_ref(file_id) < 0)
-        HDONE_ERROR(H5E_REFERENCE, H5E_CANTDEC, FAIL, "unable to decrement refcount on file")
+        HDONE_ERROR(H5E_REFERENCE, H5E_CANTDEC, FAIL, "unable to decrement refcount on file");
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5R__decode_token_compat() */
 
@@ -174,11 +174,11 @@ H5R__encode_token_region_compat(H5F_t *f, const H5O_token_t *obj_token, size_t t
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(f);
-    HDassert(obj_token);
-    HDassert(token_size);
-    HDassert(space);
-    HDassert(nalloc);
+    assert(f);
+    assert(obj_token);
+    assert(token_size);
+    assert(space);
+    assert(nalloc);
 
     /* Get required buffer size */
     if (H5R__encode_heap(f, NULL, &buf_size, NULL, (size_t)0) < 0)
@@ -195,7 +195,7 @@ H5R__encode_token_region_compat(H5F_t *f, const H5O_token_t *obj_token, size_t t
         /* Zero the heap ID out, may leak heap space if user is re-using
          * reference and doesn't have garbage collection turned on
          */
-        HDmemset(buf, 0, buf_size);
+        memset(buf, 0, buf_size);
 
         /* Get the amount of space required to serialize the selection */
         if ((data_size = H5S_SELECT_SERIAL_SIZE(space)) < 0)
@@ -413,7 +413,7 @@ H5Rcreate(void *ref, hid_t loc_id, const char *name, H5R_type_t ref_type, hid_t 
             HGOTO_ERROR(H5E_REFERENCE, H5E_CANTGET, FAIL, "can't query if file uses native VOL connector")
 
         /* Must use native VOL connector for this operation */
-        HDassert(is_native);
+        assert(is_native);
     }
 #endif /* NDEBUG */
 
@@ -483,7 +483,7 @@ H5Rcreate(void *ref, hid_t loc_id, const char *name, H5R_type_t ref_type, hid_t 
 
 done:
     if (file_id != H5I_INVALID_HID && H5I_dec_ref(file_id) < 0)
-        HDONE_ERROR(H5E_REFERENCE, H5E_CANTDEC, FAIL, "unable to decrement refcount on file")
+        HDONE_ERROR(H5E_REFERENCE, H5E_CANTDEC, FAIL, "unable to decrement refcount on file");
     FUNC_LEAVE_API(ret_value)
 } /* end H5Rcreate() */
 
@@ -664,7 +664,7 @@ H5Rget_region(hid_t id, H5R_type_t ref_type, const void *ref)
                         "can't query if file uses native VOL connector")
 
         /* Must use native VOL connector for this operation */
-        HDassert(is_native);
+        assert(is_native);
     }
 #endif /* NDEBUG */
 
@@ -702,7 +702,7 @@ H5Rget_region(hid_t id, H5R_type_t ref_type, const void *ref)
 
 done:
     if (file_id != H5I_INVALID_HID && H5I_dec_ref(file_id) < 0)
-        HDONE_ERROR(H5E_REFERENCE, H5E_CANTDEC, H5I_INVALID_HID, "unable to decrement refcount on file")
+        HDONE_ERROR(H5E_REFERENCE, H5E_CANTDEC, H5I_INVALID_HID, "unable to decrement refcount on file");
     FUNC_LEAVE_API(ret_value)
 } /* end H5Rget_region1() */
 

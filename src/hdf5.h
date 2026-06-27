@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -64,6 +63,7 @@
 #include "H5FDmirror.h"   /* Mirror VFD and IPC definitions           */
 #include "H5FDmpi.h"      /* MPI-based file drivers                   */
 #include "H5FDmulti.h"    /* Usage-partitioned file family            */
+#include "H5FDonion.h"    /* Onion file I/O                           */
 #include "H5FDros3.h"     /* R/O S3 "file" I/O                        */
 #include "H5FDsec2.h"     /* POSIX unbuffered file I/O                */
 #include "H5FDsplitter.h" /* Twin-channel (R/W & R/O) I/O passthrough */

@@ -15,7 +15,7 @@ ALIASES += Code{1}="<tt>\1</tt>"
 ALIASES += success{1}="\Bold{Success:} \1"
 ALIASES += failure{1}="\Bold{Failure:} \1"
 
-ALIASES += herr_t="Returns a non-negative value if successful; otherwise returns a negative value."
+ALIASES += herr_t="Returns a non-negative value if successful; otherwise, returns a negative value."
 ALIASES += herr_t_iter="\li Zero causes the iterator to continue, returning zero when the iteration is complete. \li A positive value causes the iterator to immediately return that positive value, indicating short-circuit success. \li A negative value causes the iterator to immediately return that value, indicating failure."
 ALIASES += hid_t{1}="Returns a \1 identifier if successful; otherwise returns #H5I_INVALID_HID. "
 ALIASES += hid_ti{1}="Returns an \1 identifier if successful; otherwise returns #H5I_INVALID_HID. "
@@ -75,7 +75,7 @@ ALIASES += space_id="\param[in] space_id Dataspace identifier"
 ALIASES += space_id{1}="\param[in] \1 Dataspace identifier"
 
 ################################################################################
-# Dataypes
+# Datatypes
 ################################################################################
 
 ALIASES += type_id="\param[in] type_id Datatype identifier"
@@ -252,6 +252,7 @@ ALIASES += ref_vol_doc="VOL documentation"
 # RFCs
 ################################################################################
 
+ALIASES += ref_rfc20220819="<a href=\"https://docs.hdfgroup.org/hdf5/rfc/Terminal_VOL_Connector_Feature_Flags.pdf\">Terminal VOL Connector Feature Flags</a>"
 ALIASES += ref_rfc20210528="<a href=\"https://docs.hdfgroup.org/hdf5/rfc/RFC_multi_thread.pdf\">Multi-Thread HDF5</a>"
 ALIASES += ref_rfc20210219="<a href=\"https://docs.hdfgroup.org/hdf5/rfc/selection_io_RFC_210610.pdf\">Selection I/O</a>"
 ALIASES += ref_rfc20200213="<a href=\"https://docs.hdfgroup.org/hdf5/rfc/RFC_VFD_subfiling_200424.pdf\">VFD Sub-filing</a>"
@@ -300,12 +301,12 @@ ALIASES += ref_rfc20130630="<a href=\"https://docs.hdfgroup.org/hdf5/rfc/Design-
 ALIASES += ref_rfc20130316="<a href=\"https://docs.hdfgroup.org/hdf5/rfc/HDF5DynamicallyLoadedFilters.pdf\">HDF5 Dynamically Loaded Filters</a>"
 ALIASES += ref_rfc20121114="<a href=\"https://docs.hdfgroup.org/hdf5/rfc/DECTRIS%20Integration%20RFC%202012-11-29.pdf\">Direct Chunk Write</a>"
 ALIASES += ref_rfc20121024="<a href=\"https://docs.hdfgroup.org/hdf5/rfc/FileSpaceManagement.pdf\">HDF5 File Space Management</a>"
-ALIASES += ref_rfc20120828="<a href=\"https://docs.hdfgroup.org/hdf5/rfc/H5HPC_MultiDset_RW_IO_RFC_v6_20220124.pdf\">New HDF5 API Routines for HPC Applications - Read/Write Multiple Datasets in an HDF5 file</a>"
+ALIASES += ref_rfc20120828="<a href=\"https://docs.hdfgroup.org/hdf5/rfc/H5HPC_MultiDset_RW_IO_RFC.pdf\">New HDF5 API Routines for HPC Applications - Read/Write Multiple Datasets in an HDF5 file</a>"
 ALIASES += ref_rfc20120523="<a href=\"https://docs.hdfgroup.org/hdf5/rfc/paged_aggregation.pdf\">HDF5 File Space Management: Paged Aggregation</a>"
 ALIASES += ref_rfc20120501="<a href=\"https://docs.hdfgroup.org/hdf5/rfc/HDF5FileImageOperations.pdf\">HDF5 File Image Operations</a>"
 ALIASES += ref_rfc20120305="<a href=\"https://docs.hdfgroup.org/hdf5/rfc/RFC%20PHDF5%20Consistency%20Semantics%20MC%20120328.docx.pdf\">Enabling a Strict Consistency Semantics Model in Parallel HDF5</a>"
 ALIASES += ref_rfc20120220="<a href=\"https://docs.hdfgroup.org/hdf5/rfc/h5repack_improve_hyperslab_over_chunked_dataset_v1.pdf\"><tt>h5repack</tt>: Improved Hyperslab selections for Large Chunked Datasets</a>"
-ALIASES += ref_rfc20120120="<a href=\"https://docs.hdfgroup.org/hdf5/rfc/2012-1-25-Maintainers-guide-for-datatype.docx.pdf\">A Maintainer’s Guide for the Datatype Module in HDF5 Library</a>"
+ALIASES += ref_rfc20120120="<a href=\"https://docs.hdfgroup.org/hdf5/rfc/2012-1-25-Maintainers-guide-for-datatype.docx.pdf\">A Maintainer's Guide for the Datatype Module in HDF5 Library</a>"
 ALIASES += ref_rfc20120104="<a href=\"https://docs.hdfgroup.org/hdf5/rfc/RFC_actual_io_v4-1_done.docx.pdf\">Actual I/O Mode</a>"
 ALIASES += ref_rfc20111119="<a href=\"https://docs.hdfgroup.org/hdf5/rfc/RFC-H5Ocompare-review_v6.pdf\">New public functions to handle comparison</a>"
 ALIASES += ref_rfc20110825="<a href=\"https://docs.hdfgroup.org/hdf5/rfc/2011-08-31-RFC_H5Ocopy_Named_DT_v2.docx.pdf\">Merging Named Datatypes in H5Ocopy()</a>"
@@ -371,3 +372,18 @@ ALIASES += storage_type="<table><tr><td>#H5G_STORAGE_TYPE_COMPACT</td><td>Compac
 ALIASES += str_pad_type="<table><tr><td>#H5T_STR_NULLTERM</td><td>0</td><td>Null terminate (as C does)</td></tr><tr><td>#H5T_STR_NULLPAD</td><td>1</td><td>Pad with zeros</td></tr><tr><td>#H5T_STR_SPACEPAD</td><td>2</td><td>Pad with spaces (as FORTRAN does)</td></tr></table>"
 ALIASES += see_virtual=" \see Supporting Functions: H5Pget_layout(), H5Pset_layout(), H5Sget_regular_hyperslab(), H5Sis_regular_hyperslab(), H5Sselect_hyperslab() \see VDS Functions: H5Pget_virtual_count(), H5Pget_virtual_dsetname(), H5Pget_virtual_filename(), H5Pget_virtual_prefix(), H5Pget_virtual_printf_gap(), H5Pget_virtual_srcspace(), H5Pget_virtual_view(), H5Pget_virtual_vspace(), H5Pset_virtual(), H5Pset_virtual_prefix(), H5Pset_virtual_printf_gap(), H5Pset_virtual_view()"
 ALIASES += obj_info_fields="<table><tr><th>Flag</th><th>Purpose</th></tr><tr><td>#H5O_INFO_BASIC</td><td>Fill in the fileno, addr, type, and rc fields</td></tr><tr> <td>#H5O_INFO_TIME</td><td>Fill in the atime, mtime, ctime, and btime fields</td></tr><tr> <td>#H5O_INFO_NUM_ATTRS</td> <td>Fill in the num_attrs field</td></tr><tr><td>#H5O_INFO_HDR</td><td>Fill in the num_attrs field</td></tr><tr><td>#H5O_INFO_META_SIZE</td><td>Fill in the meta_size field</td></tr><tr><td>#H5O_INFO_ALL</td><td>#H5O_INFO_BASIC | #H5O_INFO_TIME | #H5O_INFO_NUM_ATTRS | #H5O_INFO_HDR | #H5O_INFO_META_SIZE</td></tr></table>"
+
+################################################################################
+# FORTRAN
+################################################################################
+
+ALIASES += fortran_error="Returns 0 if successful and -1 if it fails."
+ALIASES += fortran_approved="The preferred API, Fortran 2003 version."
+ALIASES += fortran_obsolete="Obsolete API, use the Fortran 2003 version instead."
+ALIASES += fortran_file="Pointer to filename the async subroutine is being called from, filename must be null character terminated"
+ALIASES += fortran_func="Pointer to function name the async subroutine is being called in, func must be null character terminated"
+ALIASES += fortran_line="Line number the async subroutine is being called at"
+ALIASES += fortran_plist_id="Property list identifier"
+ALIASES += fortran_es_id="Event set identifier"
+ALIASES += fortran_vol_name="Connector name"
+

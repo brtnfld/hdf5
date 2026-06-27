@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -74,17 +73,17 @@ typedef struct H5E_num_t {
             CHECK_JNI_EXCEPTION(ENVONLY, JNI_FALSE);                                                         \
                                                                                                              \
         if (NULL == (jm = ENVPTR->GetMethodID(ENVONLY, jc, "<init>", "(Ljava/lang/String;)V"))) {            \
-            HDprintf("THROWEXCEPTION FATAL ERROR: GetMethodID failed\n");                                    \
+            printf("THROWEXCEPTION FATAL ERROR: GetMethodID failed\n");                                      \
             CHECK_JNI_EXCEPTION(ENVONLY, JNI_FALSE);                                                         \
         }                                                                                                    \
                                                                                                              \
         if (NULL == (ex = ENVPTR->NewObjectA(ENVONLY, jc, jm, (jvalue *)(args)))) {                          \
-            HDprintf("THROWEXCEPTION FATAL ERROR: Class %s: Creation failed\n", (className));                \
+            printf("THROWEXCEPTION FATAL ERROR: Class %s: Creation failed\n", (className));                  \
             CHECK_JNI_EXCEPTION(ENVONLY, JNI_FALSE);                                                         \
         }                                                                                                    \
                                                                                                              \
         if (ENVPTR->Throw(ENVONLY, (jthrowable)ex) < 0) {                                                    \
-            HDprintf("THROWEXCEPTION FATAL ERROR: Class %s: Throw failed\n", (className));                   \
+            printf("THROWEXCEPTION FATAL ERROR: Class %s: Throw failed\n", (className));                     \
             CHECK_JNI_EXCEPTION(ENVONLY, JNI_FALSE);                                                         \
         }                                                                                                    \
     }
@@ -153,7 +152,7 @@ Java_hdf_hdf5lib_H5_H5error_1on(JNIEnv *env, jclass clss)
  * Method:    printStackTrace0
  * Signature: (Ljava/lang/Object;)V
  *
- *  Call the HDF-5 library to print the HDF-5 error stack to 'file_name'.
+ *  Call the HDF5 library to print the HDF5 error stack to 'file_name'.
  */
 JNIEXPORT void JNICALL
 Java_hdf_hdf5lib_exceptions_HDF5LibraryException_printStackTrace0(JNIEnv *env, jobject obj, jstring file_name)
@@ -169,9 +168,9 @@ Java_hdf_hdf5lib_exceptions_HDF5LibraryException_printStackTrace0(JNIEnv *env, j
     else {
         PIN_JAVA_STRING(ENVONLY, file_name, file, NULL, "printStackTrace0: file name not pinned");
 
-        if ((stream = HDfopen(file, "a+"))) {
+        if ((stream = fopen(file, "a+"))) {
             H5Eprint2(H5E_DEFAULT, stream);
-            HDfclose(stream);
+            fclose(stream);
         }
     }
 
@@ -187,7 +186,7 @@ done:
  * Method:    _getMajorErrorNumber
  * Signature: ()J
  *
- *  Extract the HDF-5 major error number from the HDF-5 error stack.
+ *  Extract the HDF5 major error number from the HDF5 error stack.
  */
 JNIEXPORT jlong JNICALL
 Java_hdf_hdf5lib_exceptions_HDF5LibraryException__1getMajorErrorNumber(JNIEnv *env, jobject obj)
@@ -211,7 +210,7 @@ Java_hdf_hdf5lib_exceptions_HDF5LibraryException__1getMajorErrorNumber(JNIEnv *e
  * Method:    _getMinorErrorNumber
  * Signature: ()J
  *
- *  Extract the HDF-5 minor error number from the HDF-5 error stack.
+ *  Extract the HDF5 minor error number from the HDF5 error stack.
  */
 JNIEXPORT jlong JNICALL
 Java_hdf_hdf5lib_exceptions_HDF5LibraryException__1getMinorErrorNumber(JNIEnv *env, jobject obj)
@@ -350,10 +349,10 @@ h5raiseException(JNIEnv *env, const char *message, const char *exception)
 } /* end h5raiseException() */
 
 /*
- *  h5libraryError()   determines the HDF-5 major error code
+ *  h5libraryError()   determines the HDF5 major error code
  *  and creates and throws the appropriate sub-class of
  *  HDF5LibraryException().  This routine should be called
- *  whenever a call to the HDF-5 library fails, i.e., when
+ *  whenever a call to the HDF5 library fails, i.e., when
  *  the return is -1.
  *
  *  Note:  This routine never returns from the 'throw',
@@ -404,7 +403,7 @@ h5libraryError(JNIEnv *env)
         goto done;
 
     if (msg_size > 0) {
-        if (NULL == (msg_str = (char *)HDcalloc((size_t)msg_size + 1, sizeof(char))))
+        if (NULL == (msg_str = (char *)calloc((size_t)msg_size + 1, sizeof(char))))
             H5_OUT_OF_MEMORY_ERROR(ENVONLY, "h5libraryerror: failed to allocate buffer for error message");
 
         if ((msg_size = H5Eget_msg(min_num, &error_msg_type, msg_str, (size_t)msg_size + 1)) < 0)
@@ -429,14 +428,14 @@ h5libraryError(JNIEnv *env)
 
 done:
     if (msg_str)
-        HDfree(msg_str);
+        free(msg_str);
 
     return retVal;
 } /* end h5libraryError() */
 
 /*
  *  defineHDF5LibraryException()  returns the name of the sub-class
- *  which goes with an HDF-5 error code.
+ *  which goes with an HDF5 error code.
  */
 static const char *
 defineHDF5LibraryException(hid_t maj_num)

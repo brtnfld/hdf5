@@ -9,7 +9,6 @@
 ! COPYRIGHT
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 !   Copyright by The HDF Group.                                               *
-!   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
 !   This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -192,8 +191,8 @@ CONTAINS
           INTEGER(HSIZE_T), DIMENSION(2) :: chunk_dims = (/NN, MM/)
           INTEGER     ::   rank = 2                        ! Dataset rank
 
-          INTEGER, DIMENSION(N,M) :: dset_data ! Data buffers
-          INTEGER, DIMENSION(:,:), ALLOCATABLE :: data_out ! Data buffers
+          INTEGER, DIMENSION(:,:), ALLOCATABLE :: dset_data ! Data buffers
+          INTEGER, DIMENSION(:,:), ALLOCATABLE :: data_out  ! Data buffers
           INTEGER     ::   error ! Error flag
           INTEGER     ::   num_errors = 0 ! Number of data errors
 
@@ -252,6 +251,7 @@ CONTAINS
           !
           ! Initialize the dset_data array.
           !
+          ALLOCATE(dset_data(1:N,1:M))
           do i = 1, N
              do j = 1, M
                 dset_data(i,j) = (i-1)*6 + j;
@@ -387,6 +387,7 @@ CONTAINS
 100       IF (num_errors .GT. 0) THEN
             total_error=total_error + 1
           END IF
+          DEALLOCATE(dset_data)
           DEALLOCATE(data_out)
 
           !

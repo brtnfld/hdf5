@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -11,8 +10,7 @@
  * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* Programmer:  Quincey Koziol
- *
+/*
  * Purpose:	Generic Property Functions
  */
 
@@ -75,9 +73,6 @@ typedef struct {
  * Return:	   Success:	Non-negative
  *		   Failure:	Negative
  *
- * Programmer:     Quincey Koziol
- *                 Sunday, July 29, 2012
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -91,8 +86,8 @@ H5P__encode_size_t(const void *value, void **_pp, size_t *size)
 
     /* Sanity checks */
     HDcompile_assert(sizeof(size_t) <= sizeof(uint64_t));
-    HDassert(enc_size < 256);
-    HDassert(size);
+    assert(enc_size < 256);
+    assert(size);
 
     if (NULL != *pp) {
         /* Encode the size */
@@ -116,9 +111,6 @@ H5P__encode_size_t(const void *value, void **_pp, size_t *size)
  * Return:	   Success:	Non-negative
  *		   Failure:	Negative
  *
- * Programmer:     Mohamad Chaarawi
- *                 August 07, 2012
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -132,8 +124,8 @@ H5P__encode_hsize_t(const void *value, void **_pp, size_t *size)
 
     /* Sanity checks */
     HDcompile_assert(sizeof(hsize_t) <= sizeof(uint64_t));
-    HDassert(enc_size < 256);
-    HDassert(size);
+    assert(enc_size < 256);
+    assert(size);
 
     if (NULL != *pp) {
         *(*pp)++ = (uint8_t)enc_size;
@@ -156,9 +148,6 @@ H5P__encode_hsize_t(const void *value, void **_pp, size_t *size)
  * Return:	   Success:	Non-negative
  *		   Failure:	Negative
  *
- * Programmer:     Quincey Koziol
- *                 Sunday, July 29, 2012
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -169,15 +158,15 @@ H5P__encode_unsigned(const void *value, void **_pp, size_t *size)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity checks */
-    HDassert(value);
-    HDassert(size);
+    assert(value);
+    assert(size);
 
     if (NULL != *pp) {
         /* Encode the size */
         *(*pp)++ = (uint8_t)sizeof(unsigned);
 
         /* Encode the value */
-        H5_ENCODE_UNSIGNED(*pp, *(const unsigned *)value)
+        H5_ENCODE_UNSIGNED(*pp, *(const unsigned *)value);
     } /* end if */
 
     /* Set size needed for encoding */
@@ -194,9 +183,6 @@ H5P__encode_unsigned(const void *value, void **_pp, size_t *size)
  * Return:	   Success:	Non-negative
  *		   Failure:	Negative
  *
- * Programmer:     Mohamad Chaarawi
- *                 August 07, 2012
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -207,8 +193,8 @@ H5P__encode_uint8_t(const void *value, void **_pp, size_t *size)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity checks */
-    HDassert(value);
-    HDassert(size);
+    assert(value);
+    assert(size);
 
     if (NULL != *pp) {
         /* Encode the value */
@@ -229,9 +215,6 @@ H5P__encode_uint8_t(const void *value, void **_pp, size_t *size)
  * Return:	   Success:	Non-negative
  *		   Failure:	Negative
  *
- * Programmer:     Quincey Koziol
- *                 August 15, 2012
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -242,8 +225,8 @@ H5P__encode_hbool_t(const void *value, void **_pp, size_t *size)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity checks */
-    HDassert(value);
-    HDassert(size);
+    assert(value);
+    assert(size);
 
     if (NULL != *pp)
         /* Encode the value */
@@ -263,9 +246,6 @@ H5P__encode_hbool_t(const void *value, void **_pp, size_t *size)
  * Return:	   Success:	Non-negative
  *		   Failure:	Negative
  *
- * Programmer:     Quincey Koziol
- *                 Sunday, July 29, 2012
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -276,15 +256,15 @@ H5P__encode_double(const void *value, void **_pp, size_t *size)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity checks */
-    HDassert(value);
-    HDassert(size);
+    assert(value);
+    assert(size);
 
     if (NULL != *pp) {
         /* Encode the size */
         *(*pp)++ = (uint8_t)sizeof(double);
 
         /* Encode the value */
-        H5_ENCODE_DOUBLE(*pp, *(const double *)value)
+        H5_ENCODE_DOUBLE(*pp, *(const double *)value);
     } /* end if */
 
     /* Set size needed for encoding */
@@ -322,8 +302,8 @@ H5P__encode_cb(H5P_genprop_t *prop, void *_udata)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(prop);
-    HDassert(udata);
+    assert(prop);
+    assert(udata);
 
     /* Check if this property can be encoded */
     if (prop->encode) {
@@ -434,9 +414,6 @@ done:
  * Return:	   Success:	Non-negative
  *		   Failure:	Negative
  *
- * Programmer:     Quincey Koziol
- *                 Thursday, August 2, 2012
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -451,13 +428,13 @@ H5P__decode_size_t(const void **_pp, void *_value)
 
     /* Sanity check */
     HDcompile_assert(sizeof(size_t) <= sizeof(uint64_t));
-    HDassert(pp);
-    HDassert(*pp);
-    HDassert(value);
+    assert(pp);
+    assert(*pp);
+    assert(value);
 
     /* Decode the size */
     enc_size = *(*pp)++;
-    HDassert(enc_size < 256);
+    assert(enc_size < 256);
 
     /* Decode the value */
     UINT64DECODE_VAR(*pp, enc_value, enc_size);
@@ -474,9 +451,6 @@ H5P__decode_size_t(const void **_pp, void *_value)
  * Return:	   Success:	Non-negative
  *		   Failure:	Negative
  *
- * Programmer:     Mohamad Chaarawi
- *                 August 07, 2012
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -491,13 +465,13 @@ H5P__decode_hsize_t(const void **_pp, void *_value)
 
     /* Sanity check */
     HDcompile_assert(sizeof(hsize_t) <= sizeof(uint64_t));
-    HDassert(pp);
-    HDassert(*pp);
-    HDassert(value);
+    assert(pp);
+    assert(*pp);
+    assert(value);
 
     /* Decode the size */
     enc_size = *(*pp)++;
-    HDassert(enc_size < 256);
+    assert(enc_size < 256);
 
     /* Decode the value */
     UINT64DECODE_VAR(*pp, enc_value, enc_size);
@@ -514,9 +488,6 @@ H5P__decode_hsize_t(const void **_pp, void *_value)
  * Return:	   Success:	Non-negative
  *		   Failure:	Negative
  *
- * Programmer:     Quincey Koziol
- *                 Thursday, August 2, 2012
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -530,16 +501,16 @@ H5P__decode_unsigned(const void **_pp, void *_value)
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(pp);
-    HDassert(*pp);
-    HDassert(value);
+    assert(pp);
+    assert(*pp);
+    assert(value);
 
     /* Decode the size */
     enc_size = *(*pp)++;
     if (enc_size != sizeof(unsigned))
         HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "unsigned value can't be decoded")
 
-    H5_DECODE_UNSIGNED(*pp, *value)
+    H5_DECODE_UNSIGNED(*pp, *value);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -553,9 +524,6 @@ done:
  * Return:	   Success:	Non-negative
  *		   Failure:	Negative
  *
- * Programmer:     Quincey Koziol
- *                 Thursday, August 2, 2012
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -568,9 +536,9 @@ H5P__decode_uint8_t(const void **_pp, void *_value)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity checks */
-    HDassert(pp);
-    HDassert(*pp);
-    HDassert(value);
+    assert(pp);
+    assert(*pp);
+    assert(value);
 
     /* Decode the value */
     *value = *(*pp)++;
@@ -586,9 +554,6 @@ H5P__decode_uint8_t(const void **_pp, void *_value)
  * Return:	   Success:	Non-negative
  *		   Failure:	Negative
  *
- * Programmer:     Quincey Koziol
- *                 Wednesday, August 15, 2012
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -601,9 +566,9 @@ H5P__decode_hbool_t(const void **_pp, void *_value)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity checks */
-    HDassert(pp);
-    HDassert(*pp);
-    HDassert(value);
+    assert(pp);
+    assert(*pp);
+    assert(value);
 
     /* Decode the value */
     *value = (hbool_t) * (*pp)++;
@@ -619,9 +584,6 @@ H5P__decode_hbool_t(const void **_pp, void *_value)
  * Return:	   Success:	Non-negative
  *		   Failure:	Negative
  *
- * Programmer:     Quincey Koziol
- *                 Thursday, August 2, 2012
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -635,16 +597,16 @@ H5P__decode_double(const void **_pp, void *_value)
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(pp);
-    HDassert(*pp);
-    HDassert(value);
+    assert(pp);
+    assert(*pp);
+    assert(value);
 
     /* Decode the size */
     enc_size = *(*pp)++;
     if (enc_size != sizeof(double))
         HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "double value can't be decoded")
 
-    H5_DECODE_DOUBLE(*pp, *value)
+    H5_DECODE_DOUBLE(*pp, *value);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -760,7 +722,7 @@ done:
     if (ret_value < 0) {
         if (plist_id > 0 && H5I_dec_ref(plist_id) < 0)
             HDONE_ERROR(H5E_PLIST, H5E_CANTCLOSEOBJ, FAIL,
-                        "unable to close partially initialized property list")
+                        "unable to close partially initialized property list");
     } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)

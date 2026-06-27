@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -14,8 +13,6 @@
 /*-------------------------------------------------------------------------
  *
  * Created:	H5Ddeprec.c
- *		April 5 2007
- *		Quincey Koziol
  *
  * Purpose:	Deprecated functions from the H5D interface.  These
  *              functions are here for compatibility purposes and may be
@@ -95,9 +92,6 @@
  *
  *              Failure:    H5I_INVALID_HID
  *
- * Programmer:	Robb Matzke
- *		Wednesday, December  3, 1997
- *
  *-------------------------------------------------------------------------
  */
 hid_t
@@ -150,7 +144,7 @@ H5Dcreate1(hid_t loc_id, const char *name, hid_t type_id, hid_t space_id, hid_t 
 done:
     if (H5I_INVALID_HID == ret_value)
         if (dset && H5VL_dataset_close(vol_obj, H5P_DATASET_XFER_DEFAULT, H5_REQUEST_NULL) < 0)
-            HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, H5I_INVALID_HID, "unable to release dataset")
+            HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, H5I_INVALID_HID, "unable to release dataset");
 
     FUNC_LEAVE_API(ret_value)
 } /* end H5Dcreate1() */
@@ -166,9 +160,6 @@ done:
  *
  * Return:      Success:    A new dataset ID
  *              Failure:    H5I_INVALID_HID
- *
- * Programmer:	Robb Matzke
- *		Thursday, December  4, 1997
  *
  *-------------------------------------------------------------------------
  */
@@ -209,7 +200,7 @@ H5Dopen1(hid_t loc_id, const char *name)
 done:
     if (H5I_INVALID_HID == ret_value)
         if (dset && H5VL_dataset_close(vol_obj, H5P_DATASET_XFER_DEFAULT, H5_REQUEST_NULL) < 0)
-            HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, H5I_INVALID_HID, "unable to release dataset")
+            HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, H5I_INVALID_HID, "unable to release dataset");
 
     FUNC_LEAVE_API(ret_value)
 } /* end H5Dopen1() */
@@ -224,9 +215,6 @@ done:
  * Note:        Deprecated in favor of H5Dset_extent
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:	Robb Matzke
- *		Friday, January 30, 1998
  *
  *-------------------------------------------------------------------------
  */
@@ -298,7 +286,7 @@ H5Dextend(hid_t dset_id, const hsize_t size[])
 done:
     /* Close the dataspace */
     if (sid != H5I_INVALID_HID && H5I_dec_app_ref(sid) < 0)
-        HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "can't close dataspace")
+        HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "can't close dataspace");
 
     FUNC_LEAVE_API(ret_value)
 } /* end H5Dextend() */
@@ -312,9 +300,6 @@ done:
  *      correct allocation/free methods for the VL data in the buffer.
  *
  * Return:  Non-negative on success, negative on failure
- *
- * Programmer:  Quincey Koziol
- *              Thursday, June 10, 1999
  *
  *-------------------------------------------------------------------------
  */

@@ -10,7 +10,6 @@
 ! COPYRIGHT
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 !   Copyright by The HDF Group.                                               *
-!   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
 !   This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -73,7 +72,8 @@ CONTAINS
     INTEGER, SAVE :: count
     INTEGER, SAVE :: count2
 
-!!$
+    liter_cb = 0
+
 !!$    iter_info *info = (iter_info *)op_data;
 !!$    static int count = 0;
 !!$    static int count2 = 0;

@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -12,9 +11,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:  Quincey Koziol
- *              Thursday, November 09, 2000
- *
  * Purpose:	Create a two datasets with compound datatypes, one with no array
  *      fields and one with array fields.
  *		This program is used to create the test file `tarrold.h5' which has a
@@ -46,11 +42,6 @@
  * Return:	Success:
  *
  *		Failure:
- *
- * Programmer:	Robb Matzke
- *              Monday, October 26, 1998
- *
- * Modifications:
  *
  *-------------------------------------------------------------------------
  */

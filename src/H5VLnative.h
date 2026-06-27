@@ -210,9 +210,9 @@ typedef union H5VL_native_dataset_optional_args_t {
 #define H5VL_NATIVE_FILE_SET_MPI_ATOMICITY 27 /* H5Fset_mpi_atomicity                 */
 #endif
 #define H5VL_NATIVE_FILE_POST_OPEN             28 /* Adjust file after open, with wrapping context */
-#define H5VL_NATIVE_FILE_VFD_SWMR_DISABLE_EOT 29
-#define H5VL_NATIVE_FILE_VFD_SWMR_ENABLE_EOT  30
-#define H5VL_NATIVE_FILE_VFD_SWMR_END_TICK    31
+#define H5VL_NATIVE_FILE_VFD_SWMR_DISABLE_EOT 29 /* H5Fvfd_swmr_disable_end_of_tick */
+#define H5VL_NATIVE_FILE_VFD_SWMR_ENABLE_EOT  30 /* H5Fvfd_swmr_enable_end_of_tick  */
+#define H5VL_NATIVE_FILE_VFD_SWMR_END_TICK    31 /* H5Fvfd_swmr_end_tick            */
 /* NOTE: If values over 1023 are added, the H5VL_RESERVED_NATIVE_OPTIONAL macro
  *      must be updated.
  */
@@ -396,16 +396,6 @@ typedef union H5VL_native_file_optional_args_t {
 
     /* H5VL_NATIVE_FILE_POST_OPEN */
     /* No args */
-
-    /* H5VL_NATIVE_FILE_VFD_SWMR_DISABLE_EOT */
-    /* No args */
-
-    /* H5VL_NATIVE_FILE_VFD_SWMR_ENABLE_EOT */
-    /* No args */
-
-    /* H5VL_NATIVE_FILE_VFD_SWMR_END_TICK */
-    /* No args */
-
 } H5VL_native_file_optional_args_t;
 
 /* Values for native VOL connector group optional VOL operations */

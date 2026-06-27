@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -76,9 +75,6 @@
  * Return:	Success:	ID of new array datatype
  *		Failure:	Negative
  *
- * Programmer:	Quincey Koziol
- *              Thursday, Oct 17, 2007
- *
  *-------------------------------------------------------------------------
  */
 hid_t
@@ -114,7 +110,7 @@ H5Tarray_create2(hid_t base_id, unsigned ndims, const hsize_t dim[/* ndims */])
 done:
     if (ret_value < 0)
         if (dt && H5T_close_real(dt) < 0)
-            HDONE_ERROR(H5E_DATATYPE, H5E_CANTRELEASE, H5I_INVALID_HID, "can't release datatype")
+            HDONE_ERROR(H5E_DATATYPE, H5E_CANTRELEASE, H5I_INVALID_HID, "can't release datatype");
 
     FUNC_LEAVE_API(ret_value)
 } /* end H5Tarray_create2() */
@@ -131,9 +127,6 @@ done:
  * Return:	Success:	ID of new array data type
  *		Failure:	Negative
  *
- * Programmer:	Quincey Koziol
- *              Thursday, Oct 26, 2000
- *
  *-------------------------------------------------------------------------
  */
 H5T_t *
@@ -144,9 +137,9 @@ H5T__array_create(H5T_t *base, unsigned ndims, const hsize_t dim[/* ndims */])
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(base);
-    HDassert(ndims <= H5S_MAX_RANK);
-    HDassert(dim);
+    assert(base);
+    assert(ndims <= H5S_MAX_RANK);
+    assert(dim);
 
     /* Build new type */
     if (NULL == (ret_value = H5T__alloc()))
@@ -188,9 +181,6 @@ done:
  * Return:	Success:	Number of dimensions of the array datatype
  *		Failure:	Negative
  *
- * Programmer:	Quincey Koziol
- *              Monday, November 6, 2000
- *
  *-------------------------------------------------------------------------
  */
 int
@@ -224,9 +214,6 @@ done:
  * Return:	Success:	Number of dimensions of the array datatype
  *		Failure:	Negative
  *
- * Programmer:	Raymond Lu
- *              October 10, 2002
- *
  *-------------------------------------------------------------------------
  */
 int
@@ -234,8 +221,8 @@ H5T__get_array_ndims(const H5T_t *dt)
 {
     FUNC_ENTER_PACKAGE_NOERR
 
-    HDassert(dt);
-    HDassert(dt->shared->type == H5T_ARRAY);
+    assert(dt);
+    assert(dt->shared->type == H5T_ARRAY);
 
     /* Retrieve the number of dimensions */
     FUNC_LEAVE_NOAPI((int)dt->shared->u.array.ndims)
@@ -248,9 +235,6 @@ H5T__get_array_ndims(const H5T_t *dt)
  *
  * Return:	Success:	Number of dimensions of the array type
  *		Failure:	Negative
- *
- * Programmer:	Quincey Koziol
- *              Thursday, October 17, 2007
  *
  *-------------------------------------------------------------------------
  */
@@ -285,9 +269,6 @@ done:
  * Return:	Success:	Number of dimensions of the array type
  *		Failure:	Negative
  *
- * Programmer:  Raymond Lu
- *              October 10, 2002
- *
  *-------------------------------------------------------------------------
  */
 int
@@ -297,8 +278,8 @@ H5T__get_array_dims(const H5T_t *dt, hsize_t dims[])
 
     FUNC_ENTER_PACKAGE_NOERR
 
-    HDassert(dt);
-    HDassert(dt->shared->type == H5T_ARRAY);
+    assert(dt);
+    assert(dt->shared->type == H5T_ARRAY);
 
     /* Retrieve the sizes of the dimensions */
     if (dims)
@@ -324,9 +305,6 @@ H5T__get_array_dims(const H5T_t *dt, hsize_t dims[])
  *
  * Return:	Success:	ID of new array datatype
  *		Failure:	Negative
- *
- * Programmer:	Quincey Koziol
- *              Thursday, Oct 26, 2000
  *
  *-------------------------------------------------------------------------
  */
@@ -364,7 +342,7 @@ H5Tarray_create1(hid_t base_id, int ndims, const hsize_t dim[/* ndims */],
 done:
     if (ret_value < 0)
         if (dt && H5T_close_real(dt) < 0)
-            HDONE_ERROR(H5E_DATATYPE, H5E_CANTRELEASE, H5I_INVALID_HID, "can't release datatype")
+            HDONE_ERROR(H5E_DATATYPE, H5E_CANTRELEASE, H5I_INVALID_HID, "can't release datatype");
 
     FUNC_LEAVE_API(ret_value)
 } /* end H5Tarray_create1() */
@@ -376,9 +354,6 @@ done:
  *
  * Return:	Success:	Number of dimensions of the array type
  *		Failure:	Negative
- *
- * Programmer:	Quincey Koziol
- *              Monday, November 6, 2000
  *
  *-------------------------------------------------------------------------
  */

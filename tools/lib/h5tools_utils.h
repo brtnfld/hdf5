@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -12,9 +11,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:  Bill Wendling
- *              Tuesday, 6. March 2001
- *
  * Purpose:     Support functions for the various tools.
  */
 #ifndef H5TOOLS_UTILS_H
@@ -65,12 +61,23 @@ typedef struct find_objs_t {
     table_t *dset_table;
 } find_objs_t;
 
+#ifdef H5_HAVE_ROS3_VFD
+/*extended configuration struct for holding the configuration data to the #H5FD_ROS3 driver */
+typedef struct H5FD_ros3_fapl_ext_t {
+    H5FD_ros3_fapl_t fa;                                      /* ROS3 configuration struct*/
+    char             token[H5FD_ROS3_MAX_SECRET_TOK_LEN + 1]; /* Session/security token*/
+} H5FD_ros3_fapl_ext_t;
+#endif /* H5_HAVE_ROS3_VFD */
+
 H5TOOLS_DLLVAR unsigned h5tools_nCols; /*max number of columns for outputting  */
 
 /* Definitions of useful routines */
+H5TOOLS_DLL struct subset_t *parse_subset_params(const char *dset);
+
 H5TOOLS_DLL void   indentation(unsigned);
 H5TOOLS_DLL void   print_version(const char *progname);
 H5TOOLS_DLL void   parallel_print(const char *format, ...) H5_ATTR_FORMAT(printf, 1, 2);
+H5TOOLS_DLL void   parse_hsize_list(const char *h_list, subset_d *d);
 H5TOOLS_DLL herr_t parse_tuple(const char *start, int sep, char **cpy_out, unsigned *nelems,
                                char ***ptrs_out);
 H5TOOLS_DLL void   error_msg(const char *fmt, ...) H5_ATTR_FORMAT(printf, 1, 2);
@@ -127,8 +134,8 @@ H5TOOLS_DLL void        h5tools_setstatus(int d_status);
 H5TOOLS_DLL int         h5tools_getenv_update_hyperslab_bufsize(void);
 #ifdef H5_HAVE_ROS3_VFD
 H5TOOLS_DLL herr_t h5tools_parse_ros3_fapl_tuple(const char *tuple_str, int delim,
-                                                 H5FD_ros3_fapl_t *fapl_config_out);
-H5TOOLS_DLL int    h5tools_populate_ros3_fapl(H5FD_ros3_fapl_t *fa, const char **values);
+                                                 H5FD_ros3_fapl_ext_t *fapl_config_out);
+H5TOOLS_DLL int    h5tools_populate_ros3_fapl(H5FD_ros3_fapl_ext_t *fa, const char **values);
 #endif /* H5_HAVE_ROS3_VFD */
 #ifdef H5_HAVE_LIBHDFS
 H5TOOLS_DLL herr_t h5tools_parse_hdfs_fapl_tuple(const char *tuple_str, int delim,

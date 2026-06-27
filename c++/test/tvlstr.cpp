@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -66,7 +65,7 @@ static void *test_vlstr_alloc_custom(size_t size, void *info)
 
     extra=MAX(sizeof(void *),sizeof(size_t));
 
-    if((ret_value=HDmalloc(extra+size))!=NULL) {
+    if((ret_value=malloc(extra+size))!=NULL) {
         *(size_t *)ret_value=size;
         *mem_used+=size;
     } // end if
@@ -109,7 +108,7 @@ static void test_vlstr_free_custom(void *_mem, void *info)
     if(_mem!=NULL) {
         mem=((unsigned char *)_mem)-extra;
         *mem_used-=*(size_t *)mem;
-        HDfree(mem);
+        free(mem);
     } // end if
 }
 #endif
@@ -120,10 +119,6 @@ static void test_vlstr_free_custom(void *_mem, void *info)
  * Purpose      Test writing/reading VL strings on datasets.
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler (use C version)
- *              January, 2007
- *
  *-------------------------------------------------------------------------
  */
 // String for testing datasets
@@ -167,7 +162,7 @@ test_vlstring_dataset()
             TestErrPrintf("Line %d: Attribute data different: DSET1_DATA=%s,string_ds_check=%s\n", __LINE__,
                           DSET1_DATA.c_str(), string_ds_check);
 
-        HDfree(string_ds_check); // note: no need for std::string test
+        free(string_ds_check); // note: no need for std::string test
         string_ds_check = NULL;
 
         // Read and verify the dataset string as an std::string.
@@ -183,8 +178,8 @@ test_vlstring_dataset()
         // Test scalar type dataset with 1 value.
         dset1 = root.createDataSet("test_scalar_small", vlst, ds_space);
 
-        dynstring_ds_write = static_cast<char *>(HDcalloc(2, sizeof(char)));
-        HDmemset(dynstring_ds_write, 'A', 1);
+        dynstring_ds_write = static_cast<char *>(calloc(2, sizeof(char)));
+        memset(dynstring_ds_write, 'A', 1);
 
         // Write data to the dataset, then read it back.
         dset1.write(&dynstring_ds_write, vlst);
@@ -194,7 +189,7 @@ test_vlstring_dataset()
         if (HDstrcmp(string_ds_check, dynstring_ds_write) != 0)
             TestErrPrintf("VL string datasets don't match!, dynstring_ds_write=%s, string_ds_check=%s\n",
                           dynstring_ds_write, string_ds_check);
-        HDfree(string_ds_check);
+        free(string_ds_check);
         string_ds_check = NULL;
         dset1.close();
 
@@ -214,9 +209,9 @@ test_vlstring_dataset()
     }
 
     if (dynstring_ds_write)
-        HDfree(dynstring_ds_write);
+        free(dynstring_ds_write);
     if (string_ds_check)
-        HDfree(string_ds_check);
+        free(string_ds_check);
 } // test_vlstring_dataset()
 
 /*-------------------------------------------------------------------------
@@ -225,10 +220,6 @@ test_vlstring_dataset()
  * Purpose      Test writing/reading VL string array to/from datasets.
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler
- *              July, 2009
- *
  *-------------------------------------------------------------------------
  */
 const H5std_string DSSTRARR_NAME("StringArray_dset");
@@ -269,7 +260,7 @@ test_vlstring_array_dataset()
                 TestErrPrintf("Line %d: Dataset data different: written=%s,read=%s\n", __LINE__,
                               string_ds_array[ii], string_ds_check[ii]);
 
-            HDfree(string_ds_check[ii]);
+            free(string_ds_check[ii]);
         }
 
         // Close objects that are no longer needed.
@@ -285,8 +276,8 @@ test_vlstring_array_dataset()
 
         // Create and write another dataset.
         DataSet dataset2(file1->createDataSet("Dataset2", vlst, scalar_space));
-        char   *wdata2 = static_cast<char *>(HDcalloc(65534, sizeof(char)));
-        HDmemset(wdata2, 'A', 65533);
+        char   *wdata2 = static_cast<char *>(calloc(65534, sizeof(char)));
+        memset(wdata2, 'A', 65533);
         dataset2.write(&wdata2, vlst);
 
         char *rdata2;
@@ -297,8 +288,8 @@ test_vlstring_array_dataset()
         // Release resources from second dataset operation.
         scalar_space.close();
         dataset2.close();
-        HDfree(wdata2);
-        HDfree(rdata2);
+        free(wdata2);
+        free(rdata2);
 
         // Close objects and file.
         dataset2.close();
@@ -323,10 +314,6 @@ test_vlstring_array_dataset()
  *              zero-sized.
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler (use C version)
- *              January, 2007
- *
  *-------------------------------------------------------------------------
  */
 static void
@@ -443,10 +430,6 @@ test_vlstrings_special()
  * Purpose      Test if VL string is treated as string.
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler (use C version)
- *              January, 2007
- *
  *-------------------------------------------------------------------------
  */
 const H5std_string VLSTR_TYPE("vl_string_type");
@@ -542,10 +525,6 @@ test_vlstring_type()
  * Purpose      Test storing VL strings in compact datasets.
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler (use C version)
- *              January, 2007
- *
  *-------------------------------------------------------------------------
  */
 static void
@@ -621,10 +600,6 @@ test_compact_vlstring()
  * Purpose      Test writing/reading VL strings on attributes.
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler (use C version)
- *              January, 2007
- *
  *-------------------------------------------------------------------------
  */
 static char       *string_att_write = NULL;
@@ -663,7 +638,7 @@ test_vlstring_attribute()
             TestErrPrintf("Line %d: Attribute data different: ATTRSTR_DATA=%s,string_att_check=%s\n",
                           __LINE__, ATTRSTR_DATA.c_str(), string_att_check);
 
-        HDfree(string_att_check); // note: no need for std::string test
+        free(string_att_check); // note: no need for std::string test
 
         // Read and verify the attribute string as an std::string.
         H5std_string read_str;
@@ -678,8 +653,8 @@ test_vlstring_attribute()
         // Test creating a "large" sized string attribute
         gr_attr = root.createAttribute("test_scalar_large", vlst, att_space);
 
-        string_att_write = static_cast<char *>(HDcalloc(8192, sizeof(char)));
-        HDmemset(string_att_write, 'A', 8191);
+        string_att_write = static_cast<char *>(calloc(8192, sizeof(char)));
+        memset(string_att_write, 'A', 8191);
 
         // Write data to the attribute, then read it back.
         gr_attr.write(vlst, &string_att_write);
@@ -691,8 +666,8 @@ test_vlstring_attribute()
                           string_att_write, string_att_check);
 
         // Release resources.
-        HDfree(string_att_check);
-        HDfree(string_att_write);
+        free(string_att_check);
+        free(string_att_write);
         gr_attr.close();
         file1.close();
 
@@ -712,10 +687,6 @@ test_vlstring_attribute()
  * Purpose      Test reading VL strings from attributes.
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler (use C version)
- *              January, 2007
- *
  *-------------------------------------------------------------------------
  */
 static void test_read_vl_string_attribute()
@@ -740,7 +711,7 @@ static void test_read_vl_string_attribute()
         att.read(vlst, &string_att_check);
         if(HDstrcmp(string_att_check,ATTRSTR_DATA.c_str())!=0)
             TestErrPrintf("VL string attributes don't match!, string_att=%s, string_att_check=%s\n",ATTRSTR_DATA.c_str(),string_att_check);
-        HDfree(string_att_check);
+        free(string_att_check);
         att.close();
 
         // Test reading "large" sized string attribute
@@ -748,8 +719,8 @@ static void test_read_vl_string_attribute()
         att.read(vlst, &string_att_check);
         if(HDstrcmp(string_att_check,string_att_write)!=0)
             TestErrPrintf("VL string attributes don't match!, string_att_write=%s, string_att_check=%s\n",string_att_write,string_att_check);
-        HDfree(string_att_check);
-        HDfree(string_att_write);   // Free string allocated in test_write_vl_string_attribute
+        free(string_att_check);
+        free(string_att_write);   // Free string allocated in test_write_vl_string_attribute
 
         // Close objects and file.
         att.close();
@@ -774,10 +745,6 @@ static void test_read_vl_string_attribute()
  * Purpose      Test writing/reading VL string array to/from attributes.
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler
- *              July, 2009
- *
  *-------------------------------------------------------------------------
  */
 const H5std_string ATTRSTRARR_NAME("StringArray_attr");
@@ -822,7 +789,7 @@ test_vlstring_array_attribute()
                 TestErrPrintf("Line %d: Attribute data different: written=%s,read=%s\n", __LINE__,
                               string_att_check[ii], string_att_check[ii]);
 
-            HDfree(string_att_check[ii]); // note: no need for std::string test
+            free(string_att_check[ii]); // note: no need for std::string test
         }
 
         // Close group's attribute.
@@ -870,7 +837,7 @@ read_scalar_dset(H5File &file, DataType &type, DataSpace &space, char *name, cha
         if (HDstrcmp(data, data_read) != 0)
             TestErrPrintf("Expected %s for dataset %s but read %s\n", data, name, data_read);
 
-        HDfree(data_read);
+        free(data_read);
     } // end try
     catch (FileIException &ferr) {
         throw;
@@ -887,10 +854,6 @@ read_scalar_dset(H5File &file, DataType &type, DataSpace &space, char *name, cha
  *              have been linked/unlinked.
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler (use C version)
- *              January, 2007
- *
  *-------------------------------------------------------------------------
  */
 const H5std_string FILENAME2("tvlstr2.h5");
@@ -968,10 +931,6 @@ test_vl_rewrite()
  * Purpose      VL string testing main routine.
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler
- *              January, 2007
- *
  *-------------------------------------------------------------------------
  */
 extern "C" void

@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -1210,6 +1209,11 @@ Java_hdf_hdf5lib_HDF5Constants_H5ES_1STATUS_1FAIL(JNIEnv *env, jclass cls)
 {
     return H5ES_STATUS_FAIL;
 }
+JNIEXPORT jlong JNICALL
+Java_hdf_hdf5lib_HDF5Constants_H5ES_1STATUS_1CANCELED(JNIEnv *env, jclass cls)
+{
+    return H5ES_STATUS_CANCELED;
+}
 
 /* Java does not have unsigned native types */
 H5_GCC_CLANG_DIAG_OFF("sign-conversion")
@@ -1304,6 +1308,11 @@ JNIEXPORT jint JNICALL
 Java_hdf_hdf5lib_HDF5Constants_H5F_1LIBVER_1V114(JNIEnv *env, jclass cls)
 {
     return H5F_LIBVER_V114;
+}
+JNIEXPORT jint JNICALL
+Java_hdf_hdf5lib_HDF5Constants_H5F_1LIBVER_1V116(JNIEnv *env, jclass cls)
+{
+    return H5F_LIBVER_V116;
 }
 JNIEXPORT jint JNICALL
 Java_hdf_hdf5lib_HDF5Constants_H5F_1LIBVER_1NBOUNDS(JNIEnv *env, jclass cls)
@@ -1649,16 +1658,24 @@ Java_hdf_hdf5lib_HDF5Constants_H5FD_1MEM_1DEFAULT_1GHEAP_1SIZE(JNIEnv *env, jcla
 {
     return (hsize_t)(3 * (HADDR_MAX / (H5FD_MEM_NTYPES - 1)));
 }
+H5_GCC_CLANG_DIAG_OFF("sign-conversion")
 JNIEXPORT jlong JNICALL
 Java_hdf_hdf5lib_HDF5Constants_H5FD_1MEM_1DEFAULT_1LHEAP_1SIZE(JNIEnv *env, jclass cls)
 {
+    /* XXX: BADNESS! - This value cannot fit into a jlong!
+     *
+     * For now, we're going to ignore these values since the multi VFD is
+     * scheduled for removal in HDF5 2.0.
+     */
     return (hsize_t)(4 * (HADDR_MAX / (H5FD_MEM_NTYPES - 1)));
 }
 JNIEXPORT jlong JNICALL
 Java_hdf_hdf5lib_HDF5Constants_H5FD_1MEM_1DEFAULT_1OHDR_1SIZE(JNIEnv *env, jclass cls)
 {
+    /* XXX: BADNESS! - This value cannot fit into a jlong! */
     return (hsize_t)(5 * (HADDR_MAX / (H5FD_MEM_NTYPES - 1)));
 }
+H5_GCC_CLANG_DIAG_ON("sign-conversion")
 
 /* Symbols defined for compatibility with previous versions of the HDF5 API.
  *
@@ -2018,7 +2035,7 @@ Java_hdf_hdf5lib_HDF5Constants_H5O_1TOKEN_1UNDEF(JNIEnv *env, jclass cls)
     H5O_token_t undef_token = H5O_TOKEN_UNDEF;
 
     /* TODO: Can be optimized by keeping a global reference to the undefined token class */
-    return create_H5O_token_t(env, &undef_token, FALSE);
+    return create_H5O_token_t(env, &undef_token, false);
 }
 
 JNIEXPORT jlong JNICALL

@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -12,9 +11,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:     Peter X. Cao
- *                 May 01, 2005
- *
  * Purpose:    Test H5Ocopy().
  */
 
@@ -61,8 +57,8 @@
 #define H5O_TESTING
 #include "H5Opkg.h" /* Object header             */
 
-const char *FILENAME[] = {"objcopy_src",  "objcopy_dst",  "objcopy_ext", "objcopy_src2",
-                          "verbound_src", "verbound_dst", NULL};
+static const char *FILENAME[] = {"objcopy_src",  "objcopy_dst",  "objcopy_ext", "objcopy_src2",
+                                 "verbound_src", "verbound_dst", NULL};
 
 /* Configuration, really a series of bit flags.  Maximum value is all three
  * bit flags enabled.
@@ -180,9 +176,6 @@ static int compare_attribute_compound_vlstr(hid_t loc, hid_t loc2);
  *
  * Return:      void
  *
- * Programmer:  Quincey Koziol
- *              Saturday, November  5, 2005
- *
  *-------------------------------------------------------------------------
  */
 static void
@@ -198,7 +191,7 @@ token_insert(H5O_info2_t *oi)
     /* Extend the table */
     if (idtab_g.nobjs >= idtab_g.nalloc) {
         idtab_g.nalloc = MAX(256, 2 * idtab_g.nalloc);
-        idtab_g.obj    = (H5O_token_t *)HDrealloc(idtab_g.obj, idtab_g.nalloc * sizeof(idtab_g.obj[0]));
+        idtab_g.obj    = (H5O_token_t *)realloc(idtab_g.obj, idtab_g.nalloc * sizeof(idtab_g.obj[0]));
     } /* end if */
 
     /* Insert the entry */
@@ -213,9 +206,6 @@ token_insert(H5O_info2_t *oi)
  *
  * Return:      Success:    TRUE/FALSE
  *              Failure:    (can't fail)
- *
- * Programmer:  Quincey Koziol
- *              Saturday, November  5, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -245,16 +235,13 @@ token_lookup(hid_t loc_id, H5O_info2_t *oi)
  *
  * Return:      void
  *
- * Programmer:  Quincey Koziol
- *              Saturday, November  5, 2005
- *
  *-------------------------------------------------------------------------
  */
 static void
 token_reset(void)
 {
     if (idtab_g.obj)
-        HDfree(idtab_g.obj);
+        free(idtab_g.obj);
     idtab_g.obj    = NULL;
     idtab_g.nalloc = idtab_g.nobjs = 0;
 } /* end token_reset() */
@@ -265,9 +252,6 @@ token_reset(void)
  * Purpose:     Create an attribute with object references
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Peter Cao
- *              Friday, August 4, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -331,7 +315,7 @@ error:
         H5Dclose(did2);
         H5Aclose(aid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return (-1);
 }
@@ -342,9 +326,6 @@ error:
  * Purpose:     Create an attribute with object references
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Peter Cao
- *              Monday, March 5, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -427,7 +408,7 @@ error:
         H5Dclose(dsetv_id);
         H5Aclose(aid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return (-1);
 }
@@ -438,9 +419,6 @@ error:
  * Purpose:     Create a dataset with region references
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Peter Cao
- *              Friday, August 4, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -552,7 +530,7 @@ error:
         H5Dclose(dsetv_id);
         H5Pclose(pid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return (-1);
 }
@@ -563,9 +541,6 @@ error:
  * Purpose:     Attach an vlen attribute to the object to be copied
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Peter Cao
- *              Saturday, December 17, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -586,7 +561,7 @@ test_copy_attach_attribute_vl(hid_t loc_id)
 
     for (i = 0; i < 4; i++) {
         buf[i].len = i * 3 + 1;
-        buf[i].p   = (int *)HDmalloc(buf[i].len * sizeof(int));
+        buf[i].p   = (int *)malloc(buf[i].len * sizeof(int));
         for (j = 0; j < buf[i].len; j++)
             ((int *)buf[i].p)[j] = (int)(j + 1);
     } /* end for */
@@ -621,9 +596,6 @@ done:
  * Purpose:     Attach NUM_ATTRIBUTES attributes to the object to be copied
  *
  * Return:    Non-negative on success/Negative on failure
- *
- * Programmer:  Peter Cao
- *              Friday, September 30, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -691,9 +663,6 @@ done:
  * Purpose:     Attach NUM_ATTRIBUTES attributes to a pair of objects to be copied
  *
  * Return:    Non-negative on success/Negative on failure
- *
- * Programmer:  Quincey Koziol
- *              Tuesday, November 1, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -770,9 +739,6 @@ done:
  * Purpose:     Compare two attributes to check that they are equal
  *
  * Return:      TRUE if attributes are equal/FALSE if they are different
- *
- * Programmer:  Peter Cao
- *              Saturday, December 17, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -852,9 +818,9 @@ compare_attribute(hid_t aid, hid_t aid2, hid_t pid, const void *wbuf, hid_t obj_
     /* Check the raw data is equal */
 
     /* Allocate & initialize space for the raw data buffers */
-    if ((rbuf = HDcalloc(elmt_size, (size_t)nelmts)) == NULL)
+    if ((rbuf = calloc(elmt_size, (size_t)nelmts)) == NULL)
         TEST_ERROR;
-    if ((rbuf2 = HDcalloc(elmt_size, (size_t)nelmts)) == NULL)
+    if ((rbuf2 = calloc(elmt_size, (size_t)nelmts)) == NULL)
         TEST_ERROR;
 
     /* Read data from the source attribute */
@@ -885,9 +851,9 @@ compare_attribute(hid_t aid, hid_t aid2, hid_t pid, const void *wbuf, hid_t obj_
             TEST_ERROR;
 
     /* Release raw data buffers */
-    HDfree(rbuf);
+    free(rbuf);
     rbuf = NULL;
-    HDfree(rbuf2);
+    free(rbuf2);
     rbuf2 = NULL;
 
     /* close the source dataspace */
@@ -910,9 +876,9 @@ compare_attribute(hid_t aid, hid_t aid2, hid_t pid, const void *wbuf, hid_t obj_
 
 error:
     if (rbuf)
-        HDfree(rbuf);
+        free(rbuf);
     if (rbuf2)
-        HDfree(rbuf2);
+        free(rbuf2);
     H5E_BEGIN_TRY
     {
         H5Sclose(sid2);
@@ -920,7 +886,7 @@ error:
         H5Tclose(tid2);
         H5Tclose(tid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return FALSE;
 } /* end compare_attribute() */
 
@@ -930,9 +896,6 @@ error:
  * Purpose:     Compare "standard" attributes on two objects to check that they are equal
  *
  * Return:    TRUE if objects have same attributes/FALSE if they are different
- *
- * Programmer:  Quincey Koziol
- *              Monday, October 31, 2005
  *
  * Note:    This isn't very general, the attributes are assumed to be
  *              those written in test_copy_attach_attributes().
@@ -1007,7 +970,7 @@ error:
         H5Aclose(aid2);
         H5Aclose(aid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return FALSE;
 } /* end compare_std_attributes() */
 
@@ -1017,9 +980,6 @@ error:
  * Purpose:     Compare two buffers of data to check that they are equal
  *
  * Return:    TRUE if buffer are equal/FALSE if they are different
- *
- * Programmer:  Quincey Koziol
- *              Monday, November 21, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -1099,11 +1059,11 @@ compare_data(hid_t parent1, hid_t parent2, hid_t pid, hid_t tid, size_t nelmts, 
             else {
                 /* vlens cannot currently be nested below the top layer of a
                  * compound */
-                HDassert(H5Tdetect_class(memb_id, H5T_VLEN) == FALSE);
+                assert(H5Tdetect_class(memb_id, H5T_VLEN) == FALSE);
 
                 /* Iterate over all elements, calling memcmp() for each */
                 for (elmt = 0; elmt < nelmts; elmt++) {
-                    if (HDmemcmp(memb1, memb2, memb_size) != 0)
+                    if (memcmp(memb1, memb2, memb_size) != 0)
                         TEST_ERROR;
 
                     /* Update member pointers */
@@ -1325,7 +1285,7 @@ compare_data(hid_t parent1, hid_t parent2, hid_t pid, hid_t tid, size_t nelmts, 
         else
             TEST_ERROR;
     } /* end else */
-    else if (HDmemcmp(buf1, buf2, (elmt_size * nelmts)) != 0)
+    else if (memcmp(buf1, buf2, (elmt_size * nelmts)) != 0)
         TEST_ERROR;
 
     /* Data should be the same. :-) */
@@ -1341,9 +1301,6 @@ error:
  * Purpose:     Compare two datasets to check that they are equal
  *
  * Return:    TRUE if datasets are equal/FALSE if they are different
- *
- * Programmer:  Quincey Koziol
- *              Tuesday, October 25, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -1461,9 +1418,9 @@ compare_datasets(hid_t did, hid_t did2, hid_t pid, const void *wbuf)
     /* Check the raw data is equal */
 
     /* Allocate & initialize space for the raw data buffers */
-    if ((rbuf = HDcalloc(elmt_size, (size_t)nelmts)) == NULL)
+    if ((rbuf = calloc(elmt_size, (size_t)nelmts)) == NULL)
         TEST_ERROR;
-    if ((rbuf2 = HDcalloc(elmt_size, (size_t)nelmts)) == NULL)
+    if ((rbuf2 = calloc(elmt_size, (size_t)nelmts)) == NULL)
         TEST_ERROR;
 
     /* Read data from datasets */
@@ -1492,9 +1449,9 @@ compare_datasets(hid_t did, hid_t did2, hid_t pid, const void *wbuf)
             TEST_ERROR;
 
     /* Release raw data buffers */
-    HDfree(rbuf);
+    free(rbuf);
     rbuf = NULL;
-    HDfree(rbuf2);
+    free(rbuf2);
     rbuf2 = NULL;
 
     /* close the source dataspace */
@@ -1524,9 +1481,9 @@ error:
     H5E_BEGIN_TRY
     {
         if (rbuf)
-            HDfree(rbuf);
+            free(rbuf);
         if (rbuf2)
-            HDfree(rbuf2);
+            free(rbuf2);
         H5Pclose(dcpl2);
         H5Pclose(dcpl);
         H5Sclose(sid2);
@@ -1534,7 +1491,7 @@ error:
         H5Tclose(tid2);
         H5Tclose(tid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return FALSE;
 } /* end compare_datasets() */
 
@@ -1544,9 +1501,6 @@ error:
  * Purpose:     Compare two groups to check that they are "equal"
  *
  * Return:    TRUE if group are equal/FALSE if they are different
- *
- * Programmer:  Quincey Koziol
- *              Monday, October 31, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -1676,7 +1630,7 @@ compare_groups(hid_t gid, hid_t gid2, hid_t pid, int depth, unsigned copy_flags)
                         break;
 
                     case H5O_TYPE_MAP:
-                        HDassert(0 && "maps not supported in native VOL connector");
+                        assert(0 && "maps not supported in native VOL connector");
 
                         /* clang complains about implicit fallthrough here and
                          * our usual attributes and fall-through comments don't
@@ -1686,7 +1640,7 @@ compare_groups(hid_t gid, hid_t gid2, hid_t pid, int depth, unsigned copy_flags)
                     case H5O_TYPE_UNKNOWN:
                     case H5O_TYPE_NTYPES:
                     default:
-                        HDassert(0 && "Unknown type of object");
+                        assert(0 && "Unknown type of object");
                         break;
                         H5_CLANG_DIAG_ON("implicit-fallthrough")
                 } /* end switch */
@@ -1709,18 +1663,18 @@ compare_groups(hid_t gid, hid_t gid2, hid_t pid, int depth, unsigned copy_flags)
                     char linkval2[NAME_BUF_SIZE]; /* Link value */
 
                     /* Get link values */
-                    HDassert(linfo.u.val_size <= NAME_BUF_SIZE);
+                    assert(linfo.u.val_size <= NAME_BUF_SIZE);
                     if (H5Lget_val(gid, objname, linkval, (size_t)NAME_BUF_SIZE, H5P_DEFAULT) < 0)
                         TEST_ERROR;
                     if (H5Lget_val(gid2, objname2, linkval2, (size_t)NAME_BUF_SIZE, H5P_DEFAULT) < 0)
                         TEST_ERROR;
 
                     /* Compare link data */
-                    if (HDmemcmp(linkval, linkval2, linfo.u.val_size) != 0)
+                    if (memcmp(linkval, linkval2, linfo.u.val_size) != 0)
                         TEST_ERROR;
                 } /* end else-if */
                 else {
-                    HDassert(0 && "Unknown type of link");
+                    assert(0 && "Unknown type of link");
                 } /* end else */
             }     /* end else */
         }         /* end for */
@@ -1737,7 +1691,7 @@ error:
     H5E_BEGIN_TRY
     {
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return FALSE;
 } /* end compare_groups() */
 
@@ -1750,8 +1704,6 @@ error:
  * Return:    TRUE if the index type retrieved for the dataset DID is
  *            as expected
  *            FALSE if not
- *
- * Programmer:  Vailin Choi; August 2009
  *
  *-------------------------------------------------------------------------
  */
@@ -1789,9 +1741,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              Friday, September 30, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -1888,7 +1837,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_named_datatype */
 
@@ -1899,9 +1848,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Quincey Koziol
- *              Tuesday, November 22, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -1998,7 +1944,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_named_datatype_vl */
 
@@ -2009,9 +1955,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Quincey Koziol
- *              Tuesday, November 22, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -2116,7 +2059,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_named_datatype_vl_vl */
 
@@ -2129,9 +2072,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Neil
- *              Friday, March 11, 2011
  *
  *-------------------------------------------------------------------------
  */
@@ -2299,7 +2239,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_named_datatype_attr_self */
 
@@ -2310,9 +2250,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              Friday, September 30, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -2436,7 +2373,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_simple */
 
@@ -2551,7 +2488,7 @@ test_copy_dataset_versionbounds(hid_t fcpl_src, hid_t fapl_src)
             {
                 ret = H5Pset_libver_bounds(fapl_dst, low, high);
             }
-            H5E_END_TRY;
+            H5E_END_TRY
 
             if (ret < 0) /* Invalid low/high combinations */
                 continue;
@@ -2572,7 +2509,7 @@ test_copy_dataset_versionbounds(hid_t fcpl_src, hid_t fapl_src)
                 ret = H5Ocopy(fid_src, NAME_DATASET_SIMPLE, fid_dst, NAME_DATASET_SIMPLE, H5P_DEFAULT,
                               H5P_DEFAULT);
             }
-            H5E_END_TRY;
+            H5E_END_TRY
 
             /* If copy failed, check if the failure is expected */
             if (ret < 0) {
@@ -2640,7 +2577,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return 1;
 } /* end test_copy_dataset_versionbounds */
@@ -2652,9 +2589,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Neil Fortner
- *              Thursday, January 15, 2009
  *
  *-------------------------------------------------------------------------
  */
@@ -2762,7 +2696,7 @@ error:
         H5Sclose(sid);
         H5Fclose(fid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_simple_samefile */
 
@@ -2777,9 +2711,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Quincey Koziol
- *              Monday, October 31, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -2903,7 +2834,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_simple_empty */
 
@@ -2914,9 +2845,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              Friday, September 30, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -2939,7 +2867,7 @@ test_copy_dataset_compound(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid_t
 
     TESTING("H5Ocopy(): compound dataset");
 
-    HDmemset(buf, 0, sizeof(buf));
+    memset(buf, 0, sizeof(buf));
     for (i = 0; i < DIM_SIZE_1; i++) {
         buf[i].a = i;
         buf[i].d = 1.0 / (double)(i + 1);
@@ -3058,7 +2986,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_compound */
 
@@ -3069,9 +2997,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              Friday, September 30, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -3584,7 +3509,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_chunked */
 
@@ -3596,9 +3521,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Quincey Koziol
- *              Monday, October 31, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -3998,7 +3920,7 @@ test_copy_dataset_chunked_empty(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, 
     if ((did = H5Dopen2(fid_src, NAME_DATASET_CHUNKED3, H5P_DEFAULT)) < 0)
         TEST_ERROR;
 
-    /* open the copied dataset NAME_DATASET_CHUNKED3 at destinaion */
+    /* open the copied dataset NAME_DATASET_CHUNKED3 at destination */
     if ((did2 = H5Dopen2(fid_dst, NAME_DATASET_CHUNKED3, H5P_DEFAULT)) < 0)
         TEST_ERROR;
 
@@ -4087,7 +4009,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_chunked_empty */
 
@@ -4099,9 +4021,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Quincey Koziol
- *              Monday, October 31, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -4468,7 +4387,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_chunked_sparse */
 
@@ -4479,9 +4398,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Quincey Koziol
- *              Monday, October 31, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -4885,7 +4801,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 #endif /* H5_HAVE_FILTER_DEFLATE */
 } /* end test_copy_dataset_compressed */
@@ -4900,11 +4816,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Neil Fortner
- *              Tuesday, May 11, 2010
- *              Mostly copied from test_copy_dataset_compressed, by
- *              Quincey Koziol
  *
  *-------------------------------------------------------------------------
  */
@@ -5072,7 +4983,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 #endif /* H5_HAVE_FILTER_DEFLATE */
 } /* end test_copy_dataset_no_edge_filt */
@@ -5087,9 +4998,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Quincey Koziol
- *              Monday, October 31, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -5234,7 +5142,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_compact */
 
@@ -5245,9 +5153,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              Friday, September 30, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -5272,7 +5177,7 @@ test_copy_dataset_external(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid_t
         buf[i] = i;
 
     /* create an empty external file */
-    HDfclose(HDfopen(FILE_EXT, "w"));
+    fclose(fopen(FILE_EXT, "w"));
 
     /* Initialize the filenames */
     h5_fixname(FILENAME[0], src_fapl, src_filename, sizeof src_filename);
@@ -5382,7 +5287,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_external */
 
@@ -5394,9 +5299,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Quincey Koziol
- *              Monday, October 31, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -5527,7 +5429,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_named_dtype */
 
@@ -5539,9 +5441,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Quincey Koziol
- *              Tuesday, October 31, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -5694,7 +5593,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_named_dtype_hier */
 
@@ -5707,9 +5606,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Quincey Koziol
- *              Tuesday, October 31, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -5862,7 +5758,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_named_dtype_hier_outside */
 
@@ -5878,9 +5774,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Quincey Koziol
- *              Tuesday, October 31, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -6041,7 +5934,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_multi_ohdr_chunks */
 
@@ -6053,9 +5946,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Quincey Koziol
- *              Tuesday, October 31, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -6212,7 +6102,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_attr_named_dtype */
 
@@ -6224,9 +6114,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              Friday, September 30, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -6249,7 +6136,7 @@ test_copy_dataset_contig_vl(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid_
     /* set initial data values */
     for (i = 0; i < DIM_SIZE_1; i++) {
         buf[i].len = i + 1;
-        buf[i].p   = (int *)HDmalloc(buf[i].len * sizeof(int));
+        buf[i].p   = (int *)malloc(buf[i].len * sizeof(int));
         for (j = 0; j < buf[i].len; j++)
             ((int *)buf[i].p)[j] = (int)(i * 10 + j);
     } /* end for */
@@ -6372,7 +6259,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_contig_vl */
 
@@ -6384,9 +6271,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              Saturday, December 10, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -6411,7 +6295,7 @@ test_copy_dataset_chunked_vl(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid
     /* set initial data values */
     for (i = 0; i < DIM_SIZE_1; i++) {
         buf[i].len = i + 1;
-        buf[i].p   = (int *)HDmalloc(buf[i].len * sizeof(int));
+        buf[i].p   = (int *)malloc(buf[i].len * sizeof(int));
         for (j = 0; j < buf[i].len; j++)
             ((int *)buf[i].p)[j] = (int)(i * 10 + j);
     } /* end for */
@@ -6589,7 +6473,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_chunked_vl */
 
@@ -6601,9 +6485,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              Sunday, December 11, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -6627,7 +6508,7 @@ test_copy_dataset_compact_vl(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid
     /* set initial data values */
     for (i = 0; i < DIM_SIZE_1; i++) {
         buf[i].len = i + 1;
-        buf[i].p   = (int *)HDmalloc(buf[i].len * sizeof(int));
+        buf[i].p   = (int *)malloc(buf[i].len * sizeof(int));
         for (j = 0; j < buf[i].len; j++)
             ((int *)buf[i].p)[j] = (int)(i * 10 + j);
     } /* end for */
@@ -6760,7 +6641,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_compact_vl */
 
@@ -6772,9 +6653,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              Saturday, December , 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -6901,7 +6779,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_simple_empty */
 
@@ -6911,8 +6789,6 @@ error:
  * Purpose:     Attach a compound datatype with a variable length string to the object
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Vailin Choi; Aug 2016
  *
  *-------------------------------------------------------------------------
  */
@@ -6962,7 +6838,7 @@ attach_attribute_compound_vlstr(hid_t loc_id)
     /* Write to the attribute */
     len   = HDstrlen(ATTR_CMPD_STRING) + 1;
     buf.i = 9;
-    if (NULL == (buf.v = (char *)HDcalloc(len, sizeof(char))))
+    if (NULL == (buf.v = (char *)calloc(len, sizeof(char))))
         goto done;
     HDstrncpy(buf.v, ATTR_CMPD_STRING, len);
     if (H5Awrite(aid, cmpd_tid, &buf) < 0)
@@ -6982,7 +6858,7 @@ done:
     if (aid > 0)
         H5Aclose(aid);
 
-    HDfree(buf.v);
+    free(buf.v);
 
     return ret_value;
 } /* attach_attribute_compound_vlstr */
@@ -6994,8 +6870,6 @@ done:
  *        The attribute is a  compound datatype with a variable length string.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Vailin Choi; Aug 2016
  *
  *-------------------------------------------------------------------------
  */
@@ -7044,7 +6918,7 @@ compare_attribute_compound_vlstr(hid_t loc, hid_t loc2)
         FAIL_STACK_ERROR;
     if (HDstrlen(rbuf.v) != HDstrlen(rbuf2.v))
         FAIL_STACK_ERROR;
-    if (HDmemcmp(rbuf.v, rbuf2.v, HDstrlen(rbuf.v)) != 0)
+    if (memcmp(rbuf.v, rbuf2.v, HDstrlen(rbuf.v)) != 0)
         FAIL_STACK_ERROR;
 
     /* Reclaim vlen buffer */
@@ -7085,7 +6959,7 @@ error:
         H5Tclose(tid2);
         H5Pclose(dxpl_id);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return FALSE;
 
 } /* compare_attribute_compound_vlstr() */
@@ -7101,8 +6975,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:
  *
  *-------------------------------------------------------------------------
  */
@@ -7252,7 +7124,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_attribute_compound_vlstr() */
 
@@ -7264,9 +7136,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              Tuesday, December 27, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -7302,7 +7171,7 @@ test_copy_dataset_compressed_vl(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, 
     for (i = 0; i < DIM_SIZE_1; i++) {
         for (j = 0; j < DIM_SIZE_2; j++) {
             buf[i][j].len = (size_t)(j + 1);
-            buf[i][j].p   = (int *)HDmalloc(buf[i][j].len * sizeof(int));
+            buf[i][j].p   = (int *)malloc(buf[i][j].len * sizeof(int));
             for (k = 0; k < (int)buf[i][j].len; k++)
                 ((int *)buf[i][j].p)[k] = i * 10000 + j * 100 + k;
         }
@@ -7442,7 +7311,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 #endif /* H5_HAVE_FILTER_DEFLATE */
 } /* end test_copy_dataset_compressed_vl */
@@ -7454,9 +7323,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              Friday, September 30, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -7553,7 +7419,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_group_empty */
 
@@ -7564,9 +7430,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              August 8, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -7712,7 +7575,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_root_group */
 
@@ -7723,9 +7586,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              Friday, September 30, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -7871,7 +7731,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_group */
 
@@ -7882,9 +7742,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Quincey Koziol
- *              Tuesday, November 1, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -8040,7 +7897,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_group_deep */
 
@@ -8051,9 +7908,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Quincey Koziol
- *              Tuesday, November 1, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -8172,7 +8026,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_group_loop */
 
@@ -8183,9 +8037,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Quincey Koziol
- *              Tuesday, November 1, 2005
  *
  * Note:        Create groups w/lots of entries in each level, so that "dense"
  *              group form is used.
@@ -8325,7 +8176,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_group_wide_loop */
 
@@ -8336,9 +8187,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              Friday, September 30, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -8650,7 +8498,7 @@ error:
         H5Fclose(fid_src);
         H5Pclose(plid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_group_links */
 
@@ -8665,9 +8513,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Quincey Koziol
- *              Tuesday, September 30, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -8812,7 +8657,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_soft_link */
 
@@ -8823,9 +8668,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  James Laird
- *              Friday, June 16, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -8976,7 +8818,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_ext_link */
 
@@ -8988,9 +8830,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Quincey Koziol
- *              Tuesday, November  8, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -9080,7 +8919,7 @@ test_copy_exist(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid_t dst_fapl)
     {
         ret = H5Ocopy(fid_src, NAME_DATASET_SIMPLE, fid_dst, NAME_DATASET_SIMPLE, H5P_DEFAULT, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (ret >= 0)
         TEST_ERROR;
 
@@ -9103,7 +8942,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_exist */
 
@@ -9115,9 +8954,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Quincey Koziol
- *              Tuesday, November  8, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -9204,7 +9040,7 @@ test_copy_path(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid_t dst_fapl)
     {
         ret = H5Ocopy(fid_src, NAME_DATASET_SUB_SUB, fid_dst, NAME_DATASET_SUB_SUB, H5P_DEFAULT, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (ret >= 0)
         TEST_ERROR;
 
@@ -9269,7 +9105,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_path */
 
@@ -9280,9 +9116,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Quincey Koziol
- *              Tuesday, November  8, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -9347,7 +9180,7 @@ error:
         H5Tclose(tid);
         H5Fclose(fid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_same_file_named_datatype */
 
@@ -9362,9 +9195,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Quincey Koziol
- *              Thursday, November 30, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -9463,7 +9293,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_old_layout */
 
@@ -9475,9 +9305,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              Saturday, February 4, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -9501,7 +9328,7 @@ test_copy_dataset_compact_named_vl(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fap
     /* set initial data values */
     for (i = 0; i < DIM_SIZE_1; i++) {
         buf[i].len = i + 1;
-        buf[i].p   = (int *)HDmalloc(buf[i].len * sizeof(int));
+        buf[i].p   = (int *)malloc(buf[i].len * sizeof(int));
         for (j = 0; j < buf[i].len; j++)
             ((int *)buf[i].p)[j] = (int)(i * 10 + j);
     } /* end for */
@@ -9648,7 +9475,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_compact_named_vl */
 
@@ -9660,9 +9487,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              Saturday, February 11, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -9685,7 +9509,7 @@ test_copy_dataset_contig_named_vl(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl
     /* set initial data values */
     for (i = 0; i < DIM_SIZE_1; i++) {
         buf[i].len = i + 1;
-        buf[i].p   = (int *)HDmalloc(buf[i].len * sizeof(int));
+        buf[i].p   = (int *)malloc(buf[i].len * sizeof(int));
         for (j = 0; j < buf[i].len; j++)
             ((int *)buf[i].p)[j] = (int)(i * 10 + j);
     } /* end for */
@@ -9821,7 +9645,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_contig_named_vl */
 
@@ -9836,9 +9660,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              Saturday, February 11, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -9869,7 +9690,7 @@ test_copy_dataset_chunked_named_vl(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fap
     /* set initial data values */
     for (i = 0; i < DIM_SIZE_1; i++) {
         buf[i].len = i + 1;
-        buf[i].p   = (int *)HDmalloc(buf[i].len * sizeof(int));
+        buf[i].p   = (int *)malloc(buf[i].len * sizeof(int));
         for (j = 0; j < buf[i].len; j++)
             ((int *)buf[i].p)[j] = (int)(i * 10 + j);
     } /* end for */
@@ -10021,7 +9842,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_chunked_named_vl */
 
@@ -10033,9 +9854,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              Saturday, February 11, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -10060,7 +9878,7 @@ test_copy_dataset_compressed_named_vl(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_
     /* set initial data values */
     for (i = 0; i < DIM_SIZE_1; i++) {
         buf[i].len = i + 1;
-        buf[i].p   = (int *)HDmalloc(buf[i].len * sizeof(int));
+        buf[i].p   = (int *)malloc(buf[i].len * sizeof(int));
         for (j = 0; j < buf[i].len; j++)
             ((int *)buf[i].p)[j] = (int)(i * 10 + j);
     } /* end for */
@@ -10209,7 +10027,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_compressed_named_vl */
 
@@ -10221,9 +10039,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              Saturday, February 11, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -10247,14 +10062,14 @@ test_copy_dataset_compact_vl_vl(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, 
 
     /* set initial data values */
     for (i = 0; i < DIM_SIZE_1; i++) {
-        buf[i].p = HDmalloc((i + 1) * sizeof(hvl_t));
+        buf[i].p = malloc((i + 1) * sizeof(hvl_t));
         if (buf[i].p == NULL) {
             TestErrPrintf("Cannot allocate memory for VL data! i=%u\n", i);
             return 1;
         } /* end if */
         buf[i].len = i + 1;
         for (tvl = (hvl_t *)buf[i].p, j = 0; j < (i + 1); j++, tvl++) {
-            tvl->p = HDmalloc((j + 1) * sizeof(unsigned int));
+            tvl->p = malloc((j + 1) * sizeof(unsigned int));
             if (tvl->p == NULL) {
                 TestErrPrintf("Cannot allocate memory for VL data! i=%u, j=%u\n", i, j);
                 return 1;
@@ -10401,7 +10216,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_compact_vl_vl */
 
@@ -10416,9 +10231,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              Saturday, February 11, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -10448,14 +10260,14 @@ test_copy_dataset_contig_vl_vl(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, h
 
     /* set initial data values */
     for (i = 0; i < DIM_SIZE_1; i++) {
-        buf[i].p = HDmalloc((i + 1) * sizeof(hvl_t));
+        buf[i].p = malloc((i + 1) * sizeof(hvl_t));
         if (buf[i].p == NULL) {
             TestErrPrintf("Cannot allocate memory for VL data! i=%u\n", i);
             TEST_ERROR;
         } /* end if */
         buf[i].len = i + 1;
         for (tvl = (hvl_t *)buf[i].p, j = 0; j < (i + 1); j++, tvl++) {
-            tvl->p = HDmalloc((j + 1) * sizeof(unsigned int));
+            tvl->p = malloc((j + 1) * sizeof(unsigned int));
             if (tvl->p == NULL) {
                 TestErrPrintf("Cannot allocate memory for VL data! i=%u, j=%u\n", i, j);
                 TEST_ERROR;
@@ -10604,7 +10416,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_contig_vl_vl */
 
@@ -10616,9 +10428,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              Saturday, March 11, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -10643,14 +10452,14 @@ test_copy_dataset_chunked_vl_vl(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, 
 
     /* set initial data values */
     for (i = 0; i < DIM_SIZE_1; i++) {
-        buf[i].p = HDmalloc((i + 1) * sizeof(hvl_t));
+        buf[i].p = malloc((i + 1) * sizeof(hvl_t));
         if (buf[i].p == NULL) {
             TestErrPrintf("Cannot allocate memory for VL data! i=%u\n", i);
             TEST_ERROR;
         } /* end if */
         buf[i].len = i + 1;
         for (tvl = (hvl_t *)buf[i].p, j = 0; j < (i + 1); j++, tvl++) {
-            tvl->p = HDmalloc((j + 1) * sizeof(unsigned int));
+            tvl->p = malloc((j + 1) * sizeof(unsigned int));
             if (tvl->p == NULL) {
                 TestErrPrintf("Cannot allocate memory for VL data! i=%u, j=%u\n", i, j);
                 TEST_ERROR;
@@ -10839,7 +10648,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_chunked_vl_vl */
 
@@ -10854,9 +10663,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              Saturday, March 11, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -10887,14 +10693,14 @@ test_copy_dataset_compressed_vl_vl(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fap
 
     /* set initial data values */
     for (i = 0; i < DIM_SIZE_1; i++) {
-        buf[i].p = HDmalloc((i + 1) * sizeof(hvl_t));
+        buf[i].p = malloc((i + 1) * sizeof(hvl_t));
         if (buf[i].p == NULL) {
             TestErrPrintf("Cannot allocate memory for VL data! i=%u\n", i);
             TEST_ERROR;
         } /* end if */
         buf[i].len = i + 1;
         for (tvl = (hvl_t *)buf[i].p, j = 0; j < (i + 1); j++, tvl++) {
-            tvl->p = HDmalloc((j + 1) * sizeof(unsigned int));
+            tvl->p = malloc((j + 1) * sizeof(unsigned int));
             if (tvl->p == NULL) {
                 TestErrPrintf("Cannot allocate memory for VL data! i=%u, j=%u\n", i, j);
                 TEST_ERROR;
@@ -11046,7 +10852,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_compressed_vl_vl */
 
@@ -11067,9 +10873,6 @@ typedef struct cmpd_vl_t {
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Neil Fortner
- *              Tuseday, September 29, 2009
  *
  *-------------------------------------------------------------------------
  */
@@ -11095,7 +10898,7 @@ test_copy_dataset_contig_cmpd_vl(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl,
     for (i = 0; i < DIM_SIZE_1; i++) {
         buf[i].a     = (int)(i * (i - 1));
         buf[i].b.len = i + 1;
-        buf[i].b.p   = (int *)HDmalloc(buf[i].b.len * sizeof(int));
+        buf[i].b.p   = (int *)malloc(buf[i].b.len * sizeof(int));
         for (j = 0; j < buf[i].b.len; j++)
             ((int *)buf[i].b.p)[j] = (int)(i * 10 + j);
         buf[i].c = 1.0 / ((double)i + 1.0);
@@ -11231,7 +11034,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_contig_cmpd_vl */
 
@@ -11243,9 +11046,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Neil Fortner
- *              Wednesdat, September 30 , 2009
  *
  *-------------------------------------------------------------------------
  */
@@ -11271,7 +11071,7 @@ test_copy_dataset_chunked_cmpd_vl(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl
     for (i = 0; i < DIM_SIZE_1; i++) {
         buf[i].a     = (int)(i * (i - 1));
         buf[i].b.len = i + 1;
-        buf[i].b.p   = (int *)HDmalloc(buf[i].b.len * sizeof(int));
+        buf[i].b.p   = (int *)malloc(buf[i].b.len * sizeof(int));
         for (j = 0; j < buf[i].b.len; j++)
             ((int *)buf[i].b.p)[j] = (int)(i * 10 + j);
         buf[i].c = 1.0 / ((double)i + 1.0);
@@ -11417,7 +11217,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_chunked_cmpd_vl */
 
@@ -11429,9 +11229,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *              Sunday, December 11, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -11456,7 +11253,7 @@ test_copy_dataset_compact_cmpd_vl(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl
     for (i = 0; i < DIM_SIZE_1; i++) {
         buf[i].a     = (int)(i * (i - 1));
         buf[i].b.len = i + 1;
-        buf[i].b.p   = (int *)HDmalloc(buf[i].b.len * sizeof(int));
+        buf[i].b.p   = (int *)malloc(buf[i].b.len * sizeof(int));
         for (j = 0; j < buf[i].b.len; j++)
             ((int *)buf[i].b.p)[j] = (int)(i * 10 + j);
         buf[i].c = 1.0 / ((double)i + 1.0);
@@ -11602,7 +11399,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_compact_cmpd_vl */
 
@@ -11618,9 +11415,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Neil Fortner
- *              Wednesday, March 31, 2010
  *
  *-------------------------------------------------------------------------
  */
@@ -11642,7 +11436,7 @@ test_copy_null_ref(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid_t dst_fap
     TESTING("H5Ocopy(): NULL references");
 
     /* Initialize "zeros" array */
-    HDmemset(zeros, 0, sizeof(zeros));
+    memset(zeros, 0, sizeof(zeros));
 
     /* Initialize the filenames */
     h5_fixname(FILENAME[0], src_fapl, src_filename, sizeof src_filename);
@@ -11718,9 +11512,9 @@ test_copy_null_ref(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid_t dst_fap
         TEST_ERROR;
 
     /* Verify that the references contain only "0" bytes */
-    if (HDmemcmp(obj_buf, zeros, sizeof(obj_buf)) != 0)
+    if (memcmp(obj_buf, zeros, sizeof(obj_buf)) != 0)
         TEST_ERROR;
-    if (HDmemcmp(reg_buf, zeros, sizeof(reg_buf)) != 0)
+    if (memcmp(reg_buf, zeros, sizeof(reg_buf)) != 0)
         TEST_ERROR;
 
     /* Close datasets */
@@ -11763,9 +11557,9 @@ test_copy_null_ref(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid_t dst_fap
         TEST_ERROR;
 
     /* Verify that the references contain only "0" bytes */
-    if (HDmemcmp(obj_buf, zeros, sizeof(obj_buf)) != 0)
+    if (memcmp(obj_buf, zeros, sizeof(obj_buf)) != 0)
         TEST_ERROR;
-    if (HDmemcmp(reg_buf, zeros, sizeof(reg_buf)) != 0)
+    if (memcmp(reg_buf, zeros, sizeof(reg_buf)) != 0)
         TEST_ERROR;
 
     /* Close */
@@ -11793,7 +11587,7 @@ error:
         H5Fclose(fid2);
         H5Sclose(sid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_null_ref */
 
@@ -11812,9 +11606,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Neil Fortner
- *              Wednesday, March 31, 2010
  *
  *-------------------------------------------------------------------------
  */
@@ -11840,7 +11631,7 @@ test_copy_null_ref_open(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid_t ds
     TESTING("H5Ocopy(): NULL references for opened datasets");
 
     /* Initialize "zeros" array */
-    HDmemset(zeros, 0, sizeof(zeros));
+    memset(zeros, 0, sizeof(zeros));
 
     /* Initialize the filenames */
     h5_fixname(FILENAME[0], src_fapl, src_filename, sizeof src_filename);
@@ -11925,9 +11716,9 @@ test_copy_null_ref_open(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid_t ds
         TEST_ERROR;
 
     /* Verify that the references contain only "0" bytes */
-    if (HDmemcmp(obj_buf, zeros, sizeof(obj_buf)) != 0)
+    if (memcmp(obj_buf, zeros, sizeof(obj_buf)) != 0)
         TEST_ERROR;
-    if (HDmemcmp(reg_buf, zeros, sizeof(reg_buf)) != 0)
+    if (memcmp(reg_buf, zeros, sizeof(reg_buf)) != 0)
         TEST_ERROR;
 
     /* Create destination file */
@@ -11970,9 +11761,9 @@ test_copy_null_ref_open(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid_t ds
         TEST_ERROR;
 
     /* Verify that the references contain only "0" bytes */
-    if (HDmemcmp(obj_buf, zeros, sizeof(obj_buf)) != 0)
+    if (memcmp(obj_buf, zeros, sizeof(obj_buf)) != 0)
         TEST_ERROR;
-    if (HDmemcmp(reg_buf, zeros, sizeof(reg_buf)) != 0)
+    if (memcmp(reg_buf, zeros, sizeof(reg_buf)) != 0)
         TEST_ERROR;
 
     /* Close */
@@ -12008,7 +11799,7 @@ error:
         H5Fclose(fid2);
         H5Fclose(fid3);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_null_ref_open */
 
@@ -12020,9 +11811,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Neil Fortner
- *              Friday, January 20, 2012
  *
  *-------------------------------------------------------------------------
  */
@@ -12144,7 +11932,7 @@ error:
         H5Fclose(fid1);
         H5Fclose(fid2);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_attr_crt_order */
 
@@ -12155,9 +11943,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Neil Fortner
- *              Tuesday, October 11, 2011
  *
  *-------------------------------------------------------------------------
  */
@@ -12321,7 +12106,7 @@ test_copy_committed_datatype_merge(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fap
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -12409,7 +12194,7 @@ test_copy_committed_datatype_merge(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fap
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
     if (H5Dclose(did) < 0)
@@ -12463,7 +12248,7 @@ error:
         H5Dclose(did);
         H5Pclose(ocpypl_id);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_committed_datatype_merge */
 
@@ -12475,9 +12260,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Neil Fortner
- *              Tuesday, October 11, 2011
  *
  *-------------------------------------------------------------------------
  */
@@ -12637,7 +12419,7 @@ test_copy_committed_datatype_merge_same_file(hid_t fcpl, hid_t fapl, hbool_t reo
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -12695,7 +12477,7 @@ test_copy_committed_datatype_merge_same_file(hid_t fcpl, hid_t fapl, hbool_t reo
         TEST_ERROR;
     if (!token_cmp)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -12778,7 +12560,7 @@ test_copy_committed_datatype_merge_same_file(hid_t fcpl, hid_t fapl, hbool_t reo
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
     if (H5Dclose(did) < 0)
@@ -12812,7 +12594,7 @@ test_copy_committed_datatype_merge_same_file(hid_t fcpl, hid_t fapl, hbool_t reo
         TEST_ERROR;
     if (!token_cmp)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
     if (H5Dclose(did) < 0)
@@ -12858,7 +12640,7 @@ error:
         H5Dclose(did);
         H5Pclose(ocpypl_id);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_committed_datatype_merge_same_file */
 
@@ -12871,9 +12653,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Neil Fortner
- *              Thursday, November 3, 2011
  *
  *-------------------------------------------------------------------------
  */
@@ -13027,7 +12806,7 @@ test_copy_committed_dt_merge_sugg(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -13082,7 +12861,7 @@ test_copy_committed_dt_merge_sugg(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -13107,7 +12886,7 @@ test_copy_committed_dt_merge_sugg(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -13156,7 +12935,7 @@ error:
         H5Dclose(did);
         H5Pclose(ocpypl_id);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_committed_dt_merge_sugg */
 
@@ -13169,9 +12948,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Neil Fortner
- *              Thursday, November 3, 2011
  *
  *-------------------------------------------------------------------------
  */
@@ -13333,7 +13109,7 @@ test_copy_committed_dt_merge_attr(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
     if (H5Aclose(aid) < 0)
@@ -13386,7 +13162,7 @@ error:
         H5Gclose(gid);
         H5Pclose(ocpypl_id);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_committed_dt_merge_attr */
 
@@ -13444,8 +13220,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Vailin Choi; January 2012
  *
  *-------------------------------------------------------------------------
  */
@@ -13649,7 +13423,7 @@ test_copy_cdt_hier_merge(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid_t d
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token_int, &oinfo.token, sizeof(exp_token_int));
+    memcpy(&exp_token_int, &oinfo.token, sizeof(exp_token_int));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -13658,7 +13432,7 @@ test_copy_cdt_hier_merge(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid_t d
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token_short, &oinfo.token, sizeof(exp_token_short));
+    memcpy(&exp_token_short, &oinfo.token, sizeof(exp_token_short));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -13889,7 +13663,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_cdt_hier_merge */
 
@@ -13916,8 +13690,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Vailin Choi; January 2012
  *
  *-------------------------------------------------------------------------
  */
@@ -14107,7 +13879,7 @@ test_copy_cdt_merge_cdt(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid_t ds
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -14128,7 +13900,7 @@ test_copy_cdt_merge_cdt(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid_t ds
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -14149,7 +13921,7 @@ test_copy_cdt_merge_cdt(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid_t ds
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -14170,7 +13942,7 @@ test_copy_cdt_merge_cdt(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid_t ds
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -14219,7 +13991,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_cdt_merge_cdt */
 
@@ -14231,8 +14003,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Vailin Choi; January 2012
  *
  *-------------------------------------------------------------------------
  */
@@ -14342,7 +14112,7 @@ test_copy_cdt_merge_suggs(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid_t 
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -14390,7 +14160,7 @@ test_copy_cdt_merge_suggs(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid_t 
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -14445,7 +14215,7 @@ test_copy_cdt_merge_suggs(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid_t 
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -14495,7 +14265,7 @@ test_copy_cdt_merge_suggs(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid_t 
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -14534,7 +14304,7 @@ error:
         H5Tclose(tid);
         H5Pclose(ocpypl_id);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_cdt_merge_suggs */
 
@@ -14546,8 +14316,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Vailin Choi; Dec 12, 2011
  *
  *-------------------------------------------------------------------------
  */
@@ -14688,7 +14456,7 @@ test_copy_cdt_merge_dset_suggs(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, h
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -14742,7 +14510,7 @@ test_copy_cdt_merge_dset_suggs(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, h
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
     if (H5Dclose(did) < 0)
@@ -14805,7 +14573,7 @@ test_copy_cdt_merge_dset_suggs(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, h
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
     if (H5Dclose(did) < 0)
@@ -14863,7 +14631,7 @@ test_copy_cdt_merge_dset_suggs(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, h
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
     if (H5Dclose(did) < 0)
@@ -14910,7 +14678,7 @@ error:
         H5Dclose(did);
         H5Pclose(ocpypl_id);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_cdt_merge_dset_suggs */
 
@@ -14921,8 +14689,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Vailin Choi; January 2012
  *
  *-------------------------------------------------------------------------
  */
@@ -15538,7 +15304,7 @@ error:
         H5Sclose(sid);
         H5Pclose(ocpypl_id);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_cdt_merge_all_suggs */
 
@@ -15550,8 +15316,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Vailin Choi; January 2012
  *
  *-------------------------------------------------------------------------
  */
@@ -15725,7 +15489,7 @@ test_copy_set_mcdt_search_cb(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -15792,7 +15556,7 @@ test_copy_set_mcdt_search_cb(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -15847,7 +15611,7 @@ test_copy_set_mcdt_search_cb(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -15872,7 +15636,7 @@ test_copy_set_mcdt_search_cb(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -15936,7 +15700,7 @@ test_copy_set_mcdt_search_cb(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -15961,7 +15725,7 @@ test_copy_set_mcdt_search_cb(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid
         TEST_ERROR;
     if (H5Oget_info3(tid, &oinfo, H5O_INFO_BASIC) < 0)
         TEST_ERROR;
-    HDmemcpy(&exp_token, &oinfo.token, sizeof(exp_token));
+    memcpy(&exp_token, &oinfo.token, sizeof(exp_token));
     if (H5Tclose(tid) < 0)
         TEST_ERROR;
 
@@ -16010,7 +15774,7 @@ error:
         H5Dclose(did);
         H5Pclose(ocpypl_id);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_set_mcdt_search_cb */
 
@@ -16021,8 +15785,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Vailin Choi; January 2012
  *
  *-------------------------------------------------------------------------
  */
@@ -16365,7 +16127,7 @@ error:
         H5Dclose(did);
         H5Pclose(ocpypl_id);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_set_get_mcdt_search_cb */
 
@@ -16377,9 +16139,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Neil Fortner
- *              Thursday, July 12, 2012
  *
  *-------------------------------------------------------------------------
  */
@@ -16397,6 +16156,68 @@ test_copy_iterate_cb(hid_t loc_id, const char *name, const H5L_info2_t H5_ATTR_U
 error:
     return (H5_ITER_ERROR);
 } /* end test_copy_iterate_cb */
+
+/*
+ * Test for a bug with copying of v1 object headers where the
+ * new object header would end up with a gap in the header data,
+ * which v1 object header shouldn't have.
+ */
+static int
+test_copy_cdt_v1_header_bug(hid_t fcpl_src, hid_t src_fapl)
+{
+    hid_t file_id   = H5I_INVALID_HID;
+    hid_t type_id   = H5I_INVALID_HID;
+    hid_t ocpypl_id = H5I_INVALID_HID;
+    char  src_filename[NAME_BUF_SIZE];
+
+    TESTING("H5Ocopy(): bug with copying v1 object headers");
+
+    /* Initialize the filenames */
+    h5_fixname(FILENAME[0], src_fapl, src_filename, sizeof src_filename);
+
+    if ((file_id = H5Fcreate(src_filename, H5F_ACC_TRUNC, fcpl_src, src_fapl)) < 0)
+        TEST_ERROR;
+
+    if ((type_id = H5Tcreate(H5T_STRING, 385)) < 0)
+        TEST_ERROR;
+    if (H5Tset_strpad(type_id, H5T_STR_NULLPAD) < 0)
+        TEST_ERROR;
+    if (H5Tset_cset(type_id, H5T_CSET_ASCII) < 0)
+        TEST_ERROR;
+
+    if (H5Tcommit2(file_id, "committed_str_type", type_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) < 0)
+        TEST_ERROR;
+
+    if ((ocpypl_id = H5Pcreate(H5P_OBJECT_COPY)) < 0)
+        TEST_ERROR;
+    if (H5Pset_copy_object(ocpypl_id, H5O_COPY_WITHOUT_ATTR_FLAG) < 0)
+        TEST_ERROR;
+
+    if (H5Ocopy(file_id, "committed_str_type", file_id, "committed_str_type2", ocpypl_id, H5P_DEFAULT) < 0)
+        TEST_ERROR;
+
+    if (H5Tclose(type_id) < 0)
+        TEST_ERROR;
+    if (H5Pclose(ocpypl_id) < 0)
+        TEST_ERROR;
+    if (H5Fclose(file_id) < 0)
+        TEST_ERROR;
+
+    PASSED();
+
+    return 0;
+
+error:
+    H5E_BEGIN_TRY
+    {
+        H5Tclose(type_id);
+        H5Pclose(ocpypl_id);
+        H5Fclose(file_id);
+    }
+    H5E_END_TRY;
+
+    return 1;
+}
 
 static int
 test_copy_iterate(hid_t fcpl_src, hid_t fcpl_dst, hid_t src_fapl, hid_t dst_fapl)
@@ -16470,7 +16291,7 @@ error:
         H5Fclose(fid1);
         H5Fclose(fid2);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_iterate */
 
@@ -16481,9 +16302,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Peter Cao
- *               March 11, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -16853,7 +16671,7 @@ error:
         H5Fclose(fid_src);
         H5Fclose(fid_ext);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_option */
 
@@ -16891,9 +16709,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        number of errors
- *
- * Programmer:  Vailin Choi
- *              Feb 7, 2012
  *
  *-------------------------------------------------------------------------
  */
@@ -17288,7 +17103,7 @@ error:
         H5Fclose(fid_dst);
         H5Fclose(fid_src);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_copy_dataset_open */
 
@@ -17302,9 +17117,6 @@ error:
  *              both, or neither of the source and destination files.
  *
  * Return:      EXIT_SUCCESS/EXIT_FAILURE
- *
- * Programmer:  Peter Cao
- *              Friday, September 30, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -17334,7 +17146,7 @@ main(void)
 
     ExpressMode = GetTestExpress();
     if (ExpressMode > 1)
-        HDprintf("***Express test mode on.  Some tests may be skipped\n");
+        printf("***Express test mode on.  Some tests may be skipped\n");
 
     /* Copy the file access property list */
     if ((fapl2 = H5Pcopy(fapl)) < 0)
@@ -17578,6 +17390,8 @@ main(void)
             nerrors += test_copy_null_ref(fcpl_src, fcpl_dst, src_fapl, dst_fapl);
             nerrors += test_copy_null_ref_open(fcpl_src, fcpl_dst, src_fapl, dst_fapl);
 
+            nerrors += test_copy_cdt_v1_header_bug(fcpl_src, src_fapl);
+
             nerrors += test_copy_iterate(fcpl_src, fcpl_dst, src_fapl, dst_fapl);
         } /* end if */
 
@@ -17594,8 +17408,8 @@ main(void)
 
     /* Results */
     if (nerrors) {
-        HDprintf("***** %d OBJECT COPY TEST%s FAILED! *****\n", nerrors, (1 == nerrors ? "" : "S"));
-        HDexit(EXIT_FAILURE);
+        printf("***** %d OBJECT COPY TEST%s FAILED! *****\n", nerrors, (1 == nerrors ? "" : "S"));
+        exit(EXIT_FAILURE);
     } /* end if */
 
     HDputs("All object copying tests passed.");
@@ -17625,8 +17439,8 @@ main(void)
 
     h5_cleanup(FILENAME, fapl);
 
-    HDexit(EXIT_SUCCESS);
+    exit(EXIT_SUCCESS);
 
 error:
-    HDexit(EXIT_FAILURE);
+    exit(EXIT_FAILURE);
 } /* main */

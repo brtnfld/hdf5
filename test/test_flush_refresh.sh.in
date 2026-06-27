@@ -1,7 +1,6 @@
 #! /bin/sh
 #
 # Copyright by The HDF Group.
-# Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
 # This file is part of HDF5.  The full HDF5 copyright notice, including
@@ -23,9 +22,6 @@
 # and doing the verification that individual objects are being
 # correctly flushed).
 #
-# Programmer:
-#   Mike McGreevy
-#   Tuesday, July 20, 2010
 
 ###############################################################################
 ## test variables

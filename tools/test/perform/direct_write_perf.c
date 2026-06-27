@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -46,7 +45,7 @@
 #include <unistd.h>
 #endif
 
-const char *FILENAME[] = {"direct_write", "unix.raw", NULL};
+static const char *FILENAME[] = {"direct_write", "unix.raw", NULL};
 
 /*
  * Print the current location on the standard output stream.
@@ -273,7 +272,7 @@ error:
         H5Pclose(cparms);
         H5Fclose(file);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 }
 
@@ -339,7 +338,7 @@ error:
         H5Pclose(dxpl);
         H5Fclose(file);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 }
 
@@ -404,7 +403,7 @@ error:
         H5Pclose(dxpl);
         H5Fclose(file);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 }
 
@@ -496,7 +495,7 @@ error:
         H5Pclose(dxpl);
         H5Fclose(file);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 }
 
@@ -588,7 +587,7 @@ error:
         H5Pclose(dxpl);
         H5Fclose(file);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 }
 
@@ -694,7 +693,7 @@ main(void)
 int
 main(void)
 {
-    HDfprintf(stdout, "No compression IO performance because zlib was not configured\n");
+    fprintf(stdout, "No compression IO performance because zlib was not configured\n");
     return EXIT_SUCCESS;
 }
 

@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -293,8 +292,6 @@ static const H5O_layout_t H5D_def_layout_virtual_g = H5D_DEF_LAYOUT_VIRTUAL;
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Quincey Koziol
- *              October 31, 2006
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -350,9 +347,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Quincey Koziol
- *              Tuesday, Sept 1, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -366,7 +360,7 @@ H5P__dcrt_layout_set(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNUSED *na
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Make copy of layout */
     if (NULL == H5O_msg_copy(H5O_LAYOUT_ID, layout, &new_layout))
@@ -387,9 +381,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Quincey Koziol
- *              Tuesday, Sept 1, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -403,7 +394,7 @@ H5P__dcrt_layout_get(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNUSED *na
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Make copy of layout */
     if (NULL == H5O_msg_copy(H5O_LAYOUT_ID, layout, &new_layout))
@@ -426,9 +417,6 @@ done:
  * Return:	   Success:	Non-negative
  *		   Failure:	Negative
  *
- * Programmer:     Mohamad Chaarawi
- *                 Monday, October 10, 2011
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -444,8 +432,8 @@ H5P__dcrt_layout_enc(const void *value, void **_pp, size_t *size)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(layout);
-    HDassert(size);
+    assert(layout);
+    assert(size);
 
     if (NULL != *pp) {
         /* Encode layout type */
@@ -461,7 +449,7 @@ H5P__dcrt_layout_enc(const void *value, void **_pp, size_t *size)
             /* Encode chunk dims */
             HDcompile_assert(sizeof(uint32_t) == sizeof(layout->u.chunk.dim[0]));
             for (u = 0; u < (size_t)layout->u.chunk.ndims; u++) {
-                UINT32ENCODE(*pp, layout->u.chunk.dim[u])
+                UINT32ENCODE(*pp, layout->u.chunk.dim[u]);
                 *size += sizeof(uint32_t);
             } /* end for */
         }     /* end if */
@@ -469,7 +457,7 @@ H5P__dcrt_layout_enc(const void *value, void **_pp, size_t *size)
             uint64_t nentries = (uint64_t)layout->storage.u.virt.list_nused;
 
             /* Encode number of entries */
-            UINT64ENCODE(*pp, nentries)
+            UINT64ENCODE(*pp, nentries);
             *size += (size_t)8;
 
             /* Iterate over entries */
@@ -561,9 +549,6 @@ done:
  * Return:	   Success:	Non-negative
  *		   Failure:	Negative
  *
- * Programmer:     Mohamad Chaarawi
- *                 Monday, October 10, 2011
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -578,9 +563,9 @@ H5P__dcrt_layout_dec(const void **_pp, void *value)
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(pp);
-    HDassert(*pp);
-    HDassert(value);
+    assert(pp);
+    assert(*pp);
+    assert(value);
 
     /* Decode layout type */
     type = (H5D_layout_t) * (*pp)++;
@@ -614,7 +599,7 @@ H5P__dcrt_layout_dec(const void **_pp, void *value)
                 /* Set rank & dimensions */
                 tmp_layout.u.chunk.ndims = (unsigned)ndims;
                 for (u = 0; u < ndims; u++)
-                    UINT32DECODE(*pp, tmp_layout.u.chunk.dim[u])
+                    UINT32DECODE(*pp, tmp_layout.u.chunk.dim[u]);
 
                 /* Point at the newly set up struct */
                 layout = &tmp_layout;
@@ -625,7 +610,7 @@ H5P__dcrt_layout_dec(const void **_pp, void *value)
             uint64_t nentries; /* Number of VDS mappings */
 
             /* Decode number of entries */
-            UINT64DECODE(*pp, nentries)
+            UINT64DECODE(*pp, nentries);
 
             if (nentries == (uint64_t)0)
                 /* Just use the default struct */
@@ -758,9 +743,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Neil Fortner
- *              Tuesday, Feb 10, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -772,7 +754,7 @@ H5P__dcrt_layout_del(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNUSED *na
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Reset the old layout */
     if (H5O_msg_reset(H5O_LAYOUT_ID, value) < 0)
@@ -790,9 +772,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Neil Fortner
- *              Monday, Feb 9, 2015
- *
  *--------------------------------------------------------------------------
  */
 static herr_t
@@ -804,7 +783,7 @@ H5P__dcrt_layout_copy(const char H5_ATTR_UNUSED *name, size_t H5_ATTR_UNUSED siz
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(layout);
+    assert(layout);
 
     /* Make copy of layout */
     if (NULL == H5O_msg_copy(H5O_LAYOUT_ID, layout, &new_layout))
@@ -828,9 +807,6 @@ done:
  *                      VALUE2 is greater than VALUE1 and zero if VALUE1 and
  *                      VALUE2 are equal.
  *
- * Programmer:     Quincey Koziol
- *                 Tuesday, December 23, 2008
- *
  *-------------------------------------------------------------------------
  */
 static int
@@ -843,15 +819,15 @@ H5P__dcrt_layout_cmp(const void *_layout1, const void *_layout2, size_t H5_ATTR_
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(layout1);
-    HDassert(layout2);
-    HDassert(size == sizeof(H5O_layout_t));
+    assert(layout1);
+    assert(layout2);
+    assert(size == sizeof(H5O_layout_t));
 
     /* Check for different layout type */
     if (layout1->type < layout2->type)
-        HGOTO_DONE(-1)
+        HGOTO_DONE(-1);
     if (layout1->type > layout2->type)
-        HGOTO_DONE(1)
+        HGOTO_DONE(1);
 
     /* Compare non-dataset-specific fields in layout info */
     switch (layout1->type) {
@@ -864,16 +840,16 @@ H5P__dcrt_layout_cmp(const void *_layout1, const void *_layout2, size_t H5_ATTR_
 
             /* Check the number of dimensions */
             if (layout1->u.chunk.ndims < layout2->u.chunk.ndims)
-                HGOTO_DONE(-1)
+                HGOTO_DONE(-1);
             if (layout1->u.chunk.ndims > layout2->u.chunk.ndims)
-                HGOTO_DONE(1)
+                HGOTO_DONE(1);
 
             /* Compare the chunk dims */
             for (u = 0; u < layout1->u.chunk.ndims - 1; u++) {
                 if (layout1->u.chunk.dim[u] < layout2->u.chunk.dim[u])
-                    HGOTO_DONE(-1)
+                    HGOTO_DONE(-1);
                 if (layout1->u.chunk.dim[u] > layout2->u.chunk.dim[u])
-                    HGOTO_DONE(1)
+                    HGOTO_DONE(1);
             } /* end for */
         }     /* end case */
         break;
@@ -885,9 +861,9 @@ H5P__dcrt_layout_cmp(const void *_layout1, const void *_layout2, size_t H5_ATTR_
 
             /* Compare number of mappings */
             if (layout1->storage.u.virt.list_nused < layout2->storage.u.virt.list_nused)
-                HGOTO_DONE(-1)
+                HGOTO_DONE(-1);
             if (layout1->storage.u.virt.list_nused > layout2->storage.u.virt.list_nused)
-                HGOTO_DONE(1)
+                HGOTO_DONE(1);
 
             /* Iterate over mappings */
             for (u = 0; u < layout1->storage.u.virt.list_nused; u++) {
@@ -897,45 +873,45 @@ H5P__dcrt_layout_cmp(const void *_layout1, const void *_layout2, size_t H5_ATTR_
                 if ((equal = H5S_extent_equal(layout1->storage.u.virt.list[u].source_dset.virtual_select,
                                               layout2->storage.u.virt.list[u].source_dset.virtual_select)) <
                     0)
-                    HGOTO_DONE(-1)
+                    HGOTO_DONE(-1);
                 if (!equal)
-                    HGOTO_DONE(1)
+                    HGOTO_DONE(1);
                 if ((equal = H5S_SELECT_SHAPE_SAME(
                          layout1->storage.u.virt.list[u].source_dset.virtual_select,
                          layout2->storage.u.virt.list[u].source_dset.virtual_select)) < 0)
-                    HGOTO_DONE(-1)
+                    HGOTO_DONE(-1);
                 if (!equal)
-                    HGOTO_DONE(1)
+                    HGOTO_DONE(1);
 
                 /* Compare source file names */
                 strcmp_ret = HDstrcmp(layout1->storage.u.virt.list[u].source_file_name,
                                       layout2->storage.u.virt.list[u].source_file_name);
                 if (strcmp_ret < 0)
-                    HGOTO_DONE(-1)
+                    HGOTO_DONE(-1);
                 if (strcmp_ret > 0)
-                    HGOTO_DONE(1)
+                    HGOTO_DONE(1);
 
                 /* Compare source dataset names */
                 strcmp_ret = HDstrcmp(layout1->storage.u.virt.list[u].source_dset_name,
                                       layout2->storage.u.virt.list[u].source_dset_name);
                 if (strcmp_ret < 0)
-                    HGOTO_DONE(-1)
+                    HGOTO_DONE(-1);
                 if (strcmp_ret > 0)
-                    HGOTO_DONE(1)
+                    HGOTO_DONE(1);
 
                 /* Compare source spaces.  Note we cannot tell which is
                  * "greater", so just return 1 if different, -1 on failure.
                  */
                 if ((equal = H5S_extent_equal(layout1->storage.u.virt.list[u].source_select,
                                               layout2->storage.u.virt.list[u].source_select)) < 0)
-                    HGOTO_DONE(-1)
+                    HGOTO_DONE(-1);
                 if (!equal)
-                    HGOTO_DONE(1)
+                    HGOTO_DONE(1);
                 if ((equal = H5S_SELECT_SHAPE_SAME(layout1->storage.u.virt.list[u].source_select,
                                                    layout2->storage.u.virt.list[u].source_select)) < 0)
-                    HGOTO_DONE(-1)
+                    HGOTO_DONE(-1);
                 if (!equal)
-                    HGOTO_DONE(1)
+                    HGOTO_DONE(1);
             } /* end for */
         }     /* end block */
         break;
@@ -943,7 +919,7 @@ H5P__dcrt_layout_cmp(const void *_layout1, const void *_layout2, size_t H5_ATTR_
         case H5D_LAYOUT_ERROR:
         case H5D_NLAYOUTS:
         default:
-            HDassert(0 && "Unknown layout type!");
+            assert(0 && "Unknown layout type!");
     } /* end switch */
 
 done:
@@ -958,9 +934,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Neil Fortner
- *              Tuesday, Feb 10, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -971,7 +944,7 @@ H5P__dcrt_layout_close(const char H5_ATTR_UNUSED *name, size_t H5_ATTR_UNUSED si
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Reset the old layout */
     if (H5O_msg_reset(H5O_LAYOUT_ID, value) < 0)
@@ -989,9 +962,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Quincey Koziol
- *              Tuesday, Sept 1, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1005,7 +975,7 @@ H5P__dcrt_fill_value_set(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNUSED
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Make copy of fill value */
     if (NULL == H5O_msg_copy(H5O_FILL_ID, fill, &new_fill))
@@ -1026,9 +996,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Quincey Koziol
- *              Tuesday, Sept 1, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1042,7 +1009,7 @@ H5P__dcrt_fill_value_get(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNUSED
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Make copy of fill value */
     if (NULL == H5O_msg_copy(H5O_FILL_ID, fill, &new_fill))
@@ -1065,9 +1032,6 @@ done:
  * Return:	   Success:	Non-negative
  *		   Failure:	Negative
  *
- * Programmer:     Mohamad Chaarawi
- *                 Monday, October 10, 2011
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1085,8 +1049,8 @@ H5P__dcrt_fill_value_enc(const void *value, void **_pp, size_t *size)
     /* Sanity check */
     HDcompile_assert(sizeof(size_t) <= sizeof(uint64_t));
     HDcompile_assert(sizeof(ssize_t) <= sizeof(int64_t));
-    HDassert(fill);
-    HDassert(size);
+    assert(fill);
+    assert(size);
 
     if (NULL != *pp) {
         /* Encode alloc and fill time */
@@ -1094,7 +1058,7 @@ H5P__dcrt_fill_value_enc(const void *value, void **_pp, size_t *size)
         *(*pp)++ = (uint8_t)fill->fill_time;
 
         /* Encode size of fill value */
-        INT64ENCODE(*pp, fill->size)
+        INT64ENCODE(*pp, fill->size);
 
         /* Encode the fill value & datatype */
         if (fill->size > 0) {
@@ -1103,7 +1067,7 @@ H5P__dcrt_fill_value_enc(const void *value, void **_pp, size_t *size)
             *pp += fill->size;
 
             /* Encode fill value datatype */
-            HDassert(fill->type);
+            assert(fill->type);
 
             if (H5T_encode(fill->type, NULL, &dt_size) < 0)
                 HGOTO_ERROR(H5E_DATATYPE, H5E_CANTENCODE, FAIL, "can't encode datatype")
@@ -1111,7 +1075,7 @@ H5P__dcrt_fill_value_enc(const void *value, void **_pp, size_t *size)
             /* Encode the size of a size_t */
             enc_value = (uint64_t)dt_size;
             enc_size  = H5VM_limit_enc_size(enc_value);
-            HDassert(enc_size < 256);
+            assert(enc_size < 256);
 
             /* Encode the size */
             *(*pp)++ = (uint8_t)enc_size;
@@ -1135,7 +1099,7 @@ H5P__dcrt_fill_value_enc(const void *value, void **_pp, size_t *size)
         /* calculate those if they were not calculated earlier */
         if (NULL == *pp) {
             /* Get the size of the encoded datatype */
-            HDassert(fill->type);
+            assert(fill->type);
             if (H5T_encode(fill->type, NULL, &dt_size) < 0)
                 HGOTO_ERROR(H5E_DATATYPE, H5E_CANTENCODE, FAIL, "can't encode datatype")
             enc_value = (uint64_t)dt_size;
@@ -1159,9 +1123,6 @@ done:
  * Return:	   Success:	Non-negative
  *		   Failure:	Negative
  *
- * Programmer:     Mohamad Chaarawi
- *                 Monday, October 10, 2011
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1184,7 +1145,7 @@ H5P__dcrt_fill_value_dec(const void **_pp, void *_value)
     fill->fill_time  = (H5D_fill_time_t) * (*pp)++;
 
     /* Decode fill size */
-    INT64DECODE(*pp, fill->size)
+    INT64DECODE(*pp, fill->size);
 
     /* Check if there's a fill value */
     if (fill->size > 0) {
@@ -1199,7 +1160,7 @@ H5P__dcrt_fill_value_dec(const void **_pp, void *_value)
         *pp += fill->size;
 
         enc_size = *(*pp)++;
-        HDassert(enc_size < 256);
+        assert(enc_size < 256);
 
         /* Decode the size of encoded datatype */
         UINT64DECODE_VAR(*pp, enc_value, enc_size);
@@ -1223,9 +1184,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Neil Fortner
- *              Thursday, Feb 26, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1237,7 +1195,7 @@ H5P__dcrt_fill_value_del(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNUSED
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Reset the old fill value message */
     if (H5O_msg_reset(H5O_FILL_ID, value) < 0)
@@ -1255,9 +1213,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Neil Fortner
- *              Thursday, Feb 26, 2015
- *
  *--------------------------------------------------------------------------
  */
 static herr_t
@@ -1269,7 +1224,7 @@ H5P__dcrt_fill_value_copy(const char H5_ATTR_UNUSED *name, size_t H5_ATTR_UNUSED
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(fill);
+    assert(fill);
 
     /* Make copy of fill value message */
     if (NULL == H5O_msg_copy(H5O_FILL_ID, fill, &new_fill))
@@ -1292,9 +1247,6 @@ done:
  *                      VALUE2 is greater than VALUE1 and zero if VALUE1 and
  *                      VALUE2 are equal.
  *
- * Programmer:     Quincey Koziol
- *                 Wednesday, January 7, 2004
- *
  *-------------------------------------------------------------------------
  */
 int
@@ -1308,9 +1260,9 @@ H5P_fill_value_cmp(const void *_fill1, const void *_fill2, size_t H5_ATTR_UNUSED
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* Sanity check */
-    HDassert(fill1);
-    HDassert(fill2);
-    HDassert(size == sizeof(H5O_fill_t));
+    assert(fill1);
+    assert(fill2);
+    assert(size == sizeof(H5O_fill_t));
 
     /* Check the size of fill values */
     if (fill1->size < fill2->size)
@@ -1333,7 +1285,7 @@ H5P_fill_value_cmp(const void *_fill1, const void *_fill2, size_t H5_ATTR_UNUSED
     if (fill1->buf != NULL && fill2->buf == NULL)
         HGOTO_DONE(1);
     if (fill1->buf != NULL)
-        if ((cmp_value = HDmemcmp(fill1->buf, fill2->buf, (size_t)fill1->size)) != 0)
+        if ((cmp_value = memcmp(fill1->buf, fill2->buf, (size_t)fill1->size)) != 0)
             HGOTO_DONE(cmp_value);
 
     /* Check the allocation time for the fill values */
@@ -1360,9 +1312,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Neil Fortner
- *              Thursday, Feb 26, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1373,7 +1322,7 @@ H5P__dcrt_fill_value_close(const char H5_ATTR_UNUSED *name, size_t H5_ATTR_UNUSE
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Reset the old fill value message */
     if (H5O_msg_reset(H5O_FILL_ID, value) < 0)
@@ -1391,9 +1340,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Quincey Koziol
- *              Tuesday, Sept 1, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1407,7 +1353,7 @@ H5P__dcrt_ext_file_list_set(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNU
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Make copy of external file list */
     if (NULL == H5O_msg_copy(H5O_EFL_ID, efl, &new_efl))
@@ -1428,9 +1374,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Quincey Koziol
- *              Tuesday, Sept 1, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1444,7 +1387,7 @@ H5P__dcrt_ext_file_list_get(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNU
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Make copy of external file list */
     if (NULL == H5O_msg_copy(H5O_EFL_ID, efl, &new_efl))
@@ -1467,9 +1410,6 @@ done:
  * Return:	   Success:	Non-negative
  *		   Failure:	Negative
  *
- * Programmer:     Mohamad Chaarawi
- *                 Monday, October 10, 2011
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1485,17 +1425,17 @@ H5P__dcrt_ext_file_list_enc(const void *value, void **_pp, size_t *size)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(efl);
+    assert(efl);
     HDcompile_assert(sizeof(size_t) <= sizeof(uint64_t));
     HDcompile_assert(sizeof(off_t) <= sizeof(uint64_t));
     HDcompile_assert(sizeof(hsize_t) <= sizeof(uint64_t));
-    HDassert(size);
+    assert(size);
 
     if (NULL != *pp) {
         /* Encode number of slots used */
         enc_value = (uint64_t)efl->nused;
         enc_size  = H5VM_limit_enc_size(enc_value);
-        HDassert(enc_size < 256);
+        assert(enc_size < 256);
         *(*pp)++ = (uint8_t)enc_size;
         UINT64ENCODE_VAR(*pp, enc_value, enc_size);
 
@@ -1505,7 +1445,7 @@ H5P__dcrt_ext_file_list_enc(const void *value, void **_pp, size_t *size)
             len       = HDstrlen(efl->slot[u].name) + 1;
             enc_value = (uint64_t)len;
             enc_size  = H5VM_limit_enc_size(enc_value);
-            HDassert(enc_size < 256);
+            assert(enc_size < 256);
             *(*pp)++ = (uint8_t)enc_size;
             UINT64ENCODE_VAR(*pp, enc_value, enc_size);
 
@@ -1516,14 +1456,14 @@ H5P__dcrt_ext_file_list_enc(const void *value, void **_pp, size_t *size)
             /* Encode offset */
             enc_value = (uint64_t)efl->slot[u].offset;
             enc_size  = H5VM_limit_enc_size(enc_value);
-            HDassert(enc_size < 256);
+            assert(enc_size < 256);
             *(*pp)++ = (uint8_t)enc_size;
             UINT64ENCODE_VAR(*pp, enc_value, enc_size);
 
             /* encode size */
             enc_value = (uint64_t)efl->slot[u].size;
             enc_size  = H5VM_limit_enc_size(enc_value);
-            HDassert(enc_size < 256);
+            assert(enc_size < 256);
             *(*pp)++ = (uint8_t)enc_size;
             UINT64ENCODE_VAR(*pp, enc_value, enc_size);
         } /* end for */
@@ -1552,9 +1492,6 @@ H5P__dcrt_ext_file_list_enc(const void *value, void **_pp, size_t *size)
  * Return:	   Success:	Non-negative
  *		   Failure:	Negative
  *
- * Programmer:     Mohamad Chaarawi
- *                 Monday, October 10, 2011
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1570,9 +1507,9 @@ H5P__dcrt_ext_file_list_dec(const void **_pp, void *_value)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(pp);
-    HDassert(*pp);
-    HDassert(efl);
+    assert(pp);
+    assert(*pp);
+    assert(efl);
     HDcompile_assert(sizeof(size_t) <= sizeof(uint64_t));
     HDcompile_assert(sizeof(off_t) <= sizeof(uint64_t));
     HDcompile_assert(sizeof(hsize_t) <= sizeof(uint64_t));
@@ -1582,7 +1519,7 @@ H5P__dcrt_ext_file_list_dec(const void **_pp, void *_value)
 
     /* Decode number of slots used */
     enc_size = *(*pp)++;
-    HDassert(enc_size < 256);
+    assert(enc_size < 256);
     UINT64DECODE_VAR(*pp, enc_value, enc_size);
     nused = (size_t)enc_value;
 
@@ -1601,7 +1538,7 @@ H5P__dcrt_ext_file_list_dec(const void **_pp, void *_value)
 
         /* Decode length of slot name */
         enc_size = *(*pp)++;
-        HDassert(enc_size < 256);
+        assert(enc_size < 256);
         UINT64DECODE_VAR(*pp, enc_value, enc_size);
         len = (size_t)enc_value;
 
@@ -1611,13 +1548,13 @@ H5P__dcrt_ext_file_list_dec(const void **_pp, void *_value)
 
         /* decode offset */
         enc_size = *(*pp)++;
-        HDassert(enc_size < 256);
+        assert(enc_size < 256);
         UINT64DECODE_VAR(*pp, enc_value, enc_size);
         efl->slot[u].offset = (off_t)enc_value;
 
         /* decode size */
         enc_size = *(*pp)++;
-        HDassert(enc_size < 256);
+        assert(enc_size < 256);
         UINT64DECODE_VAR(*pp, enc_value, enc_size);
         efl->slot[u].size = (hsize_t)enc_value;
 
@@ -1637,9 +1574,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Neil Fortner
- *              Thursday, Feb 26, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1651,7 +1585,7 @@ H5P__dcrt_ext_file_list_del(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNU
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Reset the old efl message */
     if (H5O_msg_reset(H5O_EFL_ID, value) < 0)
@@ -1669,9 +1603,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Neil Fortner
- *              Thurday, Feb 26, 2015
- *
  *--------------------------------------------------------------------------
  */
 static herr_t
@@ -1683,7 +1614,7 @@ H5P__dcrt_ext_file_list_copy(const char H5_ATTR_UNUSED *name, size_t H5_ATTR_UNU
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(efl);
+    assert(efl);
 
     /* Make copy of efl message */
     if (NULL == H5O_msg_copy(H5O_EFL_ID, efl, &new_efl))
@@ -1707,9 +1638,6 @@ done:
  *                      VALUE2 is greater than VALUE1 and zero if VALUE1 and
  *                      VALUE2 are equal.
  *
- * Programmer:     Quincey Koziol
- *                 Wednesday, January 7, 2004
- *
  *-------------------------------------------------------------------------
  */
 static int
@@ -1723,9 +1651,9 @@ H5P__dcrt_ext_file_list_cmp(const void *_efl1, const void *_efl2, size_t H5_ATTR
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(efl1);
-    HDassert(efl2);
-    HDassert(size == sizeof(H5O_efl_t));
+    assert(efl1);
+    assert(efl2);
+    assert(size == sizeof(H5O_efl_t));
 
     /* Check the number of allocated efl entries */
     if (efl1->nalloc < efl2->nalloc)
@@ -1790,9 +1718,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Neil Fortner
- *              Thursday, Feb 26, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1803,7 +1728,7 @@ H5P__dcrt_ext_file_list_close(const char H5_ATTR_UNUSED *name, size_t H5_ATTR_UN
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Reset the old efl message */
     if (H5O_msg_reset(H5O_EFL_ID, value) < 0)
@@ -1819,9 +1744,6 @@ done:
  * Purpose:   Sets the layout of raw data in the file.
  *
  * Return:    Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Tuesday, November 23, 2004
  *
  *-------------------------------------------------------------------------
  */
@@ -1886,9 +1808,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Robb Matzke
- *		Tuesday, January  6, 1998
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1950,9 +1869,6 @@ done:
  *
  *		Failure:	H5D_LAYOUT_ERROR (negative)
  *
- * Programmer:	Robb Matzke
- *		Wednesday, January  7, 1998
- *
  *-------------------------------------------------------------------------
  */
 H5D_layout_t
@@ -1992,9 +1908,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Robb Matzke
- *		Tuesday, January  6, 1998
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -2019,7 +1932,7 @@ H5Pset_chunk(hid_t plist_id, int ndims, const hsize_t dim[/*ndims*/])
 
     /* Verify & initialize property's chunk dims */
     H5MM_memcpy(&chunk_layout, &H5D_def_layout_chunk_g, sizeof(H5D_def_layout_chunk_g));
-    HDmemset(&chunk_layout.u.chunk.dim, 0, sizeof(chunk_layout.u.chunk.dim));
+    memset(&chunk_layout.u.chunk.dim, 0, sizeof(chunk_layout.u.chunk.dim));
     chunk_nelmts = 1;
     for (u = 0; u < (unsigned)ndims; u++) {
         if (dim[u] == 0)
@@ -2056,9 +1969,6 @@ done:
  * Return:	Success:	Positive Chunk dimensionality.
  *
  *		Failure:	Negative
- *
- * Programmer:	Robb Matzke
- *		Wednesday, January  7, 1998
  *
  *-------------------------------------------------------------------------
  */
@@ -2111,9 +2021,6 @@ done:
  *              H5D_VIRTUAL.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Neil Fortner
- *              Friday, February  13, 2015
  *
  *-------------------------------------------------------------------------
  */
@@ -2171,7 +2078,7 @@ H5Pset_virtual(hid_t dcpl_id, hid_t vspace_id, const char *src_file_name, const 
         H5MM_memcpy(&virtual_layout, &H5D_def_layout_virtual_g, sizeof(H5D_def_layout_virtual_g));
 
         /* Sanity check */
-        HDassert(virtual_layout.storage.u.virt.list_nalloc == 0);
+        assert(virtual_layout.storage.u.virt.list_nalloc == 0);
     } /* end else */
 
     /* Expand list if necessary */
@@ -2189,7 +2096,7 @@ H5Pset_virtual(hid_t dcpl_id, hid_t vspace_id, const char *src_file_name, const 
 
     /* Add virtual dataset mapping entry */
     ent = &virtual_layout.storage.u.virt.list[virtual_layout.storage.u.virt.list_nused];
-    HDmemset(ent, 0, sizeof(H5O_storage_virtual_ent_t)); /* Clear before starting to set up */
+    memset(ent, 0, sizeof(H5O_storage_virtual_ent_t)); /* Clear before starting to set up */
     if (NULL == (ent->source_dset.virtual_select = H5S_copy(vspace, FALSE, TRUE)))
         HGOTO_ERROR(H5E_PLIST, H5E_CANTCOPY, FAIL, "unable to copy virtual selection")
     if (NULL == (ent->source_file_name = H5MM_xstrdup(src_file_name)))
@@ -2243,7 +2150,7 @@ done:
     /* (Even on failure, so there's not a mangled layout struct in the list) */
     if (retrieved_layout) {
         if (H5P_poke(plist, H5D_CRT_LAYOUT_NAME, &virtual_layout) < 0) {
-            HDONE_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set layout")
+            HDONE_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set layout");
             if (old_list != virtual_layout.storage.u.virt.list)
                 free_list = TRUE;
         } /* end if */
@@ -2257,10 +2164,10 @@ done:
             ent->source_file_name = (char *)H5MM_xfree(ent->source_file_name);
             ent->source_dset_name = (char *)H5MM_xfree(ent->source_dset_name);
             if (ent->source_dset.virtual_select && H5S_close(ent->source_dset.virtual_select) < 0)
-                HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to release virtual selection")
+                HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to release virtual selection");
             ent->source_dset.virtual_select = NULL;
             if (ent->source_select && H5S_close(ent->source_select) < 0)
-                HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to release source selection")
+                HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to release source selection");
             ent->source_select = NULL;
             H5D_virtual_free_parsed_name(ent->parsed_source_file_name);
             ent->parsed_source_file_name = NULL;
@@ -2285,9 +2192,6 @@ done:
  *              parameter.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Neil Fortner
- *              Friday, February  13, 2015
  *
  *-------------------------------------------------------------------------
  */
@@ -2331,9 +2235,6 @@ done:
  * Return:      Returns a dataspace identifier if successful; otherwise
  *              returns a negative value.
  *
- * Programmer:  Neil Fortner
- *              Friday, February  13, 2015
- *
  *-------------------------------------------------------------------------
  */
 hid_t
@@ -2360,7 +2261,7 @@ H5Pget_virtual_vspace(hid_t dcpl_id, size_t idx)
     /* Get the virtual space */
     if (idx >= layout.storage.u.virt.list_nused)
         HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, "invalid index (out of range)")
-    HDassert(layout.storage.u.virt.list_nused <= layout.storage.u.virt.list_nalloc);
+    assert(layout.storage.u.virt.list_nused <= layout.storage.u.virt.list_nalloc);
     if (NULL == (space = H5S_copy(layout.storage.u.virt.list[idx].source_dset.virtual_select, FALSE, TRUE)))
         HGOTO_ERROR(H5E_PLIST, H5E_CANTCOPY, FAIL, "unable to copy virtual selection")
 
@@ -2372,7 +2273,7 @@ done:
     /* Free space on failure */
     if ((ret_value < 0) && space)
         if (H5S_close(space) < 0)
-            HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to release source selection")
+            HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to release source selection");
 
     FUNC_LEAVE_API(ret_value)
 } /* end H5Pget_virtual_vspace() */
@@ -2387,9 +2288,6 @@ done:
  *
  * Return:      Returns a dataspace identifier if successful; otherwise
  *              returns a negative value.
- *
- * Programmer:  Neil Fortner
- *              Saturday, February  14, 2015
  *
  *-------------------------------------------------------------------------
  */
@@ -2417,7 +2315,7 @@ H5Pget_virtual_srcspace(hid_t dcpl_id, size_t idx)
     /* Check index */
     if (idx >= layout.storage.u.virt.list_nused)
         HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, "invalid index (out of range)")
-    HDassert(layout.storage.u.virt.list_nused <= layout.storage.u.virt.list_nalloc);
+    assert(layout.storage.u.virt.list_nused <= layout.storage.u.virt.list_nalloc);
 
     /* Attempt to open source dataset and patch extent if extent status is not
      * H5O_VIRTUAL_STATUS_CORRECT?  -NAF */
@@ -2463,7 +2361,7 @@ done:
     /* Free space on failure */
     if ((ret_value < 0) && space)
         if (H5S_close(space) < 0)
-            HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to release source selection")
+            HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to release source selection");
 
     FUNC_LEAVE_API(ret_value)
 } /* end H5Pget_virtual_srcspace() */
@@ -2492,9 +2390,6 @@ done:
  * Return:      Returns the length of the name if successful, otherwise
  *              returns a negative value.
  *
- * Programmer:  Neil Fortner
- *              Saturday, February  14, 2015
- *
  *-------------------------------------------------------------------------
  */
 ssize_t
@@ -2520,8 +2415,8 @@ H5Pget_virtual_filename(hid_t dcpl_id, size_t idx, char *name /*out*/, size_t si
     /* Get the virtual filename */
     if (idx >= layout.storage.u.virt.list_nused)
         HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, "invalid index (out of range)")
-    HDassert(layout.storage.u.virt.list_nused <= layout.storage.u.virt.list_nalloc);
-    HDassert(layout.storage.u.virt.list[idx].source_file_name);
+    assert(layout.storage.u.virt.list_nused <= layout.storage.u.virt.list_nalloc);
+    assert(layout.storage.u.virt.list[idx].source_file_name);
     if (name && (size > 0))
         (void)HDstrncpy(name, layout.storage.u.virt.list[idx].source_file_name, size);
     ret_value = (ssize_t)HDstrlen(layout.storage.u.virt.list[idx].source_file_name);
@@ -2553,9 +2448,6 @@ done:
  * Return:      Returns the length of the name if successful, otherwise
  *              returns a negative value.
  *
- * Programmer:  Neil Fortner
- *              Saturday, February  14, 2015
- *
  *-------------------------------------------------------------------------
  */
 ssize_t
@@ -2581,8 +2473,8 @@ H5Pget_virtual_dsetname(hid_t dcpl_id, size_t idx, char *name /*out*/, size_t si
     /* Get the virtual filename */
     if (idx >= layout.storage.u.virt.list_nused)
         HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, "invalid index (out of range)")
-    HDassert(layout.storage.u.virt.list_nused <= layout.storage.u.virt.list_nalloc);
-    HDassert(layout.storage.u.virt.list[idx].source_dset_name);
+    assert(layout.storage.u.virt.list_nused <= layout.storage.u.virt.list_nalloc);
+    assert(layout.storage.u.virt.list[idx].source_dset_name);
     if (name && (size > 0))
         (void)HDstrncpy(name, layout.storage.u.virt.list[idx].source_dset_name, size);
     ret_value = (ssize_t)HDstrlen(layout.storage.u.virt.list[idx].source_dset_name);
@@ -2598,9 +2490,6 @@ done:
  *              The storage must already be set to chunked.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Neil Fortner
- *              Thursday, January 21, 2010
  *
  *-------------------------------------------------------------------------
  */
@@ -2655,9 +2544,6 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Neil Fortner
- *              Friday, January 22, 2010
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -2709,9 +2595,6 @@ done:
  *		the extending).
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Robb Matzke
- *		Tuesday, March	3, 1998
  *
  *-------------------------------------------------------------------------
  */
@@ -2783,9 +2666,6 @@ done:
  *
  *		Failure:	Negative
  *
- * Programmer:	Robb Matzke
- *              Tuesday, March  3, 1998
- *
  *-------------------------------------------------------------------------
  */
 int
@@ -2831,9 +2711,6 @@ done:
  * See Also:	H5Pset_external()
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Robb Matzke
- *              Tuesday, March  3, 1998
  *
  *-------------------------------------------------------------------------
  */
@@ -2890,9 +2767,6 @@ done:
  *              for scientific data.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Kent Yang
- *              Tuesday, April 1, 2003
  *
  *-------------------------------------------------------------------------
  */
@@ -2960,9 +2834,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Kent Yang
- *              Wednesday, November 13, 2002
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -3001,9 +2872,6 @@ done:
  * Purpose:     Sets nbit filter for a dataset creation property list
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Xiaowen Wu
- *              Wednesday, December 22, 2004
  *
  *-------------------------------------------------------------------------
  */
@@ -3059,9 +2927,6 @@ done:
                               other values, for integer datatype
 
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Xiaowen Wu
- *              Thursday, April 14, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -3123,9 +2988,6 @@ done:
  *		undefining fill value.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Robb Matzke
- *              Thursday, October  1, 1998
  *
  *-------------------------------------------------------------------------
  */
@@ -3214,9 +3076,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *              Wednesday, October 17, 2007
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -3245,7 +3104,7 @@ H5P_get_fill_value(H5P_genplist_t *plist, const H5T_t *type, void *value /*out*/
 
     /* Check for "default" fill value */
     if (fill.size == 0) {
-        HDmemset(value, 0, H5T_get_size(type));
+        memset(value, 0, H5T_get_size(type));
         HGOTO_DONE(SUCCEED);
     } /* end if */
 
@@ -3289,9 +3148,9 @@ done:
     if (bkg != value)
         H5MM_xfree(bkg);
     if (src_id >= 0 && H5I_dec_ref(src_id) < 0)
-        HDONE_ERROR(H5E_PLIST, H5E_CANTDEC, FAIL, "can't decrement ref count of temp ID")
+        HDONE_ERROR(H5E_PLIST, H5E_CANTDEC, FAIL, "can't decrement ref count of temp ID");
     if (dst_id >= 0 && H5I_dec_ref(dst_id) < 0)
-        HDONE_ERROR(H5E_PLIST, H5E_CANTDEC, FAIL, "can't decrement ref count of temp ID")
+        HDONE_ERROR(H5E_PLIST, H5E_CANTDEC, FAIL, "can't decrement ref count of temp ID");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5P_get_fill_value() */
@@ -3306,9 +3165,6 @@ done:
  *		specified TYPE.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Robb Matzke
- *              Thursday, October  1, 1998
  *
  *-------------------------------------------------------------------------
  */
@@ -3347,9 +3203,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:  Raymond Lu
- *              Wednesday, January 16, 2002
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -3359,8 +3212,8 @@ H5P_is_fill_value_defined(const H5O_fill_t *fill, H5D_fill_value_t *status)
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(fill);
-    HDassert(status);
+    assert(fill);
+    assert(status);
 
     /* Check if the fill value was "unset" */
     if (fill->size == -1 && !fill->buf)
@@ -3387,9 +3240,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:  Quincey Koziol
- *              Wednesday, October 17, 2007
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -3400,7 +3250,7 @@ H5P_fill_value_defined(H5P_genplist_t *plist, H5D_fill_value_t *status)
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(status);
+    assert(status);
 
     /* Get the fill value struct */
     if (H5P_peek(plist, H5D_CRT_FILL_VALUE_NAME, &fill) < 0)
@@ -3421,9 +3271,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:  Raymond Lu
- *              Wednesday, January 16, 2002
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -3435,7 +3282,7 @@ H5Pfill_value_defined(hid_t plist_id, H5D_fill_value_t *status)
     FUNC_ENTER_API(FAIL)
     H5TRACE2("e", "i*DF", plist_id, status);
 
-    HDassert(status);
+    assert(status);
 
     /* Get the plist structure */
     if (NULL == (plist = H5P_object_verify(plist_id, H5P_DATASET_CREATE)))
@@ -3457,9 +3304,6 @@ done:
  *			H5D_ALLOC_TIME_LATE, H5D_ALLOC_TIME_INCR
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Raymond Lu
- * 		Wednesday, January 16, 2002
  *
  *-------------------------------------------------------------------------
  */
@@ -3547,9 +3391,6 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Raymond Lu
- *              Wednesday, January 16, 2002
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -3588,9 +3429,6 @@ done:
  *		H5D_FILL_TIME_ALLOC and H5D_FILL_TIME_NEVER.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Raymond Lu
- *              Wednesday, January 16, 2002
  *
  *-------------------------------------------------------------------------
  */
@@ -3634,9 +3472,6 @@ done:
  *		and H5D_ALLOC.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Raymond Lu
- *              Wednesday, January 16, 2002
  *
  *-------------------------------------------------------------------------
  */
@@ -3682,9 +3517,6 @@ done:
  *     Failure: Negative value (FAIL)
  *     Success: Non-negative value (SUCCEED)
  *
- * Programmer: Jacob Smith
- *             2018 August 14
- *
  *-----------------------------------------------------------------------------
  */
 herr_t
@@ -3725,9 +3557,6 @@ done:
  *
  *     Failure: Negative value (FAIL)
  *     Success: Non-negative value (SUCCEED)
- *
- * Programmer: Jacob Smith
- *             2018 August 14
  *
  *-----------------------------------------------------------------------------
  */

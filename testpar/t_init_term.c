@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -12,9 +11,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:  Mohamad Chaarawi
- *              June 2015
- *
  * Purpose: This test checks for the correct initialization and
  * termination of the HDF5 library with MPI init and finalize.
  */
@@ -23,7 +19,7 @@
 
 int nerrors = 0; /* errors count */
 
-const char *FILENAME[] = {"after_mpi_fin", NULL};
+static const char *FILENAME[] = {"after_mpi_fin", NULL};
 
 int
 main(int argc, char **argv)

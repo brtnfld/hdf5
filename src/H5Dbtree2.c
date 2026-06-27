@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -208,8 +207,6 @@ H5FL_ARR_DEFINE_STATIC(uint32_t, H5O_LAYOUT_NDIMS);
  * Return:      Success:        non-NULL
  *              Failure:        NULL
  *
- * Programmer:  Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static void *
@@ -223,9 +220,9 @@ H5D__bt2_crt_context(void *_udata)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(udata);
-    HDassert(udata->f);
-    HDassert(udata->ndims > 0 && udata->ndims < H5O_LAYOUT_NDIMS);
+    assert(udata);
+    assert(udata->f);
+    assert(udata->ndims > 0 && udata->ndims < H5O_LAYOUT_NDIMS);
 
     /* Allocate callback context */
     if (NULL == (ctx = H5FL_MALLOC(H5D_bt2_ctx_t)))
@@ -265,8 +262,6 @@ done:
  * Return:      Success:        non-negative
  *              Failure:        negative
  *
- * Programmer:  Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -277,7 +272,7 @@ H5D__bt2_dst_context(void *_ctx)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(ctx);
+    assert(ctx);
 
     /* Free array for chunk dimension sizes */
     if (ctx->dim)
@@ -296,8 +291,6 @@ H5D__bt2_dst_context(void *_ctx)
  *
  * Return:      Success:        non-negative
  *              Failure:        negative
- *
- * Programmer:  Vailin Choi; June 2010
  *
  *-------------------------------------------------------------------------
  */
@@ -323,8 +316,6 @@ H5D__bt2_store(void *record, const void *_udata)
  *              =0 if rec1 == rec2
  *              >0 if rec1 > rec2
  *
- * Programmer:  Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -338,8 +329,8 @@ H5D__bt2_compare(const void *_udata, const void *_rec2, int *result)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity checks */
-    HDassert(rec1);
-    HDassert(rec2);
+    assert(rec1);
+    assert(rec2);
 
     /* Compare the offsets but ignore the other fields */
     *result = H5VM_vector_cmp_u(udata->ndims, rec1->scaled, rec2->scaled);
@@ -356,8 +347,6 @@ H5D__bt2_compare(const void *_udata, const void *_rec2, int *result)
  * Return:      Success:        non-negative
  *              Failure:        negative
  *
- * Programmer:  Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -370,7 +359,7 @@ H5D__bt2_unfilt_encode(uint8_t *raw, const void *_record, void *_ctx)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(ctx);
+    assert(ctx);
 
     /* Encode the record's fields */
     H5F_addr_encode_len(ctx->sizeof_addr, &raw, record->chunk_addr);
@@ -390,8 +379,6 @@ H5D__bt2_unfilt_encode(uint8_t *raw, const void *_record, void *_ctx)
  * Return:      Success:        non-negative
  *              Failure:        negative
  *
- * Programmer:  Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -404,7 +391,7 @@ H5D__bt2_unfilt_decode(const uint8_t *raw, void *_record, void *_ctx)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(ctx);
+    assert(ctx);
 
     /* Decode the record's fields */
     H5F_addr_decode_len(ctx->sizeof_addr, &raw, &record->chunk_addr);
@@ -424,8 +411,6 @@ H5D__bt2_unfilt_decode(const uint8_t *raw, void *_record, void *_ctx)
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -438,15 +423,15 @@ H5D__bt2_unfilt_debug(FILE *stream, int indent, int fwidth, const void *_record,
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity checks */
-    HDassert(record);
-    HDassert(ctx->chunk_size == record->nbytes);
-    HDassert(0 == record->filter_mask);
+    assert(record);
+    assert(ctx->chunk_size == record->nbytes);
+    assert(0 == record->filter_mask);
 
-    HDfprintf(stream, "%*s%-*s %" PRIuHADDR "\n", indent, "", fwidth, "Chunk address:", record->chunk_addr);
+    fprintf(stream, "%*s%-*s %" PRIuHADDR "\n", indent, "", fwidth, "Chunk address:", record->chunk_addr);
 
-    HDfprintf(stream, "%*s%-*s {", indent, "", fwidth, "Logical offset:");
+    fprintf(stream, "%*s%-*s {", indent, "", fwidth, "Logical offset:");
     for (u = 0; u < ctx->ndims; u++)
-        HDfprintf(stream, "%s%" PRIuHSIZE, u ? ", " : "", record->scaled[u] * ctx->dim[u]);
+        fprintf(stream, "%s%" PRIuHSIZE, u ? ", " : "", record->scaled[u] * ctx->dim[u]);
     HDfputs("}\n", stream);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
@@ -461,8 +446,6 @@ H5D__bt2_unfilt_debug(FILE *stream, int indent, int fwidth, const void *_record,
  * Return:      Success:        non-negative
  *              Failure:        negative
  *
- * Programmer:  Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -475,10 +458,10 @@ H5D__bt2_filt_encode(uint8_t *raw, const void *_record, void *_ctx)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(ctx);
-    HDassert(record);
-    HDassert(H5F_addr_defined(record->chunk_addr));
-    HDassert(0 != record->nbytes);
+    assert(ctx);
+    assert(record);
+    assert(H5_addr_defined(record->chunk_addr));
+    assert(0 != record->nbytes);
 
     /* Encode the record's fields */
     H5F_addr_encode_len(ctx->sizeof_addr, &raw, record->chunk_addr);
@@ -499,8 +482,6 @@ H5D__bt2_filt_encode(uint8_t *raw, const void *_record, void *_ctx)
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -513,8 +494,8 @@ H5D__bt2_filt_decode(const uint8_t *raw, void *_record, void *_ctx)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(ctx);
-    HDassert(record);
+    assert(ctx);
+    assert(record);
 
     /* Decode the record's fields */
     H5F_addr_decode_len(ctx->sizeof_addr, &raw, &record->chunk_addr);
@@ -524,8 +505,8 @@ H5D__bt2_filt_decode(const uint8_t *raw, void *_record, void *_ctx)
         UINT64DECODE(raw, record->scaled[u]);
 
     /* Sanity checks */
-    HDassert(H5F_addr_defined(record->chunk_addr));
-    HDassert(0 != record->nbytes);
+    assert(H5_addr_defined(record->chunk_addr));
+    assert(0 != record->nbytes);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5D__bt2_filt_decode() */
@@ -537,8 +518,6 @@ H5D__bt2_filt_decode(const uint8_t *raw, void *_record, void *_ctx)
  *
  * Return:	Success:	non-negative
  *		Failure:	negative
- *
- * Programmer:	Vailin Choi; June 2010
  *
  *-------------------------------------------------------------------------
  */
@@ -552,17 +531,17 @@ H5D__bt2_filt_debug(FILE *stream, int indent, int fwidth, const void *_record, c
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity checks */
-    HDassert(record);
-    HDassert(H5F_addr_defined(record->chunk_addr));
-    HDassert(0 != record->nbytes);
+    assert(record);
+    assert(H5_addr_defined(record->chunk_addr));
+    assert(0 != record->nbytes);
 
-    HDfprintf(stream, "%*s%-*s %" PRIuHADDR "\n", indent, "", fwidth, "Chunk address:", record->chunk_addr);
-    HDfprintf(stream, "%*s%-*s %u bytes\n", indent, "", fwidth, "Chunk size:", (unsigned)record->nbytes);
-    HDfprintf(stream, "%*s%-*s 0x%08x\n", indent, "", fwidth, "Filter mask:", record->filter_mask);
+    fprintf(stream, "%*s%-*s %" PRIuHADDR "\n", indent, "", fwidth, "Chunk address:", record->chunk_addr);
+    fprintf(stream, "%*s%-*s %u bytes\n", indent, "", fwidth, "Chunk size:", (unsigned)record->nbytes);
+    fprintf(stream, "%*s%-*s 0x%08x\n", indent, "", fwidth, "Filter mask:", record->filter_mask);
 
-    HDfprintf(stream, "%*s%-*s {", indent, "", fwidth, "Logical offset:");
+    fprintf(stream, "%*s%-*s {", indent, "", fwidth, "Logical offset:");
     for (u = 0; u < ctx->ndims; u++)
-        HDfprintf(stream, "%s%" PRIuHSIZE, u ? ", " : "", record->scaled[u] * ctx->dim[u]);
+        fprintf(stream, "%s%" PRIuHSIZE, u ? ", " : "", record->scaled[u] * ctx->dim[u]);
     HDfputs("}\n", stream);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
@@ -575,9 +554,6 @@ H5D__bt2_filt_debug(FILE *stream, int indent, int fwidth, const void *_record, c
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Neil Fortner
- *              Wednesday, May 23, 2012
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -587,7 +563,7 @@ H5D__bt2_idx_init(const H5D_chk_idx_info_t H5_ATTR_UNUSED *idx_info, const H5S_t
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Check args */
-    HDassert(H5F_addr_defined(dset_ohdr_addr));
+    assert(H5_addr_defined(dset_ohdr_addr));
 
     idx_info->storage->u.btree2.dset_ohdr_addr = dset_ohdr_addr;
 
@@ -603,9 +579,6 @@ H5D__bt2_idx_init(const H5D_chk_idx_info_t H5_ATTR_UNUSED *idx_info, const H5S_t
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Quincey Koziol
- *		Friday, December 18, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -619,16 +592,16 @@ H5D__btree2_idx_depend(const H5D_chk_idx_info_t *idx_info)
     FUNC_ENTER_PACKAGE
 
     /* Check args */
-    HDassert(idx_info);
-    HDassert(idx_info->f);
-    HDassert(H5F_INTENT(idx_info->f) & H5F_ACC_SWMR_WRITE);
-    HDassert(idx_info->pline);
-    HDassert(idx_info->layout);
-    HDassert(H5D_CHUNK_IDX_BT2 == idx_info->layout->idx_type);
-    HDassert(idx_info->storage);
-    HDassert(H5D_CHUNK_IDX_BT2 == idx_info->storage->idx_type);
-    HDassert(H5F_addr_defined(idx_info->storage->idx_addr));
-    HDassert(idx_info->storage->u.btree2.bt2);
+    assert(idx_info);
+    assert(idx_info->f);
+    assert(H5F_INTENT(idx_info->f) & H5F_ACC_SWMR_WRITE);
+    assert(idx_info->pline);
+    assert(idx_info->layout);
+    assert(H5D_CHUNK_IDX_BT2 == idx_info->layout->idx_type);
+    assert(idx_info->storage);
+    assert(H5D_CHUNK_IDX_BT2 == idx_info->storage->idx_type);
+    assert(H5_addr_defined(idx_info->storage->idx_addr));
+    assert(idx_info->storage->u.btree2.bt2);
 
     /* Set up object header location for dataset */
     H5O_loc_reset(&oloc);
@@ -651,7 +624,7 @@ H5D__btree2_idx_depend(const H5D_chk_idx_info_t *idx_info)
 done:
     /* Release the object header from the cache */
     if (oh && H5O_unprotect(&oloc, oh, H5AC__NO_FLAGS_SET) < 0)
-        HDONE_ERROR(H5E_DATASET, H5E_CANTUNPROTECT, FAIL, "unable to release object header")
+        HDONE_ERROR(H5E_DATASET, H5E_CANTUNPROTECT, FAIL, "unable to release object header");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__btree2_idx_depend() */
@@ -669,8 +642,6 @@ done:
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -682,14 +653,14 @@ H5D__bt2_idx_open(const H5D_chk_idx_info_t *idx_info)
     FUNC_ENTER_PACKAGE
 
     /* Check args */
-    HDassert(idx_info);
-    HDassert(idx_info->f);
-    HDassert(idx_info->pline);
-    HDassert(idx_info->layout);
-    HDassert(H5D_CHUNK_IDX_BT2 == idx_info->layout->idx_type);
-    HDassert(idx_info->storage);
-    HDassert(H5F_addr_defined(idx_info->storage->idx_addr));
-    HDassert(NULL == idx_info->storage->u.btree2.bt2);
+    assert(idx_info);
+    assert(idx_info->f);
+    assert(idx_info->pline);
+    assert(idx_info->layout);
+    assert(H5D_CHUNK_IDX_BT2 == idx_info->layout->idx_type);
+    assert(idx_info->storage);
+    assert(H5_addr_defined(idx_info->storage->idx_addr));
+    assert(NULL == idx_info->storage->u.btree2.bt2);
 
     /* Set up the user data */
     u_ctx.f          = idx_info->f;
@@ -719,8 +690,6 @@ done:
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:	Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -733,12 +702,12 @@ H5D__bt2_idx_create(const H5D_chk_idx_info_t *idx_info)
     FUNC_ENTER_PACKAGE
 
     /* Check args */
-    HDassert(idx_info);
-    HDassert(idx_info->f);
-    HDassert(idx_info->pline);
-    HDassert(idx_info->layout);
-    HDassert(idx_info->storage);
-    HDassert(!H5F_addr_defined(idx_info->storage->idx_addr));
+    assert(idx_info);
+    assert(idx_info->f);
+    assert(idx_info->pline);
+    assert(idx_info->layout);
+    assert(idx_info->storage);
+    assert(!H5_addr_defined(idx_info->storage->idx_addr));
 
     bt2_cparam.rrec_size = H5F_SIZEOF_ADDR(idx_info->f)         /* Address of chunk */
                            + (idx_info->layout->ndims - 1) * 8; /* # of dimensions x 64-bit chunk offsets */
@@ -796,8 +765,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static hbool_t
@@ -806,9 +773,9 @@ H5D__bt2_idx_is_space_alloc(const H5O_storage_chunk_t *storage)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Check args */
-    HDassert(storage);
+    assert(storage);
 
-    FUNC_LEAVE_NOAPI((hbool_t)H5F_addr_defined(storage->idx_addr))
+    FUNC_LEAVE_NOAPI((hbool_t)H5_addr_defined(storage->idx_addr))
 } /* end H5D__bt2_idx_is_space_alloc() */
 
 /*-------------------------------------------------------------------------
@@ -820,8 +787,6 @@ H5D__bt2_idx_is_space_alloc(const H5O_storage_chunk_t *storage)
  *
  * Return:	Success:	non-negative
  *		Failure:	negative
- *
- * Programmer:	Vailin Choi; June 2010
  *
  *-------------------------------------------------------------------------
  */
@@ -839,7 +804,7 @@ H5D__bt2_mod_cb(void *_record, void *_op_data, hbool_t *changed)
         unsigned u; /* Local index variable */
 
         for (u = 0; u < op_data->ndims; u++)
-            HDassert(record->scaled[u] == op_data->rec.scaled[u]);
+            assert(record->scaled[u] == op_data->rec.scaled[u]);
     }
 #endif /* NDEBUG */
 
@@ -866,8 +831,6 @@ H5D__bt2_mod_cb(void *_record, void *_op_data, hbool_t *changed)
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -882,14 +845,14 @@ H5D__bt2_idx_insert(const H5D_chk_idx_info_t *idx_info, H5D_chunk_ud_t *udata,
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(idx_info);
-    HDassert(idx_info->f);
-    HDassert(idx_info->pline);
-    HDassert(idx_info->layout);
-    HDassert(idx_info->storage);
-    HDassert(H5F_addr_defined(idx_info->storage->idx_addr));
-    HDassert(udata);
-    HDassert(H5F_addr_defined(udata->chunk_block.offset));
+    assert(idx_info);
+    assert(idx_info->f);
+    assert(idx_info->pline);
+    assert(idx_info->layout);
+    assert(idx_info->storage);
+    assert(H5_addr_defined(idx_info->storage->idx_addr));
+    assert(udata);
+    assert(H5_addr_defined(udata->chunk_block.offset));
 
     /* Check if the v2 B-tree is open yet */
     if (NULL == idx_info->storage->u.btree2.bt2) {
@@ -936,8 +899,6 @@ done:
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -959,8 +920,6 @@ H5D__bt2_found_cb(const void *nrecord, void *op_data)
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -976,14 +935,14 @@ H5D__bt2_idx_get_addr(const H5D_chk_idx_info_t *idx_info, H5D_chunk_ud_t *udata)
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(idx_info);
-    HDassert(idx_info->f);
-    HDassert(idx_info->pline);
-    HDassert(idx_info->layout);
-    HDassert(idx_info->layout->ndims > 0);
-    HDassert(idx_info->storage);
-    HDassert(H5F_addr_defined(idx_info->storage->idx_addr));
-    HDassert(udata);
+    assert(idx_info);
+    assert(idx_info->f);
+    assert(idx_info->pline);
+    assert(idx_info->layout);
+    assert(idx_info->layout->ndims > 0);
+    assert(idx_info->storage);
+    assert(H5_addr_defined(idx_info->storage->idx_addr));
+    assert(udata);
 
     /* Check if the v2 B-tree is open yet */
     if (NULL == idx_info->storage->u.btree2.bt2) {
@@ -1019,7 +978,7 @@ H5D__bt2_idx_get_addr(const H5D_chk_idx_info_t *idx_info, H5D_chunk_ud_t *udata)
     /* Check if chunk was found */
     if (found) {
         /* Sanity check */
-        HDassert(0 != found_rec.nbytes);
+        assert(0 != found_rec.nbytes);
 
         /* Set common info for the chunk */
         udata->chunk_block.offset = found_rec.chunk_addr;
@@ -1056,8 +1015,6 @@ done:
  * Return:	Success:	Non-negative
  *		Failure:	Negative
  *
- * Programmer:	Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static int
@@ -1084,8 +1041,6 @@ H5D__bt2_idx_iterate_cb(const void *_record, void *_udata)
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static int
@@ -1098,14 +1053,14 @@ H5D__bt2_idx_iterate(const H5D_chk_idx_info_t *idx_info, H5D_chunk_cb_func_t chu
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(idx_info);
-    HDassert(idx_info->f);
-    HDassert(idx_info->pline);
-    HDassert(idx_info->layout);
-    HDassert(idx_info->storage);
-    HDassert(H5F_addr_defined(idx_info->storage->idx_addr));
-    HDassert(chunk_cb);
-    HDassert(chunk_udata);
+    assert(idx_info);
+    assert(idx_info->f);
+    assert(idx_info->pline);
+    assert(idx_info->layout);
+    assert(idx_info->storage);
+    assert(H5_addr_defined(idx_info->storage->idx_addr));
+    assert(chunk_cb);
+    assert(chunk_udata);
 
     /* Check if the v2 B-tree is open yet */
     if (NULL == idx_info->storage->u.btree2.bt2) {
@@ -1143,8 +1098,6 @@ done:
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1157,7 +1110,7 @@ H5D__bt2_remove_cb(const void *_record, void *_udata)
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(f);
+    assert(f);
 
     /* Free the space in the file for the object being removed */
     H5_CHECK_OVERFLOW(record->nbytes, uint32_t, hsize_t);
@@ -1175,8 +1128,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1190,13 +1141,13 @@ H5D__bt2_idx_remove(const H5D_chk_idx_info_t *idx_info, H5D_chunk_common_ud_t *u
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(idx_info);
-    HDassert(idx_info->f);
-    HDassert(idx_info->pline);
-    HDassert(idx_info->layout);
-    HDassert(idx_info->storage);
-    HDassert(H5F_addr_defined(idx_info->storage->idx_addr));
-    HDassert(udata);
+    assert(idx_info);
+    assert(idx_info->f);
+    assert(idx_info->pline);
+    assert(idx_info->layout);
+    assert(idx_info->storage);
+    assert(H5_addr_defined(idx_info->storage->idx_addr));
+    assert(udata);
 
     /* Check if the v2 B-tree is open yet */
     if (NULL == idx_info->storage->u.btree2.bt2) {
@@ -1238,8 +1189,6 @@ done:
  * Return:	Success:	Non-negative
  *		Failure:	negative
  *
- * Programmer:	Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1252,14 +1201,14 @@ H5D__bt2_idx_delete(const H5D_chk_idx_info_t *idx_info)
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(idx_info);
-    HDassert(idx_info->f);
-    HDassert(idx_info->pline);
-    HDassert(idx_info->layout);
-    HDassert(idx_info->storage);
+    assert(idx_info);
+    assert(idx_info->f);
+    assert(idx_info->pline);
+    assert(idx_info->layout);
+    assert(idx_info->storage);
 
     /* Check if the index data structure has been allocated */
-    if (H5F_addr_defined(idx_info->storage->idx_addr)) {
+    if (H5_addr_defined(idx_info->storage->idx_addr)) {
         /* Set up user data for creating context */
         u_ctx.f          = idx_info->f;
         u_ctx.ndims      = idx_info->layout->ndims - 1;
@@ -1291,8 +1240,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1303,19 +1250,19 @@ H5D__bt2_idx_copy_setup(const H5D_chk_idx_info_t *idx_info_src, const H5D_chk_id
     FUNC_ENTER_PACKAGE
 
     /* Source file */
-    HDassert(idx_info_src);
-    HDassert(idx_info_src->f);
-    HDassert(idx_info_src->pline);
-    HDassert(idx_info_src->layout);
-    HDassert(idx_info_src->storage);
+    assert(idx_info_src);
+    assert(idx_info_src->f);
+    assert(idx_info_src->pline);
+    assert(idx_info_src->layout);
+    assert(idx_info_src->storage);
 
     /* Destination file */
-    HDassert(idx_info_dst);
-    HDassert(idx_info_dst->f);
-    HDassert(idx_info_dst->pline);
-    HDassert(idx_info_dst->layout);
-    HDassert(idx_info_dst->storage);
-    HDassert(!H5F_addr_defined(idx_info_dst->storage->idx_addr));
+    assert(idx_info_dst);
+    assert(idx_info_dst->f);
+    assert(idx_info_dst->pline);
+    assert(idx_info_dst->layout);
+    assert(idx_info_dst->storage);
+    assert(!H5_addr_defined(idx_info_dst->storage->idx_addr));
 
     /* Check if the source v2 B-tree is open yet */
     if (NULL == idx_info_src->storage->u.btree2.bt2)
@@ -1323,12 +1270,12 @@ H5D__bt2_idx_copy_setup(const H5D_chk_idx_info_t *idx_info_src, const H5D_chk_id
             HGOTO_ERROR(H5E_DATASET, H5E_CANTOPENOBJ, FAIL, "can't open v2 B-tree")
 
     /* Set copied metadata tag */
-    H5_BEGIN_TAG(H5AC__COPIED_TAG);
+    H5_BEGIN_TAG(H5AC__COPIED_TAG)
 
     /* Create v2 B-tree that describes the chunked dataset in the destination file */
     if (H5D__bt2_idx_create(idx_info_dst) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to initialize chunked storage")
-    HDassert(H5F_addr_defined(idx_info_dst->storage->idx_addr));
+    assert(H5_addr_defined(idx_info_dst->storage->idx_addr));
 
     /* Reset metadata tag */
     H5_END_TAG
@@ -1344,8 +1291,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1356,10 +1301,10 @@ H5D__bt2_idx_copy_shutdown(H5O_storage_chunk_t *storage_src, H5O_storage_chunk_t
     FUNC_ENTER_PACKAGE
 
     /* Check args */
-    HDassert(storage_src);
-    HDassert(storage_src->u.btree2.bt2);
-    HDassert(storage_dst);
-    HDassert(storage_dst->u.btree2.bt2);
+    assert(storage_src);
+    assert(storage_src->u.btree2.bt2);
+    assert(storage_dst);
+    assert(storage_dst->u.btree2.bt2);
 
     /* Close v2 B-tree for source file */
     if (H5B2_close(storage_src->u.btree2.bt2) < 0)
@@ -1383,8 +1328,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        negative
  *
- * Programmer:  Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1396,13 +1339,13 @@ H5D__bt2_idx_size(const H5D_chk_idx_info_t *idx_info, hsize_t *index_size)
     FUNC_ENTER_PACKAGE
 
     /* Check args */
-    HDassert(idx_info);
-    HDassert(idx_info->f);
-    HDassert(idx_info->pline);
-    HDassert(idx_info->layout);
-    HDassert(idx_info->storage);
-    HDassert(H5F_addr_defined(idx_info->storage->idx_addr));
-    HDassert(index_size);
+    assert(idx_info);
+    assert(idx_info->f);
+    assert(idx_info->pline);
+    assert(idx_info->layout);
+    assert(idx_info->storage);
+    assert(H5_addr_defined(idx_info->storage->idx_addr));
+    assert(index_size);
 
     /* Open v2 B-tree */
     if (H5D__bt2_idx_open(idx_info) < 0)
@@ -1418,7 +1361,7 @@ H5D__bt2_idx_size(const H5D_chk_idx_info_t *idx_info, hsize_t *index_size)
 done:
     /* Close v2 B-tree index */
     if (bt2_cdset && H5B2_close(bt2_cdset) < 0)
-        HDONE_ERROR(H5E_SYM, H5E_CLOSEERROR, FAIL, "can't close v2 B-tree for tracking chunked dataset")
+        HDONE_ERROR(H5E_SYM, H5E_CLOSEERROR, FAIL, "can't close v2 B-tree for tracking chunked dataset");
     idx_info->storage->u.btree2.bt2 = NULL;
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1431,8 +1374,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1441,7 +1382,7 @@ H5D__bt2_idx_reset(H5O_storage_chunk_t *storage, hbool_t reset_addr)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity checks */
-    HDassert(storage);
+    assert(storage);
 
     /* Reset index info */
     if (reset_addr)
@@ -1458,8 +1399,6 @@ H5D__bt2_idx_reset(H5O_storage_chunk_t *storage, hbool_t reset_addr)
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1468,10 +1407,10 @@ H5D__bt2_idx_dump(const H5O_storage_chunk_t *storage, FILE *stream)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity checks */
-    HDassert(storage);
-    HDassert(stream);
+    assert(storage);
+    assert(stream);
 
-    HDfprintf(stream, "    Address: %" PRIuHADDR "\n", storage->idx_addr);
+    fprintf(stream, "    Address: %" PRIuHADDR "\n", storage->idx_addr);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5D__bt2_idx_dump() */
@@ -1483,8 +1422,6 @@ H5D__bt2_idx_dump(const H5O_storage_chunk_t *storage, FILE *stream)
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Vailin Choi; June 2010
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1495,9 +1432,9 @@ H5D__bt2_idx_dest(const H5D_chk_idx_info_t *idx_info)
     FUNC_ENTER_PACKAGE
 
     /* Check args */
-    HDassert(idx_info);
-    HDassert(idx_info->f);
-    HDassert(idx_info->storage);
+    assert(idx_info);
+    assert(idx_info->f);
+    assert(idx_info->storage);
 
     /* Check if the v2-btree is open */
     if (idx_info->storage->u.btree2.bt2) {

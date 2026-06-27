@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -52,9 +51,6 @@ void test_exit_definitions(void);
  *
  * Return:    none (error is fed back via global variable num_errs)
  *
- * Programmer:    Albert Cheng
- *              September 25, 2001
- *
  *-------------------------------------------------------------------------
  */
 void
@@ -73,11 +69,6 @@ test_configure(void)
  *
  * Return:    none
  *
- * Programmer:    Albert Cheng
- *              September 25, 2001
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 void
@@ -92,13 +83,6 @@ cleanup_configure(void)
  * Purpose:    test C language data type sizes
  *
  * Return:    none (error is fed back via global variable num_errs)
- *
- * Programmer:    Albert Cheng
- *              September 25, 2001
- *
- * Modifications:
- *    Albert Cheng, 2004/10/14
- *    Verified both signed and unsigned int types.
  *
  *-------------------------------------------------------------------------
  */
@@ -180,11 +164,6 @@ test_config_ctypes(void)
  * Purpose:    test the exit macros values
  *
  * Return:    none (error is fed back via global variable num_errs)
- *
- * Programmer:    Albert Cheng
- *              October 12, 2009
- *
- * Modifications:
  *
  *-------------------------------------------------------------------------
  */

@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -35,7 +34,11 @@ typedef enum H5LT_lang_t {
 extern "C" {
 #endif
 
-/**\defgroup H5LT Lite
+/** \page H5LT_UG The HDF5 High Level Lite
+ * @todo Under Construction
+ */
+
+/**\defgroup H5LT HDF5 Lite APIs (H5LT,H5LD)
  * <em>Functions used to simplify creating and manipulating datasets,
  * attributes and other features (H5LT, H5LD)</em>
  *
@@ -57,87 +60,93 @@ extern "C" {
  *
  * <table>
  * <tr valign="top"><td style="border: none;">
+ *
  * - Dataset Functions
  *   - Make dataset functions
- *     - \ref H5LTmake_dataset
- *     - \ref H5LTmake_dataset_char
- *     - \ref H5LTmake_dataset_short
- *     - \ref H5LTmake_dataset_int
- *     - \ref H5LTmake_dataset_long
- *     - \ref H5LTmake_dataset_float
- *     - \ref H5LTmake_dataset_double
- *     - \ref H5LTmake_dataset_string
+ *      - \ref H5LTmake_dataset
+ *      - \ref H5LTmake_dataset_char
+ *      - \ref H5LTmake_dataset_short
+ *      - \ref H5LTmake_dataset_int
+ *      - \ref H5LTmake_dataset_long
+ *      - \ref H5LTmake_dataset_float
+ *      - \ref H5LTmake_dataset_double
+ *      - \ref H5LTmake_dataset_string
  *
  *   - Read dataset functions
- *     - \ref H5LTread_dataset
- *     - \ref H5LTread_dataset_char
- *     - \ref H5LTread_dataset_short
- *     - \ref H5LTread_dataset_int
- *     - \ref H5LTread_dataset_long
- *     - \ref H5LTread_dataset_float
- *     - \ref H5LTread_dataset_double
- *     - \ref H5LTread_dataset_string
+ *      - \ref H5LTread_dataset
+ *      - \ref H5LTread_dataset_char
+ *      - \ref H5LTread_dataset_short
+ *      - \ref H5LTread_dataset_int
+ *      - \ref H5LTread_dataset_long
+ *      - \ref H5LTread_dataset_float
+ *      - \ref H5LTread_dataset_double
+ *      - \ref H5LTread_dataset_string
  *
  *   - Query dataset functions
- *     - \ref H5LTfind_dataset
- *     - \ref H5LTget_dataset_ndims
- *     - \ref H5LTget_dataset_info
+ *      - \ref H5LTfind_dataset
+ *      - \ref H5LTget_dataset_ndims
+ *      - \ref H5LTget_dataset_info
  *
  *   - Dataset watch functions
- *     - \ref H5LDget_dset_dims
- *     - \ref H5LDget_dset_elmts
- *     - \ref H5LDget_dset_type_size
+ *      - \ref H5LDget_dset_dims
+ *      - \ref H5LDget_dset_elmts
+ *      - \ref H5LDget_dset_type_size
+ *
  * </td><td style="border: none;">
+ *
  * - Attribute Functions
  *   - Set attribute functions
- *     - \ref H5LTset_attribute_string
- *     - \ref H5LTset_attribute_char
- *     - \ref H5LTset_attribute_uchar
- *     - \ref H5LTset_attribute_short
- *     - \ref H5LTset_attribute_ushort
- *     - \ref H5LTset_attribute_int
- *     - \ref H5LTset_attribute_uint
- *     - \ref H5LTset_attribute_long
- *     - \ref H5LTset_attribute_long_long
- *     - \ref H5LTset_attribute_ulong
- *     - \ref H5LTset_attribute_ullong
- *     - \ref H5LTset_attribute_float
- *     - \ref H5LTset_attribute_double
- *     - <code>H5LTset_attribute_f</code> (fortran ONLY)
+ *      - \ref H5LTset_attribute_string
+ *      - \ref H5LTset_attribute_char
+ *      - \ref H5LTset_attribute_uchar
+ *      - \ref H5LTset_attribute_short
+ *      - \ref H5LTset_attribute_ushort
+ *      - \ref H5LTset_attribute_int
+ *      - \ref H5LTset_attribute_uint
+ *      - \ref H5LTset_attribute_long
+ *      - \ref H5LTset_attribute_long_long
+ *      - \ref H5LTset_attribute_ulong
+ *      - \ref H5LTset_attribute_ullong
+ *      - \ref H5LTset_attribute_float
+ *      - \ref H5LTset_attribute_double
+ *      - <code>H5LTset_attribute_f</code> (fortran ONLY)
  *
  *   - Get attribute functions
- *     - \ref H5LTget_attribute
- *     - \ref H5LTget_attribute_string
- *     - \ref H5LTget_attribute_char
- *     - \ref H5LTget_attribute_uchar
- *     - \ref H5LTget_attribute_short
- *     - \ref H5LTget_attribute_ushort
- *     - \ref H5LTget_attribute_int
- *     - \ref H5LTget_attribute_uint
- *     - \ref H5LTget_attribute_long
- *     - \ref H5LTget_attribute_long_long
- *     - \ref H5LTget_attribute_ulong
- *     - \ref H5LTget_attribute_ullong
- *     - \ref H5LTget_attribute_float
- *     - \ref H5LTget_attribute_double
+ *      - \ref H5LTget_attribute
+ *      - \ref H5LTget_attribute_string
+ *      - \ref H5LTget_attribute_char
+ *      - \ref H5LTget_attribute_uchar
+ *      - \ref H5LTget_attribute_short
+ *      - \ref H5LTget_attribute_ushort
+ *      - \ref H5LTget_attribute_int
+ *      - \ref H5LTget_attribute_uint
+ *      - \ref H5LTget_attribute_long
+ *      - \ref H5LTget_attribute_long_long
+ *      - \ref H5LTget_attribute_ulong
+ *      - \ref H5LTget_attribute_ullong
+ *      - \ref H5LTget_attribute_float
+ *      - \ref H5LTget_attribute_double
  *
  *   - Query attribute functions
- *     - \ref H5LTfind_attribute
- *     - \ref H5LTget_attribute_info
- *     - \ref H5LTget_attribute_ndims
+ *      - \ref H5LTfind_attribute
+ *      - \ref H5LTget_attribute_info
+ *      - \ref H5LTget_attribute_ndims
+ *
  * </td><td style="border: none;">
+ *
  * - Datatype Functions
  *   - Datatype translation functions
- *     - \ref H5LTtext_to_dtype
- *     - \ref H5LTdtype_to_text
+ *      - \ref H5LTtext_to_dtype
+ *      - \ref H5LTdtype_to_text
  *
  * - File image function
  *   - Open file image function
- *     - \ref H5LTopen_file_image
+ *      - \ref H5LTopen_file_image
  *
  * - Path and object function
  *   - Query path and object function
- *     - \ref H5LTpath_valid
+ *      - \ref H5LTpath_valid
+ *
  * </td></tr>
  * </table>
  *
@@ -199,7 +208,7 @@ H5_HLDLL herr_t H5LTmake_dataset(hid_t loc_id, const char *dset_name, int rank, 
  *          named \p dset_name attached to the object specified by
  *          the identifier \p loc_id.
  *
- *          The dataset’s datatype will be \e character, #H5T_NATIVE_CHAR.
+ *          The dataset's datatype will be \e character, #H5T_NATIVE_CHAR.
  *
  */
 H5_HLDLL herr_t H5LTmake_dataset_char(hid_t loc_id, const char *dset_name, int rank, const hsize_t *dims,
@@ -223,7 +232,7 @@ H5_HLDLL herr_t H5LTmake_dataset_char(hid_t loc_id, const char *dset_name, int r
  *          named \p dset_name attached to the object specified by
  *          the identifier \p loc_id.
  *
- *          The dataset’s datatype will be <em>short signed integer</em>,
+ *          The dataset's datatype will be <em>short signed integer</em>,
  *          #H5T_NATIVE_SHORT.
  *
  */
@@ -248,7 +257,7 @@ H5_HLDLL herr_t H5LTmake_dataset_short(hid_t loc_id, const char *dset_name, int 
  *          named \p dset_name attached to the object specified by
  *          the identifier \p loc_id.
  *
- *          The dataset’s datatype will be <em>native signed integer</em>,
+ *          The dataset's datatype will be <em>native signed integer</em>,
  *          #H5T_NATIVE_INT.
  *
  * \version Fortran subroutine modified in this release to accommodate
@@ -276,7 +285,7 @@ H5_HLDLL herr_t H5LTmake_dataset_int(hid_t loc_id, const char *dset_name, int ra
  *          named \p dset_name attached to the object specified by
  *          the identifier \p loc_id.
  *
- *          The dataset’s datatype will be <em>long signed integer</em>,
+ *          The dataset's datatype will be <em>long signed integer</em>,
  *          #H5T_NATIVE_LONG.
  *
  */
@@ -301,7 +310,7 @@ H5_HLDLL herr_t H5LTmake_dataset_long(hid_t loc_id, const char *dset_name, int r
  *          named \p dset_name attached to the object specified by
  *          the identifier \p loc_id.
  *
- *          The dataset’s datatype will be <em>native floating point</em>,
+ *          The dataset's datatype will be <em>native floating point</em>,
  *          #H5T_NATIVE_FLOAT.
  *
  * \version 1.8.7 Fortran subroutine modified in this release to accommodate
@@ -329,7 +338,7 @@ H5_HLDLL herr_t H5LTmake_dataset_float(hid_t loc_id, const char *dset_name, int 
  *          named \p dset_name attached to the object specified by
  *          the identifier \p loc_id.
  *
- *          The dataset’s datatype will be
+ *          The dataset's datatype will be
  *          <em>native floating-point double</em>, #H5T_NATIVE_DOUBLE.
  *
  * \version 1.8.7 Fortran subroutine modified in this release to accommodate
@@ -355,7 +364,7 @@ H5_HLDLL herr_t H5LTmake_dataset_double(hid_t loc_id, const char *dset_name, int
  *          named \p dset_name attached to the object specified by
  *          the identifier \p loc_id.
  *
- *          The dataset’s datatype will be <em>C string</em>, #H5T_C_S1.
+ *          The dataset's datatype will be <em>C string</em>, #H5T_C_S1.
  *
  */
 H5_HLDLL herr_t H5LTmake_dataset_string(hid_t loc_id, const char *dset_name, const char *buf);
@@ -1487,7 +1496,7 @@ H5_HLDLL herr_t H5LTfind_attribute(hid_t loc_id, const char *name);
  *          final component of \p path resolves to an HDF5 object;
  *          if not, the final component is a dangling link.
  *
- *          The meaning of the function’s return value depends on the
+ *          The meaning of the function's return value depends on the
  *          value of \p check_object_valid:
  *
  *          If \p check_object_valid is set to \c FALSE, H5LTpath_valid()
@@ -1507,10 +1516,10 @@ H5_HLDLL herr_t H5LTfind_attribute(hid_t loc_id, const char *name);
  *          \p path can be any one of the following:
  *
  *          - An absolute path, which starts with a slash (\c /)
- *            indicating the file’s root group, followed by the members
+ *            indicating the file's root group, followed by the members
  *          - A relative path with respect to \p loc_id
  *          - A dot (\c .), if \p loc_id is the object identifier for
- *            the object itself
+ *            the object itself.
  *
  *          If \p path is an absolute path, then \p loc_id can be an
  *          identifier for any object in the file as it is used only to

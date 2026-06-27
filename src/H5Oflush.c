@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -14,8 +13,6 @@
 /*-------------------------------------------------------------------------
  *
  * Created:     H5Oflush.c
- *              Aug 19, 2010
- *              Mike McGreevy
  *
  * Purpose:     Object flush/refresh routines.
  *
@@ -61,9 +58,6 @@ static herr_t H5O__refresh_metadata_close(H5O_loc_t *oloc, H5G_loc_t *obj_loc, h
  * Return:	Success:	Non-negative
  *		Failure:	Negative
  *
- * Programmer:	Quincey Koziol
- *		December 29, 2017
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -108,8 +102,6 @@ done:
  *
  * Return:  	Non-negative on success, negative on failure
  *
- * Programmer:  Vailin Choi; Dec 2013
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -144,9 +136,6 @@ done:
  * Return:  	Success:    Non-negative
  *          	Failure:    Negative
  *
- * Programmer: Mike McGreevy
- *             May 19, 2010
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -158,7 +147,7 @@ H5O__oh_tag(const H5O_loc_t *oloc, haddr_t *tag)
     FUNC_ENTER_PACKAGE
 
     /* Check args */
-    HDassert(oloc);
+    assert(oloc);
 
     /* Get object header for object */
     if (NULL == (oh = H5O_protect(oloc, H5AC__READ_ONLY_FLAG, FALSE)))
@@ -171,7 +160,7 @@ H5O__oh_tag(const H5O_loc_t *oloc, haddr_t *tag)
 done:
     /* Unprotect object header on failure */
     if (oh && H5O_unprotect(oloc, oh, H5AC__NO_FLAGS_SET) < 0)
-        HDONE_ERROR(H5E_OHDR, H5E_CANTUNPROTECT, FAIL, "unable to release object header")
+        HDONE_ERROR(H5E_OHDR, H5E_CANTUNPROTECT, FAIL, "unable to release object header");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O__oh_tag() */
@@ -190,9 +179,6 @@ done:
  *	 	H5Fstart_swmr_write() no longer calls the 1st routine.	(12/24/15)
  *
  * Return:    	Non-negative on success, negative on failure
- *
- * Programmer: Mike McGreevy/Vailin Choi
- *             July 28, 2010/Feb 2014
  *
  *-------------------------------------------------------------------------
  */
@@ -270,7 +256,7 @@ done:
     if (objs_incr && file)
         H5F_decr_nopen_objs(file);
 
-    FUNC_LEAVE_NOAPI(ret_value);
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_refresh_metadata() */
 
 /*-------------------------------------------------------------------------
@@ -286,9 +272,6 @@ done:
  *
  * Return:  Success:    Non-negative
  *          Failure:    Negative
- *
- * Programmer: Mike McGreevy/Vailin Choi
- *             July 28, 2010/Feb 2014
  *
  *-------------------------------------------------------------------------
  */
@@ -336,7 +319,7 @@ H5O__refresh_metadata_close(H5O_loc_t *oloc, H5G_loc_t *obj_loc, hid_t oid)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTFLUSH, FAIL, "unable to flush tagged metadata")
 
     /* Evict the object's tagged metadata */
-    if (H5F_evict_tagged_metadata(file, tag) < 0)
+    if (H5AC_evict_tagged_metadata(file, tag, TRUE) < 0)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTFLUSH, FAIL, "unable to evict metadata")
 
     /* Re-cork object with tag */
@@ -345,7 +328,7 @@ H5O__refresh_metadata_close(H5O_loc_t *oloc, H5G_loc_t *obj_loc, hid_t oid)
             HGOTO_ERROR(H5E_OHDR, H5E_SYSTEM, FAIL, "unable to cork the object")
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value);
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O__refresh_metadata_close() */
 
 /*-------------------------------------------------------------------------
@@ -356,9 +339,6 @@ done:
  *		  (2) Re-register object ID with the re-opened object.
  *
  * Return:      SUCCEED/FAIL
- *
- * Programmer: Mike McGreevy/Vailin Choi
- *             July 28, 2010/Feb 2014
  *
  *-------------------------------------------------------------------------
  */
@@ -373,8 +353,8 @@ H5O_refresh_metadata_reopen(hid_t oid, hid_t apl_id, H5G_loc_t *obj_loc, H5VL_t 
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity check */
-    HDassert(obj_loc);
-    HDassert(vol_connector);
+    assert(obj_loc);
+    assert(vol_connector);
 
     /* Get object's type */
     type = H5I_get_type(oid);
@@ -435,5 +415,5 @@ H5O_refresh_metadata_reopen(hid_t oid, hid_t apl_id, H5G_loc_t *obj_loc, H5VL_t 
         HGOTO_ERROR(H5E_OHDR, H5E_CANTREGISTER, FAIL, "unable to re-register object ID after refresh")
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value);
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_refresh_metadata_reopen() */

@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -69,7 +68,6 @@
 #ifdef H5_HAVE_WINDOWS
 #include "H5FDwindows.h" /* Win32 I/O                                */
 #endif
-#include "H5FDvfd_swmr.h" /* Posix unbuffered I/O    file driver  */
 
 /* Includes needed to set default VOL connector */
 #include "H5VLnative_private.h" /* Native VOL connector                     */
@@ -341,11 +339,8 @@
 #define H5F_ACS_VFD_SWMR_CONFIG_ENC  H5P__facc_vfd_swmr_config_enc
 #define H5F_ACS_VFD_SWMR_CONFIG_DEC  H5P__facc_vfd_swmr_config_dec
 
-/*  Private property for VFD SWMR testing:
- *      Callback function to generate checksum for metadata file
- */
+/* Private property for VFD SWMR testing: callback to generate checksum for metadata file */
 #define H5F_ACS_GENERATE_MD_CK_CB_SIZE sizeof(H5F_generate_md_ck_cb_t)
-
 #define H5F_ACS_GENERATE_MD_CK_CB_DEF                                                                        \
     {                                                                                                        \
         NULL                                                                                                 \
@@ -395,8 +390,6 @@ static herr_t H5P__facc_multi_type_enc(const void *value, void **_pp, size_t *si
 static herr_t H5P__facc_multi_type_dec(const void **_pp, void *value);
 static herr_t H5P__facc_libver_type_enc(const void *value, void **_pp, size_t *size);
 static herr_t H5P__facc_libver_type_dec(const void **_pp, void *value);
-static herr_t H5P__facc_vfd_swmr_config_enc(const void *value, void **_pp, size_t *size);
-static herr_t H5P__facc_vfd_swmr_config_dec(const void **_pp, void *value);
 
 /* Metadata cache log location property callbacks */
 static herr_t H5P__facc_mdc_log_location_enc(const void *value, void **_pp, size_t *size);
@@ -420,6 +413,10 @@ static herr_t H5P__facc_vol_del(hid_t prop_id, const char *name, size_t size, vo
 static herr_t H5P__facc_vol_copy(const char *name, size_t size, void *value);
 static int    H5P__facc_vol_cmp(const void *value1, const void *value2, size_t size);
 static herr_t H5P__facc_vol_close(const char *name, size_t size, void *value);
+
+/* VFD SWMR config encode/decode callbacks */
+static herr_t H5P__facc_vfd_swmr_config_enc(const void *value, void **_pp, size_t *size);
+static herr_t H5P__facc_vfd_swmr_config_dec(const void **_pp, void *value);
 
 #ifdef H5_HAVE_PARALLEL
 /* MPI communicator callbacks */
@@ -557,7 +554,7 @@ static const H5F_vfd_swmr_config_t H5F_def_vfd_swmr_config_g =
     H5F_ACS_VFD_SWMR_CONFIG_DEF; /* Default vfd swmr configuration */
 H5_GCC_CLANG_DIAG_ON("larger-than=")
 /* For VFD SWMR testing only: Default to generate checksum for metadata file */
-static const H5F_generate_md_ck_t H5F_def_generate_md_ck_cb_g = H5F_ACS_GENERATE_MD_CK_CB_DEF;
+static const H5F_generate_md_ck_cb_t H5F_def_generate_md_ck_cb_g = H5F_ACS_GENERATE_MD_CK_CB_DEF;
 
 /*-------------------------------------------------------------------------
  * Function:    H5P__facc_reg_prop
@@ -566,8 +563,6 @@ static const H5F_generate_md_ck_t H5F_def_generate_md_ck_cb_g = H5F_ACS_GENERATE
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Quincey Koziol
- *              October 31, 2006
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -673,14 +668,6 @@ H5P__facc_reg_prop(H5P_genclass_t *pclass)
     /* (Note: this property should not have an encode/decode callback -QAK) */
     if (H5P__register_real(pclass, H5F_ACS_FAMILY_TO_SINGLE_NAME, H5F_ACS_FAMILY_TO_SINGLE_SIZE,
                            &H5F_def_family_to_single_g, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                           NULL) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
-
-    /* Register the private property of whether to generate checksum for metadata file.
-     * It's used for VFD SWMR testing only. */
-    /* (Note: this property should not have an encode/decode callback -QAK) */
-    if (H5P__register_real(pclass, H5F_ACS_GENERATE_MD_CK_CB_NAME, H5F_ACS_GENERATE_MD_CK_CB_SIZE,
-                           &H5F_def_generate_md_ck_cb_g, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                            NULL) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
 
@@ -844,12 +831,6 @@ H5P__facc_reg_prop(H5P_genclass_t *pclass)
                            H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_DEC, NULL, NULL, NULL, NULL) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
 
-    /* Register the default VFD SWMR configuration */
-    if (H5P__register_real(pclass, H5F_ACS_VFD_SWMR_CONFIG_NAME, H5F_ACS_VFD_SWMR_CONFIG_SIZE,
-                           &H5F_def_vfd_swmr_config_g, NULL, NULL, NULL, H5F_ACS_VFD_SWMR_CONFIG_ENC,
-                           H5F_ACS_VFD_SWMR_CONFIG_DEC, NULL, NULL, NULL, NULL) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
-
     /* Register the file VOL connector ID & info */
     /* (Note: this property should not have an encode/decode callback -QAK) */
     if (H5P__register_real(pclass, H5F_ACS_VOL_CONN_NAME, H5F_ACS_VOL_CONN_SIZE, &def_vol_prop,
@@ -869,6 +850,12 @@ H5P__facc_reg_prop(H5P_genclass_t *pclass)
                            H5F_ACS_IGNORE_DISABLED_FILE_LOCKS_SIZE, &H5F_def_ignore_disabled_file_locks_g,
                            NULL, NULL, NULL, H5F_ACS_IGNORE_DISABLED_FILE_LOCKS_ENC,
                            H5F_ACS_IGNORE_DISABLED_FILE_LOCKS_DEC, NULL, NULL, NULL, NULL) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
+
+    /* Register the default VFD SWMR configuration */
+    if (H5P__register_real(pclass, H5F_ACS_VFD_SWMR_CONFIG_NAME, H5F_ACS_VFD_SWMR_CONFIG_SIZE,
+                           &H5F_def_vfd_swmr_config_g, NULL, NULL, NULL, H5F_ACS_VFD_SWMR_CONFIG_ENC,
+                           H5F_ACS_VFD_SWMR_CONFIG_DEC, NULL, NULL, NULL, NULL) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
 
 done:
@@ -910,7 +897,7 @@ H5P__facc_set_def_driver(void)
         if ((driver_is_registered = H5FD_is_driver_registered_by_name(driver_env_var, &driver_id)) < 0)
             HGOTO_ERROR(H5E_VFL, H5E_CANTGET, FAIL, "can't check if VFL driver is already registered")
         if (driver_is_registered) {
-            HDassert(driver_id >= 0);
+            assert(driver_id >= 0);
 
             if (H5I_inc_ref(driver_id, TRUE) < 0)
                 HGOTO_ERROR(H5E_VFL, H5E_CANTINC, FAIL, "unable to increment ref count on VFD")
@@ -964,7 +951,7 @@ done:
     /* Clean up on error */
     if (ret_value < 0) {
         if (driver_id >= 0 && driver_ref_inc && H5I_dec_app_ref(driver_id) < 0)
-            HDONE_ERROR(H5E_PLIST, H5E_CANTDEC, FAIL, "unable to unregister VFL driver")
+            HDONE_ERROR(H5E_PLIST, H5E_CANTDEC, FAIL, "unable to unregister VFL driver");
     } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -990,8 +977,8 @@ H5P__facc_set_def_driver_check_predefined(const char *driver_name, hid_t *driver
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(driver_name);
-    HDassert(driver_id);
+    assert(driver_name);
+    assert(driver_id);
 
     if (!HDstrcmp(driver_name, "sec2")) {
         if ((*driver_id = H5FD_SEC2) < 0)
@@ -1088,10 +1075,10 @@ done:
 /*-------------------------------------------------------------------------
  * Function:    H5P_facc_set_def_driver_check_predefined
  *
- * Purpose:     Checks a given driver name against a list of predefined
- *              names for VFL drivers that are internal to HDF5. If a name
- *              is matched, the ID for that driver is returned through
- *              `driver_id`. Otherwise, `driver_id` is set to
+ * Purpose:     Public (non-static) wrapper for
+ *              H5P__facc_set_def_driver_check_predefined.
+ *              If driver_name matches a predefined VFL driver name,
+ *              sets *driver_id to the driver's ID; else sets it to
  *              H5I_INVALID_HID.
  *
  *              This is the public (non-static) version of this function,
@@ -1108,8 +1095,8 @@ H5P_facc_set_def_driver_check_predefined(const char *driver_name, hid_t *driver_
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(driver_name);
-    HDassert(driver_id);
+    assert(driver_name);
+    assert(driver_id);
 
     if (H5P__facc_set_def_driver_check_predefined(driver_name, driver_id) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "unable to check predefined VFL driver")
@@ -1136,9 +1123,6 @@ done:
  *        which is a multiple of the disk block size.
  *
  * Return:    Non-negative on success/Negative on failure
- *
- * Programmer:    Robb Matzke
- *              Tuesday, June  9, 1998
  *
  *-------------------------------------------------------------------------
  */
@@ -1177,9 +1161,6 @@ done:
  *        pointers may be null pointers.
  *
  * Return:    Non-negative on success/Negative on failure
- *
- * Programmer:    Robb Matzke
- *              Tuesday, June  9, 1998
  *
  *-------------------------------------------------------------------------
  */
@@ -1225,9 +1206,6 @@ done:
  *
  * Return:     Non-negative on success/Negative on failure
  *
- * Programmer:    Robb Matzke
- *                Tuesday, August 3, 1999
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1241,7 +1219,7 @@ H5P_set_driver(H5P_genplist_t *plist, hid_t new_driver_id, const void *new_drive
     /* If VFD configuration information is supplied, ensure that either binary
      * configuration data or a configuration string is supplied, but not both.
      */
-    HDassert(!new_driver_info || !new_driver_config_str);
+    assert(!new_driver_info || !new_driver_config_str);
 
     if (NULL == H5I_object_verify(new_driver_id, H5I_VFL))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file driver ID")
@@ -1278,9 +1256,6 @@ done:
  *
  * Return:    Success:    Non-negative
  *        Failure:    Negative
- *
- * Programmer:    Robb Matzke
- *              Tuesday, August  3, 1999
  *
  *-------------------------------------------------------------------------
  */
@@ -1333,8 +1308,8 @@ H5P_set_driver_by_name(H5P_genplist_t *plist, const char *driver_name, const cha
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(plist);
-    HDassert(driver_name);
+    assert(plist);
+    assert(driver_name);
 
     /* Register the driver */
     if ((new_driver_id = H5FD_register_driver_by_name(driver_name, app_ref)) < 0)
@@ -1347,7 +1322,7 @@ H5P_set_driver_by_name(H5P_genplist_t *plist, const char *driver_name, const cha
 done:
     if (ret_value < 0) {
         if (new_driver_id >= 0 && H5I_dec_app_ref(new_driver_id) < 0)
-            HDONE_ERROR(H5E_PLIST, H5E_CANTDEC, FAIL, "can't decrement count on VFD ID")
+            HDONE_ERROR(H5E_PLIST, H5E_CANTDEC, FAIL, "can't decrement count on VFD ID");
     }
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1421,8 +1396,8 @@ H5P_set_driver_by_value(H5P_genplist_t *plist, H5FD_class_value_t driver_value, 
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(plist);
-    HDassert(driver_value >= 0);
+    assert(plist);
+    assert(driver_value >= 0);
 
     /* Register the driver */
     if ((new_driver_id = H5FD_register_driver_by_value(driver_value, app_ref)) < 0)
@@ -1435,7 +1410,7 @@ H5P_set_driver_by_value(H5P_genplist_t *plist, H5FD_class_value_t driver_value, 
 done:
     if (ret_value < 0) {
         if (new_driver_id >= 0 && H5I_dec_app_ref(new_driver_id) < 0)
-            HDONE_ERROR(H5E_PLIST, H5E_CANTDEC, FAIL, "can't decrement count on VFD ID")
+            HDONE_ERROR(H5E_PLIST, H5E_CANTDEC, FAIL, "can't decrement count on VFD ID");
     }
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1494,9 +1469,6 @@ done:
  *
  *        Failure:    Negative
  *
- * Programmer:    Robb Matzke
- *        Thursday, February 26, 1998
- *
  *-------------------------------------------------------------------------
  */
 hid_t
@@ -1539,9 +1511,6 @@ done:
  *
  *        Failure:    Negative
  *
- * Programmer:    Robb Matzke
- *        Thursday, February 26, 1998
- *
  *-------------------------------------------------------------------------
  */
 hid_t
@@ -1577,9 +1546,6 @@ done:
  *                not registered any driver-specific properties
  *                although no error is pushed on the stack in
  *                this case.
- *
- * Programmer:    Robb Matzke
- *              Wednesday, August  4, 1999
  *
  *-------------------------------------------------------------------------
  */
@@ -1618,9 +1584,6 @@ done:
  *                not registered any driver-specific properties
  *                although no error is pushed on the stack in
  *                this case.
- *
- * Programmer:    Robb Matzke
- *              Wednesday, August  4, 1999
  *
  *-------------------------------------------------------------------------
  */
@@ -1747,9 +1710,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Quincey Koziol
- *              Monday, Sept 8, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1817,9 +1777,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Quincey Koziol
- *              Monday, Sept 8, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1860,9 +1817,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Quincey Koziol
- *              Monday, September 8, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1888,9 +1842,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Quincey Koziol
- *              Monday, Sept 7, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1902,7 +1853,7 @@ H5P__facc_file_driver_set(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNUSE
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Make copy of file driver ID & info */
     if (H5P__file_driver_copy(value) < 0)
@@ -1920,9 +1871,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Quincey Koziol
- *              Monday, Sept 7, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1934,7 +1882,7 @@ H5P__facc_file_driver_get(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNUSE
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Make copy of file driver */
     if (H5P__file_driver_copy(value) < 0)
@@ -1951,9 +1899,6 @@ done:
  *
  * Return:      Success:        Non-negative
  *              Failure:        Negative
- *
- * Programmer:  Quincey Koziol
- *              Monday, September 8, 2015
  *
  *-------------------------------------------------------------------------
  */
@@ -1980,9 +1925,6 @@ done:
  *
  * Return:      Success:        Non-negative
  *              Failure:        Negative
- *
- * Programmer:  Quincey Koziol
- *              Monday, September 8, 2015
  *
  *-------------------------------------------------------------------------
  */
@@ -2011,9 +1953,6 @@ done:
  *                      VALUE2 is greater than VALUE1 and zero if VALUE1 and
  *                      VALUE2 are equal.
  *
- * Programmer:     Quincey Koziol
- *                 Monday, September 8, 2015
- *
  *-------------------------------------------------------------------------
  */
 static int
@@ -2029,15 +1968,15 @@ H5P__facc_file_driver_cmp(const void *_info1, const void *_info2, size_t H5_ATTR
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(info1);
-    HDassert(info2);
-    HDassert(size == sizeof(H5FD_driver_prop_t));
+    assert(info1);
+    assert(info2);
+    assert(size == sizeof(H5FD_driver_prop_t));
 
     /* Compare drivers */
     if (NULL == (cls1 = H5FD_get_class(info1->driver_id)))
-        HGOTO_DONE(-1)
+        HGOTO_DONE(-1);
     if (NULL == (cls2 = H5FD_get_class(info2->driver_id)))
-        HGOTO_DONE(1)
+        HGOTO_DONE(1);
     if (cls1->name == NULL && cls2->name != NULL)
         HGOTO_DONE(-1);
     if (cls1->name != NULL && cls2->name == NULL)
@@ -2047,17 +1986,17 @@ H5P__facc_file_driver_cmp(const void *_info1, const void *_info2, size_t H5_ATTR
 
     /* Compare driver infos */
     if (cls1->fapl_size < cls2->fapl_size)
-        HGOTO_DONE(-1)
+        HGOTO_DONE(-1);
     if (cls1->fapl_size > cls2->fapl_size)
-        HGOTO_DONE(1)
-    HDassert(cls1->fapl_size == cls2->fapl_size);
+        HGOTO_DONE(1);
+    assert(cls1->fapl_size == cls2->fapl_size);
     if (info1->driver_info == NULL && info2->driver_info != NULL)
         HGOTO_DONE(-1);
     if (info1->driver_info != NULL && info2->driver_info == NULL)
         HGOTO_DONE(1);
     if (info1->driver_info) {
-        HDassert(cls1->fapl_size > 0);
-        if (0 != (cmp_value = HDmemcmp(info1->driver_info, info2->driver_info, cls1->fapl_size)))
+        assert(cls1->fapl_size > 0);
+        if (0 != (cmp_value = memcmp(info1->driver_info, info2->driver_info, cls1->fapl_size)))
             HGOTO_DONE(cmp_value);
     } /* end if */
 
@@ -2082,9 +2021,6 @@ done:
  *
  * Return:      Success:        Non-negative
  *              Failure:        Negative
- *
- * Programmer:  Quincey Koziol
- *              Monday, September 8, 2015
  *
  *-------------------------------------------------------------------------
  */
@@ -2112,9 +2048,6 @@ done:
  *
  * Return:      Success:        Non-negative value.
  *              Failure:        Negative value.
- *
- * Programmer:  Raymond Lu
- *              Sep 17, 2002
  *
  *-------------------------------------------------------------------------
  */
@@ -2150,9 +2083,6 @@ done:
  *
  * Return:      Success:        Non-negative value.
  *              Failure:        Negative value.
- *
- * Programmer:  Raymond Lu
- *              Sep 17, 2002
  *
  *-------------------------------------------------------------------------
  */
@@ -2191,9 +2121,6 @@ done:
  * Return:      Success:        Non-negative value.
  *              Failure:        Negative value.
  *
- * Programmer:  Raymond Lu
- *              Sep 17, 2002
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -2228,9 +2155,6 @@ done:
  *
  * Return:      Success:        Non-negative value.
  *              Failure:        Negative value.
- *
- * Programmer:  Raymond Lu
- *              Sep 17, 2002
  *
  *-------------------------------------------------------------------------
  */
@@ -2276,9 +2200,6 @@ done:
  *
  * Return:    Non-negative on success/Negative on failure
  *
- * Programmer:    Robb Matzke
- *              Tuesday, May 19, 1998
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -2322,9 +2243,6 @@ done:
  *        corresponding datum is not returned.
  *
  * Return:    Non-negative on success/Negative on failure
- *
- * Programmer:    Robb Matzke
- *              Tuesday, May 19, 1998
  *
  *-------------------------------------------------------------------------
  */
@@ -2370,9 +2288,6 @@ done:
  *
  * Return:    Non-negative on success/Negative on failure
  *
- * Programmer:    J. Mainzer
- *              Thursday, June 25, 2015
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -2417,9 +2332,6 @@ done:
  *
  * Return:    Non-negative on success/Negative on failure
  *
- * Programmer:    J. Mainzer
- *              Friday, June 26, 2015
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -2461,9 +2373,6 @@ done:
  *        target FAPL.
  *
  * Return:    Non-negative on success/Negative on failure
- *
- * Programmer:    J. Mainzer
- *              Thursday, April 7, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -2508,9 +2417,6 @@ done:
  *        version of H5AC_cache_config_t.
  *
  * Return:    Non-negative on success/Negative on failure
- *
- * Programmer:    J. Mainzer
- *              Thursday, April 7, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -2565,9 +2471,6 @@ done:
  *
  * Return:    Non-negative on success/Negative on failure
  *
- * Programmer:    Quincey Koziol
- *        June, 1999
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -2598,9 +2501,6 @@ done:
  *        references property from a file access property list.
  *
  * Return:    Non-negative on success/Negative on failure
- *
- * Programmer:    Quincey Koziol
- *              June, 1999
  *
  *-------------------------------------------------------------------------
  */
@@ -2633,9 +2533,6 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Raymond Lu
- *              November, 2001
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -2665,9 +2562,6 @@ done:
  * Purpose:     Returns the degree for the file close behavior.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Raymond Lu
- *              November, 2001
  *
  *-------------------------------------------------------------------------
  */
@@ -2708,9 +2602,6 @@ done:
  *
  * Return:    Non-negative on success/Negative on failure
  *
- * Programmer:    Quincey Koziol
- *              Friday, August 25, 2000
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -2741,9 +2632,6 @@ done:
  *      property from a file access property list.
  *
  * Return:    Non-negative on success/Negative on failure
- *
- * Programmer:    Quincey Koziol
- *              Friday, August 29, 2000
  *
  *-------------------------------------------------------------------------
  */
@@ -2787,9 +2675,6 @@ done:
  *
  * Return:    Non-negative on success/Negative on failure
  *
- * Programmer:    Quincey Koziol
- *              Thursday, September 21, 2000
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -2820,9 +2705,6 @@ done:
  *      property from a file access property list.
  *
  * Return:    Non-negative on success/Negative on failure
- *
- * Programmer:    Quincey Koziol
- *              Thursday, September 21, 2000
  *
  *-------------------------------------------------------------------------
  */
@@ -2865,9 +2747,6 @@ done:
  *
  * Return:    Non-negative on success/Negative on failure
  *
- * Programmer:    Quincey Koziol
- *              Wednesday, June 5, 2002
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -2898,9 +2777,6 @@ done:
  *      allocation property from a file access property list.
  *
  * Return:    Non-negative on success/Negative on failure
- *
- * Programmer:    Quincey Koziol
- *              Wednesday, June 5, 2002
  *
  *-------------------------------------------------------------------------
  */
@@ -3026,9 +2902,6 @@ done:
  *
  * Return:    Non-negative on success/Negative on failure
  *
- * Programmer:    Quincey Koziol
- *              Sunday, December 30, 2007
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -3075,9 +2948,6 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:    Quincey Koziol
- *              Thursday, January 3, 2008
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -3117,9 +2987,6 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Neil Fortner
- *              Friday, December 17, 2010
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -3154,9 +3021,6 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Neil Fortner
- *              Friday, December 17, 2010
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -3188,9 +3052,6 @@ done:
  *              the starting data in a file from a buffer.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Jacob Gruber
- *              Thurday, August 11, 2011
  *
  *-------------------------------------------------------------------------
  */
@@ -3286,9 +3147,6 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Jacob Gruber
- *              Thurday, August 11, 2011
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -3310,8 +3168,8 @@ H5Pget_file_image(hid_t fapl_id, void **buf /*out*/, size_t *buf_len /*out*/)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get file image info")
 
     /* verify file image field consistency */
-    HDassert(((image_info.buffer != NULL) && (image_info.size > 0)) ||
-             ((image_info.buffer == NULL) && (image_info.size == 0)));
+    assert(((image_info.buffer != NULL) && (image_info.size > 0)) ||
+           ((image_info.buffer == NULL) && (image_info.size == 0)));
 
     /* Set output size */
     if (buf_len != NULL)
@@ -3361,9 +3219,6 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Jacob Gruber
- *              Thurday, August 11, 2011
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -3385,7 +3240,7 @@ H5Pset_file_image_callbacks(hid_t fapl_id, H5FD_file_image_callbacks_t *callback
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get old file image info")
 
     /* verify file image field consistency */
-    HDassert(((info.buffer != NULL) && (info.size > 0)) || ((info.buffer == NULL) && (info.size == 0)));
+    assert(((info.buffer != NULL) && (info.size > 0)) || ((info.buffer == NULL) && (info.size == 0)));
 
     /* Make sure a file image hasn't already been set */
     if (info.buffer != NULL || info.size > 0)
@@ -3404,7 +3259,7 @@ H5Pset_file_image_callbacks(hid_t fapl_id, H5FD_file_image_callbacks_t *callback
 
     /* Release old udata if it exists */
     if (info.callbacks.udata != NULL) {
-        HDassert(info.callbacks.udata_free);
+        assert(info.callbacks.udata_free);
         if (info.callbacks.udata_free(info.callbacks.udata) < 0)
             HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, "udata_free callback failed")
     } /* end if */
@@ -3413,8 +3268,8 @@ H5Pset_file_image_callbacks(hid_t fapl_id, H5FD_file_image_callbacks_t *callback
     info.callbacks = *callbacks_ptr;
 
     if (callbacks_ptr->udata) {
-        HDassert(callbacks_ptr->udata_copy);
-        HDassert(callbacks_ptr->udata_free);
+        assert(callbacks_ptr->udata_copy);
+        assert(callbacks_ptr->udata_free);
         if ((info.callbacks.udata = callbacks_ptr->udata_copy(callbacks_ptr->udata)) == NULL)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't copy the supplied udata")
     } /* end if */
@@ -3437,9 +3292,6 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Jacob Gruber
- *              Thurday, August 11, 2011
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -3461,7 +3313,7 @@ H5Pget_file_image_callbacks(hid_t fapl_id, H5FD_file_image_callbacks_t *callback
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get file image info")
 
     /* verify file image field consistency */
-    HDassert(((info.buffer != NULL) && (info.size > 0)) || ((info.buffer == NULL) && (info.size == 0)));
+    assert(((info.buffer != NULL) && (info.size > 0)) || ((info.buffer == NULL) && (info.size == 0)));
 
     /* verify that callbacks is not NULL */
     if (NULL == callbacks)
@@ -3472,7 +3324,7 @@ H5Pget_file_image_callbacks(hid_t fapl_id, H5FD_file_image_callbacks_t *callback
 
     /* Copy udata if it exists */
     if (info.callbacks.udata != NULL) {
-        HDassert(info.callbacks.udata_copy);
+        assert(info.callbacks.udata_copy);
         if ((callbacks->udata = info.callbacks.udata_copy(info.callbacks.udata)) == 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't copy udata")
     } /* end if */
@@ -3495,9 +3347,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Quincey Koziol
- *              Tuesday, Sept 1, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -3513,8 +3362,7 @@ H5P__file_image_info_copy(void *value)
         info = (H5FD_file_image_info_t *)value;
 
         /* verify file image field consistency */
-        HDassert(((info->buffer != NULL) && (info->size > 0)) ||
-                 ((info->buffer == NULL) && (info->size == 0)));
+        assert(((info->buffer != NULL) && (info->size > 0)) || ((info->buffer == NULL) && (info->size == 0)));
 
         if (info->buffer && info->size > 0) {
             void *old_buffer; /* Pointer to old image buffer */
@@ -3569,9 +3417,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Quincey Koziol
- *              Wednesday, Sept 2, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -3587,8 +3432,7 @@ H5P__file_image_info_free(void *value)
         info = (H5FD_file_image_info_t *)value;
 
         /* Verify file image field consistency */
-        HDassert(((info->buffer != NULL) && (info->size > 0)) ||
-                 ((info->buffer == NULL) && (info->size == 0)));
+        assert(((info->buffer != NULL) && (info->size > 0)) || ((info->buffer == NULL) && (info->size == 0)));
 
         /* Free buffer */
         if (info->buffer != NULL && info->size > 0) {
@@ -3621,9 +3465,6 @@ done:
  *
  * Return: positive if VALUE1 is greater than VALUE2, negative if VALUE2 is
  *        greater than VALUE1 and zero if VALUE1 and VALUE2 are equal.
- *
- * Programmer:     John Mainzer
- *                 June 26, 2015
  *
  *-------------------------------------------------------------------------
  */
@@ -3678,9 +3519,6 @@ done:
  * Return:       Success:    Non-negative
  *           Failure:    Negative
  *
- * Programmer:     John Mainzer
- *                 June 26, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -3693,7 +3531,7 @@ H5P__facc_cache_image_config_enc(const void *value, void **_pp, size_t *size)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     if (NULL != *pp) {
         /* Encode type sizes (as a safety check) */
@@ -3724,9 +3562,6 @@ H5P__facc_cache_image_config_enc(const void *value, void **_pp, size_t *size)
  * Return:       Success:    Non-negative
  *           Failure:    Negative
  *
- * Programmer:     John Mainzer
- *                 June 26, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -3740,9 +3575,9 @@ H5P__facc_cache_image_config_dec(const void **_pp, void *_value)
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(pp);
-    HDassert(*pp);
-    HDassert(config);
+    assert(pp);
+    assert(*pp);
+    assert(config);
     HDcompile_assert(sizeof(size_t) <= sizeof(uint64_t));
 
     /* Set property to default value */
@@ -3773,9 +3608,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Quincey Koziol
- *              Tuesday, Sept 1, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -3787,7 +3619,7 @@ H5P__facc_file_image_info_set(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_U
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Make copy of file image info */
     if (H5P__file_image_info_copy(value) < 0)
@@ -3805,9 +3637,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Quincey Koziol
- *              Tuesday, Sept 1, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -3819,7 +3648,7 @@ H5P__facc_file_image_info_get(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_U
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Make copy of file image info */
     if (H5P__file_image_info_copy(value) < 0)
@@ -3838,9 +3667,6 @@ done:
  *              respective callbacks so the default free won't work.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Jacob Gruber
- *              Thurday, August 11, 2011
  *
  *-------------------------------------------------------------------------
  */
@@ -3869,9 +3695,6 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Jacob Gruber
- *              Thurday, August 11, 2011
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -3899,9 +3722,6 @@ done:
  *                      VALUE2 is greater than VALUE1 and zero if VALUE1 and
  *                      VALUE2 are equal.
  *
- * Programmer:     Quincey Koziol
- *                 Thursday, September 3, 2015
- *
  *-------------------------------------------------------------------------
  */
 static int
@@ -3915,45 +3735,45 @@ H5P__facc_file_image_info_cmp(const void *_info1, const void *_info2, size_t H5_
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(info1);
-    HDassert(info2);
-    HDassert(size == sizeof(H5FD_file_image_info_t));
+    assert(info1);
+    assert(info2);
+    assert(size == sizeof(H5FD_file_image_info_t));
 
     /* Check for different buffer sizes */
     if (info1->size < info2->size)
-        HGOTO_DONE(-1)
+        HGOTO_DONE(-1);
     if (info1->size > info2->size)
-        HGOTO_DONE(1)
+        HGOTO_DONE(1);
 
     /* Check for different callbacks */
     /* (Order in memory is fairly meaningless, so just check for equality) */
     if (info1->callbacks.image_malloc != info2->callbacks.image_malloc)
-        HGOTO_DONE(1)
+        HGOTO_DONE(1);
     if (info1->callbacks.image_memcpy != info2->callbacks.image_memcpy)
-        HGOTO_DONE(-1)
+        HGOTO_DONE(-1);
     if (info1->callbacks.image_realloc != info2->callbacks.image_realloc)
-        HGOTO_DONE(1)
+        HGOTO_DONE(1);
     if (info1->callbacks.image_free != info2->callbacks.image_free)
-        HGOTO_DONE(-1)
+        HGOTO_DONE(-1);
     if (info1->callbacks.udata_copy != info2->callbacks.udata_copy)
-        HGOTO_DONE(1)
+        HGOTO_DONE(1);
     if (info1->callbacks.udata_free != info2->callbacks.udata_free)
-        HGOTO_DONE(-1)
+        HGOTO_DONE(-1);
 
     /* Check for different udata */
     /* (Don't know how big it is, so can't check contents) */
     if (info1->callbacks.udata < info2->callbacks.udata)
-        HGOTO_DONE(-1)
+        HGOTO_DONE(-1);
     if (info1->callbacks.udata > info2->callbacks.udata)
-        HGOTO_DONE(1)
+        HGOTO_DONE(1);
 
     /* Check buffer contents (instead of buffer pointers) */
     if (info1->buffer != NULL && info2->buffer == NULL)
-        HGOTO_DONE(-1)
+        HGOTO_DONE(-1);
     if (info1->buffer == NULL && info2->buffer != NULL)
-        HGOTO_DONE(1)
+        HGOTO_DONE(1);
     if (info1->buffer != NULL && info2->buffer != NULL)
-        ret_value = HDmemcmp(info1->buffer, info2->buffer, size);
+        ret_value = memcmp(info1->buffer, info2->buffer, size);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -3967,9 +3787,6 @@ done:
  *              respective callbacks so the standard free won't work.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Jacob Gruber
- *              Thurday, August 11, 2011
  *
  *-------------------------------------------------------------------------
  */
@@ -3995,9 +3812,6 @@ done:
  *
  * Return: positive if VALUE1 is greater than VALUE2, negative if VALUE2 is
  *        greater than VALUE1 and zero if VALUE1 and VALUE2 are equal.
- *
- * Programmer:     Mohamad Chaarawi
- *                 September 24, 2012
  *
  *-------------------------------------------------------------------------
  */
@@ -4167,9 +3981,6 @@ done:
  * Return:       Success:    Non-negative
  *           Failure:    Negative
  *
- * Programmer:     Mohamad Chaarawi
- *                 August 09, 2012
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -4184,7 +3995,7 @@ H5P__facc_cache_config_enc(const void *value, void **_pp, size_t *size)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
     HDcompile_assert(sizeof(size_t) <= sizeof(uint64_t));
 
     if (NULL != *pp) {
@@ -4211,7 +4022,7 @@ H5P__facc_cache_config_enc(const void *value, void **_pp, size_t *size)
 
         enc_value = (uint64_t)config->initial_size;
         enc_size  = H5VM_limit_enc_size(enc_value);
-        HDassert(enc_size < 256);
+        assert(enc_size < 256);
         *(*pp)++ = (uint8_t)enc_size;
         UINT64ENCODE_VAR(*pp, enc_value, enc_size);
 
@@ -4219,13 +4030,13 @@ H5P__facc_cache_config_enc(const void *value, void **_pp, size_t *size)
 
         enc_value = (uint64_t)config->max_size;
         enc_size  = H5VM_limit_enc_size(enc_value);
-        HDassert(enc_size < 256);
+        assert(enc_size < 256);
         *(*pp)++ = (uint8_t)enc_size;
         UINT64ENCODE_VAR(*pp, enc_value, enc_size);
 
         enc_value = (uint64_t)config->min_size;
         enc_size  = H5VM_limit_enc_size(enc_value);
-        HDassert(enc_size < 256);
+        assert(enc_size < 256);
         *(*pp)++ = (uint8_t)enc_size;
         UINT64ENCODE_VAR(*pp, enc_value, enc_size);
 
@@ -4243,7 +4054,7 @@ H5P__facc_cache_config_enc(const void *value, void **_pp, size_t *size)
 
         enc_value = (uint64_t)config->max_increment;
         enc_size  = H5VM_limit_enc_size(enc_value);
-        HDassert(enc_size < 256);
+        assert(enc_size < 256);
         *(*pp)++ = (uint8_t)enc_size;
         UINT64ENCODE_VAR(*pp, enc_value, enc_size);
 
@@ -4265,7 +4076,7 @@ H5P__facc_cache_config_enc(const void *value, void **_pp, size_t *size)
 
         enc_value = (uint64_t)config->max_decrement;
         enc_size  = H5VM_limit_enc_size(enc_value);
-        HDassert(enc_size < 256);
+        assert(enc_size < 256);
         *(*pp)++ = (uint8_t)enc_size;
         UINT64ENCODE_VAR(*pp, enc_value, enc_size);
 
@@ -4312,9 +4123,6 @@ H5P__facc_cache_config_enc(const void *value, void **_pp, size_t *size)
  * Return:       Success:    Non-negative
  *           Failure:    Negative
  *
- * Programmer:     Mohamad Chaarawi
- *                 August 09, 2012
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -4329,9 +4137,9 @@ H5P__facc_cache_config_dec(const void **_pp, void *_value)
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(pp);
-    HDassert(*pp);
-    HDassert(config);
+    assert(pp);
+    assert(*pp);
+    assert(config);
     HDcompile_assert(sizeof(size_t) <= sizeof(uint64_t));
 
     /* Set property to default value */
@@ -4362,19 +4170,19 @@ H5P__facc_cache_config_dec(const void **_pp, void *_value)
     H5_DECODE_UNSIGNED(*pp, config->set_initial_size);
 
     enc_size = *(*pp)++;
-    HDassert(enc_size < 256);
+    assert(enc_size < 256);
     UINT64DECODE_VAR(*pp, enc_value, enc_size);
     config->initial_size = (size_t)enc_value;
 
     H5_DECODE_DOUBLE(*pp, config->min_clean_fraction);
 
     enc_size = *(*pp)++;
-    HDassert(enc_size < 256);
+    assert(enc_size < 256);
     UINT64DECODE_VAR(*pp, enc_value, enc_size);
     config->max_size = (size_t)enc_value;
 
     enc_size = *(*pp)++;
-    HDassert(enc_size < 256);
+    assert(enc_size < 256);
     UINT64DECODE_VAR(*pp, enc_value, enc_size);
     config->min_size = (size_t)enc_value;
 
@@ -4394,7 +4202,7 @@ H5P__facc_cache_config_dec(const void **_pp, void *_value)
     H5_DECODE_UNSIGNED(*pp, config->apply_max_increment);
 
     enc_size = *(*pp)++;
-    HDassert(enc_size < 256);
+    assert(enc_size < 256);
     UINT64DECODE_VAR(*pp, enc_value, enc_size);
     config->max_increment = (size_t)enc_value;
 
@@ -4415,7 +4223,7 @@ H5P__facc_cache_config_dec(const void **_pp, void *_value)
     H5_DECODE_UNSIGNED(*pp, config->apply_max_decrement);
 
     enc_size = *(*pp)++;
-    HDassert(enc_size < 256);
+    assert(enc_size < 256);
     UINT64DECODE_VAR(*pp, enc_value, enc_size);
     config->max_decrement = (size_t)enc_value;
 
@@ -4446,9 +4254,6 @@ done:
  * Return:       Success:    Non-negative
  *           Failure:    Negative
  *
- * Programmer:     Quincey Koziol
- *                 Wednesday, August 15, 2012
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -4461,8 +4266,8 @@ H5P__facc_fclose_degree_enc(const void *value, void **_pp, size_t *size)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(fclose_degree);
-    HDassert(size);
+    assert(fclose_degree);
+    assert(size);
 
     if (NULL != *pp)
         /* Encode file close degree */
@@ -4484,9 +4289,6 @@ H5P__facc_fclose_degree_enc(const void *value, void **_pp, size_t *size)
  * Return:       Success:    Non-negative
  *           Failure:    Negative
  *
- * Programmer:     Quincey Koziol
- *                 Wednesday, August 15, 2012
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -4498,9 +4300,9 @@ H5P__facc_fclose_degree_dec(const void **_pp, void *_value)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity checks */
-    HDassert(pp);
-    HDassert(*pp);
-    HDassert(fclose_degree);
+    assert(pp);
+    assert(*pp);
+    assert(fclose_degree);
 
     /* Decode file close degree */
     *fclose_degree = (H5F_close_degree_t) * (*pp)++;
@@ -4518,9 +4320,6 @@ H5P__facc_fclose_degree_dec(const void **_pp, void *_value)
  * Return:       Success:    Non-negative
  *           Failure:    Negative
  *
- * Programmer:     Quincey Koziol
- *                 Wednesday, August 15, 2012
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -4532,8 +4331,8 @@ H5P__facc_multi_type_enc(const void *value, void **_pp, size_t *size)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(type);
-    HDassert(size);
+    assert(type);
+    assert(size);
 
     if (NULL != *pp)
         /* Encode file close degree */
@@ -4555,9 +4354,6 @@ H5P__facc_multi_type_enc(const void *value, void **_pp, size_t *size)
  * Return:       Success:    Non-negative
  *           Failure:    Negative
  *
- * Programmer:     Quincey Koziol
- *                 Wednesday, August 15, 2012
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -4569,9 +4365,9 @@ H5P__facc_multi_type_dec(const void **_pp, void *_value)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity checks */
-    HDassert(pp);
-    HDassert(*pp);
-    HDassert(type);
+    assert(pp);
+    assert(*pp);
+    assert(type);
 
     /* Decode multi VFD memory type */
     *type = (H5FD_mem_t) * (*pp)++;
@@ -4589,8 +4385,6 @@ H5P__facc_multi_type_dec(const void **_pp, void *_value)
  * Return:       Success:    Non-negative
  *           Failure:    Negative
  *
- * Programmer
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -4602,8 +4396,8 @@ H5P__facc_libver_type_enc(const void *value, void **_pp, size_t *size)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(type);
-    HDassert(size);
+    assert(type);
+    assert(size);
 
     /* Encode */
     if (NULL != *pp)
@@ -4625,8 +4419,6 @@ H5P__facc_libver_type_enc(const void *value, void **_pp, size_t *size)
  * Return:       Success:    Non-negative
  *           Failure:    Negative
  *
- * Programmer:
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -4638,133 +4430,15 @@ H5P__facc_libver_type_dec(const void **_pp, void *_value)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity checks */
-    HDassert(pp);
-    HDassert(*pp);
-    HDassert(type);
+    assert(pp);
+    assert(*pp);
+    assert(type);
 
     /* Decode */
     *type = (H5F_libver_t) * (*pp)++;
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5P__facc_libver_type_dec() */
-
-/*-------------------------------------------------------------------------
- * Function:    H5P__facc_vfd_swmr_config_enc
- *
- * Purpose:     Callback routine which is called whenever the VFD SWMR config
- *              property in the file access property list is encoded.
- *
- * Return:      Success:    Non-negative
- *              Failure:    Negative
- *
- * Programmer:  Vailin Choi; July 2018
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5P__facc_vfd_swmr_config_enc(const void *value, void **_pp, size_t *size)
-{
-    const H5F_vfd_swmr_config_t *config =
-        (const H5F_vfd_swmr_config_t *)value; /* Create local aliases for values */
-    uint8_t **pp = (uint8_t **)_pp;
-
-    FUNC_ENTER_PACKAGE_NOERR
-
-    /* Sanity check */
-    HDassert(value);
-    HDcompile_assert(sizeof(size_t) <= sizeof(uint64_t));
-
-    if (NULL != *pp) {
-
-        /* int */
-        INT32ENCODE(*pp, (int32_t)config->version);
-        INT32ENCODE(*pp, (int32_t)config->tick_len);
-        INT32ENCODE(*pp, (int32_t)config->max_lag);
-        H5_ENCODE_UNSIGNED(*pp, config->presume_posix_semantics);
-        H5_ENCODE_UNSIGNED(*pp, config->writer);
-        H5_ENCODE_UNSIGNED(*pp, config->maintain_metadata_file);
-        H5_ENCODE_UNSIGNED(*pp, config->generate_updater_files);
-        H5_ENCODE_UNSIGNED(*pp, config->flush_raw_data);
-        INT32ENCODE(*pp, (int32_t)config->md_pages_reserved);
-        INT32ENCODE(*pp, (int32_t)config->pb_expansion_threshold);
-        HDmemcpy(*pp, (const uint8_t *)(config->md_file_path), (size_t)(H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1));
-        *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
-        HDmemcpy(*pp, (const uint8_t *)(config->md_file_name), (size_t)(H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1));
-        *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
-        HDmemcpy(*pp, (const uint8_t *)(config->updater_file_path),
-                 (size_t)(H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1));
-        *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
-        HDmemcpy(*pp, (const uint8_t *)(config->log_file_path),
-                 (size_t)(H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1));
-        *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
-
-    } /* end if */
-
-    /* Compute encoded size */
-    *size += ((5 * sizeof(int32_t)) + (5 * sizeof(unsigned)) + (4 * (H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1)));
-
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5P__facc_vfd_swmr_config_enc() */
-
-/*-------------------------------------------------------------------------
- * Function:    H5P__facc_vfd_swmr_config_dec
- *
- * Purpose:     Callback routine which is called whenever the VFD SWMR
- *              config property in the file access property list is decoded.
- *
- * Return:      Success:    Non-negative
- *              Failure:    Negative
- *
- * Programmer:  Vailin Choi; July 2018
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5P__facc_vfd_swmr_config_dec(const void **_pp, void *_value)
-{
-    H5F_vfd_swmr_config_t *config = (H5F_vfd_swmr_config_t *)_value;
-    const uint8_t **       pp     = (const uint8_t **)_pp;
-
-    FUNC_ENTER_PACKAGE_NOERR
-
-    /* Sanity checks */
-    HDassert(pp);
-    HDassert(*pp);
-    HDassert(config);
-    HDcompile_assert(sizeof(size_t) <= sizeof(uint64_t));
-
-    /* Set property to default value */
-    HDmemcpy(config, &H5F_def_vfd_swmr_config_g, sizeof(H5F_vfd_swmr_config_t));
-
-    /* int */
-    INT32DECODE(*pp, config->version);
-    UINT32DECODE(*pp, config->tick_len);
-    UINT32DECODE(*pp, config->max_lag);
-    UINT32DECODE(*pp, config->presume_posix_semantics);
-
-    H5_DECODE_UNSIGNED(*pp, config->writer);
-    H5_DECODE_UNSIGNED(*pp, config->maintain_metadata_file);
-    H5_DECODE_UNSIGNED(*pp, config->generate_updater_files);
-    H5_DECODE_UNSIGNED(*pp, config->flush_raw_data);
-
-    /* int */
-    UINT32DECODE(*pp, config->md_pages_reserved);
-    UINT32DECODE(*pp, config->pb_expansion_threshold);
-
-    HDstrcpy(config->md_file_path, (const char *)(*pp));
-    *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
-
-    HDstrcpy(config->md_file_name, (const char *)(*pp));
-    *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
-
-    HDstrcpy(config->updater_file_path, (const char *)(*pp));
-    *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
-
-    HDstrcpy(config->log_file_path, (const char *)(*pp));
-    *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
-
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5P__facc_vfd_swmr_config_dec() */
 
 /*-------------------------------------------------------------------------
  * Function:    H5Pset_metadata_read_attempts
@@ -4778,8 +4452,6 @@ H5P__facc_vfd_swmr_config_dec(const void **_pp, void *_value)
  *        case, the # of read attempts will be always be 1.
  *
  * Return:    Non-negative on success/Negative on failure
- *
- * Programmer:    Vailin Choi; Sept 2013
  *
  *-------------------------------------------------------------------------
  */
@@ -4815,8 +4487,6 @@ done:
  * Purpose:    Returns the # of metadata read attempts set in the file access property list.
  *
  * Return:    Non-negative on success/Negative on failure
- *
- * Programmer:    Vailin Choi; Sept 2013
  *
  *-------------------------------------------------------------------------
  */
@@ -4856,8 +4526,6 @@ done:
  *        object flush occurs in the file.
  *
  * Return:    Non-negative on success/Negative on failure
- *
- * Programmer:    Vailin Choi; Dec 2013
  *
  *-------------------------------------------------------------------------
  */
@@ -4899,8 +4567,6 @@ done:
  *        property list for an object flush.
  *
  * Return:    Non-negative on success/Negative on failure
- *
- * Programmer:    Vailin Choi; Dec 2013
  *
  *-------------------------------------------------------------------------
  */
@@ -5061,7 +4727,7 @@ H5P__facc_mdc_log_location_enc(const void *value, void **_pp, size_t *size)
 
     enc_value = (uint64_t)len;
     enc_size  = H5VM_limit_enc_size(enc_value);
-    HDassert(enc_size < 256);
+    assert(enc_size < 256);
 
     if (NULL != *pp) {
         /* encode the length of the prefix */
@@ -5106,14 +4772,14 @@ H5P__facc_mdc_log_location_dec(const void **_pp, void *_value)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(pp);
-    HDassert(*pp);
-    HDassert(log_location);
+    assert(pp);
+    assert(*pp);
+    assert(log_location);
     HDcompile_assert(sizeof(size_t) <= sizeof(uint64_t));
 
     /* Decode the size */
     enc_size = *(*pp)++;
-    HDassert(enc_size < 256);
+    assert(enc_size < 256);
 
     /* Decode the value */
     UINT64DECODE_VAR(*pp, enc_value, enc_size);
@@ -5150,7 +4816,7 @@ H5P__facc_mdc_log_location_del(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_
 {
     FUNC_ENTER_PACKAGE_NOERR
 
-    HDassert(value);
+    assert(value);
 
     H5MM_xfree(*(void **)value);
 
@@ -5171,7 +4837,7 @@ H5P__facc_mdc_log_location_copy(const char H5_ATTR_UNUSED *name, size_t H5_ATTR_
 {
     FUNC_ENTER_PACKAGE_NOERR
 
-    HDassert(value);
+    assert(value);
 
     *(char **)value = H5MM_xstrdup(*(const char **)value);
 
@@ -5224,7 +4890,7 @@ H5P__facc_mdc_log_location_close(const char H5_ATTR_UNUSED *name, size_t H5_ATTR
 {
     FUNC_ENTER_PACKAGE_NOERR
 
-    HDassert(value);
+    assert(value);
 
     H5MM_xfree(*(void **)value);
 
@@ -5243,9 +4909,6 @@ H5P__facc_mdc_log_location_close(const char H5_ATTR_UNUSED *name, size_t H5_ATTR
  *              Currently only implemented for datasets.
  *
  * Return:      SUCCEED/FAIL
- *
- * Programmer:  Dana Robinson
- *              Spring 2016
  *
  *-------------------------------------------------------------------------
  */
@@ -5292,9 +4955,6 @@ done:
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:  Dana Robinson
- *              Spring 2016
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -5337,9 +4997,6 @@ done:
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:  Dana Robinson
- *              Spring 2020
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -5378,9 +5035,6 @@ done:
  *              problematic file accesses.
  *
  * Return:      SUCCEED/FAIL
- *
- * Programmer:  Dana Robinson
- *              Spring 2020
  *
  *-------------------------------------------------------------------------
  */
@@ -5421,9 +5075,6 @@ done:
  * Return:       Success:    Non-negative
  *           Failure:    Negative
  *
- * Programmer:     Mohamad Chaarawi
- *                 Sunday, June 21, 2015
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -5435,8 +5086,8 @@ H5P__encode_coll_md_read_flag_t(const void *value, void **_pp, size_t *size)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity checks */
-    HDassert(coll_md_read_flag);
-    HDassert(size);
+    assert(coll_md_read_flag);
+    assert(size);
 
     if (NULL != *pp) {
         /* Encode the value */
@@ -5458,9 +5109,6 @@ H5P__encode_coll_md_read_flag_t(const void *value, void **_pp, size_t *size)
  * Return:       Success:    Non-negative
  *           Failure:    Negative
  *
- * Programmer:     Mohamad Chaarawi
- *                 Sunday, June 21, 2015
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -5472,9 +5120,9 @@ H5P__decode_coll_md_read_flag_t(const void **_pp, void *_value)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity checks */
-    HDassert(pp);
-    HDassert(*pp);
-    HDassert(coll_md_read_flag);
+    assert(pp);
+    assert(*pp);
+    assert(coll_md_read_flag);
 
     /* Decode file close degree */
     *coll_md_read_flag = (H5P_coll_md_read_flag_t) * (*pp);
@@ -5497,9 +5145,6 @@ H5P__decode_coll_md_read_flag_t(const void **_pp, void *_value)
  *          and named datatype access property lists.
  *
  * Return:    Non-negative on success/Negative on failure
- *
- * Programmer:    Mohamad Chaarawi
- *              Sunday, June 21, 2015
  *
  *-------------------------------------------------------------------------
  */
@@ -5550,9 +5195,6 @@ done:
  *
  * Return:    Non-negative on success/Negative on failure
  *
- * Programmer:    Mohamad Chaarawi
- *              Sunday, June 21, 2015
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -5601,9 +5243,6 @@ done:
  *
  * Return:    Non-negative on success/Negative on failure
  *
- * Programmer:    Mohamad Chaarawi
- *              Sunday, June 21, 2015
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -5637,9 +5276,6 @@ done:
  * Purpose:     Gets the MPI communicator and info stored in the fapl.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Dana Robinson
- *              August 2019
  *
  *-------------------------------------------------------------------------
  */
@@ -5676,9 +5312,6 @@ done:
  * Purpose:     Set the MPI communicator and info
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Dana Robinson
- *              August 2019
  *
  *-------------------------------------------------------------------------
  */
@@ -6088,9 +5721,6 @@ done:
  *
  * Return:    Non-negative on success/Negative on failure
  *
- * Programmer:    Mohamad Chaarawi
- *              Sunday, June 21, 2015
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -6127,9 +5757,6 @@ done:
  *
  * Return:    Non-negative on success/Negative on failure
  *
- * Programmer:    Mohamad Chaarawi
- *              June 2015
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -6145,15 +5772,12 @@ H5Pset_page_buffer_size(hid_t plist_id, size_t buf_size, unsigned min_meta_perc,
     if (NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
         HGOTO_ERROR(H5E_ID, H5E_BADID, FAIL, "can't find object for ID")
 
-    /* Any addtional sanity checking may need to be replicated in H5F__load_vfd_swmr_page_buffer_config() 
-     *              -- Cody S. 5/15/26 */
-
     if (min_meta_perc > 100)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "Minimum metadata fractions must be between 0 and 100 inclusive")
     if (min_raw_perc > 100)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                    "Minimum rawdata fractions must be between 0 and 100 inclusive")
+                    "Minimum raw data fractions must be between 0 and 100 inclusive")
 
     if (min_meta_perc + min_raw_perc > 100)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
@@ -6165,7 +5789,7 @@ H5Pset_page_buffer_size(hid_t plist_id, size_t buf_size, unsigned min_meta_perc,
     if (H5P_set(plist, H5F_ACS_PAGE_BUFFER_MIN_META_PERC_NAME, &min_meta_perc) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set percentage of min metadata entries")
     if (H5P_set(plist, H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_NAME, &min_raw_perc) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set percentage of min rawdata entries")
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set percentage of min raw data entries")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -6177,9 +5801,6 @@ done:
  * Purpose:    Retrieves the maximum page buffer size.
  *
  * Return:    Non-negative on success/Negative on failure
- *
- * Programmer:    Mohamad Chaarawi
- *              June 2015
  *
  *-------------------------------------------------------------------------
  */
@@ -6254,120 +5875,6 @@ done:
 } /* end H5P_set_vol() */
 
 /*-------------------------------------------------------------------------
- * Function:    H5P_check_vfd_swmr_config
- *
- * Purpose:     Verify that the values of the H5F_vfd_swmr_config_t
- *              struct are valid.
- *
- * Return:      SUCCEED/FAIL
- * 
- * Programmer: Cody Sloan; April 2026
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5P_check_vfd_swmr_config(H5F_vfd_swmr_config_t *config_ptr)
-{
-    size_t          name_len;
-    herr_t          ret_value = SUCCEED; /* return value */
-
-    FUNC_ENTER_NOAPI(FAIL)
-
-    /* Check args */
-    if (config_ptr == NULL)
-        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "NULL config_ptr on entry")
-
-    /* This field must always be set to a known version */
-    if (config_ptr->version != H5F__CURR_VFD_SWMR_CONFIG_VERSION)
-        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "Unknown config version")
-
-    /* This field must be at least 3 */
-    if (config_ptr->max_lag < 3)
-        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "max_lag must be at least 3")
-
-    /* This field must be >= 2 */
-    if (config_ptr->md_pages_reserved < 2)
-        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "md_pages_reserved must be at least 2")
-
-    /* This field must be in the range [0, 100] */
-    if (config_ptr->pb_expansion_threshold > H5F__MAX_PB_EXPANSION_THRESHOLD)
-        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "pb_expansion_threshold out of range")
-
-    /* If writer is TRUE, at least one of maintain_metadata_file and generate_updater_files must be TRUE */
-    if (config_ptr->writer) {
-        if (!config_ptr->maintain_metadata_file && !config_ptr->generate_updater_files)
-            HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL,
-                        "either maintain_metadata_file or generate_updater_files must be TRUE")
-    }
-
-    /* md_file_path can be "" or a name (+"/")*/
-    /* md_file_name can be "" (+ ".md") or a name */
-    /* <md_file_path, md_file_name> pattern: <null, null> <null, name> <name, null> <name, name> */
-    /* Can only validate for <null, name>, <name, name> cases */
-    name_len = HDstrlen(config_ptr->md_file_path) + HDstrlen(config_ptr->md_file_name);
-    if (name_len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN)
-        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "md_file_name + md_file_path is too long")
-
-    if (config_ptr->writer && config_ptr->generate_updater_files) {
-        /* Must provide the path and base name of the metadata updater files */
-        name_len = HDstrlen(config_ptr->updater_file_path);
-        if (name_len == 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "updater_file_path is empty")
-        else if (name_len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN)
-            HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "updater_file_path is too long")
-    }
-
-    name_len = HDstrlen(config_ptr->log_file_path);
-    if (name_len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN)
-        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "log_file_path is too long")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5P_check_vfd_swmr_config() */
-
-/*-------------------------------------------------------------------------
- * Function:    H5Pset_vfd_swmr_config
- *
- * Purpose:     Set VFD SWMR configuration in the target FAPL.
- *              Note: Hard-wired to set the driver in the fapl
- *                    to use the SWMR VFD driver; this will be changed
- *                    later
- *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Vailin Choi; July 2018
- * 
- * Changes:     Factored out input configuration validation
- *                  - Cody Sloan; April 2026
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5Pset_vfd_swmr_config(hid_t plist_id, H5F_vfd_swmr_config_t *config_ptr)
-{
-    H5P_genplist_t *plist; /* Property list pointer */
-    herr_t          ret_value = SUCCEED; /* return value */
-
-    FUNC_ENTER_API(FAIL)
-    H5TRACE2("e", "i*!", plist_id, config_ptr);
-
-    /* Get the plist structure */
-    if (NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
-        HGOTO_ERROR(H5E_ID, H5E_BADID, FAIL, "can't find object for ID")
-
-    /* Validate the input configuration */
-    if (H5P_check_vfd_swmr_config(config_ptr) < 0) 
-        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "configuration contains invalid values")
-
-    /* Set the modified config */
-    if (H5P_set(plist, H5F_ACS_VFD_SWMR_CONFIG_NAME, config_ptr) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set vfd swmr config")
-
-done:
-    FUNC_LEAVE_API(ret_value)
-} /* H5Pset_vfd_swmr_config() */
-
-/*-------------------------------------------------------------------------
  * Function:    H5P_reset_vol_class
  *
  * Purpose:     Change the VOL connector for a file access property class.
@@ -6377,9 +5884,6 @@ done:
  *		The reference count on the new VOL will _NOT_ be incremented.
  *
  * Return:      SUCCEED/FAIL
- *
- * Programmer:  Quincey Koziol
- *              March 8, 2019
  *
  *-------------------------------------------------------------------------
  */
@@ -6457,6 +5961,9 @@ H5Pget_vol_id(hid_t plist_id, hid_t *vol_id /*out*/)
     FUNC_ENTER_API(FAIL)
     H5TRACE2("e", "ix", plist_id, vol_id);
 
+    if (H5P_DEFAULT == plist_id)
+        plist_id = H5P_FILE_ACCESS_DEFAULT;
+
     /* Get property list for ID */
     if (NULL == (plist = (H5P_genplist_t *)H5I_object_verify(plist_id, H5I_GENPROP_LST)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list")
@@ -6482,42 +5989,6 @@ H5Pget_vol_id(hid_t plist_id, hid_t *vol_id /*out*/)
 done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5Pget_vol_id() */
-
-/*-------------------------------------------------------------------------
- * Function:    H5Pget_vfd_swmr_config
- *
- * Purpose:     Retrieve the VFD SWMR configuration from the target FAPL.
- *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Vailin Choi; July 2018
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5Pget_vfd_swmr_config(hid_t plist_id, H5F_vfd_swmr_config_t *config_ptr)
-{
-    H5P_genplist_t *plist;               /* Property list pointer */
-    herr_t          ret_value = SUCCEED; /* return value */
-
-    FUNC_ENTER_API(FAIL)
-    H5TRACE2("e", "i*!", plist_id, config_ptr);
-
-    /* Get the plist structure */
-    if (NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
-        HGOTO_ERROR(H5E_ID, H5E_BADID, FAIL, "can't find object for ID")
-
-    /* Validate the config_ptr */
-    if (config_ptr == NULL)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "NULL config_ptr on entry.")
-
-    /* Get the current VFD SWMR configuration */
-    if (H5P_get(plist, H5F_ACS_VFD_SWMR_CONFIG_NAME, config_ptr) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get VFD SWMR config")
-
-done:
-    FUNC_LEAVE_API(ret_value)
-} /* H5Pget_vfd_swmr_config() */
 
 /*-------------------------------------------------------------------------
  * Function:    H5Pget_vol_info
@@ -6600,15 +6071,18 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Pget_vol_cap_flags(hid_t plist_id, unsigned *cap_flags)
+H5Pget_vol_cap_flags(hid_t plist_id, uint64_t *cap_flags)
 {
     herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE2("e", "i*Iu", plist_id, cap_flags);
+    H5TRACE2("e", "i*UL", plist_id, cap_flags);
 
     /* Get the 'cap_flags' from the connector */
     if (cap_flags) {
+        if (H5P_DEFAULT == plist_id)
+            plist_id = H5P_FILE_ACCESS_DEFAULT;
+
         if (TRUE == H5P_isa_class(plist_id, H5P_FILE_ACCESS)) {
             H5P_genplist_t       *plist;          /* Property list pointer */
             H5VL_connector_prop_t connector_prop; /* Property for VOL connector ID & info */
@@ -6624,10 +6098,10 @@ H5Pget_vol_cap_flags(hid_t plist_id, unsigned *cap_flags)
             /* Query the capability flags */
             if (H5VL_get_cap_flags(&connector_prop, cap_flags) < 0)
                 HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get VOL connector capability flags")
-        } /* end if */
+        }
         else
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list")
-    } /* end if */
+    }
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -6677,7 +6151,7 @@ H5P__facc_vol_set(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNUSED *name,
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Make copy of VOL connector ID & info */
     if (H5VL_conn_copy((H5VL_connector_prop_t *)value) < 0)
@@ -6706,7 +6180,7 @@ H5P__facc_vol_get(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNUSED *name,
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Make copy of VOL connector */
     if (H5VL_conn_copy((H5VL_connector_prop_t *)value) < 0)
@@ -6794,17 +6268,17 @@ H5P__facc_vol_cmp(const void *_info1, const void *_info2, size_t H5_ATTR_UNUSED 
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(info1);
-    HDassert(info2);
-    HDassert(size == sizeof(H5VL_connector_prop_t));
+    assert(info1);
+    assert(info2);
+    assert(size == sizeof(H5VL_connector_prop_t));
 
     /* Compare connectors */
     if (NULL == (cls1 = (H5VL_class_t *)H5I_object(info1->connector_id)))
-        HGOTO_DONE(-1)
+        HGOTO_DONE(-1);
     if (NULL == (cls2 = (H5VL_class_t *)H5I_object(info2->connector_id)))
-        HGOTO_DONE(1)
+        HGOTO_DONE(1);
     status = H5VL_cmp_connector_cls(&cmp_value, cls1, cls2);
-    HDassert(status >= 0);
+    assert(status >= 0);
     if (cmp_value != 0)
         HGOTO_DONE(cmp_value);
 
@@ -6815,9 +6289,9 @@ H5P__facc_vol_cmp(const void *_info1, const void *_info2, size_t H5_ATTR_UNUSED 
     /* Use one of the classes (cls1) info comparison routines to compare the
      * info objects
      */
-    HDassert(cls1->info_cls.cmp == cls2->info_cls.cmp);
+    assert(cls1->info_cls.cmp == cls2->info_cls.cmp);
     status = H5VL_cmp_connector_info(cls1, &cmp_value, info1->connector_info, info2->connector_info);
-    HDassert(status >= 0);
+    assert(status >= 0);
 
     /* Set return value */
     ret_value = cmp_value;
@@ -6850,3 +6324,261 @@ H5P__facc_vol_close(const char H5_ATTR_UNUSED *name, size_t H5_ATTR_UNUSED size,
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5P__facc_vol_close() */
+
+/*-------------------------------------------------------------------------
+ * Function:    H5P__facc_vfd_swmr_config_enc
+ *
+ * Purpose:     Callback routine which is called whenever the VFD SWMR config
+ *              property in the file access property list is encoded.
+ *
+ * Return:      Success:    Non-negative
+ *              Failure:    Negative
+ *
+ * Programmer:  Vailin Choi; July 2018
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5P__facc_vfd_swmr_config_enc(const void *value, void **_pp, size_t *size)
+{
+    const H5F_vfd_swmr_config_t *config =
+        (const H5F_vfd_swmr_config_t *)value; /* Create local aliases for values */
+    uint8_t **pp = (uint8_t **)_pp;
+
+    FUNC_ENTER_PACKAGE_NOERR
+
+    /* Sanity check */
+    assert(value);
+    HDcompile_assert(sizeof(size_t) <= sizeof(uint64_t));
+
+    if (NULL != *pp) {
+
+        /* int */
+        INT32ENCODE(*pp, (int32_t)config->version);
+        INT32ENCODE(*pp, (int32_t)config->tick_len);
+        INT32ENCODE(*pp, (int32_t)config->max_lag);
+        H5_ENCODE_UNSIGNED(*pp, config->presume_posix_semantics);
+        H5_ENCODE_UNSIGNED(*pp, config->writer);
+        H5_ENCODE_UNSIGNED(*pp, config->maintain_metadata_file);
+        H5_ENCODE_UNSIGNED(*pp, config->generate_updater_files);
+        H5_ENCODE_UNSIGNED(*pp, config->flush_raw_data);
+        INT32ENCODE(*pp, (int32_t)config->md_pages_reserved);
+        INT32ENCODE(*pp, (int32_t)config->pb_expansion_threshold);
+        memcpy(*pp, (const uint8_t *)(config->md_file_path), (size_t)(H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1));
+        *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
+        memcpy(*pp, (const uint8_t *)(config->md_file_name), (size_t)(H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1));
+        *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
+        memcpy(*pp, (const uint8_t *)(config->updater_file_path),
+                 (size_t)(H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1));
+        *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
+        memcpy(*pp, (const uint8_t *)(config->log_file_path),
+                 (size_t)(H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1));
+        *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
+
+    } /* end if */
+
+    /* Compute encoded size */
+    *size += ((5 * sizeof(int32_t)) + (5 * sizeof(unsigned)) + (4 * (H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1)));
+
+    FUNC_LEAVE_NOAPI(SUCCEED)
+} /* end H5P__facc_vfd_swmr_config_enc() */
+
+/*-------------------------------------------------------------------------
+ * Function:    H5P__facc_vfd_swmr_config_dec
+ *
+ * Purpose:     Callback routine which is called whenever the VFD SWMR
+ *              config property in the file access property list is decoded.
+ *
+ * Return:      Success:    Non-negative
+ *              Failure:    Negative
+ *
+ * Programmer:  Vailin Choi; July 2018
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5P__facc_vfd_swmr_config_dec(const void **_pp, void *_value)
+{
+    H5F_vfd_swmr_config_t *config = (H5F_vfd_swmr_config_t *)_value;
+    const uint8_t **       pp     = (const uint8_t **)_pp;
+
+    FUNC_ENTER_PACKAGE_NOERR
+
+    /* Sanity checks */
+    assert(pp);
+    assert(*pp);
+    assert(config);
+    HDcompile_assert(sizeof(size_t) <= sizeof(uint64_t));
+
+    /* Set property to default value */
+    memcpy(config, &H5F_def_vfd_swmr_config_g, sizeof(H5F_vfd_swmr_config_t));
+
+    /* int */
+    INT32DECODE(*pp, config->version);
+    UINT32DECODE(*pp, config->tick_len);
+    UINT32DECODE(*pp, config->max_lag);
+    UINT32DECODE(*pp, config->presume_posix_semantics);
+
+    H5_DECODE_UNSIGNED(*pp, config->writer);
+    H5_DECODE_UNSIGNED(*pp, config->maintain_metadata_file);
+    H5_DECODE_UNSIGNED(*pp, config->generate_updater_files);
+    H5_DECODE_UNSIGNED(*pp, config->flush_raw_data);
+
+    /* int */
+    UINT32DECODE(*pp, config->md_pages_reserved);
+    UINT32DECODE(*pp, config->pb_expansion_threshold);
+
+    HDstrcpy(config->md_file_path, (const char *)(*pp));
+    *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
+
+    HDstrcpy(config->md_file_name, (const char *)(*pp));
+    *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
+
+    HDstrcpy(config->updater_file_path, (const char *)(*pp));
+    *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
+
+    HDstrcpy(config->log_file_path, (const char *)(*pp));
+    *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
+
+    FUNC_LEAVE_NOAPI(SUCCEED)
+} /* end H5P__facc_vfd_swmr_config_dec() */
+
+/*-------------------------------------------------------------------------
+ * Function:    H5P_check_vfd_swmr_config
+ *
+ * Purpose:     Verify that the values of the H5F_vfd_swmr_config_t
+ *              struct are valid.
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5P_check_vfd_swmr_config(H5F_vfd_swmr_config_t *config_ptr)
+{
+    size_t          name_len;
+    herr_t          ret_value = SUCCEED; /* return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Check args */
+    if (config_ptr == NULL)
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "NULL config_ptr on entry")
+
+    /* This field must always be set to a known version */
+    if (config_ptr->version != H5F__CURR_VFD_SWMR_CONFIG_VERSION)
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "Unknown config version")
+
+    /* This field must be at least 3 */
+    if (config_ptr->max_lag < 3)
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "max_lag must be at least 3")
+
+    /* This field must be >= 2 */
+    if (config_ptr->md_pages_reserved < 2)
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "md_pages_reserved must be at least 2")
+
+    /* This field must be in the range [0, 100] */
+    if (config_ptr->pb_expansion_threshold > H5F__MAX_PB_EXPANSION_THRESHOLD)
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "pb_expansion_threshold out of range")
+
+    /* If writer is TRUE, at least one of maintain_metadata_file and generate_updater_files must be TRUE */
+    if (config_ptr->writer) {
+        if (!config_ptr->maintain_metadata_file && !config_ptr->generate_updater_files)
+            HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL,
+                        "either maintain_metadata_file or generate_updater_files must be TRUE")
+    }
+
+    /* md_file_path can be "" or a name (+"/")*/
+    /* md_file_name can be "" (+ ".md") or a name */
+    name_len = HDstrlen(config_ptr->md_file_path) + HDstrlen(config_ptr->md_file_name);
+    if (name_len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN)
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "md_file_name + md_file_path is too long")
+
+    if (config_ptr->writer && config_ptr->generate_updater_files) {
+        /* Must provide the path and base name of the metadata updater files */
+        name_len = HDstrlen(config_ptr->updater_file_path);
+        if (name_len == 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "updater_file_path is empty")
+        else if (name_len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN)
+            HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "updater_file_path is too long")
+    }
+
+    name_len = HDstrlen(config_ptr->log_file_path);
+    if (name_len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN)
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "log_file_path is too long")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5P_check_vfd_swmr_config() */
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Pset_vfd_swmr_config
+ *
+ * Purpose:     Set VFD SWMR configuration in the target FAPL.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  Vailin Choi; July 2018
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_vfd_swmr_config(hid_t plist_id, H5F_vfd_swmr_config_t *config_ptr)
+{
+    H5P_genplist_t *plist; /* Property list pointer */
+    herr_t          ret_value = SUCCEED; /* return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE2("e", "i*!", plist_id, config_ptr);
+
+    /* Get the plist structure */
+    if (NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
+        HGOTO_ERROR(H5E_ID, H5E_BADID, FAIL, "can't find object for ID")
+
+    /* Validate the input configuration */
+    if (H5P_check_vfd_swmr_config(config_ptr) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "configuration contains invalid values")
+
+    /* Set the modified config */
+    if (H5P_set(plist, H5F_ACS_VFD_SWMR_CONFIG_NAME, config_ptr) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set vfd swmr config")
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* H5Pset_vfd_swmr_config() */
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Pget_vfd_swmr_config
+ *
+ * Purpose:     Retrieve the VFD SWMR configuration from the target FAPL.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  Vailin Choi; July 2018
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_vfd_swmr_config(hid_t plist_id, H5F_vfd_swmr_config_t *config_ptr)
+{
+    H5P_genplist_t *plist;               /* Property list pointer */
+    herr_t          ret_value = SUCCEED; /* return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE2("e", "i*!", plist_id, config_ptr);
+
+    /* Get the plist structure */
+    if (NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
+        HGOTO_ERROR(H5E_ID, H5E_BADID, FAIL, "can't find object for ID")
+
+    /* Validate the config_ptr */
+    if (config_ptr == NULL)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "NULL config_ptr on entry.")
+
+    /* Get the current VFD SWMR configuration */
+    if (H5P_get(plist, H5F_ACS_VFD_SWMR_CONFIG_NAME, config_ptr) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get VFD SWMR config")
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* H5Pget_vfd_swmr_config() */

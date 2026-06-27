@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -183,6 +182,11 @@ main(void)
     if ((ret = H5Pset_edc_check(dxpl1, H5Z_DISABLE_EDC)) < 0)
         assert(ret > 0);
     if ((ret = H5Pset_data_transform(dxpl1, c_to_f)) < 0)
+        assert(ret > 0);
+    if ((ret = H5Pset_selection_io(dxpl1, H5D_SELECTION_IO_MODE_ON)) < 0)
+        assert(ret > 0);
+
+    if ((ret = H5Pset_modify_write_buf(dxpl1, TRUE)) < 0)
         assert(ret > 0);
 
     if ((ret = encode_plist(dxpl1, little_endian, word_length, "testfiles/plist_files/dxpl_")) < 0)
@@ -453,27 +457,27 @@ encode_plist(hid_t plist_id, int little_endian, int word_length, const char *fil
     /* Generate filename */
     if ((ret = HDsnprintf(filename, sizeof(filename), "%s%d%s", filename_prefix, word_length,
                           little_endian ? "le" : "be")) < 0)
-        HDassert(ret > 0);
+        assert(ret > 0);
 
     /* first call to encode returns only the size of the buffer needed */
     if ((ret = H5Pencode2(plist_id, NULL, &temp_size, H5P_DEFAULT)) < 0)
-        HDassert(ret > 0);
+        assert(ret > 0);
 
-    temp_buf = (void *)HDmalloc(temp_size);
-    HDassert(temp_buf);
+    temp_buf = (void *)malloc(temp_size);
+    assert(temp_buf);
 
     if ((ret = H5Pencode2(plist_id, temp_buf, &temp_size, H5P_DEFAULT)) < 0)
-        HDassert(ret > 0);
+        assert(ret > 0);
 
     fd = HDopen(filename, O_RDWR | O_CREAT | O_TRUNC, H5_POSIX_CREATE_MODE_RW);
-    HDassert(fd >= 0);
+    assert(fd >= 0);
 
     write_size = HDwrite(fd, temp_buf, temp_size);
-    HDassert(write_size == (ssize_t)temp_size);
+    assert(write_size == (ssize_t)temp_size);
 
     HDclose(fd);
 
-    HDfree(temp_buf);
+    free(temp_buf);
 
     return 1;
 }

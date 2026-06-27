@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -92,10 +91,10 @@
 #ifdef H5R_DEBUG
 #define H5R_LOG_DEBUG(...)                                                                                   \
     do {                                                                                                     \
-        HDfprintf(stdout, " # %s(): ", __func__);                                                            \
-        HDfprintf(stdout, __VA_ARGS__);                                                                      \
-        HDfprintf(stdout, "\n");                                                                             \
-        HDfflush(stdout);                                                                                    \
+        fprintf(stdout, " # %s(): ", __func__);                                                              \
+        fprintf(stdout, __VA_ARGS__);                                                                        \
+        fprintf(stdout, "\n");                                                                               \
+        fflush(stdout);                                                                                      \
     } while (0)
 static const char *
 H5R__print_token(const H5O_token_t token)
@@ -188,7 +187,7 @@ H5R__create_object(const H5O_token_t *obj_token, size_t token_size, H5R_ref_priv
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(ref);
+    assert(ref);
 
     /* Create new reference */
     ref->info.obj.filename = NULL;
@@ -227,8 +226,8 @@ H5R__create_region(const H5O_token_t *obj_token, size_t token_size, H5S_t *space
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(space);
-    HDassert(ref);
+    assert(space);
+    assert(ref);
 
     /* Create new reference */
     ref->info.obj.filename = NULL;
@@ -276,8 +275,8 @@ H5R__create_attr(const H5O_token_t *obj_token, size_t token_size, const char *at
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(attr_name);
-    HDassert(ref);
+    assert(attr_name);
+    assert(ref);
 
     /* Make sure that attribute name is not longer than supported encode size */
     if (HDstrlen(attr_name) > H5R_MAX_STRING_LEN)
@@ -328,7 +327,7 @@ H5R__destroy(H5R_ref_priv_t *ref)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(ref != NULL);
+    assert(ref != NULL);
 
     H5R_LOG_DEBUG("Destroying reference, filename=%s, obj_addr=%s, encode size=%u", ref->info.obj.filename,
                   H5R__print_token(ref->info.obj.token), ref->encode_size);
@@ -356,11 +355,11 @@ H5R__destroy(H5R_ref_priv_t *ref)
             break;
         case H5R_BADTYPE:
         case H5R_MAXTYPE:
-            HDassert("invalid reference type" && 0);
+            assert("invalid reference type" && 0);
             HGOTO_ERROR(H5E_REFERENCE, H5E_UNSUPPORTED, FAIL, "internal error (invalid reference type)")
 
         default:
-            HDassert("unknown reference type" && 0);
+            assert("unknown reference type" && 0);
             HGOTO_ERROR(H5E_REFERENCE, H5E_UNSUPPORTED, FAIL, "internal error (unknown reference type)")
     } /* end switch */
 
@@ -396,8 +395,8 @@ H5R__set_loc_id(H5R_ref_priv_t *ref, hid_t id, hbool_t inc_ref, hbool_t app_ref)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(ref != NULL);
-    HDassert(id != H5I_INVALID_HID);
+    assert(ref != NULL);
+    assert(id != H5I_INVALID_HID);
 
     /* If a location ID was previously assigned, decrement refcount and
      * assign new one */
@@ -441,7 +440,7 @@ H5R__get_loc_id(const H5R_ref_priv_t *ref)
 
     FUNC_ENTER_PACKAGE_NOERR
 
-    HDassert(ref != NULL);
+    assert(ref != NULL);
 
     ret_value = ref->loc_id;
 
@@ -544,7 +543,7 @@ H5R__get_type(const H5R_ref_priv_t *ref)
 
     FUNC_ENTER_PACKAGE_NOERR
 
-    HDassert(ref != NULL);
+    assert(ref != NULL);
     ret_value = (H5R_type_t)ref->type;
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -566,8 +565,8 @@ H5R__equal(const H5R_ref_priv_t *ref1, const H5R_ref_priv_t *ref2)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(ref1 != NULL);
-    HDassert(ref2 != NULL);
+    assert(ref1 != NULL);
+    assert(ref2 != NULL);
 
     /* Compare reference types */
     if (ref1->type != ref2->type)
@@ -576,7 +575,7 @@ H5R__equal(const H5R_ref_priv_t *ref1, const H5R_ref_priv_t *ref2)
     /* Compare object addresses */
     if (ref1->token_size != ref2->token_size)
         HGOTO_DONE(FALSE);
-    if (0 != HDmemcmp(&ref1->info.obj.token, &ref2->info.obj.token, ref1->token_size))
+    if (0 != memcmp(&ref1->info.obj.token, &ref2->info.obj.token, ref1->token_size))
         HGOTO_DONE(FALSE);
 
     /* Compare filenames */
@@ -595,7 +594,7 @@ H5R__equal(const H5R_ref_priv_t *ref1, const H5R_ref_priv_t *ref2)
                 HGOTO_ERROR(H5E_REFERENCE, H5E_CANTCOMPARE, FAIL, "cannot compare dataspace extents")
             break;
         case H5R_ATTR:
-            HDassert(ref1->info.attr.name && ref2->info.attr.name);
+            assert(ref1->info.attr.name && ref2->info.attr.name);
             if (0 != HDstrcmp(ref1->info.attr.name, ref2->info.attr.name))
                 HGOTO_DONE(FALSE);
             break;
@@ -603,10 +602,10 @@ H5R__equal(const H5R_ref_priv_t *ref1, const H5R_ref_priv_t *ref2)
         case H5R_DATASET_REGION1:
         case H5R_BADTYPE:
         case H5R_MAXTYPE:
-            HDassert("invalid reference type" && 0);
+            assert("invalid reference type" && 0);
             HGOTO_ERROR(H5E_REFERENCE, H5E_UNSUPPORTED, FAIL, "internal error (invalid reference type)")
         default:
-            HDassert("unknown reference type" && 0);
+            assert("unknown reference type" && 0);
             HGOTO_ERROR(H5E_REFERENCE, H5E_UNSUPPORTED, FAIL, "internal error (unknown reference type)")
     } /* end switch */
 
@@ -630,7 +629,7 @@ H5R__copy(const H5R_ref_priv_t *src_ref, H5R_ref_priv_t *dst_ref)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert((src_ref != NULL) && (dst_ref != NULL));
+    assert((src_ref != NULL) && (dst_ref != NULL));
 
     H5MM_memcpy(&dst_ref->info.obj.token, &src_ref->info.obj.token, sizeof(H5O_token_t));
     dst_ref->encode_size = src_ref->encode_size;
@@ -650,18 +649,18 @@ H5R__copy(const H5R_ref_priv_t *src_ref, H5R_ref_priv_t *dst_ref)
             break;
         case H5R_OBJECT1:
         case H5R_DATASET_REGION1:
-            HDassert("invalid reference type" && 0);
+            assert("invalid reference type" && 0);
             HGOTO_ERROR(H5E_REFERENCE, H5E_UNSUPPORTED, FAIL, "internal error (invalid reference type)")
         case H5R_BADTYPE:
         case H5R_MAXTYPE:
         default:
-            HDassert("unknown reference type" && 0);
+            assert("unknown reference type" && 0);
             HGOTO_ERROR(H5E_REFERENCE, H5E_UNSUPPORTED, FAIL, "internal error (unknown reference type)")
     } /* end switch */
 
     /* We only need to keep a copy of the filename if we don't have the loc_id */
     if (src_ref->loc_id == H5I_INVALID_HID) {
-        HDassert(src_ref->info.obj.filename);
+        assert(src_ref->info.obj.filename);
 
         if (NULL == (dst_ref->info.obj.filename = HDstrdup(src_ref->info.obj.filename)))
             HGOTO_ERROR(H5E_REFERENCE, H5E_CANTCOPY, FAIL, "Cannot copy filename")
@@ -697,8 +696,8 @@ H5R__get_obj_token(const H5R_ref_priv_t *ref, H5O_token_t *obj_token, size_t *to
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(ref != NULL);
-    HDassert(ref->token_size <= H5O_MAX_TOKEN_SIZE);
+    assert(ref != NULL);
+    assert(ref->token_size <= H5O_MAX_TOKEN_SIZE);
 
     if (obj_token) {
         if (0 == ref->token_size)
@@ -728,13 +727,13 @@ H5R__set_obj_token(H5R_ref_priv_t *ref, const H5O_token_t *obj_token, size_t tok
 
     FUNC_ENTER_PACKAGE_NOERR
 
-    HDassert(ref != NULL);
-    HDassert(obj_token);
-    HDassert(token_size);
-    HDassert(token_size <= H5O_MAX_TOKEN_SIZE);
+    assert(ref != NULL);
+    assert(obj_token);
+    assert(token_size);
+    assert(token_size <= H5O_MAX_TOKEN_SIZE);
 
     H5MM_memcpy(&ref->info.obj.token, obj_token, token_size);
-    HDassert(token_size <= 255);
+    assert(token_size <= 255);
     ref->token_size = (uint8_t)token_size;
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -758,9 +757,9 @@ H5R__get_region(const H5R_ref_priv_t *ref, H5S_t *space)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(ref != NULL);
-    HDassert(ref->type == H5R_DATASET_REGION2);
-    HDassert(space);
+    assert(ref != NULL);
+    assert(ref->type == H5R_DATASET_REGION2);
+    assert(space);
 
     /* Copy reference selection to destination */
     if (H5S_select_copy(space, ref->info.reg.space, FALSE) < 0)
@@ -789,7 +788,7 @@ H5R__get_file_name(const H5R_ref_priv_t *ref, char *buf, size_t size)
     FUNC_ENTER_PACKAGE
 
     /* Check args */
-    HDassert(ref != NULL);
+    assert(ref != NULL);
 
     /* Return if that reference has no filename set */
     if (!ref->info.obj.filename)
@@ -797,7 +796,7 @@ H5R__get_file_name(const H5R_ref_priv_t *ref, char *buf, size_t size)
 
     /* Get the file name length */
     copy_len = HDstrlen(ref->info.obj.filename);
-    HDassert(copy_len <= H5R_MAX_STRING_LEN);
+    assert(copy_len <= H5R_MAX_STRING_LEN);
 
     /* Copy the file name */
     if (buf) {
@@ -829,12 +828,12 @@ H5R__get_attr_name(const H5R_ref_priv_t *ref, char *buf, size_t size)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Check args */
-    HDassert(ref != NULL);
-    HDassert(ref->type == H5R_ATTR);
+    assert(ref != NULL);
+    assert(ref->type == H5R_ATTR);
 
     /* Get the attribute name length */
     attr_name_len = HDstrlen(ref->info.attr.name);
-    HDassert(attr_name_len <= H5R_MAX_STRING_LEN);
+    assert(attr_name_len <= H5R_MAX_STRING_LEN);
 
     /* Get the attribute name */
     if (buf) {
@@ -867,8 +866,8 @@ H5R__encode(const char *filename, const H5R_ref_priv_t *ref, unsigned char *buf,
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(ref);
-    HDassert(nalloc);
+    assert(ref);
+    assert(nalloc);
 
     /**
      * Encoding format:
@@ -930,11 +929,11 @@ H5R__encode(const char *filename, const H5R_ref_priv_t *ref, unsigned char *buf,
         case H5R_DATASET_REGION1:
         case H5R_BADTYPE:
         case H5R_MAXTYPE:
-            HDassert("invalid reference type" && 0);
+            assert("invalid reference type" && 0);
             HGOTO_ERROR(H5E_REFERENCE, H5E_UNSUPPORTED, FAIL, "internal error (invalid reference type)")
 
         default:
-            HDassert("unknown reference type" && 0);
+            assert("unknown reference type" && 0);
             HGOTO_ERROR(H5E_REFERENCE, H5E_UNSUPPORTED, FAIL, "internal error (unknown reference type)")
     } /* end switch */
 
@@ -967,9 +966,9 @@ H5R__decode(const unsigned char *buf, size_t *nbytes, H5R_ref_priv_t *ref)
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(buf);
-    HDassert(nbytes);
-    HDassert(ref);
+    assert(buf);
+    assert(nbytes);
+    assert(ref);
 
     /* Don't decode if buffer size isn't big enough */
     buf_size = *nbytes;
@@ -1017,10 +1016,10 @@ H5R__decode(const unsigned char *buf, size_t *nbytes, H5R_ref_priv_t *ref)
         case H5R_DATASET_REGION1:
         case H5R_BADTYPE:
         case H5R_MAXTYPE:
-            HDassert("invalid reference type" && 0);
+            assert("invalid reference type" && 0);
             HGOTO_ERROR(H5E_REFERENCE, H5E_UNSUPPORTED, FAIL, "internal error (invalid reference type)")
         default:
-            HDassert("unknown reference type" && 0);
+            assert("unknown reference type" && 0);
             HGOTO_ERROR(H5E_REFERENCE, H5E_UNSUPPORTED, FAIL, "internal error (unknown reference type)")
     } /* end switch */
 
@@ -1056,7 +1055,7 @@ H5R__encode_obj_token(const H5O_token_t *obj_token, size_t token_size, unsigned 
 
     FUNC_ENTER_PACKAGE_NOERR
 
-    HDassert(nalloc);
+    assert(nalloc);
 
     /* Don't encode if buffer size isn't big enough or buffer is empty */
     if (buf && *nalloc >= token_size) {
@@ -1090,10 +1089,10 @@ H5R__decode_obj_token(const unsigned char *buf, size_t *nbytes, H5O_token_t *obj
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(buf);
-    HDassert(nbytes);
-    HDassert(obj_token);
-    HDassert(token_size);
+    assert(buf);
+    assert(nbytes);
+    assert(obj_token);
+    assert(token_size);
 
     /* Don't decode if buffer size isn't big enough */
     if (*nbytes < sizeof(uint8_t))
@@ -1105,7 +1104,7 @@ H5R__decode_obj_token(const unsigned char *buf, size_t *nbytes, H5O_token_t *obj
         HGOTO_ERROR(H5E_REFERENCE, H5E_CANTDECODE, FAIL, "Invalid token size (%u)", *token_size)
 
     /* Make sure that token is initialized */
-    HDmemset(obj_token, 0, sizeof(H5O_token_t));
+    memset(obj_token, 0, sizeof(H5O_token_t));
 
     /* Decode token */
     H5MM_memcpy(obj_token, p, *token_size);
@@ -1134,8 +1133,8 @@ H5R__encode_region(H5S_t *space, unsigned char *buf, size_t *nalloc)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(space);
-    HDassert(nalloc);
+    assert(space);
+    assert(nalloc);
 
     /* Get the amount of space required to serialize the selection */
     if ((buf_size = H5S_SELECT_SERIAL_SIZE(space)) < 0)
@@ -1178,6 +1177,7 @@ static herr_t
 H5R__decode_region(const unsigned char *buf, size_t *nbytes, H5S_t **space_ptr)
 {
     const uint8_t *p        = (const uint8_t *)buf;
+    const uint8_t *p_end    = p + *nbytes - 1;
     size_t         buf_size = 0;
     unsigned       rank;
     H5S_t         *space;
@@ -1185,9 +1185,9 @@ H5R__decode_region(const unsigned char *buf, size_t *nbytes, H5S_t **space_ptr)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(buf);
-    HDassert(nbytes);
-    HDassert(space_ptr);
+    assert(buf);
+    assert(nbytes);
+    assert(space_ptr);
 
     /* Don't decode if buffer size isn't big enough */
     if (*nbytes < (2 * sizeof(uint32_t)))
@@ -1210,7 +1210,11 @@ H5R__decode_region(const unsigned char *buf, size_t *nbytes, H5S_t **space_ptr)
         HGOTO_ERROR(H5E_REFERENCE, H5E_CANTDECODE, FAIL, "Buffer size is too small")
     if (H5S_set_extent_simple(space, rank, NULL, NULL) < 0)
         HGOTO_ERROR(H5E_REFERENCE, H5E_CANTSET, FAIL, "can't set extent rank for selection")
-    if (H5S_SELECT_DESERIALIZE(&space, &p) < 0)
+
+    if (p - 1 > p_end)
+        HGOTO_ERROR(H5E_REFERENCE, H5E_CANTDECODE, FAIL, "Ran off end of buffer while decoding")
+
+    if (H5S_SELECT_DESERIALIZE(&space, &p, (size_t)(p_end - p + 1)) < 0)
         HGOTO_ERROR(H5E_REFERENCE, H5E_CANTDECODE, FAIL, "can't deserialize selection")
 
     *nbytes    = buf_size;
@@ -1237,8 +1241,8 @@ H5R__encode_string(const char *string, unsigned char *buf, size_t *nalloc)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(string);
-    HDassert(nalloc);
+    assert(string);
+    assert(nalloc);
 
     /* Get the amount of space required to serialize the string */
     string_len = HDstrlen(string);
@@ -1280,9 +1284,9 @@ H5R__decode_string(const unsigned char *buf, size_t *nbytes, char **string_ptr)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(buf);
-    HDassert(nbytes);
-    HDassert(string_ptr);
+    assert(buf);
+    assert(nbytes);
+    assert(string_ptr);
 
     /* Don't decode if buffer size isn't big enough */
     if (*nbytes < sizeof(uint16_t))
@@ -1290,7 +1294,7 @@ H5R__decode_string(const unsigned char *buf, size_t *nbytes, char **string_ptr)
 
     /* Get the string length */
     UINT16DECODE(p, string_len);
-    HDassert(string_len <= H5R_MAX_STRING_LEN);
+    assert(string_len <= H5R_MAX_STRING_LEN);
 
     /* Allocate the string */
     if (NULL == (string = (char *)H5MM_malloc(string_len + 1)))
@@ -1324,8 +1328,8 @@ H5R__encode_heap(H5F_t *f, unsigned char *buf, size_t *nalloc, const unsigned ch
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(f);
-    HDassert(nalloc);
+    assert(f);
+    assert(nalloc);
 
     buf_size = H5HG_HEAP_ID_SIZE(f);
     if (buf && *nalloc >= buf_size) {
@@ -1366,10 +1370,10 @@ H5R__decode_heap(H5F_t *f, const unsigned char *buf, size_t *nbytes, unsigned ch
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(f);
-    HDassert(buf);
-    HDassert(nbytes);
-    HDassert(data_ptr);
+    assert(f);
+    assert(buf);
+    assert(nbytes);
+    assert(data_ptr);
 
     buf_size = H5HG_HEAP_ID_SIZE(f);
     /* Don't decode if buffer size isn't big enough */
@@ -1378,7 +1382,7 @@ H5R__decode_heap(H5F_t *f, const unsigned char *buf, size_t *nbytes, unsigned ch
 
     /* Get the heap information */
     H5F_addr_decode(f, &p, &(hobjid.addr));
-    if (!H5F_addr_defined(hobjid.addr) || hobjid.addr == 0)
+    if (!H5_addr_defined(hobjid.addr) || hobjid.addr == 0)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Undefined reference pointer")
     UINT32DECODE(p, hobjid.idx);
 
@@ -1409,9 +1413,9 @@ H5R__encode_token_obj_compat(const H5O_token_t *obj_token, size_t token_size, un
 
     FUNC_ENTER_PACKAGE_NOERR
 
-    HDassert(obj_token);
-    HDassert(token_size);
-    HDassert(nalloc);
+    assert(obj_token);
+    assert(token_size);
+    assert(nalloc);
 
     /* Don't encode if buffer size isn't big enough or buffer is empty */
     if (buf && *nalloc >= token_size)
@@ -1439,10 +1443,10 @@ H5R__decode_token_obj_compat(const unsigned char *buf, size_t *nbytes, H5O_token
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(buf);
-    HDassert(nbytes);
-    HDassert(obj_token);
-    HDassert(token_size);
+    assert(buf);
+    assert(nbytes);
+    assert(obj_token);
+    assert(token_size);
 
     /* Don't decode if buffer size isn't big enough */
     if (*nbytes < token_size)
@@ -1473,23 +1477,25 @@ H5R__decode_token_region_compat(H5F_t *f, const unsigned char *buf, size_t *nbyt
     unsigned char *data  = NULL;
     H5O_token_t    token = {0};
     size_t         data_size;
-    const uint8_t *p;
+    const uint8_t *p         = NULL;
+    const uint8_t *p_end     = NULL;
     H5S_t         *space     = NULL;
     herr_t         ret_value = SUCCEED;
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(f);
-    HDassert(buf);
-    HDassert(nbytes);
-    HDassert(token_size);
+    assert(f);
+    assert(buf);
+    assert(nbytes);
+    assert(token_size);
 
     /* Read from heap */
     if (H5R__decode_heap(f, buf, nbytes, &data, &data_size) < 0)
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid location identifier")
 
     /* Get object address */
-    p = (const uint8_t *)data;
+    p     = (const uint8_t *)data;
+    p_end = p + data_size - 1;
     H5MM_memcpy(&token, p, token_size);
     p += token_size;
 
@@ -1509,7 +1515,11 @@ H5R__decode_token_region_compat(H5F_t *f, const unsigned char *buf, size_t *nbyt
             HGOTO_ERROR(H5E_REFERENCE, H5E_NOTFOUND, FAIL, "not found")
 
         /* Unserialize the selection */
-        if (H5S_SELECT_DESERIALIZE(&space, &p) < 0)
+
+        if (p - 1 >= p_end)
+            HGOTO_ERROR(H5E_REFERENCE, H5E_CANTDECODE, FAIL, "Ran off end of buffer while deserializing")
+
+        if (H5S_SELECT_DESERIALIZE(&space, &p, (size_t)(p_end - p + 1)) < 0)
             HGOTO_ERROR(H5E_REFERENCE, H5E_CANTDECODE, FAIL, "can't deserialize selection")
 
         *space_ptr = space;
@@ -1522,7 +1532,7 @@ done:
 
     if (ret_value < 0) {
         if (space && H5S_close(space) < 0)
-            HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to release dataspace")
+            HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to release dataspace");
     }
 
     FUNC_LEAVE_NOAPI(ret_value)

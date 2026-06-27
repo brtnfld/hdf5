@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -14,8 +13,6 @@
 /*-------------------------------------------------------------------------
  *
  * Created:     H5FA.c
- *              April 2009
- *              Vailin Choi
  *
  * Purpose:     Implements a Fixed Array for storing elements
  *              of datasets with fixed dimensions.
@@ -97,9 +94,6 @@ H5FL_BLK_DEFINE(fa_native_elmt);
  * Return:	Pointer to farray wrapper success
  *              NULL on failure
  *
- * Programmer:	Quincey Koziol
- *		Oct 17 2016
- *
  *-------------------------------------------------------------------------
  */
 static H5FA_t *
@@ -112,8 +106,8 @@ H5FA__new(H5F_t *f, haddr_t fa_addr, hbool_t from_open, void *ctx_udata)
     FUNC_ENTER_PACKAGE
 
     /* Check arguments */
-    HDassert(f);
-    HDassert(H5F_addr_defined(fa_addr));
+    assert(f);
+    assert(H5_addr_defined(fa_addr));
 
     /* Allocate fixed array wrapper */
     if (NULL == (fa = H5FL_CALLOC(H5FA_t)))
@@ -145,10 +139,10 @@ H5FA__new(H5F_t *f, haddr_t fa_addr, hbool_t from_open, void *ctx_udata)
 
 done:
     if (hdr && H5FA__hdr_unprotect(hdr, H5AC__NO_FLAGS_SET) < 0)
-        HDONE_ERROR(H5E_FARRAY, H5E_CANTUNPROTECT, NULL, "unable to release fixed array header")
+        HDONE_ERROR(H5E_FARRAY, H5E_CANTUNPROTECT, NULL, "unable to release fixed array header");
     if (!ret_value)
         if (fa && H5FA_close(fa) < 0)
-            HDONE_ERROR(H5E_FARRAY, H5E_CLOSEERROR, NULL, "unable to close fixed array")
+            HDONE_ERROR(H5E_FARRAY, H5E_CLOSEERROR, NULL, "unable to close fixed array");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FA__new() */
@@ -160,9 +154,6 @@ done:
  *
  * Return:      Pointer to fixed array wrapper on success
  *              NULL on failure
- *
- * Programmer:  Vailin Choi
- *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
  */
@@ -176,8 +167,8 @@ H5FA_create(H5F_t *f, const H5FA_create_t *cparam, void *ctx_udata)
     FUNC_ENTER_NOAPI(NULL)
 
     /* Check arguments */
-    HDassert(f);
-    HDassert(cparam);
+    assert(f);
+    assert(cparam);
 
     /* H5FA interface sanity check */
     HDcompile_assert(H5FA_NUM_CLS_ID == NELMTS(H5FA_client_class_g));
@@ -197,7 +188,7 @@ H5FA_create(H5F_t *f, const H5FA_create_t *cparam, void *ctx_udata)
 done:
     if (!ret_value)
         if (fa && H5FA_close(fa) < 0)
-            HDONE_ERROR(H5E_FARRAY, H5E_CLOSEERROR, NULL, "unable to close fixed array")
+            HDONE_ERROR(H5E_FARRAY, H5E_CLOSEERROR, NULL, "unable to close fixed array");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FA_create() */
@@ -210,9 +201,6 @@ done:
  * Return:      Pointer to array wrapper on success
  *              NULL on failure
  *
- * Programmer:  Vailin Choi
- *              Thursday, April 30, 2009
- *
  *-------------------------------------------------------------------------
  */
 H5FA_t *
@@ -224,8 +212,8 @@ H5FA_open(H5F_t *f, haddr_t fa_addr, void *ctx_udata)
     FUNC_ENTER_NOAPI(NULL)
 
     /* Check arguments */
-    HDassert(f);
-    HDassert(H5F_addr_defined(fa_addr));
+    assert(f);
+    assert(H5_addr_defined(fa_addr));
 
     /* Allocate and initialize new fixed array wrapper */
     if (NULL == (fa = H5FA__new(f, fa_addr, TRUE, ctx_udata)))
@@ -238,7 +226,7 @@ H5FA_open(H5F_t *f, haddr_t fa_addr, void *ctx_udata)
 done:
     if (!ret_value)
         if (fa && H5FA_close(fa) < 0)
-            HDONE_ERROR(H5E_FARRAY, H5E_CLOSEERROR, NULL, "unable to close fixed array")
+            HDONE_ERROR(H5E_FARRAY, H5E_CLOSEERROR, NULL, "unable to close fixed array");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FA_open() */
@@ -250,9 +238,6 @@ done:
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:  Vailin Choi
- *              Thursday, April 30, 2009
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -261,8 +246,8 @@ H5FA_get_nelmts(const H5FA_t *fa, hsize_t *nelmts)
     FUNC_ENTER_NOAPI_NOERR
 
     /* Check arguments */
-    HDassert(fa);
-    HDassert(nelmts);
+    assert(fa);
+    assert(nelmts);
 
     /* Retrieve the current number of elements in the fixed array */
     *nelmts = fa->hdr->stats.nelmts;
@@ -277,9 +262,6 @@ H5FA_get_nelmts(const H5FA_t *fa, hsize_t *nelmts)
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:  Vailin Choi
- *              Thursday, April 30, 2009
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -288,9 +270,9 @@ H5FA_get_addr(const H5FA_t *fa, haddr_t *addr)
     FUNC_ENTER_NOAPI_NOERR
 
     /* Check arguments */
-    HDassert(fa);
-    HDassert(fa->hdr);
-    HDassert(addr);
+    assert(fa);
+    assert(fa->hdr);
+    assert(addr);
 
     /* Retrieve the address of the fixed array's header */
     *addr = fa->hdr->addr;
@@ -304,9 +286,6 @@ H5FA_get_addr(const H5FA_t *fa, haddr_t *addr)
  * Purpose:     Set an element of a fixed array
  *
  * Return:      SUCCEED/FAIL
- *
- * Programmer:  Vailin Choi
- *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
  */
@@ -325,21 +304,21 @@ H5FA_set(const H5FA_t *fa, hsize_t idx, const void *elmt)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Check arguments */
-    HDassert(fa);
-    HDassert(fa->hdr);
+    assert(fa);
+    assert(fa->hdr);
 
     /* Set the shared array header's file context for this operation */
     hdr->f = fa->f;
 
     /* Check if we need to create the fixed array data block */
-    if (!H5F_addr_defined(hdr->dblk_addr)) {
+    if (!H5_addr_defined(hdr->dblk_addr)) {
         /* Create the data block */
         hdr->dblk_addr = H5FA__dblock_create(hdr, &hdr_dirty);
-        if (!H5F_addr_defined(hdr->dblk_addr))
+        if (!H5_addr_defined(hdr->dblk_addr))
             HGOTO_ERROR(H5E_FARRAY, H5E_CANTCREATE, FAIL, "unable to create fixed array data block")
     }
 
-    HDassert(idx < hdr->cparam.nelmts);
+    assert(idx < hdr->cparam.nelmts);
 
     /* Protect data block */
     if (NULL == (dblock = H5FA__dblock_protect(hdr, hdr->dblk_addr, H5AC__NO_FLAGS_SET)))
@@ -402,13 +381,13 @@ done:
     /* Check for header modified */
     if (hdr_dirty)
         if (H5FA__hdr_modified(hdr) < 0)
-            HDONE_ERROR(H5E_FARRAY, H5E_CANTMARKDIRTY, FAIL, "unable to mark fixed array header as modified")
+            HDONE_ERROR(H5E_FARRAY, H5E_CANTMARKDIRTY, FAIL, "unable to mark fixed array header as modified");
 
     /* Release resources */
     if (dblock && H5FA__dblock_unprotect(dblock, dblock_cache_flags) < 0)
-        HDONE_ERROR(H5E_FARRAY, H5E_CANTUNPROTECT, FAIL, "unable to release fixed array data block")
+        HDONE_ERROR(H5E_FARRAY, H5E_CANTUNPROTECT, FAIL, "unable to release fixed array data block");
     if (dblk_page && H5FA__dblk_page_unprotect(dblk_page, dblk_page_cache_flags) < 0)
-        HDONE_ERROR(H5E_FARRAY, H5E_CANTUNPROTECT, FAIL, "unable to release fixed array data block page")
+        HDONE_ERROR(H5E_FARRAY, H5E_CANTUNPROTECT, FAIL, "unable to release fixed array data block page");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FA_set() */
@@ -419,9 +398,6 @@ done:
  * Purpose:     Get an element of a fixed array
  *
  * Return:      SUCCEED/FAIL
- *
- * Programmer:  Vailin Choi
- *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
  */
@@ -436,21 +412,21 @@ H5FA_get(const H5FA_t *fa, hsize_t idx, void *elmt)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Check arguments */
-    HDassert(fa);
-    HDassert(fa->hdr);
+    assert(fa);
+    assert(fa->hdr);
 
     /* Set the shared array header's file context for this operation */
     hdr->f = fa->f;
 
     /* Check if the fixed array data block has been allocated on disk yet */
-    if (!H5F_addr_defined(hdr->dblk_addr)) {
+    if (!H5_addr_defined(hdr->dblk_addr)) {
         /* Call the class's 'fill' callback */
         if ((hdr->cparam.cls->fill)(elmt, (size_t)1) < 0)
             HGOTO_ERROR(H5E_FARRAY, H5E_CANTSET, FAIL, "can't set element to class's fill value")
     } /* end if */
     else {
         /* Get the data block */
-        HDassert(H5F_addr_defined(hdr->dblk_addr));
+        assert(H5_addr_defined(hdr->dblk_addr));
         if (NULL == (dblock = H5FA__dblock_protect(hdr, hdr->dblk_addr, H5AC__READ_ONLY_FLAG)))
             HGOTO_ERROR(H5E_FARRAY, H5E_CANTPROTECT, FAIL,
                         "unable to protect fixed array data block, address = %llu",
@@ -474,7 +450,7 @@ H5FA_get(const H5FA_t *fa, hsize_t idx, void *elmt)
                     HGOTO_ERROR(H5E_FARRAY, H5E_CANTSET, FAIL, "can't set element to class's fill value")
 
                 /* We've retrieved the value, leave now */
-                HGOTO_DONE(SUCCEED)
+                HGOTO_DONE(SUCCEED);
             }                             /* end if */
             else {                        /* get the page */
                 size_t  dblk_page_nelmts; /* # of elements in a data block page */
@@ -510,9 +486,9 @@ H5FA_get(const H5FA_t *fa, hsize_t idx, void *elmt)
 
 done:
     if (dblock && H5FA__dblock_unprotect(dblock, H5AC__NO_FLAGS_SET) < 0)
-        HDONE_ERROR(H5E_FARRAY, H5E_CANTUNPROTECT, FAIL, "unable to release fixed array data block")
+        HDONE_ERROR(H5E_FARRAY, H5E_CANTUNPROTECT, FAIL, "unable to release fixed array data block");
     if (dblk_page && H5FA__dblk_page_unprotect(dblk_page, H5AC__NO_FLAGS_SET) < 0)
-        HDONE_ERROR(H5E_FARRAY, H5E_CANTUNPROTECT, FAIL, "unable to release fixed array data block page")
+        HDONE_ERROR(H5E_FARRAY, H5E_CANTUNPROTECT, FAIL, "unable to release fixed array data block page");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FA_get() */
@@ -523,9 +499,6 @@ done:
  * Purpose:     Close a fixed array
  *
  * Return:      SUCCEED/FAIL
- *
- * Programmer:  Vailin Choi
- *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
  */
@@ -539,7 +512,7 @@ H5FA_close(H5FA_t *fa)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Check arguments */
-    HDassert(fa);
+    assert(fa);
 
     /* Close the header if it was set */
     if (fa->hdr) {
@@ -575,9 +548,9 @@ H5FA_close(H5FA_t *fa)
                                 "unable to check metadata cache status for fixed array header")
 
                 /* Sanity checks on header */
-                HDassert(hdr_status & H5AC_ES__IN_CACHE);
-                HDassert(hdr_status & H5AC_ES__IS_PINNED);
-                HDassert(!(hdr_status & H5AC_ES__IS_PROTECTED));
+                assert(hdr_status & H5AC_ES__IN_CACHE);
+                assert(hdr_status & H5AC_ES__IS_PINNED);
+                assert(!(hdr_status & H5AC_ES__IS_PROTECTED));
             }
 #endif /* NDEBUG */
 
@@ -626,9 +599,6 @@ done:
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:  Vailin Choi
- *              Thursday, April 30, 2009
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -640,8 +610,8 @@ H5FA_delete(H5F_t *f, haddr_t fa_addr, void *ctx_udata)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Check arguments */
-    HDassert(f);
-    HDassert(H5F_addr_defined(fa_addr));
+    assert(f);
+    assert(H5_addr_defined(fa_addr));
 
     /* Lock the array header into memory */
     if (NULL == (hdr = H5FA__hdr_protect(f, fa_addr, ctx_udata, H5AC__NO_FLAGS_SET)))
@@ -664,7 +634,7 @@ H5FA_delete(H5F_t *f, haddr_t fa_addr, void *ctx_udata)
 done:
     /* Unprotect the header if an error occurred */
     if (hdr && H5FA__hdr_unprotect(hdr, H5AC__NO_FLAGS_SET) < 0)
-        HDONE_ERROR(H5E_FARRAY, H5E_CANTUNPROTECT, FAIL, "unable to release fixed array header")
+        HDONE_ERROR(H5E_FARRAY, H5E_CANTUNPROTECT, FAIL, "unable to release fixed array header");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FA_delete() */
@@ -679,9 +649,6 @@ done:
  *
  * Return:      H5_ITER_CONT/H5_ITER_ERROR
  *
- * Programmer:  Vailin Choi
- *              Thursday, April 30, 2009
- *
  *-------------------------------------------------------------------------
  */
 int
@@ -694,9 +661,9 @@ H5FA_iterate(H5FA_t *fa, H5FA_operator_t op, void *udata)
     FUNC_ENTER_NOAPI(H5_ITER_ERROR)
 
     /* Check arguments */
-    HDassert(fa);
-    HDassert(op);
-    HDassert(udata);
+    assert(fa);
+    assert(op);
+    assert(udata);
 
     /* Allocate space for a native array element */
     if (NULL == (elmt = H5FL_BLK_MALLOC(fa_native_elmt, fa->hdr->cparam.cls->nat_elmt_size)))
@@ -731,9 +698,6 @@ done:
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:  Dana Robinson
- *              Fall 2012
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -745,9 +709,9 @@ H5FA_depend(H5FA_t *fa, H5AC_proxy_entry_t *parent)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Check arguments */
-    HDassert(fa);
-    HDassert(hdr);
-    HDassert(parent);
+    assert(fa);
+    assert(hdr);
+    assert(parent);
 
     /*
      * Check to see if a flush dependency between the fixed array
@@ -756,7 +720,7 @@ H5FA_depend(H5FA_t *fa, H5AC_proxy_entry_t *parent)
      */
     if (NULL == hdr->parent) {
         /* Sanity check */
-        HDassert(hdr->top_proxy);
+        assert(hdr->top_proxy);
 
         /* Set the shared array header's file context for this operation */
         hdr->f = fa->f;
@@ -789,8 +753,8 @@ H5FA_patch_file(H5FA_t *fa, H5F_t *f)
     FUNC_ENTER_NOAPI_NOERR
 
     /* Check arguments */
-    HDassert(fa);
-    HDassert(f);
+    assert(fa);
+    assert(f);
 
     if (fa->f != f || fa->hdr->f != f)
         fa->f = fa->hdr->f = f;

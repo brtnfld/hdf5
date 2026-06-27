@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -21,7 +20,7 @@
 static void
 print_filter_warning(const char *dname, const char *fname)
 {
-    HDfprintf(stderr, "Warning: dataset <%s> cannot be read, %s filter is not available\n", dname, fname);
+    fprintf(stderr, "Warning: dataset <%s> cannot be read, %s filter is not available\n", dname, fname);
 }
 
 /*-------------------------------------------------------------------------

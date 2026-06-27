@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -14,8 +13,6 @@
 /*-------------------------------------------------------------------------
  *
  * Created:		H5HFbtree2.c
- *			Aug  7 2006
- *			Quincey Koziol
  *
  * Purpose:		v2 B-tree callbacks for "huge" object tracker
  *
@@ -31,10 +28,13 @@
 /***********/
 /* Headers */
 /***********/
-#include "H5private.h"   /* Generic Functions			*/
-#include "H5Eprivate.h"  /* Error handling		  	*/
-#include "H5HFpkg.h"     /* Fractal heaps			*/
-#include "H5MFprivate.h" /* File memory management		*/
+#include "H5private.h"   /* Generic Functions                        */
+#include "H5B2private.h" /* B-Trees (Version 2)                      */
+#include "H5Eprivate.h"  /* Error Handling                           */
+#include "H5Fprivate.h"  /* Files                                    */
+#include "H5FLprivate.h" /* Free Lists                               */
+#include "H5HFpkg.h"     /* Fractal Heaps                            */
+#include "H5MFprivate.h" /* File Memory Management                   */
 
 /****************/
 /* Local Macros */
@@ -180,9 +180,6 @@ H5FL_DEFINE_STATIC(H5HF_huge_bt2_ctx_t);
  * Return:	Success:	non-NULL
  *		Failure:	NULL
  *
- * Programmer:	Quincey Koziol
- *              Thursday, November 26, 2009
- *
  *-------------------------------------------------------------------------
  */
 static void *
@@ -195,7 +192,7 @@ H5HF__huge_bt2_crt_context(void *_f)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(f);
+    assert(f);
 
     /* Allocate callback context */
     if (NULL == (ctx = H5FL_MALLOC(H5HF_huge_bt2_ctx_t)))
@@ -222,9 +219,6 @@ done:
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Quincey Koziol
- *              Thursday, November 26, 2009
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -235,7 +229,7 @@ H5HF__huge_bt2_dst_context(void *_ctx)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(ctx);
+    assert(ctx);
 
     /* Release callback context */
     ctx = H5FL_FREE(H5HF_huge_bt2_ctx_t, ctx);
@@ -251,9 +245,6 @@ H5HF__huge_bt2_dst_context(void *_ctx)
  *
  * Return:	Success:	non-negative
  *		Failure:	negative
- *
- * Programmer:	Quincey Koziol
- *              Tuesday, August  8, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -275,9 +266,6 @@ H5HF__huge_bt2_indir_found(const void *nrecord, void *op_data)
  *
  * Return:	Success:	non-negative
  *		Failure:	negative
- *
- * Programmer:	Quincey Koziol
- *              Tuesday, August  8, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -309,9 +297,6 @@ done:
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Quincey Koziol
- *              Monday, August  7, 2006
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -332,9 +317,6 @@ H5HF__huge_bt2_indir_store(void *nrecord, const void *udata)
  * Return:	<0 if rec1 < rec2
  *              =0 if rec1 == rec2
  *              >0 if rec1 > rec2
- *
- * Programmer:	Quincey Koziol
- *              Monday, August  7, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -357,9 +339,6 @@ H5HF__huge_bt2_indir_compare(const void *_rec1, const void *_rec2, int *result)
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Quincey Koziol
- *              Monday, August  7, 2006
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -371,12 +350,12 @@ H5HF__huge_bt2_indir_encode(uint8_t *raw, const void *_nrecord, void *_ctx)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(ctx);
+    assert(ctx);
 
     /* Encode the record's fields */
     H5F_addr_encode_len(ctx->sizeof_addr, &raw, nrecord->addr);
-    H5F_ENCODE_LENGTH_LEN(raw, nrecord->len, ctx->sizeof_size);
-    H5F_ENCODE_LENGTH_LEN(raw, nrecord->id, ctx->sizeof_size);
+    H5_ENCODE_LENGTH_LEN(raw, nrecord->len, ctx->sizeof_size);
+    H5_ENCODE_LENGTH_LEN(raw, nrecord->id, ctx->sizeof_size);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5HF__huge_bt2_indir_encode() */
@@ -389,9 +368,6 @@ H5HF__huge_bt2_indir_encode(uint8_t *raw, const void *_nrecord, void *_ctx)
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Quincey Koziol
- *              Monday, August  7, 2006
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -403,12 +379,12 @@ H5HF__huge_bt2_indir_decode(const uint8_t *raw, void *_nrecord, void *_ctx)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(ctx);
+    assert(ctx);
 
     /* Decode the record's fields */
     H5F_addr_decode_len(ctx->sizeof_addr, &raw, &nrecord->addr);
-    H5F_DECODE_LENGTH_LEN(raw, nrecord->len, ctx->sizeof_size);
-    H5F_DECODE_LENGTH_LEN(raw, nrecord->id, ctx->sizeof_size);
+    H5_DECODE_LENGTH_LEN(raw, nrecord->len, ctx->sizeof_size);
+    H5_DECODE_LENGTH_LEN(raw, nrecord->id, ctx->sizeof_size);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5HF__huge_bt2_indir_decode() */
@@ -421,9 +397,6 @@ H5HF__huge_bt2_indir_decode(const uint8_t *raw, void *_nrecord, void *_ctx)
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Quincey Koziol
- *              Monday, August  7, 2006
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -434,8 +407,8 @@ H5HF__huge_bt2_indir_debug(FILE *stream, int indent, int fwidth, const void *_nr
 
     FUNC_ENTER_PACKAGE_NOERR
 
-    HDfprintf(stream, "%*s%-*s {%" PRIuHADDR ", %" PRIuHSIZE ", %" PRIuHSIZE "}\n", indent, "", fwidth,
-              "Record:", nrecord->addr, nrecord->len, nrecord->id);
+    fprintf(stream, "%*s%-*s {%" PRIuHADDR ", %" PRIuHSIZE ", %" PRIuHSIZE "}\n", indent, "", fwidth,
+            "Record:", nrecord->addr, nrecord->len, nrecord->id);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5HF__huge_bt2_indir_debug() */
@@ -448,9 +421,6 @@ H5HF__huge_bt2_indir_debug(FILE *stream, int indent, int fwidth, const void *_nr
  *
  * Return:	Success:	non-negative
  *		Failure:	negative
- *
- * Programmer:	Quincey Koziol
- *              Tuesday, August  8, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -472,9 +442,6 @@ H5HF__huge_bt2_filt_indir_found(const void *nrecord, void *op_data)
  *
  * Return:	Success:	non-negative
  *		Failure:	negative
- *
- * Programmer:	Quincey Koziol
- *              Tuesday, August  8, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -507,9 +474,6 @@ done:
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Quincey Koziol
- *              Monday, August  7, 2006
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -530,9 +494,6 @@ H5HF__huge_bt2_filt_indir_store(void *nrecord, const void *udata)
  * Return:	<0 if rec1 < rec2
  *              =0 if rec1 == rec2
  *              >0 if rec1 > rec2
- *
- * Programmer:	Quincey Koziol
- *              Monday, August  7, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -555,9 +516,6 @@ H5HF__huge_bt2_filt_indir_compare(const void *_rec1, const void *_rec2, int *res
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Quincey Koziol
- *              Monday, August  7, 2006
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -569,14 +527,14 @@ H5HF__huge_bt2_filt_indir_encode(uint8_t *raw, const void *_nrecord, void *_ctx)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(ctx);
+    assert(ctx);
 
     /* Encode the record's fields */
     H5F_addr_encode_len(ctx->sizeof_addr, &raw, nrecord->addr);
-    H5F_ENCODE_LENGTH_LEN(raw, nrecord->len, ctx->sizeof_size);
+    H5_ENCODE_LENGTH_LEN(raw, nrecord->len, ctx->sizeof_size);
     UINT32ENCODE(raw, nrecord->filter_mask);
-    H5F_ENCODE_LENGTH_LEN(raw, nrecord->obj_size, ctx->sizeof_size);
-    H5F_ENCODE_LENGTH_LEN(raw, nrecord->id, ctx->sizeof_size);
+    H5_ENCODE_LENGTH_LEN(raw, nrecord->obj_size, ctx->sizeof_size);
+    H5_ENCODE_LENGTH_LEN(raw, nrecord->id, ctx->sizeof_size);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5HF__huge_bt2_filt_indir_encode() */
@@ -589,9 +547,6 @@ H5HF__huge_bt2_filt_indir_encode(uint8_t *raw, const void *_nrecord, void *_ctx)
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Quincey Koziol
- *              Monday, August  7, 2006
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -603,14 +558,14 @@ H5HF__huge_bt2_filt_indir_decode(const uint8_t *raw, void *_nrecord, void *_ctx)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(ctx);
+    assert(ctx);
 
     /* Decode the record's fields */
     H5F_addr_decode_len(ctx->sizeof_addr, &raw, &nrecord->addr);
-    H5F_DECODE_LENGTH_LEN(raw, nrecord->len, ctx->sizeof_size);
+    H5_DECODE_LENGTH_LEN(raw, nrecord->len, ctx->sizeof_size);
     UINT32DECODE(raw, nrecord->filter_mask);
-    H5F_DECODE_LENGTH_LEN(raw, nrecord->obj_size, ctx->sizeof_size);
-    H5F_DECODE_LENGTH_LEN(raw, nrecord->id, ctx->sizeof_size);
+    H5_DECODE_LENGTH_LEN(raw, nrecord->obj_size, ctx->sizeof_size);
+    H5_DECODE_LENGTH_LEN(raw, nrecord->id, ctx->sizeof_size);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5HF__huge_bt2_filt_indir_decode() */
@@ -623,9 +578,6 @@ H5HF__huge_bt2_filt_indir_decode(const uint8_t *raw, void *_nrecord, void *_ctx)
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Quincey Koziol
- *              Monday, August  7, 2006
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -636,9 +588,9 @@ H5HF__huge_bt2_filt_indir_debug(FILE *stream, int indent, int fwidth, const void
 
     FUNC_ENTER_PACKAGE_NOERR
 
-    HDfprintf(stream, "%*s%-*s {%" PRIuHADDR ", %" PRIuHSIZE ", %x, %" PRIuHSIZE ", %" PRIuHSIZE "}\n",
-              indent, "", fwidth, "Record:", nrecord->addr, nrecord->len, nrecord->filter_mask,
-              nrecord->obj_size, nrecord->id);
+    fprintf(stream, "%*s%-*s {%" PRIuHADDR ", %" PRIuHSIZE ", %x, %" PRIuHSIZE ", %" PRIuHSIZE "}\n", indent,
+            "", fwidth, "Record:", nrecord->addr, nrecord->len, nrecord->filter_mask, nrecord->obj_size,
+            nrecord->id);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5HF__huge_bt2_filt_indir_debug() */
@@ -651,9 +603,6 @@ H5HF__huge_bt2_filt_indir_debug(FILE *stream, int indent, int fwidth, const void
  *
  * Return:	Success:	non-negative
  *		Failure:	negative
- *
- * Programmer:	Quincey Koziol
- *              Tuesday, August  8, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -685,9 +634,6 @@ done:
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Quincey Koziol
- *              Monday, August  7, 2006
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -708,9 +654,6 @@ H5HF__huge_bt2_dir_store(void *nrecord, const void *udata)
  * Return:	<0 if rec1 < rec2
  *              =0 if rec1 == rec2
  *              >0 if rec1 > rec2
- *
- * Programmer:	Quincey Koziol
- *              Monday, August  7, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -744,9 +687,6 @@ H5HF__huge_bt2_dir_compare(const void *_rec1, const void *_rec2, int *result)
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Quincey Koziol
- *              Monday, August  7, 2006
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -758,11 +698,11 @@ H5HF__huge_bt2_dir_encode(uint8_t *raw, const void *_nrecord, void *_ctx)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(ctx);
+    assert(ctx);
 
     /* Encode the record's fields */
     H5F_addr_encode_len(ctx->sizeof_addr, &raw, nrecord->addr);
-    H5F_ENCODE_LENGTH_LEN(raw, nrecord->len, ctx->sizeof_size);
+    H5_ENCODE_LENGTH_LEN(raw, nrecord->len, ctx->sizeof_size);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5HF__huge_bt2_dir_encode() */
@@ -775,9 +715,6 @@ H5HF__huge_bt2_dir_encode(uint8_t *raw, const void *_nrecord, void *_ctx)
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Quincey Koziol
- *              Monday, August  7, 2006
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -789,11 +726,11 @@ H5HF__huge_bt2_dir_decode(const uint8_t *raw, void *_nrecord, void *_ctx)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(ctx);
+    assert(ctx);
 
     /* Decode the record's fields */
     H5F_addr_decode_len(ctx->sizeof_addr, &raw, &nrecord->addr);
-    H5F_DECODE_LENGTH_LEN(raw, nrecord->len, ctx->sizeof_size);
+    H5_DECODE_LENGTH_LEN(raw, nrecord->len, ctx->sizeof_size);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5HF__huge_bt2_dir_decode() */
@@ -806,9 +743,6 @@ H5HF__huge_bt2_dir_decode(const uint8_t *raw, void *_nrecord, void *_ctx)
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Quincey Koziol
- *              Monday, August  7, 2006
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -819,8 +753,8 @@ H5HF__huge_bt2_dir_debug(FILE *stream, int indent, int fwidth, const void *_nrec
 
     FUNC_ENTER_PACKAGE_NOERR
 
-    HDfprintf(stream, "%*s%-*s {%" PRIuHADDR ", %" PRIuHSIZE "}\n", indent, "", fwidth,
-              "Record:", nrecord->addr, nrecord->len);
+    fprintf(stream, "%*s%-*s {%" PRIuHADDR ", %" PRIuHSIZE "}\n", indent, "", fwidth,
+            "Record:", nrecord->addr, nrecord->len);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5HF__huge_bt2_dir_debug() */
@@ -833,9 +767,6 @@ H5HF__huge_bt2_dir_debug(FILE *stream, int indent, int fwidth, const void *_nrec
  *
  * Return:	Success:	non-negative
  *		Failure:	negative
- *
- * Programmer:	Quincey Koziol
- *              Tuesday, August 15, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -857,9 +788,6 @@ H5HF__huge_bt2_filt_dir_found(const void *nrecord, void *op_data)
  *
  * Return:	Success:	non-negative
  *		Failure:	negative
- *
- * Programmer:	Quincey Koziol
- *              Tuesday, August 15, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -892,9 +820,6 @@ done:
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Quincey Koziol
- *              Tuesday, August 15, 2006
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -915,9 +840,6 @@ H5HF__huge_bt2_filt_dir_store(void *nrecord, const void *udata)
  * Return:	<0 if rec1 < rec2
  *              =0 if rec1 == rec2
  *              >0 if rec1 > rec2
- *
- * Programmer:	Quincey Koziol
- *              Tuesday, August 15, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -951,9 +873,6 @@ H5HF__huge_bt2_filt_dir_compare(const void *_rec1, const void *_rec2, int *resul
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Quincey Koziol
- *              Tuesday, August 15, 2006
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -965,13 +884,13 @@ H5HF__huge_bt2_filt_dir_encode(uint8_t *raw, const void *_nrecord, void *_ctx)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(ctx);
+    assert(ctx);
 
     /* Encode the record's fields */
     H5F_addr_encode_len(ctx->sizeof_addr, &raw, nrecord->addr);
-    H5F_ENCODE_LENGTH_LEN(raw, nrecord->len, ctx->sizeof_size);
+    H5_ENCODE_LENGTH_LEN(raw, nrecord->len, ctx->sizeof_size);
     UINT32ENCODE(raw, nrecord->filter_mask);
-    H5F_ENCODE_LENGTH_LEN(raw, nrecord->obj_size, ctx->sizeof_size);
+    H5_ENCODE_LENGTH_LEN(raw, nrecord->obj_size, ctx->sizeof_size);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5HF__huge_bt2_filt_dir_encode() */
@@ -984,9 +903,6 @@ H5HF__huge_bt2_filt_dir_encode(uint8_t *raw, const void *_nrecord, void *_ctx)
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Quincey Koziol
- *              Tuesday, August 15, 2006
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -998,13 +914,13 @@ H5HF__huge_bt2_filt_dir_decode(const uint8_t *raw, void *_nrecord, void *_ctx)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(ctx);
+    assert(ctx);
 
     /* Decode the record's fields */
     H5F_addr_decode_len(ctx->sizeof_addr, &raw, &nrecord->addr);
-    H5F_DECODE_LENGTH_LEN(raw, nrecord->len, ctx->sizeof_size);
+    H5_DECODE_LENGTH_LEN(raw, nrecord->len, ctx->sizeof_size);
     UINT32DECODE(raw, nrecord->filter_mask);
-    H5F_DECODE_LENGTH_LEN(raw, nrecord->obj_size, ctx->sizeof_size);
+    H5_DECODE_LENGTH_LEN(raw, nrecord->obj_size, ctx->sizeof_size);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5HF__huge_bt2_filt_dir_decode() */
@@ -1017,9 +933,6 @@ H5HF__huge_bt2_filt_dir_decode(const uint8_t *raw, void *_nrecord, void *_ctx)
  * Return:	Success:	non-negative
  *		Failure:	negative
  *
- * Programmer:	Quincey Koziol
- *              Tuesday, August 15, 2006
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1030,8 +943,8 @@ H5HF__huge_bt2_filt_dir_debug(FILE *stream, int indent, int fwidth, const void *
 
     FUNC_ENTER_PACKAGE_NOERR
 
-    HDfprintf(stream, "%*s%-*s {%" PRIuHADDR ", %" PRIuHSIZE ", %x, %" PRIuHSIZE "}\n", indent, "", fwidth,
-              "Record:", nrecord->addr, nrecord->len, nrecord->filter_mask, nrecord->obj_size);
+    fprintf(stream, "%*s%-*s {%" PRIuHADDR ", %" PRIuHSIZE ", %x, %" PRIuHSIZE "}\n", indent, "", fwidth,
+            "Record:", nrecord->addr, nrecord->len, nrecord->filter_mask, nrecord->obj_size);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5HF__huge_bt2_filt_dir_debug() */

@@ -49,7 +49,7 @@ main(void)
             kdims[3] = {KDIM0, KDIM1, KDIM2}, kdims_max[3] = {H5S_UNLIMITED, KDIM1, KDIM2},
             ndims[3] = {NDIM0, NDIM1, NDIM2}, ndims_max[3] = {H5S_UNLIMITED, NDIM1, NDIM2},
             start[3], /* Hyperslab parameters */
-        stride[3], count[3], block[3];
+        count[3], block[3];
     hsize_t      start_out[3], stride_out[3], count_out[3], block_out[3];
     int          k = 2;
     int          n = 3;
@@ -156,7 +156,7 @@ main(void)
     for (i = 0; i < (int)num_map; i++) {
         printf(" Mapping %d \n", i);
         printf("         Selection in the virtual dataset \n");
-        /* Get selection in the virttual  dataset */
+        /* Get selection in the virtual dataset */
         vspace = H5Pget_virtual_vspace(dcpl, (size_t)i);
         if (H5Sget_select_type(vspace) == H5S_SEL_HYPERSLABS) {
             if (H5Sis_regular_hyperslab(vspace)) {

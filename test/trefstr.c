@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -23,12 +22,6 @@
    BUGS/LIMITATIONS
 
    EXPORTED ROUTINES
-
-   AUTHOR
-       Quincey Koziol
-
-   MODIFICATION HISTORY
-       12/17/02 - Started coding
  */
 
 #include "testhdf5.h"
@@ -376,9 +369,9 @@ test_refstr_acat(void)
     VERIFY(cmp, 0, "HDstrcmp");
 
     /* Append a large string to ref-counted string */
-    large_str = HDmalloc(1024);
-    CHECK_PTR(large_str, "HDmalloc");
-    HDmemset(large_str, 'a', 1024);
+    large_str = malloc(1024);
+    CHECK_PTR(large_str, "malloc");
+    memset(large_str, 'a', 1024);
     large_str[1023] = '\0';
     ret             = H5RS_acat(rs, large_str);
     CHECK(ret, FAIL, "H5RS_acat");
@@ -387,10 +380,10 @@ test_refstr_acat(void)
     s = H5RS_get_str(rs);
     CHECK_PTR(s, "H5RS_get_str");
     HDsnprintf(buf, sizeof(buf), "%s", "foobar");
-    large_str2 = HDmalloc(1024 + 6);
-    CHECK_PTR(large_str2, "HDmalloc");
+    large_str2 = malloc(1024 + 6);
+    CHECK_PTR(large_str2, "malloc");
     HDstrcpy(large_str2, "foobar");
-    HDmemset(&large_str2[6], 'a', 1024);
+    memset(&large_str2[6], 'a', 1024);
     large_str2[1029] = '\0';
     cmp              = HDstrcmp(s, large_str2);
     VERIFY(cmp, 0, "HDstrcmp");
@@ -400,8 +393,8 @@ test_refstr_acat(void)
     CHECK(ret, FAIL, "H5RS_decr");
 
     /* Free large strings */
-    HDfree(large_str);
-    HDfree(large_str2);
+    free(large_str);
+    free(large_str2);
 } /* end test_refstr_acat() */
 
 /****************************************************************

@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -14,8 +13,6 @@
 /*-------------------------------------------------------------------------
  *
  * Created:		H5B2internal.c
- *			Dec 01 2016
- *			Quincey Koziol
  *
  * Purpose:		Routines for managing v2 B-tree internal nodes.
  *
@@ -76,9 +73,6 @@ H5FL_DEFINE(H5B2_internal_t);
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *		Feb  3 2005
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -91,9 +85,9 @@ H5B2__create_internal(H5B2_hdr_t *hdr, void *parent, H5B2_node_ptr_t *node_ptr, 
     FUNC_ENTER_PACKAGE
 
     /* Check arguments. */
-    HDassert(hdr);
-    HDassert(node_ptr);
-    HDassert(depth > 0);
+    assert(hdr);
+    assert(node_ptr);
+    assert(depth > 0);
 
     /* Allocate memory for internal node information */
     if (NULL == (internal = H5FL_CALLOC(H5B2_internal_t)))
@@ -110,14 +104,14 @@ H5B2__create_internal(H5B2_hdr_t *hdr, void *parent, H5B2_node_ptr_t *node_ptr, 
     if (NULL == (internal->int_native = (uint8_t *)H5FL_FAC_MALLOC(hdr->node_info[depth].nat_rec_fac)))
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL,
                     "memory allocation failed for B-tree internal native keys")
-    HDmemset(internal->int_native, 0, hdr->cls->nrec_size * hdr->node_info[depth].max_nrec);
+    memset(internal->int_native, 0, hdr->cls->nrec_size * hdr->node_info[depth].max_nrec);
 
     /* Allocate space for the node pointers in memory */
     if (NULL ==
         (internal->node_ptrs = (H5B2_node_ptr_t *)H5FL_FAC_MALLOC(hdr->node_info[depth].node_ptr_fac)))
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL,
                     "memory allocation failed for B-tree internal node pointers")
-    HDmemset(internal->node_ptrs, 0, sizeof(H5B2_node_ptr_t) * (hdr->node_info[depth].max_nrec + 1));
+    memset(internal->node_ptrs, 0, sizeof(H5B2_node_ptr_t) * (hdr->node_info[depth].max_nrec + 1));
 
     /* Set depth of the node */
     internal->depth = depth;
@@ -151,17 +145,17 @@ done:
             if (inserted)
                 if (H5AC_remove_entry(internal) < 0)
                     HDONE_ERROR(H5E_BTREE, H5E_CANTREMOVE, FAIL,
-                                "unable to remove v2 B-tree internal node from cache")
+                                "unable to remove v2 B-tree internal node from cache");
 
             /* Release internal node's disk space */
-            if (H5F_addr_defined(node_ptr->addr) &&
+            if (H5_addr_defined(node_ptr->addr) &&
                 H5MF_xfree(hdr->f, H5FD_MEM_BTREE, node_ptr->addr, (hsize_t)hdr->node_size) < 0)
                 HDONE_ERROR(H5E_BTREE, H5E_CANTFREE, FAIL,
-                            "unable to release file space for v2 B-tree internal node")
+                            "unable to release file space for v2 B-tree internal node");
 
             /* Destroy internal node */
             if (H5B2__internal_free(internal) < 0)
-                HDONE_ERROR(H5E_BTREE, H5E_CANTFREE, FAIL, "unable to release v2 B-tree internal node")
+                HDONE_ERROR(H5E_BTREE, H5E_CANTFREE, FAIL, "unable to release v2 B-tree internal node");
         } /* end if */
     }     /* end if */
 
@@ -174,9 +168,6 @@ done:
  * Purpose:	"Protect" an internal node in the metadata cache
  *
  * Return:	Pointer to internal node on success/NULL on failure
- *
- * Programmer:	Quincey Koziol
- *		Aug 25 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -191,13 +182,13 @@ H5B2__protect_internal(H5B2_hdr_t *hdr, void *parent, H5B2_node_ptr_t *node_ptr,
     FUNC_ENTER_PACKAGE
 
     /* Check arguments. */
-    HDassert(hdr);
-    HDassert(node_ptr);
-    HDassert(H5F_addr_defined(node_ptr->addr));
-    HDassert(depth > 0);
+    assert(hdr);
+    assert(node_ptr);
+    assert(H5_addr_defined(node_ptr->addr));
+    assert(depth > 0);
 
     /* only H5AC__READ_ONLY_FLAG may appear in flags */
-    HDassert((flags & (unsigned)(~H5AC__READ_ONLY_FLAG)) == 0);
+    assert((flags & (unsigned)(~H5AC__READ_ONLY_FLAG)) == 0);
 
     /* Set up user data for callback */
     udata.f      = hdr->f;
@@ -238,7 +229,7 @@ done:
                 if (H5AC_proxy_entry_remove_child(internal->top_proxy, internal) < 0)
                     HDONE_ERROR(
                         H5E_BTREE, H5E_CANTUNDEPEND, NULL,
-                        "unable to destroy flush dependency between internal node and v2 B-tree 'top' proxy")
+                        "unable to destroy flush dependency between internal node and v2 B-tree 'top' proxy");
                 internal->top_proxy = NULL;
             } /* end if */
 
@@ -246,7 +237,7 @@ done:
             if (H5AC_unprotect(hdr->f, H5AC_BT2_INT, node_ptr->addr, internal, H5AC__NO_FLAGS_SET) < 0)
                 HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, NULL,
                             "unable to unprotect v2 B-tree internal node, address = %llu",
-                            (unsigned long long)node_ptr->addr)
+                            (unsigned long long)node_ptr->addr);
         } /* end if */
     }     /* end if */
 
@@ -273,9 +264,6 @@ done:
  *
  * Return:	Non-negative on success, negative on failure.
  *
- * Programmer:	Quincey Koziol
- *		Mar  9 2005
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -290,11 +278,11 @@ H5B2__neighbor_internal(H5B2_hdr_t *hdr, uint16_t depth, H5B2_node_ptr_t *curr_n
     FUNC_ENTER_PACKAGE
 
     /* Check arguments. */
-    HDassert(hdr);
-    HDassert(depth > 0);
-    HDassert(curr_node_ptr);
-    HDassert(H5F_addr_defined(curr_node_ptr->addr));
-    HDassert(op);
+    assert(hdr);
+    assert(depth > 0);
+    assert(curr_node_ptr);
+    assert(H5_addr_defined(curr_node_ptr->addr));
+    assert(op);
 
     /* Lock current B-tree node */
     if (NULL ==
@@ -314,7 +302,7 @@ H5B2__neighbor_internal(H5B2_hdr_t *hdr, uint16_t depth, H5B2_node_ptr_t *curr_n
             neighbor_loc = H5B2_INT_NREC(internal, hdr, idx - 1);
     } /* end if */
     else {
-        HDassert(comp == H5B2_COMPARE_GREATER);
+        assert(comp == H5B2_COMPARE_GREATER);
 
         if (idx < internal->nrec)
             neighbor_loc = H5B2_INT_NREC(internal, hdr, idx);
@@ -337,7 +325,7 @@ done:
     /* Release the B-tree internal node */
     if (internal &&
         H5AC_unprotect(hdr->f, H5AC_BT2_INT, curr_node_ptr->addr, internal, H5AC__NO_FLAGS_SET) < 0)
-        HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release internal B-tree node")
+        HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release internal B-tree node");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5B2__neighbor_internal() */
@@ -348,9 +336,6 @@ done:
  * Purpose:	Adds a new record to a B-tree node.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		Mar  2 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -367,10 +352,10 @@ H5B2__insert_internal(H5B2_hdr_t *hdr, uint16_t depth, unsigned *parent_cache_in
     FUNC_ENTER_PACKAGE
 
     /* Check arguments. */
-    HDassert(hdr);
-    HDassert(depth > 0);
-    HDassert(curr_node_ptr);
-    HDassert(H5F_addr_defined(curr_node_ptr->addr));
+    assert(hdr);
+    assert(depth > 0);
+    assert(curr_node_ptr);
+    assert(H5_addr_defined(curr_node_ptr->addr));
 
     /* Lock current B-tree node */
     if (NULL ==
@@ -378,7 +363,7 @@ H5B2__insert_internal(H5B2_hdr_t *hdr, uint16_t depth, unsigned *parent_cache_in
         HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree internal node")
 
     /* Sanity check number of records */
-    HDassert(internal->nrec == curr_node_ptr->node_nrec);
+    assert(internal->nrec == curr_node_ptr->node_nrec);
 
     /* Split or redistribute child node pointers, if necessary */
     {
@@ -498,11 +483,11 @@ done:
         /* Shadow the node if doing SWMR writes */
         if (hdr->swmr_write && (internal_flags & H5AC__DIRTIED_FLAG))
             if (H5B2__shadow_internal(internal, curr_node_ptr) < 0)
-                HDONE_ERROR(H5E_BTREE, H5E_CANTCOPY, FAIL, "unable to shadow internal B-tree node")
+                HDONE_ERROR(H5E_BTREE, H5E_CANTCOPY, FAIL, "unable to shadow internal B-tree node");
 
         /* Unprotect node */
         if (H5AC_unprotect(hdr->f, H5AC_BT2_INT, curr_node_ptr->addr, internal, internal_flags) < 0)
-            HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release internal B-tree node")
+            HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release internal B-tree node");
     } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -517,9 +502,6 @@ done:
  *		H5B2_insert was called.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		Dec 24 2015
  *
  *-------------------------------------------------------------------------
  */
@@ -538,10 +520,10 @@ H5B2__update_internal(H5B2_hdr_t *hdr, uint16_t depth, unsigned *parent_cache_in
     FUNC_ENTER_PACKAGE
 
     /* Check arguments. */
-    HDassert(hdr);
-    HDassert(depth > 0);
-    HDassert(curr_node_ptr);
-    HDassert(H5F_addr_defined(curr_node_ptr->addr));
+    assert(hdr);
+    assert(depth > 0);
+    assert(curr_node_ptr);
+    assert(H5_addr_defined(curr_node_ptr->addr));
 
     /* Lock current B-tree node */
     if (NULL ==
@@ -549,7 +531,7 @@ H5B2__update_internal(H5B2_hdr_t *hdr, uint16_t depth, unsigned *parent_cache_in
         HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree internal node")
 
     /* Sanity check number of records */
-    HDassert(internal->nrec == curr_node_ptr->node_nrec);
+    assert(internal->nrec == curr_node_ptr->node_nrec);
 
     /* Locate node pointer for child */
     if (H5B2__locate_record(hdr->cls, internal->nrec, hdr->nat_off, internal->int_native, udata, &idx, &cmp) <
@@ -563,7 +545,7 @@ H5B2__update_internal(H5B2_hdr_t *hdr, uint16_t depth, unsigned *parent_cache_in
         /* Make callback for current record */
         if ((op)(H5B2_INT_NREC(internal, hdr, idx), op_data, &changed) < 0) {
             /* Make certain that the callback didn't modify the value if it failed */
-            HDassert(changed == FALSE);
+            assert(changed == FALSE);
 
             HGOTO_ERROR(H5E_BTREE, H5E_CANTMODIFY, FAIL,
                         "'modify' callback failed for B-tree update operation")
@@ -692,7 +674,7 @@ H5B2__update_internal(H5B2_hdr_t *hdr, uint16_t depth, unsigned *parent_cache_in
 
             case H5B2_UPDATE_UNKNOWN:
             default:
-                HDassert(0 && "Invalid update status");
+                assert(0 && "Invalid update status");
                 HGOTO_ERROR(H5E_BTREE, H5E_CANTUPDATE, FAIL, "invalid update status")
         } /* end switch */
     }     /* end else */
@@ -704,7 +686,7 @@ done:
         if (hdr->swmr_write && (internal_flags & H5AC__DIRTIED_FLAG)) {
             /* Attempt to shadow the node if doing SWMR writes */
             if (H5B2__shadow_internal(internal, curr_node_ptr) < 0)
-                HDONE_ERROR(H5E_BTREE, H5E_CANTCOPY, FAIL, "unable to shadow internal B-tree node")
+                HDONE_ERROR(H5E_BTREE, H5E_CANTCOPY, FAIL, "unable to shadow internal B-tree node");
 
             /* Change the state to "shadowed" if only modified currently */
             /* (Triggers parent to be marked dirty) */
@@ -714,7 +696,7 @@ done:
 
         /* Unprotect node */
         if (H5AC_unprotect(hdr->f, H5AC_BT2_INT, curr_node_ptr->addr, internal, internal_flags) < 0)
-            HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release internal B-tree node")
+            HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release internal B-tree node");
     } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -731,9 +713,6 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Neil Fortner
- *              Apr 27 2012
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -747,12 +726,12 @@ H5B2__shadow_internal(H5B2_internal_t *internal, H5B2_node_ptr_t *curr_node_ptr)
     /*
      * Check arguments.
      */
-    HDassert(internal);
-    HDassert(curr_node_ptr);
-    HDassert(H5F_addr_defined(curr_node_ptr->addr));
+    assert(internal);
+    assert(curr_node_ptr);
+    assert(H5_addr_defined(curr_node_ptr->addr));
     hdr = internal->hdr;
-    HDassert(hdr);
-    HDassert(hdr->swmr_write);
+    assert(hdr);
+    assert(hdr->swmr_write);
 
     /* We only need to shadow the node if it has not been shadowed since the
      * last time the header was flushed, as otherwise it will be unreachable by
@@ -795,9 +774,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *		Mar  3 2005
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -820,11 +796,11 @@ H5B2__remove_internal(H5B2_hdr_t *hdr, hbool_t *depth_decreased, void *swap_loc,
     FUNC_ENTER_PACKAGE
 
     /* Check arguments. */
-    HDassert(hdr);
-    HDassert(depth > 0);
-    HDassert(parent_cache_info);
-    HDassert(curr_node_ptr);
-    HDassert(H5F_addr_defined(curr_node_ptr->addr));
+    assert(hdr);
+    assert(depth > 0);
+    assert(parent_cache_info);
+    assert(curr_node_ptr);
+    assert(H5_addr_defined(curr_node_ptr->addr));
 
     /* Lock current B-tree node */
     if (NULL == (internal = H5B2__protect_internal(hdr, parent_cache_info, curr_node_ptr, depth, FALSE,
@@ -1026,7 +1002,7 @@ H5B2__remove_internal(H5B2_hdr_t *hdr, hbool_t *depth_decreased, void *swap_loc,
 done:
     /* Release the B-tree internal node */
     if (internal && H5AC_unprotect(hdr->f, H5AC_BT2_INT, internal_addr, internal, internal_flags) < 0)
-        HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release internal B-tree node")
+        HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release internal B-tree node");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5B2__remove_internal() */
@@ -1038,9 +1014,6 @@ done:
  *              in the B-tree records
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		Nov 14 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -1064,19 +1037,19 @@ H5B2__remove_internal_by_idx(H5B2_hdr_t *hdr, hbool_t *depth_decreased, void *sw
     FUNC_ENTER_PACKAGE
 
     /* Check arguments. */
-    HDassert(hdr);
-    HDassert(depth > 0);
-    HDassert(parent_cache_info);
-    HDassert(curr_node_ptr);
-    HDassert(H5F_addr_defined(curr_node_ptr->addr));
+    assert(hdr);
+    assert(depth > 0);
+    assert(parent_cache_info);
+    assert(curr_node_ptr);
+    assert(H5_addr_defined(curr_node_ptr->addr));
 
     /* Lock current B-tree node */
     if (NULL == (internal = H5B2__protect_internal(hdr, parent_cache_info, curr_node_ptr, depth, FALSE,
                                                    H5AC__NO_FLAGS_SET)))
         HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to protect B-tree internal node")
     internal_addr = curr_node_ptr->addr;
-    HDassert(internal->nrec == curr_node_ptr->node_nrec);
-    HDassert(depth == hdr->depth || internal->nrec > 1);
+    assert(internal->nrec == curr_node_ptr->node_nrec);
+    assert(depth == hdr->depth || internal->nrec > 1);
 
     /* Determine the correct number of records to merge at */
     merge_nrec = hdr->node_info[depth - 1].merge_nrec;
@@ -1085,7 +1058,7 @@ H5B2__remove_internal_by_idx(H5B2_hdr_t *hdr, hbool_t *depth_decreased, void *sw
     /* (The root node is the only internal node allowed to have 1 record) */
     if (internal->nrec == 1 &&
         ((internal->node_ptrs[0].node_nrec + internal->node_ptrs[1].node_nrec) <= ((merge_nrec * 2) + 1))) {
-        HDassert(depth == hdr->depth);
+        assert(depth == hdr->depth);
 
         /* Merge children of root node */
         if (H5B2__merge2(hdr, depth, curr_node_ptr, parent_cache_info_flags_ptr, internal, &internal_flags,
@@ -1321,7 +1294,7 @@ H5B2__remove_internal_by_idx(H5B2_hdr_t *hdr, hbool_t *depth_decreased, void *sw
 done:
     /* Release the B-tree internal node */
     if (internal && H5AC_unprotect(hdr->f, H5AC_BT2_INT, internal_addr, internal, internal_flags) < 0)
-        HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release internal B-tree node")
+        HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release internal B-tree node");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5B2__remove_internal_by_idx() */
@@ -1332,9 +1305,6 @@ done:
  * Purpose:	Destroys a B-tree internal node in memory.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		Feb 2 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -1348,7 +1318,7 @@ H5B2__internal_free(H5B2_internal_t *internal)
     /*
      * Check arguments.
      */
-    HDassert(internal);
+    assert(internal);
 
     /* Release internal node's native key buffer */
     if (internal->int_native)
@@ -1365,7 +1335,7 @@ H5B2__internal_free(H5B2_internal_t *internal)
         HGOTO_ERROR(H5E_BTREE, H5E_CANTDEC, FAIL, "can't decrement ref. count on B-tree header")
 
     /* Sanity check */
-    HDassert(NULL == internal->top_proxy);
+    assert(NULL == internal->top_proxy);
 
     /* Free B-tree internal node info */
     internal = H5FL_FREE(H5B2_internal_t, internal);
@@ -1383,9 +1353,6 @@ done:
  *
  * Return:	Non-negative on success, negative on failure
  *
- * Programmer:	Quincey Koziol
- *		Feb 19 2005
- *
  *-------------------------------------------------------------------------
  */
 H5_ATTR_PURE herr_t
@@ -1396,22 +1363,22 @@ H5B2__assert_internal(hsize_t parent_all_nrec, const H5B2_hdr_t H5_ATTR_NDEBUG_U
     uint16_t u, v;         /* Local index variables */
 
     /* General sanity checking on node */
-    HDassert(internal->nrec <= hdr->node_info->split_nrec);
+    assert(internal->nrec <= hdr->node_info->split_nrec);
 
     /* Sanity checking on node pointers */
     tot_all_nrec = internal->nrec;
     for (u = 0; u < internal->nrec + 1; u++) {
         tot_all_nrec += internal->node_ptrs[u].all_nrec;
 
-        HDassert(H5F_addr_defined(internal->node_ptrs[u].addr));
-        HDassert(internal->node_ptrs[u].addr > 0);
+        assert(H5_addr_defined(internal->node_ptrs[u].addr));
+        assert(internal->node_ptrs[u].addr > 0);
         for (v = 0; v < u; v++)
-            HDassert(internal->node_ptrs[u].addr != internal->node_ptrs[v].addr);
+            assert(internal->node_ptrs[u].addr != internal->node_ptrs[v].addr);
     } /* end for */
 
     /* Sanity check all_nrec total in parent */
     if (parent_all_nrec > 0)
-        HDassert(tot_all_nrec == parent_all_nrec);
+        assert(tot_all_nrec == parent_all_nrec);
 
     return (0);
 } /* end H5B2__assert_internal() */
@@ -1423,9 +1390,6 @@ H5B2__assert_internal(hsize_t parent_all_nrec, const H5B2_hdr_t H5_ATTR_NDEBUG_U
  *
  * Return:	Non-negative on success, negative on failure
  *
- * Programmer:	Quincey Koziol
- *		Feb 19 2005
- *
  *-------------------------------------------------------------------------
  */
 H5_ATTR_PURE herr_t
@@ -1436,24 +1400,24 @@ H5B2__assert_internal2(hsize_t parent_all_nrec, const H5B2_hdr_t H5_ATTR_NDEBUG_
     uint16_t u, v;         /* Local index variables */
 
     /* General sanity checking on node */
-    HDassert(internal->nrec <= hdr->node_info->split_nrec);
+    assert(internal->nrec <= hdr->node_info->split_nrec);
 
     /* Sanity checking on node pointers */
     tot_all_nrec = internal->nrec;
     for (u = 0; u < internal->nrec + 1; u++) {
         tot_all_nrec += internal->node_ptrs[u].all_nrec;
 
-        HDassert(H5F_addr_defined(internal->node_ptrs[u].addr));
-        HDassert(internal->node_ptrs[u].addr > 0);
+        assert(H5_addr_defined(internal->node_ptrs[u].addr));
+        assert(internal->node_ptrs[u].addr > 0);
         for (v = 0; v < u; v++)
-            HDassert(internal->node_ptrs[u].addr != internal->node_ptrs[v].addr);
+            assert(internal->node_ptrs[u].addr != internal->node_ptrs[v].addr);
         for (v = 0; v < internal2->nrec + 1; v++)
-            HDassert(internal->node_ptrs[u].addr != internal2->node_ptrs[v].addr);
+            assert(internal->node_ptrs[u].addr != internal2->node_ptrs[v].addr);
     } /* end for */
 
     /* Sanity check all_nrec total in parent */
     if (parent_all_nrec > 0)
-        HDassert(tot_all_nrec == parent_all_nrec);
+        assert(tot_all_nrec == parent_all_nrec);
 
     return (0);
 } /* end H5B2__assert_internal2() */

@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -56,9 +55,6 @@ typedef enum int_t {
  * Purpose      Tests 1-D array of compound datatypes (with array fields)
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler (using C version)
- *              January, 2016
  *-------------------------------------------------------------------------
  */
 static void
@@ -243,7 +239,7 @@ test_array_compound_array()
         verify_val(ndims, ARRAY1_RANK, "f2_atype_check.getArrayNDims", __LINE__, __FILE__);
 
         // Get the array dimensions
-        HDmemset(rdims1, 0, sizeof(rdims1));
+        memset(rdims1, 0, sizeof(rdims1));
         f2_atype_check.getArrayDims(rdims1);
 
         // Check the array dimensions
@@ -308,9 +304,6 @@ getArr()
  *
  * Return       None
  *
- * Programmer   Binh-Minh Ribler (using C version)
- *              March, 2016
- *
  * Description:
  *              Used user's sample code in HDFFV-9562
  *-------------------------------------------------------------------------
@@ -365,9 +358,6 @@ test_array_assignment()
  * Purpose      Tests getting array information using the const methods.
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler
- *              April, 2016
  *-------------------------------------------------------------------------
  */
 static void
@@ -509,9 +499,6 @@ test_array()
  * Purpose      Cleanup temporary test files
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler (using C version)
- *              January, 2016
  *-------------------------------------------------------------------------
  */
 extern "C" void

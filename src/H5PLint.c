@@ -2,7 +2,7 @@
  * Copyright by The HDF Group.                                               *
  * All rights reserved.                                                      *
  *                                                                           *
- * This file is part of HDF5. The full HDF5 copyright notice, including      *
+ * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
  * the COPYING file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
@@ -82,7 +82,7 @@ H5PL__get_plugin_control_mask(unsigned int *mask /*out*/)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Check args - Just assert on package functions */
-    HDassert(mask);
+    assert(mask);
 
     /* Return the mask */
     *mask = H5PL_plugin_control_mask_g;
@@ -254,11 +254,17 @@ H5PL_load(H5PL_type_t type, const H5PL_key_t *key)
     /* If not found, try iterating through the path table to find an appropriate plugin */
     if (!found)
         if (H5PL__find_plugin_in_path_table(&search_params, &found, &plugin_info) < 0)
-            HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, NULL, "search in path table failed")
+            HGOTO_ERROR(H5E_PLUGIN, H5E_CANTGET, NULL,
+                        "can't find plugin in the paths either set by HDF5_PLUGIN_PATH, or default location, "
+                        "or set by H5PLxxx functions")
 
     /* Set the return value we found the plugin */
     if (found)
         ret_value = plugin_info;
+    else
+        HGOTO_ERROR(H5E_PLUGIN, H5E_NOTFOUND, NULL,
+                    "can't find plugin. Check either HDF5_VOL_CONNECTOR, HDF5_PLUGIN_PATH, default location, "
+                    "or path set by H5PLxxx functions")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -323,11 +329,11 @@ H5PL__open(const char *path, H5PL_type_t type, const H5PL_key_t *key, hbool_t *s
     FUNC_ENTER_PACKAGE
 
     /* Check args - Just assert on package functions */
-    HDassert(path);
+    assert(path);
     if (type == H5PL_TYPE_NONE)
-        HDassert(!key);
-    HDassert(success);
-    HDassert(plugin_info);
+        assert(!key);
+    assert(success);
+    assert(plugin_info);
 
     /* Initialize out parameters */
     *success     = FALSE;
@@ -340,25 +346,25 @@ H5PL__open(const char *path, H5PL_type_t type, const H5PL_key_t *key, hbool_t *s
      */
     if (NULL == (handle = H5PL_OPEN_DLIB(path))) {
         H5PL_CLR_ERROR; /* clear error */
-        HGOTO_DONE(SUCCEED)
+        HGOTO_DONE(SUCCEED);
     }
 
     /* Return a handle for the function H5PLget_plugin_type in the dynamic library.
      * The plugin library is supposed to define this function.
      */
     if (NULL == (get_plugin_type = (H5PL_get_plugin_type_t)H5PL_GET_LIB_FUNC(handle, "H5PLget_plugin_type")))
-        HGOTO_DONE(SUCCEED)
+        HGOTO_DONE(SUCCEED);
 
     /* Return a handle for the function H5PLget_plugin_info in the dynamic library.
      * The plugin library is supposed to define this function.
      */
     if (NULL == (get_plugin_info = (H5PL_get_plugin_info_t)H5PL_GET_LIB_FUNC(handle, "H5PLget_plugin_info")))
-        HGOTO_DONE(SUCCEED)
+        HGOTO_DONE(SUCCEED);
 
     /* Check the plugin type and return if it doesn't match the one passed in */
     loaded_plugin_type = (H5PL_type_t)(*get_plugin_type)();
     if ((type != H5PL_TYPE_NONE) && (type != loaded_plugin_type))
-        HGOTO_DONE(SUCCEED)
+        HGOTO_DONE(SUCCEED);
 
     /* Get the plugin information */
     switch (loaded_plugin_type) {
@@ -456,7 +462,7 @@ H5PL__open(const char *path, H5PL_type_t type, const H5PL_key_t *key, hbool_t *s
 done:
     if (!(*success) && handle)
         if (H5PL__close(handle) < 0)
-            HDONE_ERROR(H5E_PLUGIN, H5E_CLOSEERROR, FAIL, "can't close dynamic library")
+            HDONE_ERROR(H5E_PLUGIN, H5E_CLOSEERROR, FAIL, "can't close dynamic library");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PL__open() */

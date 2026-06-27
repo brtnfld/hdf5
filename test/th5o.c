@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -49,6 +48,9 @@ test_h5o_open(void)
     H5G_info_t  ginfo;      /* Group info struct */
     H5T_class_t type_class; /* Class of the datatype */
     herr_t      ret;        /* Value returned from API calls */
+
+    /* Output message about test being performed */
+    MESSAGE(5, ("Testing H5Oopen\n"));
 
     h5_fixname(TEST_FILENAME, H5P_DEFAULT, filename, sizeof filename);
 
@@ -161,6 +163,9 @@ test_h5o_close(void)
     char    filename[1024];
     hsize_t dims[RANK];
     herr_t  ret; /* Value returned from API calls */
+
+    /* Output message about test being performed */
+    MESSAGE(5, ("Testing H5Oclose\n"));
 
     h5_fixname(TEST_FILENAME, H5P_DEFAULT, filename, sizeof filename);
 
@@ -414,6 +419,9 @@ test_h5o_open_by_token(void)
     H5T_class_t type_class; /* Class of the datatype */
     herr_t      ret;        /* Value returned from API calls */
 
+    /* Output message about test being performed */
+    MESSAGE(5, ("Testing H5Oopen_by_token\n"));
+
     h5_fixname(TEST_FILENAME, H5P_DEFAULT, filename, sizeof filename);
 
     /* Create a new HDF5 file */
@@ -531,6 +539,9 @@ test_h5o_refcount(void)
     H5O_info2_t oinfo; /* Object info struct */
     hsize_t     dims[RANK];
     herr_t      ret; /* Value returned from API calls */
+
+    /* Output message about test being performed */
+    MESSAGE(5, ("Testing retrieval of object reference count with H5Oget_info\n"));
 
     h5_fixname(TEST_FILENAME, H5P_DEFAULT, filename, sizeof filename);
 
@@ -732,6 +743,9 @@ test_h5o_plist(void)
     unsigned def_max_compact, def_min_dense; /* Default phase change parameters */
     unsigned max_compact, min_dense;         /* Actual phase change parameters */
     herr_t   ret;                            /* Value returned from API calls */
+
+    /* Output message about test being performed */
+    MESSAGE(5, ("Testing Object creation properties\n"));
 
     /* Make a FAPL that uses the "use the latest version of the format" flag */
     fapl = H5Pcreate(H5P_FILE_ACCESS);
@@ -936,14 +950,17 @@ test_h5o_link(void)
     int          i, n;
     herr_t       ret; /* Value returned from API calls */
 
+    /* Output message about test being performed */
+    MESSAGE(5, ("Testing H5Olink\n"));
+
     h5_fixname(TEST_FILENAME, H5P_DEFAULT, filename, sizeof filename);
 
     /* Allocate memory buffers */
     /* (These are treated as 2-D buffers) */
-    wdata = (int *)HDmalloc((size_t)(TEST6_DIM1 * TEST6_DIM2) * sizeof(int));
-    CHECK_PTR(wdata, "HDmalloc");
-    rdata = (int *)HDmalloc((size_t)(TEST6_DIM1 * TEST6_DIM2) * sizeof(int));
-    CHECK_PTR(rdata, "HDmalloc");
+    wdata = (int *)malloc((size_t)(TEST6_DIM1 * TEST6_DIM2) * sizeof(int));
+    CHECK_PTR(wdata, "malloc");
+    rdata = (int *)malloc((size_t)(TEST6_DIM1 * TEST6_DIM2) * sizeof(int));
+    CHECK_PTR(rdata, "malloc");
 
     /* Initialize the raw data */
     for (i = n = 0; i < (TEST6_DIM1 * TEST6_DIM2); i++)
@@ -972,7 +989,7 @@ test_h5o_link(void)
             {
                 ret = H5Pset_libver_bounds(fapl_id, low, high);
             }
-            H5E_END_TRY;
+            H5E_END_TRY
 
             if (ret < 0) /* Invalid low/high combinations */
                 continue;
@@ -1066,8 +1083,8 @@ test_h5o_link(void)
     CHECK(ret, FAIL, "H5Pclose");
 
     /* Release buffers */
-    HDfree(wdata);
-    HDfree(rdata);
+    free(wdata);
+    free(rdata);
 } /* end test_h5o_link() */
 
 /****************************************************************
@@ -1163,7 +1180,7 @@ test_h5o_comment(void)
     {
         ret = H5Oset_comment(dspace, "dataspace comment");
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(ret, FAIL, "H5Oset_comment");
 
     /* Close the file */
@@ -1338,7 +1355,7 @@ test_h5o_comment_by_name(void)
     {
         ret = H5Oset_comment_by_name(dspace, ".", "dataspace comment", H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     VERIFY(ret, FAIL, "H5Oset_comment");
 
     /* Close the file */
@@ -1423,6 +1440,9 @@ test_h5o_getinfo_same_file(void)
     H5O_info2_t oinfo1, oinfo2; /* Object info structs */
     herr_t      ret;            /* Value returned from API calls */
 
+    /* Output message about test being performed */
+    MESSAGE(5, ("Testing H5Oget_info on objects in same file\n"));
+
     h5_fixname(TEST_FILENAME, H5P_DEFAULT, filename, sizeof filename);
 
     /* Create a new HDF5 file */
@@ -1436,8 +1456,8 @@ test_h5o_getinfo_same_file(void)
     CHECK(gid2, FAIL, "H5Gcreate2");
 
     /* Reset object info */
-    HDmemset(&oinfo1, 0, sizeof(oinfo1));
-    HDmemset(&oinfo2, 0, sizeof(oinfo2));
+    memset(&oinfo1, 0, sizeof(oinfo1));
+    memset(&oinfo2, 0, sizeof(oinfo2));
 
     /* Query the object info for each object, through group IDs */
     ret = H5Oget_info3(gid1, &oinfo1, H5O_INFO_BASIC);
@@ -1448,8 +1468,8 @@ test_h5o_getinfo_same_file(void)
     VERIFY(oinfo1.fileno, oinfo2.fileno, "file number from H5Oget_info3");
 
     /* Reset object info */
-    HDmemset(&oinfo1, 0, sizeof(oinfo1));
-    HDmemset(&oinfo2, 0, sizeof(oinfo2));
+    memset(&oinfo1, 0, sizeof(oinfo1));
+    memset(&oinfo2, 0, sizeof(oinfo2));
 
     /* Query the object info for each object, by name */
     ret = H5Oget_info_by_name3(fid1, "group1", &oinfo1, H5O_INFO_BASIC, H5P_DEFAULT);
@@ -1480,8 +1500,8 @@ test_h5o_getinfo_same_file(void)
     CHECK(gid2, FAIL, "H5Gopen2");
 
     /* Reset object info */
-    HDmemset(&oinfo1, 0, sizeof(oinfo1));
-    HDmemset(&oinfo2, 0, sizeof(oinfo2));
+    memset(&oinfo1, 0, sizeof(oinfo1));
+    memset(&oinfo2, 0, sizeof(oinfo2));
 
     /* Query the object info for each object, through group IDs */
     ret = H5Oget_info3(gid1, &oinfo1, H5O_INFO_BASIC);
@@ -1492,8 +1512,8 @@ test_h5o_getinfo_same_file(void)
     VERIFY(oinfo1.fileno, oinfo2.fileno, "file number from H5Oget_info3");
 
     /* Reset object info */
-    HDmemset(&oinfo1, 0, sizeof(oinfo1));
-    HDmemset(&oinfo2, 0, sizeof(oinfo2));
+    memset(&oinfo1, 0, sizeof(oinfo1));
+    memset(&oinfo2, 0, sizeof(oinfo2));
 
     /* Query the object info for each object, by name */
     ret = H5Oget_info_by_name3(fid1, "group1", &oinfo1, H5O_INFO_BASIC, H5P_DEFAULT);
@@ -1721,6 +1741,9 @@ test_h5o_getinfo_visit(void)
     int         j;              /* Local index variable */
     herr_t      ret;            /* Value returned from API calls */
 
+    /* Output message about test being performed */
+    MESSAGE(5, ("Testing info returned by H5Oget_info vs H5Ovisit\n"));
+
     h5_fixname(TEST_FILENAME, H5P_DEFAULT, filename, sizeof filename);
 
     /* Create an HDF5 file */
@@ -1752,8 +1775,8 @@ test_h5o_getinfo_visit(void)
     CHECK(gid2, FAIL, "H5Gcreate2");
 
     /* Reset object info */
-    HDmemset(&oinfo1, 0, sizeof(oinfo1));
-    HDmemset(&oinfo2, 0, sizeof(oinfo2));
+    memset(&oinfo1, 0, sizeof(oinfo1));
+    memset(&oinfo2, 0, sizeof(oinfo2));
 
     /* Query the object info for "group1" via H5Oget_info1 and H5Oget_info2 */
     ret = H5Oget_info1(gid1, &oinfo1);
@@ -1766,8 +1789,8 @@ test_h5o_getinfo_visit(void)
     VERIFY(oinfo1.num_attrs, oinfo2.num_attrs, "obj info from H5Oget_info1/2");
 
     /* Reset object info */
-    HDmemset(&oinfo1, 0, sizeof(oinfo1));
-    HDmemset(&oinfo2, 0, sizeof(oinfo2));
+    memset(&oinfo1, 0, sizeof(oinfo1));
+    memset(&oinfo2, 0, sizeof(oinfo2));
 
     /* Query the object info for "group2" via H5Oget_info1 and H5Oget_info2 */
     ret = H5Oget_info_by_name1(fid, "group2", &oinfo1, H5P_DEFAULT);
@@ -1834,9 +1857,6 @@ test_h5o(void)
  *
  * Return:    none
  *
- * Programmer:    James Laird
- *              June 3, 2006
- *
  *-------------------------------------------------------------------------
  */
 void
@@ -1849,5 +1869,5 @@ cleanup_h5o(void)
         h5_fixname(TEST_FILENAME, H5P_DEFAULT, filename, sizeof filename);
         H5Fdelete(filename, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 }

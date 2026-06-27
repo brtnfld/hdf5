@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -64,16 +63,13 @@ H5Z_class2_t H5Z_SZIP[1] = {{
  * Return:	Success: Non-negative
  *		Failure: Negative
  *
- * Programmer:	Quincey Koziol
- *              Monday, April  7, 2003
- *
  *-------------------------------------------------------------------------
  */
 static htri_t
 H5Z__can_apply_szip(hid_t H5_ATTR_UNUSED dcpl_id, hid_t type_id, hid_t H5_ATTR_UNUSED space_id)
 {
     const H5T_t *type;             /* Datatype */
-    unsigned     dtype_size;       /* Datatype's size (in bits) */
+    size_t       dtype_size;       /* Datatype's size (in bits) */
     H5T_order_t  dtype_order;      /* Datatype's endianness order */
     htri_t       ret_value = TRUE; /* Return value */
 
@@ -112,9 +108,6 @@ done:
  * Return:	Success: Non-negative
  *		Failure: Negative
  *
- * Programmer:	Quincey Koziol
- *              Monday, April  7, 2003
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -131,7 +124,7 @@ H5Z__set_local_szip(hid_t dcpl_id, hid_t type_id, hid_t space_id)
     H5T_order_t     dtype_order;                      /* Datatype's endianness order */
     size_t          dtype_size;                       /* Datatype's size (in bits) */
     size_t          dtype_precision;                  /* Datatype's precision (in bits) */
-    size_t          dtype_offset;                     /* Datatype's offset (in bits) */
+    int             dtype_offset;                     /* Datatype's offset (in bits) */
     hsize_t         scanline;                         /* Size of dataspace's fastest changing dimension */
     herr_t          ret_value = SUCCEED;              /* Return value */
 
@@ -161,16 +154,16 @@ H5Z__set_local_szip(hid_t dcpl_id, hid_t type_id, hid_t space_id)
         dtype_offset = H5T_get_offset(type);
         if (dtype_offset != 0)
             dtype_precision = dtype_size;
-    } /* end if */
+    }
     if (dtype_precision > 24) {
         if (dtype_precision <= 32)
             dtype_precision = 32;
         else if (dtype_precision <= 64)
             dtype_precision = 64;
-    } /* end if */
+    }
 
     /* Set "local" parameter for this dataset's "bits-per-pixel" */
-    cd_values[H5Z_SZIP_PARM_BPP] = dtype_precision;
+    cd_values[H5Z_SZIP_PARM_BPP] = (unsigned)dtype_precision;
 
     /* Get dataspace */
     if (NULL == (ds = (H5S_t *)H5I_object_verify(space_id, H5I_DATASPACE)))
@@ -182,7 +175,7 @@ H5Z__set_local_szip(hid_t dcpl_id, hid_t type_id, hid_t space_id)
 
     /* Set "local" parameter for this dataset's "pixels-per-scanline" */
     /* (Use the chunk's fastest changing dimension size) */
-    HDassert(ndims > 0);
+    assert(ndims > 0);
     scanline = dims[ndims - 1];
 
     /* Adjust scanline if it is smaller than number of pixels per block or
@@ -200,7 +193,7 @@ H5Z__set_local_szip(hid_t dcpl_id, hid_t type_id, hid_t space_id)
         if (npoints < cd_values[H5Z_SZIP_PARM_PPB])
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                         "pixels per block greater than total number of elements in the chunk")
-        scanline = MIN((cd_values[H5Z_SZIP_PARM_PPB] * SZ_MAX_BLOCKS_PER_SCANLINE), npoints);
+        scanline = (hsize_t)MIN((cd_values[H5Z_SZIP_PARM_PPB] * SZ_MAX_BLOCKS_PER_SCANLINE), npoints);
     }
     else {
         if (scanline <= SZ_MAX_PIXELS_PER_SCANLINE)
@@ -218,7 +211,7 @@ H5Z__set_local_szip(hid_t dcpl_id, hid_t type_id, hid_t space_id)
 
     /* Set the correct endianness flag for szip */
     /* (Note: this may not handle non-atomic datatypes well) */
-    cd_values[H5Z_SZIP_PARM_MASK] &= ~(SZ_LSB_OPTION_MASK | SZ_MSB_OPTION_MASK);
+    cd_values[H5Z_SZIP_PARM_MASK] &= ~((unsigned)SZ_LSB_OPTION_MASK | (unsigned)SZ_MSB_OPTION_MASK);
     switch (dtype_order) {
         case H5T_ORDER_LE: /* Little-endian byte order */
             cd_values[H5Z_SZIP_PARM_MASK] |= SZ_LSB_OPTION_MASK;
@@ -253,9 +246,6 @@ done:
  * Return:	Success: Size of buffer filtered
  *		Failure: 0
  *
- * Programmer:	Kent Yang
- *              Tuesday, April 1, 2003
- *
  *-------------------------------------------------------------------------
  */
 static size_t
@@ -272,13 +262,13 @@ H5Z__filter_szip(unsigned flags, size_t cd_nelmts, const unsigned cd_values[], s
 
     /* Sanity check to make certain that we haven't drifted out of date with
      * the mask options from the szlib.h header */
-    HDassert(H5_SZIP_ALLOW_K13_OPTION_MASK == SZ_ALLOW_K13_OPTION_MASK);
-    HDassert(H5_SZIP_CHIP_OPTION_MASK == SZ_CHIP_OPTION_MASK);
-    HDassert(H5_SZIP_EC_OPTION_MASK == SZ_EC_OPTION_MASK);
-    HDassert(H5_SZIP_LSB_OPTION_MASK == SZ_LSB_OPTION_MASK);
-    HDassert(H5_SZIP_MSB_OPTION_MASK == SZ_MSB_OPTION_MASK);
-    HDassert(H5_SZIP_NN_OPTION_MASK == SZ_NN_OPTION_MASK);
-    HDassert(H5_SZIP_RAW_OPTION_MASK == SZ_RAW_OPTION_MASK);
+    assert(H5_SZIP_ALLOW_K13_OPTION_MASK == SZ_ALLOW_K13_OPTION_MASK);
+    assert(H5_SZIP_CHIP_OPTION_MASK == SZ_CHIP_OPTION_MASK);
+    assert(H5_SZIP_EC_OPTION_MASK == SZ_EC_OPTION_MASK);
+    assert(H5_SZIP_LSB_OPTION_MASK == SZ_LSB_OPTION_MASK);
+    assert(H5_SZIP_MSB_OPTION_MASK == SZ_MSB_OPTION_MASK);
+    assert(H5_SZIP_NN_OPTION_MASK == SZ_NN_OPTION_MASK);
+    assert(H5_SZIP_RAW_OPTION_MASK == SZ_RAW_OPTION_MASK);
 
     /* Check arguments */
     if (cd_nelmts != 4)
@@ -308,7 +298,7 @@ H5Z__filter_szip(unsigned flags, size_t cd_nelmts, const unsigned cd_values[], s
         size_out = nalloc;
         if (SZ_BufftoBuffDecompress(outbuf, &size_out, newbuf, nbytes - 4, &sz_param) != SZ_OK)
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, 0, "szip_filter: decompression failed")
-        HDassert(size_out == nalloc);
+        assert(size_out == nalloc);
 
         /* Free the input buffer */
         H5MM_xfree(*buf);
@@ -335,7 +325,7 @@ H5Z__filter_szip(unsigned flags, size_t cd_nelmts, const unsigned cd_values[], s
         size_out = nbytes;
         if (SZ_OK != SZ_BufftoBuffCompress(dst, &size_out, *buf, nbytes, &sz_param))
             HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, 0, "overflow")
-        HDassert(size_out <= nbytes);
+        assert(size_out <= nbytes);
 
         /* Free the input buffer */
         H5MM_xfree(*buf);

@@ -32,6 +32,7 @@
 #include "H5Pprivate.h"  /* Property lists                           */
 #include "H5Eprivate.h"  /* Error handling                           */
 #include "H5FDprivate.h" /* VFDs                                     */
+#include "H5MMprivate.h" /* Memory management                        */
 
 
 /****************/

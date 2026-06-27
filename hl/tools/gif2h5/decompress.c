@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -55,8 +54,8 @@ GIFBYTE *Raster; /* The raster data stream, unblocked            */
 
 /* The hash table used by the decompressor */
 
-int *Prefix;
-int *Suffix;
+static int *Prefix;
+static int *Suffix;
 
 /* An output array used by the decompressor */
 

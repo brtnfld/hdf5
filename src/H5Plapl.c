@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -14,8 +13,6 @@
 /*-------------------------------------------------------------------------
  *
  * Created:		H5Plapl.c
- *			July 14 2006
- *			James Laird
  *
  * Purpose:		Link access property list class routines
  *
@@ -31,12 +28,13 @@
 /***********/
 /* Headers */
 /***********/
-#include "H5private.h"   /* Generic Functions			*/
-#include "H5Eprivate.h"  /* Error handling		  	*/
-#include "H5Iprivate.h"  /* IDs			  		*/
-#include "H5Lprivate.h"  /* Links		  		*/
-#include "H5MMprivate.h" /* Memory management			*/
-#include "H5Ppkg.h"      /* Property lists		  	*/
+#include "H5private.h"   /* Generic Functions                        */
+#include "H5Eprivate.h"  /* Error handling                           */
+#include "H5Iprivate.h"  /* IDs                                      */
+#include "H5Lprivate.h"  /* Links                                    */
+#include "H5MMprivate.h" /* Memory management                        */
+#include "H5Ppkg.h"      /* Property lists                           */
+#include "H5VMprivate.h" /* Vector Functions                         */
 
 /****************/
 /* Local Macros */
@@ -179,9 +177,6 @@ static const H5P_coll_md_read_flag_t H5L_def_coll_md_read_g =
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Quincey Koziol
- *              October 31, 2006
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -243,9 +238,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Quincey Koziol
- *              Wednesday, Sept 2, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -258,7 +250,7 @@ H5P__lacc_elink_fapl_set(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNUSED
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Get the FAPL ID */
     l_fapl_id = *(const hid_t *)value;
@@ -285,9 +277,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Quincey Koziol
- *              Wednesday, Sept 2, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -300,7 +289,7 @@ H5P__lacc_elink_fapl_get(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNUSED
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Get the FAPL ID */
     l_fapl_id = *(const hid_t *)value;
@@ -328,9 +317,6 @@ done:
  *
  * Return:         Success:        Non-negative
  *	               Failure:        Negative
- *
- * Programmer:     Quincey Koziol
- *                 Wednesday, August 15, 2012
  *
  *-------------------------------------------------------------------------
  */
@@ -371,7 +357,7 @@ H5P__lacc_elink_fapl_enc(const void *value, void **_pp, size_t *size)
             /* encode the length of the plist */
             enc_value = (uint64_t)fapl_size;
             enc_size  = H5VM_limit_enc_size(enc_value);
-            HDassert(enc_size < 256);
+            assert(enc_size < 256);
             *(*pp)++ = (uint8_t)enc_size;
             UINT64ENCODE_VAR(*pp, enc_value, enc_size);
 
@@ -400,9 +386,6 @@ done:
  * Return:         Success:        Non-negative
  *	               Failure:        Negative
  *
- * Programmer:     Quincey Koziol
- *                 Wednesday, August 15, 2012
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -416,9 +399,9 @@ H5P__lacc_elink_fapl_dec(const void **_pp, void *_value)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(pp);
-    HDassert(*pp);
-    HDassert(elink_fapl);
+    assert(pp);
+    assert(*pp);
+    assert(elink_fapl);
     HDcompile_assert(sizeof(size_t) <= sizeof(uint64_t));
 
     /* Determine if the FAPL is non-default */
@@ -431,7 +414,7 @@ H5P__lacc_elink_fapl_dec(const void **_pp, void *_value)
 
         /* Decode the plist length */
         enc_size = *(*pp)++;
-        HDassert(enc_size < 256);
+        assert(enc_size < 256);
         UINT64DECODE_VAR(*pp, enc_value, enc_size);
         fapl_size = (size_t)enc_value;
 
@@ -456,9 +439,6 @@ done:
  * Return:      Success:        Non-negative
  * 	            Failure:        Negative
  *
- * Programmer:  Vailin Choi
- *	            Tuesday, Sept 23, 2008
- *
  *--------------------------------------------------------------------------
  */
 static herr_t
@@ -471,7 +451,7 @@ H5P__lacc_elink_fapl_del(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNUSED
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Get the FAPL ID */
     l_fapl_id = (*(const hid_t *)value);
@@ -492,9 +472,6 @@ done:
  * Return:      Success:        Non-negative
  * 	            Failure:        Negative
  *
- * Programmer:  Vailin Choi
- *	            Tuesday, Sept 23, 2008
- *
  *--------------------------------------------------------------------------
  */
 static herr_t
@@ -506,7 +483,7 @@ H5P__lacc_elink_fapl_copy(const char H5_ATTR_UNUSED *name, size_t H5_ATTR_UNUSED
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Get the FAPL ID */
     l_fapl_id = (*(const hid_t *)value);
@@ -533,9 +510,6 @@ done:
  *                 compared.
  *
  * Return:         zero if VALUE1 and VALUE2 are equal, non zero otherwise.
- *
- * Programmer:     Quincey Koziol
- *                 Wednesday, August 15, 2012
  *
  *-------------------------------------------------------------------------
  */
@@ -568,7 +542,7 @@ H5P__lacc_elink_fapl_cmp(const void *value1, const void *value2, size_t H5_ATTR_
         herr_t H5_ATTR_NDEBUG_UNUSED status;
 
         status = H5P__cmp_plist(obj1, obj2, &ret_value);
-        HDassert(status >= 0);
+        assert(status >= 0);
     } /* end if */
 
 done:
@@ -583,9 +557,6 @@ done:
  * Return:      Success:        Non-negative
  * 	            Failure:        Negative
  *
- * Programmer:  Vailin Choi
- *	            Tuesday, Sept 23, 2008
- *
  *---------------------------------------------------------------------------
  */
 static herr_t
@@ -597,7 +568,7 @@ H5P__lacc_elink_fapl_close(const char H5_ATTR_UNUSED *name, size_t H5_ATTR_UNUSE
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Get the FAPL ID */
     l_fapl_id = (*(const hid_t *)value);
@@ -618,9 +589,6 @@ done:
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Quincey Koziol
- *              Wednesday, Sept 2, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -630,7 +598,7 @@ H5P__lacc_elink_pref_set(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNUSED
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Copy the prefix */
     *(char **)value = H5MM_xstrdup(*(const char **)value);
@@ -646,9 +614,6 @@ H5P__lacc_elink_pref_set(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNUSED
  * Return:      Success:        Non-negative
  *              Failure:        Negative
  *
- * Programmer:  Quincey Koziol
- *              Wednesday, Sept 2, 2015
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -658,7 +623,7 @@ H5P__lacc_elink_pref_get(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNUSED
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity check */
-    HDassert(value);
+    assert(value);
 
     /* Copy the prefix */
     *(char **)value = H5MM_xstrdup(*(const char **)value);
@@ -675,9 +640,6 @@ H5P__lacc_elink_pref_get(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNUSED
  *
  * Return:	   Success:	Non-negative
  *		   Failure:	Negative
- *
- * Programmer:     Mohamad Chaarawi
- *                 Monday, October 10, 2011
  *
  *-------------------------------------------------------------------------
  */
@@ -700,7 +662,7 @@ H5P__lacc_elink_pref_enc(const void *value, void **_pp, size_t *size)
 
     enc_value = (uint64_t)len;
     enc_size  = H5VM_limit_enc_size(enc_value);
-    HDassert(enc_size < 256);
+    assert(enc_size < 256);
 
     if (NULL != *pp) {
         /* encode the length of the prefix */
@@ -731,9 +693,6 @@ H5P__lacc_elink_pref_enc(const void *value, void **_pp, size_t *size)
  * Return:	   Success:	Non-negative
  *		   Failure:	Negative
  *
- * Programmer:     Mohamad Chaarawi
- *                 Monday, October 10, 2011
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -748,14 +707,14 @@ H5P__lacc_elink_pref_dec(const void **_pp, void *_value)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(pp);
-    HDassert(*pp);
-    HDassert(elink_pref);
+    assert(pp);
+    assert(*pp);
+    assert(elink_pref);
     HDcompile_assert(sizeof(size_t) <= sizeof(uint64_t));
 
     /* Decode the size */
     enc_size = *(*pp)++;
-    HDassert(enc_size < 256);
+    assert(enc_size < 256);
 
     /* Decode the value */
     UINT64DECODE_VAR(*pp, enc_value, enc_size);
@@ -784,9 +743,6 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Quincey Koziol
- *              November 2, 2006
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -795,7 +751,7 @@ H5P__lacc_elink_pref_del(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNUSED
 {
     FUNC_ENTER_PACKAGE_NOERR
 
-    HDassert(value);
+    assert(value);
 
     H5MM_xfree(*(void **)value);
 
@@ -809,9 +765,6 @@ H5P__lacc_elink_pref_del(hid_t H5_ATTR_UNUSED prop_id, const char H5_ATTR_UNUSED
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Quincey Koziol
- *              November 2, 2006
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -819,7 +772,7 @@ H5P__lacc_elink_pref_copy(const char H5_ATTR_UNUSED *name, size_t H5_ATTR_UNUSED
 {
     FUNC_ENTER_PACKAGE_NOERR
 
-    HDassert(value);
+    assert(value);
 
     *(char **)value = H5MM_xstrdup(*(const char **)value);
 
@@ -834,9 +787,6 @@ H5P__lacc_elink_pref_copy(const char H5_ATTR_UNUSED *name, size_t H5_ATTR_UNUSED
  *                 compared.
  *
  * Return:         zero if VALUE1 and VALUE2 are equal, non zero otherwise.
- *
- * Programmer:     Mohamad Chaarawi
- *                 Thursday, November 3, 2011
  *
  *-------------------------------------------------------------------------
  */
@@ -867,9 +817,6 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Quincey Koziol
- *              November 2, 2006
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -877,7 +824,7 @@ H5P__lacc_elink_pref_close(const char H5_ATTR_UNUSED *name, size_t H5_ATTR_UNUSE
 {
     FUNC_ENTER_PACKAGE_NOERR
 
-    HDassert(value);
+    assert(value);
 
     H5MM_xfree(*(void **)value);
 
@@ -899,9 +846,6 @@ H5P__lacc_elink_pref_close(const char H5_ATTR_UNUSED *name, size_t H5_ATTR_UNUSE
  *              links as desired.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	James Laird
- *              Friday, July 14, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -940,9 +884,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	James Laird
- *              Friday, July 14, 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -978,9 +919,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	James Laird
- *              Thursday, August 3, 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1014,9 +952,6 @@ done:
  *              buffer.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	James Laird
- *              Thursday, August 3, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -1066,9 +1001,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:
- *              Vailin Choi; Tuesday, September 12th, 2008
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1100,9 +1032,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:
- *              Vailin Choi; Tuesday, September 12th, 2008
- *
  *-------------------------------------------------------------------------
  */
 hid_t
@@ -1122,7 +1051,7 @@ H5Pget_elink_fapl(hid_t lapl_id)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get fapl for links")
 
 done:
-    FUNC_LEAVE_API(ret_value);
+    FUNC_LEAVE_API(ret_value)
 } /* end H5Pget_elink_fapl() */
 
 /*-------------------------------------------------------------------------
@@ -1133,9 +1062,6 @@ done:
  *              H5F_ACC_RDWR, or H5F_ACC_DEFAULT to unset the value.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Neil Fortner
- *              Tuesday, December 9, 2008
  *
  *-------------------------------------------------------------------------
  */
@@ -1174,9 +1100,6 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Neil Fortner
- *              Tuesday, December 9, 2008
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1209,9 +1132,6 @@ done:
  *              H5F_ACC_RDWR.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Neil Fortner
- *              Tuesday, December 15, 2008
  *
  *-------------------------------------------------------------------------
  */
@@ -1253,9 +1173,6 @@ done:
  *              external link.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Neil Fortner
- *              Tuesday, December 15, 2008
  *
  *-------------------------------------------------------------------------
  */

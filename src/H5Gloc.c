@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -14,8 +13,6 @@
 /*-------------------------------------------------------------------------
  *
  * Created:		H5Gloc.c
- *			Sep 13 2005
- *			Quincey Koziol
  *
  * Purpose:		Functions for working with group "locations"
  *
@@ -279,9 +276,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *		Tuesday, September 13, 2005
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -292,8 +286,8 @@ H5G_loc_copy(H5G_loc_t *dst, const H5G_loc_t *src, H5_copy_depth_t depth)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Check args. */
-    HDassert(dst);
-    HDassert(src);
+    assert(dst);
+    assert(src);
 
     /* Copy components of the location */
     if (H5O_loc_copy(dst->oloc, src->oloc, depth) < 0)
@@ -312,9 +306,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *		Tuesday, September 13, 2005
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -325,7 +316,7 @@ H5G_loc_reset(H5G_loc_t *loc)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Check args. */
-    HDassert(loc);
+    assert(loc);
 
     /* Reset components of the location */
     if (H5O_loc_reset(loc->oloc) < 0)
@@ -344,9 +335,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *		Tuesday, September 13, 2005
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -357,7 +345,7 @@ H5G_loc_free(H5G_loc_t *loc)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Check args. */
-    HDassert(loc);
+    assert(loc);
 
     /* Reset components of the location */
     if (H5G_name_free(loc->path) < 0)
@@ -375,9 +363,6 @@ done:
  * Purpose:	Callback for retrieving object location for an object in a group
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Monday, October 17, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -413,9 +398,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *		Tuesday, September 13, 2005
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -427,9 +409,9 @@ H5G_loc_find(const H5G_loc_t *loc, const char *name, H5G_loc_t *obj_loc /*out*/)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Check args. */
-    HDassert(loc);
-    HDassert(name && *name);
-    HDassert(obj_loc);
+    assert(loc);
+    assert(name && *name);
+    assert(obj_loc);
 
     /* Set up user data for locating object */
     udata.loc = obj_loc;
@@ -449,9 +431,6 @@ done:
  *              according to the order within an index
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Monday, November 20, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -497,7 +476,7 @@ done:
     /* Release the object location if we failed after copying it */
     if (ret_value < 0 && obj_loc_valid)
         if (H5G_loc_free(udata->loc) < 0)
-            HDONE_ERROR(H5E_SYM, H5E_CANTRELEASE, FAIL, "can't free location")
+            HDONE_ERROR(H5E_SYM, H5E_CANTRELEASE, FAIL, "can't free location");
 
     /* Indicate that this callback didn't take ownership of the group *
      * location for the object */
@@ -513,9 +492,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *		Monday, November 20, 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -528,9 +504,9 @@ H5G_loc_find_by_idx(const H5G_loc_t *loc, const char *group_name, H5_index_t idx
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Check args. */
-    HDassert(loc);
-    HDassert(group_name && *group_name);
-    HDassert(obj_loc);
+    assert(loc);
+    assert(group_name && *group_name);
+    assert(obj_loc);
 
     /* Set up user data for locating object */
     udata.idx_type = idx_type;
@@ -553,9 +529,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *		Tuesday, September 13, 2005
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -567,9 +540,9 @@ H5G__loc_insert(H5G_loc_t *grp_loc, char *name, H5G_loc_t *obj_loc, H5O_type_t o
     FUNC_ENTER_PACKAGE
 
     /* Check args. */
-    HDassert(grp_loc);
-    HDassert(name && *name);
-    HDassert(obj_loc);
+    assert(grp_loc);
+    assert(name && *name);
+    assert(obj_loc);
 
     /* Create link object for the object location */
     lnk.type         = H5L_TYPE_HARD;
@@ -597,9 +570,6 @@ done:
  * Purpose:	Callback for checking if an object exists
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Tuesday, February 2, 2010
  *
  *-------------------------------------------------------------------------
  */
@@ -638,9 +608,6 @@ done:
  * Return:	Success:	TRUE/FALSE
  * 		Failure:	Negative
  *
- * Programmer:	Quincey Koziol
- *		Tuesday, February 2, 2010
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -651,9 +618,9 @@ H5G_loc_exists(const H5G_loc_t *loc, const char *name, hbool_t *exists)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Check args. */
-    HDassert(loc);
-    HDassert(name && *name);
-    HDassert(exists);
+    assert(loc);
+    assert(name && *name);
+    assert(exists);
 
     /* Traverse group hierarchy to locate object */
     if (H5G_traverse(loc, name, H5G_TARGET_EXISTS, H5G__loc_exists_cb, exists) < 0)
@@ -669,9 +636,6 @@ done:
  * Purpose:	Callback for retrieving the address for an object in a group
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Saturday, December 21, 2019
  *
  *-------------------------------------------------------------------------
  */
@@ -708,9 +672,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *		Thursday, November 23, 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -721,9 +682,9 @@ H5G__loc_addr(const H5G_loc_t *loc, const char *name, haddr_t *addr /*out*/)
     FUNC_ENTER_PACKAGE
 
     /* Check args. */
-    HDassert(loc);
-    HDassert(name && *name);
-    HDassert(addr);
+    assert(loc);
+    assert(name && *name);
+    assert(addr);
 
     /* Traverse group hierarchy to locate object */
     if (H5G_traverse(loc, name, H5G_TARGET_NORMAL, H5G__loc_addr_cb, addr) < 0)
@@ -739,9 +700,6 @@ done:
  * Purpose:	Callback for retrieving data model info for an object in a group
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Thursday, November 23, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -779,9 +737,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *		Thursday, November 23, 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -793,9 +748,9 @@ H5G_loc_info(const H5G_loc_t *loc, const char *name, H5O_info2_t *oinfo /*out*/,
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Check args. */
-    HDassert(loc);
-    HDassert(name && *name);
-    HDassert(oinfo);
+    assert(loc);
+    assert(name && *name);
+    assert(oinfo);
 
     /* Set up user data for locating object */
     udata.fields = fields;
@@ -815,9 +770,6 @@ done:
  * Purpose:	Callback for retrieving native info for an object in a group
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Thursday, November 23, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -855,9 +807,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *		Thursday, November 23, 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -869,9 +818,9 @@ H5G_loc_native_info(const H5G_loc_t *loc, const char *name, H5O_native_info_t *o
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Check args. */
-    HDassert(loc);
-    HDassert(name && *name);
-    HDassert(oinfo);
+    assert(loc);
+    assert(name && *name);
+    assert(oinfo);
 
     /* Set up user data for locating object */
     udata.fields = fields;
@@ -891,9 +840,6 @@ done:
  * Purpose:	Callback for (re)setting object comment for an object in a group
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Thursday, August 30, 2007
  *
  *-------------------------------------------------------------------------
  */
@@ -932,7 +878,7 @@ H5G__loc_set_comment_cb(H5G_loc_t H5_ATTR_UNUSED *grp_loc /*in*/, const char H5_
     } /* end if */
 
 done:
-    HDfree(comment.s);
+    free(comment.s);
 
     /* Indicate that this callback didn't take ownership of the group *
      * location for the object */
@@ -949,9 +895,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *		Thursday, August 30, 2007
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -963,8 +906,8 @@ H5G_loc_set_comment(const H5G_loc_t *loc, const char *name, const char *comment)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Check args. */
-    HDassert(loc);
-    HDassert(name && *name);
+    assert(loc);
+    assert(name && *name);
 
     /* Set up user data for locating object */
     udata.comment = comment;
@@ -983,9 +926,6 @@ done:
  * Purpose:	Callback for retrieving object comment for an object in a group
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Thursday, August 30, 2007
  *
  *-------------------------------------------------------------------------
  */
@@ -1035,9 +975,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *		Thursday, August 30, 2007
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1050,8 +987,8 @@ H5G_loc_get_comment(const H5G_loc_t *loc, const char *name, char *comment /*out*
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Check args. */
-    HDassert(loc);
-    HDassert(name && *name);
+    assert(loc);
+    assert(name && *name);
 
     /* Set up user data for locating object */
     udata.comment      = comment;

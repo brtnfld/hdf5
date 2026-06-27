@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -83,9 +82,6 @@ H5FL_BLK_DEFINE(fa_page_init);
  *
  * Return:      Non-NULL pointer to data block on success/NULL on failure
  *
- * Programmer:  Vailin Choi
- *              Thursday, April 30, 2009
- *
  *-------------------------------------------------------------------------
  */
 H5FA_dblock_t *
@@ -97,8 +93,8 @@ H5FA__dblock_alloc(H5FA_hdr_t *hdr)
     FUNC_ENTER_PACKAGE
 
     /* Check arguments */
-    HDassert(hdr);
-    HDassert(hdr->cparam.nelmts > 0);
+    assert(hdr);
+    assert(hdr->cparam.nelmts > 0);
 
     /* Allocate memory for the data block */
     if (NULL == (dblock = H5FL_CALLOC(H5FA_dblock_t)))
@@ -121,11 +117,11 @@ H5FA__dblock_alloc(H5FA_hdr_t *hdr)
         H5_CHECKED_ASSIGN(dblock->npages, size_t, npages, hsize_t);
 
         /* Sanity check that we have at least 1 page */
-        HDassert(dblock->npages > 0);
+        assert(dblock->npages > 0);
 
         /* Compute size of 'page init' flag array, in bytes */
         dblock->dblk_page_init_size = (dblock->npages + 7) / 8;
-        HDassert(dblock->dblk_page_init_size > 0);
+        assert(dblock->dblk_page_init_size > 0);
 
         /* Allocate space for 'page init' flags */
         if (NULL == (dblock->dblk_page_init = H5FL_BLK_CALLOC(fa_page_init, dblock->dblk_page_init_size)))
@@ -156,7 +152,7 @@ H5FA__dblock_alloc(H5FA_hdr_t *hdr)
 done:
     if (!ret_value)
         if (dblock && H5FA__dblock_dest(dblock) < 0)
-            HDONE_ERROR(H5E_FARRAY, H5E_CANTFREE, NULL, "unable to destroy fixed array data block")
+            HDONE_ERROR(H5E_FARRAY, H5E_CANTFREE, NULL, "unable to destroy fixed array data block");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FA__dblock_alloc() */
@@ -167,9 +163,6 @@ done:
  * Purpose:     Creates a fixed array data block in the file
  *
  * Return:      Valid file address on success/HADDR_UNDEF on failure
- *
- * Programmer:  Vailin Choi
- *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
  */
@@ -184,8 +177,8 @@ H5FA__dblock_create(H5FA_hdr_t *hdr, hbool_t *hdr_dirty)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(hdr);
-    HDassert(hdr_dirty);
+    assert(hdr);
+    assert(hdr_dirty);
 
     /* Allocate the data block */
     if (NULL == (dblock = H5FA__dblock_alloc(hdr)))
@@ -229,22 +222,24 @@ H5FA__dblock_create(H5FA_hdr_t *hdr, hbool_t *hdr_dirty)
 
 done:
 
-    if (!H5F_addr_defined(ret_value))
+    if (!H5_addr_defined(ret_value))
         if (dblock) {
             /* Remove from cache, if inserted */
             if (inserted)
                 if (H5AC_remove_entry(dblock) < 0)
                     HDONE_ERROR(H5E_FARRAY, H5E_CANTREMOVE, HADDR_UNDEF,
-                                "unable to remove fixed array data block from cache")
+                                "unable to remove fixed array data block from cache");
 
             /* Release data block's disk space */
-            if (H5F_addr_defined(dblock->addr) &&
+            if (H5_addr_defined(dblock->addr) &&
                 H5MF_xfree(hdr->f, H5FD_MEM_FARRAY_DBLOCK, dblock->addr, (hsize_t)dblock->size) < 0)
-                HDONE_ERROR(H5E_FARRAY, H5E_CANTFREE, HADDR_UNDEF, "unable to release fixed array data block")
+                HDONE_ERROR(H5E_FARRAY, H5E_CANTFREE, HADDR_UNDEF,
+                            "unable to release fixed array data block");
 
             /* Destroy data block */
             if (H5FA__dblock_dest(dblock) < 0)
-                HDONE_ERROR(H5E_FARRAY, H5E_CANTFREE, HADDR_UNDEF, "unable to destroy fixed array data block")
+                HDONE_ERROR(H5E_FARRAY, H5E_CANTFREE, HADDR_UNDEF,
+                            "unable to destroy fixed array data block");
         } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -256,9 +251,6 @@ done:
  * Purpose:     Convenience wrapper around protecting fixed array data block
  *
  * Return:      Non-NULL pointer to data block on success/NULL on failure
- *
- * Programmer:  Vailin Choi
- *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
  */
@@ -272,11 +264,11 @@ H5FA__dblock_protect(H5FA_hdr_t *hdr, haddr_t dblk_addr, unsigned flags)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(hdr);
-    HDassert(H5F_addr_defined(dblk_addr));
+    assert(hdr);
+    assert(H5_addr_defined(dblk_addr));
 
     /* only the H5AC__READ_ONLY_FLAG flag is permitted */
-    HDassert((flags & (unsigned)(~H5AC__READ_ONLY_FLAG)) == 0);
+    assert((flags & (unsigned)(~H5AC__READ_ONLY_FLAG)) == 0);
 
     /* Set up user data */
     udata.hdr       = hdr;
@@ -320,9 +312,6 @@ done:
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:  Vailin Choi
- *              Thursday, April 30, 2009
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -333,7 +322,7 @@ H5FA__dblock_unprotect(H5FA_dblock_t *dblock, unsigned cache_flags)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(dblock);
+    assert(dblock);
 
     /* Unprotect the data block */
     if (H5AC_unprotect(dblock->hdr->f, H5AC_FARRAY_DBLOCK, dblock->addr, dblock, cache_flags) < 0)
@@ -352,9 +341,6 @@ done:
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:  Vailin Choi
- *              Thursday, April 30, 2009
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -366,8 +352,8 @@ H5FA__dblock_delete(H5FA_hdr_t *hdr, haddr_t dblk_addr)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(hdr);
-    HDassert(H5F_addr_defined(dblk_addr));
+    assert(hdr);
+    assert(H5_addr_defined(dblk_addr));
 
     /* Protect data block */
     if (NULL == (dblock = H5FA__dblock_protect(hdr, dblk_addr, H5AC__NO_FLAGS_SET)))
@@ -399,7 +385,7 @@ done:
     /* Finished deleting data block in metadata cache */
     if (dblock && H5FA__dblock_unprotect(dblock, H5AC__DIRTIED_FLAG | H5AC__DELETED_FLAG |
                                                      H5AC__FREE_FILE_SPACE_FLAG) < 0)
-        HDONE_ERROR(H5E_FARRAY, H5E_CANTUNPROTECT, FAIL, "unable to release fixed array data block")
+        HDONE_ERROR(H5E_FARRAY, H5E_CANTUNPROTECT, FAIL, "unable to release fixed array data block");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FA__dblock_delete() */
@@ -411,9 +397,6 @@ done:
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:  Vailin Choi
- *              Thursday, April 30, 2009
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -424,21 +407,21 @@ H5FA__dblock_dest(H5FA_dblock_t *dblock)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(dblock);
+    assert(dblock);
 
     /* Check if shared header field has been initialized */
     if (dblock->hdr) {
         /* Check if we've got elements in the data block */
         if (dblock->elmts && !dblock->npages) {
             /* Free buffer for data block elements */
-            HDassert(dblock->hdr->cparam.nelmts > 0);
+            assert(dblock->hdr->cparam.nelmts > 0);
             dblock->elmts = H5FL_BLK_FREE(chunk_elmts, dblock->elmts);
         } /* end if */
 
         /* Check if data block is paged */
         if (dblock->npages) {
             /* Free buffer for 'page init' bitmask, if there is one */
-            HDassert(dblock->dblk_page_init_size > 0);
+            assert(dblock->dblk_page_init_size > 0);
             if (dblock->dblk_page_init)
                 dblock->dblk_page_init = H5FL_BLK_FREE(fa_page_init, dblock->dblk_page_init);
         } /* end if */
@@ -451,7 +434,7 @@ H5FA__dblock_dest(H5FA_dblock_t *dblock)
     } /* end if */
 
     /* Sanity check */
-    HDassert(NULL == dblock->top_proxy);
+    assert(NULL == dblock->top_proxy);
 
     /* Free the data block itself */
     dblock = H5FL_FREE(H5FA_dblock_t, dblock);

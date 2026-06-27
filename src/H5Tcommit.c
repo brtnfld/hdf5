@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -161,9 +160,6 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Quincey Koziol
- *              April 5, 2007
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -234,9 +230,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:  Quincey Koziol
- *              April 5, 2007
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -250,11 +243,11 @@ H5T__commit_named(const H5G_loc_t *loc, const char *name, H5T_t *dt, hid_t lcpl_
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(loc);
-    HDassert(name && *name);
-    HDassert(dt);
-    HDassert(lcpl_id != H5P_DEFAULT);
-    HDassert(tcpl_id != H5P_DEFAULT);
+    assert(loc);
+    assert(name && *name);
+    assert(dt);
+    assert(lcpl_id != H5P_DEFAULT);
+    assert(tcpl_id != H5P_DEFAULT);
 
     /* Record the type's state so that we can revert to it if linking fails */
     old_state = dt->shared->state;
@@ -271,7 +264,7 @@ H5T__commit_named(const H5G_loc_t *loc, const char *name, H5T_t *dt, hid_t lcpl_
     /* Create the new named datatype and link it to its parent group */
     if (H5L_link_object(loc, name, &ocrt_info, lcpl_id) < 0)
         HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "unable to create and link to named datatype")
-    HDassert(ocrt_info.new_obj);
+    assert(ocrt_info.new_obj);
 
 done:
     /* If the datatype was committed but something failed after that, we need
@@ -281,22 +274,22 @@ done:
         if (dt->shared->state == H5T_STATE_OPEN && dt->sh_loc.type == H5O_SHARE_TYPE_COMMITTED) {
             /* Remove the datatype from the list of opened objects in the file */
             if (H5FO_top_decr(dt->sh_loc.file, dt->sh_loc.u.loc.oh_addr) < 0)
-                HDONE_ERROR(H5E_DATASET, H5E_CANTRELEASE, FAIL, "can't decrement count for object")
+                HDONE_ERROR(H5E_DATASET, H5E_CANTRELEASE, FAIL, "can't decrement count for object");
             if (H5FO_delete(dt->sh_loc.file, dt->sh_loc.u.loc.oh_addr) < 0)
                 HDONE_ERROR(H5E_DATASET, H5E_CANTRELEASE, FAIL,
-                            "can't remove dataset from list of open objects")
+                            "can't remove dataset from list of open objects");
 
             /* Close the datatype object */
             if (H5O_close(&(dt->oloc), NULL) < 0)
-                HDONE_ERROR(H5E_DATATYPE, H5E_CLOSEERROR, FAIL, "unable to release object header")
+                HDONE_ERROR(H5E_DATATYPE, H5E_CLOSEERROR, FAIL, "unable to release object header");
 
             /* Remove the datatype's object header from the file */
             if (H5O_delete(dt->sh_loc.file, dt->sh_loc.u.loc.oh_addr) < 0)
-                HDONE_ERROR(H5E_DATATYPE, H5E_CANTDELETE, FAIL, "unable to delete object header")
+                HDONE_ERROR(H5E_DATATYPE, H5E_CANTDELETE, FAIL, "unable to delete object header");
 
             /* Mark datatype as being back in memory */
             if (H5T_set_loc(dt, NULL, H5T_LOC_MEMORY))
-                HDONE_ERROR(H5E_DATATYPE, H5E_CANTDELETE, FAIL, "unable to return datatype to memory")
+                HDONE_ERROR(H5E_DATATYPE, H5E_CANTDELETE, FAIL, "unable to return datatype to memory");
             dt->sh_loc.type   = H5O_SHARE_TYPE_UNSHARED;
             dt->shared->state = old_state;
         } /* end if */
@@ -318,9 +311,6 @@ done:
  *              is checked for sanity anyway.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Peter Cao
- *              May 17, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -348,6 +338,11 @@ H5Tcommit_anon(hid_t loc_id, hid_t type_id, hid_t tcpl_id, hid_t tapl_id)
         tcpl_id = H5P_DATATYPE_CREATE_DEFAULT;
     else if (TRUE != H5P_isa_class(tcpl_id, H5P_DATATYPE_CREATE))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not datatype creation property list")
+
+    if (H5P_DEFAULT == tapl_id)
+        tapl_id = H5P_DATATYPE_ACCESS_DEFAULT;
+    else if (TRUE != H5P_isa_class(tapl_id, H5P_DATATYPE_ACCESS))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not datatype access property list")
 
     /* Verify access property list and set up collective metadata if appropriate */
     if (H5CX_set_apl(&tapl_id, H5P_CLS_TACC, loc_id, TRUE) < 0)
@@ -384,9 +379,6 @@ done:
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:	Quincey Koziol
- *              Tuesday, December 12, 2017
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -398,9 +390,9 @@ H5T__commit_anon(H5F_t *file, H5T_t *type, hid_t tcpl_id)
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(file);
-    HDassert(type);
-    HDassert(tcpl_id != H5P_DEFAULT);
+    assert(file);
+    assert(type);
+    assert(tcpl_id != H5P_DEFAULT);
 
     /* Commit the type */
     if (H5T__commit(file, type, tcpl_id) < 0)
@@ -428,9 +420,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Robb Matzke
- *              Monday, June  1, 1998
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -444,9 +433,9 @@ H5T__commit(H5F_t *file, H5T_t *type, hid_t tcpl_id)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(file);
-    HDassert(type);
-    HDassert(tcpl_id != H5P_DEFAULT);
+    assert(file);
+    assert(type);
+    assert(tcpl_id != H5P_DEFAULT);
 
     /* Check if we are allowed to write to this file */
     if (0 == (H5F_INTENT(file) & H5F_ACC_RDWR))
@@ -485,7 +474,7 @@ H5T__commit(H5F_t *file, H5T_t *type, hid_t tcpl_id)
 
     /* Calculate message size information, for creating object header */
     dtype_size = H5O_msg_size_f(file, tcpl_id, H5O_DTYPE_ID, type, (size_t)0);
-    HDassert(dtype_size);
+    assert(dtype_size);
 
     /*
      * Create the object header and open it for write access. Insert the data
@@ -531,11 +520,11 @@ done:
             (type->sh_loc.type == H5O_SHARE_TYPE_COMMITTED)) {
             if (H5O_dec_rc_by_loc(&(type->oloc)) < 0)
                 HDONE_ERROR(H5E_DATATYPE, H5E_CANTDEC, FAIL,
-                            "unable to decrement refcount on newly created object")
+                            "unable to decrement refcount on newly created object");
             if (H5O_close(&(type->oloc), NULL) < 0)
-                HDONE_ERROR(H5E_DATATYPE, H5E_CLOSEERROR, FAIL, "unable to release object header")
+                HDONE_ERROR(H5E_DATATYPE, H5E_CLOSEERROR, FAIL, "unable to release object header");
             if (H5O_delete(file, type->sh_loc.u.loc.oh_addr) < 0)
-                HDONE_ERROR(H5E_DATATYPE, H5E_CANTDELETE, FAIL, "unable to delete object header")
+                HDONE_ERROR(H5E_DATATYPE, H5E_CANTDELETE, FAIL, "unable to delete object header");
             type->sh_loc.type = H5O_SHARE_TYPE_UNSHARED;
         } /* end if */
     }     /* end if */
@@ -549,9 +538,6 @@ done:
  * Purpose:     Determines if a datatype is committed or not.
  *
  * Return:      TRUE/FALSE/Negative
- *
- * Programmer:	Robb Matzke
- *              Thursday, June  4, 1998
  *
  *-------------------------------------------------------------------------
  */
@@ -584,9 +570,6 @@ done:
  * Return:	Success:	New link count
  *		Failure:	-1
  *
- * Programmer:	Quincey Koziol
- *              Friday, September 26, 2003
- *
  *-------------------------------------------------------------------------
  */
 int
@@ -596,8 +579,8 @@ H5T_link(const H5T_t *type, int adjust)
 
     FUNC_ENTER_NOAPI((-1))
 
-    HDassert(type);
-    HDassert(type->sh_loc.type == H5O_SHARE_TYPE_COMMITTED);
+    assert(type);
+    assert(type->sh_loc.type == H5O_SHARE_TYPE_COMMITTED);
 
     /* Adjust the link count on the named datatype */
     if ((ret_value = H5O_link(&type->oloc, adjust)) < 0)
@@ -654,7 +637,7 @@ done:
     /* Cleanup on error */
     if (H5I_INVALID_HID == ret_value)
         if (dt && H5VL_datatype_close(*vol_obj_ptr, H5P_DATASET_XFER_DEFAULT, H5_REQUEST_NULL) < 0)
-            HDONE_ERROR(H5E_DATATYPE, H5E_CLOSEERROR, H5I_INVALID_HID, "unable to release datatype")
+            HDONE_ERROR(H5E_DATATYPE, H5E_CLOSEERROR, H5I_INVALID_HID, "unable to release datatype");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5T__open_api_common() */
@@ -668,9 +651,6 @@ done:
  * Return:      Success:    Object ID of the named datatype
  *
  *              Failure:    H5I_INVALID_HID
- *
- * Programmer:  James Laird
- *              Thursday July 27, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -752,9 +732,6 @@ done:
  *
  *              Failure:    H5I_INVALID_HID
  *
- * Programmer:	Quincey Koziol
- *		Tuesday, November 28, 2006
- *
  *-------------------------------------------------------------------------
  */
 hid_t
@@ -816,9 +793,6 @@ done:
  *
  * Return:      Non-negative on success, negative on failure
  *
- * Programmer:  Mike McGreevy
- *              May 19, 2010
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -862,9 +836,6 @@ done:
  * Purpose:     Refreshes all buffers associated with a named datatype.
  *
  * Return:      Non-negative on success, negative on failure
- *
- * Programmer:  Mike McGreevy
- *              July 21, 2010
  *
  *-------------------------------------------------------------------------
  */
@@ -917,9 +888,6 @@ done:
  *
  *              Failure:    H5I_INVALID_HID
  *
- * Programmer:	Quincey Koziol
- *		Wednesday, December 13, 2017
- *
  *-------------------------------------------------------------------------
  */
 hid_t
@@ -933,7 +901,7 @@ H5T__get_create_plist(const H5T_t *type)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(type);
+    assert(type);
 
     /* Copy the default datatype creation property list */
     if (NULL == (tcpl_plist = (H5P_genplist_t *)H5I_object(H5P_LST_DATATYPE_CREATE_ID_g)))
@@ -956,7 +924,7 @@ done:
     if (ret_value < 0)
         if (new_tcpl_id > 0)
             if (H5I_dec_app_ref(new_tcpl_id) < 0)
-                HDONE_ERROR(H5E_DATATYPE, H5E_CANTDEC, H5I_INVALID_HID, "unable to close temporary object")
+                HDONE_ERROR(H5E_DATATYPE, H5E_CANTDEC, H5I_INVALID_HID, "unable to close temporary object");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5T__get_create_plist() */
@@ -968,9 +936,6 @@ done:
  *
  * Return:	Success:	Ptr to a new datatype.
  *		Failure:	NULL
- *
- * Programmer:	Quincey Koziol
- *              Wednesday, December 13, 2017
  *
  *-------------------------------------------------------------------------
  */
@@ -988,8 +953,8 @@ H5T__open_name(const H5G_loc_t *loc, const char *name)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(loc);
-    HDassert(name);
+    assert(loc);
+    assert(name);
 
     /* Set up datatype location to fill in */
     type_loc.oloc = &oloc;
@@ -1019,9 +984,9 @@ H5T__open_name(const H5G_loc_t *loc, const char *name)
 done:
     /* Error cleanup */
     if (NULL == ret_value)
-        if (obj_found && H5F_addr_defined(type_loc.oloc->addr))
+        if (obj_found && H5_addr_defined(type_loc.oloc->addr))
             if (H5G_loc_free(&type_loc) < 0)
-                HDONE_ERROR(H5E_DATATYPE, H5E_CANTRELEASE, NULL, "can't free location")
+                HDONE_ERROR(H5E_DATATYPE, H5E_CANTRELEASE, NULL, "can't free location");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5T__open_name() */
@@ -1035,9 +1000,6 @@ done:
  *
  *		Failure:	NULL
  *
- * Programmer:	Robb Matzke
- *              Monday, June  1, 1998
- *
  *-------------------------------------------------------------------------
  */
 H5T_t *
@@ -1049,7 +1011,7 @@ H5T_open(const H5G_loc_t *loc)
 
     FUNC_ENTER_NOAPI(NULL)
 
-    HDassert(loc);
+    assert(loc);
 
     /* Check if datatype was already open */
     if (NULL == (shared_fo = (H5T_shared_t *)H5FO_opened(loc->oloc->file, loc->oloc->addr))) {
@@ -1129,7 +1091,7 @@ done:
         if (dt) {
             if (shared_fo == NULL) { /* Need to free shared file object */
                 if (dt->shared->owned_vol_obj && H5VL_free_object(dt->shared->owned_vol_obj) < 0)
-                    HDONE_ERROR(H5E_DATATYPE, H5E_CANTCLOSEOBJ, NULL, "unable to close owned VOL object")
+                    HDONE_ERROR(H5E_DATATYPE, H5E_CANTCLOSEOBJ, NULL, "unable to close owned VOL object");
                 dt->shared = H5FL_FREE(H5T_shared_t, dt->shared);
             } /* end if */
 
@@ -1155,9 +1117,6 @@ done:
  *
  *		Failure:	NULL
  *
- * Programmer:	Quincey Koziol
- *              Wednesday, March 17, 1999
- *
  *-------------------------------------------------------------------------
  */
 static H5T_t *
@@ -1168,7 +1127,7 @@ H5T__open_oid(const H5G_loc_t *loc)
 
     FUNC_ENTER_PACKAGE_TAG(loc->oloc->addr)
 
-    HDassert(loc);
+    assert(loc);
 
     /* Open named datatype object in file */
     if (H5O_open(loc->oloc) < 0)
@@ -1210,9 +1169,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *              Friday, April 13, 2007
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1220,7 +1176,7 @@ H5T_update_shared(H5T_t *dt)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-    HDassert(dt);
+    assert(dt);
 
     /* Set the shared location fields from the named datatype info */
     H5O_UPDATE_SHARED(&(dt->sh_loc), H5O_SHARE_TYPE_COMMITTED, dt->oloc.file, H5O_DTYPE_ID, 0, dt->oloc.addr)
@@ -1354,7 +1310,7 @@ H5T_save_refresh_state(hid_t tid, H5O_shared_t *cached_H5O_shared)
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(cached_H5O_shared);
+    assert(cached_H5O_shared);
 
     if (NULL == (dt = (H5T_t *)H5I_object_verify(tid, H5I_DATATYPE)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "tid is not a datatype ID")
@@ -1394,7 +1350,7 @@ H5T_restore_refresh_state(hid_t tid, H5O_shared_t *cached_H5O_shared)
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(cached_H5O_shared);
+    assert(cached_H5O_shared);
 
     if (NULL == (dt = (H5T_t *)H5I_object_verify(tid, H5I_DATATYPE)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "tid not a datatype ID")
@@ -1431,7 +1387,7 @@ H5T_already_vol_managed(const H5T_t *dt)
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* Sanity check */
-    HDassert(dt);
+    assert(dt);
 
     FUNC_LEAVE_NOAPI(dt->vol_obj != NULL)
 } /* end H5T_already_vol_managed() */

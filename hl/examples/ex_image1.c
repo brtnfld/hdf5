@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -17,7 +16,7 @@
 #define WIDTH       400
 #define HEIGHT      200
 #define PAL_ENTRIES 9
-unsigned char buf[WIDTH * HEIGHT];
+static unsigned char buf[WIDTH * HEIGHT];
 
 int
 main(void)

@@ -35,6 +35,7 @@
 #include "H5Eprivate.h"  /* Error handling                           */
 #include "H5Fpkg.h"      /* File access                              */
 #include "H5FDpkg.h"     /* File drivers                             */
+#include "H5FDvfd_swmr.h" /* VFD SWMR file driver                    */
 #include "H5Gprivate.h"  /* Groups                                   */
 #include "H5Iprivate.h"  /* IDs                                      */
 #include "H5Lprivate.h"  /* Links                                    */
@@ -50,6 +51,13 @@
 /****************/
 /* Local Macros */
 /****************/
+
+/* Portable timespec comparison macro (timespeccmp is BSD-only) */
+#ifndef timespeccmp
+#define timespeccmp(tsp, usp, cmp)                                                                           \
+    (((tsp)->tv_sec == (usp)->tv_sec) ? ((tsp)->tv_nsec cmp(usp)->tv_nsec) : ((tsp)->tv_sec cmp(usp)->tv_sec))
+#endif
+
 #define FILE_NAME_LEN           1024
 #define VFD_SWMR_MD_FILE_SUFFIX ".md"
 #define NANOSECS_PER_SECOND     1000000000LL /* nanoseconds per second */
@@ -196,14 +204,14 @@ H5F_vfd_swmr_init(H5F_t *f, hbool_t file_create)
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(H5F_SHARED_VFD_SWMR_CONFIG(shared));
+    assert(H5F_SHARED_VFD_SWMR_CONFIG(shared));
 
     shared->vfd_swmr = TRUE;
 
     if (H5F_SHARED_INTENT(shared) & H5F_ACC_RDWR) {
 
-        HDassert(shared->vfd_swmr_config.writer);
-        HDassert(shared->vfd_swmr_config.maintain_metadata_file ||
+        assert(shared->vfd_swmr_config.writer);
+        assert(shared->vfd_swmr_config.maintain_metadata_file ||
                  shared->vfd_swmr_config.generate_updater_files);
 
         SIMPLEQ_INIT(&shared->lower_defrees);
@@ -227,7 +235,7 @@ H5F_vfd_swmr_init(H5F_t *f, hbool_t file_create)
         if ((hdr_addr = H5MV_alloc(f, md_size)) == HADDR_UNDEF)
             HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "error allocating shadow-file header")
 
-        HDassert(H5F_addr_eq(hdr_addr, H5FD_MD_HEADER_OFF));
+        assert(H5F_addr_eq(hdr_addr, H5FD_MD_HEADER_OFF));
 
         shared->writer_index_offset = H5FD_MD_HEADER_SIZE;
         shared->vfd_swmr_md_eoa     = (haddr_t)md_size;
@@ -266,9 +274,9 @@ H5F_vfd_swmr_init(H5F_t *f, hbool_t file_create)
     }
     else { /* VFD SWMR reader  */
 
-        HDassert(!shared->vfd_swmr_config.writer);
+        assert(!shared->vfd_swmr_config.writer);
 
-        HDassert(shared->fs_page_size > 0);
+        assert(shared->fs_page_size > 0);
         /* This is a bug uncovered by issue #3 of the group test failures.
          *  See Kent's documentation "Designed to Fail Tests and Issues".
          *  The file opening process in H5F__new() initializes the cache copy of
@@ -286,7 +294,7 @@ H5F_vfd_swmr_init(H5F_t *f, hbool_t file_create)
         shared->vfd_swmr_writer = FALSE;
         shared->max_jump_ticks  = 0;
 
-        HDassert(shared->mdf_idx == NULL);
+        assert(shared->mdf_idx == NULL);
 
         /* allocate an index to save the initial index */
         if (H5F__vfd_swmr_create_index(shared) < 0)
@@ -402,8 +410,8 @@ H5F_vfd_swmr_close_or_flush(H5F_t *f, hbool_t closing)
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(shared->vfd_swmr_writer);
-    HDassert(shared->vfd_swmr_md_fd >= 0);
+    assert(shared->vfd_swmr_writer);
+    assert(shared->vfd_swmr_md_fd >= 0);
 
     /* Write empty index to the md file */
     if (H5F__vfd_swmr_construct_write_md_idx(shared, 0, NULL, md_idx_image) < 0)
@@ -443,7 +451,7 @@ H5F_vfd_swmr_close_or_flush(H5F_t *f, hbool_t closing)
             H5FL_FREE(shadow_defree_t, curr);
         }
 
-        HDassert(TAILQ_EMPTY(&shared->shadow_defrees));
+        assert(TAILQ_EMPTY(&shared->shadow_defrees));
 
         if (shared->vfd_swmr_config.generate_updater_files) {
             if (H5F__generate_updater_file(f, 0, FINAL_UPDATE_FLAG, md_hdr_image, H5FD_MD_HEADER_SIZE,
@@ -455,7 +463,7 @@ H5F_vfd_swmr_close_or_flush(H5F_t *f, hbool_t closing)
     else { /* For file flush */
         /* Update end_of_tick */
         if (H5F__vfd_swmr_update_end_of_tick_and_tick_num(shared, TRUE) < 0)
-            HDONE_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to update end of tick")
+            HDONE_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to update end of tick");
     }
 #if 1 /* Save the end of close info. to the log file, subject to comment out. */
     if (closing)
@@ -469,7 +477,7 @@ done:
      */
     if (shared->vfd_swmr_log_on && closing) {
         H5_timer_stop(&(shared->vfd_swmr_log_start_time));
-        HDfclose(shared->vfd_swmr_log_file_ptr);
+        fclose(shared->vfd_swmr_log_file_ptr);
     }
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -558,10 +566,10 @@ H5F_update_vfd_swmr_metadata_file(H5F_t *f, uint32_t num_entries, H5FD_vfd_swmr_
 
     /* Sort index entries by increasing offset in the HDF5 file */
     if (num_entries > 0) {
-        HDqsort(index, num_entries, sizeof(*index), H5F__idx_entry_cmp);
+        qsort(index, num_entries, sizeof(*index), H5F__idx_entry_cmp);
         /* Assert that no HDF5 page offsets are duplicated. */
         for (i = 1; i < num_entries; i++)
-            HDassert(index[i - 1].hdf5_page_offset < index[i].hdf5_page_offset);
+            assert(index[i - 1].hdf5_page_offset < index[i].hdf5_page_offset);
     }
 
     /* For each non-null entry_ptr in the index:
@@ -581,7 +589,7 @@ H5F_update_vfd_swmr_metadata_file(H5F_t *f, uint32_t num_entries, H5FD_vfd_swmr_
         if (index[i].entry_ptr == NULL)
             continue;
 
-        HDassert(index[i].tick_of_last_change == f->shared->tick_num);
+        assert(index[i].tick_of_last_change == f->shared->tick_num);
 
         /* Prepend previous image of the entry to the delayed list */
         if (index[i].md_file_page_offset) {
@@ -594,7 +602,7 @@ H5F_update_vfd_swmr_metadata_file(H5F_t *f, uint32_t num_entries, H5FD_vfd_swmr_
         if ((md_addr = H5MV_alloc(f, index[i].length)) == HADDR_UNDEF)
             HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "error in allocating space from the metadata file")
 
-        HDassert(md_addr % shared->fs_page_size == 0);
+        assert(md_addr % shared->fs_page_size == 0);
 
         /* Compute checksum and update the index entry */
         index[i].md_file_page_offset = md_addr / shared->fs_page_size;
@@ -618,7 +626,7 @@ H5F_update_vfd_swmr_metadata_file(H5F_t *f, uint32_t num_entries, H5FD_vfd_swmr_
             index[i].entry_ptr = NULL;
     }
 
-    if ((md_idx_image = HDmalloc(H5FD_MD_INDEX_SIZE(num_entries))) == NULL)
+    if ((md_idx_image = malloc(H5FD_MD_INDEX_SIZE(num_entries))) == NULL)
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for md index")
 
     /* Construct and write index to the metadata file */
@@ -676,7 +684,7 @@ H5F_update_vfd_swmr_metadata_file(H5F_t *f, uint32_t num_entries, H5FD_vfd_swmr_
 
 done:
 
-    HDfree(md_idx_image);
+    free(md_idx_image);
 
     FUNC_LEAVE_NOAPI(ret_value)
 
@@ -726,13 +734,13 @@ H5F_vfd_swmr_writer_delay_write(H5F_shared_t *shared, uint64_t page, uint64_t *u
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(shared);
-    HDassert(shared->vfd_swmr);
-    HDassert(shared->vfd_swmr_writer);
+    assert(shared);
+    assert(shared->vfd_swmr);
+    assert(shared->vfd_swmr_writer);
 
     idx = shared->mdf_idx;
 
-    HDassert(idx != NULL || shared->tick_num <= 1);
+    assert(idx != NULL || shared->tick_num <= 1);
 
     /* Do a binary search on the metadata file index to see if
      * it already contains an entry for `page`
@@ -789,9 +797,9 @@ H5F_vfd_swmr_writer_prep_for_flush_or_close(H5F_t *f)
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(shared->vfd_swmr);
-    HDassert(shared->vfd_swmr_writer);
-    HDassert(shared->page_buf);
+    assert(shared->vfd_swmr);
+    assert(shared->vfd_swmr_writer);
+    assert(shared->page_buf);
 
     /* since we are about to flush the page buffer, force and end of
      * tick so as to avoid attempts to flush entries on the page buffer
@@ -824,8 +832,8 @@ H5F__clean_shadow_index(H5F_t *f, uint32_t nentries, H5FD_vfd_swmr_idx_entry_t *
 
         if (ie->clean && ie->tick_of_last_flush + max_lag < tick_num) {
 
-            HDassert(!ie->garbage);
-            HDassert(ie->entry_ptr == NULL);
+            assert(!ie->garbage);
+            assert(ie->entry_ptr == NULL);
 
             if (ie->md_file_page_offset != 0) {
                 if (H5F_shadow_image_defer_free(shared, ie) == -1)
@@ -916,9 +924,9 @@ H5F_vfd_swmr_writer_end_of_tick(H5F_t *f)
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(shared);
-    HDassert(shared->page_buf);
-    HDassert(shared->vfd_swmr_writer);
+    assert(shared);
+    assert(shared->page_buf);
+    assert(shared->vfd_swmr_writer);
 
     /* Obtain the starting time for the logging info: the processing time of this function. */
     if (shared->vfd_swmr_log_on == TRUE) {
@@ -955,7 +963,7 @@ H5F_vfd_swmr_writer_end_of_tick(H5F_t *f)
 
         if (H5AC_prep_for_file_flush(f) < 0)
 
-            HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "prep for MDC flush failed")
+            HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "prep for MDC flush failed");
 
         if (H5AC_flush(f) < 0)
 
@@ -963,7 +971,7 @@ H5F_vfd_swmr_writer_end_of_tick(H5F_t *f)
 
         if (H5AC_secure_from_file_flush(f) < 0)
 
-            HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "secure from MDC flush failed")
+            HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "secure from MDC flush failed");
     }
 
     if (H5FD_truncate(shared->lf, FALSE) < 0)
@@ -1012,7 +1020,7 @@ H5F_vfd_swmr_writer_end_of_tick(H5F_t *f)
     shared->mdf_idx_entries_used += idx_entries_added;
     shared->mdf_idx_entries_used -= idx_entries_removed;
 
-    HDassert(shared->mdf_idx_entries_used <= shared->mdf_idx_len);
+    assert(shared->mdf_idx_entries_used <= shared->mdf_idx_len);
 
     /* 7) Release the page buffer tick list. */
     if (H5PB_vfd_swmr__release_tick_list(shared) < 0)
@@ -1030,7 +1038,7 @@ H5F_vfd_swmr_writer_end_of_tick(H5F_t *f)
 
     /* Remove the entry from the EOT queue */
     if (H5F_vfd_swmr_remove_entry_eot(f) < 0)
-        HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "unable to remove entry from EOT queue")
+        HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "unable to remove entry from EOT queue");
 
     /* Re-insert the entry that corresponds to f onto the EOT queue */
     if (H5F_vfd_swmr_insert_entry_eot(f) < 0)
@@ -1042,11 +1050,11 @@ done:
         if (H5_timer_get_times(shared->vfd_swmr_log_start_time, &current_time) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time from H5_timer_get_times")
         end_elapsed_time = current_time.elapsed;
-        if (NULL != (log_msg = HDmalloc(eot_pt_log_mesg_length * sizeof(char)))) {
+        if (NULL != (log_msg = malloc(eot_pt_log_mesg_length * sizeof(char)))) {
             temp_time = (unsigned int)((end_elapsed_time - start_elapsed_time) * 1000);
             HDsprintf(log_msg, "Writer time is %u milliseconds", temp_time);
             H5F_POST_VFD_SWMR_LOG_ENTRY(f, EOT_PROCESSING_TIME, log_msg);
-            HDfree(log_msg);
+            free(log_msg);
         }
     }
 
@@ -1072,20 +1080,20 @@ H5F_vfd_swmr_writer_dump_index(H5F_shared_t *shared)
 
     FUNC_ENTER_NOAPI_NOERR
 
-    HDassert(shared);
-    HDassert(shared->vfd_swmr);
-    HDassert(shared->mdf_idx);
+    assert(shared);
+    assert(shared->vfd_swmr);
+    assert(shared->mdf_idx);
 
     index                = shared->mdf_idx;
     mdf_idx_len          = shared->mdf_idx_len;
     mdf_idx_entries_used = shared->mdf_idx_entries_used;
 
-    HDfprintf(stderr, "\n\nDumping Index:\n\n");
-    HDfprintf(stderr, "index len / entries used = %" PRIu32 " / %" PRIu32 "\n\n", mdf_idx_len,
+    fprintf(stderr, "\n\nDumping Index:\n\n");
+    fprintf(stderr, "index len / entries used = %" PRIu32 " / %" PRIu32 "\n\n", mdf_idx_len,
               mdf_idx_entries_used);
 
     for (i = 0; i < mdf_idx_entries_used; i++)
-        HDfprintf(stderr, "%u: %" PRIu64 " %" PRIu64 " %" PRIu32 "\n", i, index[i].hdf5_page_offset,
+        fprintf(stderr, "%u: %" PRIu64 " %" PRIu64 " %" PRIu32 "\n", i, index[i].hdf5_page_offset,
                   index[i].md_file_page_offset, index[i].length);
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1158,10 +1166,10 @@ H5F_vfd_swmr_reader_end_of_tick(H5F_t *f, hbool_t entering_api)
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(shared->page_buf);
-    HDassert(shared->vfd_swmr);
-    HDassert(!shared->vfd_swmr_writer);
-    HDassert(file);
+    assert(shared->page_buf);
+    assert(shared->vfd_swmr);
+    assert(!shared->vfd_swmr_writer);
+    assert(file);
 
     /* 1) Direct the VFD SWMR reader VFD to load the current header
      *    from the metadata file, and report the current tick.
@@ -1187,7 +1195,7 @@ H5F_vfd_swmr_reader_end_of_tick(H5F_t *f, hbool_t entering_api)
             HGOTO_ERROR(H5E_ARGS, H5E_CANTGET, FAIL, "error in assessing make_believe from driver")
 
         /* Return value is FALSE i.e. found the metadata file */
-        HDassert(!ret);
+        assert(!ret);
 
         /* Try to load the metadata file header and index */
         if (H5FD_vfd_swmr_get_tick_and_idx(file, TRUE, &tmp_tick_num, &vfd_entries, NULL) < 0)
@@ -1248,7 +1256,7 @@ H5F_vfd_swmr_reader_end_of_tick(H5F_t *f, hbool_t entering_api)
             H5FD_vfd_swmr_idx_entry_t *new_idx;
             H5FD_vfd_swmr_idx_entry_t *old_idx;
 
-            HDassert(shared->old_mdf_idx_len <= shared->mdf_idx_len);
+            assert(shared->old_mdf_idx_len <= shared->mdf_idx_len);
 
             /* Determine the size needed for the index */
             inc_mdf_idx_len = shared->mdf_idx_len * 2;
@@ -1274,7 +1282,7 @@ H5F_vfd_swmr_reader_end_of_tick(H5F_t *f, hbool_t entering_api)
         if (H5FD_vfd_swmr_get_tick_and_idx(file, FALSE, NULL, &mdf_idx_entries_used, shared->mdf_idx) < 0)
             HGOTO_ERROR(H5E_ARGS, H5E_CANTGET, FAIL, "error in retrieving tick_num from driver");
 
-        HDassert(mdf_idx_entries_used <= shared->mdf_idx_len);
+        assert(mdf_idx_entries_used <= shared->mdf_idx_len);
 
         shared->mdf_idx_entries_used = mdf_idx_entries_used;
 
@@ -1283,7 +1291,7 @@ H5F_vfd_swmr_reader_end_of_tick(H5F_t *f, hbool_t entering_api)
         new_mdf_idx_entries_used = shared->mdf_idx_entries_used;
         old_mdf_idx_entries_used = shared->old_mdf_idx_entries_used;
 
-        change = HDmalloc(sizeof(change[0]) * (old_mdf_idx_entries_used + new_mdf_idx_entries_used));
+        change = malloc(sizeof(change[0]) * (old_mdf_idx_entries_used + new_mdf_idx_entries_used));
 
         if (change == NULL) {
             HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, FAIL, "unable to allocate removed pages list");
@@ -1303,9 +1311,9 @@ H5F_vfd_swmr_reader_end_of_tick(H5F_t *f, hbool_t entering_api)
             const H5FD_vfd_swmr_idx_entry_t *oent = &old_mdf_idx[i], *nent = &new_mdf_idx[j];
 
             /* Verify that the old and new indices are sorted as expected. */
-            HDassert(i == 0 || oent[-1].hdf5_page_offset < oent[0].hdf5_page_offset);
+            assert(i == 0 || oent[-1].hdf5_page_offset < oent[0].hdf5_page_offset);
 
-            HDassert(j == 0 || nent[-1].hdf5_page_offset < nent[0].hdf5_page_offset);
+            assert(j == 0 || nent[-1].hdf5_page_offset < nent[0].hdf5_page_offset);
 
             if (oent->hdf5_page_offset == nent->hdf5_page_offset) {
 
@@ -1322,10 +1330,10 @@ H5F_vfd_swmr_reader_end_of_tick(H5F_t *f, hbool_t entering_api)
                      * group test failures.  See Kent's documentation
                      * "Designed to Fail Tests and Issues".
                      * nent->length can be <, =, > to oent->length.
-                     * Fix: HDassert the 1st two cases: < and =.
+                     * Fix: assert the 1st two cases: < and =.
                      * John will address the > case.
                      */
-                    HDassert(nent->length <= oent->length);
+                    assert(nent->length <= oent->length);
 
                     /* the page has been altered -- evict it and
                      * any contained metadata cache entries.
@@ -1420,7 +1428,7 @@ reader_update_eot:
 
     /* Remove the entry from the EOT queue */
     if (H5F_vfd_swmr_remove_entry_eot(f) < 0)
-        HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "unable to remove entry from EOT queue")
+        HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "unable to remove entry from EOT queue");
 
     /* Re-insert the entry that corresponds to f onto the EOT queue */
     if (H5F_vfd_swmr_insert_entry_eot(f) < 0)
@@ -1429,7 +1437,7 @@ reader_update_eot:
 done:
 
     if (change != NULL)
-        HDfree(change);
+        free(change);
 
     FUNC_LEAVE_NOAPI(ret_value)
 
@@ -1453,7 +1461,7 @@ H5F__vfd_swmr_insert_eot_entry(eot_queue_entry_t *entry_ptr)
     /* Find the insertion point for the entry on the EOT queue */
     TAILQ_FOREACH_REVERSE(prec_ptr, &eot_queue_g, eot_queue, link)
     {
-        if (HDtimespeccmp(&prec_ptr->end_of_tick, &entry_ptr->end_of_tick, <=))
+        if (timespeccmp(&prec_ptr->end_of_tick, &entry_ptr->end_of_tick, <=))
             break;
     }
 
@@ -1486,7 +1494,7 @@ H5F_vfd_swmr_update_entry_eot(eot_queue_entry_t *entry)
 
     TAILQ_REMOVE(&eot_queue_g, entry, link);
 
-    HDassert(entry->vfd_swmr_writer == shared->vfd_swmr_writer);
+    assert(entry->vfd_swmr_writer == shared->vfd_swmr_writer);
     entry->tick_num    = shared->tick_num;
     entry->end_of_tick = shared->end_of_tick;
 
@@ -1576,13 +1584,13 @@ H5F_dump_eot_queue(void)
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     for (curr = TAILQ_FIRST(&eot_queue_g), i = 0; curr != NULL; curr = TAILQ_NEXT(curr, link), i++) {
-        HDfprintf(stderr, "%d: %s tick_num %" PRIu64 ", end_of_tick %jd.%09ld, vfd_swmr_file %p\n", i,
+        fprintf(stderr, "%d: %s tick_num %" PRIu64 ", end_of_tick %jd.%09ld, vfd_swmr_file %p\n", i,
                   curr->vfd_swmr_writer ? "writer" : "not writer", curr->tick_num, curr->end_of_tick.tv_sec,
                   curr->end_of_tick.tv_nsec, (void *)curr->vfd_swmr_file);
     }
 
     if (i == 0)
-        HDfprintf(stderr, "EOT head is null\n");
+        fprintf(stderr, "EOT head is null\n");
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5F_dump_eot_queue() */
@@ -1613,7 +1621,7 @@ H5F__vfd_swmr_update_end_of_tick_and_tick_num(H5F_shared_t *shared, hbool_t incr
     if (HDtimespec_get(&curr, TIME_UTC) != TIME_UTC)
         HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time via timespec_get");
 #else
-    if (HDclock_gettime(CLOCK_MONOTONIC, &curr) < 0) {
+    if (clock_gettime(CLOCK_MONOTONIC, &curr) < 0) {
         HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time via clock_gettime");
     }
 #endif
@@ -1685,7 +1693,7 @@ H5F__vfd_swmr_construct_write_md_hdr(H5F_shared_t *shared, uint32_t num_entries,
     p = image;
 
     /* Encode magic for header */
-    HDmemcpy(p, H5FD_MD_HEADER_MAGIC, (size_t)H5_SIZEOF_MAGIC);
+    memcpy(p, H5FD_MD_HEADER_MAGIC, (size_t)H5_SIZEOF_MAGIC);
     p += H5_SIZEOF_MAGIC;
 
     /* Encode page size, tick number, index offset, index length */
@@ -1701,7 +1709,7 @@ H5F__vfd_swmr_construct_write_md_hdr(H5F_shared_t *shared, uint32_t num_entries,
     UINT32ENCODE(p, metadata_chksum);
 
     /* Sanity checks on header */
-    HDassert(p - image == (ptrdiff_t)hdr_size);
+    assert(p - image == (ptrdiff_t)hdr_size);
 
     if (shared->vfd_swmr_config.maintain_metadata_file) {
         /* Set to beginning of the file */
@@ -1748,13 +1756,13 @@ H5F__vfd_swmr_construct_write_md_idx(H5F_shared_t *shared, uint32_t num_entries,
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(num_entries == 0 || index != NULL);
+    assert(num_entries == 0 || index != NULL);
 
     /* Encode metadata file index */
     p = image;
 
     /* Encode magic for index */
-    HDmemcpy(p, H5FD_MD_INDEX_MAGIC, H5_SIZEOF_MAGIC);
+    memcpy(p, H5FD_MD_INDEX_MAGIC, H5_SIZEOF_MAGIC);
     p += H5_SIZEOF_MAGIC;
 
     /* Encode tick number */
@@ -1778,10 +1786,10 @@ H5F__vfd_swmr_construct_write_md_idx(H5F_shared_t *shared, uint32_t num_entries,
     UINT32ENCODE(p, metadata_chksum);
 
     /* Sanity checks on index */
-    HDassert(p - image == (ptrdiff_t)idx_size);
+    assert(p - image == (ptrdiff_t)idx_size);
 
     /* Verify the md file descriptor exists */
-    HDassert(shared->vfd_swmr_md_fd >= 0);
+    assert(shared->vfd_swmr_md_fd >= 0);
 
     if (shared->vfd_swmr_config.maintain_metadata_file) {
 
@@ -1802,7 +1810,7 @@ done:
 /*-------------------------------------------------------------------------
  * Function:    H5F__idx_entry_cmp()
  *
- * Purpose:     Callback used by HDqsort to sort entries in the index
+ * Purpose:     Callback used by qsort to sort entries in the index
  *
  * Return:      0 if the entries are the same
  *              -1 if entry1's offset is less than that of entry2
@@ -1820,8 +1828,8 @@ H5F__idx_entry_cmp(const void *_entry1, const void *_entry2)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity checks */
-    HDassert(entry1);
-    HDassert(entry2);
+    assert(entry1);
+    assert(entry2);
 
     if (entry1->hdf5_page_offset < entry2->hdf5_page_offset)
         ret_value = -1;
@@ -1850,25 +1858,25 @@ H5F__vfd_swmr_create_index(H5F_shared_t *shared)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(shared->vfd_swmr);
-    HDassert(shared->mdf_idx == NULL);
-    HDassert(shared->mdf_idx_len == 0);
-    HDassert(shared->mdf_idx_entries_used == 0);
+    assert(shared->vfd_swmr);
+    assert(shared->mdf_idx == NULL);
+    assert(shared->mdf_idx_len == 0);
+    assert(shared->mdf_idx_entries_used == 0);
 
     bytes_available = (size_t)shared->fs_page_size * (size_t)(shared->vfd_swmr_config.md_pages_reserved - 1);
 
-    HDassert(bytes_available > 0);
+    assert(bytes_available > 0);
 
     entries_in_index = (bytes_available - H5FD_MD_INDEX_SIZE(0)) / H5FD_MD_INDEX_ENTRY_SIZE;
 
-    HDassert(entries_in_index > 0);
+    assert(entries_in_index > 0);
 
     index = H5MM_calloc(entries_in_index * sizeof(index[0]));
 
     if (index == NULL)
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for md index")
 
-    HDassert(entries_in_index <= UINT32_MAX);
+    assert(entries_in_index <= UINT32_MAX);
 
     shared->mdf_idx              = index;
     shared->mdf_idx_len          = (uint32_t)entries_in_index;
@@ -1977,10 +1985,10 @@ H5F__vfd_swmr_writer_wait_a_tick(H5F_t *f)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(f);
+    assert(f);
     shared = f->shared;
-    HDassert(shared->vfd_swmr);
-    HDassert(shared->vfd_swmr_writer);
+    assert(shared->vfd_swmr);
+    assert(shared->vfd_swmr_writer);
 
     tick_in_nsec = shared->vfd_swmr_config.tick_len * NANOSECS_PER_TENTH_SEC;
 
@@ -2020,10 +2028,10 @@ H5F_vfd_swmr_process_eot_queue(hbool_t entering_api)
         if (HDtimespec_get(&now, TIME_UTC) != TIME_UTC)
             HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time via timespec_get")
 #else
-        if (HDclock_gettime(CLOCK_MONOTONIC, &now) < 0)
+        if (clock_gettime(CLOCK_MONOTONIC, &now) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time via clock_gettime")
 #endif
-        if (HDtimespeccmp(&now, &head->end_of_tick, <))
+        if (timespeccmp(&now, &head->end_of_tick, <))
             break;
         /* If the H5F_shared_t is labeled with a later EOT time than
          * the queue entry is, then we have already performed the
@@ -2031,7 +2039,7 @@ H5F_vfd_swmr_process_eot_queue(hbool_t entering_api)
          * multiple H5F_t share the H5F_shared_t.  Just update the
          * EOT queue entry and move to the next.
          */
-        if (HDtimespeccmp(&head->end_of_tick, &shared->end_of_tick, <)) {
+        if (timespeccmp(&head->end_of_tick, &shared->end_of_tick, <)) {
             H5F_vfd_swmr_update_entry_eot(head);
         }
         else if (shared->vfd_swmr_writer) {
@@ -2075,16 +2083,16 @@ H5F__post_vfd_swmr_log_entry(H5F_t *f, int entry_type_code, const char *log_info
      * created and write the time to the log file.
      */
     if (H5_timer_get_times(f->shared->vfd_swmr_log_start_time, &current_time) < 0) {
-        if (NULL != (gettime_error = HDmalloc(log_err_mesg_length * sizeof(char)))) {
+        if (NULL != (gettime_error = malloc(log_err_mesg_length * sizeof(char)))) {
             HDsprintf(gettime_error, "gettime_error");
-            HDfprintf(f->shared->vfd_swmr_log_file_ptr, "%-26s:  %s\n", H5Fvfd_swmr_log_tags[entry_type_code],
+            fprintf(f->shared->vfd_swmr_log_file_ptr, "%-26s:  %s\n", H5Fvfd_swmr_log_tags[entry_type_code],
                       gettime_error);
-            HDfree(gettime_error);
+            free(gettime_error);
         }
     }
     else {
         temp_time = current_time.elapsed;
-        HDfprintf(f->shared->vfd_swmr_log_file_ptr, log_fmt_str, H5Fvfd_swmr_log_tags[entry_type_code],
+        fprintf(f->shared->vfd_swmr_log_file_ptr, log_fmt_str, H5Fvfd_swmr_log_tags[entry_type_code],
                   temp_time, log_info);
     }
 
@@ -2113,7 +2121,7 @@ H5F__vfd_swmr_construct_ud_hdr(H5F_vfd_swmr_updater_t *updater)
     p = image;
 
     /* Encode magic for header */
-    HDmemcpy(p, H5F_UD_HEADER_MAGIC, (size_t)H5_SIZEOF_MAGIC);
+    memcpy(p, H5F_UD_HEADER_MAGIC, (size_t)H5_SIZEOF_MAGIC);
     p += H5_SIZEOF_MAGIC;
 
     /* Encode version number, flags, page size, sequence number, tick number,
@@ -2135,7 +2143,7 @@ H5F__vfd_swmr_construct_ud_hdr(H5F_vfd_swmr_updater_t *updater)
     UINT32ENCODE(p, metadata_chksum);
 
     /* Sanity checks on header */
-    HDassert(p - image == (ptrdiff_t)updater->header_image_len);
+    assert(p - image == (ptrdiff_t)updater->header_image_len);
 
     FUNC_LEAVE_NOAPI(ret_value)
 
@@ -2165,7 +2173,7 @@ H5F__vfd_swmr_construct_ud_cl(H5F_vfd_swmr_updater_t *updater)
     p = image;
 
     /* Encode magic for ud cl */
-    HDmemcpy(p, H5F_UD_CL_MAGIC, H5_SIZEOF_MAGIC);
+    memcpy(p, H5F_UD_CL_MAGIC, H5_SIZEOF_MAGIC);
     p += H5_SIZEOF_MAGIC;
 
     /* Encode tick number */
@@ -2218,7 +2226,7 @@ H5F__vfd_swmr_construct_ud_cl(H5F_vfd_swmr_updater_t *updater)
     UINT32ENCODE(p, metadata_chksum);
 
     /* Sanity checks on index */
-    HDassert(p - image == (ptrdiff_t)updater->change_list_len);
+    assert(p - image == (ptrdiff_t)updater->change_list_len);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F__vfd_swmr_construct_ud_cl() */
@@ -2285,7 +2293,7 @@ H5F__generate_updater_file(H5F_t *f, uint32_t num_entries, uint16_t flags, uint8
     }
 
     if (flags == CREATE_METADATA_FILE_ONLY_FLAG)
-        HDassert(updater.sequence_number == 0);
+        assert(updater.sequence_number == 0);
     /* For file creation, just generate a header with this flag set */
     else {
         /* Update 2 updater file header fields: change_list_len, change_list_offset */
@@ -2306,7 +2314,7 @@ H5F__generate_updater_file(H5F_t *f, uint32_t num_entries, uint16_t flags, uint8
                              HADDR_UNDEF)) == NULL)
         HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "fail to open updater file");
 
-    if ((updater.header_image_ptr = HDmalloc(updater.header_image_len)) == NULL)
+    if ((updater.header_image_ptr = malloc(updater.header_image_len)) == NULL)
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for ud header")
 
     /* Serialize updater file hdr in updater.header_image_ptr */
@@ -2330,7 +2338,7 @@ H5F__generate_updater_file(H5F_t *f, uint32_t num_entries, uint16_t flags, uint8
         if (updater.num_change_list_entries) {
 
             /* Allocate space for change list entries */
-            if ((updater.change_list = HDmalloc(sizeof(H5F_vfd_swmr_updater_cl_entry_t) *
+            if ((updater.change_list = malloc(sizeof(H5F_vfd_swmr_updater_cl_entry_t) *
                                                 updater.num_change_list_entries)) == NULL)
                 HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for ud cl")
 
@@ -2370,7 +2378,7 @@ H5F__generate_updater_file(H5F_t *f, uint32_t num_entries, uint16_t flags, uint8
         next_page_offset += (((uint32_t)updater.md_file_index_len / updater.page_size) + 1);
         updater.md_file_header_ud_file_page_offset = next_page_offset;
 
-        if ((updater.change_list_image_ptr = HDmalloc(updater.change_list_len)) == NULL)
+        if ((updater.change_list_image_ptr = malloc(updater.change_list_len)) == NULL)
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for ud cl ")
 
         /* Serialize updater file change list in updater.change_list_image_ptr */
@@ -2442,11 +2450,11 @@ H5F__generate_updater_file(H5F_t *f, uint32_t num_entries, uint16_t flags, uint8
 
 done:
     if (updater.header_image_ptr)
-        HDfree(updater.header_image_ptr);
+        free(updater.header_image_ptr);
     if (updater.change_list_image_ptr)
-        HDfree(updater.change_list_image_ptr);
+        free(updater.change_list_image_ptr);
     if (updater.change_list)
-        HDfree(updater.change_list);
+        free(updater.change_list);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F__generate_updater_file() */
@@ -2468,8 +2476,8 @@ H5F__vfd_swmr_end_tick(H5F_t *f)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(f);
-    HDassert(f->shared);
+    assert(f);
+    assert(f->shared);
 
     /* The file should be opened with VFD SWMR configured.*/
     if (!(H5F_USE_VFD_SWMR(f)))
@@ -2515,8 +2523,8 @@ H5F__vfd_swmr_disable_end_of_tick(H5F_t *f)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(f);
-    HDassert(f->shared);
+    assert(f);
+    assert(f->shared);
 
     /* The file should be opened with VFD SWMR configured.*/
     if (!(H5F_USE_VFD_SWMR(f)))
@@ -2535,7 +2543,7 @@ H5F__vfd_swmr_disable_end_of_tick(H5F_t *f)
 
     /* Remove the entry that corresponds to "f" from the EOT queue */
     if (H5F_vfd_swmr_remove_entry_eot(f) < 0)
-        HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "unable to remove entry from EOT queue")
+        HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "unable to remove entry from EOT queue");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -2558,8 +2566,8 @@ H5F__vfd_swmr_enable_end_of_tick(H5F_t *f)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(f);
-    HDassert(f->shared);
+    assert(f);
+    assert(f->shared);
 
     /* The file should be opened with VFD SWMR configured.*/
     if (!(H5F_USE_VFD_SWMR(f)))

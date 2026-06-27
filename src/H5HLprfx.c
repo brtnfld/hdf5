@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -14,8 +13,6 @@
 /*-------------------------------------------------------------------------
  *
  * Created:     H5HLprfx.c
- *              Summer 2012
- *              Dana Robinson
  *
  * Purpose:     Prefix routines for local heaps.
  *
@@ -75,9 +72,6 @@ H5FL_DEFINE_STATIC(H5HL_prfx_t);
  * Return:      Success:    non-NULL pointer to new local heap prefix
  *              Failure:    NULL
  *
- * Programmer:  Quincey Koziol
- *              Oct 12 2008
- *
  *-------------------------------------------------------------------------
  */
 H5HL_prfx_t *
@@ -89,7 +83,7 @@ H5HL__prfx_new(H5HL_t *heap)
     FUNC_ENTER_PACKAGE
 
     /* check arguments */
-    HDassert(heap);
+    assert(heap);
 
     /* Allocate new local heap prefix */
     if (NULL == (prfx = H5FL_CALLOC(H5HL_prfx_t)))
@@ -122,9 +116,6 @@ done:
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:  Quincey Koziol
- *              Oct 12 2008
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -135,7 +126,7 @@ H5HL__prfx_dest(H5HL_prfx_t *prfx)
     FUNC_ENTER_PACKAGE
 
     /* check arguments */
-    HDassert(prfx);
+    assert(prfx);
 
     /* Check if prefix was initialized */
     if (prfx->heap) {

@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -110,7 +109,7 @@ int                attr_data1a[ATTR1_DIM1] = {256, 11945, -22107};
  *-------------------------------------------------------------------------
  */
 static void
-test_attr_basic_write()
+test_attr_basic_write(FileAccPropList &fapl)
 {
     hsize_t dims1[]                = {SPACE1_DIM1, SPACE1_DIM2, SPACE1_DIM3};
     hsize_t dims2[]                = {ATTR1_DIM1};
@@ -123,7 +122,7 @@ test_attr_basic_write()
 
     try {
         // Create file
-        H5File fid1(FILE_BASIC, H5F_ACC_TRUNC);
+        H5File fid1(FILE_BASIC, H5F_ACC_TRUNC, FileCreatPropList::DEFAULT, fapl);
 
         // Create dataspace for dataset
         DataSpace ds_space(SPACE1_RANK, dims1);
@@ -270,7 +269,7 @@ test_attr_basic_write()
  *-------------------------------------------------------------------------
  */
 static void
-test_attr_getname()
+test_attr_getname(FileAccPropList &fapl)
 {
     // Output message about test being performed
     SUBTEST("Testing all overloads of Attribute::getName");
@@ -281,7 +280,7 @@ test_attr_getname()
         //
 
         // Open file
-        H5File fid1(FILE_BASIC, H5F_ACC_RDWR);
+        H5File fid1(FILE_BASIC, H5F_ACC_RDWR, fapl);
 
         // Check for existence of attribute FATTR1_NAME
         bool attr_exists = fid1.attrExists(FATTR1_NAME);
@@ -298,7 +297,7 @@ test_attr_getname()
         // 1. With arbitrary buf_size that is larger than the name size
         size_t buf_size    = FATTR1_NAME.length() + 10;
         char  *fattr1_name = new char[buf_size + 1];
-        HDmemset(fattr1_name, 0, buf_size + 1);
+        memset(fattr1_name, 0, buf_size + 1);
         ssize_t name_size = 0; // actual length of attribute name
         name_size         = fattr1.getName(fattr1_name, buf_size + 1);
         CHECK(name_size, FAIL, "Attribute::getName", __LINE__, __FILE__);
@@ -313,7 +312,7 @@ test_attr_getname()
         buf_size           = 4;
         char short_name[5] = "File"; // to verify the read name
         fattr1_name        = new char[buf_size + 1];
-        HDmemset(fattr1_name, 0, buf_size + 1);
+        memset(fattr1_name, 0, buf_size + 1);
         name_size = fattr1.getName(fattr1_name, buf_size + 1);
         CHECK(name_size, FAIL, "Attribute::getName", __LINE__, __FILE__);
         verify_val(static_cast<size_t>(name_size), FATTR1_NAME.size(), "Attribute::getName", __LINE__,
@@ -325,7 +324,7 @@ test_attr_getname()
         // 3. With a buf_size that equals the name's length.
         buf_size    = FATTR1_NAME.length();
         fattr1_name = new char[buf_size + 1];
-        HDmemset(fattr1_name, 0, buf_size + 1);
+        memset(fattr1_name, 0, buf_size + 1);
         name_size = fattr1.getName(fattr1_name, buf_size + 1);
         CHECK(name_size, FAIL, "Attribute::getName", __LINE__, __FILE__);
         verify_val(fattr1_name, FATTR1_NAME, "Attribute::getName", __LINE__, __FILE__);
@@ -394,7 +393,7 @@ test_attr_getname()
  *-------------------------------------------------------------------------
  */
 static void
-test_attr_rename()
+test_attr_rename(FileAccPropList &fapl)
 {
     int     read_data1[ATTR1_DIM1] = {0}; // Buffer for reading the attribute
     hsize_t i;
@@ -404,7 +403,7 @@ test_attr_rename()
 
     try {
         // Open file
-        H5File fid1(FILE_BASIC, H5F_ACC_RDWR);
+        H5File fid1(FILE_BASIC, H5F_ACC_RDWR, fapl);
 
         // Check and rename attribute belonging to a file
 
@@ -512,7 +511,7 @@ test_attr_rename()
  *-------------------------------------------------------------------------
  */
 static void
-test_attr_basic_read()
+test_attr_basic_read(FileAccPropList &fapl)
 {
     hsize_t i, j;
 
@@ -521,7 +520,7 @@ test_attr_basic_read()
 
     try {
         // Open file
-        H5File fid1(FILE_BASIC, H5F_ACC_RDWR);
+        H5File fid1(FILE_BASIC, H5F_ACC_RDWR, fapl);
 
         // Open the dataset
         DataSet dataset = fid1.openDataSet(DSET1_NAME);
@@ -532,7 +531,7 @@ test_attr_basic_read()
 
         // Verify the correct number of attributes another way
         H5O_info2_t oinfo;
-        HDmemset(&oinfo, 0, sizeof(oinfo));
+        memset(&oinfo, 0, sizeof(oinfo));
         dataset.getObjinfo(oinfo, H5O_INFO_NUM_ATTRS);
         verify_val(static_cast<long>(oinfo.num_attrs), 3, "DataSet::getObjinfo", __LINE__, __FILE__);
 
@@ -561,7 +560,7 @@ test_attr_basic_read()
         verify_val(num_attrs, 1, "Group::getNumAttrs", __LINE__, __FILE__);
 
         // Verify the correct number of attributes another way
-        HDmemset(&oinfo, 0, sizeof(oinfo));
+        memset(&oinfo, 0, sizeof(oinfo));
         group.getObjinfo(oinfo, H5O_INFO_NUM_ATTRS);
         verify_val(static_cast<long>(oinfo.num_attrs), 1, "Group::getObjinfo", __LINE__, __FILE__);
 
@@ -600,7 +599,7 @@ test_attr_basic_read()
  *-------------------------------------------------------------------------
  */
 static void
-test_attr_compound_write()
+test_attr_compound_write(FileAccPropList &fapl)
 {
 
     // Output message about test being performed
@@ -608,7 +607,7 @@ test_attr_compound_write()
 
     try {
         // Create file
-        H5File fid1(FILE_COMPOUND.c_str(), H5F_ACC_TRUNC);
+        H5File fid1(FILE_COMPOUND.c_str(), H5F_ACC_TRUNC, FileCreatPropList::DEFAULT, fapl);
 
         // Create dataspace for dataset
         hsize_t   dims1[] = {SPACE1_DIM1, SPACE1_DIM2, SPACE1_DIM3};
@@ -664,7 +663,7 @@ test_attr_compound_write()
  *-------------------------------------------------------------------------
  */
 static void
-test_attr_compound_read()
+test_attr_compound_read(FileAccPropList &fapl)
 {
     hsize_t             dims[ATTR_MAX_DIMS];                // Attribute dimensions
     size_t              size;                               // Attribute datatype size as stored in file
@@ -676,7 +675,7 @@ test_attr_compound_read()
 
     try {
         // Open file
-        H5File fid1(FILE_COMPOUND, H5F_ACC_RDWR);
+        H5File fid1(FILE_COMPOUND, H5F_ACC_RDWR, fapl);
 
         // Open the dataset
         DataSet dataset = fid1.openDataSet(DSET1_NAME);
@@ -687,7 +686,7 @@ test_attr_compound_read()
 
         // Verify the correct number of attributes another way
         H5O_info2_t oinfo;
-        HDmemset(&oinfo, 0, sizeof(oinfo));
+        memset(&oinfo, 0, sizeof(oinfo));
         dataset.getObjinfo(oinfo, H5O_INFO_NUM_ATTRS);
         verify_val(static_cast<long>(oinfo.num_attrs), 1, "DataSet::getObjinfo", __LINE__, __FILE__);
 
@@ -790,7 +789,7 @@ test_attr_compound_read()
         hsize_t ii, jj;
         for (ii = 0; ii < ATTR4_DIM1; ii++)
             for (jj = 0; jj < ATTR4_DIM2; jj++)
-                if (HDmemcmp(&attr_data4[ii][jj], &read_data4[ii][jj], sizeof(struct attr4_struct)) != 0) {
+                if (memcmp(&attr_data4[ii][jj], &read_data4[ii][jj], sizeof(struct attr4_struct)) != 0) {
                     TestErrPrintf("%d:attribute data different: attr_data4[%" PRIuHSIZE "][%" PRIuHSIZE
                                   "].i=%d, "
                                   "read_data4[%" PRIuHSIZE "][%" PRIuHSIZE "].i=%d\n",
@@ -839,14 +838,14 @@ test_attr_compound_read()
  *-------------------------------------------------------------------------
  */
 static void
-test_attr_scalar_write()
+test_attr_scalar_write(FileAccPropList &fapl)
 {
     // Output message about test being performed
     SUBTEST("Basic Scalar Attribute Writing Functions");
 
     try {
         // Create file
-        H5File fid1(FILE_SCALAR, H5F_ACC_TRUNC);
+        H5File fid1(FILE_SCALAR, H5F_ACC_TRUNC, FileCreatPropList::DEFAULT, fapl);
 
         // Create dataspace for dataset
         hsize_t   dims1[] = {SPACE1_DIM1, SPACE1_DIM2, SPACE1_DIM3};
@@ -902,14 +901,14 @@ test_attr_scalar_write()
 #define FP_EPSILON 0.000001F
 
 static void
-test_attr_scalar_read()
+test_attr_scalar_read(FileAccPropList &fapl)
 {
     // Output message about test being performed
     SUBTEST("Basic Scalar Attribute Reading Functions");
 
     try {
         // Open file
-        H5File fid1(FILE_SCALAR, H5F_ACC_RDWR);
+        H5File fid1(FILE_SCALAR, H5F_ACC_RDWR, fapl);
 
         // Open the dataset
         DataSet dataset = fid1.openDataSet(DSET1_NAME);
@@ -954,14 +953,14 @@ test_attr_scalar_read()
  *-------------------------------------------------------------------------
  */
 static void
-test_attr_mult_write()
+test_attr_mult_write(FileAccPropList &fapl)
 {
     // Output message about test being performed
     SUBTEST("Multiple Attribute Writing Functions");
 
     try {
         // Create file
-        H5File fid1(FILE_MULTI, H5F_ACC_TRUNC);
+        H5File fid1(FILE_MULTI, H5F_ACC_TRUNC, FileCreatPropList::DEFAULT, fapl);
 
         // Create dataspace for dataset
         hsize_t   dims1[] = {SPACE1_DIM1, SPACE1_DIM2, SPACE1_DIM3};
@@ -1032,7 +1031,7 @@ test_attr_mult_write()
  *-------------------------------------------------------------------------
  */
 static void
-test_attr_mult_read()
+test_attr_mult_read(FileAccPropList &fapl)
 {
     int     read_data1[ATTR1_DIM1]                         = {0};     // Buffer for reading 1st attribute
     int     read_data2[ATTR2_DIM1][ATTR2_DIM2]             = {{0}};   // Buffer for reading 2nd attribute
@@ -1044,7 +1043,7 @@ test_attr_mult_read()
 
     try {
         // Open file
-        H5File fid1(FILE_MULTI, H5F_ACC_RDWR);
+        H5File fid1(FILE_MULTI, H5F_ACC_RDWR, fapl);
 
         // Open the dataset
         DataSet dataset = fid1.openDataSet(DSET1_NAME);
@@ -1246,7 +1245,7 @@ test_attr_mult_read()
  *-------------------------------------------------------------------------
  */
 static void
-test_attr_delete()
+test_attr_delete(FileAccPropList &fapl)
 {
     H5std_string attr_name; // Buffer for attribute names
 
@@ -1255,7 +1254,7 @@ test_attr_delete()
 
     try {
         // Open file.
-        H5File fid1(FILE_BASIC, H5F_ACC_RDWR);
+        H5File fid1(FILE_BASIC, H5F_ACC_RDWR, fapl);
 
         // Get the number of file attributes
         int num_attrs = fid1.getNumAttrs();
@@ -1295,20 +1294,21 @@ test_attr_delete()
         {
         } // do nothing, exception expected
 
-        // Test deleting dataset's attributes
+        // Test opening and deleting non-existing dataset's attributes
 
         // Verify the correct number of attributes
         num_attrs = dataset.getNumAttrs();
         verify_val(num_attrs, 3, "DataSet::getNumAttrs", __LINE__, __FILE__);
 
-        // Delete middle (2nd) attribute
+        // Delete an attribute
         dataset.removeAttr(ATTR2_NAME);
 
         // Verify the correct number of attributes
         num_attrs = dataset.getNumAttrs();
         verify_val(num_attrs, 2, "DataSet::getNumAttrs", __LINE__, __FILE__);
 
-        // Open 1st attribute for the dataset
+#if 0 // commented this test out, awaiting HDFFV-11327 resolution
+      // Open 1st attribute for the dataset
         Attribute attr = dataset.openAttribute(static_cast<unsigned>(0));
 
         // Verify Name
@@ -1326,15 +1326,28 @@ test_attr_delete()
         verify_val(attr_name, ATTR3_NAME, "Attribute::getName", __LINE__, __FILE__);
 
         attr.close();
+#endif
 
-        // Delete first attribute
+        // Try opening a deleted attribute, should fail
+        try {
+            Attribute exp_attr = dataset.openAttribute(ATTR2_NAME);
+
+            // continuation here, that means no exception has been thrown
+            throw InvalidActionException("DataSet::removeAttr", "Attempting to open non-existing attribute");
+        }
+        catch (AttributeIException &E) // catching invalid removing attribute
+        {
+        } // do nothing, exception expected
+
+        // Delete an attribute
         dataset.removeAttr(ATTR1_NAME);
 
         // Verify the correct number of attributes
         num_attrs = dataset.getNumAttrs();
         verify_val(num_attrs, 1, "DataSet::getNumAttrs", __LINE__, __FILE__);
 
-        // Open the only attribute for the dataset (formally 3rd)
+#if 0 // commented this test out, awaiting HDFFV-11327 resolution
+      // Open the only attribute for the dataset (formally 3rd)
         attr = dataset.openAttribute(static_cast<unsigned>(0));
 
         // Verify Name
@@ -1342,13 +1355,26 @@ test_attr_delete()
         verify_val(attr_name, ATTR3_NAME, "Attribute::getName", __LINE__, __FILE__);
         // Close attribute
         attr.close();
+#endif
 
-        // Delete first attribute
+        // Delete an attribute
         dataset.removeAttr(ATTR3_NAME);
 
         // Verify the correct number of attributes
         num_attrs = dataset.getNumAttrs();
         verify_val(num_attrs, 0, "DataSet::getNumAttrs", __LINE__, __FILE__);
+
+        // Try removing a deleted attribute, should fail
+        try {
+            dataset.removeAttr(ATTR1_NAME);
+
+            // continuation here, that means no exception has been thrown
+            throw InvalidActionException("DataSet::removeAttr",
+                                         "Attempting to delete non-existing attribute");
+        }
+        catch (AttributeIException &E) // catching invalid removing attribute
+        {
+        } // do nothing, exception expected
 
         PASSED();
     } // end try block
@@ -1367,7 +1393,7 @@ test_attr_delete()
  *-------------------------------------------------------------------------
  */
 static void
-test_attr_dtype_shared()
+test_attr_dtype_shared(FileAccPropList &fapl)
 {
     int data  = 8; // Data to write
     int rdata = 0; // Data read in
@@ -1381,7 +1407,7 @@ test_attr_dtype_shared()
 
     try {
         // Create a file
-        H5File fid1(FILE_DTYPE, H5F_ACC_TRUNC);
+        H5File fid1(FILE_DTYPE, H5F_ACC_TRUNC, FileCreatPropList::DEFAULT, fapl);
 
         // Close file
         fid1.close();
@@ -1536,14 +1562,14 @@ const H5std_string ATTRSTR_DATA("String Attribute");
 const int          ATTR_LEN = 17;
 
 static void
-test_string_attr()
+test_string_attr(FileAccPropList &fapl)
 {
     // Output message about test being performed
     SUBTEST("I/O on FL and VL String Attributes");
 
     try {
         // Create file
-        H5File fid1(FILE_BASIC, H5F_ACC_RDWR);
+        H5File fid1(FILE_BASIC, H5F_ACC_RDWR, fapl);
 
         //
         // Fixed-lenth string attributes
@@ -1637,7 +1663,7 @@ test_string_attr()
         if (HDstrcmp(string_att_check, ATTRSTR_DATA.c_str()) != 0)
             TestErrPrintf("Line %d: Attribute data different: ATTRSTR_DATA=%s,string_att_check=%s\n",
                           __LINE__, ATTRSTR_DATA.c_str(), string_att_check);
-        HDfree(string_att_check);
+        free(string_att_check);
 
         /* Test Attribute::read(...,H5std_string& strg) with VL string */
         // Read and verify the attribute string as an std::string.
@@ -1666,14 +1692,14 @@ test_string_attr()
  *-------------------------------------------------------------------------
  */
 static void
-test_attr_exists()
+test_attr_exists(FileAccPropList &fapl)
 {
     // Output message about test being performed
     SUBTEST("Check Attribute Existence");
 
     try {
         // Open file.
-        H5File fid1(FILE_BASIC, H5F_ACC_RDWR);
+        H5File fid1(FILE_BASIC, H5F_ACC_RDWR, fapl);
 
         // Open the root group.
         Group root = fid1.openGroup("/");
@@ -1962,25 +1988,25 @@ test_attr()
                 curr_fapl = fapl;
             }
 
-            test_attr_basic_write(); // Test basic H5A writing code
-            test_attr_getname();     // Test overloads of Attribute::getName
-            test_attr_rename();      // Test renaming attribute
-            test_attr_basic_read();  // Test basic H5A reading code
+            test_attr_basic_write(curr_fapl); // Test basic H5A writing code
+            test_attr_getname(curr_fapl);     // Test overloads of Attribute::getName
+            test_attr_rename(curr_fapl);      // Test renaming attribute
+            test_attr_basic_read(curr_fapl);  // Test basic H5A reading code
 
-            test_attr_compound_write(); // Test complex datatype H5A writing code
-            test_attr_compound_read();  // Test complex datatype H5A reading code
+            test_attr_compound_write(curr_fapl); // Test complex datatype H5A writing code
+            test_attr_compound_read(curr_fapl);  // Test complex datatype H5A reading code
 
-            test_attr_scalar_write(); // Test scalar dataspace H5A writing code
-            test_attr_scalar_read();  // Test scalar dataspace H5A reading code
+            test_attr_scalar_write(curr_fapl); // Test scalar dataspace H5A writing code
+            test_attr_scalar_read(curr_fapl);  // Test scalar dataspace H5A reading code
 
-            test_attr_mult_write(); // Test writing multiple attributes
-            test_attr_mult_read();  // Test reading multiple attributes
-            test_attr_delete();     // Test deleting attributes
+            test_attr_mult_write(curr_fapl); // Test writing multiple attributes
+            test_attr_mult_read(curr_fapl);  // Test reading multiple attributes
+            test_attr_delete(curr_fapl);     // Test deleting attributes
 
-            test_attr_dtype_shared(); // Test using shared datatypes in attributes
+            test_attr_dtype_shared(curr_fapl); // Test using shared datatypes in attributes
 
-            test_string_attr(); // Test read/write string attribute
-            test_attr_exists(); // Test H5Location::attrExists
+            test_string_attr(curr_fapl); // Test read/write string attribute
+            test_attr_exists(curr_fapl); // Test H5Location::attrExists
 
             // Test with new format
             if (new_format) {

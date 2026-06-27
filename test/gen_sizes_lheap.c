@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -12,9 +11,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:  Neil Fortner
- *              Thursday, July  15, 2010
- *
  * Purpose:     Creates a file with non-default sizes of lengths and addresses.
  *              This is used to make sure that the local heap code is able to
  *              handle this case correctly, even when the heap prefix and data
@@ -33,11 +29,6 @@
  * Return:      Success:
  *
  *              Failure:
- *
- * Programmer:  Neil Fortner
- *              Thursday, July  15, 2010
- *
- * Modifications:
  *
  *-------------------------------------------------------------------------
  */

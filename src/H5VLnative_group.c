@@ -90,7 +90,7 @@ H5VL__native_group_create(void *obj, const H5VL_loc_params_t *loc_params, const 
         /* Set up group creation info */
         gcrt_info.gcpl_id    = gcpl_id;
         gcrt_info.cache_type = H5G_NOTHING_CACHED;
-        HDmemset(&gcrt_info.cache, 0, sizeof(gcrt_info.cache));
+        memset(&gcrt_info.cache, 0, sizeof(gcrt_info.cache));
 
         /* Create the new group & get its ID */
         if (NULL == (grp = H5G__create(loc.oloc->file, &gcrt_info)))
@@ -113,12 +113,12 @@ done:
 
             /* Get the new group's object location */
             if (NULL == (oloc = H5G_oloc(grp)))
-                HDONE_ERROR(H5E_SYM, H5E_CANTGET, NULL, "unable to get object location of group")
+                HDONE_ERROR(H5E_SYM, H5E_CANTGET, NULL, "unable to get object location of group");
 
             /* Decrement refcount on group's object header in memory */
             if (H5O_dec_rc_by_loc(oloc) < 0)
                 HDONE_ERROR(H5E_SYM, H5E_CANTDEC, NULL,
-                            "unable to decrement refcount on newly created object")
+                            "unable to decrement refcount on newly created object");
         } /* end if */
     }     /* end if */
 
@@ -140,7 +140,7 @@ H5VL__native_group_open(void *obj, const H5VL_loc_params_t *loc_params, const ch
                         hid_t H5_ATTR_UNUSED gapl_id, hid_t H5_ATTR_UNUSED dxpl_id, void H5_ATTR_UNUSED **req)
 {
     H5G_loc_t loc;        /* Location to open group   */
-    H5G_t    *grp = NULL; /* New group opend          */
+    H5G_t    *grp = NULL; /* New group opened         */
     void     *ret_value;
 
     FUNC_ENTER_PACKAGE

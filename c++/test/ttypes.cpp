@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -45,7 +44,8 @@ using namespace H5;
 /* #include "H5Tpkg.h"
  */
 
-const char *FILENAME[] = {"dtypes1.h5", "dtypes2.h5", "dtypes3.h5", "dtypes4.h5", NULL};
+static const char *FILENAME[] = {"dtypes1.h5",       "dtypes2.h5",           "dtypes3.h5", "dtypes4.h5",
+                                 "encode_decode.h5", "h5_type_operators.h5", NULL};
 
 typedef enum flt_t { FLT_FLOAT, FLT_DOUBLE, FLT_LDOUBLE, FLT_OTHER } flt_t;
 
@@ -76,9 +76,6 @@ typedef struct {
  * Purpose      Test type classes
  *
  * Return       None.
- *
- * Programmer   Binh-Minh Ribler (using C version)
- *              January, 2007
  *-------------------------------------------------------------------------
  */
 static void
@@ -113,9 +110,6 @@ test_classes()
  * Purpose      Test datatype copy functionality
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler (using C version)
- *              January, 2007
  *-------------------------------------------------------------------------
  */
 static void
@@ -165,9 +159,6 @@ test_copy()
  * Purpose      Test DataType::detectClass()
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler (using C version)
- *              August, 2017
  *-------------------------------------------------------------------------
  */
 typedef struct { /* Struct with atomic fields */
@@ -359,9 +350,6 @@ test_detect_type_class()
  * Purpose      Tests VarLenType class
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler (use C version)
- *              August, 2017
  *-------------------------------------------------------------------------
  */
 static void
@@ -432,9 +420,6 @@ test_vltype()
  * Purpose      Tests query functions of compound and enumeration types.
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler (use C version)
- *              January, 2007
  *-------------------------------------------------------------------------
  */
 const H5std_string CompT_NAME("Compound_type");
@@ -462,11 +447,16 @@ test_query()
         // Create a enumerate datatype
         EnumType tid2(sizeof(short));
 
-        tid2.insert("RED", (enum_val = 0, &enum_val));
-        tid2.insert("GREEN", (enum_val = 1, &enum_val));
-        tid2.insert("BLUE", (enum_val = 2, &enum_val));
-        tid2.insert("ORANGE", (enum_val = 3, &enum_val));
-        tid2.insert("YELLOW", (enum_val = 4, &enum_val));
+        enum_val = 0;
+        tid2.insert("RED", &enum_val);
+        enum_val = 1;
+        tid2.insert("GREEN", &enum_val);
+        enum_val = 2;
+        tid2.insert("BLUE", &enum_val);
+        enum_val = 3;
+        tid2.insert("ORANGE", &enum_val);
+        enum_val = 4;
+        tid2.insert("YELLOW", &enum_val);
 
         // Query member number and member index by name, for compound type
         int nmembs = tid1.getNmembers();
@@ -552,12 +542,8 @@ test_query()
  * Purpose      Tests transient datatypes.
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler (use C version)
- *              January, 2007
  *-------------------------------------------------------------------------
  */
-const char *filename1 = "dtypes1.h5";
 
 static void
 test_transient()
@@ -568,7 +554,7 @@ test_transient()
     try {
 
         // Create the file and the dataspace.
-        H5File    file(filename1, H5F_ACC_TRUNC);
+        H5File    file(FILENAME[0], H5F_ACC_TRUNC);
         DataSpace space(2, ds_size, ds_size);
 
         // Copying a predefined type results in a modifiable copy
@@ -632,12 +618,8 @@ test_transient()
  * Purpose      Tests named datatypes.
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler (use C version)
- *              January, 2007
  *-------------------------------------------------------------------------
  */
-const H5std_string filename2("dtypes2.h5");
 
 static void
 test_named()
@@ -649,7 +631,7 @@ test_named()
     SUBTEST("Named datatypes");
     try {
         // Create the file.
-        H5File file(filename2, H5F_ACC_TRUNC);
+        H5File file(FILENAME[1], H5F_ACC_TRUNC);
 
         // Create a simple dataspace.
         DataSpace space(2, ds_size, ds_size);
@@ -800,14 +782,10 @@ test_named()
  * Purpose      Test datatype encode/decode functionality.
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler (using C version)
- *              August, 2017
  *-------------------------------------------------------------------------
  */
-const H5std_string filename3("encode_decode.h5");
-const int          ARRAY1_RANK = 1;
-const int          ARRAY1_DIM  = 10;
+const int ARRAY1_RANK = 1;
+const int ARRAY1_DIM  = 10;
 
 static void
 test_encode_decode()
@@ -817,7 +795,7 @@ test_encode_decode()
     SUBTEST("DataType::encode() and DataType::decode()");
     try {
         // Create the file.
-        H5File file(filename3, H5F_ACC_TRUNC);
+        H5File file(FILENAME[4], H5F_ACC_TRUNC);
 
         //
         // Test with CompType
@@ -862,11 +840,16 @@ test_encode_decode()
         // Create a enumerate datatype
         EnumType enumtyp(sizeof(short));
 
-        enumtyp.insert("RED", (enum_val = 0, &enum_val));
-        enumtyp.insert("GREEN", (enum_val = 1, &enum_val));
-        enumtyp.insert("BLUE", (enum_val = 2, &enum_val));
-        enumtyp.insert("ORANGE", (enum_val = 3, &enum_val));
-        enumtyp.insert("YELLOW", (enum_val = 4, &enum_val));
+        enum_val = 0;
+        enumtyp.insert("RED", &enum_val);
+        enum_val = 1;
+        enumtyp.insert("GREEN", &enum_val);
+        enum_val = 2;
+        enumtyp.insert("BLUE", &enum_val);
+        enum_val = 3;
+        enumtyp.insert("ORANGE", &enum_val);
+        enum_val = 4;
+        enumtyp.insert("YELLOW", &enum_val);
 
         // Encode compound type in a buffer
         enumtyp.encode();
@@ -1021,12 +1004,8 @@ test_encode_decode()
  * Purpose      Test datatype encode/decode functionality.
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler (using C version)
- *              August, 2017
  *-------------------------------------------------------------------------
  */
-const H5std_string filename4("h5_type_operators.h5");
 
 static void
 test_operators()
@@ -1036,7 +1015,7 @@ test_operators()
     SUBTEST("DataType::operator== and DataType::operator!=");
     try {
         // Create the file.
-        H5File file(filename4, H5F_ACC_TRUNC);
+        H5File file(FILENAME[5], H5F_ACC_TRUNC);
 
         //
         // Test with CompType
@@ -1064,9 +1043,12 @@ test_operators()
         // Create an enumerate datatype
         EnumType enumtyp(sizeof(short));
 
-        enumtyp.insert("RED", (enum_val = 0, &enum_val));
-        enumtyp.insert("GREEN", (enum_val = 1, &enum_val));
-        enumtyp.insert("BLUE", (enum_val = 2, &enum_val));
+        enum_val = 0;
+        enumtyp.insert("RED", &enum_val);
+        enum_val = 1;
+        enumtyp.insert("GREEN", &enum_val);
+        enum_val = 2;
+        enumtyp.insert("BLUE", &enum_val);
 
         // Verify that operator== and operator!= work properly
         verify_val(cmptyp == enumtyp, false, "DataType::operator==", __LINE__, __FILE__);
@@ -1140,6 +1122,6 @@ test_types()
 extern "C" void
 cleanup_types()
 {
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 6; i++)
         HDremove(FILENAME[i]);
 } // cleanup_types

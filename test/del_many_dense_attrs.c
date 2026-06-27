@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -20,7 +19,7 @@
 #include "h5test.h"
 
 /* The test file name */
-const char *FILENAME[] = {"del_many_dense_attrs", NULL};
+static const char *FILENAME[] = {"del_many_dense_attrs", NULL};
 
 #define ATTR_COUNT 64 /* The number of attributes */
 
@@ -31,14 +30,12 @@ const char *FILENAME[] = {"del_many_dense_attrs", NULL};
  *
  * Return:      No return
  *
- * Programmer:  Vailin Choi
- *
  *-------------------------------------------------------------------------
  */
 static void
 catch_signal(int H5_ATTR_UNUSED signo)
 {
-    HDexit(EXIT_FAILURE);
+    exit(EXIT_FAILURE);
 } /* catch_signal() */
 
 /*-------------------------------------------------------------------------
@@ -50,8 +47,6 @@ catch_signal(int H5_ATTR_UNUSED signo)
  *
  * Return:	Success:	exit(EXIT_SUCCESS)
  *		    Failure:	exit(EXIT_FAILURE)
- *
- * Programmer:  Vailin Choi; Dec 2018
  *
  *-------------------------------------------------------------------------
  */

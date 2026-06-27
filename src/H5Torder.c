@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -73,9 +72,6 @@ static herr_t H5T__set_order(H5T_t *dtype, H5T_order_t order);
  *				returns H5T_ORDER_MIXED.
  *		Failure:	H5T_ORDER_ERROR (Negative)
  *
- * Programmer:	Robb Matzke
- *		Wednesday, January  7, 1998
- *
  *-------------------------------------------------------------------------
  */
 H5T_order_t
@@ -106,9 +102,6 @@ done:
  *
  * Return:	Success:	A byte order constant
  *		Failure:	H5T_ORDER_ERROR (Negative)
- *
- * Programmer:	Quincey Koziol
- *		Wednesday, October 17, 2007
  *
  *-------------------------------------------------------------------------
  */
@@ -179,9 +172,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Robb Matzke
- *		Wednesday, January  7, 1998
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -217,9 +207,6 @@ done:
  * Purpose:	Private function to set the byte order for a datatype.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Raymond Lu
- *		13 August 2010
  *
  *-------------------------------------------------------------------------
  */

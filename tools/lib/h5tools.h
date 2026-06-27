@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -12,9 +11,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:  Robb Matzke
- *              Thursday, July 23, 1998
- *
  * Purpose:     Support functions for the various tools.
  */
 #ifndef H5TOOLS_H
@@ -34,13 +30,13 @@
 /* Stream macros */
 #define FLUSHSTREAM(S)                                                                                       \
     if (S != NULL)                                                                                           \
-    HDfflush(S)
+    fflush(S)
 #define PRINTSTREAM(S, F, ...)                                                                               \
     if (S != NULL)                                                                                           \
-    HDfprintf(S, F, __VA_ARGS__)
+    fprintf(S, F, __VA_ARGS__)
 #define PRINTVALSTREAM(S, V)                                                                                 \
     if (S != NULL)                                                                                           \
-    HDfprintf(S, V)
+    fprintf(S, V)
 #define PUTSTREAM(X, S)                                                                                      \
     do {                                                                                                     \
         if (S != NULL)                                                                                       \
@@ -584,15 +580,15 @@ typedef struct h5tools_vfd_info_t {
     const char *swmr_config_file;
 } h5tools_vfd_info_t;
 
-/* This enum should match the entries in the above 'volnames'
- * since they are indices into the 'volnames' array. */
+/* This enum should match the entries in the 'volnames'
+ * array since they are indices into that array. */
 typedef enum {
     NATIVE_VOL_IDX = 0,
     PASS_THROUGH_VOL_IDX,
 } vol_idx;
 
-/* This enum should match the entries in the above 'drivernames'
- * since they are indices into the 'drivernames' array. */
+/* This enum should match the entries in the 'drivernames'
+ * array since they are indices into that array. */
 typedef enum {
     SEC2_VFD_IDX = 0,
     DIRECT_VFD_IDX,
@@ -607,6 +603,8 @@ typedef enum {
     ROS3_VFD_IDX,
     HDFS_VFD_IDX,
     SWMR_VFD_IDX,
+    SUBFILING_VFD_IDX,
+    ONION_VFD_IDX,
 } driver_idx;
 
 /* The following include, h5tools_str.h, must be after the
@@ -658,6 +656,7 @@ H5TOOLS_DLLVAR int enable_error_stack; /* re-enable error stack; disable=0 enabl
 #define H5_TOOLS_DATASET   "DATASET"
 #define H5_TOOLS_DATATYPE  "DATATYPE"
 #define H5_TOOLS_ATTRIBUTE "ATTRIBUTE"
+#define H5_TOOLS_MAP       "MAP"
 #define H5_TOOLS_UNKNOWN   "UNKNOWN"
 
 /* Definitions of useful routines */
@@ -673,7 +672,7 @@ H5TOOLS_DLL int  h5tools_set_error_file(const char *fname, int is_bin);
 
 H5TOOLS_DLL hid_t   h5tools_get_fapl(hid_t prev_fapl_id, h5tools_vol_info_t *vol_info,
                                      h5tools_vfd_info_t *vfd_info);
-H5TOOLS_DLL herr_t  h5tools_get_vfd_name(hid_t fapl_id, char *drivername, size_t drivername_size);
+H5TOOLS_DLL herr_t  h5tools_get_vfd_name(hid_t fid, hid_t fapl_id, char *drivername, size_t drivername_size);
 H5TOOLS_DLL hid_t   h5tools_fopen(const char *fname, unsigned flags, hid_t fapl, hbool_t use_specific_driver,
                                   char *drivername, size_t drivername_size);
 H5TOOLS_DLL hid_t   h5tools_get_little_endian_type(hid_t type);

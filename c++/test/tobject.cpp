@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -58,9 +57,6 @@ const H5std_string DSET_IN_GRP1_2_PATH("/Top Group/Sub-Group 1.2/Dataset_in_Grou
  *
  * Return       Success: 0
  *              Failure: -1
- *
- * Programmer   Binh-Minh Ribler
- *              Friday, March 4, 2014
  *-------------------------------------------------------------------------
  */
 static void
@@ -160,9 +156,6 @@ test_get_objname()
  *
  * Return       Success: 0
  *              Failure: -1
- *
- * Programmer   Binh-Minh Ribler
- *              Friday, March 4, 2014
  *-------------------------------------------------------------------------
  */
 static void
@@ -243,9 +236,6 @@ test_existance()
  *
  * Return       Success: 0
  *              Failure: -1
- *
- * Programmer   Binh-Minh Ribler
- *              March 4, 2014
  *-------------------------------------------------------------------------
  */
 static void
@@ -342,9 +332,6 @@ test_get_objname_ontypes()
  *
  * Return       Success: 0
  *              Failure: -1
- *
- * Programmer   Binh-Minh Ribler
- *              Friday, March 4, 2014
  *-------------------------------------------------------------------------
  */
 static void
@@ -407,9 +394,6 @@ test_get_objtype()
  * Purpose      Test Group::getObjId function.
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler (use C version)
- *              March, 2017
  *-------------------------------------------------------------------------
  */
 const H5std_string GROUPNAME("group");
@@ -552,8 +536,8 @@ test_getobjectinfo_same_file()
         Group grp2(file1.createGroup(GROUP2NAME));
 
         // Reset object info
-        HDmemset(&oinfo1, 0, sizeof(oinfo1));
-        HDmemset(&oinfo2, 0, sizeof(oinfo2));
+        memset(&oinfo1, 0, sizeof(oinfo1));
+        memset(&oinfo2, 0, sizeof(oinfo2));
 
         // Query the info of two groups and verify that they have the same
         // file number
@@ -575,8 +559,8 @@ test_getobjectinfo_same_file()
         grp2 = file2.openGroup(GROUP2NAME);
 
         // Reset object info
-        HDmemset(&oinfo1, 0, sizeof(oinfo1));
-        HDmemset(&oinfo2, 0, sizeof(oinfo2));
+        memset(&oinfo1, 0, sizeof(oinfo1));
+        memset(&oinfo2, 0, sizeof(oinfo2));
 
         // Query the info of two groups and verify that they have the same
         // file number
@@ -585,8 +569,8 @@ test_getobjectinfo_same_file()
         verify_val(oinfo1.fileno, oinfo2.fileno, "file number from getObjinfo", __LINE__, __FILE__);
 
         // Reset object info
-        HDmemset(&oinfo1, 0, sizeof(oinfo1));
-        HDmemset(&oinfo2, 0, sizeof(oinfo2));
+        memset(&oinfo1, 0, sizeof(oinfo1));
+        memset(&oinfo2, 0, sizeof(oinfo2));
 
         file1.getObjinfo(GROUP1NAME, oinfo1);
         file1.getObjinfo(GROUP2NAME, oinfo2);
@@ -761,4 +745,7 @@ extern "C" void
 cleanup_object()
 {
     HDremove(FILE_OBJECTS.c_str());
+    HDremove(FILE_OBJHDR.c_str());
+    HDremove(FILE_OBJINFO.c_str());
+    HDremove(FILE_INTERGRPS.c_str());
 } // cleanup_objects

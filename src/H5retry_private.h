@@ -72,9 +72,9 @@ H5__retry_decrement(struct h5_retry_t *r)
 static inline hbool_t
 H5_retry_init(h5_retry_t *r, unsigned int maxtries, uint64_t minival, uint64_t maxival)
 {
-    HDmemset(r, '\0', sizeof(*r));
-    HDassert(0 < maxtries);
-    HDassert(0 < minival && minival <= maxival);
+    memset(r, '\0', sizeof(*r));
+    assert(0 < maxtries);
+    assert(0 < minival && minival <= maxival);
     r->tries = r->maxtries = maxtries;
     r->ival                = minival;
     r->maxival             = maxival;

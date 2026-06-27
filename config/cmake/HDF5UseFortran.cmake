@@ -17,12 +17,16 @@
 enable_language (Fortran)
 
 set (HDF_PREFIX "H5")
+
+# Force lowercase Fortran module file names
+if (CMAKE_Fortran_COMPILER_ID STREQUAL "Cray")
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ef")
+endif ()
+
 include (CheckFortranFunctionExists)
 
-if (NOT CMAKE_VERSION VERSION_LESS "3.14.0")
-  include (CheckFortranSourceRuns)
-  include (CheckFortranSourceCompiles)
-endif ()
+include (CheckFortranSourceRuns)
+include (CheckFortranSourceCompiles)
 
 # Read source line beginning at the line matching Input:"START" and ending at the line matching Input:"END"
 macro (READ_SOURCE SOURCE_START SOURCE_END RETURN_VAR)
@@ -36,42 +40,39 @@ set (RUN_OUTPUT_PATH_DEFAULT ${CMAKE_BINARY_DIR})
 # so this one is used.
 #-----------------------------------------------------------------------------
 macro (FORTRAN_RUN FUNCTION_NAME SOURCE_CODE RUN_RESULT_VAR1 COMPILE_RESULT_VAR1 RETURN_VAR RETURN_OUTPUT_VAR)
-    if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.15.0")
-      message (VERBOSE "Detecting Fortran ${FUNCTION_NAME}")
-    endif ()
+    message (VERBOSE "Detecting Fortran ${FUNCTION_NAME}")
     file (WRITE
         ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/testFortranCompiler1.f90
         "${SOURCE_CODE}"
     )
+    if (CMAKE_VERSION VERSION_LESS 3.25)
+      set (_RUN_OUTPUT_VARIABLE "RUN_OUTPUT_VARIABLE")
+    else ()
+      set (_RUN_OUTPUT_VARIABLE  "RUN_OUTPUT_STDOUT_VARIABLE")
+    endif()
     TRY_RUN (RUN_RESULT_VAR COMPILE_RESULT_VAR
         ${CMAKE_BINARY_DIR}
         ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/testFortranCompiler1.f90
         LINK_LIBRARIES "${HDF5_REQUIRED_LIBRARIES}"
-        RUN_OUTPUT_VARIABLE OUTPUT_VAR
+        ${_RUN_OUTPUT_VARIABLE} OUTPUT_VAR
     )
     set (${RETURN_OUTPUT_VAR} ${OUTPUT_VAR})
 
     if (${COMPILE_RESULT_VAR})
       set(${RETURN_VAR} ${RUN_RESULT_VAR})
       if (${RUN_RESULT_VAR} MATCHES 0)
-        if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.15.0")
-          message (VERBOSE "Testing Fortran ${FUNCTION_NAME} - OK")
-        endif ()
+        message (VERBOSE "Testing Fortran ${FUNCTION_NAME} - OK")
         file (APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeOutput.log
             "Determining if the Fortran ${FUNCTION_NAME} exists passed\n"
         )
       else ()
-        if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.15.0")
-          message (VERBOSE "Testing Fortran ${FUNCTION_NAME} - Fail")
-        endif ()
+        message (VERBOSE "Testing Fortran ${FUNCTION_NAME} - Fail")
         file (APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
             "Determining if the Fortran ${FUNCTION_NAME} exists failed: ${RUN_RESULT_VAR}\n"
         )
       endif ()
     else ()
-        if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.15.0")
-          message (VERBOSE "Compiling Fortran ${FUNCTION_NAME} - Fail")
-        endif ()
+        message (VERBOSE "Compiling Fortran ${FUNCTION_NAME} - Fail")
         file (APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
             "Determining if the Fortran ${FUNCTION_NAME} compiles failed: ${COMPILE_RESULT_VAR}\n"
         )
@@ -82,11 +83,7 @@ endmacro ()
 #  Check to see C_LONG_DOUBLE is available
 
 READ_SOURCE("PROGRAM PROG_FC_HAVE_C_LONG_DOUBLE" "END PROGRAM PROG_FC_HAVE_C_LONG_DOUBLE" SOURCE_CODE)
-if (NOT CMAKE_VERSION VERSION_LESS "3.14.0")
-  check_fortran_source_compiles (${SOURCE_CODE} FORTRAN_HAVE_C_LONG_DOUBLE SRC_EXT f90)
-else ()
-  CHECK_FORTRAN_FEATURE(c_long_double "${SOURCE_CODE}" FORTRAN_HAVE_C_LONG_DOUBLE)
-endif ()
+check_fortran_source_compiles (${SOURCE_CODE} FORTRAN_HAVE_C_LONG_DOUBLE SRC_EXT f90)
 
 if (${FORTRAN_HAVE_C_LONG_DOUBLE})
   set (${HDF_PREFIX}_FORTRAN_HAVE_C_LONG_DOUBLE 1)
@@ -97,11 +94,7 @@ endif ()
 # Check to see C_LONG_DOUBLE is different from C_DOUBLE
 
 READ_SOURCE("MODULE type_mod" "END PROGRAM PROG_FC_C_LONG_DOUBLE_EQ_C_DOUBLE" SOURCE_CODE)
-if (NOT CMAKE_VERSION VERSION_LESS "3.14.0")
-  check_fortran_source_compiles (${SOURCE_CODE} FORTRAN_C_LONG_DOUBLE_IS_UNIQUE SRC_EXT f90)
-else ()
-  CHECK_FORTRAN_FEATURE(c_long_double "${SOURCE_CODE}" FORTRAN_C_LONG_DOUBLE_IS_UNIQUE)
-endif ()
+check_fortran_source_compiles (${SOURCE_CODE} FORTRAN_C_LONG_DOUBLE_IS_UNIQUE SRC_EXT f90)
 if (${FORTRAN_C_LONG_DOUBLE_IS_UNIQUE})
   set (${HDF_PREFIX}_FORTRAN_C_LONG_DOUBLE_IS_UNIQUE 1)
 else ()
@@ -187,10 +180,10 @@ foreach (KIND ${VAR})
   "
        PROGRAM main
           USE ISO_C_BINDING
-          USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY : stderr=>ERROR_UNIT
+          USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY : stdout=>OUTPUT_UNIT
           IMPLICIT NONE
           INTEGER (KIND=${KIND}) a
-          WRITE(stderr,'(I0)') ${FC_SIZEOF_A}
+          WRITE(stdout,'(I0)') ${FC_SIZEOF_A}
        END
    "
   )
@@ -212,9 +205,7 @@ string (REGEX REPLACE " " "" pack_int_sizeof "${pack_int_sizeof}")
 
 set (PAC_FC_ALL_INTEGER_KINDS_SIZEOF "\{${pack_int_sizeof}\}")
 
-if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.15.0")
-  message (VERBOSE "....FOUND SIZEOF for INTEGER KINDs ${PAC_FC_ALL_INTEGER_KINDS_SIZEOF}")
-endif ()
+message (VERBOSE "....FOUND SIZEOF for INTEGER KINDs ${PAC_FC_ALL_INTEGER_KINDS_SIZEOF}")
 # **********
 # REALS
 # **********
@@ -230,10 +221,10 @@ foreach (KIND ${VAR} )
   "
        PROGRAM main
           USE ISO_C_BINDING
-          USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY : stderr=>ERROR_UNIT
+          USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY : stdout=>OUTPUT_UNIT
           IMPLICIT NONE
           REAL (KIND=${KIND}) a
-          WRITE(stderr,'(I0)') ${FC_SIZEOF_A}
+          WRITE(stdout,'(I0)') ${FC_SIZEOF_A}
        END
   "
   )
@@ -272,17 +263,17 @@ set (PROG_SRC3
   "
        PROGRAM main
           USE ISO_C_BINDING
-          USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY : stderr=>ERROR_UNIT
+          USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY : stdout=>OUTPUT_UNIT
           IMPLICIT NONE
           INTEGER a
           REAL b
           DOUBLE PRECISION c
-          WRITE(stderr,*) ${FC_SIZEOF_A}
-          WRITE(stderr,*) kind(a)
-          WRITE(stderr,*) ${FC_SIZEOF_B}
-          WRITE(stderr,*) kind(b)
-          WRITE(stderr,*) ${FC_SIZEOF_C}
-          WRITE(stderr,*) kind(c)
+          WRITE(stdout,*) ${FC_SIZEOF_A}
+          WRITE(stdout,*) kind(a)
+          WRITE(stdout,*) ${FC_SIZEOF_B}
+          WRITE(stdout,*) kind(b)
+          WRITE(stdout,*) ${FC_SIZEOF_C}
+          WRITE(stdout,*) kind(c)
        END
   "
 )

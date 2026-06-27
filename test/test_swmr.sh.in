@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #
 # Copyright by The HDF Group.
-# Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
 # This file is part of HDF5.  The full HDF5 copyright notice, including
@@ -83,13 +82,6 @@ WAIT_MESSAGE() {
 
 ###############################################################################
 ## Main
-##
-## Modifications:
-##   Vailin Choi; July 2013
-##     Add waiting of message file before launching the reader(s).
-##     Due to the implementation of file locking, coordination
-##     is needed in file opening for the writer/reader tests
-##     to proceed as expected.
 ##
 ###############################################################################
 

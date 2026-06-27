@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -84,9 +83,6 @@ static herr_t H5L__iterate_api_common(hid_t group_id, H5_index_t idx_type, H5_it
  *              which are either file IDs or group ID.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:	James Laird
- *              Wednesday, March 29, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -189,9 +185,6 @@ done:
  *              and be in a different location than the original.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:	James Laird
- *              Wednesday, March 29, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -359,9 +352,6 @@ done:
  *              then the actual object looked up is `./x/y/./foo'.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Robb Matzke
- *              Monday, April  6, 1998
  *
  *-------------------------------------------------------------------------
  */
@@ -546,9 +536,6 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Robb Matzke
- *              Monday, April  6, 1998
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -626,16 +613,13 @@ done:
  *
  *              External links are links to objects in other HDF5 files.  They
  *              are allowed to "dangle" like soft links internal to a file.
- *              FILE_NAME is the name of the file that OBJ_NAME is is contained
+ *              FILE_NAME is the name of the file that OBJ_NAME is contained
  *              within.  If OBJ_NAME is given as a relative path name, the
  *              path will be relative to the root group of FILE_NAME.
  *              LINK_NAME is interpreted relative to LINK_LOC_ID, which is
  *              either a file ID or a group ID.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Quincey Koziol
- *              Wednesday, May 18, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -739,9 +723,6 @@ done:
  *              with the library.
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:	James Laird
- *              Tuesday, December 13, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -851,9 +832,6 @@ done:
  *              delayed until all handles to the object are closed).
  *
  * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:	Robb Matzke
- *              Monday, April  6, 1998
  *
  *-------------------------------------------------------------------------
  */
@@ -976,9 +954,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *              Monday, November 13, 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1056,9 +1031,6 @@ done:
  *
  * 		Failure:	Negative
  *
- * Programmer:	Robb Matzke
- *              Monday, April 13, 1998
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1115,9 +1087,6 @@ done:
  *
  * Return:	Success:	Non-negative with the link value in BUF.
  * 		Failure:	Negative
- *
- * Programmer:	Quincey Koziol
- *              Monday, November 13, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -1221,9 +1190,6 @@ done:
  *
  * Return:      Success:    TRUE/FALSE/FAIL
  *
- * Programmer:	Quincey Koziol
- *              Friday, March 16, 2007
- *
  *-------------------------------------------------------------------------
  */
 htri_t
@@ -1295,9 +1261,6 @@ done:
  * Return:      Success:    Non-negative with information in LINFO
  *              Failure:    Negative
  *
- * Programmer:	James Laird
- *              Wednesday, June 21, 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1349,9 +1312,6 @@ done:
  *
  * Return:      Success:    Non-negative with information in LINFO
  *              Failure:    Negative
- *
- * Programmer:	Quincey Koziol
- *              Monday, November  6, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -1418,9 +1378,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	James Laird
- *              Monday, July 10, 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1475,9 +1432,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	James Laird
- *              Monday, July 10, 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1509,9 +1463,6 @@ done:
  * Return:      TRUE if the link class has been registered
  *              FALSE if it is unregistered
  *              FAIL on error (if the class is not a valid UD class ID)
- *
- * Programmer:	James Laird
- *              Monday, July 10, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -1550,9 +1501,6 @@ done:
  *                          in NAME buffer
  *
  *              Failure:    -1
- *
- * Programmer:	Quincey Koziol
- *              Saturday, November 11, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -1770,9 +1718,6 @@ done:
  *                          of the operators.
  *
  *
- * Programmer:  Quincey Koziol
- *              Thursday, November 16, 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1854,9 +1799,6 @@ done:
  *                          library, or the negative value returned by one
  *                          of the operators.
  *
- * Programmer:	Quincey Koziol
- *		        November 24 2007
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1930,9 +1872,6 @@ done:
  *              Failure:    Negative if something goes wrong within the
  *                          library, or the negative value returned by one
  *                          of the operators.
- *
- * Programmer:  Quincey Koziol
- *              November 3 2007
  *
  *-------------------------------------------------------------------------
  */
@@ -2009,9 +1948,6 @@ done:
  *              udata buffers can result in segmentation faults.
  *
  * Return: Non-negative on success/ Negative on failure
- *
- * Programmer:  James Laird
- *              Monday, July 17, 2006
  *
  *-------------------------------------------------------------------------
  */

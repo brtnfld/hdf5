@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -12,12 +11,9 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:	Robb Matzke
- *		Monday, December  8, 1997
- *
- * Purpose:	This file contains declarations which are visible only within
- *		the H5T package.  Source files outside the H5T package should
- *		include H5Tprivate.h instead.
+ * Purpose: This file contains declarations which are visible only within
+ *          the H5T package.  Source files outside the H5T package should
+ *          include H5Tprivate.h instead.
  */
 #if !(defined H5T_FRIEND || defined H5T_MODULE)
 #error "Do not include this file outside the H5T package!"
@@ -405,23 +401,6 @@ H5_DLLVAR size_t H5T_HOBJREF_ALIGN_g;
 H5_DLLVAR size_t H5T_HDSETREGREF_ALIGN_g;
 H5_DLLVAR size_t H5T_REF_ALIGN_g;
 
-/* Compound type alignment constraints */
-H5_DLLVAR size_t H5T_NATIVE_SCHAR_COMP_ALIGN_g;
-H5_DLLVAR size_t H5T_NATIVE_SHORT_COMP_ALIGN_g;
-H5_DLLVAR size_t H5T_NATIVE_INT_COMP_ALIGN_g;
-H5_DLLVAR size_t H5T_NATIVE_LONG_COMP_ALIGN_g;
-H5_DLLVAR size_t H5T_NATIVE_LLONG_COMP_ALIGN_g;
-H5_DLLVAR size_t H5T_NATIVE_FLOAT_COMP_ALIGN_g;
-H5_DLLVAR size_t H5T_NATIVE_DOUBLE_COMP_ALIGN_g;
-#if H5_SIZEOF_LONG_DOUBLE != 0
-H5_DLLVAR size_t H5T_NATIVE_LDOUBLE_COMP_ALIGN_g;
-#endif
-H5_DLLVAR size_t H5T_POINTER_COMP_ALIGN_g;
-H5_DLLVAR size_t H5T_HVL_COMP_ALIGN_g;
-H5_DLLVAR size_t H5T_HOBJREF_COMP_ALIGN_g;
-H5_DLLVAR size_t H5T_HDSETREGREF_COMP_ALIGN_g;
-H5_DLLVAR size_t H5T_REF_COMP_ALIGN_g;
-
 /*
  * Alignment information for native types. A value of N indicates that the
  * data must be aligned on an address ADDR such that 0 == ADDR mod N. When
@@ -485,7 +464,7 @@ H5FL_EXTERN(H5T_t);
 H5FL_EXTERN(H5T_shared_t);
 
 /* Common functions */
-H5_DLL herr_t H5T__init_native(void);
+H5_DLL herr_t H5T__init_native_float_types(void);
 H5_DLL herr_t H5T__init_native_internal(void);
 H5_DLL H5T_t *H5T__create(H5T_class_t type, size_t size);
 H5_DLL H5T_t *H5T__alloc(void);

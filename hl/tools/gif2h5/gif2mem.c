@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -21,8 +20,6 @@
 **  Title:       GIFHEAD.C                                                  **
 **  Purpose:     Display the data in a GIF image file.                      **
 **  Version:     1.0                                                        **
-**  Date:        March 1992                                                 **
-**  Author:      James D. Murray, Anaheim, CA, USA                          **
 **  C Compilers: Borland C++ v2.0, Microsoft C v6.00a                       **
 **                                                                          **
 **  GIFHEAD displays all real information contained within a GIF image      **

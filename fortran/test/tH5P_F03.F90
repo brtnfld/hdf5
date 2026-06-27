@@ -10,7 +10,6 @@
 ! COPYRIGHT
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 !   Copyright by The HDF Group.                                               *
-!   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
 !   This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -82,12 +81,6 @@ CONTAINS
 ! * Return:	Success:	0
 ! *
 ! *		Failure:	number of errors
-! *
-! * Programmer:	M. Scot Breitenfeld
-! *             June 24, 2008
-! *
-! * Modifications:
-! *
 ! *-------------------------------------------------------------------------
 !
 
@@ -445,9 +438,6 @@ END SUBROUTINE test_genprop_class_callback
 !
 ! Return:      Success: 0
 !              Failure: -1
-!
-! FORTRAN Programmer: M. Scot Breitenfeld
-!                     April 1, 2014
 !-------------------------------------------------------------------------
 
 SUBROUTINE test_h5p_file_image(total_error)
@@ -517,9 +507,6 @@ END SUBROUTINE test_h5p_file_image
 !
 ! Return:      Success: 0
 !              Failure: -1
-!
-! FORTRAN Programmer: M. Scot Breitenfeld
-!                     January 10, 2012
 !-------------------------------------------------------------------------
 !
 SUBROUTINE external_test_offset(cleanup,total_error)
@@ -535,6 +522,7 @@ SUBROUTINE external_test_offset(cleanup,total_error)
   INTEGER(hid_t) :: dset=-1   ! dataset
   INTEGER(hid_t) :: grp=-1    ! group to emit diagnostics
   INTEGER(size_t) :: i, j     ! miscellaneous counters
+  INTEGER :: k
   CHARACTER(LEN=180) :: filename   ! file names
   INTEGER, DIMENSION(1:25) :: part
   INTEGER, DIMENSION(1:100), TARGET :: whole ! raw data buffers
@@ -567,7 +555,7 @@ SUBROUTINE external_test_offset(cleanup,total_error)
   !
   ! Create the file and an initial group.
   CALL h5pcreate_f(H5P_FILE_ACCESS_F, fapl, error)
-  CALL h5fcreate_f('extren_raw.h5', H5F_ACC_TRUNC_F, file, error, access_prp=fapl)
+  CALL h5fcreate_f('extern_raw.h5', H5F_ACC_TRUNC_F, file, error, access_prp=fapl)
   CALL check("h5fcreate_f",error,total_error)
 
   CALL h5gcreate_f(file, "emit-diagnostics", grp, error)
@@ -601,8 +589,9 @@ SUBROUTINE external_test_offset(cleanup,total_error)
   CALL h5dread_f(dset, H5T_NATIVE_INTEGER, f_ptr, error, mem_space_id=space, file_space_id=space)
   CALL check("h5dread_f", error, total_error)
 
-  DO i = 1, 100
-     IF(whole(i) .NE. i-1)THEN
+  DO k = 1, 100
+     CALL verify("h5dread_f", whole(k), k-1, error)
+     IF(error .NE. 0)THEN
         WRITE(*,*) "Incorrect value(s) read."
         total_error =  total_error + 1
         EXIT
@@ -622,8 +611,10 @@ SUBROUTINE external_test_offset(cleanup,total_error)
 
   CALL h5sclose_f(hs_space, error)
   CALL check("h5sclose_f", error, total_error)
-  DO i = INT(hs_start(1))+1, INT(hs_start(1)+hs_count(1))
-     IF(whole(i) .NE. i-1)THEN
+
+  DO k = INT(hs_start(1))+1, INT(hs_start(1)+hs_count(1))
+     CALL verify("h5dread_f", whole(k), k-1, error)
+     IF(error .NE. 0)THEN
         WRITE(*,*) "Incorrect value(s) read."
         total_error =  total_error + 1
         EXIT
@@ -646,7 +637,7 @@ SUBROUTINE external_test_offset(cleanup,total_error)
      CALL h5_cleanup_f(filename, H5P_DEFAULT_F, error)
      CALL check("h5_cleanup_f", error, total_error)
   ENDDO
-  IF(cleanup) CALL h5_cleanup_f("extren_raw.h5", H5P_DEFAULT_F, error)
+  IF(cleanup) CALL h5_cleanup_f("extern_raw.h5", H5P_DEFAULT_F, error)
   CALL check("h5_cleanup_f", error, total_error)
 
 END SUBROUTINE external_test_offset
@@ -661,10 +652,6 @@ END SUBROUTINE external_test_offset
 ! RETURNS:
 !   Success:	0
 !   Failure:	number of errors
-!
-! FORTRAN Programmer:  M. Scot Breitenfeld
-!                      February 1, 2016
-!
 !-------------------------------------------------------------------------
 !
 SUBROUTINE test_vds(total_error)

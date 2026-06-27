@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -14,11 +13,9 @@
 /*-------------------------------------------------------------------------
  *
  * Created:     H5Ctest.c
- *              June 7 2016
- *              Quincey Koziol
  *
  * Purpose:     Functions in this file support the metadata cache regression
- *		tests>
+ *              tests
  *
  *-------------------------------------------------------------------------
  */
@@ -78,9 +75,6 @@ typedef struct {
  *
  * Return:      SUCCEED on success, FAIL on error
  *
- * Programmer:  Vailin Choi
- *		Feb 2014
- *
  *-------------------------------------------------------------------------
  */
 static int
@@ -94,8 +88,8 @@ H5C__verify_cork_tag_test_cb(H5C_cache_entry_t *entry, void *_ctx)
     FUNC_ENTER_PACKAGE
 
     /* Santify checks */
-    HDassert(entry);
-    HDassert(ctx);
+    assert(entry);
+    assert(ctx);
 
     /* Retrieve corked status for entry */
     is_corked = entry->tag_info ? entry->tag_info->corked : FALSE;
@@ -115,9 +109,6 @@ done:
  *      the object tag are marked with the desired "cork" status.
  *
  * Return:      SUCCEED on success, FAIL on error
- *
- * Programmer:  Vailin Choi
- *		Feb 2014
  *
  *-------------------------------------------------------------------------
  */
@@ -192,8 +183,7 @@ H5C_set_curr_io_type_splitable(H5C_t *cache_ptr, hbool_t set_splitable)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-    HDassert(cache_ptr);
-    HDassert(cache_ptr->magic == H5C__H5C_T_MAGIC);
+    assert(cache_ptr);
 
     if (set_splitable) {
 

@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -23,19 +22,25 @@ static hbool_t     doxml_g       = FALSE;
 static hbool_t     useschema_g   = TRUE;
 static const char *xml_dtd_uri_g = NULL;
 
-static hbool_t            use_custom_vol_g = FALSE;
-static hbool_t            use_custom_vfd_g = FALSE;
-static h5tools_vol_info_t vol_info_g       = {0};
-static h5tools_vfd_info_t vfd_info_g       = {0};
+static hbool_t use_custom_vol_g = FALSE;
+static hbool_t use_custom_vfd_g = FALSE;
+
+static h5tools_vol_info_t vol_info_g = {0};
+static h5tools_vfd_info_t vfd_info_g = {0};
+
+static hbool_t get_onion_revision_count = FALSE;
 
 #ifdef H5_HAVE_ROS3_VFD
 /* Default "anonymous" S3 configuration */
-static H5FD_ros3_fapl_t ros3_fa_g = {
-    1,     /* Structure Version */
-    FALSE, /* Authenticate?     */
-    "",    /* AWS Region        */
-    "",    /* Access Key ID     */
-    "",    /* Secret Access Key */
+static H5FD_ros3_fapl_ext_t ros3_fa_g = {
+    {
+        1,     /* Structure Version */
+        FALSE, /* Authenticate?     */
+        "",    /* AWS Region        */
+        "",    /* Access Key ID     */
+        "",    /* Secret Access Key */
+    },
+    "", /* Session/security token */
 };
 #endif /* H5_HAVE_ROS3_VFD */
 
@@ -50,6 +55,17 @@ static H5FD_hdfs_fapl_t hdfs_fa_g = {
     2048,        /* Stream buffer size    */
 };
 #endif /* H5_HAVE_LIBHDFS */
+
+static H5FD_onion_fapl_info_t onion_fa_g = {
+    H5FD_ONION_FAPL_INFO_VERSION_CURR,
+    H5P_DEFAULT,                   /* backing_fapl_id                */
+    32,                            /* page_size                      */
+    H5FD_ONION_STORE_TARGET_ONION, /* store_target                   */
+    H5FD_ONION_FAPL_INFO_REVISION_ID_LATEST,
+    0,            /* force_write_open               */
+    0,            /* creation_flags                 */
+    "input file", /* comment                        */
+};
 
 /* module-scoped variables for XML option */
 #define DEFAULT_XSD "http://www.hdfgroup.org/HDF5/XML/schema/HDF5-File.xsd"
@@ -146,7 +162,7 @@ leave(int ret)
 {
     h5tools_close();
 
-    HDexit(ret);
+    exit(ret);
 }
 
 /*-------------------------------------------------------------------------
@@ -206,6 +222,14 @@ usage(const char *prog)
     PRINTVALSTREAM(rawoutstream,
                    "     --vol-info           VOL-specific info to pass to the VOL connector used for\n");
     PRINTVALSTREAM(rawoutstream, "                          opening the HDF5 file specified\n");
+    PRINTVALSTREAM(
+        rawoutstream,
+        "                          If none of the above options are used to specify a VOL, then\n");
+    PRINTVALSTREAM(
+        rawoutstream,
+        "                          the VOL named by HDF5_VOL_CONNECTOR (or the native VOL connector,\n");
+    PRINTVALSTREAM(rawoutstream,
+                   "                          if that environment variable is unset) will be used\n");
     PRINTVALSTREAM(rawoutstream,
                    "     --vfd-value          Value (ID) of the VFL driver to use for opening the\n");
     PRINTVALSTREAM(rawoutstream, "                          HDF5 file specified\n");
@@ -395,7 +419,7 @@ table_list_add(hid_t oid, unsigned long file_no)
         h5dump_table_items_t *tmp_ptr;
 
         table_list.nalloc = MAX(1, table_list.nalloc * 2);
-        if (NULL == (tmp_ptr = (h5dump_table_items_t *)HDrealloc(
+        if (NULL == (tmp_ptr = (h5dump_table_items_t *)realloc(
                          table_list.tables, table_list.nalloc * sizeof(table_list.tables[0]))))
             return -1;
         table_list.tables = tmp_ptr;
@@ -472,7 +496,7 @@ table_list_free(void)
     }
 
     /* Free the table list */
-    HDfree(table_list.tables);
+    free(table_list.tables);
     table_list.tables = NULL;
     table_list.nalloc = table_list.nused = 0;
 } /* end table_list_free() */
@@ -552,114 +576,6 @@ set_sort_order(const char *form)
 }
 
 /*-------------------------------------------------------------------------
- * Function:    parse_hsize_list
- *
- * Purpose:     Parse a list of comma or space separated integers and return
- *              them in a list. The string being passed into this function
- *              should be at the start of the list you want to parse. You are
- *              responsible for freeing the array returned from here.
- *
- *              Lists in the so-called "terse" syntax are separated by
- *              semicolons (;). The lists themselves can be separated by
- *              either commas (,) or white spaces.
- *
- * Return:      <none>
- *-------------------------------------------------------------------------
- */
-static void
-parse_hsize_list(const char *h_list, subset_d *d)
-{
-    hsize_t     *p_list;
-    const char  *ptr;
-    unsigned int size_count = 0;
-    unsigned int i          = 0;
-    unsigned int last_digit = 0;
-
-    if (!h_list || !*h_list || *h_list == ';')
-        return;
-
-    /* count how many integers do we have */
-    for (ptr = h_list; ptr && *ptr && *ptr != ';' && *ptr != ']'; ptr++)
-        if (HDisdigit(*ptr)) {
-            if (!last_digit)
-                /* the last read character wasn't a digit */
-                size_count++;
-
-            last_digit = 1;
-        }
-        else
-            last_digit = 0;
-
-    if (size_count == 0)
-        /* there aren't any integers to read */
-        return;
-
-    /* allocate an array for the integers in the list */
-    p_list = (hsize_t *)HDcalloc(size_count, sizeof(hsize_t));
-
-    for (ptr = h_list; i < size_count && ptr && *ptr && *ptr != ';' && *ptr != ']'; ptr++)
-        if (HDisdigit(*ptr)) {
-            /* we should have an integer now */
-            p_list[i++] = (hsize_t)HDstrtoull(ptr, NULL, 0);
-
-            while (HDisdigit(*ptr))
-                /* scroll to end of integer */
-                ptr++;
-        }
-    d->data = p_list;
-    d->len  = size_count;
-}
-
-/*-------------------------------------------------------------------------
- * Function:    parse_subset_params
- *
- * Purpose:     Parse the so-called "terse" syntax for specifying subsetting parameters.
- *
- * Return:      Success:    struct subset_t object
- *              Failure:    NULL
- *-------------------------------------------------------------------------
- */
-static struct subset_t *
-parse_subset_params(const char *dset)
-{
-    struct subset_t *s = NULL;
-    char            *brace;
-
-    if (!dump_opts.disable_compact_subset && ((brace = HDstrrchr(dset, '[')) != NULL)) {
-        *brace++ = '\0';
-
-        s = (struct subset_t *)HDcalloc(1, sizeof(struct subset_t));
-        parse_hsize_list(brace, &s->start);
-
-        while (*brace && *brace != ';')
-            brace++;
-
-        if (*brace)
-            brace++;
-
-        parse_hsize_list(brace, &s->stride);
-
-        while (*brace && *brace != ';')
-            brace++;
-
-        if (*brace)
-            brace++;
-
-        parse_hsize_list(brace, &s->count);
-
-        while (*brace && *brace != ';')
-            brace++;
-
-        if (*brace)
-            brace++;
-
-        parse_hsize_list(brace, &s->block);
-    }
-
-    return s;
-}
-
-/*-------------------------------------------------------------------------
  * Function:    parse_mask_list
  *
  * Purpose:     Parse a list of comma or space separated integers and fill
@@ -682,18 +598,18 @@ parse_mask_list(const char *h_list)
 
     /* sanity check */
     if (h_list) {
-        HDmemset(packed_mask, 0, sizeof(packed_mask));
+        memset(packed_mask, 0, sizeof(packed_mask));
 
         packed_bits_num = 0;
         /* scan in pair of offset,length separated by commas. */
         ptr = h_list;
         while (*ptr) {
             /* scan for an offset which is an unsigned int */
-            if (!HDisdigit(*ptr)) {
+            if (!isdigit(*ptr)) {
                 error_msg("Bad mask list(%s)\n", h_list);
                 return FAIL;
             }
-            soffset_value = HDatoi(ptr);
+            soffset_value = atoi(ptr);
             offset_value  = (unsigned)soffset_value;
             if (soffset_value < 0 || offset_value >= PACKED_BITS_SIZE_MAX) {
                 error_msg("Packed Bit offset value(%d) must be between 0 and %u\n", soffset_value,
@@ -702,7 +618,7 @@ parse_mask_list(const char *h_list)
             }
 
             /* skip to end of integer */
-            while (HDisdigit(*++ptr))
+            while (isdigit(*++ptr))
                 ;
             /* Look for the common separator */
             if (*ptr++ != ',') {
@@ -711,11 +627,11 @@ parse_mask_list(const char *h_list)
             }
 
             /* scan for a length which is a positive int */
-            if (!HDisdigit(*ptr)) {
+            if (!isdigit(*ptr)) {
                 error_msg("Bad mask list(%s)\n", h_list);
                 return FAIL;
             }
-            slength_value = HDatoi(ptr);
+            slength_value = atoi(ptr);
             if (slength_value <= 0) {
                 error_msg("Packed Bit length value(%d) must be positive.\n", slength_value);
                 return FAIL;
@@ -728,7 +644,7 @@ parse_mask_list(const char *h_list)
             }
 
             /* skip to end of int */
-            while (HDisdigit(*++ptr))
+            while (isdigit(*++ptr))
                 ;
 
             /* store the offset,length pair */
@@ -795,26 +711,26 @@ free_handler(struct handler_t *hand, int len)
     if (hand) {
         for (i = 0; i < len; i++) {
             if (hand[i].obj) {
-                HDfree(hand[i].obj);
+                free(hand[i].obj);
                 hand[i].obj = NULL;
             }
 
             if (hand[i].subset_info) {
                 if (hand[i].subset_info->start.data)
-                    HDfree(hand[i].subset_info->start.data);
+                    free(hand[i].subset_info->start.data);
                 if (hand[i].subset_info->stride.data)
-                    HDfree(hand[i].subset_info->stride.data);
+                    free(hand[i].subset_info->stride.data);
                 if (hand[i].subset_info->count.data)
-                    HDfree(hand[i].subset_info->count.data);
+                    free(hand[i].subset_info->count.data);
                 if (hand[i].subset_info->block.data)
-                    HDfree(hand[i].subset_info->block.data);
+                    free(hand[i].subset_info->block.data);
 
-                HDfree(hand[i].subset_info);
+                free(hand[i].subset_info);
                 hand[i].subset_info = NULL;
             }
         }
 
-        HDfree(hand);
+        free(hand);
     }
 }
 
@@ -845,7 +761,7 @@ parse_command_line(int argc, const char *const *argv)
     }
 
     /* this will be plenty big enough to hold the info */
-    if ((hand = (struct handler_t *)HDcalloc((size_t)argc, sizeof(struct handler_t))) == NULL) {
+    if ((hand = (struct handler_t *)calloc((size_t)argc, sizeof(struct handler_t))) == NULL) {
         goto error;
     }
 
@@ -865,7 +781,7 @@ parse_start:
                 dump_opts.display_fi = TRUE;
                 last_was_dset        = FALSE;
                 if (H5_optarg != NULL)
-                    h5trav_set_verbose(HDatoi(H5_optarg));
+                    h5trav_set_verbose(atoi(H5_optarg));
                 break;
             case 'p':
                 dump_opts.display_dcpl = TRUE;
@@ -883,7 +799,7 @@ parse_start:
                 break;
             case 'A':
                 if (H5_optarg != NULL) {
-                    if (0 == HDatoi(H5_optarg))
+                    if (0 == atoi(H5_optarg))
                         dump_opts.include_attrs = FALSE;
                 }
                 else {
@@ -907,7 +823,7 @@ parse_start:
                 goto done;
                 break;
             case 'w': {
-                int sh5tools_nCols = HDatoi(H5_optarg);
+                int sh5tools_nCols = atoi(H5_optarg);
 
                 if (sh5tools_nCols <= 0)
                     h5tools_nCols = 65535;
@@ -944,10 +860,11 @@ parse_start:
 
                 for (i = 0; i < argc; i++)
                     if (!hand[i].func) {
-                        hand[i].func        = handle_datasets;
-                        hand[i].obj         = HDstrdup(H5_optarg);
-                        hand[i].subset_info = parse_subset_params(hand[i].obj);
-                        last_dset           = &hand[i];
+                        hand[i].func = handle_datasets;
+                        hand[i].obj  = HDstrdup(H5_optarg);
+                        if (!dump_opts.disable_compact_subset)
+                            hand[i].subset_info = parse_subset_params(hand[i].obj);
+                        last_dset = &hand[i];
                         break;
                     }
 
@@ -956,8 +873,19 @@ parse_start:
             case 'f':
                 vfd_info_g.type   = VFD_BY_NAME;
                 vfd_info_g.u.name = H5_optarg;
-                vfd_info_g.info   = NULL;
                 use_custom_vfd_g  = TRUE;
+
+#ifdef H5_HAVE_ROS3_VFD
+                if (0 == HDstrcmp(vfd_info_g.u.name, drivernames[ROS3_VFD_IDX]))
+                    if (!vfd_info_g.info)
+                        vfd_info_g.info = &ros3_fa_g;
+#endif
+#ifdef H5_HAVE_LIBHDFS
+                if (0 == HDstrcmp(vfd_info_g.u.name, drivernames[HDFS_VFD_IDX]))
+                    if (!vfd_info_g.info)
+                        vfd_info_g.info = &hdfs_fa_g;
+#endif
+
                 break;
             case 'g':
                 dump_opts.display_all = 0;
@@ -1081,7 +1009,7 @@ parse_start:
                 dump_opts.display_vds_first = TRUE;
                 break;
             case 'G':
-                dump_opts.vds_gap_size = HDatoi(H5_optarg);
+                dump_opts.vds_gap_size = atoi(H5_optarg);
                 if (dump_opts.vds_gap_size < 0) {
                     usage(h5tools_getprogname());
                     goto error;
@@ -1153,7 +1081,7 @@ parse_start:
                     s = last_dset->subset_info;
                 }
                 else {
-                    last_dset->subset_info = s = (struct subset_t *)HDcalloc(1, sizeof(struct subset_t));
+                    last_dset->subset_info = s = (struct subset_t *)calloc(1, sizeof(struct subset_t));
                 }
 
                 /*
@@ -1171,28 +1099,28 @@ parse_start:
                     switch ((char)opt) {
                         case 's':
                             if (s->start.data) {
-                                HDfree(s->start.data);
+                                free(s->start.data);
                                 s->start.data = NULL;
                             }
                             parse_hsize_list(H5_optarg, &s->start);
                             break;
                         case 'S':
                             if (s->stride.data) {
-                                HDfree(s->stride.data);
+                                free(s->stride.data);
                                 s->stride.data = NULL;
                             }
                             parse_hsize_list(H5_optarg, &s->stride);
                             break;
                         case 'c':
                             if (s->count.data) {
-                                HDfree(s->count.data);
+                                free(s->count.data);
                                 s->count.data = NULL;
                             }
                             parse_hsize_list(H5_optarg, &s->count);
                             break;
                         case 'k':
                             if (s->block.data) {
-                                HDfree(s->block.data);
+                                free(s->block.data);
                                 s->block.data = NULL;
                             }
                             parse_hsize_list(H5_optarg, &s->block);
@@ -1214,7 +1142,7 @@ end_collect:
 
             case 'E':
                 if (H5_optarg != NULL)
-                    enable_error_stack = HDatoi(H5_optarg);
+                    enable_error_stack = atoi(H5_optarg);
                 else
                     enable_error_stack = 1;
                 break;
@@ -1268,7 +1196,7 @@ end_collect:
 
             case '1':
                 vol_info_g.type    = VOL_BY_VALUE;
-                vol_info_g.u.value = (H5VL_class_value_t)HDatoi(H5_optarg);
+                vol_info_g.u.value = (H5VL_class_value_t)atoi(H5_optarg);
                 use_custom_vol_g   = TRUE;
                 break;
 
@@ -1284,7 +1212,7 @@ end_collect:
 
             case '4':
                 vfd_info_g.type    = VFD_BY_VALUE;
-                vfd_info_g.u.value = (H5FD_class_value_t)HDatoi(H5_optarg);
+                vfd_info_g.u.value = (H5FD_class_value_t)atoi(H5_optarg);
                 use_custom_vfd_g   = TRUE;
                 break;
 
@@ -1303,6 +1231,29 @@ end_collect:
                 usage(h5tools_getprogname());
                 goto error;
         }
+    }
+
+    /* If the file uses the onion VFD, get the revision number */
+    if (vfd_info_g.u.name && !HDstrcmp(vfd_info_g.u.name, "onion")) {
+
+        if (vfd_info_g.info) {
+            if (!HDstrcmp(vfd_info_g.info, "revision_count"))
+                get_onion_revision_count = TRUE;
+            else {
+                errno                   = 0;
+                onion_fa_g.revision_num = strtoull(vfd_info_g.info, NULL, 10);
+                if (errno == ERANGE) {
+                    printf("Invalid onion revision specified\n");
+                    goto error;
+                }
+
+                printf("Using revision %" PRIu64 "\n", onion_fa_g.revision_num);
+            }
+        }
+        else
+            onion_fa_g.revision_num = 0;
+
+        vfd_info_g.info = &onion_fa_g;
     }
 
 parse_end:
@@ -1424,7 +1375,21 @@ main(int argc, char *argv[])
     while (H5_optind < argc) {
         fname = HDstrdup(argv[H5_optind++]);
 
-        fid = h5tools_fopen(fname, H5F_ACC_RDONLY, fapl_id, (fapl_id != H5P_DEFAULT), NULL, 0);
+        /* A short cut to get the revision count of an onion file without opening the file */
+        if (get_onion_revision_count && H5FD_ONION == H5Pget_driver(fapl_id)) {
+            uint64_t revision_count = 0;
+
+            if (H5FDonion_get_revision_count(fname, fapl_id, &revision_count) < 0) {
+                error_msg("unable to create FAPL for file access\n");
+                h5tools_setstatus(EXIT_FAILURE);
+                goto done;
+            }
+
+            printf("The number of revisions for the onion file is %" PRIu64 "\n", revision_count);
+            goto done;
+        }
+        else
+            fid = h5tools_fopen(fname, H5F_ACC_RDONLY, fapl_id, (fapl_id != H5P_DEFAULT), NULL, 0);
 
         if (fid < 0) {
             error_msg("unable to open file \"%s\"\n", fname);
@@ -1519,7 +1484,7 @@ main(int argc, char *argv[])
                                 "xsi:schemaLocation=\"http://hdfgroup.org/HDF5/XML/schema/HDF5-File "
                                 "http://www.hdfgroup.org/HDF5/XML/schema/HDF5-File.xsd\">\n",
                                 xmlnsprefix, ns);
-                    HDfree(ns);
+                    free(ns);
                 }
             }
             else {
@@ -1592,11 +1557,11 @@ main(int argc, char *argv[])
                 h5tools_setstatus(EXIT_FAILURE);
 
         if (prefix) {
-            HDfree(prefix);
+            free(prefix);
             prefix = NULL;
         }
         if (fname) {
-            HDfree(fname);
+            free(fname);
             fname = NULL;
         }
     } /* end while */
@@ -1622,11 +1587,11 @@ done:
             h5tools_setstatus(EXIT_FAILURE);
 
     if (prefix) {
-        HDfree(prefix);
+        free(prefix);
         prefix = NULL;
     }
     if (fname) {
-        HDfree(fname);
+        free(fname);
         fname = NULL;
     }
 
@@ -1645,15 +1610,13 @@ done:
  *
  * Return:      void
  *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static void
 init_prefix(char **prfx, size_t prfx_len)
 {
     if (prfx_len > 0)
-        *prfx = (char *)HDcalloc(prfx_len, 1);
+        *prfx = (char *)calloc(prfx_len, 1);
     else
         error_msg("unable to allocate prefix buffer\n");
 }
@@ -1675,7 +1638,7 @@ add_prefix(char **prfx, size_t *prfx_len, const char *name)
     /* Check if we need more space */
     if (*prfx_len <= new_len) {
         *prfx_len = new_len + 1;
-        *prfx     = (char *)HDrealloc(*prfx, *prfx_len);
+        *prfx     = (char *)realloc(*prfx, *prfx_len);
     }
 
     /* Append object name to prefix */

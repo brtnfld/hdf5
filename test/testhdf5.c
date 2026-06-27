@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -43,6 +42,7 @@ main(int argc, char *argv[])
 
     /* Tests are generally arranged from least to most complexity... */
     AddTest("config", test_configure, cleanup_configure, "Configure definitions", NULL);
+    AddTest("h5system", test_h5_system, cleanup_h5_system, "H5system routines", NULL);
     AddTest("metadata", test_metadata, cleanup_metadata, "Encoding/decoding metadata", NULL);
     AddTest("checksum", test_checksum, cleanup_checksum, "Checksum algorithm", NULL);
     AddTest("skiplist", test_skiplist, NULL, "Skip Lists", NULL);
@@ -89,7 +89,7 @@ main(int argc, char *argv[])
     /* Exit failure if errors encountered; else exit success. */
     /* No need to print anything since PerformTests() already does. */
     if (GetTestNumErrs() > 0)
-        HDexit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     else
-        HDexit(EXIT_SUCCESS);
+        exit(EXIT_SUCCESS);
 } /* end main() */

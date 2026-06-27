@@ -1,7 +1,6 @@
 #							-*- shell-script -*-
 #
 # Copyright by The HDF Group.
-# Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
 # This file is part of HDF5.  The full HDF5 copyright notice, including
@@ -58,7 +57,7 @@ if test "X-" = "X-$f9x_flags_set"; then
   H5_FCFLAGS="$H5_FCFLAGS ${F9XSUFFIXFLAG}"
   FSEARCH_DIRS="-I./ -I../src"
 
-  # Produciton
+  # Production
   PROD_FCFLAGS=
 
   # Debug
@@ -109,7 +108,7 @@ case $CC_BASENAME in
     # Use very generic flags
     H5_CFLAGS="$H5_CFLAGS -ansi"
 
-    # Produciton
+    # Production
     PROD_CFLAGS=
 
     # Debug

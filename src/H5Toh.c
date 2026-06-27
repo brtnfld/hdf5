@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -82,9 +81,6 @@ const H5O_obj_class_t H5O_OBJ_DATATYPE[1] = {{
  *		Failure:	FAIL if the existence of certain messages
  *				cannot be determined.
  *
- * Programmer:	Robb Matzke
- *              Monday, November  2, 1998
- *
  *-------------------------------------------------------------------------
  */
 static htri_t
@@ -94,7 +90,7 @@ H5O__dtype_isa(const H5O_t *oh)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(oh);
+    assert(oh);
 
     if ((ret_value = H5O_msg_exists_oh(oh, H5O_DTYPE_ID)) < 0)
         HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "unable to read object header")
@@ -111,9 +107,6 @@ done:
  * Return:	Success:	Open object identifier
  *		Failure:	Negative
  *
- * Programmer:	Quincey Koziol
- *              Monday, November  6, 2006
- *
  *-------------------------------------------------------------------------
  */
 static void *
@@ -124,7 +117,7 @@ H5O__dtype_open(const H5G_loc_t *obj_loc, H5I_type_t *opened_type)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(obj_loc);
+    assert(obj_loc);
 
     *opened_type = H5I_DATATYPE;
 
@@ -137,7 +130,7 @@ H5O__dtype_open(const H5G_loc_t *obj_loc, H5I_type_t *opened_type)
 done:
     if (NULL == ret_value)
         if (type && H5T_close(type) < 0)
-            HDONE_ERROR(H5E_DATATYPE, H5E_CLOSEERROR, NULL, "unable to release datatype")
+            HDONE_ERROR(H5E_DATATYPE, H5E_CLOSEERROR, NULL, "unable to release datatype");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O__dtype_open() */
@@ -150,9 +143,6 @@ done:
  * Return:	Success:	Pointer to the named datatype data structure
  *		Failure:	NULL
  *
- * Programmer:	Quincey Koziol
- *              Wednesday, April 11, 2007
- *
  *-------------------------------------------------------------------------
  */
 static void *
@@ -164,9 +154,9 @@ H5O__dtype_create(H5F_t *f, void *_crt_info, H5G_loc_t *obj_loc)
     FUNC_ENTER_PACKAGE
 
     /* Sanity checks */
-    HDassert(f);
-    HDassert(crt_info);
-    HDassert(obj_loc);
+    assert(f);
+    assert(crt_info);
+    assert(obj_loc);
 
     /* Commit the type to the file */
     if (H5T__commit(f, crt_info->dt, crt_info->tcpl_id) < 0)
@@ -192,9 +182,6 @@ done:
  *
  * Return:	Success:	Pointer to object header location
  *		Failure:	NULL
- *
- * Programmer:	Quincey Koziol
- *              Monday, November  6, 2006
  *
  *-------------------------------------------------------------------------
  */

@@ -27,15 +27,6 @@ int  h5_set_info_object(void);
 void h5_dump_info_object(MPI_Info info);
 #endif
 
-#ifdef H5_HAVE_PARALLEL
-extern MPI_Info h5_io_info_g; /* MPI INFO object for IO */
-#endif
-
-#ifdef H5_HAVE_PARALLEL
-int  h5_set_info_object(void);
-void h5_dump_info_object(MPI_Info info);
-#endif
-
 /* setup the dataset no fill option if this is v1.5 or more */
 #if H5_VERS_MAJOR > 1 || H5_VERS_MINOR > 4
 #define H5_HAVE_NOFILL 1
@@ -95,10 +86,10 @@ extern int        pio_debug_level;     /* The debug level:
                                         *   4 - Even More Debugging (timer stuff)
                                         */
 
-#define HDprint_rank(f)      /* print rank in MPI_COMM_WORLD */ HDfprintf(f, "%d: ", comm_world_rank_g);
-#define HDprint_size(f)      /* print size of MPI_COMM_WORLD */ HDfprintf(f, "%d", comm_world_nprocs_g);
+#define HDprint_rank(f)      /* print rank in MPI_COMM_WORLD */ fprintf(f, "%d: ", comm_world_rank_g);
+#define HDprint_size(f)      /* print size of MPI_COMM_WORLD */ fprintf(f, "%d", comm_world_nprocs_g);
 #define HDprint_rank_size(f) /* print rank/size of MPI_COMM_WORLD */                                         \
-    HDfprintf(f, "%d/%d: ", comm_world_rank_g, comm_world_nprocs_g);
+    fprintf(f, "%d/%d: ", comm_world_rank_g, comm_world_nprocs_g);
 
 #ifdef __cplusplus
 extern "C" {

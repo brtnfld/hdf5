@@ -121,7 +121,7 @@ H5MV__sect_new(haddr_t sect_off, hsize_t sect_size)
     FUNC_ENTER_PACKAGE
 
     /* Check arguments.  */
-    HDassert(sect_size);
+    assert(sect_size);
 
     /* Create free space section node */
     if (NULL == (sect = H5FL_MALLOC(H5MV_free_section_t)))
@@ -160,7 +160,7 @@ H5MV__sect_free(H5FS_section_info_t *_sect)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Check arguments. */
-    HDassert(sect);
+    assert(sect);
 
     /* Release the section */
     sect = H5FL_FREE(H5MV_free_section_t, sect);
@@ -191,13 +191,13 @@ H5MV__sect_can_merge(const H5FS_section_info_t *_sect1, const H5FS_section_info_
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Check arguments. */
-    HDassert(sect1);
-    HDassert(sect2);
-    HDassert(sect1->sect_info.type == sect2->sect_info.type); /* Checks "MERGE_SYM" flag */
-    HDassert(H5F_addr_lt(sect1->sect_info.addr, sect2->sect_info.addr));
+    assert(sect1);
+    assert(sect2);
+    assert(sect1->sect_info.type == sect2->sect_info.type); /* Checks "MERGE_SYM" flag */
+    assert(H5_addr_lt(sect1->sect_info.addr, sect2->sect_info.addr));
 
     /* Check if second section adjoins first section */
-    ret_value = H5F_addr_eq(sect1->sect_info.addr + sect1->sect_info.size, sect2->sect_info.addr);
+    ret_value = H5_addr_eq(sect1->sect_info.addr + sect1->sect_info.size, sect2->sect_info.addr);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5MV__sect_can_merge() */
@@ -224,11 +224,11 @@ H5MV__sect_merge(H5FS_section_info_t **_sect1, H5FS_section_info_t *_sect2, void
     FUNC_ENTER_PACKAGE
 
     /* Check arguments. */
-    HDassert(sect1);
-    HDassert((*sect1)->sect_info.type == H5MV_FSPACE_SECT_SIMPLE);
-    HDassert(sect2);
-    HDassert(sect2->sect_info.type == H5MV_FSPACE_SECT_SIMPLE);
-    HDassert(H5F_addr_eq((*sect1)->sect_info.addr + (*sect1)->sect_info.size, sect2->sect_info.addr));
+    assert(sect1);
+    assert((*sect1)->sect_info.type == H5MV_FSPACE_SECT_SIMPLE);
+    assert(sect2);
+    assert(sect2->sect_info.type == H5MV_FSPACE_SECT_SIMPLE);
+    assert(H5_addr_eq((*sect1)->sect_info.addr + (*sect1)->sect_info.size, sect2->sect_info.addr));
 
     /* Add second section's size to first section */
     (*sect1)->sect_info.size += sect2->sect_info.size;
@@ -264,7 +264,7 @@ H5MV__sect_can_shrink(const H5FS_section_info_t *_sect, void *_udata)
     FUNC_ENTER_PACKAGE
 
     /* Check arguments. */
-    HDassert(sect);
+    assert(sect);
 
     /* Retrieve the end oa the file's address space */
     if (HADDR_UNDEF == (eoa = H5MV_get_vfd_swmr_md_eoa(shared)))
@@ -274,7 +274,7 @@ H5MV__sect_can_shrink(const H5FS_section_info_t *_sect, void *_udata)
     end = sect->sect_info.addr + sect->sect_info.size;
 
     /* Check if the section is exactly at the end of the allocated space in the file */
-    if (H5F_addr_eq(end, eoa))
+    if (H5_addr_eq(end, eoa))
         /* Indicate shrinking can occur */
         ret_value = TRUE;
 
@@ -303,8 +303,8 @@ H5MV__sect_shrink(H5FS_section_info_t **_sect, void *_udata)
     FUNC_ENTER_PACKAGE
 
     /* Check arguments. */
-    HDassert(sect);
-    HDassert(H5F_SHARED_INTENT(shared) & H5F_ACC_RDWR);
+    assert(sect);
+    assert(H5F_SHARED_INTENT(shared) & H5F_ACC_RDWR);
 
     /* Release section's space at EOA */
     if (H5MV__free_md(shared, (*sect)->sect_info.addr, (*sect)->sect_info.size) < 0)
@@ -339,7 +339,7 @@ H5MV__sect_valid(const H5FS_section_class_t H5_ATTR_UNUSED *cls, const H5FS_sect
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Check arguments. */
-    HDassert(sect);
+    assert(sect);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5MV__sect_valid() */

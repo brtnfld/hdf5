@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -30,9 +29,6 @@
  *
  * Return:      Success:        Pointer to 'faked up' file structure
  *              Failure:        NULL
- *
- * Programmer:  Quincey Koziol
- *              Oct  2, 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -73,9 +69,6 @@ done:
  *
  * Return:	Success:	non-negative
  *		Failure:	negative
- *
- * Programmer:  Quincey Koziol
- *              Oct  2, 2006
  *
  *-------------------------------------------------------------------------
  */

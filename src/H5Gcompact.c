@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -14,8 +13,6 @@
 /*-------------------------------------------------------------------------
  *
  * Created:		H5Gcompact.c
- *			Sep  5 2005
- *			Quincey Koziol
  *
  * Purpose:		Functions for handling compact storage.
  *
@@ -71,9 +68,6 @@ static herr_t H5G__compact_lookup_cb(const void *_mesg, unsigned H5_ATTR_UNUSED 
  *
  * Return:      SUCCEED/FAIL
  *
- * Programmer:	Quincey Koziol
- *		Sep  5 2005
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -86,9 +80,9 @@ H5G__compact_build_table_cb(const void *_mesg, unsigned H5_ATTR_UNUSED idx, void
     FUNC_ENTER_PACKAGE
 
     /* check arguments */
-    HDassert(lnk);
-    HDassert(udata);
-    HDassert(udata->curr_lnk < udata->ltable->nlinks);
+    assert(lnk);
+    assert(udata);
+    assert(udata->curr_lnk < udata->ltable->nlinks);
 
     /* Copy link message into table */
     if (NULL == H5O_msg_copy(H5O_LINK_ID, lnk, &(udata->ltable->lnks[udata->curr_lnk])))
@@ -110,9 +104,6 @@ done:
  * Return:	Success:        Non-negative
  *		Failure:	Negative
  *
- * Programmer:	Quincey Koziol
- *	        Sep  6, 2005
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -124,9 +115,9 @@ H5G__compact_build_table(const H5O_loc_t *oloc, const H5O_linfo_t *linfo, H5_ind
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(oloc);
-    HDassert(linfo);
-    HDassert(ltable);
+    assert(oloc);
+    assert(linfo);
+    assert(ltable);
 
     /* Set size of table */
     H5_CHECK_OVERFLOW(linfo->nlinks, hsize_t, size_t);
@@ -171,9 +162,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *		Sep  6 2005
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -184,8 +172,8 @@ H5G__compact_insert(const H5O_loc_t *grp_oloc, H5O_link_t *obj_lnk)
     FUNC_ENTER_PACKAGE
 
     /* check arguments */
-    HDassert(grp_oloc && grp_oloc->file);
-    HDassert(obj_lnk);
+    assert(grp_oloc && grp_oloc->file);
+    assert(obj_lnk);
 
     /* Insert link message into group */
     if (H5O_msg_create(grp_oloc, H5O_LINK_ID, 0, H5O_UPDATE_TIME, obj_lnk) < 0)
@@ -202,9 +190,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *	        Sep  6, 2005
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -218,7 +203,7 @@ H5G__compact_get_name_by_idx(const H5O_loc_t *oloc, const H5O_linfo_t *linfo, H5
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(oloc);
+    assert(oloc);
 
     /* Build table of all link messages */
     if (H5G__compact_build_table(oloc, linfo, idx_type, order, &ltable) < 0)
@@ -241,7 +226,7 @@ H5G__compact_get_name_by_idx(const H5O_loc_t *oloc, const H5O_linfo_t *linfo, H5
 done:
     /* Release link table */
     if (ltable.lnks && H5G__link_release_table(&ltable) < 0)
-        HDONE_ERROR(H5E_SYM, H5E_CANTFREE, FAIL, "unable to release link table")
+        HDONE_ERROR(H5E_SYM, H5E_CANTFREE, FAIL, "unable to release link table");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G__compact_get_name_by_idx() */
@@ -253,9 +238,6 @@ done:
  *              particular name.
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		Sep  5 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -269,8 +251,8 @@ H5G__compact_remove_common_cb(const void *_mesg, unsigned H5_ATTR_UNUSED idx, vo
     FUNC_ENTER_PACKAGE
 
     /* check arguments */
-    HDassert(lnk);
-    HDassert(udata);
+    assert(lnk);
+    assert(udata);
 
     /* If we've found the right link, get the object type */
     if (HDstrcmp(lnk->name, udata->name) == 0) {
@@ -279,7 +261,7 @@ H5G__compact_remove_common_cb(const void *_mesg, unsigned H5_ATTR_UNUSED idx, vo
             HGOTO_ERROR(H5E_SYM, H5E_CANTGET, H5_ITER_ERROR, "unable to get object type")
 
         /* Stop the iteration, we found the correct link */
-        HGOTO_DONE(H5_ITER_STOP)
+        HGOTO_DONE(H5_ITER_STOP);
     } /* end if */
 
 done:
@@ -293,9 +275,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *              Monday, September 19, 2005
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -306,8 +285,8 @@ H5G__compact_remove(const H5O_loc_t *oloc, H5RS_str_t *grp_full_path_r, const ch
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(oloc && oloc->file);
-    HDassert(name && *name);
+    assert(oloc && oloc->file);
+    assert(name && *name);
 
     /* Initialize data to pass through object header iteration */
     udata.file            = oloc->file;
@@ -329,9 +308,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *              Tuesday, November 14, 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -344,8 +320,8 @@ H5G__compact_remove_by_idx(const H5O_loc_t *oloc, const H5O_linfo_t *linfo, H5RS
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(oloc && oloc->file);
-    HDassert(linfo);
+    assert(oloc && oloc->file);
+    assert(linfo);
 
     /* Build table of all link messages, sorted according to desired order */
     if (H5G__compact_build_table(oloc, linfo, idx_type, order, &ltable) < 0)
@@ -367,7 +343,7 @@ H5G__compact_remove_by_idx(const H5O_loc_t *oloc, const H5O_linfo_t *linfo, H5RS
 done:
     /* Release link table */
     if (ltable.lnks && H5G__link_release_table(&ltable) < 0)
-        HDONE_ERROR(H5E_SYM, H5E_CANTFREE, FAIL, "unable to release link table")
+        HDONE_ERROR(H5E_SYM, H5E_CANTFREE, FAIL, "unable to release link table");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G__compact_remove_by_idx() */
@@ -378,9 +354,6 @@ done:
  * Purpose:	Iterate over the links in a group
  *
  * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Monday, October  3, 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -395,9 +368,9 @@ H5G__compact_iterate(const H5O_loc_t *oloc, const H5O_linfo_t *linfo, H5_index_t
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(oloc);
-    HDassert(linfo);
-    HDassert(op);
+    assert(oloc);
+    assert(linfo);
+    assert(op);
 
     /* Build table of all link messages */
     if (H5G__compact_build_table(oloc, linfo, idx_type, order, &ltable) < 0)
@@ -410,7 +383,7 @@ H5G__compact_iterate(const H5O_loc_t *oloc, const H5O_linfo_t *linfo, H5_index_t
 done:
     /* Release link table */
     if (ltable.lnks && H5G__link_release_table(&ltable) < 0)
-        HDONE_ERROR(H5E_SYM, H5E_CANTFREE, FAIL, "unable to release link table")
+        HDONE_ERROR(H5E_SYM, H5E_CANTFREE, FAIL, "unable to release link table");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G__compact_iterate() */
@@ -422,9 +395,6 @@ done:
  *              name & getting object location for it
  *
  * Return:      SUCCEED/FAIL
- *
- * Programmer:	Quincey Koziol
- *		Sep 20 2005
  *
  *-------------------------------------------------------------------------
  */
@@ -438,8 +408,8 @@ H5G__compact_lookup_cb(const void *_mesg, unsigned H5_ATTR_UNUSED idx, void *_ud
     FUNC_ENTER_PACKAGE
 
     /* check arguments */
-    HDassert(lnk);
-    HDassert(udata);
+    assert(lnk);
+    assert(udata);
 
     /* Check for name to get information */
     if (HDstrcmp(lnk->name, udata->name) == 0) {
@@ -453,7 +423,7 @@ H5G__compact_lookup_cb(const void *_mesg, unsigned H5_ATTR_UNUSED idx, void *_ud
         *udata->found = TRUE;
 
         /* Stop iteration now */
-        HGOTO_DONE(H5_ITER_STOP)
+        HGOTO_DONE(H5_ITER_STOP);
     } /* end if */
 
 done:
@@ -467,9 +437,6 @@ done:
  *
  * Return:	Non-negative (TRUE/FALSE) on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *		Sep 20 2005
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -482,9 +449,9 @@ H5G__compact_lookup(const H5O_loc_t *oloc, const char *name, hbool_t *found, H5O
     FUNC_ENTER_PACKAGE
 
     /* check arguments */
-    HDassert(name && *name);
-    HDassert(found);
-    HDassert(lnk && oloc->file);
+    assert(name && *name);
+    assert(found);
+    assert(lnk && oloc->file);
 
     /* Set up user data for iteration */
     udata.name  = name;
@@ -509,9 +476,6 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *		Nov  6 2006
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -524,9 +488,9 @@ H5G__compact_lookup_by_idx(const H5O_loc_t *oloc, const H5O_linfo_t *linfo, H5_i
     FUNC_ENTER_PACKAGE
 
     /* check arguments */
-    HDassert(oloc && oloc->file);
-    HDassert(linfo);
-    HDassert(lnk);
+    assert(oloc && oloc->file);
+    assert(linfo);
+    assert(lnk);
 
     /* Build table of all link messages, sorted according to desired order */
     if (H5G__compact_build_table(oloc, linfo, idx_type, order, &ltable) < 0)
@@ -543,7 +507,7 @@ H5G__compact_lookup_by_idx(const H5O_loc_t *oloc, const H5O_linfo_t *linfo, H5_i
 done:
     /* Release link table */
     if (ltable.lnks && H5G__link_release_table(&ltable) < 0)
-        HDONE_ERROR(H5E_SYM, H5E_CANTFREE, FAIL, "unable to release link table")
+        HDONE_ERROR(H5E_SYM, H5E_CANTFREE, FAIL, "unable to release link table");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G__compact_lookup_by_idx() */

@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -12,9 +11,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:  Quincey Koziol
- *              Thursday, November 14, 2002
- *
  * Purpose:	    Create a dataset compressed with the deflate filter.
  *              This program is used to create the test file `tdeflate.h5'
  *              which has a dataset compressed with the "deflate" I/O filter.
@@ -39,9 +35,6 @@
  *
  * Return:      EXIT_SUCCESS/EXIT_FAILURE
  *
- * Programmer:	Quincey Koziol
- *              Thursday, November 14, 2002
- *
  *-------------------------------------------------------------------------
  */
 int
@@ -55,7 +48,7 @@ main(void)
 
     /* Initialize the data */
     /* (Try for something easily compressible) */
-    if (NULL == (data = (int *)HDmalloc(SPACE_DIM1 * SPACE_DIM2 * sizeof(int))))
+    if (NULL == (data = (int *)malloc(SPACE_DIM1 * SPACE_DIM2 * sizeof(int))))
         TEST_ERROR;
 
     for (i = 0; i < SPACE_DIM1; i++)
@@ -98,13 +91,13 @@ main(void)
     if (H5Fclose(fid) < 0)
         FAIL_STACK_ERROR;
 
-    HDfree(data);
+    free(data);
 
     return EXIT_SUCCESS;
 
 error:
     if (data)
-        HDfree(data);
+        free(data);
     H5E_BEGIN_TRY
     {
         H5Pclose(dcpl_id);
@@ -112,7 +105,7 @@ error:
         H5Sclose(sid);
         H5Fclose(fid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return EXIT_FAILURE;
 } /* end main() */

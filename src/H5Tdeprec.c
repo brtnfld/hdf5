@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -14,8 +13,6 @@
 /*-------------------------------------------------------------------------
  *
  * Created:	H5Tdeprec.c
- *		April 5 2007
- *		Quincey Koziol
  *
  * Purpose:	Deprecated functions from the H5T interface.  These
  *              functions are here for compatibility purposes and may be
@@ -90,9 +87,6 @@ H5FL_EXTERN(H5VL_object_t);
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Robb Matzke
- *              Monday, June  1, 1998
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -155,9 +149,6 @@ done:
  *
  *		Failure:	H5I_INVALID_HID
  *
- * Programmer:	Robb Matzke
- *              Monday, June  1, 1998
- *
  *-------------------------------------------------------------------------
  */
 hid_t
@@ -195,7 +186,7 @@ done:
     /* Cleanup on error */
     if (H5I_INVALID_HID == ret_value)
         if (dt && H5VL_datatype_close(vol_obj, H5P_DATASET_XFER_DEFAULT, H5_REQUEST_NULL) < 0)
-            HDONE_ERROR(H5E_DATATYPE, H5E_CLOSEERROR, H5I_INVALID_HID, "unable to close datatype")
+            HDONE_ERROR(H5E_DATATYPE, H5E_CLOSEERROR, H5I_INVALID_HID, "unable to close datatype");
 
     FUNC_LEAVE_API(ret_value)
 } /* end H5Topen1() */

@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -28,14 +27,12 @@
  *
  * Return:      No return
  *
- * Programmer:  Vailin Choi
- *
  *-------------------------------------------------------------------------
  */
 static void
 catch_signal(int H5_ATTR_UNUSED signo)
 {
-    HDexit(EXIT_FAILURE);
+    exit(EXIT_FAILURE);
 } /* catch_signal() */
 
 /*-------------------------------------------------------------------------
@@ -46,8 +43,6 @@ catch_signal(int H5_ATTR_UNUSED signo)
  *
  * Return:	Success:	exit(EXIT_SUCCESS)
  *		    Failure:	exit(EXIT_FAILURE)
- *
- * Programmer:  Vailin Choi; June 2017
  *
  *-------------------------------------------------------------------------
  */
@@ -81,7 +76,7 @@ main(void)
     if (!contig_addr_vfd) {
         SKIPPED();
         HDputs("    Temporary skipped for a spilt/multi driver");
-        HDexit(EXIT_SUCCESS);
+        exit(EXIT_SUCCESS);
     }
 
     h5_reset();
@@ -137,9 +132,9 @@ main(void)
     /* The file is not closed. */
     /* The library will call H5_term_library to shut down the library. */
 
-    HDexit(EXIT_SUCCESS);
+    exit(EXIT_SUCCESS);
 
 error:
     HDputs("*** TEST FAILED ***");
-    HDexit(EXIT_FAILURE);
+    exit(EXIT_FAILURE);
 }

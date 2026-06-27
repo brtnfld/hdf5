@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -11,16 +10,12 @@
  * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/*
- * Programmer:  Robb Matzke
- *              Monday, July 26, 1999
- */
 #ifndef H5FDpublic_H
 #define H5FDpublic_H
 
-/* Public headers needed by this file */
-#include "H5public.h"  /* Generic Functions */
-#include "H5Fpublic.h" /* Files */
+#include "H5public.h"  /* Generic Functions                        */
+#include "H5Fpublic.h" /* Files                                    */
+#include "H5Ipublic.h" /* Identifiers                              */
 
 /*****************/
 /* Public Macros */
@@ -46,7 +41,8 @@
 #define H5_VFD_ROS3      ((H5FD_class_value_t)(11))
 #define H5_VFD_SUBFILING ((H5FD_class_value_t)(12))
 #define H5_VFD_IOC       ((H5FD_class_value_t)(13))
-#define H5_VFD_SWMR      ((H5FD_class_value_t)(14))
+#define H5_VFD_ONION     ((H5FD_class_value_t)(14))
+#define H5_VFD_SWMR      ((H5FD_class_value_t)(15))
 
 /* VFD IDs below this value are reserved for library use. */
 #define H5_VFD_RESERVED 256
@@ -173,8 +169,8 @@
 #define H5FD_FEAT_MEMMANAGE 0x00010000
 /*
  * Defining H5FD_FEAT_SUPPORTS_VFD_SWMR for a VFL driver means that the
- * driver supports the SWMR feature that is implemented in a more modular
- * fashion and simplifies maintenance.
+ * driver supports the VFD SWMR feature -- i.e. it is capable of being
+ * used as the lower driver in a VFD SWMR reader VFD stack.
  */
 #define H5FD_FEAT_SUPPORTS_VFD_SWMR 0x00020000
 
@@ -196,7 +192,6 @@
 #define H5FD_CTL_MEM_FREE                    6
 #define H5FD_CTL_MEM_COPY                    7
 #define H5FD_CTL_GET_MPI_FILE_SYNC_OPCODE    8
-#define H5FD_CTL_GET_TERMINAL_VFD            9
 
 /* ctl function flags: */
 
@@ -326,6 +321,7 @@ typedef struct {
     /**
      * \param[in] dest Address of the destination buffer
      * \param[in] src Address of the source buffer
+     * \param[in] size Size in bytes of the file image buffer to allocate
      * \param[in] file_image_op A value from #H5FD_file_image_op_t indicating
      *                          the operation being performed on the file image
      *                          when this callback is invoked
@@ -338,6 +334,7 @@ typedef struct {
     //! <!-- [image_memcpy_snip] -->
     /**
      * \param[in] ptr Pointer to the buffer being reallocated
+     * \param[in] size Size in bytes of the file image buffer to allocate
      * \param[in] file_image_op A value from #H5FD_file_image_op_t indicating
      *                          the operation being performed on the file image
      *                          when this callback is invoked
@@ -348,6 +345,10 @@ typedef struct {
     void *(*image_realloc)(void *ptr, size_t size, H5FD_file_image_op_t file_image_op, void *udata);
     //! <!-- [image_realloc_snip] -->
     /**
+     * \param[in] ptr Pointer to the buffer being reallocated
+     * \param[in] file_image_op A value from #H5FD_file_image_op_t indicating
+     *                          the operation being performed on the file image
+     *                          when this callback is invoked
      * \param[in] udata Value passed in in the H5Pset_file_image_callbacks
      *            parameter \p udata
      */
@@ -405,10 +406,28 @@ extern "C" {
 #endif
 
 /* Function prototypes */
-/* Allows querying a VFD ID for features before the file is opened */
+
+/**
+ * \ingroup H5FD
+ *
+ * \brief Allows querying a VFD ID for features before the file is opened
+ *
+ * \param[in] driver_id Virtual File Driver (VFD) ID
+ * \param[out] flags VFD flags supported
+ *
+ * \return \herr_t
+ *
+ * \details Queries a virtual file driver (VFD) for feature flags. Takes a
+ *          VFD hid_t so it can be used before the file is opened. For example,
+ *          this could be used to check if a VFD supports SWMR.
+ *
+ * \note The flags obtained here are just those of the base driver and
+ *       do not take any configuration options (e.g., set via a fapl
+ *       call) into consideration.
+ *
+ * \since 1.10.2
+ */
 H5_DLL herr_t H5FDdriver_query(hid_t driver_id, unsigned long *flags /*out*/);
-H5_DLL htri_t H5FDis_driver_registered_by_name(const char *driver_name);
-H5_DLL htri_t H5FDis_driver_registered_by_value(H5FD_class_value_t driver_value);
 
 #ifdef __cplusplus
 }

@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -44,8 +43,6 @@ static hsize_t bigio_count_g = H5_MAX_MPI_COUNT;
  *
  * Return:    The current/previous value of bigio_count_g.
  *
- * Programmer: Richard Warren,  March 10, 2017
- *
  *-------------------------------------------------------------------------
  */
 hsize_t
@@ -67,11 +64,9 @@ H5_mpi_set_bigio_count(hsize_t new_count)
  *
  * Return:    The current/previous value of bigio_count_g.
  *
- * Programmer: Richard Warren,  October 7, 2019
- *
  *-------------------------------------------------------------------------
  */
-hsize_t
+H5_ATTR_PURE hsize_t
 H5_mpi_get_bigio_count(void)
 {
     return bigio_count_g;
@@ -396,9 +391,9 @@ H5_mpi_info_cmp(MPI_Info info1, MPI_Info info2, int *result)
                 same = TRUE;
 
                 /* Memset the buffers to zero */
-                HDmemset(key, 0, MPI_MAX_INFO_KEY);
-                HDmemset(value1, 0, MPI_MAX_INFO_VAL);
-                HDmemset(value2, 0, MPI_MAX_INFO_VAL);
+                memset(key, 0, MPI_MAX_INFO_KEY);
+                memset(value1, 0, MPI_MAX_INFO_VAL);
+                memset(value2, 0, MPI_MAX_INFO_VAL);
 
                 /* Get the nth key */
                 if (MPI_SUCCESS != (mpi_code = MPI_Info_get_nthkey(info1, i, key)))
@@ -411,7 +406,7 @@ H5_mpi_info_cmp(MPI_Info info1, MPI_Info info2, int *result)
                     HMPI_GOTO_ERROR(FAIL, "MPI_Info_get failed", mpi_code)
 
                 /* Compare values and flags */
-                if (!flag1 || !flag2 || HDmemcmp(value1, value2, MPI_MAX_INFO_VAL)) {
+                if (!flag1 || !flag2 || memcmp(value1, value2, MPI_MAX_INFO_VAL)) {
                     same = FALSE;
                     break;
                 }
@@ -450,8 +445,6 @@ done:
  * Return:      Non-negative on success, negative on failure.
  *
  *              *new_type    the new datatype created
- *
- * Programmer:  Mohamad Chaarawi
  *
  *-------------------------------------------------------------------------
  */
@@ -640,9 +633,9 @@ H5_mpio_gatherv_alloc(void *send_buf, int send_count, MPI_Datatype send_type, co
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(send_buf || send_count == 0);
+    assert(send_buf || send_count == 0);
     if (allgather || (mpi_rank == root))
-        HDassert(out_buf && out_buf_num_entries);
+        assert(out_buf && out_buf_num_entries);
 
         /* Retrieve the extent of the MPI Datatype being used */
 #if H5_CHECK_MPI_VERSION(3, 0)
@@ -669,11 +662,11 @@ H5_mpio_gatherv_alloc(void *send_buf, int send_count, MPI_Datatype send_type, co
 
         /* If our buffer size is 0, there's nothing to do */
         if (buf_size == 0)
-            HGOTO_DONE(SUCCEED)
+            HGOTO_DONE(SUCCEED);
 
         if (NULL == (recv_buf = H5MM_malloc(buf_size)))
             /* Push an error, but still participate in collective gather operation */
-            HDONE_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL, "couldn't allocate receive buffer")
+            HDONE_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL, "couldn't allocate receive buffer");
     }
 
     /* Perform gather operation */
@@ -726,9 +719,9 @@ H5_mpio_gatherv_alloc_simple(void *send_buf, int send_count, MPI_Datatype send_t
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(send_buf || send_count == 0);
+    assert(send_buf || send_count == 0);
     if (allgather || (mpi_rank == root))
-        HDassert(out_buf && out_buf_num_entries);
+        assert(out_buf && out_buf_num_entries);
 
     /*
      * Allocate array to store the receive counts of each rank, as well as
@@ -742,7 +735,7 @@ H5_mpio_gatherv_alloc_simple(void *send_buf, int send_count, MPI_Datatype send_t
             (recv_counts_disps_array = H5MM_malloc(2 * (size_t)mpi_size * sizeof(*recv_counts_disps_array))))
             /* Push an error, but still participate in collective gather operation */
             HDONE_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL,
-                        "couldn't allocate receive counts and displacements array")
+                        "couldn't allocate receive counts and displacements array");
     }
 
     /* Collect each rank's send count to interested ranks */
@@ -795,8 +788,6 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Houjun Tang,  April 7, 2022
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -804,12 +795,13 @@ H5_mpio_get_file_sync_required(MPI_File fh, hbool_t *file_sync_required)
 {
     MPI_Info info_used;
     int      flag;
+    char    *sync_env_var;
     char     value[MPI_MAX_INFO_VAL];
     herr_t   ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(file_sync_required);
+    assert(file_sync_required);
 
     *file_sync_required = FALSE;
 
@@ -827,7 +819,7 @@ H5_mpio_get_file_sync_required(MPI_File fh, hbool_t *file_sync_required)
         HGOTO_ERROR(H5E_LIB, H5E_CANTFREE, FAIL, "can't free MPI info")
 
     /* Force setting the flag via env variable (temp solution before the flag is implemented in MPI) */
-    char *sync_env_var = HDgetenv("HDF5_DO_MPI_FILE_SYNC");
+    sync_env_var = HDgetenv("HDF5_DO_MPI_FILE_SYNC");
     if (sync_env_var && (!HDstrcmp(sync_env_var, "TRUE") || !HDstrcmp(sync_env_var, "1")))
         *file_sync_required = TRUE;
     if (sync_env_var && (!HDstrcmp(sync_env_var, "FALSE") || !HDstrcmp(sync_env_var, "0")))

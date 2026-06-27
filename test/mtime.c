@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -12,9 +11,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:  Robb Matzke
- *              Thursday, July 30, 1998
- *
  * Purpose:    Determines if the modification time message is working
  *        properly.  Specifically, the code in H5O_mtime_decode() is
  *        very OS-dependent and this test tries to figure out if it's
@@ -23,7 +19,7 @@
 #include "h5test.h"
 #include "H5srcdir.h"
 
-const char *FILENAME[] = {"mtime", NULL};
+static const char *FILENAME[] = {"mtime", NULL};
 
 #define TESTFILE1 "tmtimeo.h5"
 #define MTIME1    1055531866
@@ -36,16 +32,6 @@ const char *FILENAME[] = {"mtime", NULL};
  * Purpose:    H5O_mtime_decode() test.
  *
  * Return:      EXIT_SUCCESS/EXIT_FAILURE
- *
- * Programmer:    Robb Matzke
- *              Thursday, July 30, 1998
- *
- * Modifications:
- *              Added checks for old and new modification time messages
- *              in pre-created datafiles (generated with gen_old_mtime.c and
- *              gen_new_mtime.c).
- *              Quincey Koziol
- *              Friday, January  3, 2003
  *
  *-------------------------------------------------------------------------
  */
@@ -130,7 +116,7 @@ main(void)
         HDstrftime((char *)buf1, sizeof buf1, "%Y-%m-%d %H:%M:%S", tm);
         tm = HDlocaltime(&now);
         HDstrftime((char *)buf2, sizeof buf2, "%Y-%m-%d %H:%M:%S", tm);
-        HDprintf("    got: %s\n    ans: %s\n", buf1, buf2);
+        printf("    got: %s\n    ans: %s\n", buf1, buf2);
         goto error;
     }
     PASSED();
@@ -160,7 +146,7 @@ main(void)
             }
             else {
                 H5_FAILED();
-                HDprintf("***cannot open the pre-created old modification test file (%s)\n", testfile);
+                printf("***cannot open the pre-created old modification test file (%s)\n", testfile);
                 goto error;
             } /* end else */
         }
@@ -190,7 +176,7 @@ main(void)
             }
             else {
                 H5_FAILED();
-                HDprintf("***cannot open the pre-created old modification test file (%s)\n", testfile);
+                printf("***cannot open the pre-created old modification test file (%s)\n", testfile);
                 goto error;
             } /* end else */
         }

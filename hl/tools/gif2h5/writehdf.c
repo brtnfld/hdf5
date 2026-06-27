@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -23,13 +22,6 @@
  * Function: WriteHDF
  *
  * Purpose: Write the GIF image with the HDF5 Image API
- *
- * Programmer: Unknown
- *
- * Modifications:  pvn
- *   Use the HDF5 IMAGE API to write the HDF5 image and palette
- *
- * Date: January, 31, 2006
  *
  *-------------------------------------------------------------------------
  */

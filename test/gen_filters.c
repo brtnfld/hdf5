@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -36,9 +35,6 @@ static size_t filter_bogus(unsigned int flags, size_t cd_nelmts, const unsigned 
  * Return:	Success:	0
  *
  *		Failure:	-1
- *
- * Programmer:  Pedro Vicente
- *              Thursday, March 25, 2004
  *
  *-------------------------------------------------------------------------
  */
@@ -102,7 +98,7 @@ error:
         H5Sclose(sid);
         H5Fclose(fid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return -1;
 } /* end test_filters_endianess() */
 
@@ -126,9 +122,6 @@ const H5Z_class2_t H5Z_BOGUS[1] = {{
  *
  *		Failure:	0
  *
- * Programmer:	Raymond Lu
- *              2 June 2011
- *
  *-------------------------------------------------------------------------
  */
 static size_t
@@ -147,9 +140,6 @@ filter_bogus(unsigned int H5_ATTR_UNUSED flags, size_t H5_ATTR_UNUSED cd_nelmts,
  * Return:	Success:	0
  *
  *		Failure:	-1
- *
- * Programmer:	Raymond Lu
- *              2 June 2011
  *
  *-------------------------------------------------------------------------
  */
@@ -218,7 +208,7 @@ error:
         H5Sclose(sid);
         H5Fclose(fid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return -1;
 }
 
@@ -228,8 +218,6 @@ error:
  * Purpose:	call the generator function
  *
  * Return:	Success:
- *
- * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -243,12 +231,12 @@ main(void)
 
     if (nerrors)
         goto error;
-    HDprintf("All tests passed.\n");
+    printf("All tests passed.\n");
 
     return 0;
 
 error:
     nerrors = MAX(1, nerrors);
-    HDprintf("***** %d GEN_FILTERS FAILURES *****\n", nerrors);
+    printf("***** %d GEN_FILTERS FAILURES *****\n", nerrors);
     return 1;
 }

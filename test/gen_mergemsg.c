@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -12,9 +11,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:  Quincey Koziol
- *              Friday, June 30, 2006
- *
  *  This program creates an object with fragmented object header messages
  *  that will be merged when the object is read from the file.  This program
  *  needs to be compiled against the 1.6.5 or earlier version of the library
@@ -37,7 +33,7 @@
 #define ATTR3_LEN 1
 
 int
-main()
+main(void)
 {
     hid_t  fid;             /* File ID */
     hid_t  gid, gid2, gid3; /* Group IDs */
@@ -82,7 +78,7 @@ main()
     sid = H5Screate(H5S_SCALAR);
     assert(sid > 0);
 
-    /* Create dataype for attribute */
+    /* Create datatype for attribute */
     tid = H5Tcopy(H5T_C_S1);
     assert(tid > 0);
     ret = H5Tset_size(tid, ATTR1_LEN);
@@ -108,7 +104,7 @@ main()
     sid = H5Screate(H5S_SCALAR);
     assert(sid > 0);
 
-    /* Create dataype for attribute */
+    /* Create datatype for attribute */
     tid = H5Tcopy(H5T_C_S1);
     assert(tid > 0);
     ret = H5Tset_size(tid, ATTR2_LEN);
@@ -178,7 +174,7 @@ main()
     sid = H5Screate(H5S_SCALAR);
     assert(sid > 0);
 
-    /* Create dataype for attribute */
+    /* Create datatype for attribute */
     tid = H5Tcopy(H5T_C_S1);
     assert(tid > 0);
     ret = H5Tset_size(tid, ATTR3_LEN);
@@ -224,7 +220,7 @@ main()
     sid = H5Screate(H5S_SCALAR);
     assert(sid > 0);
 
-    /* Create dataype for attribute */
+    /* Create datatype for attribute */
     tid = H5Tcopy(H5T_C_S1);
     assert(tid > 0);
     ret = H5Tset_size(tid, ATTR2_LEN);
@@ -286,7 +282,7 @@ main()
     sid = H5Screate(H5S_SCALAR);
     assert(sid > 0);
 
-    /* Create dataype for attribute */
+    /* Create datatype for attribute */
     tid = H5Tcopy(H5T_C_S1);
     assert(tid > 0);
     ret = H5Tset_size(tid, ATTR2_LEN);

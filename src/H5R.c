@@ -1,6 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -147,7 +146,7 @@ H5Rcreate_object(hid_t loc_id, const char *name, hid_t oapl_id, H5R_ref_t *ref_p
         HGOTO_ERROR(H5E_REFERENCE, H5E_CANTGET, FAIL, "unable to retrieve object token")
 
     /* Create the reference (do not pass filename, since file_id is attached) */
-    HDmemset(ref_ptr, 0, H5R_REF_BUF_SIZE);
+    memset(ref_ptr, 0, H5R_REF_BUF_SIZE);
     if (H5R__create_object(&obj_token, cont_info.token_size, (H5R_ref_priv_t *)ref_ptr) < 0)
         HGOTO_ERROR(H5E_REFERENCE, H5E_CANTCREATE, FAIL, "unable to create object reference")
 
@@ -157,7 +156,7 @@ H5Rcreate_object(hid_t loc_id, const char *name, hid_t oapl_id, H5R_ref_t *ref_p
 
 done:
     if (file_id != H5I_INVALID_HID && H5I_dec_ref(file_id) < 0)
-        HDONE_ERROR(H5E_REFERENCE, H5E_CANTDEC, FAIL, "unable to decrement refcount on file")
+        HDONE_ERROR(H5E_REFERENCE, H5E_CANTDEC, FAIL, "unable to decrement refcount on file");
     FUNC_LEAVE_API(ret_value)
 } /* end H5Rcreate_object() */
 
@@ -248,7 +247,7 @@ H5Rcreate_region(hid_t loc_id, const char *name, hid_t space_id, hid_t oapl_id, 
         HGOTO_ERROR(H5E_REFERENCE, H5E_CANTGET, FAIL, "unable to retrieve object token")
 
     /* Create the reference (do not pass filename, since file_id is attached) */
-    HDmemset(ref_ptr, 0, H5R_REF_BUF_SIZE);
+    memset(ref_ptr, 0, H5R_REF_BUF_SIZE);
     if (H5R__create_region((const H5O_token_t *)&obj_token, cont_info.token_size, space,
                            (H5R_ref_priv_t *)ref_ptr) < 0)
         HGOTO_ERROR(H5E_REFERENCE, H5E_CANTCREATE, FAIL, "unable to create region reference")
@@ -259,7 +258,7 @@ H5Rcreate_region(hid_t loc_id, const char *name, hid_t space_id, hid_t oapl_id, 
 
 done:
     if (file_id != H5I_INVALID_HID && H5I_dec_ref(file_id) < 0)
-        HDONE_ERROR(H5E_REFERENCE, H5E_CANTDEC, FAIL, "unable to decrement refcount on file")
+        HDONE_ERROR(H5E_REFERENCE, H5E_CANTDEC, FAIL, "unable to decrement refcount on file");
     FUNC_LEAVE_API(ret_value)
 } /* end H5Rcreate_region() */
 
@@ -346,7 +345,7 @@ H5Rcreate_attr(hid_t loc_id, const char *name, const char *attr_name, hid_t oapl
         HGOTO_ERROR(H5E_REFERENCE, H5E_CANTGET, FAIL, "unable to retrieve object token")
 
     /* Create the reference (do not pass filename, since file_id is attached) */
-    HDmemset(ref_ptr, 0, H5R_REF_BUF_SIZE);
+    memset(ref_ptr, 0, H5R_REF_BUF_SIZE);
     if (H5R__create_attr((const H5O_token_t *)&obj_token, cont_info.token_size, attr_name,
                          (H5R_ref_priv_t *)ref_ptr) < 0)
         HGOTO_ERROR(H5E_REFERENCE, H5E_CANTCREATE, FAIL, "unable to create attribute reference")
@@ -357,7 +356,7 @@ H5Rcreate_attr(hid_t loc_id, const char *name, const char *attr_name, hid_t oapl
 
 done:
     if (file_id != H5I_INVALID_HID && H5I_dec_ref(file_id) < 0)
-        HDONE_ERROR(H5E_REFERENCE, H5E_CANTDEC, FAIL, "unable to decrement refcount on file")
+        HDONE_ERROR(H5E_REFERENCE, H5E_CANTDEC, FAIL, "unable to decrement refcount on file");
     FUNC_LEAVE_API(ret_value)
 } /* end H5Rcreate_attr() */
 
@@ -388,7 +387,7 @@ H5Rdestroy(H5R_ref_t *ref_ptr)
         HGOTO_ERROR(H5E_REFERENCE, H5E_CANTFREE, FAIL, "unable to destroy reference")
 
     /* Memset back to 0 for safety */
-    HDmemset(ref_ptr, 0, H5R_REF_BUF_SIZE);
+    memset(ref_ptr, 0, H5R_REF_BUF_SIZE);
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -709,10 +708,10 @@ H5R__open_region_api_common(H5R_ref_t *ref_ptr, hid_t rapl_id, hid_t oapl_id, vo
 
 done:
     if ((opened_obj_id != H5I_INVALID_HID) && (H5I_dec_ref(opened_obj_id) < 0))
-        HDONE_ERROR(H5E_REFERENCE, H5E_CLOSEERROR, H5I_INVALID_HID, "can't close object")
+        HDONE_ERROR(H5E_REFERENCE, H5E_CLOSEERROR, H5I_INVALID_HID, "can't close object");
     if (H5I_INVALID_HID == ret_value) /* Cleanup on failure */
         if ((space_id != H5I_INVALID_HID) && (H5I_dec_ref(space_id) < 0))
-            HDONE_ERROR(H5E_REFERENCE, H5E_CLOSEERROR, H5I_INVALID_HID, "can't close dataspace")
+            HDONE_ERROR(H5E_REFERENCE, H5E_CLOSEERROR, H5I_INVALID_HID, "can't close dataspace");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5R__open_region_api_common() */
@@ -879,10 +878,10 @@ H5R__open_attr_api_common(H5R_ref_t *ref_ptr, hid_t rapl_id, hid_t aapl_id, void
 
 done:
     if ((opened_obj_id != H5I_INVALID_HID) && (H5I_dec_ref(opened_obj_id) < 0))
-        HDONE_ERROR(H5E_REFERENCE, H5E_CLOSEERROR, H5I_INVALID_HID, "can't close object")
+        HDONE_ERROR(H5E_REFERENCE, H5E_CLOSEERROR, H5I_INVALID_HID, "can't close object");
     if (H5I_INVALID_HID == ret_value) /* Cleanup on failure */
         if (opened_attr && H5VL_attr_close(*vol_obj_ptr, H5P_DATASET_XFER_DEFAULT, H5_REQUEST_NULL) < 0)
-            HDONE_ERROR(H5E_REFERENCE, H5E_CLOSEERROR, H5I_INVALID_HID, "can't close attribute")
+            HDONE_ERROR(H5E_REFERENCE, H5E_CLOSEERROR, H5I_INVALID_HID, "can't close attribute");
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5R__open_attr_api_common() */
