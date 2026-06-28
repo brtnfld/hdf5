@@ -854,7 +854,8 @@ H5C_evict_or_refresh_all_entries_in_page(H5F_t *f, uint64_t page, uint32_t lengt
                      * This should be un-reachable. If it is reached, we
                      * probably have another refresh callback to write.
                      */
-                    assert(false);
+                    HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL,
+                                "unsupported pinned entry state: no tag_info and no refresh callback");
                 }
             }
             else { /* simply evict the entry */

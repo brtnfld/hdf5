@@ -343,6 +343,8 @@ H5F_vfd_swmr_build_md_path_name(H5F_vfd_swmr_config_t *config, const char *hdf5_
 
     FUNC_ENTER_NOAPI(FAIL)
 
+    name[0] = '\0';
+
     if ((tot_len = strlen(config->md_file_path)) != 0) {
 
         /* md_file_path + '/' */

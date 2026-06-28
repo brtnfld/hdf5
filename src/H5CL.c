@@ -196,12 +196,12 @@ done:
 
     /* take down lex_vars */
     if (H5CL__take_down_lex_vars(&lex_vars) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't take down lex_vars.");
+        HDONE_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't take down lex_vars.");
 
     /* take down top_pair */
 
     if (H5CL_take_down_nv_pair(&top_pair) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't take down top_pair.");
+        HDONE_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't take down top_pair.");
 
     /* Clean up on error */
     if (ret_value < 0) {
@@ -319,11 +319,11 @@ done:
 
     /* take down lex_vars after parsing the name value pair list */
     if (H5CL__take_down_lex_vars(&lex_vars) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't take down lex_vars 1.");
+        HDONE_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't take down lex_vars 1.");
 
     /* take down top_pair */
     if (H5CL_take_down_nv_pair(&top_pair) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't take down top_pair.");
+        HDONE_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't take down top_pair.");
 
     FUNC_LEAVE_NOAPI(ret_value)
 
@@ -586,17 +586,17 @@ done:
 
     /* take down lex_vars if it isn't done already */
     if ((H5CL_LEX_VARS_STRUCT_TAG == lex_vars.struct_tag) && (H5CL__take_down_lex_vars(&lex_vars) < 0))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't take down lex_vars at done.");
+        HDONE_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't take down lex_vars at done.");
 
     /* take down top_pair */
     if (H5CL_take_down_nv_pair(&top_pair) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't take down top_pair.");
+        HDONE_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't take down top_pair.");
 
     for (i = 0; i < num_configs; i++) {
 
         if ((configs_mv_pairs[i].struct_tag == H5CL_NV_PAIR_STRUCT_TAG) &&
             (H5CL_take_down_nv_pair(&(configs_mv_pairs[i])) < 0)) {
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't take down a config name value pair.");
+            HDONE_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't take down a config name value pair.");
         }
     }
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1160,7 +1160,8 @@ H5CL__lex_read_token(bool value_expected, bool eoi_expected, H5CL_token_t **toke
 
             do {
 
-                assert(lex_vars_ptr->token.str_len < lex_vars_ptr->token.max_str_len);
+                if (lex_vars_ptr->token.str_len >= lex_vars_ptr->token.max_str_len)
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "token length exceeds max permitted size");
 
                 if ('(' == next_char) {
 
@@ -1174,8 +1175,6 @@ H5CL__lex_read_token(bool value_expected, bool eoi_expected, H5CL_token_t **toke
                 (lex_vars_ptr->token.str_ptr)[lex_vars_ptr->token.str_len++] = next_char;
                 lex_vars_ptr->next_char_ptr++;
                 next_char = *(lex_vars_ptr->next_char_ptr);
-
-                assert(lex_vars_ptr->token.str_len <= lex_vars_ptr->token.max_str_len);
 
             } while (('\0' != next_char) && (paren_depth > 0));
 
@@ -1196,8 +1195,6 @@ H5CL__lex_read_token(bool value_expected, bool eoi_expected, H5CL_token_t **toke
                                 "Un-terminated list in input string.  Context: %s", lex_vars_ptr->err_ctx);
                 }
             }
-
-            assert(lex_vars_ptr->token.str_len <= lex_vars_ptr->token.max_str_len);
 
             (lex_vars_ptr->token.str_ptr)[lex_vars_ptr->token.str_len] = '\0';
         }
@@ -1249,6 +1246,8 @@ H5CL__lex_read_token(bool value_expected, bool eoi_expected, H5CL_token_t **toke
                 escape = false;
             }
 
+            if (lex_vars_ptr->token.str_len >= lex_vars_ptr->token.max_str_len)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "token length exceeds max permitted size");
             (lex_vars_ptr->token.str_ptr)[lex_vars_ptr->token.str_len++] = next_char;
 
             lex_vars_ptr->next_char_ptr++;
@@ -1353,11 +1352,11 @@ H5CL__lex_read_token(bool value_expected, bool eoi_expected, H5CL_token_t **toke
 
         do {
 
+            if (lex_vars_ptr->token.str_len >= lex_vars_ptr->token.max_str_len)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "token length exceeds max permitted size");
             (lex_vars_ptr->token.str_ptr)[lex_vars_ptr->token.str_len++] = next_char;
             lex_vars_ptr->next_char_ptr++;
             next_char = *(lex_vars_ptr->next_char_ptr);
-
-            assert(lex_vars_ptr->token.str_len < lex_vars_ptr->token.max_str_len);
 
         } while ((isalnum(next_char)) || ('_' == next_char));
 
@@ -1440,11 +1439,11 @@ H5CL__lex_read_token(bool value_expected, bool eoi_expected, H5CL_token_t **toke
                 is_float = true;
             }
 
+            if (lex_vars_ptr->token.str_len >= lex_vars_ptr->token.max_str_len)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "token length exceeds max permitted size");
             (lex_vars_ptr->token.str_ptr)[lex_vars_ptr->token.str_len++] = next_char;
             lex_vars_ptr->next_char_ptr++;
             next_char = *(lex_vars_ptr->next_char_ptr);
-
-            assert(lex_vars_ptr->token.str_len < lex_vars_ptr->token.max_str_len);
 
         } while ((isdigit(next_char)) || (('.' == next_char) && (!is_float)));
 
@@ -2121,7 +2120,7 @@ H5CL_load_config_string_from_file(const char *file_path, char **cfg_str_ptr_ptr)
     if (st.st_size <= 0)
         HGOTO_ERROR(H5E_FILE, H5E_BADFILE, FAIL, "file is empty");
 
-    buf = malloc((size_t)st.st_size + 1);
+    buf = H5MM_malloc((size_t)st.st_size + 1);
     if (!buf)
         HGOTO_ERROR(H5E_INTERNAL, H5E_CANTALLOC, FAIL, "unable to allocate string buffer");
 
@@ -2167,7 +2166,7 @@ H5CL_load_config_string_from_file(const char *file_path, char **cfg_str_ptr_ptr)
 
 done:
     if (buf)
-        free(buf);
+        H5MM_xfree(buf);
 
     if (file)
         fclose(file);
