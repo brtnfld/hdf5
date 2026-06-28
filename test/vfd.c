@@ -1945,8 +1945,7 @@ test_log(void)
     /* Check for extra flags not accounted for above */
     if (driver_flags != (H5FD_FEAT_AGGREGATE_METADATA | H5FD_FEAT_ACCUMULATE_METADATA | H5FD_FEAT_DATA_SIEVE |
                          H5FD_FEAT_AGGREGATE_SMALLDATA | H5FD_FEAT_POSIX_COMPAT_HANDLE |
-                         H5FD_FEAT_SUPPORTS_SWMR_IO | H5FD_FEAT_DEFAULT_VFD_COMPATIBLE |
-                         H5FD_FEAT_SUPPORTS_VFD_SWMR))
+                         H5FD_FEAT_SUPPORTS_SWMR_IO | H5FD_FEAT_DEFAULT_VFD_COMPATIBLE))
         TEST_ERROR;
 
     /* Create the test file */
