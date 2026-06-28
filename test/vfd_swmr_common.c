@@ -52,18 +52,30 @@ below_speed_limit(struct timespec *last, const struct timespec *ival)
     /* NOTE: timespec_get() is C11. This may need further tweaks. */
 #if defined(H5_HAVE_TIMESPEC_GET)
     if (timespec_get(&now, TIME_UTC) != TIME_UTC) {
+        fprintf(stderr, "%s: timespec_get", __func__);
+        exit(EXIT_FAILURE);
+    }
 #elif defined(H5_HAVE_CLOCK_GETTIME)
     if (clock_gettime(CLOCK_MONOTONIC, &now) == -1) {
-#elif defined(H5_HAVE_WIN32_API)
-    /* MSVC/most MSYS2 targets: timespec_get is available from VS2015+ */
-    if (timespec_get(&now, TIME_UTC) != TIME_UTC) {
-#else
-#error "No suitable time function (timespec_get or clock_gettime) available"
-    if (0) {
-#endif
         fprintf(stderr, "%s: clock_gettime", __func__);
         exit(EXIT_FAILURE);
     }
+#elif defined(H5_HAVE_WIN32_API)
+    {
+        /* GetSystemTimeAsFileTime: always available, no CRT version dependency */
+        FILETIME       ft;
+        ULARGE_INTEGER uli;
+        GetSystemTimeAsFileTime(&ft);
+        uli.LowPart  = ft.dwLowDateTime;
+        uli.HighPart = ft.dwHighDateTime;
+        /* Convert from 100-ns ticks since 1601-01-01 to Unix epoch */
+        uli.QuadPart -= 116444736000000000ULL;
+        now.tv_sec  = (time_t)(uli.QuadPart / 10000000ULL);
+        now.tv_nsec = (long)((uli.QuadPart % 10000000ULL) * 100ULL);
+    }
+#else
+#error "No suitable time function (timespec_get or clock_gettime) available"
+#endif
 
     if ((uint64_t)now.tv_sec - (uint64_t)last->tv_sec > (uint64_t)ival->tv_sec)
         result = true;

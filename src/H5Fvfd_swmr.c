@@ -1592,9 +1592,18 @@ H5F__vfd_swmr_update_end_of_tick_and_tick_num(H5F_shared_t *shared, hbool_t incr
     if (clock_gettime(CLOCK_REALTIME, &curr) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time via clock_gettime");
 #elif defined(H5_HAVE_WIN32_API)
-    /* MSVC and most MSYS2 targets: timespec_get is available from VS2015+ */
-    if (timespec_get(&curr, TIME_UTC) != TIME_UTC)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time via timespec_get");
+    {
+        /* GetSystemTimeAsFileTime: always available, no CRT version dependency */
+        FILETIME       ft;
+        ULARGE_INTEGER uli;
+        GetSystemTimeAsFileTime(&ft);
+        uli.LowPart  = ft.dwLowDateTime;
+        uli.HighPart = ft.dwHighDateTime;
+        /* Convert from 100-ns ticks since 1601-01-01 to Unix epoch */
+        uli.QuadPart -= 116444736000000000ULL;
+        curr.tv_sec  = (time_t)(uli.QuadPart / 10000000ULL);
+        curr.tv_nsec = (long)((uli.QuadPart % 10000000ULL) * 100ULL);
+    }
 #else
 #error "No suitable time function (timespec_get or clock_gettime) available"
 #endif
@@ -1999,9 +2008,18 @@ H5F_vfd_swmr_process_eot_queue(hbool_t entering_api)
         if (clock_gettime(CLOCK_REALTIME, &now) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time via clock_gettime");
 #elif defined(H5_HAVE_WIN32_API)
-        /* MSVC and most MSYS2 targets: timespec_get is available from VS2015+ */
-        if (timespec_get(&now, TIME_UTC) != TIME_UTC)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time via timespec_get");
+        {
+            /* GetSystemTimeAsFileTime: always available, no CRT version dependency */
+            FILETIME       ft;
+            ULARGE_INTEGER uli;
+            GetSystemTimeAsFileTime(&ft);
+            uli.LowPart  = ft.dwLowDateTime;
+            uli.HighPart = ft.dwHighDateTime;
+            /* Convert from 100-ns ticks since 1601-01-01 to Unix epoch */
+            uli.QuadPart -= 116444736000000000ULL;
+            now.tv_sec  = (time_t)(uli.QuadPart / 10000000ULL);
+            now.tv_nsec = (long)((uli.QuadPart % 10000000ULL) * 100ULL);
+        }
 #else
 #error "No suitable time function (timespec_get or clock_gettime) available"
 #endif
