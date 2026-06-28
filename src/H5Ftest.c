@@ -308,7 +308,7 @@ H5F__vfd_swmr_writer_create_open_flush_test(hid_t file_id, hbool_t file_create)
     H5F_t                  *f;                   /* File pointer */
     h5_stat_t               stat_buf;            /* Buffer for stat info */
     H5FD_vfd_swmr_md_header md_hdr;              /* Header for the metadata file */
-    H5FD_vfd_swmr_md_index  md_idx = {0};        /* Index for the metadata file */
+    H5FD_vfd_swmr_md_index  md_idx    = {0};     /* Index for the metadata file */
     int                     md_fd     = -1;      /* The metadata file descriptor */
     herr_t                  ret_value = SUCCEED; /* Return value */
 
