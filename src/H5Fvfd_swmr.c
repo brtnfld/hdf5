@@ -119,8 +119,6 @@ const unsigned int log_err_mesg_length = 14;
 
 /********************/
 /* Local Prototypes */
-herr_t H5Fswmr_config_file(const char *file_path, hid_t fapl_id, hid_t fcpl_id, hbool_t writer,
-                           hbool_t create_file);
 /********************/
 
 static herr_t H5F__vfd_swmr_update_end_of_tick_and_tick_num(H5F_shared_t *, hbool_t);

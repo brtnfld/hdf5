@@ -870,8 +870,11 @@ H5_DLL herr_t H5F_load_swmr_config_from_string(const char *config_str, hid_t fap
                                                hbool_t writer, hbool_t create_file);
 H5_DLL herr_t H5Fswmr_config_file(const char *file_path, hid_t fapl_id, hid_t fcpl_id, hbool_t writer,
                                   hbool_t create_file);
+H5_DLL herr_t H5Fswmr_config_string(const char *config_str, hid_t fapl_id, hid_t fcpl_id,
+                                    hbool_t writer, hbool_t create_file);
 H5_DLL herr_t H5Fswmr_config_env(hid_t fapl_id, hid_t fcpl_id, hbool_t writer, hbool_t create_file,
                                  const char *env_var_name);
+H5_DLL herr_t H5F_vfd_swmr_process_eot_queue(hbool_t entering_api);
 
 /* EOT queue global */
 H5_DLL extern eot_queue_t eot_queue_g;
