@@ -50,10 +50,16 @@ below_speed_limit(struct timespec *last, const struct timespec *ival)
     assert(0 <= ival->tv_nsec && ival->tv_nsec < 1000000000LL);
 
     /* NOTE: timespec_get() is C11. This may need further tweaks. */
-#ifdef H5_HAVE_WIN32_API
+#if defined(H5_HAVE_TIMESPEC_GET)
+    if (timespec_get(&now, TIME_UTC) != TIME_UTC) {
+#elif defined(H5_HAVE_CLOCK_GETTIME)
+    if (clock_gettime(CLOCK_MONOTONIC, &now) == -1) {
+#elif defined(H5_HAVE_WIN32_API)
+    /* MSVC/most MSYS2 targets: timespec_get is available from VS2015+ */
     if (timespec_get(&now, TIME_UTC) != TIME_UTC) {
 #else
-    if (clock_gettime(CLOCK_MONOTONIC, &now) == -1) {
+#error "No suitable time function (timespec_get or clock_gettime) available"
+    if (0) {
 #endif
         fprintf(stderr, "%s: clock_gettime", __func__);
         exit(EXIT_FAILURE);

@@ -2705,7 +2705,7 @@ random_pause(unsigned int max_pause_msecs)
     if (max_pause_msecs == 0)
         return;
 
-    nsecs_per_msec = 1 + (uint64_t)random() % (1000 * 1000);
+    nsecs_per_msec = 1 + (uint64_t)rand() % (1000 * 1000);
     nsecs          = max_pause_msecs * nsecs_per_msec;
 
     H5_nanosleep(nsecs);

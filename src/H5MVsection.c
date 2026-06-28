@@ -329,7 +329,7 @@ done:
 static herr_t
 H5MV__sect_valid(const H5FS_section_class_t H5_ATTR_UNUSED *cls, const H5FS_section_info_t *_sect)
 {
-    const H5MV_free_section_t *sect = (const H5MV_free_section_t *)_sect; /* File free section */
+    const H5MV_free_section_t H5_ATTR_NDEBUG_UNUSED *sect = (const H5MV_free_section_t *)_sect;
 
     FUNC_ENTER_PACKAGE_NOERR
 

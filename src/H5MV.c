@@ -467,7 +467,7 @@ done:
 htri_t
 H5MV_try_shrink(H5F_t *f, haddr_t addr, hsize_t size)
 {
-    H5F_shared_t        *shared    = f->shared;
+    H5F_shared_t H5_ATTR_NDEBUG_UNUSED *shared = f->shared;
     H5MV_free_section_t *node      = NULL;  /* Free space section pointer */
     htri_t               ret_value = false; /* Return value */
 
