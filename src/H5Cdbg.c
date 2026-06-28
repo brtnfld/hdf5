@@ -49,6 +49,11 @@
 /********************/
 /* Local Prototypes */
 /********************/
+#ifdef H5_HAVE_PARALLEL
+#ifndef NDEBUG
+static herr_t H5C_dump_coll_write_list(H5C_t *cache_ptr, char *calling_fcn);
+#endif /* NDEBUG */
+#endif /* H5_HAVE_PARALLEL */
 
 /*********************/
 /* Package Variables */
@@ -322,7 +327,7 @@ H5C_dump_cache_skip_list(H5C_t *cache_ptr, char *calling_fcn)
  */
 #ifdef H5_HAVE_PARALLEL
 #ifndef NDEBUG
-herr_t
+static herr_t
 H5C_dump_coll_write_list(H5C_t *cache_ptr, char *calling_fcn)
 {
     herr_t             ret_value = SUCCEED; /* Return value */
@@ -334,69 +339,59 @@ H5C_dump_coll_write_list(H5C_t *cache_ptr, char *calling_fcn)
 
     FUNC_ENTER_NOAPI_NOERR
 
-    HDassert(cache_ptr != NULL);
-    HDassert(cache_ptr->aux_ptr);
+    assert(cache_ptr != NULL);
+    assert(cache_ptr->aux_ptr);
 
     aux_ptr = (H5AC_aux_t *)cache_ptr->aux_ptr;
 
-    HDassert(calling_fcn != NULL);
+    assert(calling_fcn != NULL);
 
     list_len = (int)H5SL_count(cache_ptr->coll_write_list);
 
-    HDfprintf(stdout, "\n\nDumping MDC coll write list from %d:%s.\n", aux_ptr->mpi_rank, calling_fcn);
-    HDfprintf(stdout, "	slist len = %" PRIu32 ".\n", cache_ptr->slist_len);
+    fprintf(stdout, "\n\nDumping MDC coll write list from %d:%s.\n", aux_ptr->mpi_rank, calling_fcn);
+    fprintf(stdout, "\tslist len = %" PRIu32 ".\n", cache_ptr->slist_len);
 
     if (list_len > 0) {
 
         /* scan the collective write list generating the desired output */
-        HDfprintf(stdout, "Num:    Addr:               Len: Prot/Pind: Dirty: Type:\n");
+        fprintf(stdout, "Num:    Addr:               Len: Prot/Pind: Dirty: Type:\n");
 
         i = 0;
 
         node_ptr = H5SL_first(cache_ptr->coll_write_list);
 
         if (node_ptr != NULL)
-
             entry_ptr = (H5C_cache_entry_t *)H5SL_item(node_ptr);
     }
     else {
-
         entry_ptr = NULL;
     }
 
     while (entry_ptr != NULL) {
 
-        HDassert(entry_ptr != NULL);
+        assert(entry_ptr != NULL);
 
-        HDfprintf(stdout, "%s%d       0x%016llx  %4lld    %d/%d       %d    %s\n", cache_ptr->prefix, i,
-                  (long long)(entry_ptr->addr), (long long)(entry_ptr->size), (int)(entry_ptr->is_protected),
-                  (int)(entry_ptr->is_pinned), (int)(entry_ptr->is_dirty), entry_ptr->type->name);
+        fprintf(stdout, "%s%d       0x%016llx  %4lld    %d/%d       %d    %s\n", cache_ptr->prefix, i,
+                (long long)(entry_ptr->addr), (long long)(entry_ptr->size), (int)(entry_ptr->is_protected),
+                (int)(entry_ptr->is_pinned), (int)(entry_ptr->is_dirty), entry_ptr->type->name);
 
-        HDfprintf(stdout, "		node_ptr = %p, item = %p\n", (void *)node_ptr, H5SL_item(node_ptr));
+        fprintf(stdout, "\t\tnode_ptr = %p, item = %p\n", (void *)node_ptr, H5SL_item(node_ptr));
 
         /* increment node_ptr before we delete its target */
-
         node_ptr = H5SL_next(node_ptr);
 
-        if (node_ptr != NULL) {
-
+        if (node_ptr != NULL)
             entry_ptr = (H5C_cache_entry_t *)H5SL_item(node_ptr);
-        }
-        else {
-
+        else
             entry_ptr = NULL;
-        }
 
         i++;
-
     } /* end while */
-} /* end if */
 
-HDfprintf(stdout, "\n\n");
+    fprintf(stdout, "\n\n");
 
-FUNC_LEAVE_NOAPI(ret_value)
-
-} /* H5C_dump_cache_skip_list() */
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5C_dump_coll_write_list() */
 #endif /* NDEBUG */
 #endif /* H5_HAVE_PARALLEL */
 
