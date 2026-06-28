@@ -3235,7 +3235,7 @@ H5Fswmr_config_file(const char *file_path, hid_t fapl_id, hid_t fcpl_id, hbool_t
 
 done:
     if (config_str)
-        free(config_str);
+        H5MM_xfree(config_str);
 
     FUNC_LEAVE_API(ret_value)
 } /* H5Fswmr_config_file() */

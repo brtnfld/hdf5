@@ -1285,6 +1285,8 @@ H5CL__lex_read_token(bool value_expected, bool eoi_expected, H5CL_token_t **toke
 
         lex_vars_ptr->token.code = H5CL_BIN_BLOB_TOK;
 
+        if (lex_vars_ptr->token.str_len >= lex_vars_ptr->token.max_str_len)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "token length exceeds max permitted size");
         (lex_vars_ptr->token.str_ptr)[lex_vars_ptr->token.str_len++] = next_char;
 
         lex_vars_ptr->next_char_ptr++;
@@ -1292,6 +1294,8 @@ H5CL__lex_read_token(bool value_expected, bool eoi_expected, H5CL_token_t **toke
 
         assert('-' == next_char);
 
+        if (lex_vars_ptr->token.str_len >= lex_vars_ptr->token.max_str_len)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "token length exceeds max permitted size");
         (lex_vars_ptr->token.str_ptr)[lex_vars_ptr->token.str_len++] = next_char;
 
         lex_vars_ptr->next_char_ptr++;
@@ -1299,6 +1303,8 @@ H5CL__lex_read_token(bool value_expected, bool eoi_expected, H5CL_token_t **toke
 
         while (isxdigit(next_char)) {
 
+            if (lex_vars_ptr->token.str_len >= lex_vars_ptr->token.max_str_len)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "token length exceeds max permitted size");
             (lex_vars_ptr->token.str_ptr)[lex_vars_ptr->token.str_len++] = next_char;
 
             if (!have_high_nibble) {
@@ -1327,6 +1333,12 @@ H5CL__lex_read_token(bool value_expected, bool eoi_expected, H5CL_token_t **toke
                 byte_str[0] = '0';
                 byte_str[1] = '0';
 
+                /* bb_ptr is allocated with the same size as str_ptr (max_str_len + 1),
+                 * so max_str_len bounds it as well.
+                 */
+                if (lex_vars_ptr->token.bb_len >= lex_vars_ptr->token.max_str_len)
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                                "binary blob length exceeds max permitted size");
                 (lex_vars_ptr->token.bb_ptr)[lex_vars_ptr->token.bb_len++] = next_byte;
             }
 
@@ -1340,6 +1352,8 @@ H5CL__lex_read_token(bool value_expected, bool eoi_expected, H5CL_token_t **toke
 
             next_byte = (uint8_t)strtoll(byte_str, NULL, 16);
 
+            if (lex_vars_ptr->token.bb_len >= lex_vars_ptr->token.max_str_len)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "binary blob length exceeds max permitted size");
             (lex_vars_ptr->token.bb_ptr)[lex_vars_ptr->token.bb_len++] = next_byte;
         }
 

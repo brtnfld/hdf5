@@ -20,6 +20,7 @@
 #include "H5CLpkg.h"
 #include "H5Epkg.h"
 #include "H5Fprivate.h"
+#include "H5MMprivate.h" /* Memory management */
 
 /*
  * Disable calls to cl_test_verify_error_stack() because this HDF5
@@ -4478,10 +4479,10 @@ vfd_swmr_load_string_config_smoke_check(void)
 
     bool verbose = true;
 
-    if (NULL == (actual_config = HDcalloc(1, sizeof(H5F_vfd_swmr_config_t)))) {
+    if (NULL == (actual_config = calloc(1, sizeof(H5F_vfd_swmr_config_t)))) {
         TEST_ERROR;
     }
-    HDmemset(actual_config, 0, sizeof(H5F_vfd_swmr_config_t));
+    memset(actual_config, 0, sizeof(H5F_vfd_swmr_config_t));
 
     TESTING("H5F_load_swmr_config_from_string() -- Initial Smoke Check");
 
@@ -6583,7 +6584,7 @@ cl_load_string_from_file_smoke_check(void)
         perror("Error deleting file");
     }
 
-    free(actual_file_str);
+    H5MM_xfree(actual_file_str);
 
     PASSED();
 
@@ -6594,7 +6595,7 @@ error:
     remove(TEST_CONFIG_FILE_NAME);
 
     if (actual_file_str)
-        free(actual_file_str);
+        H5MM_xfree(actual_file_str);
 
     return -1;
 } /* cl_load_string_from_file_smoke_check() */
@@ -6884,10 +6885,10 @@ vfd_swmr_load_file_config_smoke_check(void)
 
     bool verbose = true;
 
-    if (NULL == (actual_config = HDcalloc(1, sizeof(H5F_vfd_swmr_config_t)))) {
+    if (NULL == (actual_config = calloc(1, sizeof(H5F_vfd_swmr_config_t)))) {
         TEST_ERROR;
     }
-    HDmemset(actual_config, 0, sizeof(H5F_vfd_swmr_config_t));
+    memset(actual_config, 0, sizeof(H5F_vfd_swmr_config_t));
 
     TESTING("H5Fswmr_config_file() -- Initial Smoke Check");
 
