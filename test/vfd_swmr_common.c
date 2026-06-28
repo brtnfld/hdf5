@@ -297,7 +297,10 @@ await_signal(hid_t fid)
 
         pthread_create(&timer, NULL, timer_function, &params);
 
-        rc = sigwait(&sleepset, NULL);
+        {
+            int sig;
+            rc = sigwait(&sleepset, &sig);
+        }
 
         if (rc != -1) {
             fprintf(stderr, "Received signal, wrapping things up.\n");

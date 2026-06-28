@@ -3314,7 +3314,7 @@ H5F_load_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_t fc
 
     /* Define variables used within config handling routines */
     size_t                 page_buf_size;
-    hbool_t                metadata_pages_only;
+    hbool_t                metadata_pages_only = false;
     hbool_t                fs_strategy_persist;
     hsize_t                fs_page_size;
     H5F_vfd_swmr_config_t *config_ptr = NULL;
