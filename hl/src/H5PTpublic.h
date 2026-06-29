@@ -1,11 +1,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -18,7 +17,34 @@
 extern "C" {
 #endif
 
-/**\defgroup H5PT Packet Table
+/** \page H5PT_UG HDF5 High Level Packet Table
+ *
+ * Navigate back: \ref index "Main" / \ref UG
+ * <hr>
+ *
+ * \section sec_hl_packet_table_api HDF5 Packet Table APIs
+ *
+ * \subsection subsec_hl_packet_intro Introduction
+ *
+ * The HDF5 Packet Table API (H5PT) provides an interface for storing and retrieving
+ * fixed-length packets of data in append-only datasets. Packet tables are optimized
+ * for streaming data collection where records are added sequentially.
+ *
+ * @see H5PT Reference Manual
+ *
+ * \subsection subsec_hl_packet_ops Packet Table Operations
+ *
+ * Create packet tables with #H5PTcreate or open existing ones with #H5PTopen. Append
+ * packets using #H5PTappend and read packets with #H5PTread_packets. Get the number
+ * of packets with #H5PTget_num_packets. Close with #H5PTclose.
+ *
+ * Previous Chapter \ref sec_hl_table_api
+ *
+ * <hr>
+ * Navigate back: \ref index "Main" / \ref UG
+ */
+
+/**\defgroup H5PT HDF5 Packet Table APIs (H5PT)
  *
  * <em>Creating and manipulating HDF5 datasets to support append-
  * and read-only operations on table data (H5PT)</em>
@@ -83,7 +109,6 @@ extern "C" {
  *   \n Reads a number of packets from a packet table.
  * - \ref H5PTset_index
  *   \n Sets a packet table's index.
- * .
  *
  */
 
@@ -130,7 +155,7 @@ extern "C" {
  * \since   1.10.0 and 1.8.17
  *
  */
-H5_HLDLL hid_t H5PTcreate(hid_t loc_id, const char *dset_name, hid_t dtype_id, hsize_t chunk_size,
+H5HL_DLL hid_t H5PTcreate(hid_t loc_id, const char *dset_name, hid_t dtype_id, hsize_t chunk_size,
                           hid_t plist_id);
 
 /**
@@ -153,7 +178,7 @@ H5_HLDLL hid_t H5PTcreate(hid_t loc_id, const char *dset_name, hid_t dtype_id, h
  *          H5PTclose().
  *
  */
-H5_HLDLL hid_t H5PTopen(hid_t loc_id, const char *dset_name);
+H5HL_DLL hid_t H5PTopen(hid_t loc_id, const char *dset_name);
 
 /**
  * --------------------------------------------------------------------------
@@ -169,7 +194,7 @@ H5_HLDLL hid_t H5PTopen(hid_t loc_id, const char *dset_name);
  *          by \p table_id.
  *
  */
-H5_HLDLL herr_t H5PTclose(hid_t table_id);
+H5HL_DLL herr_t H5PTclose(hid_t table_id);
 
 /**
  * --------------------------------------------------------------------------
@@ -211,10 +236,10 @@ H5_HLDLL herr_t H5PTclose(hid_t table_id);
  *          Level 0 is faster but offers the least compression;
  *          level 9 is slower but offers maximum compression.
  *          A setting of -1 indicates that no compression is desired.
-
+ *
  */
 /* This function may be removed from the packet table in release 1.8.19. */
-H5_HLDLL hid_t H5PTcreate_fl(hid_t loc_id, const char *dset_name, hid_t dtype_id, hsize_t chunk_size,
+H5HL_DLL hid_t H5PTcreate_fl(hid_t loc_id, const char *dset_name, hid_t dtype_id, hsize_t chunk_size,
                              int compression);
 
 /*-------------------------------------------------------------------------
@@ -242,7 +267,7 @@ H5_HLDLL hid_t H5PTcreate_fl(hid_t loc_id, const char *dset_name, hid_t dtype_id
  *          the data should be in the form of #hvl_t structs.
  *
  */
-H5_HLDLL herr_t H5PTappend(hid_t table_id, size_t nrecords, const void *data);
+H5HL_DLL herr_t H5PTappend(hid_t table_id, size_t nrecords, const void *data);
 
 /*-------------------------------------------------------------------------
  * Read functions
@@ -272,7 +297,7 @@ H5_HLDLL herr_t H5PTappend(hid_t table_id, size_t nrecords, const void *data);
  *          The memory used by this data must be freed using H5PTfree_vlen_buff().
  *
  */
-H5_HLDLL herr_t H5PTget_next(hid_t table_id, size_t nrecords, void *data);
+H5HL_DLL herr_t H5PTget_next(hid_t table_id, size_t nrecords, void *data);
 
 /**
  * --------------------------------------------------------------------------
@@ -299,7 +324,7 @@ H5_HLDLL herr_t H5PTget_next(hid_t table_id, size_t nrecords, void *data);
  *          H5PTfree_vlen_buff().
  *
  */
-H5_HLDLL herr_t H5PTread_packets(hid_t table_id, hsize_t start, size_t nrecords, void *data);
+H5HL_DLL herr_t H5PTread_packets(hid_t table_id, hsize_t start, size_t nrecords, void *data);
 
 /*-------------------------------------------------------------------------
  * Inquiry functions
@@ -321,7 +346,7 @@ H5_HLDLL herr_t H5PTread_packets(hid_t table_id, hsize_t start, size_t nrecords,
  *          of packets in a packet table specified by \p table_id.
  *
  */
-H5_HLDLL herr_t H5PTget_num_packets(hid_t table_id, hsize_t *nrecords);
+H5HL_DLL herr_t H5PTget_num_packets(hid_t table_id, hsize_t *nrecords);
 
 /**
  * --------------------------------------------------------------------------
@@ -339,7 +364,7 @@ H5_HLDLL herr_t H5PTget_num_packets(hid_t table_id, hsize_t *nrecords);
  *          and returns a negative value otherwise.
  *
  */
-H5_HLDLL herr_t H5PTis_valid(hid_t table_id);
+H5HL_DLL herr_t H5PTis_valid(hid_t table_id);
 
 /**
  * --------------------------------------------------------------------------
@@ -363,7 +388,7 @@ H5_HLDLL herr_t H5PTis_valid(hid_t table_id);
  *                            Function had been removed in 1.8.3.
  *
  */
-H5_HLDLL herr_t H5PTis_varlen(hid_t table_id);
+H5HL_DLL herr_t H5PTis_varlen(hid_t table_id);
 
 /*-------------------------------------------------------------------------
  *
@@ -389,7 +414,7 @@ H5_HLDLL herr_t H5PTis_varlen(hid_t table_id);
  * \since 1.10.0 and 1.8.17
  *
  */
-H5_HLDLL hid_t H5PTget_dataset(hid_t table_id);
+H5HL_DLL hid_t H5PTget_dataset(hid_t table_id);
 
 /**
  * --------------------------------------------------------------------------
@@ -408,7 +433,7 @@ H5_HLDLL hid_t H5PTget_dataset(hid_t table_id);
  * \since 1.10.0 and 1.8.17
  *
  */
-H5_HLDLL hid_t H5PTget_type(hid_t table_id);
+H5HL_DLL hid_t H5PTget_type(hid_t table_id);
 
 /*-------------------------------------------------------------------------
  *
@@ -436,7 +461,7 @@ H5_HLDLL hid_t H5PTget_type(hid_t table_id);
  *          this information is lost when the packet table is closed.
  *
  */
-H5_HLDLL herr_t H5PTcreate_index(hid_t table_id);
+H5HL_DLL herr_t H5PTcreate_index(hid_t table_id);
 
 /**
  * --------------------------------------------------------------------------
@@ -455,7 +480,7 @@ H5_HLDLL herr_t H5PTcreate_index(hid_t table_id);
  *          packet (the packets are zero-indexed).
  *
  */
-H5_HLDLL herr_t H5PTset_index(hid_t table_id, hsize_t pt_index);
+H5HL_DLL herr_t H5PTset_index(hid_t table_id, hsize_t pt_index);
 
 /**
  * --------------------------------------------------------------------------
@@ -474,7 +499,7 @@ H5_HLDLL herr_t H5PTset_index(hid_t table_id, hsize_t pt_index);
  * \since 1.8.0
  *
  */
-H5_HLDLL herr_t H5PTget_index(hid_t table_id, hsize_t *pt_index);
+H5HL_DLL herr_t H5PTget_index(hid_t table_id, hsize_t *pt_index);
 
 /*-------------------------------------------------------------------------
  *
@@ -506,7 +531,7 @@ H5_HLDLL herr_t H5PTget_index(hid_t table_id, hsize_t *pt_index);
  *                            Function had been removed in 1.8.3.
  *
  */
-H5_HLDLL herr_t H5PTfree_vlen_buff(hid_t table_id, size_t bufflen, void *buff);
+H5HL_DLL herr_t H5PTfree_vlen_buff(hid_t table_id, size_t bufflen, void *buff);
 
 #ifdef __cplusplus
 }

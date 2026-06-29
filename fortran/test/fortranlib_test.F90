@@ -9,12 +9,11 @@
 ! COPYRIGHT
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 !   Copyright by The HDF Group.                                               *
-!   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
 !   This file is part of HDF5.  The full HDF5 copyright notice, including     *
 !   terms governing use, modification, and redistribution, is contained in    *
-!   the COPYING file, which can be found at the root of the source code       *
+!   the LICENSE file, which can be found at the root of the source code       *
 !   distribution tree, or in https://www.hdfgroup.org/licenses.               *
 !   If you do not have access to either file, you may request a copy from     *
 !   help@hdfgroup.org.                                                        *
@@ -93,6 +92,18 @@ PROGRAM fortranlibtest
   CALL file_space("file_space",cleanup, ret_total_error)
   CALL write_test_status(ret_total_error, ' File free space test', total_error)
 
+  ret_total_error = 0
+  CALL test_file_info("file_info",cleanup, ret_total_error)
+  CALL write_test_status(ret_total_error, ' File information test', total_error)
+
+  ret_total_error = 0
+  CALL test_get_file_image(ret_total_error)
+  CALL write_test_status(ret_total_error, ' Testing get file image ', total_error)
+
+  ret_total_error = 0
+  CALL test_swmr_wrappers(cleanup, ret_total_error)
+  CALL write_test_status(ret_total_error, ' SWMR wrapper test', total_error)
+
 !
 !      '========================================='
 !      'Testing DATASET Interface                '
@@ -106,8 +117,19 @@ PROGRAM fortranlibtest
   CALL extenddsettest(cleanup, ret_total_error)
   CALL write_test_status(ret_total_error, ' Extendible dataset test', total_error)
 
+  ret_total_error = 0
   CALL test_userblock_offset(cleanup, ret_total_error)
   CALL write_test_status(ret_total_error, ' Dataset offset with user block', total_error)
+
+  ! Test filling dataspace elements
+  ret_total_error = 0
+  CALL test_dset_fill(cleanup, ret_total_error)
+  CALL write_test_status(ret_total_error, ' Filling dataspace elements', total_error)
+
+  ! Direct chunk IO
+  ret_total_error = 0
+  CALL test_direct_chunk_io(cleanup, ret_total_error)
+  CALL write_test_status(ret_total_error, ' Direct chunk IO', total_error)
 
 !
 !      '========================================='
@@ -124,12 +146,17 @@ PROGRAM fortranlibtest
 !      '========================================='
 
   ret_total_error = 0
+  CALL v3reftest(cleanup, ret_total_error)
+  CALL write_test_status(ret_total_error, ' Version 3 references test', total_error)
+
+  ret_total_error = 0
   CALL refobjtest(cleanup, ret_total_error)
   CALL write_test_status(ret_total_error, ' Reference to object test', total_error)
 
   ret_total_error = 0
   CALL refregtest(cleanup, ret_total_error)
   CALL write_test_status(ret_total_error, ' Reference to dataset region test', total_error)
+
 
 !
 !      '========================================='
@@ -140,9 +167,8 @@ PROGRAM fortranlibtest
   CALL test_basic_select(cleanup, ret_total_error)
   CALL write_test_status(ret_total_error, ' Basic selection test', total_error)
 
-
   ret_total_error = 0
-  CALL test_select_hyperslab( cleanup, ret_total_error)
+  CALL test_select_hyperslab(cleanup, ret_total_error)
   CALL write_test_status(ret_total_error, ' Hyperslab selection test', total_error)
 
   ret_total_error = 0
@@ -160,6 +186,11 @@ PROGRAM fortranlibtest
   ret_total_error = 0
   CALL test_select_bounds(ret_total_error)
   CALL write_test_status(ret_total_error, ' Selection bounds test ', total_error)
+
+  ret_total_error = 0
+  CALL test_select_iter(cleanup, ret_total_error)
+  CALL write_test_status(ret_total_error, ' Dataspace selection iterators test', total_error)
+
 
 !
 !      '========================================='
@@ -188,7 +219,7 @@ PROGRAM fortranlibtest
 
   ret_total_error = 0
   CALL external_test(cleanup, ret_total_error)
-  CALL write_test_status(ret_total_error, ' External dataset test', total_error)
+  CALL write_test_status(ret_total_error, ' External dataset and Selection IO test', total_error)
 
   ret_total_error = 0
   CALL multi_file_test(cleanup, ret_total_error)
@@ -199,8 +230,12 @@ PROGRAM fortranlibtest
   CALL write_test_status(ret_total_error, ' Dataset chunk cache configuration', total_error)
 
   ret_total_error = 0
-  CALL test_misc_properties(cleanup, ret_total_error)
+  CALL test_misc_properties(ret_total_error)
   CALL write_test_status(ret_total_error, ' Miscellaneous properties', total_error)
+
+  ret_total_error = 0
+  CALL test_in_place_conversion(cleanup, ret_total_error)
+  CALL write_test_status(ret_total_error, ' Test in-place conversion', total_error)
 
 !
 !      '========================================='

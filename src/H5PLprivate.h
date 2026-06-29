@@ -2,9 +2,9 @@
  * Copyright by The HDF Group.                                               *
  * All rights reserved.                                                      *
  *                                                                           *
- * This file is part of HDF5. The full HDF5 copyright notice, including      *
+ * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -38,7 +38,7 @@ typedef struct H5PL_vol_key_t {
     H5VL_get_connector_kind_t kind; /* Kind of VOL lookup to do */
     union {
         H5VL_class_value_t value; /* VOL connector value */
-        const char *       name;  /* VOL connector name */
+        const char        *name;  /* VOL connector name */
     } u;
 } H5PL_vol_key_t;
 
@@ -47,7 +47,7 @@ typedef struct H5PL_vfd_key_t {
     H5FD_get_driver_kind_t kind; /* Kind of VFD lookup to do */
     union {
         H5FD_class_value_t value; /* VFD value */
-        const char *       name;  /* VFD name */
+        const char        *name;  /* VFD name */
     } u;
 } H5PL_vfd_key_t;
 
@@ -82,6 +82,5 @@ typedef herr_t (*H5PL_iterate_t)(H5PL_type_t plugin_type, const void *plugin_inf
 /* Internal API routines */
 H5_DLL const void *H5PL_load(H5PL_type_t plugin_type, const H5PL_key_t *key);
 H5_DLL herr_t      H5PL_iterate(H5PL_iterate_type_t iter_type, H5PL_iterate_t iter_op, void *op_data);
-H5_DLL herr_t      H5PL_init(void);
 
 #endif /* H5PLprivate_H */

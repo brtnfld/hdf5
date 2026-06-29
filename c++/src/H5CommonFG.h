@@ -1,12 +1,11 @@
 // C++ informative line for the emacs editor: -*- C++ -*-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -27,7 +26,7 @@ class VarLenType;
     \brief \a CommonFG is an abstract base class of H5Group.
 */
 /* Note: This class is being deprecated gradually. */
-class H5_DLLCPP CommonFG {
+class H5CPP_DLL CommonFG {
   public:
     // Opens a generic named datatype in this location.
     DataType openDataType(const char *name) const;
@@ -73,7 +72,7 @@ class H5_DLLCPP CommonFG {
     CommonFG();
 
     // Noop destructor.
-    virtual ~CommonFG();
+    virtual ~CommonFG() = default;
 
   protected:
     virtual void p_setId(const hid_t new_id) = 0;

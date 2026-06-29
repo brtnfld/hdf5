@@ -3,12 +3,12 @@
  * Created:     crasher.c
  *              Cody Sloan, 08/06/2025
  *
- * Purpose:     Run a command as a forked process and then kill it with 
+ * Purpose:     Run a command as a forked process and then kill it with
  *              SIGKILL after a specified delay.
- * 
+ *
  *              This program is intended to simulate real crashes in VFD
  *              SWMR writer programs to test recovery of the HDF5 file.
- *      
+ *
  *              Only works on POSIX systems.
  *
  *-------------------------------------------------------------------------
@@ -20,13 +20,13 @@
 #include "H5private.h"
 #include <unistd.h>
 #include <sys/types.h>
-#include <sys/wait.h>  
-#include <signal.h>   
+#include <sys/wait.h>
+#include <signal.h>
 #include <fcntl.h>
-#include <string.h>    
-#include <stdlib.h>    
+#include <string.h>
+#include <stdlib.h>
 
-#define FILE_NAME_LEN                  1024
+#define FILE_NAME_LEN 1024
 
 /*-------------------------------------------------------------------------
  * Function: run_command_with_crash
@@ -37,22 +37,24 @@
  * Description: This function forks a child process to run the command. The
  *    child process redirects its output (stdout and stderr) to a file named
  *    "<outbase>.out".
- * 
+ *
  * Return:   Success:       exit status of the command
- *           Failure:      -1 
+ *           Failure:      -1
  *-------------------------------------------------------------------------
  */
 static int
-run_command_with_crash(const char *outbase, char *const cmd_argv[], double delay, int verbose, int print_to_console)
+run_command_with_crash(const char *outbase, char *const cmd_argv[], double delay, int verbose,
+                       int print_to_console)
 {
     pid_t pid = fork();
     if (pid < 0) {
         perror("fork failed");
         goto error;
-    } else if (pid == 0) { /* Child process */
-        /* If print_to_console is false, redirect stdout and stderr to an 
+    }
+    else if (pid == 0) { /* Child process */
+        /* If print_to_console is false, redirect stdout and stderr to an
         output file instead of printing to the console. */
-        if (!print_to_console){
+        if (!print_to_console) {
             /* Prepare output file names */
             char out_file[FILE_NAME_LEN];
             snprintf(out_file, sizeof(out_file), "%s.out", outbase);
@@ -80,15 +82,17 @@ run_command_with_crash(const char *outbase, char *const cmd_argv[], double delay
         /* If execvp returns, there was an error */
         perror("execvp failed");
         exit(EXIT_FAILURE);
-    } else { /* Parent process */
+    }
+    else { /* Parent process */
         /* Start the crash timer */
         if (delay <= 0) {
             /* If delay is 0, crash immediately */
             kill(pid, SIGKILL);
-        } else {
+        }
+        else {
             /* Otherwise, wait for the specified delay before crashing */
             usleep((useconds_t)(delay * 1000000));
-            kill(pid, SIGKILL);  /* Always kill, regardless of state */
+            kill(pid, SIGKILL); /* Always kill, regardless of state */
         }
 
         /* Wait for the child process to finish */
@@ -98,22 +102,23 @@ run_command_with_crash(const char *outbase, char *const cmd_argv[], double delay
             goto error;
         }
 
-
         /* Write return code to file and handle status in one go */
         char rc_file[FILE_NAME_LEN];
         snprintf(rc_file, sizeof(rc_file), "%s.rc", outbase);
         FILE *rc_fp = fopen(rc_file, "w");
-        
+
         int return_code;
         if (WIFEXITED(status)) {
             return_code = WEXITSTATUS(status);
             if (verbose)
                 HDfprintf(stdout, "Command exited with status %d\n", return_code);
-        } else if (WIFSIGNALED(status)) {
+        }
+        else if (WIFSIGNALED(status)) {
             return_code = 128 + WTERMSIG(status);
             if (verbose)
                 HDfprintf(stdout, "Command was killed by signal %d\n", WTERMSIG(status));
-        } else {
+        }
+        else {
             return_code = -1;
             if (verbose)
                 HDfprintf(stdout, "Command terminated abnormally (status=0x%x)\n", status);
@@ -123,7 +128,8 @@ run_command_with_crash(const char *outbase, char *const cmd_argv[], double delay
         if (rc_fp) {
             fprintf(rc_fp, "%d\n", return_code);
             fclose(rc_fp);
-        } else {
+        }
+        else {
             perror("fopen rc file failed");
             goto error;
         }
@@ -159,27 +165,32 @@ usage(void)
     HDprintf("\n");
 }
 
-int main(int argc, char *argv[]) {
-    double  delay           = -1.0;
+int
+main(int argc, char *argv[])
+{
+    double delay            = -1.0;
     int    verbose          = 0;
     int    print_to_console = 0;
     int    i                = 1;
     char  *endptr           = NULL;
-    char  **cmd_argv        = NULL;  /* Command and its arguments */
-    char  *cmd_name         = NULL;  /* Name used for output files */
+    char **cmd_argv         = NULL; /* Command and its arguments */
+    char  *cmd_name         = NULL; /* Name used for output files */
 
     /* Parse options first */
     while (i < argc && argv[i][0] == '-') {
         if (strcmp(argv[i], "-h") == 0) {
             usage();
             exit(0);
-        } else if (strcmp(argv[i], "-v") == 0) {
+        }
+        else if (strcmp(argv[i], "-v") == 0) {
             verbose = 1;
             i++;
-        } else if (strcmp(argv[i], "-p") == 0) {  
+        }
+        else if (strcmp(argv[i], "-p") == 0) {
             print_to_console = 1;
             i++;
-        } else {
+        }
+        else {
             HDprintf("Unknown option: %s\n", argv[i]);
             usage();
             exit(1);
@@ -223,7 +234,7 @@ int main(int argc, char *argv[]) {
     /* Strip path from command path to get basename for output files */
     char *slash = strrchr(cmd_argv[0], '/');
     if (slash) {
-        cmd_name = slash + 1;  /* Use basename only */
+        cmd_name = slash + 1; /* Use basename only */
     }
 
     /* Sanity check - this should never happen if cmd_argv[0] exists */

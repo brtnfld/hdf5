@@ -1,23 +1,19 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:	Quincey Koziol
- *		Thursday, September 28, 2000
- *
- * Purpose:	This file contains declarations which are visible only within
- *		the H5F package.  Source files outside the H5F package should
- *		include H5Fprivate.h instead.
+ * Purpose: This file contains declarations which are visible only within
+ *          the H5F package.  Source files outside the H5F package should
+ *          include H5Fprivate.h instead.
  */
 #if !(defined H5F_FRIEND || defined H5F_MODULE)
 #error "Do not include this file outside the H5F package!"
@@ -41,6 +37,7 @@
 #include "H5Oprivate.h"  /* Object header messages                   */
 #include "H5PBprivate.h" /* Page buffer                              */
 #include "H5UCprivate.h" /* Reference counted object functions       */
+#include "H5queue.h"     /* Queue macros (SIMPLEQ etc.)              */
 
 /*
  * Feature: Define this constant on the compiler command-line if you want to
@@ -135,6 +132,10 @@
     (H5F_SUPERBLOCK_FIXED_SIZE +                                                                             \
      H5F_SUPERBLOCK_VARLEN_SIZE((s)->super_vers, (s)->sizeof_addr, (s)->sizeof_size))
 
+/* Optimistic read size for superblock */
+/* Size of a v2+ superblock, w/8-byte addresses & lengths */
+#define H5F_SUPERBLOCK_SPEC_READ_SIZE (H5F_SUPERBLOCK_FIXED_SIZE + H5F_SUPERBLOCK_VARLEN_SIZE(2, 8, 8))
+
 /* For superblock version 0 & 1:
    Offset to the file consistency flags (status_flags) in the superblock (excluding H5F_SUPERBLOCK_FIXED_SIZE)
  */
@@ -153,29 +154,15 @@
 /* Size of file consistency flags (status_flags) in the superblock */
 #define H5F_SUPER_STATUS_FLAGS_SIZE(v) (v >= 2 ? 1 : 4)
 
-/* VFD SMWR LOG REPORTING MACROS */
+/* Forward declaration for VFD SWMR log function used in macros below */
+H5_DLL void H5F__post_vfd_swmr_log_entry(H5F_t *f, int entry_type_code, const char *log_info);
 
-/* H5F_POST_VFD_SWMR_LOG_ENTRY is the macro that can help the developers debug VFD SWMR features.
- * It calls an internal reporting function H5F_post_vfd_swmr_log_entry() that receives
- * a log entry_type_code,  which generates a log tag,  and the message log_info, which
- * the developers want to save into a log file.
- *
- * The macro H5F_POST_VFD_SWMR_LOG_ENTRY_PRODUCTION(f, c, number_entry_production, m) is
- * called by H5F_POST_VFD_SWMR_LOG_ENTRY when the HDF5 library is built with the
- * production mode. Number_entry_production will control the number of entry tags that
- * applications can receive. Currently this number is set to 1 and is subject to change
- * when more tags are useful to be present to applications.
- *
- * The first argument of the macro is the HDF5 file pointer(H5F_t *).
- * Its value needs to be checked to avoid a failure caused by "Low-Level File I/O "
- * in the testhdf5 program, which involves the test of a non-existing HDF5 file.
- */
-
+/* VFD SWMR LOG REPORTING MACROS */
 #define H5F_POST_VFD_SWMR_LOG_ENTRY_INTERNAL(fp, entry_type_code, log_info)                                  \
     do {                                                                                                     \
         if (fp != NULL) {                                                                                    \
             if (fp->shared != NULL) {                                                                        \
-                if (fp->shared->vfd_swmr_log_on == TRUE) {                                                   \
+                if (fp->shared->vfd_swmr_log_on == true) {                                                   \
                     H5F__post_vfd_swmr_log_entry(fp, entry_type_code, log_info);                             \
                 }                                                                                            \
             }                                                                                                \
@@ -189,25 +176,21 @@
         }                                                                                                    \
     } while (0)
 
-/* Note: change H5F_POST_VFD_SWMR_LOG_ENTRY_PRODUCTION(f, c, 1, m) on the following lines to
- *       H5F_POST_VFD_SWMR_LOG_ENTRY_PRODUCTION(f, c, your_number_entry_production, m)
- *       as necessary.
- */
 #ifndef NDEBUG
 #define H5F_POST_VFD_SWMR_LOG_ENTRY(f, c, m) H5F_POST_VFD_SWMR_LOG_ENTRY_INTERNAL(f, c, m)
 #else
 #define H5F_POST_VFD_SWMR_LOG_ENTRY(f, c, m) H5F_POST_VFD_SWMR_LOG_ENTRY_PRODUCTION(f, c, 1, m)
 #endif
 
-/* Macros for VFD SWMR log entry code
- * Note: this should be consistent with const char *H5Fvfd_swmr_log_tags[] declared at
- * H5Fvfd_swmr.c .
- */
+/* Macros for VFD SWMR log entry codes */
 #define EOT_PROCESSING_TIME 0
 #define FILE_OPEN           1
 #define FILE_CLOSE          2
 #define EOT_TRIGGER_TIME    3
 #define EOT_META_FILE_INDEX 4
+
+/* H5F_USE_VFD_SWMR macro */
+#define H5F_USE_VFD_SWMR(F) ((F)->shared->vfd_swmr)
 
 /* Forward declaration external file cache struct used below (defined in
  * H5Fefc.c) */
@@ -216,13 +199,13 @@ typedef struct H5F_efc_t H5F_efc_t;
 /* Structure for passing 'user data' to superblock cache callbacks */
 typedef struct H5F_superblock_cache_ud_t {
     /* IN: */
-    H5F_t * f;                          /* Pointer to file */
-    hbool_t ignore_drvrinfo;            /* Indicate if the driver info should be ignored */
+    H5F_t *f;                           /* Pointer to file */
+    bool   ignore_drvrinfo;             /* Indicate if the driver info should be ignored */
                                         /* OUT: */
     unsigned sym_leaf_k;                /* Symbol table leaf node's 'K' value */
     unsigned btree_k[H5B_NUM_BTREE_ID]; /* B-tree key values for each type */
     haddr_t  stored_eof;                /* End-of-file in file */
-    hbool_t  drvrinfo_removed;          /* Indicate if the driver info was removed */
+    bool     drvrinfo_removed;          /* Indicate if the driver info was removed */
     unsigned super_vers;                /* Superblock version obtained in get_load_size callback.
                                          * It will be used later in verify_chksum callback
                                          */
@@ -230,7 +213,7 @@ typedef struct H5F_superblock_cache_ud_t {
 
 /* Structure for passing 'user data' to driver info block cache callbacks */
 typedef struct H5F_drvrinfo_cache_ud_t {
-    H5F_t * f;           /* Pointer to file */
+    H5F_t  *f;           /* Pointer to file */
     haddr_t driver_addr; /* address of driver info block */
 } H5F_drvrinfo_cache_ud_t;
 
@@ -251,7 +234,7 @@ typedef struct H5F_meta_accum_t {
     size_t         alloc_size; /* Size of the accumulated metadata buffer allocated (in bytes) */
     size_t         dirty_off;  /* Offset of the dirty region in the accumulator buffer */
     size_t         dirty_len;  /* Length of the dirty region in the accumulator buffer */
-    hbool_t        dirty;      /* Flag to indicate that the accumulated metadata is dirty */
+    bool           dirty;      /* Flag to indicate that the accumulated metadata is dirty */
 } H5F_meta_accum_t;
 
 /* A record of the mount table */
@@ -269,16 +252,6 @@ typedef struct H5F_mtab_t {
     unsigned     nalloc;  /* Number of mount slots allocated	*/
     H5F_mount_t *child;   /* An array of mount records		*/
 } H5F_mtab_t;
-
-/* Deferred-free record for the shadow file: records a region of bytes in
- * the shadow file to release after max_lag ticks.
- */
-typedef struct shadow_defree {
-    uint64_t offset;                 /* offset of the region in *bytes* */
-    uint32_t length;                 /* length of the region in *bytes* */
-    uint64_t tick_num;               /* tick number when the free was deferred */
-    TAILQ_ENTRY(shadow_defree) link; /* deferred-free queue linkage */
-} shadow_defree_t;
 
 /* Structure specifically to store superblock. This was originally
  * maintained entirely within H5F_shared_t, but is now extracted
@@ -299,8 +272,23 @@ typedef struct H5F_super_t {
     H5G_entry_t *root_ent;                 /* Root group symbol table entry              */
 } H5F_super_t;
 
-/* Deferred-free record for the lower file: records a region of bytes in
- * the file below the SWMR VFD to release after a delay.
+/* VFD SWMR: Deferred-free record for the shadow file. Records a region of
+ * bytes in the shadow file to release after max_lag ticks.
+ */
+typedef struct shadow_defree {
+    uint64_t offset;                 /* offset of the region in *bytes* */
+    uint32_t length;                 /* length of the region in *bytes* */
+    uint64_t tick_num;               /* tick number when the free was deferred */
+    TAILQ_ENTRY(shadow_defree) link; /* deferred-free queue linkage */
+} shadow_defree_t;
+
+/* Queue of deferred-free records for the shadow file, sorted head-to-tail
+ * in increasing tick_num order.
+ */
+typedef TAILQ_HEAD(shadow_defree_queue, shadow_defree) shadow_defree_queue_t;
+
+/* VFD SWMR: Deferred-free record for the lower file. Records a region of
+ * bytes in the file below the SWMR VFD to release after a delay.
  */
 typedef struct lower_defree {
     SIMPLEQ_ENTRY(lower_defree) link; /* deferred-free queue linkage */
@@ -312,15 +300,10 @@ typedef struct lower_defree {
                                        */
 } lower_defree_t;
 
-/* Queue of deferred-free records (lower_defree_t) for the lower file, sorted
- * head-to-tail in increasing `free_after_tick` order.
+/* Queue of deferred-free records for the lower file, sorted head-to-tail
+ * in increasing free_after_tick order.
  */
 typedef SIMPLEQ_HEAD(lower_defree_queue, lower_defree) lower_defree_queue_t;
-
-/* Queue of deferred-free records (shadow_defree_t) for the shadow file, sorted
- * head-to-tail in increasing `tick_num` order.
- */
-typedef TAILQ_HEAD(shadow_defree_queue, shadow_defree) shadow_defree_queue_t;
 
 /*
  * Define the structure to store the file information for HDF5 files. One of
@@ -330,27 +313,27 @@ typedef TAILQ_HEAD(shadow_defree_queue, shadow_defree) shadow_defree_queue_t;
  * pointing to this struct.
  */
 struct H5F_shared_t {
-    H5FD_t *       lf;             /* Lower level file handle for I/O	*/
-    H5F_super_t *  sblock;         /* Pointer to (pinned) superblock for file */
-    H5O_drvinfo_t *drvinfo;        /* Pointer to the (pinned) driver info
-                                    * cache entry.  This field is only defined
-                                    * for older versions of the super block,
-                                    * and then only when a driver information
-                                    * block is present.  At all other times
-                                    * it should be NULL.
-                                    */
-    hbool_t drvinfo_sb_msg_exists; /* Convenience field used to track
-                                    * whether the driver info superblock
-                                    * extension message has been created
-                                    * yet. This field should be TRUE iff the
-                                    * superblock extension exists and contains
-                                    * a driver info message.  Under all other
-                                    * circumstances, it must be set to FALSE.
-                                    */
-    unsigned   nrefs;              /* Ref count for times file is opened	*/
-    unsigned   flags;              /* Access Permissions for file          */
-    H5F_mtab_t mtab;               /* File mount table                     */
-    H5F_efc_t *efc;                /* External file cache                  */
+    H5FD_t        *lf;          /* Lower level file handle for I/O	*/
+    H5F_super_t   *sblock;      /* Pointer to (pinned) superblock for file */
+    H5O_drvinfo_t *drvinfo;     /* Pointer to the (pinned) driver info
+                                 * cache entry.  This field is only defined
+                                 * for older versions of the super block,
+                                 * and then only when a driver information
+                                 * block is present.  At all other times
+                                 * it should be NULL.
+                                 */
+    bool drvinfo_sb_msg_exists; /* Convenience field used to track
+                                 * whether the driver info superblock
+                                 * extension message has been created
+                                 * yet. This field should be true iff the
+                                 * superblock extension exists and contains
+                                 * a driver info message.  Under all other
+                                 * circumstances, it must be set to false.
+                                 */
+    unsigned   nrefs;           /* Ref count for times file is opened	*/
+    unsigned   flags;           /* Access Permissions for file          */
+    H5F_mtab_t mtab;            /* File mount table                     */
+    H5F_efc_t *efc;             /* External file cache                  */
 
     /* Cached values from FCPL/superblock */
     uint8_t       sizeof_addr;   /* Size of addresses in file            */
@@ -361,8 +344,8 @@ struct H5F_shared_t {
     unsigned long feature_flags; /* VFL Driver feature Flags            */
     haddr_t       maxaddr;       /* Maximum address for file             */
 
-    H5PB_t *            page_buf;                    /* The page buffer cache                */
-    H5AC_t *            cache;                       /* The object cache	 		*/
+    H5PB_t             *page_buf;                    /* The page buffer cache                */
+    H5AC_t             *cache;                       /* The object cache	 		*/
     H5AC_cache_config_t mdc_initCacheCfg;            /* initial configuration for the      */
                                                      /* metadata cache.  This structure is   */
                                                      /* fixed at creation time and should    */
@@ -372,13 +355,13 @@ struct H5F_shared_t {
                                                      /* close option.  This structure is     */
                                                      /* fixed at creation time and should    */
                                                      /* not change thereafter.               */
-    hbool_t use_mdc_logging;                         /* Set when metadata logging is desired */
-    hbool_t start_mdc_log_on_access;                 /* set when mdc logging should  */
+    bool use_mdc_logging;                            /* Set when metadata logging is desired */
+    bool start_mdc_log_on_access;                    /* set when mdc logging should  */
                                                      /* begin on file access/create          */
-    char *             mdc_log_location;             /* location of mdc log               */
+    char              *mdc_log_location;             /* location of mdc log               */
     hid_t              fcpl_id;                      /* File creation property list ID 	*/
     H5F_close_degree_t fc_degree;                    /* File close behavior degree	*/
-    hbool_t  evict_on_close; /* If the file's objects should be evicted from the metadata cache on close */
+    bool     evict_on_close; /* If the file's objects should be evicted from the metadata cache on close */
     size_t   rdcc_nslots;    /* Size of raw data chunk cache (slots)	*/
     size_t   rdcc_nbytes;    /* Size of raw data chunk cache	(bytes)	*/
     double   rdcc_w0;        /* Preempt read chunks first? [0.0..1.0]*/
@@ -386,38 +369,39 @@ struct H5F_shared_t {
     hsize_t  threshold;      /* Threshold for alignment		*/
     hsize_t  alignment;      /* Alignment				*/
     unsigned gc_ref;         /* Garbage-collect references?		*/
-    H5F_libver_t         low_bound;         /* The 'low' bound of library format versions */
-    H5F_libver_t         high_bound;        /* The 'high' bound of library format versions */
-    hbool_t              store_msg_crt_idx; /* Store creation index for object header messages?	*/
-    unsigned             ncwfs;             /* Num entries on cwfs list		*/
-    struct H5HG_heap_t **cwfs;              /* Global heap cache			*/
-    struct H5G_t *       root_grp;          /* Open root group			*/
-    H5FO_t *             open_objs;         /* Open objects in file                 */
-    H5UC_t *             grp_btree_shared;  /* Ref-counted group B-tree node info   */
-    hbool_t              use_file_locking;  /* Whether or not to use file locking */
-    hbool_t              closing;           /* File is in the process of being closed */
+    H5F_libver_t         low_bound;             /* The 'low' bound of library format versions */
+    H5F_libver_t         high_bound;            /* The 'high' bound of library format versions */
+    bool                 store_msg_crt_idx;     /* Store creation index for object header messages?	*/
+    unsigned             ncwfs;                 /* Num entries on cwfs list		*/
+    struct H5HG_heap_t **cwfs;                  /* Global heap cache			*/
+    struct H5G_t        *root_grp;              /* Open root group			*/
+    H5FO_t              *open_objs;             /* Open objects in file                 */
+    H5UC_t              *grp_btree_shared;      /* Ref-counted group B-tree node info   */
+    bool                 use_file_locking;      /* Whether or not to use file locking */
+    bool                 ignore_disabled_locks; /* Whether or not to ignore disabled file locking */
+    bool                 closing;               /* File is in the process of being closed */
+    uint64_t             rfic_flags;            /* Relaxed file integrity check (RFIC) flags */
 
     /* Cached VOL connector ID & info */
-    hid_t               vol_id;   /* ID of VOL connector for the container */
-    const H5VL_class_t *vol_cls;  /* Pointer to VOL connector class for the container */
-    void *              vol_info; /* Copy of VOL connector info for container */
+    H5VL_connector_t *vol_conn; /* VOL connector for the container */
+    void             *vol_info; /* Copy of VOL connector info for container */
 
     /* File space allocation information */
     H5F_fspace_strategy_t fs_strategy;  /* File space handling strategy	*/
     hsize_t               fs_threshold; /* Free space section threshold 	*/
-    hbool_t               fs_persist;   /* Free-space persist or not */
+    bool                  fs_persist;   /* Free-space persist or not */
     unsigned              fs_version;   /* Free-space version: */
                                         /* It is used to update fsinfo message in the superblock
                                            extension when closing down the free-space managers */
-    hbool_t use_tmp_space;              /* Whether temp. file space allocation is allowed */
+    bool    use_tmp_space;              /* Whether temp. file space allocation is allowed */
     haddr_t tmp_addr;                   /* Next address to use for temp. space in the file */
-    hbool_t point_of_no_return; /* Flag to indicate that we can't go back and delete a freespace header when
-                                   it's used up */
+    bool    point_of_no_return; /* Flag to indicate that we can't go back and delete a freespace header when
+                                      it's used up */
 
     H5F_fs_state_t fs_state[H5F_MEM_PAGE_NTYPES]; /* State of free space manager for each type */
     haddr_t        fs_addr[H5F_MEM_PAGE_NTYPES];  /* Address of free space manager info for each type */
-    H5FS_t *       fs_man[H5F_MEM_PAGE_NTYPES];   /* Free space manager for each file space type */
-    hbool_t        null_fsm_addr;                 /* Used by h5clear tool to tell the library  */
+    H5FS_t        *fs_man[H5F_MEM_PAGE_NTYPES];   /* Free space manager for each file space type */
+    bool           null_fsm_addr;                 /* Used by h5clear tool to tell the library  */
                                                   /* to drop free-space to the floor */
     haddr_t eoa_fsm_fsalloc;                      /* eoa after file space allocation */
                                                   /* for self referential FSMs      */
@@ -445,129 +429,42 @@ struct H5F_shared_t {
 
     /* Object flush info */
     H5F_object_flush_t object_flush;           /* Information for object flush callback */
-    hbool_t            crt_dset_min_ohdr_flag; /* flag to minimize created dataset object header */
-
-    /* VFD SWMR */
-
-    /* Configuration info */
-    H5F_vfd_swmr_config_t vfd_swmr_config; /* Copy of the VFD SWMR
-                                            * configuration from the
-                                            * FAPL used to open the file
-                                            */
-    haddr_t writer_index_offset;           /* Current byte offset of the
-                                            * shadow index in the shadow file.
-                                            */
-    hbool_t vfd_swmr;                      /* The file is opened with VFD
-                                            * SWMR configured or not
-                                            */
-    hbool_t vfd_swmr_writer;               /* This is the VFD SWMR writer or
-                                            * not
-                                            */
-    uint64_t        tick_num;              /* Number of the current tick */
-    uint64_t        max_jump_ticks;        /* Max # of jumps in tick number */
-    struct timespec end_of_tick;           /* End time of the current tick */
-
-    lower_defree_queue_t lower_defrees; /* Records of lower-file space
-                                         * awaiting reclamation.
-                                         */
-    /* VFD SWMR metadata file index */
-    H5FD_vfd_swmr_idx_entry_t *mdf_idx; /* pointer to an array of instance
-                                         * of H5FD_vfd_swmr_idx_entry_t of
-                                         * length mdf_idx_len.  This array
-                                         * is used by the vfd swmr writer
-                                         * to assemble the metadata file
-                                         * index at the end of each tick,
-                                         * and by the vfd swmr readers to
-                                         * track changes in the index.
-                                         * With one brief exception during
-                                         * writer end of tick processing,
-                                         * this index will always be sorted
-                                         * in increasing HDF5 file page
-                                         * offset order.
-                                         *
-                                         * This field should be NULL unless
-                                         * the index is defined.
-                                         */
-    uint32_t mdf_idx_len;               /* number of entries in the array
-                                         * of instances of
-                                         * H5FD_vfd_swmr_idx_entry_t pointed
-                                         * to by mdf_idx above.  Note that
-                                         * not all entries in the index
-                                         * need be used.
-                                         */
-    uint32_t mdf_idx_entries_used;      /* Number of entries in *mdf_idx
-                                         * that are in use -- these will
-                                         * be contiguous at indices 0
-                                         * through mdf_idx_entries_used - 1.
-                                         */
-
-    /* Old VFD SWMMR metadata file index.  These fields are used only
-     * by the VFD SWMR reader to store the previous version of the
-     * metadata file index so that it can be compared with the current
-     * version to identify page buffer and metadata cache entries that
-     * must be evicted or refreshed to avoid message from the past bugs.
-     */
-    H5FD_vfd_swmr_idx_entry_t *old_mdf_idx;
-    uint32_t                   old_mdf_idx_len;
-    uint32_t                   old_mdf_idx_entries_used;
-
-    /* Metadata file and updater file for VFD SWMR writer */
-    int vfd_swmr_md_fd;      /* POSIX: file descriptor for the
-                              * metadata file or -1 if the metadata file
-                              * is not currently open.
-                              * The vfd_swmr_config.generate_updater_files
-                              * is FALSE.
-                              */
-                             /* NFS:
-                              * The vfd_swmr_config.generate_updater_files
-                              * is TRUE and:
-                              * --if vfd_swmr_config.writer is FALSE,
-                              * this field is the file descriptor of the local
-                              * copy of the metadata file, or -1 if the local
-                              * copy is not currently open.
-                              * --if vfd_swmr_config.writer is TRUE, this field
-                              * is not used and is set to -1.
-                              */
-    char *md_file_path_name; /* Name composed of md_file_path and md_file_name from vfd_swmr_config */
-
-    H5F_generate_md_ck_t generate_md_ck_cb;
-    /* For testing only:
-     * Invoke the user-defined callback if exists to
-     * generate checksum for the metadata file
-     */
-
-    haddr_t vfd_swmr_md_eoa;  /* POSIX: eoa for the metadata
-                               * file
-                               */
-    uint64_t updater_seq_num; /* Sequence number of the next updater file to be
-                               * generated.  This field must be initialized to zero,
-                               * and incremented after each updater file is generated.
-                               */
-
-    /* Free space manager for the metadata file */
-    H5FS_t *       fs_man_md;   /* Free-space manager */
-    H5F_fs_state_t fs_state_md; /* State of the free space
-                                 * manager
-                                 */
-    /* Log file for VFD SWMR */
-    FILE *vfd_swmr_log_file_ptr;        /* File pointer for the
-                                         * log file.
-                                         */
-    hbool_t vfd_swmr_log_on;            /* flag to indicate if
-                                         * the log file is
-                                         * created. */
-    H5_timer_t vfd_swmr_log_start_time; /* The starting time for
-                                         * calculating the time
-                                         * stamp of a log message.
-                                         */
-    /* Delayed free space release doubly linked list */
-    shadow_defree_queue_t shadow_defrees;
+    bool               crt_dset_min_ohdr_flag; /* flag to minimize created dataset object header */
 
     char *extpath; /* Path for searching target external link file                 */
 
+    /* VFD SWMR fields */
+    H5F_vfd_swmr_config_t      vfd_swmr_config;      /* Copy of the VFD SWMR configuration */
+    haddr_t                    writer_index_offset;  /* Current byte offset of the shadow index */
+    hbool_t                    vfd_swmr;             /* File is opened with VFD SWMR configured */
+    hbool_t                    vfd_swmr_writer;      /* This is the VFD SWMR writer */
+    uint64_t                   tick_num;             /* Number of the current tick */
+    uint64_t                   max_jump_ticks;       /* Max # of jumps in tick number */
+    struct timespec            end_of_tick;          /* End time of the current tick */
+    lower_defree_queue_t       lower_defrees;        /* Records of lower-file space awaiting reclamation */
+    shadow_defree_queue_t      shadow_defrees;       /* Records of shadow-file space awaiting reclamation */
+    H5FD_vfd_swmr_idx_entry_t *mdf_idx;              /* Pointer to metadata file index array */
+    uint32_t                   mdf_idx_len;          /* Number of entries in mdf_idx */
+    uint32_t                   mdf_idx_entries_used; /* Number of entries in use */
+    H5FD_vfd_swmr_idx_entry_t *old_mdf_idx;          /* Previous version of the metadata file index */
+    uint32_t                   old_mdf_idx_len;
+    uint32_t                   old_mdf_idx_entries_used;
+    int                        vfd_swmr_md_fd;    /* File descriptor for the metadata file */
+    char                      *md_file_path_name; /* Name of the metadata file */
+    H5F_generate_md_ck_t       generate_md_ck_cb; /* Testing callback to generate MD checksum */
+    haddr_t                    vfd_swmr_md_eoa;   /* EOA for the metadata file */
+    uint64_t                   updater_seq_num;   /* Sequence number of the next updater file */
+    H5FS_t                    *fs_man_md;         /* Free-space manager for the metadata file */
+    H5F_fs_state_t             fs_state_md;       /* State of the metadata file free-space manager */
+
+    /* Log file for VFD SWMR */
+    FILE      *vfd_swmr_log_file_ptr;   /* File pointer for the log file */
+    hbool_t    vfd_swmr_log_on;         /* Flag to indicate if the log file is active */
+    H5_timer_t vfd_swmr_log_start_time; /* Starting time for log message timestamps */
+
 #ifdef H5_HAVE_PARALLEL
     H5P_coll_md_read_flag_t coll_md_read;  /* Do all metadata reads collectively */
-    hbool_t                 coll_md_write; /* Do all metadata writes collectively */
+    bool                    coll_md_write; /* Do all metadata writes collectively */
 #endif                                     /* H5_HAVE_PARALLEL */
 };
 
@@ -577,15 +474,15 @@ struct H5F_shared_t {
  * to shared H5F_shared_t structs.
  */
 struct H5F_t {
-    char *         open_name;   /* Name used to open file                                       */
-    char *         actual_name; /* Actual name of the file, after resolving symlinks, etc.      */
-    H5F_shared_t * shared;      /* The shared file info                                         */
+    char          *open_name;   /* Name used to open file                                       */
+    char          *actual_name; /* Actual name of the file, after resolving symlinks, etc.      */
+    H5F_shared_t  *shared;      /* The shared file info                                         */
     H5VL_object_t *vol_obj;     /* VOL object                                                   */
     unsigned       nopen_objs;  /* Number of open object headers                                */
-    H5FO_t *       obj_count;   /* # of time each object is opened through top file structure   */
-    hbool_t        id_exists;   /* Whether an ID for this struct exists                         */
-    hbool_t        closing;     /* File is in the process of being closed                       */
-    struct H5F_t * parent;      /* Parent file that this file is mounted to                     */
+    H5FO_t        *obj_count;   /* # of time each object is opened through top file structure   */
+    bool           id_exists;   /* Whether an ID for this struct exists                         */
+    bool           closing;     /* File is in the process of being closed                       */
+    struct H5F_t  *parent;      /* Parent file that this file is mounted to                     */
     unsigned       nmounts;     /* Number of children mounted to this file                      */
 };
 
@@ -600,9 +497,11 @@ H5FL_EXTERN(H5F_t);
 H5FL_EXTERN(H5F_shared_t);
 
 /* Whether or not to use file locking (based on the environment variable)
- * FAIL means ignore the environment variable.
+ * and whether or not to ignore disabled file locking. FAIL means ignore
+ * the environment variable.
  */
 H5_DLLVAR htri_t use_locks_env_g;
+H5_DLLVAR htri_t ignore_disabled_locks_g;
 
 /******************************/
 /* Package Private Prototypes */
@@ -612,7 +511,7 @@ H5_DLLVAR htri_t use_locks_env_g;
 H5_DLL herr_t H5F__post_open(H5F_t *f);
 H5_DLL H5F_t *H5F__reopen(H5F_t *f);
 H5_DLL herr_t H5F__flush(H5F_t *f);
-H5_DLL htri_t H5F__is_hdf5(const char *name, hid_t fapl_id);
+H5_DLL herr_t H5F__is_hdf5(const char *name, hid_t fapl_id, bool *is_hdf5);
 H5_DLL herr_t H5F__get_file_image(H5F_t *f, void *buf_ptr, size_t buf_len, size_t *image_len);
 H5_DLL herr_t H5F__get_info(H5F_t *f, H5F_info2_t *finfo);
 H5_DLL herr_t H5F__format_convert(H5F_t *f);
@@ -620,13 +519,8 @@ H5_DLL herr_t H5F__start_swmr_write(H5F_t *f);
 H5_DLL herr_t H5F__close(H5F_t *f);
 H5_DLL herr_t H5F__set_libver_bounds(H5F_t *f, H5F_libver_t low, H5F_libver_t high);
 H5_DLL herr_t H5F__get_cont_info(const H5F_t *f, H5VL_file_cont_info_t *info);
-H5_DLL herr_t H5F__parse_file_lock_env_var(htri_t *use_locks);
+H5_DLL herr_t H5F__parse_file_lock_env_var(htri_t *use_locks, htri_t *ignore_disabled_locks);
 H5_DLL herr_t H5F__delete(const char *filename, hid_t fapl_id);
-
-/* VFD SWMR routines */
-H5_DLL herr_t H5F__vfd_swmr_end_tick(H5F_t *f);
-H5_DLL herr_t H5F__vfd_swmr_disable_end_of_tick(H5F_t *f);
-H5_DLL herr_t H5F__vfd_swmr_enable_end_of_tick(H5F_t *f);
 
 /* File mount related routines */
 H5_DLL herr_t H5F__close_mounts(H5F_t *f);
@@ -634,16 +528,16 @@ H5_DLL herr_t H5F__mount_count_ids(H5F_t *f, unsigned *nopen_files, unsigned *no
 
 /* Superblock related routines */
 H5_DLL herr_t H5F__super_init(H5F_t *f);
-H5_DLL herr_t H5F__super_read(H5F_t *f, H5P_genplist_t *fa_plist, hbool_t initial_read);
+H5_DLL herr_t H5F__super_read(H5F_t *f, H5P_genplist_t *fa_plist, bool initial_read);
 H5_DLL herr_t H5F__super_size(H5F_t *f, hsize_t *super_size, hsize_t *super_ext_size);
 H5_DLL herr_t H5F__super_free(H5F_super_t *sblock);
 
 /* Superblock extension related routines */
 H5_DLL herr_t H5F__super_ext_open(H5F_t *f, haddr_t ext_addr, H5O_loc_t *ext_ptr);
-H5_DLL herr_t H5F__super_ext_write_msg(H5F_t *f, unsigned id, void *mesg, hbool_t may_create,
+H5_DLL herr_t H5F__super_ext_write_msg(H5F_t *f, unsigned id, void *mesg, bool may_create,
                                        unsigned mesg_flags);
 H5_DLL herr_t H5F__super_ext_remove_msg(H5F_t *f, unsigned id);
-H5_DLL herr_t H5F__super_ext_close(H5F_t *f, H5O_loc_t *ext_ptr, hbool_t was_created);
+H5_DLL herr_t H5F__super_ext_close(H5F_t *f, H5O_loc_t *ext_ptr, bool was_created);
 
 /* Metadata accumulator routines */
 H5_DLL herr_t H5F__accum_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, void *buf);
@@ -651,26 +545,27 @@ H5_DLL herr_t H5F__accum_write(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr
                                const void *buf);
 H5_DLL herr_t H5F__accum_free(H5F_shared_t *f, H5FD_mem_t type, haddr_t addr, hsize_t size);
 H5_DLL herr_t H5F__accum_flush(H5F_shared_t *f_sh);
-H5_DLL herr_t H5F__accum_reset(H5F_shared_t *f_sh, hbool_t flush);
+H5_DLL herr_t H5F__accum_reset(H5F_shared_t *f_sh, bool flush, bool force);
 
 /* Shared file list related routines */
-H5_DLL herr_t H5F__sfile_add(H5F_shared_t *shared);
+H5_DLL herr_t        H5F__sfile_add(H5F_shared_t *shared);
 H5_DLL H5F_shared_t *H5F__sfile_search(H5FD_t *lf);
 H5_DLL herr_t        H5F__sfile_remove(H5F_shared_t *shared);
 
 /* Parallel I/O (i.e. MPI) related routines */
 #ifdef H5_HAVE_PARALLEL
-H5_DLL herr_t H5F__get_mpi_atomicity(const H5F_t *file, hbool_t *flag);
-H5_DLL herr_t H5F__set_mpi_atomicity(H5F_t *file, hbool_t flag);
+H5_DLL herr_t H5F__get_mpi_atomicity(const H5F_t *file, bool *flag);
+H5_DLL herr_t H5F__set_mpi_atomicity(H5F_t *file, bool flag);
 #endif /* H5_HAVE_PARALLEL */
 
 /* External file cache routines */
 H5_DLL H5F_efc_t *H5F__efc_create(unsigned max_nfiles);
-H5_DLL H5F_t *  H5F__efc_open(H5F_t *parent, const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id);
-H5_DLL unsigned H5F__efc_max_nfiles(H5F_efc_t *efc);
-H5_DLL herr_t   H5F__efc_release(H5F_efc_t *efc);
-H5_DLL herr_t   H5F__efc_destroy(H5F_efc_t *efc);
-H5_DLL herr_t   H5F__efc_try_close(H5F_t *f);
+H5_DLL herr_t     H5F__efc_open(bool try, H5F_efc_t *efc, H5F_t **file, const char *name, unsigned flags,
+                                hid_t fcpl_id, hid_t fapl_id);
+H5_DLL unsigned   H5F__efc_max_nfiles(H5F_efc_t *efc);
+H5_DLL herr_t     H5F__efc_release(H5F_efc_t *efc);
+H5_DLL herr_t     H5F__efc_destroy(H5F_efc_t *efc);
+H5_DLL herr_t     H5F__efc_try_close(H5F_t *f);
 
 /* Space allocation routines */
 H5_DLL haddr_t H5F__alloc(H5F_t *f, H5F_mem_t type, hsize_t size, haddr_t *frag_addr, hsize_t *frag_size);
@@ -680,14 +575,11 @@ H5_DLL htri_t  H5F__try_extend(H5F_t *f, H5FD_mem_t type, haddr_t blk_end, hsize
 /* Functions that get/retrieve values from VFD layer */
 H5_DLL herr_t H5F__set_eoa(const H5F_t *f, H5F_mem_t type, haddr_t addr);
 H5_DLL herr_t H5F__set_base_addr(const H5F_t *f, haddr_t addr);
-H5_DLL herr_t H5F__set_paged_aggr(const H5F_t *f, hbool_t paged);
+H5_DLL herr_t H5F__set_paged_aggr(const H5F_t *f, bool paged);
 H5_DLL herr_t H5F__get_max_eof_eoa(const H5F_t *f, haddr_t *max_eof_eoa);
 
 /* Functions that flush or evict */
 H5_DLL herr_t H5F__evict_cache_entries(H5F_t *f);
-
-/* VFD SWMR log functions */
-H5_DLL void H5F__post_vfd_swmr_log_entry(H5F_t *f, int entry_type_code, const char *log_info);
 
 /* Testing functions */
 #ifdef H5F_TESTING
@@ -695,13 +587,17 @@ H5_DLL herr_t H5F__get_sohm_mesg_count_test(hid_t fid, unsigned type_id, size_t 
 H5_DLL herr_t H5F__check_cached_stab_test(hid_t file_id);
 H5_DLL herr_t H5F__get_maxaddr_test(hid_t file_id, haddr_t *maxaddr);
 H5_DLL herr_t H5F__get_sbe_addr_test(hid_t file_id, haddr_t *sbe_addr);
-
-/* VFD SWMR testing routines */
-H5_DLL herr_t H5F__vfd_swmr_writer_create_open_flush_test(hid_t file_id, hbool_t create);
-H5_DLL herr_t H5F__vfd_swmr_writer_md_test(hid_t, unsigned, struct H5FD_vfd_swmr_idx_entry_t *, unsigned);
-
 H5_DLL htri_t H5F__same_file_test(hid_t file_id1, hid_t file_id2);
 H5_DLL herr_t H5F__reparse_file_lock_variable_test(void);
+/* VFD SWMR testing functions */
+H5_DLL herr_t H5F__vfd_swmr_writer_create_open_flush_test(hid_t file_id, hbool_t create);
+H5_DLL herr_t H5F__vfd_swmr_writer_md_test(hid_t file_id, unsigned num_entries,
+                                           struct H5FD_vfd_swmr_idx_entry_t *index, unsigned nshadow_defrees);
 #endif /* H5F_TESTING */
+
+/* VFD SWMR functions (used from H5F module only) */
+H5_DLL herr_t H5F__vfd_swmr_end_tick(H5F_t *f);
+H5_DLL herr_t H5F__vfd_swmr_disable_end_of_tick(H5F_t *f);
+H5_DLL herr_t H5F__vfd_swmr_enable_end_of_tick(H5F_t *f);
 
 #endif /* H5Fpkg_H */

@@ -1,11 +1,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -21,6 +20,7 @@
 #include "h5tools_ref.h"
 #include "h5tools_utils.h"
 #include "H5private.h"
+#include "H5Fprivate.h"
 
 #ifdef H5_TOOLS_DEBUG
 /* global debug variables */
@@ -30,8 +30,8 @@ int H5tools_INDENT_g = 0;
 /* global variables */
 H5E_auto2_t lib_func;
 H5E_auto2_t tools_func;
-void *      lib_edata;
-void *      tools_edata;
+void       *lib_edata;
+void       *tools_edata;
 
 hid_t H5tools_ERR_STACK_g     = H5I_INVALID_HID;
 hid_t H5tools_ERR_CLS_g       = H5I_INVALID_HID;
@@ -52,7 +52,6 @@ int region_output;    /* region output */
 int oid_output;       /* oid output */
 int data_output;      /* data output */
 int attr_data_output; /* attribute data output */
-int compound_data;
 
 unsigned           packed_bits_num;    /* number of packed bits to display */
 unsigned           packed_data_offset; /* offset of packed bits to display */
@@ -84,8 +83,9 @@ const char *drivernames[] = {
     [SEC2_VFD_IDX] = "sec2",       [DIRECT_VFD_IDX] = "direct", [LOG_VFD_IDX] = "log",
     [WINDOWS_VFD_IDX] = "windows", [STDIO_VFD_IDX] = "stdio",   [CORE_VFD_IDX] = "core",
     [FAMILY_VFD_IDX] = "family",   [SPLIT_VFD_IDX] = "split",   [MULTI_VFD_IDX] = "multi",
-    [MPIO_VFD_IDX] = "mpio",       [ROS3_VFD_IDX] = "ros3",     [HDFS_VFD_IDX] = "hdfs",
-    [SWMR_VFD_IDX] = "swmr",
+    [MPIO_VFD_IDX] = "mpio",       [MIRROR_VFD_IDX] = "mirror", [SPLITTER_VFD_IDX] = "splitter",
+    [ROS3_VFD_IDX] = "ros3",       [HDFS_VFD_IDX] = "hdfs",     [SUBFILING_VFD_IDX] = H5FD_SUBFILING_NAME,
+    [ONION_VFD_IDX] = "onion",     [SWMR_VFD_IDX] = "swmr",
 };
 
 #define NUM_VOLS    (sizeof(volnames) / sizeof(volnames[0]))
@@ -168,7 +168,7 @@ h5tools_close(void)
     if (h5tools_init_g) {
         /* special case where only data is output to stdout */
         if ((rawoutstream == NULL) && rawdatastream && (rawdatastream == stdout))
-            HDfprintf(rawdatastream, "\n");
+            fprintf(rawdatastream, "\n");
 
         if (tools_func)
             H5Eprint2(H5tools_ERR_STACK_g, rawerrorstream);
@@ -238,8 +238,8 @@ h5tools_set_data_output_file(const char *fname, int is_bin)
               * so that rawdatastream is changed only when succeeded */
 
     if (rawdatastream && rawdatastream != stdout) {
-        if (HDfclose(rawdatastream))
-            HDperror("closing rawdatastream");
+        if (fclose(rawdatastream))
+            perror("closing rawdatastream");
         else
             rawdatastream = NULL;
     }
@@ -248,13 +248,13 @@ h5tools_set_data_output_file(const char *fname, int is_bin)
     if (fname != NULL) {
         /* binary output */
         if (is_bin) {
-            if ((f = HDfopen(fname, "wb")) != NULL) {
+            if ((f = fopen(fname, "wb")) != NULL) {
                 rawdatastream = f;
                 retvalue      = SUCCEED;
             }
         }
         else {
-            if ((f = HDfopen(fname, "w")) != NULL) {
+            if ((f = fopen(fname, "w")) != NULL) {
                 rawdatastream = f;
                 retvalue      = SUCCEED;
             }
@@ -286,8 +286,8 @@ h5tools_set_attr_output_file(const char *fname, int is_bin)
               * so that rawattrstream is changed only when succeeded */
 
     if (rawattrstream && rawattrstream != stdout) {
-        if (HDfclose(rawattrstream))
-            HDperror("closing rawattrstream");
+        if (fclose(rawattrstream))
+            perror("closing rawattrstream");
         else
             rawattrstream = NULL;
     }
@@ -296,13 +296,13 @@ h5tools_set_attr_output_file(const char *fname, int is_bin)
     if (fname != NULL) {
         /* binary output */
         if (is_bin) {
-            if ((f = HDfopen(fname, "wb")) != NULL) {
+            if ((f = fopen(fname, "wb")) != NULL) {
                 rawattrstream = f;
                 retvalue      = SUCCEED;
             }
         }
         else {
-            if ((f = HDfopen(fname, "w")) != NULL) {
+            if ((f = fopen(fname, "w")) != NULL) {
                 rawattrstream = f;
                 retvalue      = SUCCEED;
             }
@@ -335,8 +335,8 @@ h5tools_set_input_file(const char *fname, int is_bin)
               * so that rawinstream is changed only when succeeded */
 
     if (rawinstream && rawinstream != stdin) {
-        if (HDfclose(rawinstream))
-            HDperror("closing rawinstream");
+        if (fclose(rawinstream))
+            perror("closing rawinstream");
         else
             rawinstream = NULL;
     }
@@ -344,13 +344,13 @@ h5tools_set_input_file(const char *fname, int is_bin)
     if (fname != NULL) {
         /* binary output */
         if (is_bin) {
-            if ((f = HDfopen(fname, "rb")) != NULL) {
+            if ((f = fopen(fname, "rb")) != NULL) {
                 rawinstream = f;
                 retvalue    = SUCCEED;
             }
         }
         else {
-            if ((f = HDfopen(fname, "r")) != NULL) {
+            if ((f = fopen(fname, "r")) != NULL) {
                 rawinstream = f;
                 retvalue    = SUCCEED;
             }
@@ -383,8 +383,8 @@ h5tools_set_output_file(const char *fname, int is_bin)
               * so that rawoutstream is changed only when succeeded */
 
     if (rawoutstream && rawoutstream != stdout) {
-        if (HDfclose(rawoutstream))
-            HDperror("closing rawoutstream");
+        if (fclose(rawoutstream))
+            perror("closing rawoutstream");
         else
             rawoutstream = NULL;
     }
@@ -392,13 +392,13 @@ h5tools_set_output_file(const char *fname, int is_bin)
     if (fname != NULL) {
         /* binary output */
         if (is_bin) {
-            if ((f = HDfopen(fname, "wb")) != NULL) {
+            if ((f = fopen(fname, "wb")) != NULL) {
                 rawoutstream = f;
                 retvalue     = SUCCEED;
             }
         }
         else {
-            if ((f = HDfopen(fname, "w")) != NULL) {
+            if ((f = fopen(fname, "w")) != NULL) {
                 rawoutstream = f;
                 retvalue     = SUCCEED;
             }
@@ -430,8 +430,8 @@ h5tools_set_error_file(const char *fname, int is_bin)
               * so that rawerrorstream is changed only when succeeded */
 
     if (rawerrorstream && rawerrorstream != stderr) {
-        if (HDfclose(rawerrorstream))
-            HDperror("closing rawerrorstream");
+        if (fclose(rawerrorstream))
+            perror("closing rawerrorstream");
         else
             rawerrorstream = NULL;
     }
@@ -440,13 +440,13 @@ h5tools_set_error_file(const char *fname, int is_bin)
     if (fname != NULL) {
         /* binary output */
         if (is_bin) {
-            if ((f = HDfopen(fname, "wb")) != NULL) {
+            if ((f = fopen(fname, "wb")) != NULL) {
                 rawerrorstream = f;
                 retvalue       = SUCCEED;
             }
         }
         else {
-            if ((f = HDfopen(fname, "w")) != NULL) {
+            if ((f = fopen(fname, "w")) != NULL) {
                 rawerrorstream = f;
                 retvalue       = SUCCEED;
             }
@@ -473,27 +473,25 @@ static herr_t
 h5tools_set_up_vfd_swmr(hid_t fapl, const char *config_file)
 
 {
-    herr_t                 ret_value = SUCCEED;
+    herr_t ret_value = SUCCEED;
 
     if (config_file == NULL || *config_file == '\0') {
         /* Set up SWMR fapl with default config values */
         H5F_vfd_swmr_config_t config = /* Configuration for VFD SWMR */
-        {
-            /* int32_t  version;                                   = */ H5F__CURR_VFD_SWMR_CONFIG_VERSION,
-            /* uint32_t tick_len;                                               = */ 4,
-            /* uint32_t max_lag;                                                = */ 5,
-            /* hbool_t  presume_posix_semantics;                                = */ true,
-            /* hbool_t  writer;                                                 = */ false,
-            /* hbool_t  maintain_metadata_file;                                 = */ true,
-            /* hbool_t  generate_updater_files;                                 = */ false,
-            /* hbool_t  flush_raw_data;                                         = */ true,
-            /* uint32_t md_pages_reserved;                                      = */ 128,
-            /* uint32_t pb_expansion_threshold;                                 = */ 0,
-            /* char     md_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];      = */ "./",
-            /* char     md_file_name[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];      = */ "my_md_file",
-            /* char     updater_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1]; = */ "",
-            /* char     log_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];     = */ ""
-        };
+            {/* int32_t  version;                                   = */ H5F__CURR_VFD_SWMR_CONFIG_VERSION,
+             /* uint32_t tick_len;                                               = */ 4,
+             /* uint32_t max_lag;                                                = */ 5,
+             /* hbool_t  presume_posix_semantics;                                = */ true,
+             /* hbool_t  writer;                                                 = */ false,
+             /* hbool_t  maintain_metadata_file;                                 = */ true,
+             /* hbool_t  generate_updater_files;                                 = */ false,
+             /* hbool_t  flush_raw_data;                                         = */ true,
+             /* uint32_t md_pages_reserved;                                      = */ 128,
+             /* uint32_t pb_expansion_threshold;                                 = */ 0,
+             /* char     md_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];      = */ "./",
+             /* char     md_file_name[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];      = */ "my_md_file",
+             /* char     updater_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1]; = */ "",
+             /* char     log_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1];     = */ ""};
 
         /* Enable page buffering */
         if (H5Pset_page_buffer_size(fapl, 4096, 100, 0) < 0)
@@ -502,8 +500,8 @@ h5tools_set_up_vfd_swmr(hid_t fapl, const char *config_file)
         /* Enable VFD SWMR configuration */
         if (H5Pset_vfd_swmr_config(fapl, &config) < 0)
             H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_vrd_swmr_config failed");
-    } 
-    else { 
+    }
+    else {
         /* set up VFD SWMR fapl with values defined in config file.
          * fcpl id set to H5I_INVALID_HID since it is unneeded.  */
         if (H5Fswmr_config_file(config_file, fapl, H5I_INVALID_HID, false, false) < 0)
@@ -524,7 +522,7 @@ done:
  *           negative - failed
  *-------------------------------------------------------------------------
  */
-static herr_t
+herr_t
 h5tools_set_fapl_vfd(hid_t fapl_id, h5tools_vfd_info_t *vfd_info)
 {
     herr_t ret_value = SUCCEED;
@@ -532,12 +530,12 @@ h5tools_set_fapl_vfd(hid_t fapl_id, h5tools_vfd_info_t *vfd_info)
     switch (vfd_info->type) {
         case VFD_BY_NAME:
             /* Determine which driver the user wants to open the file with */
-            if (!HDstrcmp(vfd_info->u.name, drivernames[SEC2_VFD_IDX])) {
+            if (!strcmp(vfd_info->u.name, drivernames[SEC2_VFD_IDX])) {
                 /* SEC2 Driver */
                 if (H5Pset_fapl_sec2(fapl_id) < 0)
                     H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_sec2 failed");
             }
-            else if (!HDstrcmp(vfd_info->u.name, drivernames[DIRECT_VFD_IDX])) {
+            else if (!strcmp(vfd_info->u.name, drivernames[DIRECT_VFD_IDX])) {
 #ifdef H5_HAVE_DIRECT
                 /* Direct Driver */
                 if (H5Pset_fapl_direct(fapl_id, 1024, 4096, 8 * 4096) < 0)
@@ -546,14 +544,14 @@ h5tools_set_fapl_vfd(hid_t fapl_id, h5tools_vfd_info_t *vfd_info)
                 H5TOOLS_GOTO_ERROR(FAIL, "Direct VFD is not enabled");
 #endif
             }
-            else if (!HDstrcmp(vfd_info->u.name, drivernames[LOG_VFD_IDX])) {
+            else if (!strcmp(vfd_info->u.name, drivernames[LOG_VFD_IDX])) {
                 unsigned long long log_flags = H5FD_LOG_LOC_IO | H5FD_LOG_ALLOC;
 
                 /* Log Driver */
                 if (H5Pset_fapl_log(fapl_id, NULL, log_flags, (size_t)0) < 0)
                     H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_log failed");
             }
-            else if (!HDstrcmp(vfd_info->u.name, drivernames[WINDOWS_VFD_IDX])) {
+            else if (!strcmp(vfd_info->u.name, drivernames[WINDOWS_VFD_IDX])) {
 #ifdef H5_HAVE_WINDOWS
                 /* There is no Windows VFD - use SEC2 */
                 if (H5Pset_fapl_sec2(fapl_id) < 0)
@@ -562,17 +560,17 @@ h5tools_set_fapl_vfd(hid_t fapl_id, h5tools_vfd_info_t *vfd_info)
                 H5TOOLS_GOTO_ERROR(FAIL, "Windows VFD is not enabled");
 #endif
             }
-            else if (!HDstrcmp(vfd_info->u.name, drivernames[STDIO_VFD_IDX])) {
+            else if (!strcmp(vfd_info->u.name, drivernames[STDIO_VFD_IDX])) {
                 /* Stdio Driver */
                 if (H5Pset_fapl_stdio(fapl_id) < 0)
                     H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_stdio failed");
             }
-            else if (!HDstrcmp(vfd_info->u.name, drivernames[CORE_VFD_IDX])) {
+            else if (!strcmp(vfd_info->u.name, drivernames[CORE_VFD_IDX])) {
                 /* Core Driver */
-                if (H5Pset_fapl_core(fapl_id, (size_t)H5_MB, TRUE) < 0)
+                if (H5Pset_fapl_core(fapl_id, (size_t)H5_MB, true) < 0)
                     H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_core failed");
             }
-            else if (!HDstrcmp(vfd_info->u.name, drivernames[FAMILY_VFD_IDX])) {
+            else if (!strcmp(vfd_info->u.name, drivernames[FAMILY_VFD_IDX])) {
                 /* FAMILY Driver */
                 /* Set member size to be 0 to indicate the current first member size
                  * is the member size.
@@ -580,17 +578,17 @@ h5tools_set_fapl_vfd(hid_t fapl_id, h5tools_vfd_info_t *vfd_info)
                 if (H5Pset_fapl_family(fapl_id, (hsize_t)0, H5P_DEFAULT) < 0)
                     H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_family failed");
             }
-            else if (!HDstrcmp(vfd_info->u.name, drivernames[SPLIT_VFD_IDX])) {
+            else if (!strcmp(vfd_info->u.name, drivernames[SPLIT_VFD_IDX])) {
                 /* SPLIT Driver */
                 if (H5Pset_fapl_split(fapl_id, "-m.h5", H5P_DEFAULT, "-r.h5", H5P_DEFAULT) < 0)
                     H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_split failed");
             }
-            else if (!HDstrcmp(vfd_info->u.name, drivernames[MULTI_VFD_IDX])) {
+            else if (!strcmp(vfd_info->u.name, drivernames[MULTI_VFD_IDX])) {
                 /* MULTI Driver */
-                if (H5Pset_fapl_multi(fapl_id, NULL, NULL, NULL, NULL, TRUE) < 0)
+                if (H5Pset_fapl_multi(fapl_id, NULL, NULL, NULL, NULL, true) < 0)
                     H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_multi failed");
             }
-            else if (!HDstrcmp(vfd_info->u.name, drivernames[MPIO_VFD_IDX])) {
+            else if (!strcmp(vfd_info->u.name, drivernames[MPIO_VFD_IDX])) {
 #ifdef H5_HAVE_PARALLEL
                 int mpi_initialized, mpi_finalized;
 
@@ -608,17 +606,26 @@ h5tools_set_fapl_vfd(hid_t fapl_id, h5tools_vfd_info_t *vfd_info)
                 H5TOOLS_GOTO_ERROR(FAIL, "MPI-I/O VFD is not enabled");
 #endif /* H5_HAVE_PARALLEL */
             }
-            else if (!HDstrcmp(vfd_info->u.name, drivernames[ROS3_VFD_IDX])) {
+            else if (!strcmp(vfd_info->u.name, drivernames[ROS3_VFD_IDX])) {
 #ifdef H5_HAVE_ROS3_VFD
-                if (!vfd_info->info)
+                const H5FD_ros3_fapl_ext_t *ros3_fapl_info = (const H5FD_ros3_fapl_ext_t *)vfd_info->info;
+
+                if (!ros3_fapl_info)
                     H5TOOLS_GOTO_ERROR(FAIL, "Read-only S3 VFD info is invalid");
-                if (H5Pset_fapl_ros3(fapl_id, (const H5FD_ros3_fapl_t *)vfd_info->info) < 0)
+                if (H5Pset_fapl_ros3(fapl_id, &ros3_fapl_info->fa) < 0)
                     H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_ros3() failed");
+
+                if (ros3_fapl_info->token[0] != '\0')
+                    if (H5Pset_fapl_ros3_token(fapl_id, ros3_fapl_info->token) < 0)
+                        H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_ros3_token() failed");
+                if (ros3_fapl_info->ep_url[0] != '\0')
+                    if (H5Pset_fapl_ros3_endpoint(fapl_id, ros3_fapl_info->ep_url) < 0)
+                        H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_ros3_endpoint() failed");
 #else
                 H5TOOLS_GOTO_ERROR(FAIL, "Read-only S3 VFD is not enabled");
 #endif
             }
-            else if (!HDstrcmp(vfd_info->u.name, drivernames[HDFS_VFD_IDX])) {
+            else if (!strcmp(vfd_info->u.name, drivernames[HDFS_VFD_IDX])) {
 #ifdef H5_HAVE_LIBHDFS
                 if (!vfd_info->info)
                     H5TOOLS_GOTO_ERROR(FAIL, "HDFS VFD info is invalid");
@@ -628,10 +635,25 @@ h5tools_set_fapl_vfd(hid_t fapl_id, h5tools_vfd_info_t *vfd_info)
                 H5TOOLS_GOTO_ERROR(FAIL, "The HDFS VFD is not enabled");
 #endif
             }
-            else if (!HDstrcmp(vfd_info->u.name, drivernames[SWMR_VFD_IDX])) {
+            else if (!strcmp(vfd_info->u.name, drivernames[SWMR_VFD_IDX])) {
                 /* VFD SWMR driver */
                 if (h5tools_set_up_vfd_swmr(fapl_id, vfd_info->swmr_config_file) < 0)
                     H5TOOLS_GOTO_ERROR(FAIL, "swmr_fapl_augment failed");
+            }
+            else if (!strcmp(vfd_info->u.name, drivernames[SUBFILING_VFD_IDX])) {
+#if defined(H5_HAVE_PARALLEL) && defined(H5_HAVE_SUBFILING_VFD)
+                if (H5Pset_fapl_subfiling(fapl_id, (const H5FD_subfiling_config_t *)vfd_info->info) < 0)
+                    H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_subfiling() failed");
+#else
+                H5TOOLS_GOTO_ERROR(FAIL, "The Subfiling VFD is not enabled");
+#endif
+            }
+            else if (!strcmp(vfd_info->u.name, drivernames[ONION_VFD_IDX])) {
+                /* Onion driver */
+                if (!vfd_info->info)
+                    H5TOOLS_GOTO_ERROR(FAIL, "Onion VFD info is invalid");
+                if (H5Pset_fapl_onion(fapl_id, (const H5FD_onion_fapl_info_t *)vfd_info->info) < 0)
+                    H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_onion() failed");
             }
             else {
                 /*
@@ -651,9 +673,20 @@ h5tools_set_fapl_vfd(hid_t fapl_id, h5tools_vfd_info_t *vfd_info)
              *
              * Currently, driver configuration strings are unsupported.
              */
-            if (H5Pset_driver_by_value(fapl_id, vfd_info->u.value, (const char *)vfd_info->info) < 0)
-                H5TOOLS_GOTO_ERROR(FAIL, "can't load VFD plugin by driver value '%ld'",
-                                   (long int)vfd_info->u.value);
+
+            if (vfd_info->u.value == H5_VFD_SUBFILING) {
+#if defined(H5_HAVE_PARALLEL) && defined(H5_HAVE_SUBFILING_VFD)
+                if (H5Pset_fapl_subfiling(fapl_id, (const H5FD_subfiling_config_t *)vfd_info->info) < 0)
+                    H5TOOLS_GOTO_ERROR(FAIL, "H5Pset_fapl_subfiling() failed");
+#else
+                H5TOOLS_GOTO_ERROR(FAIL, "The Subfiling VFD is not enabled");
+#endif
+            }
+            else {
+                if (H5Pset_driver_by_value(fapl_id, vfd_info->u.value, (const char *)vfd_info->info) < 0)
+                    H5TOOLS_GOTO_ERROR(FAIL, "can't load VFD plugin by driver value '%ld'",
+                                       (long int)vfd_info->u.value);
+            }
             break;
 
         default:
@@ -661,12 +694,6 @@ h5tools_set_fapl_vfd(hid_t fapl_id, h5tools_vfd_info_t *vfd_info)
     }
 
 done:
-    if (ret_value < 0) {
-        /* Clear error message unless asked for */
-        if ((H5tools_ERR_STACK_g >= 0) && (enable_error_stack <= 1))
-            H5Epop(H5tools_ERR_STACK_g, 1);
-    }
-
     return ret_value;
 }
 
@@ -680,12 +707,12 @@ done:
  *           negative - failed
  *-------------------------------------------------------------------------
  */
-static herr_t
+herr_t
 h5tools_set_fapl_vol(hid_t fapl_id, h5tools_vol_info_t *vol_info)
 {
     htri_t connector_is_registered;
     hid_t  connector_id   = H5I_INVALID_HID;
-    void * connector_info = NULL;
+    void  *connector_info = NULL;
     herr_t ret_value      = SUCCEED;
 
     switch (vol_info->type) {
@@ -701,12 +728,8 @@ h5tools_set_fapl_vol(hid_t fapl_id, h5tools_vol_info_t *vol_info)
                 /* Check for VOL connectors that ship with the library, then try
                  * registering by name if that fails.
                  */
-                if (!HDstrcmp(vol_info->u.name, H5VL_NATIVE_NAME)) {
-                    connector_id = H5VL_NATIVE;
-                }
-                else if (!HDstrcmp(vol_info->u.name, H5VL_PASSTHRU_NAME)) {
+                if (!strcmp(vol_info->u.name, H5VL_PASSTHRU_NAME))
                     connector_id = H5VL_PASSTHRU;
-                }
                 else {
                     /* NOTE: Not being able to pass in a VIPL may be a limitation for some
                      * connectors.
@@ -728,12 +751,8 @@ h5tools_set_fapl_vol(hid_t fapl_id, h5tools_vol_info_t *vol_info)
             }
             else {
                 /* Check for VOL connectors that ship with the library */
-                if (vol_info->u.value == H5VL_NATIVE_VALUE) {
-                    connector_id = H5VL_NATIVE;
-                }
-                else if (vol_info->u.value == H5VL_PASSTHRU_VALUE) {
+                if (vol_info->u.value == H5VL_PASSTHRU_VALUE)
                     connector_id = H5VL_PASSTHRU;
-                }
                 else {
                     /* NOTE: Not being able to pass in a VIPL may be a limitation for some
                      * connectors.
@@ -766,19 +785,15 @@ done:
     if (ret_value < 0) {
         if (connector_id >= 0 && H5Idec_ref(connector_id) < 0)
             H5TOOLS_ERROR(FAIL, "failed to decrement refcount on VOL connector ID");
-
-        /* Clear error message unless asked for */
-        if ((H5tools_ERR_STACK_g >= 0) && (enable_error_stack <= 1))
-            H5Epop(H5tools_ERR_STACK_g, 1);
     }
 
     return ret_value;
 }
 
 /*-------------------------------------------------------------------------
- * Function: h5tools_get_fapl
+ * Function: h5tools_get_new_fapl
  *
- * Purpose:  Copies an input fapl and then sets a VOL and/or a VFD on it.
+ * Purpose:  Copies an input fapl.
  *
  *           The returned fapl must be closed by the caller.
  *
@@ -787,7 +802,7 @@ done:
  *-------------------------------------------------------------------------
  */
 hid_t
-h5tools_get_fapl(hid_t prev_fapl_id, h5tools_vol_info_t *vol_info, h5tools_vfd_info_t *vfd_info)
+h5tools_get_new_fapl(hid_t prev_fapl_id)
 {
     hid_t new_fapl_id = H5I_INVALID_HID;
     hid_t ret_value   = H5I_INVALID_HID;
@@ -805,16 +820,6 @@ h5tools_get_fapl(hid_t prev_fapl_id, h5tools_vol_info_t *vol_info, h5tools_vfd_i
             H5TOOLS_GOTO_ERROR(H5I_INVALID_HID, "H5Pcopy failed");
     }
 
-    /* Set non-default VOL connector, if requested */
-    if (vol_info)
-        if (h5tools_set_fapl_vol(new_fapl_id, vol_info) < 0)
-            H5TOOLS_GOTO_ERROR(H5I_INVALID_HID, "failed to set VOL on FAPL");
-
-    /* Set non-default virtual file driver, if requested */
-    if (vfd_info)
-        if (h5tools_set_fapl_vfd(new_fapl_id, vfd_info) < 0)
-            H5TOOLS_GOTO_ERROR(H5I_INVALID_HID, "failed to set VFD on FAPL");
-
     ret_value = new_fapl_id;
 
 done:
@@ -823,10 +828,6 @@ done:
             H5Pclose(new_fapl_id);
             new_fapl_id = H5I_INVALID_HID;
         }
-
-        /* Clear error message unless asked for */
-        if ((H5tools_ERR_STACK_g >= 0) && (enable_error_stack <= 1))
-            H5Epop(H5tools_ERR_STACK_g, 1);
     }
 
     return ret_value;
@@ -845,9 +846,10 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-h5tools_get_vfd_name(hid_t fapl_id, char *drivername, size_t drivername_size)
+h5tools_get_vfd_name(hid_t fid, hid_t fapl_id, char *drivername, size_t drivername_size)
 {
     hid_t  fapl_vol_id = H5I_INVALID_HID;
+    bool   is_native   = false;
     herr_t ret_value   = SUCCEED;
 
     if (fapl_id < 0)
@@ -867,9 +869,11 @@ h5tools_get_vfd_name(hid_t fapl_id, char *drivername, size_t drivername_size)
     if (H5Pget_vol_id(fapl_id, &fapl_vol_id) < 0)
         H5TOOLS_ERROR(FAIL, "failed to retrieve VOL ID from FAPL");
 
-    /* TODO: For now, we have no way of determining if an arbitrary
-     * VOL connector is native-terminal. */
-    if (fapl_vol_id == H5VL_NATIVE || fapl_vol_id == H5VL_PASSTHRU) {
+    /* Query if the file ID is native-terminal */
+    if (H5VLobject_is_native(fid, &is_native) < 0)
+        H5TOOLS_ERROR(FAIL, "failed to determine if file ID is native-terminal");
+
+    if (is_native) {
         const char *driver_name;
         hid_t       driver_id;
 
@@ -908,10 +912,16 @@ h5tools_get_vfd_name(hid_t fapl_id, char *drivername, size_t drivername_size)
         else if (driver_id == H5FD_HDFS)
             driver_name = drivernames[HDFS_VFD_IDX];
 #endif
+#ifdef H5_HAVE_SUBFILING_VFD
+        else if (driver_id == H5FD_SUBFILING)
+            driver_name = drivernames[SUBFILING_VFD_IDX];
+#endif
+        else if (driver_id == H5FD_ONION)
+            driver_name = drivernames[ONION_VFD_IDX];
         else
             driver_name = "unknown";
 
-        HDstrncpy(drivername, driver_name, drivername_size);
+        strncpy(drivername, driver_name, drivername_size);
         drivername[drivername_size - 1] = '\0';
     }
 
@@ -931,14 +941,14 @@ done:
  *
  *           The 'use_specific_driver' parameter is used to control the
  *           VFD/VOL connector that this routine uses to open the file
- *           with. If 'use_specific_driver' is set to TRUE, this routine
+ *           with. If 'use_specific_driver' is set to true, this routine
  *           assumes that the caller has already set a specific VFD or VOL
  *           connector on the given FAPL and will attempt to directly use
  *           the FAPL for opening the file. We assume that the caller knows
  *           what they are doing; if the file is unable to be opened using
  *           that FAPL, this routine will return H5I_INVALID_HID.
  *
- *           However, if 'use_specific_driver' is set to FALSE, this
+ *           However, if 'use_specific_driver' is set to false, this
  *           routine assumes that the caller HAS NOT set a specific VFD or
  *           VOL connector on the given FAPL and will instead loop through
  *           the various available VFL drivers and VOL connectors trying to
@@ -967,14 +977,16 @@ done:
  *-------------------------------------------------------------------------
  */
 hid_t
-h5tools_fopen(const char *fname, unsigned flags, hid_t fapl_id, hbool_t use_specific_driver, char *drivername,
+h5tools_fopen(const char *fname, unsigned flags, hid_t fapl_id, bool use_specific_driver, char *drivername,
               size_t drivername_size)
 {
     hid_t    fid          = H5I_INVALID_HID;
     hid_t    tmp_fapl_id  = H5I_INVALID_HID;
     hid_t    used_fapl_id = H5I_INVALID_HID;
     unsigned volnum, drivernum;
-    hid_t    ret_value = H5I_INVALID_HID;
+    bool     lib_errors_paused   = false;
+    bool     tools_errors_paused = false;
+    hid_t    ret_value           = H5I_INVALID_HID;
 
     /*
      * First try to open the file using just the given FAPL. If the
@@ -994,7 +1006,7 @@ h5tools_fopen(const char *fname, unsigned flags, hid_t fapl_id, hbool_t use_spec
         {
             fid = H5Fopen(fname, flags, fapl_id);
         }
-        H5E_END_TRY;
+        H5E_END_TRY
     }
 
     /* If we succeeded in opening the file, we're done. */
@@ -1005,11 +1017,22 @@ h5tools_fopen(const char *fname, unsigned flags, hid_t fapl_id, hbool_t use_spec
 
     /*
      * If we failed to open the file and the caller specified 'use_specific_driver'
-     * as TRUE, we should return failure now since the file couldn't be opened with
+     * as true, we should return failure now since the file couldn't be opened with
      * the VFL driver/VOL connector that was set on the FAPL by the caller.
      */
     if (use_specific_driver)
         H5TOOLS_GOTO_ERROR(H5I_INVALID_HID, "failed to open file using specified FAPL");
+
+    /*
+     * Pause errors on the library and tools error stacks to prevent a
+     * flood of unhelpful error messages from the section below.
+     */
+    if (H5Epause_stack(H5tools_ERR_STACK_g) < 0)
+        H5TOOLS_GOTO_ERROR(H5I_INVALID_HID, "failed to pause errors for tools error stack");
+    tools_errors_paused = true;
+    if (H5Epause_stack(H5E_DEFAULT) < 0)
+        H5TOOLS_GOTO_ERROR(H5I_INVALID_HID, "failed to pause errors for library error stack");
+    lib_errors_paused = true;
 
     /*
      * As a final resort, try to open the file using each of the available
@@ -1049,18 +1072,34 @@ h5tools_fopen(const char *fname, unsigned flags, hid_t fapl_id, hbool_t use_spec
                 if (drivernum == SWMR_VFD_IDX)
                     continue;
 
-                vfd_info.type   = VFD_BY_NAME;
-                vfd_info.info   = NULL;
-                vfd_info.fname  = fname;
-                vfd_info.u.name = drivernames[drivernum];
+                vfd_info.type             = VFD_BY_NAME;
+                vfd_info.info             = NULL;
+                vfd_info.fname            = fname;
+                vfd_info.swmr_config_file = NULL;
+                vfd_info.u.name           = drivernames[drivernum];
 
                 /* Get a fapl reflecting the selected VOL connector and VFD */
-                if ((tmp_fapl_id = h5tools_get_fapl(fapl_id, &vol_info, &vfd_info)) < 0)
+                if ((tmp_fapl_id = h5tools_get_new_fapl(fapl_id)) < 0)
                     continue;
 
+                if (h5tools_set_fapl_vol(tmp_fapl_id, &vol_info) < 0) {
+                    /* Close the temporary fapl */
+                    H5Pclose(tmp_fapl_id);
+                    tmp_fapl_id = H5I_INVALID_HID;
+                    continue;
+                }
+
+                if (h5tools_set_fapl_vfd(tmp_fapl_id, &vfd_info) < 0) {
+                    /* Close the temporary fapl */
+                    H5Pclose(tmp_fapl_id);
+                    tmp_fapl_id = H5I_INVALID_HID;
+                    continue;
+                }
+
                 /* Can we open the file with this combo? */
-                if ((fid = h5tools_fopen(fname, flags, tmp_fapl_id, TRUE, drivername, drivername_size)) >=
-                    0) {
+                fid = h5tools_fopen(fname, flags, tmp_fapl_id, true, drivername, drivername_size);
+
+                if (fid >= 0) {
                     used_fapl_id = tmp_fapl_id;
                     H5TOOLS_GOTO_DONE(fid);
                 }
@@ -1075,11 +1114,18 @@ h5tools_fopen(const char *fname, unsigned flags, hid_t fapl_id, hbool_t use_spec
             /* NOT the native VOL connector */
 
             /* Get a FAPL for the current VOL connector */
-            if ((tmp_fapl_id = h5tools_get_fapl(fapl_id, &vol_info, NULL)) < 0)
+            if ((tmp_fapl_id = h5tools_get_new_fapl(fapl_id)) < 0)
                 continue;
 
+            if (h5tools_set_fapl_vol(tmp_fapl_id, &vol_info) < 0) {
+                /* Close the temporary fapl */
+                H5Pclose(tmp_fapl_id);
+                tmp_fapl_id = H5I_INVALID_HID;
+                continue;
+            }
+
             /* Can we open the file with this connector? */
-            if ((fid = h5tools_fopen(fname, flags, tmp_fapl_id, TRUE, drivername, drivername_size)) >= 0) {
+            if ((fid = h5tools_fopen(fname, flags, tmp_fapl_id, true, drivername, drivername_size)) >= 0) {
                 used_fapl_id = tmp_fapl_id;
                 H5TOOLS_GOTO_DONE(fid);
             }
@@ -1095,19 +1141,19 @@ h5tools_fopen(const char *fname, unsigned flags, hid_t fapl_id, hbool_t use_spec
     ret_value = H5I_INVALID_HID;
 
 done:
+    if (lib_errors_paused && H5Eresume_stack(H5E_DEFAULT) < 0)
+        H5TOOLS_ERROR(H5I_INVALID_HID, "failed to unpause errors for library error stack");
+    if (tools_errors_paused && H5Eresume_stack(H5tools_ERR_STACK_g) < 0)
+        H5TOOLS_ERROR(H5I_INVALID_HID, "failed to unpause errors for tools error stack");
+
     /* Save the driver name if using a native-terminal VOL connector */
     if (drivername && drivername_size && ret_value >= 0)
-        if (used_fapl_id >= 0 && h5tools_get_vfd_name(used_fapl_id, drivername, drivername_size) < 0)
+        if (used_fapl_id >= 0 &&
+            h5tools_get_vfd_name(ret_value, used_fapl_id, drivername, drivername_size) < 0)
             H5TOOLS_ERROR(H5I_INVALID_HID, "failed to retrieve name of VFD used to open file");
 
     if (tmp_fapl_id >= 0)
         H5Pclose(tmp_fapl_id);
-
-    /* Clear error message unless asked for */
-    if (ret_value < 0) {
-        if ((H5tools_ERR_STACK_g >= 0) && (enable_error_stack <= 1))
-            H5Epop(H5tools_ERR_STACK_g, 1);
-    }
 
     return ret_value;
 }
@@ -1139,24 +1185,24 @@ h5tools_count_ncols(const char *s)
  *
  * Purpose:  Recursive check for any variable length data in given type.
  *
- * Return:   TRUE : type contains any variable length data
- *           FALSE : type doesn't contain any variable length data
+ * Return:   true : type contains any variable length data
+ *           false : type doesn't contain any variable length data
  *           Negative value: failed
  *-------------------------------------------------------------------------
  */
 htri_t
 h5tools_detect_vlen(hid_t tid)
 {
-    htri_t ret = FALSE;
+    htri_t ret = false;
 
     /* recursive detect any vlen data values in type (compound, array ...) */
     ret = H5Tdetect_class(tid, H5T_VLEN);
-    if ((ret == TRUE) || (ret < 0))
+    if ((ret == true) || (ret < 0))
         goto done;
 
     /* recursive detect any vlen string in type (compound, array ...) */
     ret = h5tools_detect_vlen_str(tid);
-    if ((ret == TRUE) || (ret < 0))
+    if ((ret == true) || (ret < 0))
         goto done;
 
 done:
@@ -1168,8 +1214,8 @@ done:
  *
  * Purpose:  Recursive check for variable length string of a datatype.
  *
- * Return:   TRUE : type contains any variable length string
- *           FALSE : type doesn't contain any variable length string
+ * Return:   true : type contains any variable length string
+ *           false : type doesn't contain any variable length string
  *           Negative value: failed
  *-------------------------------------------------------------------------
  */
@@ -1177,10 +1223,10 @@ htri_t
 h5tools_detect_vlen_str(hid_t tid)
 {
     H5T_class_t tclass = -1;
-    htri_t      ret    = FALSE;
+    htri_t      ret    = false;
 
     ret = H5Tis_variable_str(tid);
-    if ((ret == TRUE) || (ret < 0))
+    if ((ret == true) || (ret < 0))
         goto done;
 
     tclass = H5Tget_class(tid);
@@ -1192,7 +1238,7 @@ h5tools_detect_vlen_str(hid_t tid)
             goto done;
         }
         ret = h5tools_detect_vlen_str(btid);
-        if ((ret == TRUE) || (ret < 0)) {
+        if ((ret == true) || (ret < 0)) {
             H5Tclose(btid);
             goto done;
         }
@@ -1212,7 +1258,7 @@ h5tools_detect_vlen_str(hid_t tid)
             hid_t mtid = H5Tget_member_type(tid, u);
 
             ret = h5tools_detect_vlen_str(mtid);
-            if ((ret == TRUE) || (ret < 0)) {
+            if ((ret == true) || (ret < 0)) {
                 H5Tclose(mtid);
                 goto done;
             }
@@ -1251,15 +1297,15 @@ h5tools_simple_prefix(FILE *stream, const h5tool_format_t *info, h5tools_context
 
     H5TOOLS_START_DEBUG(" ");
 
-    HDmemset(&prefix, 0, sizeof(h5tools_str_t));
-    HDmemset(&str, 0, sizeof(h5tools_str_t));
+    memset(&prefix, 0, sizeof(h5tools_str_t));
+    memset(&str, 0, sizeof(h5tools_str_t));
 
     /* Terminate previous line, if any */
     H5TOOLS_DEBUG("before CR elmtno=%ld, ctx->cur_column=%d, info->idx_fmt=%s, info->line_suf=%s", elmtno,
                   ctx->cur_column, info->idx_fmt, info->line_suf);
     if (ctx->cur_column) {
         PUTSTREAM(OPT(info->line_suf, ""), stream);
-        HDputc('\n', stream);
+        putc('\n', stream);
         PUTSTREAM(OPT(info->line_sep, ""), stream);
     }
     H5TOOLS_DEBUG("after CR elmtno=%ld, ctx->ndims=%d", elmtno, ctx->ndims);
@@ -1346,13 +1392,13 @@ h5tools_region_simple_prefix(FILE *stream, const h5tool_format_t *info, h5tools_
     if (!ctx->need_prefix)
         return;
 
-    HDmemset(&prefix, 0, sizeof(h5tools_str_t));
-    HDmemset(&str, 0, sizeof(h5tools_str_t));
+    memset(&prefix, 0, sizeof(h5tools_str_t));
+    memset(&str, 0, sizeof(h5tools_str_t));
 
     /* Terminate previous line, if any */
     if (ctx->cur_column) {
         PUTSTREAM(OPT(info->line_suf, ""), stream);
-        HDputc('\n', stream);
+        putc('\n', stream);
         PUTSTREAM(OPT(info->line_sep, ""), stream);
     }
 
@@ -1429,16 +1475,16 @@ h5tools_region_simple_prefix(FILE *stream, const h5tool_format_t *info, h5tools_
  *           hsize_t elmt_count is the data element loop counter
  *-------------------------------------------------------------------------
  */
-hbool_t
+bool
 h5tools_render_element(FILE *stream, const h5tool_format_t *info, h5tools_context_t *ctx,
                        h5tools_str_t *buffer, hsize_t *curr_pos, size_t ncols, hsize_t local_elmt_counter,
                        hsize_t elmt_counter)
 {
-    hbool_t dimension_break = TRUE;
-    char *  s               = NULL;
-    char *  section         = NULL; /* a section of output */
-    int     secnum;                 /* section sequence number */
-    int     multiline;              /* datum was multiline */
+    bool  dimension_break = true;
+    char *s               = NULL;
+    char *section         = NULL; /* a section of output */
+    int   secnum;                 /* section sequence number */
+    int   multiline;              /* datum was multiline */
 
     if (stream == NULL)
         return dimension_break;
@@ -1454,23 +1500,23 @@ h5tools_render_element(FILE *stream, const h5tool_format_t *info, h5tools_contex
      * current location...
      */
     if (info->line_multi_new == 1 &&
-        (ctx->cur_column + h5tools_count_ncols(s) + HDstrlen(OPT(info->elmt_suf2, " ")) +
-         HDstrlen(OPT(info->line_suf, ""))) > ncols) {
+        (ctx->cur_column + h5tools_count_ncols(s) + strlen(OPT(info->elmt_suf2, " ")) +
+         strlen(OPT(info->line_suf, ""))) > ncols) {
         if (ctx->prev_multiline) {
             /*
              * ... and the previous element also occupied more than one
              * line, then start this element at the beginning of a line.
              */
-            ctx->need_prefix = TRUE;
+            ctx->need_prefix = true;
         }
-        else if ((ctx->prev_prefix_len + h5tools_count_ncols(s) + HDstrlen(OPT(info->elmt_suf2, " ")) +
-                  HDstrlen(OPT(info->line_suf, ""))) <= ncols) {
+        else if ((ctx->prev_prefix_len + h5tools_count_ncols(s) + strlen(OPT(info->elmt_suf2, " ")) +
+                  strlen(OPT(info->line_suf, ""))) <= ncols) {
             /*
              * ...but *could* fit on one line otherwise, then we
              * should end the current line and start this element on its
              * own line.
              */
-            ctx->need_prefix = TRUE;
+            ctx->need_prefix = true;
         }
         H5TOOLS_DEBUG("ctx->need_prefix=%d", ctx->need_prefix);
     }
@@ -1482,11 +1528,11 @@ h5tools_render_element(FILE *stream, const h5tool_format_t *info, h5tools_contex
      */
     if (info->arr_linebreak && ctx->cur_elmt) {
         if (ctx->size_last_dim && (ctx->cur_elmt % ctx->size_last_dim) == 0)
-            ctx->need_prefix = TRUE;
+            ctx->need_prefix = true;
 
         if (elmt_counter == ctx->size_last_dim) {
-            ctx->need_prefix = TRUE;
-            dimension_break  = FALSE;
+            ctx->need_prefix = true;
+            dimension_break  = false;
         }
         H5TOOLS_DEBUG("ctx->need_prefix=%d", ctx->need_prefix);
     }
@@ -1499,9 +1545,9 @@ h5tools_render_element(FILE *stream, const h5tool_format_t *info, h5tools_contex
      * beginning of the line.
      */
     if (info->line_multi_new == 1 && ctx->prev_multiline &&
-        (ctx->cur_column + h5tools_count_ncols(s) + HDstrlen(OPT(info->elmt_suf2, " ")) +
-         HDstrlen(OPT(info->line_suf, ""))) > ncols)
-        ctx->need_prefix = TRUE;
+        (ctx->cur_column + h5tools_count_ncols(s) + strlen(OPT(info->elmt_suf2, " ")) +
+         strlen(OPT(info->line_suf, ""))) > ncols)
+        ctx->need_prefix = true;
     H5TOOLS_DEBUG("ctx->need_prefix=%d", ctx->need_prefix);
 
     /*
@@ -1509,7 +1555,7 @@ h5tools_render_element(FILE *stream, const h5tool_format_t *info, h5tools_contex
      * start a new line.
      */
     if (info->line_per_line > 0 && ctx->cur_elmt >= info->line_per_line)
-        ctx->need_prefix = TRUE;
+        ctx->need_prefix = true;
     H5TOOLS_DEBUG("ctx->need_prefix=%d", ctx->need_prefix);
 
     /*
@@ -1518,7 +1564,7 @@ h5tools_render_element(FILE *stream, const h5tool_format_t *info, h5tools_contex
      * one-at a time.
      */
     multiline = 0;
-    for (secnum = 0, multiline = 0; (section = HDstrtok(secnum ? NULL : s, OPTIONAL_LINE_BREAK)); secnum++) {
+    for (secnum = 0, multiline = 0; (section = strtok(secnum ? NULL : s, OPTIONAL_LINE_BREAK)); secnum++) {
         /*
          * If the current section plus possible suffix and end-of-line
          * information would cause the output to wrap then we need to
@@ -1528,8 +1574,8 @@ h5tools_render_element(FILE *stream, const h5tool_format_t *info, h5tools_contex
         /*
          * check for displaying prefix for each section
          */
-        if ((ctx->cur_column + HDstrlen(section) + HDstrlen(OPT(info->elmt_suf2, " ")) +
-             HDstrlen(OPT(info->line_suf, ""))) > ncols)
+        if ((ctx->cur_column + strlen(section) + strlen(OPT(info->elmt_suf2, " ")) +
+             strlen(OPT(info->line_suf, ""))) > ncols)
             ctx->need_prefix = 1;
 
         /*
@@ -1553,13 +1599,13 @@ h5tools_render_element(FILE *stream, const h5tool_format_t *info, h5tools_contex
         }
         else if ((local_elmt_counter || ctx->continuation) && secnum == 0) {
             PUTSTREAM(OPT(info->elmt_suf2, " "), stream);
-            ctx->cur_column += HDstrlen(OPT(info->elmt_suf2, " "));
+            ctx->cur_column += strlen(OPT(info->elmt_suf2, " "));
         }
         H5TOOLS_DEBUG("section=%s", section);
 
         /* Print the section */
         PUTSTREAM(section, stream);
-        ctx->cur_column += HDstrlen(section);
+        ctx->cur_column += strlen(section);
     }
 
     ctx->prev_multiline = multiline;
@@ -1594,16 +1640,16 @@ h5tools_render_element(FILE *stream, const h5tool_format_t *info, h5tools_contex
  *           hsize_t elmt_count is the data element loop counter
  *-------------------------------------------------------------------------
  */
-hbool_t
+bool
 h5tools_render_region_element(FILE *stream, const h5tool_format_t *info, h5tools_context_t *ctx,
                               h5tools_str_t *buffer, hsize_t *curr_pos, size_t ncols, hsize_t *ptdata,
                               hsize_t local_elmt_counter, hsize_t elmt_counter)
 {
-    hbool_t dimension_break = TRUE;
-    char *  s               = NULL;
-    char *  section         = NULL; /* a section of output */
-    int     secnum;                 /* section sequence number */
-    int     multiline;              /* datum was multiline */
+    bool  dimension_break = true;
+    char *s               = NULL;
+    char *section         = NULL; /* a section of output */
+    int   secnum;                 /* section sequence number */
+    int   multiline;              /* datum was multiline */
 
     H5TOOLS_START_DEBUG(" ");
     H5TOOLS_DEBUG("elmt_counter=%ld - local_elmt_counter=%ld", elmt_counter, local_elmt_counter);
@@ -1615,23 +1661,23 @@ h5tools_render_region_element(FILE *stream, const h5tool_format_t *info, h5tools
      * current location...
      */
     if (info->line_multi_new == 1 &&
-        (ctx->cur_column + h5tools_count_ncols(s) + HDstrlen(OPT(info->elmt_suf2, " ")) +
-         HDstrlen(OPT(info->line_suf, ""))) > ncols) {
+        (ctx->cur_column + h5tools_count_ncols(s) + strlen(OPT(info->elmt_suf2, " ")) +
+         strlen(OPT(info->line_suf, ""))) > ncols) {
         if (ctx->prev_multiline) {
             /*
              * ... and the previous element also occupied more than one
              * line, then start this element at the beginning of a line.
              */
-            ctx->need_prefix = TRUE;
+            ctx->need_prefix = true;
         }
-        else if ((ctx->prev_prefix_len + h5tools_count_ncols(s) + HDstrlen(OPT(info->elmt_suf2, " ")) +
-                  HDstrlen(OPT(info->line_suf, ""))) <= ncols) {
+        else if ((ctx->prev_prefix_len + h5tools_count_ncols(s) + strlen(OPT(info->elmt_suf2, " ")) +
+                  strlen(OPT(info->line_suf, ""))) <= ncols) {
             /*
              * ...but *could* fit on one line otherwise, then we
              * should end the current line and start this element on its
              * own line.
              */
-            ctx->need_prefix = TRUE;
+            ctx->need_prefix = true;
         }
     }
 
@@ -1642,11 +1688,11 @@ h5tools_render_region_element(FILE *stream, const h5tool_format_t *info, h5tools
      */
     if (info->arr_linebreak && ctx->cur_elmt) {
         if (ctx->size_last_dim && (ctx->cur_elmt % ctx->size_last_dim) == 0)
-            ctx->need_prefix = TRUE;
+            ctx->need_prefix = true;
 
         if (elmt_counter == ctx->size_last_dim) {
-            ctx->need_prefix = TRUE;
-            dimension_break  = FALSE;
+            ctx->need_prefix = true;
+            dimension_break  = false;
         }
     }
 
@@ -1656,16 +1702,16 @@ h5tools_render_region_element(FILE *stream, const h5tool_format_t *info, h5tools
      * beginning of the line.
      */
     if (info->line_multi_new == 1 && ctx->prev_multiline &&
-        (ctx->cur_column + h5tools_count_ncols(s) + HDstrlen(OPT(info->elmt_suf2, " ")) +
-         HDstrlen(OPT(info->line_suf, ""))) > ncols)
-        ctx->need_prefix = TRUE;
+        (ctx->cur_column + h5tools_count_ncols(s) + strlen(OPT(info->elmt_suf2, " ")) +
+         strlen(OPT(info->line_suf, ""))) > ncols)
+        ctx->need_prefix = true;
 
     /*
      * If too many elements have already been printed then we need to
      * start a new line.
      */
     if (info->line_per_line > 0 && ctx->cur_elmt >= info->line_per_line)
-        ctx->need_prefix = TRUE;
+        ctx->need_prefix = true;
 
     /*
      * Each OPTIONAL_LINE_BREAK embedded in the rendered string can cause
@@ -1673,7 +1719,7 @@ h5tools_render_region_element(FILE *stream, const h5tool_format_t *info, h5tools
      * one-at a time.
      */
     multiline = 0;
-    for (secnum = 0, multiline = 0; (section = HDstrtok(secnum ? NULL : s, OPTIONAL_LINE_BREAK)); secnum++) {
+    for (secnum = 0, multiline = 0; (section = strtok(secnum ? NULL : s, OPTIONAL_LINE_BREAK)); secnum++) {
         /*
          * If the current section plus possible suffix and end-of-line
          * information would cause the output to wrap then we need to
@@ -1685,8 +1731,8 @@ h5tools_render_region_element(FILE *stream, const h5tool_format_t *info, h5tools
          * this check to happen for the first line
          */
         if ((!info->skip_first || local_elmt_counter) &&
-            (ctx->cur_column + HDstrlen(section) + HDstrlen(OPT(info->elmt_suf2, " ")) +
-             HDstrlen(OPT(info->line_suf, ""))) > ncols)
+            (ctx->cur_column + strlen(section) + strlen(OPT(info->elmt_suf2, " ")) +
+             strlen(OPT(info->line_suf, ""))) > ncols)
             ctx->need_prefix = 1;
 
         /*
@@ -1708,12 +1754,12 @@ h5tools_render_region_element(FILE *stream, const h5tool_format_t *info, h5tools
         }
         else if ((local_elmt_counter || ctx->continuation) && secnum == 0) {
             PUTSTREAM(OPT(info->elmt_suf2, " "), stream);
-            ctx->cur_column += HDstrlen(OPT(info->elmt_suf2, " "));
+            ctx->cur_column += strlen(OPT(info->elmt_suf2, " "));
         }
 
         /* Print the section */
         PUTSTREAM(section, stream);
-        ctx->cur_column += HDstrlen(section);
+        ctx->cur_column += strlen(section);
     }
 
     ctx->prev_multiline = multiline;
@@ -1806,7 +1852,7 @@ render_bin_output(FILE *stream, hid_t container, hid_t tid, void *_mem, hsize_t 
     size_t         size; /* datum size */
     hsize_t        block_index;
     H5T_class_t    type_class;
-    hbool_t        past_catch = FALSE;
+    bool           past_catch = false;
     int            ret_value  = 0;
 
     H5TOOLS_START_DEBUG(" ");
@@ -1832,9 +1878,9 @@ render_bin_output(FILE *stream, hid_t container, hid_t tid, void *_mem, hsize_t 
                 else
                     bytes_in = (size_t)block_index;
 
-                bytes_wrote = HDfwrite(mem, 1, bytes_in, stream);
+                bytes_wrote = fwrite(mem, 1, bytes_in, stream);
 
-                if (bytes_wrote != bytes_in || (0 == bytes_wrote && HDferror(stream)))
+                if (bytes_wrote != bytes_in || (0 == bytes_wrote && ferror(stream)))
                     H5TOOLS_THROW((-1), "fwrite failed");
 
                 block_index -= (hsize_t)bytes_wrote;
@@ -1844,7 +1890,7 @@ render_bin_output(FILE *stream, hid_t container, hid_t tid, void *_mem, hsize_t 
         case H5T_STRING: {
             unsigned int  i;
             H5T_str_t     pad;
-            char *        s = NULL;
+            char         *s = NULL;
             unsigned char tempuchar;
 
             H5TOOLS_DEBUG("H5T_STRING");
@@ -1856,7 +1902,7 @@ render_bin_output(FILE *stream, hid_t container, hid_t tid, void *_mem, hsize_t 
                 if (H5Tis_variable_str(tid)) {
                     s = *(char **)((void *)mem);
                     if (s != NULL)
-                        size = HDstrlen(s);
+                        size = strlen(s);
                     else
                         H5TOOLS_THROW((-1), "NULL string");
                 }
@@ -1864,8 +1910,8 @@ render_bin_output(FILE *stream, hid_t container, hid_t tid, void *_mem, hsize_t 
                     s = (char *)mem;
                 }
                 for (i = 0; i < size && (s[i] || pad != H5T_STR_NULLTERM); i++) {
-                    HDmemcpy(&tempuchar, &s[i], sizeof(unsigned char));
-                    if (1 != HDfwrite(&tempuchar, sizeof(unsigned char), 1, stream))
+                    memcpy(&tempuchar, &s[i], sizeof(unsigned char));
+                    if (1 != fwrite(&tempuchar, sizeof(unsigned char), 1, stream))
                         H5TOOLS_THROW((-1), "fwrite failed");
                 } /* i */
             }     /* for (block_index = 0; block_index < block_nelmts; block_index++) */
@@ -1968,11 +2014,11 @@ render_bin_output(FILE *stream, hid_t container, hid_t tid, void *_mem, hsize_t 
                     if (size > sizeof(tref))
                         H5TOOLS_THROW((-1), "unexpectedly large ref");
 
-                    HDmemset(&tref, 0, sizeof(tref));
+                    memset(&tref, 0, sizeof(tref));
 
                     for (block_index = 0; block_index < block_nelmts; block_index++) {
                         mem = ((unsigned char *)_mem) + block_index * size;
-                        HDmemcpy(&tref, mem, size);
+                        memcpy(&tref, mem, size);
                         if ((region_id = H5Ropen_object(&tref, H5P_DEFAULT, H5P_DEFAULT)) < 0)
                             H5TOOLS_INFO("H5Ropen_object H5T_STD_REF failed");
                         else {
@@ -2007,12 +2053,34 @@ render_bin_output(FILE *stream, hid_t container, hid_t tid, void *_mem, hsize_t 
             }
         } break;
 
+        case H5T_COMPLEX: {
+            hid_t memb = H5I_INVALID_HID;
+
+            H5TOOLS_DEBUG("H5T_COMPLEX");
+
+            /* get the base datatype for each complex number element */
+            memb = H5Tget_super(tid);
+
+            for (block_index = 0; block_index < block_nelmts; block_index++) {
+                mem = ((unsigned char *)_mem) + block_index * size;
+
+                /* dump the complex number element */
+                if (render_bin_output(stream, container, memb, mem, 2) < 0) {
+                    H5Tclose(memb);
+                    H5TOOLS_THROW((-1), "render_bin_output failed");
+                }
+            }
+
+            H5Tclose(memb);
+            break;
+        }
+
         case H5T_TIME:
         case H5T_OPAQUE:
             H5TOOLS_DEBUG("H5T_OPAQUE");
             for (block_index = 0; block_index < block_nelmts; block_index++) {
                 mem = ((unsigned char *)_mem) + block_index * size;
-                if (size != HDfwrite(mem, sizeof(char), size, stream))
+                if (size != fwrite(mem, sizeof(char), size, stream))
                     H5TOOLS_THROW((-1), "fwrite failed");
             } /* end for */
             break;
@@ -2053,8 +2121,8 @@ render_bin_output_region_data_blocks(hid_t region_id, FILE *stream, hid_t contai
     unsigned jndx;
     size_t   type_size;
     hid_t    mem_space  = H5I_INVALID_HID;
-    void *   region_buf = NULL;
-    hbool_t  past_catch = FALSE;
+    void    *region_buf = NULL;
+    bool     past_catch = false;
     hsize_t  blkndx;
     hid_t    sid1      = H5I_INVALID_HID;
     int      ret_value = -1;
@@ -2065,7 +2133,7 @@ render_bin_output_region_data_blocks(hid_t region_id, FILE *stream, hid_t contai
         H5TOOLS_THROW((-1), "H5Dget_space failed");
 
     /* Allocate space for the dimension array */
-    if ((dims1 = (hsize_t *)HDmalloc(sizeof(hsize_t) * ndims)) == NULL)
+    if ((dims1 = (hsize_t *)malloc(sizeof(hsize_t) * ndims)) == NULL)
         H5TOOLS_THROW((-1), "Could not allocate buffer for dims");
 
     /* find the dimensions of each data space from the block coordinates */
@@ -2082,15 +2150,15 @@ render_bin_output_region_data_blocks(hid_t region_id, FILE *stream, hid_t contai
     if ((type_size = H5Tget_size(type_id)) == 0)
         H5TOOLS_THROW((-1), "H5Tget_size failed");
 
-    if ((region_buf = HDmalloc(type_size * (size_t)numelem)) == NULL)
+    if ((region_buf = malloc(type_size * (size_t)numelem)) == NULL)
         H5TOOLS_THROW((-1), "Could not allocate region buffer");
 
     /* Select (x , x , ..., x ) x (y , y , ..., y ) hyperslab for reading memory dataset */
     /*          1   2        n      1   2        n                                       */
-    if ((start = (hsize_t *)HDmalloc(sizeof(hsize_t) * ndims)) == NULL)
+    if ((start = (hsize_t *)malloc(sizeof(hsize_t) * ndims)) == NULL)
         H5TOOLS_THROW((-1), "Could not allocate buffer for start");
 
-    if ((count = (hsize_t *)HDmalloc(sizeof(hsize_t) * ndims)) == NULL)
+    if ((count = (hsize_t *)malloc(sizeof(hsize_t) * ndims)) == NULL)
         H5TOOLS_THROW((-1), "Could not allocate buffer for count");
 
     for (blkndx = 0; blkndx < nblocks; blkndx++) {
@@ -2115,10 +2183,10 @@ done:;
     } /* end for (blkndx = 0; blkndx < nblocks; blkndx++) */
 
     CATCH
-    HDfree(start);
-    HDfree(count);
-    HDfree(region_buf);
-    HDfree(dims1);
+    free(start);
+    free(count);
+    free(region_buf);
+    free(dims1);
 
     if (H5Sclose(mem_space) < 0)
         H5TOOLS_ERROR((-1), "H5Sclose failed");
@@ -2139,7 +2207,7 @@ done:;
  *           True otherwise
  *-------------------------------------------------------------------------
  */
-hbool_t
+bool
 render_bin_output_region_blocks(hid_t region_space, hid_t region_id, FILE *stream, hid_t container)
 {
     hssize_t snblocks;
@@ -2150,43 +2218,43 @@ render_bin_output_region_blocks(hid_t region_space, hid_t region_id, FILE *strea
     unsigned ndims;
     hid_t    dtype      = H5I_INVALID_HID;
     hid_t    type_id    = H5I_INVALID_HID;
-    hbool_t  past_catch = FALSE;
-    hbool_t  ret_value  = TRUE;
+    bool     past_catch = false;
+    bool     ret_value  = true;
 
     H5TOOLS_START_DEBUG(" ");
     if ((snblocks = H5Sget_select_hyper_nblocks(region_space)) <= 0)
-        H5TOOLS_THROW(FALSE, "H5Sget_select_hyper_nblocks failed");
+        H5TOOLS_THROW(false, "H5Sget_select_hyper_nblocks failed");
     nblocks = (hsize_t)snblocks;
 
     /* Print block information */
     if ((sndims = H5Sget_simple_extent_ndims(region_space)) < 0)
-        H5TOOLS_THROW(FALSE, "H5Sget_simple_extent_ndims failed");
+        H5TOOLS_THROW(false, "H5Sget_simple_extent_ndims failed");
     ndims = (unsigned)sndims;
 
     alloc_size = nblocks * ndims * 2 * sizeof(ptdata[0]);
-    if ((ptdata = (hsize_t *)HDmalloc((size_t)alloc_size)) == NULL)
-        H5TOOLS_GOTO_ERROR(FALSE, "Could not allocate buffer for ptdata");
+    if ((ptdata = (hsize_t *)malloc((size_t)alloc_size)) == NULL)
+        H5TOOLS_GOTO_ERROR(false, "Could not allocate buffer for ptdata");
 
     if (H5Sget_select_hyper_blocklist(region_space, (hsize_t)0, nblocks, ptdata) < 0)
-        H5TOOLS_GOTO_ERROR(FALSE, "H5Rget_select_hyper_blocklist failed");
+        H5TOOLS_GOTO_ERROR(false, "H5Rget_select_hyper_blocklist failed");
 
     if ((dtype = H5Dget_type(region_id)) < 0)
-        H5TOOLS_GOTO_ERROR(FALSE, "H5Dget_type failed");
+        H5TOOLS_GOTO_ERROR(false, "H5Dget_type failed");
     if ((type_id = H5Tget_native_type(dtype, H5T_DIR_DEFAULT)) < 0)
-        H5TOOLS_GOTO_ERROR(FALSE, "H5Tget_native_type failed");
+        H5TOOLS_GOTO_ERROR(false, "H5Tget_native_type failed");
 
     render_bin_output_region_data_blocks(region_id, stream, container, ndims, type_id, nblocks, ptdata);
 
 done:
-    HDfree(ptdata);
+    free(ptdata);
 
     if (type_id > 0 && H5Tclose(type_id) < 0)
-        H5TOOLS_ERROR(FALSE, "H5Tclose failed");
+        H5TOOLS_ERROR(false, "H5Tclose failed");
 
     if (dtype > 0 && H5Tclose(dtype) < 0)
-        H5TOOLS_ERROR(FALSE, "H5Tclose failed");
+        H5TOOLS_ERROR(false, "H5Tclose failed");
 
-    H5_LEAVE(TRUE)
+    H5_LEAVE(true);
 
     CATCH
     H5TOOLS_ENDDEBUG(" ");
@@ -2217,18 +2285,18 @@ render_bin_output_region_data_points(hid_t region_space, hid_t region_id, FILE *
     hsize_t *dims1 = NULL;
     size_t   type_size;
     hid_t    mem_space  = H5I_INVALID_HID;
-    void *   region_buf = NULL;
+    void    *region_buf = NULL;
     int      ret_value  = 0;
 
     H5TOOLS_START_DEBUG(" ");
     if ((type_size = H5Tget_size(type_id)) == 0)
         H5TOOLS_GOTO_ERROR((-1), "H5Tget_size failed");
 
-    if ((region_buf = HDmalloc(type_size * (size_t)npoints)) == NULL)
+    if ((region_buf = malloc(type_size * (size_t)npoints)) == NULL)
         H5TOOLS_GOTO_ERROR((-1), "Could not allocate buffer for region");
 
     /* Allocate space for the dimension array */
-    if ((dims1 = (hsize_t *)HDmalloc(sizeof(hsize_t) * ndims)) == NULL)
+    if ((dims1 = (hsize_t *)malloc(sizeof(hsize_t) * ndims)) == NULL)
         H5TOOLS_GOTO_ERROR((-1), "Could not allocate buffer for dims");
 
     dims1[0] = npoints;
@@ -2244,8 +2312,8 @@ render_bin_output_region_data_points(hid_t region_space, hid_t region_id, FILE *
         H5TOOLS_GOTO_ERROR((-1), "render_bin_output of data points failed");
 
 done:
-    HDfree(region_buf);
-    HDfree(dims1);
+    free(region_buf);
+    free(dims1);
 
     if (H5Sclose(mem_space) < 0)
         H5TOOLS_ERROR((-1), "H5Sclose failed");
@@ -2264,7 +2332,7 @@ done:
  *           True otherwise
  *-------------------------------------------------------------------------
  */
-hbool_t
+bool
 render_bin_output_region_points(hid_t region_space, hid_t region_id, FILE *stream, hid_t container)
 {
     hssize_t snpoints;
@@ -2273,35 +2341,35 @@ render_bin_output_region_points(hid_t region_space, hid_t region_id, FILE *strea
     unsigned ndims;
     hid_t    dtype      = H5I_INVALID_HID;
     hid_t    type_id    = H5I_INVALID_HID;
-    hbool_t  past_catch = FALSE;
-    hbool_t  ret_value  = TRUE;
+    bool     past_catch = false;
+    bool     ret_value  = true;
 
     H5TOOLS_START_DEBUG(" ");
     if ((snpoints = H5Sget_select_elem_npoints(region_space)) <= 0)
-        H5TOOLS_THROW(FALSE, "H5Sget_select_elem_npoints failed");
+        H5TOOLS_THROW(false, "H5Sget_select_elem_npoints failed");
     npoints = (hsize_t)snpoints;
 
     /* Allocate space for the dimension array */
     if ((sndims = H5Sget_simple_extent_ndims(region_space)) < 0)
-        H5TOOLS_THROW(FALSE, "H5Sget_simple_extent_ndims failed");
+        H5TOOLS_THROW(false, "H5Sget_simple_extent_ndims failed");
     ndims = (unsigned)sndims;
 
     if ((dtype = H5Dget_type(region_id)) < 0)
-        H5TOOLS_GOTO_ERROR(FALSE, "H5Dget_type failed");
+        H5TOOLS_GOTO_ERROR(false, "H5Dget_type failed");
 
     if ((type_id = H5Tget_native_type(dtype, H5T_DIR_DEFAULT)) < 0)
-        H5TOOLS_GOTO_ERROR(FALSE, "H5Tget_native_type failed");
+        H5TOOLS_GOTO_ERROR(false, "H5Tget_native_type failed");
 
     render_bin_output_region_data_points(region_space, region_id, stream, container, ndims, type_id, npoints);
 
 done:
     if (type_id > 0 && H5Tclose(type_id) < 0)
-        H5TOOLS_ERROR(FALSE, "H5Tclose failed");
+        H5TOOLS_ERROR(false, "H5Tclose failed");
 
     if (dtype > 0 && H5Tclose(dtype) < 0)
-        H5TOOLS_ERROR(FALSE, "H5Tclose failed");
+        H5TOOLS_ERROR(false, "H5Tclose failed");
 
-    H5_LEAVE(ret_value)
+    H5_LEAVE(ret_value);
     CATCH
     H5TOOLS_ENDDEBUG(" ");
     return ret_value;
@@ -2312,20 +2380,20 @@ done:
  *
  * Purpose:  Determines if memory is initialized to all zero bytes.
  *
- * Return:   TRUE if all bytes are zero
- *           FALSE otherwise
+ * Return:   true if all bytes are zero
+ *           false otherwise
  *-------------------------------------------------------------------------
  */
-H5_ATTR_PURE hbool_t
+H5_ATTR_PURE bool
 h5tools_is_zero(const void *_mem, size_t size)
 {
     const unsigned char *mem = (const unsigned char *)_mem;
 
     while (size-- > 0)
         if (mem[size])
-            return FALSE;
+            return false;
 
-    return TRUE;
+    return true;
 }
 
 /*-------------------------------------------------------------------------
@@ -2341,22 +2409,22 @@ h5tools_is_zero(const void *_mem, size_t size)
  *           char *name1:   link name of the first object.
  *                          Use "." or NULL if loc_id2 is the object to be compared.
  *
- * Return:   TRUE if it is the same object
- *           FALSE otherwise.
+ * Return:   true if it is the same object
+ *           false otherwise.
  *-------------------------------------------------------------------------
  */
-hbool_t
+bool
 h5tools_is_obj_same(hid_t loc_id1, const char *name1, hid_t loc_id2, const char *name2)
 {
     H5O_info2_t oinfo1, oinfo2;
-    hbool_t     ret_val = FALSE;
+    bool        ret_val = false;
 
-    if (name1 && HDstrcmp(name1, ".") != 0)
+    if (name1 && strcmp(name1, ".") != 0)
         H5Oget_info_by_name3(loc_id1, name1, &oinfo1, H5O_INFO_BASIC, H5P_DEFAULT);
     else
         H5Oget_info3(loc_id1, &oinfo1, H5O_INFO_BASIC);
 
-    if (name2 && HDstrcmp(name2, ".") != 0)
+    if (name2 && strcmp(name2, ".") != 0)
         H5Oget_info_by_name3(loc_id2, name2, &oinfo2, H5O_INFO_BASIC, H5P_DEFAULT);
     else
         H5Oget_info3(loc_id2, &oinfo2, H5O_INFO_BASIC);
@@ -2367,7 +2435,7 @@ h5tools_is_obj_same(hid_t loc_id1, const char *name1, hid_t loc_id2, const char 
         H5Otoken_cmp(loc_id1, &oinfo1.token, &oinfo2.token, &token_cmp_val);
 
         if (!token_cmp_val)
-            ret_val = TRUE;
+            ret_val = true;
     }
 
     return ret_val;

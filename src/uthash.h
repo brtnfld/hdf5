@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2003-2018, Troy D. Hanson     http://troydhanson.github.com/uthash/
+Copyright (c) 2003-2022, Troy D. Hanson  https://troydhanson.github.io/uthash/
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -24,11 +24,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef UTHASH_H
 #define UTHASH_H
 
-#define UTHASH_VERSION 2.1.0
+#define UTHASH_VERSION 2.3.0
 
 #include <string.h> /* memcmp, memset, strlen */
 #include <stddef.h> /* ptrdiff_t */
 #include <stdlib.h> /* exit */
+
+#if defined(HASH_DEFINE_OWN_STDINT) && HASH_DEFINE_OWN_STDINT
+/* This codepath is provided for backward compatibility, but I plan to remove it. */
+#warning "HASH_DEFINE_OWN_STDINT is deprecated; please use HASH_NO_STDINT instead"
+typedef unsigned int  uint32_t;
+typedef unsigned char uint8_t;
+#elif defined(HASH_NO_STDINT) && HASH_NO_STDINT
+#else
+#include <stdint.h> /* uint8_t, uint32_t */
+#endif
 
 /* These macros use decltype or the earlier __typeof GNU extension.
    As decltype is only available in newer compilers (VS2010 or gcc 4.3+
@@ -62,23 +72,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     } while (0)
 #endif
 
-/* a number of the hash function use uint32_t which isn't defined on Pre VS2010 */
-#if defined(_WIN32)
-#if defined(_MSC_VER) && _MSC_VER >= 1600
-#include <stdint.h>
-#elif defined(__WATCOMC__) || defined(__MINGW32__) || defined(__CYGWIN__)
-#include <stdint.h>
-#else
-typedef unsigned int  uint32_t;
-typedef unsigned char uint8_t;
-#endif
-#elif defined(__GNUC__) && !defined(__VXWORKS__)
-#include <stdint.h>
-#else
-typedef unsigned int  uint32_t;
-typedef unsigned char uint8_t;
-#endif
-
 #ifndef uthash_malloc
 #define uthash_malloc(sz) malloc(sz) /* malloc fcn                      */
 #endif
@@ -92,15 +85,12 @@ typedef unsigned char uint8_t;
 #define uthash_strlen(s) strlen(s)
 #endif
 
-#ifdef uthash_memcmp
-/* This warning will not catch programs that define uthash_memcmp AFTER including uthash.h. */
-#warning "uthash_memcmp is deprecated; please use HASH_KEYCMP instead"
-#else
-#define uthash_memcmp(a, b, n) memcmp(a, b, n)
+#ifndef HASH_FUNCTION
+#define HASH_FUNCTION(keyptr, keylen, hashv) HASH_JEN(keyptr, keylen, hashv)
 #endif
 
 #ifndef HASH_KEYCMP
-#define HASH_KEYCMP(a, b, n) uthash_memcmp(a, b, n)
+#define HASH_KEYCMP(a, b, n) memcmp(a, b, n)
 #endif
 
 #ifndef uthash_noexpand_fyi
@@ -163,7 +153,7 @@ typedef unsigned char uint8_t;
 
 #define HASH_VALUE(keyptr, keylen, hashv)                                                                    \
     do {                                                                                                     \
-        HASH_FCN(keyptr, keylen, hashv);                                                                     \
+        HASH_FUNCTION(keyptr, keylen, hashv);                                                                \
     } while (0)
 
 #define HASH_FIND_BYHASHVALUE(hh, head, keyptr, keylen, hashval, out)                                        \
@@ -420,7 +410,7 @@ typedef unsigned char uint8_t;
     do {                                                                                                     \
         IF_HASH_NONFATAL_OOM(int _ha_oomed = 0;)                                                             \
         (add)->hh.hashv  = (hashval);                                                                        \
-        (add)->hh.key    = (char *)(keyptr);                                                                 \
+        (add)->hh.key    = (const void *)(keyptr);                                                           \
         (add)->hh.keylen = (unsigned)(keylen_in);                                                            \
         if (!(head)) {                                                                                       \
             (add)->hh.next = NULL;                                                                           \
@@ -544,7 +534,7 @@ typedef unsigned char uint8_t;
         if (head) {                                                                                          \
             unsigned _bkt_i;                                                                                 \
             unsigned _count = 0;                                                                             \
-            char *   _prev;                                                                                  \
+            char    *_prev;                                                                                  \
             for (_bkt_i = 0; _bkt_i < (head)->hh.tbl->num_buckets; ++_bkt_i) {                               \
                 unsigned _bkt_count = 0;                                                                     \
                 _thh                = (head)->hh.tbl->buckets[_bkt_i].hh_head;                               \
@@ -604,13 +594,6 @@ typedef unsigned char uint8_t;
 #define HASH_EMIT_KEY(hh, head, keyptr, fieldlen)
 #endif
 
-/* default to Jenkin's hash unless overridden e.g. DHASH_FUNCTION=HASH_SAX */
-#ifdef HASH_FUNCTION
-#define HASH_FCN HASH_FUNCTION
-#else
-#define HASH_FCN HASH_JEN
-#endif
-
 /* The Bernstein hash function, used in Perl prior to v5.6. Note (x<<5+x)=x*33. */
 #define HASH_BER(key, keylen, hashv)                                                                         \
     do {                                                                                                     \
@@ -623,7 +606,9 @@ typedef unsigned char uint8_t;
     } while (0)
 
 /* SAX/FNV/OAT/JEN hash functions are macro variants of those listed at
- * http://eternallyconfuzzled.com/tuts/algorithms/jsw_tut_hashing.aspx */
+ * http://eternallyconfuzzled.com/tuts/algorithms/jsw_tut_hashing.aspx
+ * (archive link: https://archive.is/Ivcan )
+ */
 #define HASH_SAX(key, keylen, hashv)                                                                         \
     do {                                                                                                     \
         unsigned             _sx_i;                                                                          \
@@ -715,36 +700,38 @@ typedef unsigned char uint8_t;
         switch (_hj_k) {                                                                                     \
             case 11:                                                                                         \
                 hashv += ((unsigned)_hj_key[10] << 24);                                                      \
-                H5_ATTR_FALLTHROUGH                                                                          \
-            case 10:                                                                                         \
+            H5_ATTR_FALLTHROUGH /* FALLTHROUGH */                                                            \
+                case 10:                                                                                     \
                 hashv += ((unsigned)_hj_key[9] << 16);                                                       \
-                H5_ATTR_FALLTHROUGH                                                                          \
-            case 9:                                                                                          \
+            H5_ATTR_FALLTHROUGH /* FALLTHROUGH */                                                            \
+                case 9:                                                                                      \
                 hashv += ((unsigned)_hj_key[8] << 8);                                                        \
-                H5_ATTR_FALLTHROUGH                                                                          \
-            case 8:                                                                                          \
+            H5_ATTR_FALLTHROUGH /* FALLTHROUGH */                                                            \
+                case 8:                                                                                      \
                 _hj_j += ((unsigned)_hj_key[7] << 24);                                                       \
-                H5_ATTR_FALLTHROUGH                                                                          \
-            case 7:                                                                                          \
+            H5_ATTR_FALLTHROUGH /* FALLTHROUGH */                                                            \
+                case 7:                                                                                      \
                 _hj_j += ((unsigned)_hj_key[6] << 16);                                                       \
-                H5_ATTR_FALLTHROUGH                                                                          \
-            case 6:                                                                                          \
+            H5_ATTR_FALLTHROUGH /* FALLTHROUGH */                                                            \
+                case 6:                                                                                      \
                 _hj_j += ((unsigned)_hj_key[5] << 8);                                                        \
-                H5_ATTR_FALLTHROUGH                                                                          \
-            case 5:                                                                                          \
+            H5_ATTR_FALLTHROUGH /* FALLTHROUGH */                                                            \
+                case 5:                                                                                      \
                 _hj_j += _hj_key[4];                                                                         \
-                H5_ATTR_FALLTHROUGH                                                                          \
-            case 4:                                                                                          \
+            H5_ATTR_FALLTHROUGH /* FALLTHROUGH */                                                            \
+                case 4:                                                                                      \
                 _hj_i += ((unsigned)_hj_key[3] << 24);                                                       \
-                H5_ATTR_FALLTHROUGH                                                                          \
-            case 3:                                                                                          \
+            H5_ATTR_FALLTHROUGH /* FALLTHROUGH */                                                            \
+                case 3:                                                                                      \
                 _hj_i += ((unsigned)_hj_key[2] << 16);                                                       \
-                H5_ATTR_FALLTHROUGH                                                                          \
-            case 2:                                                                                          \
+            H5_ATTR_FALLTHROUGH /* FALLTHROUGH */                                                            \
+                case 2:                                                                                      \
                 _hj_i += ((unsigned)_hj_key[1] << 8);                                                        \
-                H5_ATTR_FALLTHROUGH                                                                          \
-            case 1:                                                                                          \
+            H5_ATTR_FALLTHROUGH /* FALLTHROUGH */                                                            \
+                case 1:                                                                                      \
                 _hj_i += _hj_key[0];                                                                         \
+                H5_ATTR_FALLTHROUGH /* FALLTHROUGH */                                                        \
+                    default :;                                                                               \
         }                                                                                                    \
         HASH_JEN_MIX(_hj_i, _hj_j, hashv);                                                                   \
     } while (0)
@@ -794,6 +781,8 @@ typedef unsigned char uint8_t;
                 hashv += *_sfh_key;                                                                          \
                 hashv ^= hashv << 10;                                                                        \
                 hashv += hashv >> 1;                                                                         \
+                break;                                                                                       \
+            default:;                                                                                        \
         }                                                                                                    \
                                                                                                              \
         /* Force "avalanching" of final 127 bits */                                                          \
@@ -897,14 +886,14 @@ typedef unsigned char uint8_t;
         unsigned               _he_bkt;                                                                      \
         unsigned               _he_bkt_i;                                                                    \
         struct UT_hash_handle *_he_thh, *_he_hh_nxt;                                                         \
-        UT_hash_bucket *       _he_new_buckets, *_he_newbkt;                                                 \
+        UT_hash_bucket        *_he_new_buckets, *_he_newbkt;                                                 \
         _he_new_buckets =                                                                                    \
-            (UT_hash_bucket *)uthash_malloc(2UL * (tbl)->num_buckets * sizeof(struct UT_hash_bucket));       \
+            (UT_hash_bucket *)uthash_malloc(sizeof(struct UT_hash_bucket) * (tbl)->num_buckets * 2U);        \
         if (!_he_new_buckets) {                                                                              \
             HASH_RECORD_OOM(oomed);                                                                          \
         }                                                                                                    \
         else {                                                                                               \
-            uthash_bzero(_he_new_buckets, 2UL * (tbl)->num_buckets * sizeof(struct UT_hash_bucket));         \
+            uthash_bzero(_he_new_buckets, sizeof(struct UT_hash_bucket) * (tbl)->num_buckets * 2U);          \
             (tbl)->ideal_chain_maxlen =                                                                      \
                 ((tbl)->num_items >> ((tbl)->log2_num_buckets + 1U)) +                                       \
                 ((((tbl)->num_items & (((tbl)->num_buckets * 2U) - 1U)) != 0U) ? 1U : 0U);                   \
@@ -1040,7 +1029,7 @@ typedef unsigned char uint8_t;
 #define HASH_SELECT(hh_dst, dst, hh_src, src, cond)                                                          \
     do {                                                                                                     \
         unsigned        _src_bkt, _dst_bkt;                                                                  \
-        void *          _last_elt = NULL, *_elt;                                                             \
+        void           *_last_elt = NULL, *_elt;                                                             \
         UT_hash_handle *_src_hh, *_dst_hh, *_last_elt_hh = NULL;                                             \
         ptrdiff_t       _dst_hho = ((char *)(&(dst)->hh_dst) - (char *)(dst));                               \
         if ((src) != NULL) {                                                                                 \
@@ -1123,6 +1112,37 @@ typedef unsigned char uint8_t;
 #define HASH_COUNT(head)   HASH_CNT(hh, head)
 #define HASH_CNT(hh, head) ((head != NULL) ? ((head)->hh.tbl->num_items) : 0U)
 
+/* Adjust all element and hash handle pointers by ptr_adj bytes. Does not adjust key pointers. Intended for
+ * the case where all elements are stored in a flat array and that array is realloced. */
+#define HASH_ADJUST_PTRS(hh, head, ptr_adj)                                                                  \
+    do {                                                                                                     \
+        ptrdiff_t _ptr_adj = (ptrdiff_t)(ptr_adj);                                                           \
+        if (head && (_ptr_adj != 0)) {                                                                       \
+            unsigned _tmp_bkt;                                                                               \
+            (head)               = (void *)((char *)head + _ptr_adj);                                        \
+            (head)->hh.tbl->tail = (UT_hash_handle *)(void *)((char *)(head)->hh.tbl->tail + _ptr_adj);      \
+            for (_tmp_bkt = 0; _tmp_bkt < (head)->hh.tbl->num_buckets; _tmp_bkt++)                           \
+                if ((head)->hh.tbl->buckets[_tmp_bkt].hh_head) {                                             \
+                    (head)->hh.tbl->buckets[_tmp_bkt].hh_head =                                              \
+                        (UT_hash_handle *)(void *)((char *)(head)->hh.tbl->buckets[_tmp_bkt].hh_head +       \
+                                                   _ptr_adj);                                                \
+                    for (UT_hash_handle *_tmp_hh  = (head)->hh.tbl->buckets[_tmp_bkt].hh_head;               \
+                         _tmp_hh != NULL; _tmp_hh = _tmp_hh->hh_next) {                                      \
+                        if (_tmp_hh->prev)                                                                   \
+                            _tmp_hh->prev = (UT_hash_handle *)(void *)((char *)_tmp_hh->prev + _ptr_adj);    \
+                        if (_tmp_hh->next)                                                                   \
+                            _tmp_hh->next = (UT_hash_handle *)(void *)((char *)_tmp_hh->next + _ptr_adj);    \
+                        if (_tmp_hh->hh_prev)                                                                \
+                            _tmp_hh->hh_prev =                                                               \
+                                (UT_hash_handle *)(void *)((char *)_tmp_hh->hh_prev + _ptr_adj);             \
+                        if (_tmp_hh->hh_next)                                                                \
+                            _tmp_hh->hh_next =                                                               \
+                                (UT_hash_handle *)(void *)((char *)_tmp_hh->hh_next + _ptr_adj);             \
+                    }                                                                                        \
+                }                                                                                            \
+        }                                                                                                    \
+    } while (0)
+
 typedef struct UT_hash_bucket {
     struct UT_hash_handle *hh_head;
     unsigned               count;
@@ -1148,7 +1168,7 @@ typedef struct UT_hash_bucket {
 #define HASH_BLOOM_SIGNATURE 0xb12220f2u
 
 typedef struct UT_hash_table {
-    UT_hash_bucket *       buckets;
+    UT_hash_bucket        *buckets;
     unsigned               num_buckets, log2_num_buckets;
     unsigned               num_items;
     struct UT_hash_handle *tail; /* tail hh in app order, for fast append    */
@@ -1181,12 +1201,12 @@ typedef struct UT_hash_table {
 } UT_hash_table;
 
 typedef struct UT_hash_handle {
-    struct UT_hash_table * tbl;
-    void *                 prev;    /* prev element in app order      */
-    void *                 next;    /* next element in app order      */
+    struct UT_hash_table  *tbl;
+    void                  *prev;    /* prev element in app order      */
+    void                  *next;    /* next element in app order      */
     struct UT_hash_handle *hh_prev; /* previous hh in bucket order    */
     struct UT_hash_handle *hh_next; /* next hh in bucket order        */
-    void *                 key;     /* ptr to enclosing struct's key  */
+    const void            *key;     /* ptr to enclosing struct's key  */
     unsigned               keylen;  /* enclosing struct's key len     */
     unsigned               hashv;   /* result of hash-fcn(key)        */
 } UT_hash_handle;

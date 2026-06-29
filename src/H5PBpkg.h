@@ -1,11 +1,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -40,8 +39,8 @@
 /* page buffer configuration settings */
 
 #define H5PB__H5PB_ENTRY_T_MAGIC        0x02030405
-#define H5PB__DO_SANITY_CHECKS          TRUE
-#define H5PB__COLLECT_PAGE_BUFFER_STATS TRUE
+#define H5PB__DO_SANITY_CHECKS          true
+#define H5PB__COLLECT_PAGE_BUFFER_STATS true
 
 /****************************************************************************
  *
@@ -58,7 +57,7 @@
  * NULL on entry in the insertion macros.
  *
  * Finally, observe that the sanity checking macros evaluate to the empty
- * string when H5PB__DO_SANITY_CHECKS is FALSE.  They also contain calls
+ * string when H5PB__DO_SANITY_CHECKS is false.  They also contain calls
  * to the HGOTO_ERROR macro, which may not be appropriate in all cases.
  * If so, we will need versions of the insertion and deletion macros which
  * do not reference the sanity checking macros.
@@ -97,7 +96,7 @@
          (((head_ptr) != (tail_ptr)) || ((head_ptr) == NULL) || ((head_ptr)->size != (size_t)(Size)))) ||    \
         (((len) >= 1) && (((head_ptr) == NULL) || ((head_ptr)->prev != NULL) || ((tail_ptr) == NULL) ||      \
                           ((tail_ptr)->next != NULL)))) {                                                    \
-        HDassert(FALSE);                                                                                     \
+        HDassert(false);                                                                                     \
         HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, (fv), "DLL pre insert SC failed")                               \
     }
 
@@ -864,7 +863,7 @@
 
 #define H5PB__PRE_HT_UPDATE_FOR_ENTRY_CLEAN_SC(page_buf, entry_ptr)                                          \
     if (((page_buf) == NULL) || ((page_buf)->magic != H5PB__H5PB_T_MAGIC) || ((page_buf)->index_len <= 0) || \
-        ((entry_ptr) == NULL) || ((entry_ptr)->is_dirty != FALSE) ||                                         \
+        ((entry_ptr) == NULL) || ((entry_ptr)->is_dirty != false) ||                                         \
         ((page_buf)->index_size < (int64_t)((entry_ptr)->size)) ||                                           \
         ((page_buf)->dirty_index_size < (int64_t)((entry_ptr)->size)) ||                                     \
         ((page_buf)->index_size != ((page_buf)->clean_index_size + (page_buf)->dirty_index_size)) ||         \
@@ -875,7 +874,7 @@
 
 #define H5PB__PRE_HT_UPDATE_FOR_ENTRY_DIRTY_SC(page_buf, entry_ptr)                                          \
     if (((page_buf) == NULL) || ((page_buf)->magic != H5PB__H5PB_T_MAGIC) || ((page_buf)->index_len <= 0) || \
-        ((entry_ptr) == NULL) || ((entry_ptr)->is_dirty != TRUE) ||                                          \
+        ((entry_ptr) == NULL) || ((entry_ptr)->is_dirty != true) ||                                          \
         ((page_buf)->index_size < (int64_t)((entry_ptr)->size)) ||                                           \
         ((page_buf)->clean_index_size < (int64_t)((entry_ptr)->size)) ||                                     \
         ((page_buf)->index_size != ((page_buf)->clean_index_size + (page_buf)->dirty_index_size)) ||         \
@@ -1587,7 +1586,7 @@
  * mem_type:    Type (H5F_mem_t) of the page buffer entry.  This value
  *              is needed when reading or writing the entry from/to file.
  *
- * is_metadata:  Boolean flag that is set to TRUE iff the associated
+ * is_metadata:  Boolean flag that is set to true iff the associated
  *              entry is a page of metadata (or, in the context of VFD
  *              SWMR, a multi-page metadata entry).
  *
@@ -1646,24 +1645,24 @@
  *
  * Fields supporting VFD SWMR:
  *
- * is_mpmde:    Boolean flag that is set to TRUE iff the entry
+ * is_mpmde:    Boolean flag that is set to true iff the entry
  *              is a multi-page metadata entry.  In the absence of VFD
- *              SWMR, the field should always be set to FALSE.
+ *              SWMR, the field should always be set to false.
  *
  *              Observe that:
  *
  *              is_mpmde <==> is_metadata && size > page_buf->page_size
  *
- * loaded:      Boolean flag that is set to TRUE iff the entry was loaded
+ * loaded:      Boolean flag that is set to true iff the entry was loaded
  *              from file.  This is a necessary input in determining
  *              whether the write of the entry must be delayed.
  *
  *              This field is only maintained in the VFD SWMR case
  *              and should be false otherwise.
  *
- * modified_this_tick:  This field is set to TRUE iff page_buf->vfd_swrm_write
+ * modified_this_tick:  This field is set to true iff page_buf->vfd_swrm_write
  *              and the entry has been modified in the current tick.  If
- *              modified_this_tick is TRUE, the entry must also be in the
+ *              modified_this_tick is true, the entry must also be in the
  *              tick list.
  *
  * delay_write_until: Unsigned 64 bit integer containing the first tick
@@ -1686,15 +1685,17 @@
 
 struct H5PB_entry_t {
 
-    uint32_t   magic;
-    H5PB_t *   page_buf;
-    haddr_t    addr;
-    uint64_t   page;
-    size_t     size;
-    void *     image_ptr;
-    H5FD_mem_t mem_type;
-    hbool_t    is_metadata;
-    hbool_t    is_dirty;
+    uint32_t       magic;
+    H5PB_t        *page_buf;
+    haddr_t        addr;
+    uint64_t       page;
+    size_t         size;
+    void          *image_ptr;
+    void          *page_buf_ptr; /* M3 compat: alias for image_ptr */
+    H5FD_mem_t     mem_type;
+    H5F_mem_page_t type; /* M3 compat: page memory type */
+    hbool_t        is_metadata;
+    hbool_t        is_dirty;
 
     /* fields supporting the hash table: */
     struct H5PB_entry_t *ht_next;
@@ -1715,6 +1716,8 @@ struct H5PB_entry_t {
     struct H5PB_entry_t *tl_prev;
 
 }; /* H5PB_entry_t */
+
+typedef struct H5PB_entry_t H5PB_entry_t;
 
 /*****************************/
 /* Package Private Variables */

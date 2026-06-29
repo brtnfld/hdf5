@@ -87,10 +87,11 @@ open_skeleton(const char *filename, unsigned verbose)
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
      * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
      * md_file_path, md_file_name, updater_file_path */
-    init_vfd_swmr_config(config, 4, 5, FALSE, TRUE, TRUE, TRUE, TRUE, 128, NULL, "rw-shadow", "sparse-updater");
+    init_vfd_swmr_config(config, 4, 5, false, true, true, true, true, 128, NULL, "rw-shadow",
+                         "sparse-updater");
 
     /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */
-    if ((fapl = vfd_swmr_create_fapl(TRUE, TRUE, FALSE, 4096, config)) < 0)
+    if ((fapl = vfd_swmr_create_fapl(true, true, false, 4096, config)) < 0)
         goto error;
 
     /* Open the file */
@@ -181,7 +182,7 @@ add_records(hid_t fid, unsigned verbose, unsigned long nrecords, unsigned long f
     symbol_t      record;            /* The record to add to the dataset */
     unsigned long rec_to_flush;      /* # of records left to write before flush */
 #ifdef OUT
-    volatile int dummy;            /* Dummy varialbe for busy sleep */
+    volatile int dummy;            /* Dummy variable for busy sleep */
 #endif                             /* OUT */
     hsize_t       dim[2] = {1, 0}; /* Dataspace dimensions */
     unsigned long u, v;            /* Local index variables */
@@ -352,7 +353,7 @@ main(int argc, const char *argv[])
     long     nrecords        = 0;    /* # of records to append */
     long     flush_count     = 1000; /* # of records to write between flushing file */
     unsigned verbose         = 1;    /* Whether to emit some informational messages */
-    bool     wait_for_signal = TRUE; /* Whether to wait for the signal */
+    bool     wait_for_signal = true; /* Whether to wait for the signal */
     unsigned u;                      /* Local index variable */
 
     block_signals(&oldset);
@@ -374,10 +375,10 @@ main(int argc, const char *argv[])
                         break;
                     /* Don't wait for signal */
                     case 'W':
-                        wait_for_signal = FALSE;
+                        wait_for_signal = false;
                         u++;
                         break;
-                        
+
                     /* Be quiet */
                     case 'q':
                         verbose = 0;

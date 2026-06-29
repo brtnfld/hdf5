@@ -1,12 +1,11 @@
 // C++ informative line for the emacs editor: -*- C++ -*-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -22,7 +21,7 @@ namespace H5 {
     integer datatype.
 */
 //  Inheritance: AtomType -> DataType -> H5Object -> H5Location -> IdComponent
-class H5_DLLCPP IntType : public AtomType {
+class H5CPP_DLL IntType : public AtomType {
   public:
     // Creates an integer type using a predefined type
     IntType(const PredType &pred_type);
@@ -41,7 +40,7 @@ class H5_DLLCPP IntType : public AtomType {
     // Retrieves the sign type for an integer type
     H5T_sign_t getSign() const;
 
-    // Sets the sign proprety for an integer type.
+    // Sets the sign property for an integer type.
     void setSign(H5T_sign_t sign) const;
 
     ///\brief Returns this class name.
@@ -61,7 +60,7 @@ class H5_DLLCPP IntType : public AtomType {
     IntType(const IntType &original);
 
     // Noop destructor.
-    virtual ~IntType() override;
+    virtual ~IntType() override = default;
 
 }; // end of IntType
 } // namespace H5

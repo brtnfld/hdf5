@@ -1,12 +1,11 @@
 // C++ informative line for the emacs editor: -*- C++ -*-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -50,19 +49,19 @@ typedef int (*visit_operator_t)(H5Object &obj, const H5std_string attr_name, con
 class UserData4Aiterate {
   public:
     attr_operator_t op;
-    void *          opData;
-    H5Object *      location; // Consider changing to H5Location
+    void           *opData;
+    H5Object       *location; // Consider changing to H5Location
 };
 
 // User data for visit iteration
 class UserData4Visit {
   public:
     visit_operator_t op;
-    void *           opData;
-    H5Object *       obj;
+    void            *opData;
+    H5Object        *obj;
 };
 
-class H5_DLLCPP H5Object : public H5Location {
+class H5CPP_DLL H5Object : public H5Location {
   public:
     // Creates an attribute for the specified object
     // PropList is currently not used, so always be default.
@@ -125,7 +124,7 @@ class H5_DLLCPP H5Object : public H5Location {
     virtual void p_setId(const hid_t new_id) override = 0;
 
     // Noop destructor.
-    virtual ~H5Object() override;
+    virtual ~H5Object() override = default;
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 

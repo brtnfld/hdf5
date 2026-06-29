@@ -47,11 +47,11 @@ typedef struct {
     uint32_t     pbs;
 #ifdef H5_USE_SOCKETS
     socket_state_t sock;
-#else /* H5_USE_SOCKETS */
-    int          np_fd_w_to_r;
-    int          np_fd_r_to_w;
-    int          np_notify;
-    int          np_verify;
+#else  /* H5_USE_SOCKETS */
+    int np_fd_w_to_r;
+    int np_fd_r_to_w;
+    int np_notify;
+    int np_verify;
 #endif /* H5_USE_SOCKETS */
 } state_t;
 
@@ -90,7 +90,7 @@ usage(const char *progname)
               "                                       attribute deleted, in compact \n"
               "              `dense-del`            - Attributes added until the storage\n"
               "                                       is dense then an attribute deleted\n"
-              "                                       the storge still in dense\n"
+              "                                       the storage still in dense\n"
               "              `compact-add-to-dense` - Attributes added first in compact\n"
               "                                       then in dense storage\n"
               "              `dense-del-to-compact` - Attributes added until the storage\n"
@@ -98,51 +98,49 @@ usage(const char *progname)
               "                                       deleted, the storage changed to\n"
               "                                       compact\n"
               "              `modify`               - An attribute added then modified\n",
-            progname);
+              progname);
     /* Need to split this print function to remove compiler warnings (print too large) */
-    HDfprintf(stderr, 
-              "              `add-vstr`             - A VL string attribute added\n"
-              "              `remove-vstr`          - A VL string attribute added then\n"
-              "                                       deleted\n"
-              "              `modify-vstr`          - A VL string attribute added then \n"
-              "                                       modified \n"
-              "              `add-ohr-block`        - An attribute is added and this forces\n"
-              "                                       the creation of object header\n"
-              "                                       continuation block \n"
-              "              `del-ohr-block`        - An attribute is added and this forces\n"
-              "                                       the creation of object header\n"
-              "                                       continuation block and then this \n"
-              "                                       attribute is deleted so the \n"
-              "                                       object header continuation block is \n"
-              "                                       removed. \n"
-              "-O grp_op_pattern:  `grp_op_pattern' for different group operation tests\n"
-              "              The value of `grp_op_pattern` is one of the following:\n"
-              "              `grp-creation`         - A group is created.\n"
-              "              `grp-deletion`         - An existing group is deleted.\n"
-              "              `grp-move`             - A group is moved to become \n"
-              "                                       another group. \n"
-              "              `grp-ins-links`        - Links are inserted, including\n"
-              "                                       both hard and soft links. \n"
-              "              `grp-del-links`        - Links are deleted, including\n"
-              "                                       both hard ans soft links. \n"
-              "              `grp-compact-t-dense`  - Links are inserted to the group.\n"
-              "                                       The link storage of this group \n"
-              "                                       changed from compact to dense. \n"
-              "                                       The links include both hard and\n"
-              "                                       soft links.                    \n"
-              "              `grp-dense-t-compact`  - Links are inserted to the group\n"
-              "                                       The link storage of this group \n"
-              "                                       changed from compact to dense. \n"
-              "                                       Then several links are deleted.\n"
-              "                                       The link storage changed from  \n"
-              "                                       dense to compact again.        \n"
-              "                                       The links include both hard and\n"
-              "                                       soft links.                    \n"
-              "-q:             silence printouts, few messages\n"
-              "\n");
+    HDfprintf(stderr, "              `add-vstr`             - A VL string attribute added\n"
+                      "              `remove-vstr`          - A VL string attribute added then\n"
+                      "                                       deleted\n"
+                      "              `modify-vstr`          - A VL string attribute added then \n"
+                      "                                       modified \n"
+                      "              `add-ohr-block`        - An attribute is added and this forces\n"
+                      "                                       the creation of object header\n"
+                      "                                       continuation block \n"
+                      "              `del-ohr-block`        - An attribute is added and this forces\n"
+                      "                                       the creation of object header\n"
+                      "                                       continuation block and then this \n"
+                      "                                       attribute is deleted so the \n"
+                      "                                       object header continuation block is \n"
+                      "                                       removed. \n"
+                      "-O grp_op_pattern:  `grp_op_pattern' for different group operation tests\n"
+                      "              The value of `grp_op_pattern` is one of the following:\n"
+                      "              `grp-creation`         - A group is created.\n"
+                      "              `grp-deletion`         - An existing group is deleted.\n"
+                      "              `grp-move`             - A group is moved to become \n"
+                      "                                       another group. \n"
+                      "              `grp-ins-links`        - Links are inserted, including\n"
+                      "                                       both hard and soft links. \n"
+                      "              `grp-del-links`        - Links are deleted, including\n"
+                      "                                       both hard ans soft links. \n"
+                      "              `grp-compact-t-dense`  - Links are inserted to the group.\n"
+                      "                                       The link storage of this group \n"
+                      "                                       changed from compact to dense. \n"
+                      "                                       The links include both hard and\n"
+                      "                                       soft links.                    \n"
+                      "              `grp-dense-t-compact`  - Links are inserted to the group\n"
+                      "                                       The link storage of this group \n"
+                      "                                       changed from compact to dense. \n"
+                      "                                       Then several links are deleted.\n"
+                      "                                       The link storage changed from  \n"
+                      "                                       dense to compact again.        \n"
+                      "                                       The links include both hard and\n"
+                      "                                       soft links.                    \n"
+                      "-q:             silence printouts, few messages\n"
+                      "\n");
     HDexit(EXIT_FAILURE);
 }
-
 
 #ifdef H5_USE_SOCKETS
 static hbool_t
@@ -151,33 +149,30 @@ state_init(state_t *s, int argc, char **argv)
     unsigned long          tmp;
     int                    opt;
     const hsize_t          dims  = 1;
-    char *                 tfile = NULL;
-    char *                 end;
-    const char *           s_opts   = "SGa:bc:i:n:Nqu:t:m:B:s:A:O:";
-    struct h5_long_options l_opts[] = {
-        {"ip_addr", require_arg, 'i'},
-        {NULL, 0, '\0'}
-    };
+    char                  *tfile = NULL;
+    char                  *end;
+    const char            *s_opts   = "SGa:bc:i:n:Nqu:t:m:B:s:A:O:";
+    struct h5_long_options l_opts[] = {{"ip_addr", require_arg, 'i'}, {NULL, 0, '\0'}};
 
-    s->file            = H5I_INVALID_HID;
-    s->one_by_one_sid  = H5I_INVALID_HID;
-    s->filetype        = H5T_NATIVE_UINT32;
-    s->asteps          = 10;
-    s->csteps          = 10;
-    s->nsteps          = 100;
-    s->update_interval = READER_WAIT_TICKS;
-    s->use_vfd_swmr    = TRUE;
-    s->old_style_grp   = FALSE;
-    s->use_communication = TRUE;
-    s->grp_op_pattern  = ' ';
-    s->grp_op_test     = FALSE;
-    s->at_pattern      = ' ';
-    s->attr_test       = FALSE;
-    s->tick_len        = 4;
-    s->max_lag         = 7;
-    s->ps              = 4096;
-    s->pbs             = 4096;
-    
+    s->file              = H5I_INVALID_HID;
+    s->one_by_one_sid    = H5I_INVALID_HID;
+    s->filetype          = H5T_NATIVE_UINT32;
+    s->asteps            = 10;
+    s->csteps            = 10;
+    s->nsteps            = 100;
+    s->update_interval   = READER_WAIT_TICKS;
+    s->use_vfd_swmr      = true;
+    s->old_style_grp     = false;
+    s->use_communication = true;
+    s->grp_op_pattern    = ' ';
+    s->grp_op_test       = false;
+    s->at_pattern        = ' ';
+    s->attr_test         = false;
+    s->tick_len          = 4;
+    s->max_lag           = 7;
+    s->ps                = 4096;
+    s->pbs               = 4096;
+
     if (!socket_init(&s->sock)) {
         HDprintf("socket_init failed\n");
         TEST_ERROR;
@@ -201,10 +196,10 @@ state_init(state_t *s, int argc, char **argv)
     while ((opt = H5_get_option(argc, (const char *const *)argv, s_opts, l_opts)) != EOF) {
         switch (opt) {
             case 'S':
-                s->use_vfd_swmr = FALSE;
+                s->use_vfd_swmr = false;
                 break;
             case 'G':
-                s->old_style_grp = TRUE;
+                s->old_style_grp = true;
                 break;
             case 'a':
             case 'c':
@@ -251,13 +246,13 @@ state_init(state_t *s, int argc, char **argv)
                 break;
             case 'i':
                 if (HDstrlen(H5_optarg) >= MAX_IP_ADDR_LEN) {
-                        HDfprintf(stderr, "-i,--ip_addr argument %s is too long\n", H5_optarg);
-                        TEST_ERROR;
-                    }
-                    s->sock.ip_address = H5_optarg;
-                    break;
+                    HDfprintf(stderr, "-i,--ip_addr argument %s is too long\n", H5_optarg);
+                    TEST_ERROR;
+                }
+                s->sock.ip_address = H5_optarg;
+                break;
             case 'N':
-                s->use_communication = FALSE;
+                s->use_communication = false;
                 break;
             case 'O':
                 if (HDstrcmp(H5_optarg, "grp-creation") == 0)
@@ -322,9 +317,9 @@ state_init(state_t *s, int argc, char **argv)
     argv += H5_optind;
 
     if (s->grp_op_pattern != ' ')
-        s->grp_op_test = TRUE;
+        s->grp_op_test = true;
     if (s->at_pattern != ' ')
-        s->attr_test = TRUE;
+        s->attr_test = true;
 
     if (!s->grp_op_test) {
         if (s->asteps < 1 || s->asteps > s->nsteps) {
@@ -360,12 +355,12 @@ state_init(state_t *s, int argc, char **argv)
 
     esnprintf(s->filename, sizeof(s->filename), "vfd_swmr_group.h5");
 
-    return TRUE;
+    return true;
 
 error:
     if (tfile)
         HDfree(tfile);
-    return FALSE;
+    return false;
 } /* state_init() */
 
 /* Socket Subroutine: sock_wr_send_receive
@@ -421,10 +416,10 @@ sock_wr_send_receive(state_t *s)
         TEST_ERROR;
     }
 
-    return TRUE;
+    return true;
 
 error:
-    return FALSE;
+    return false;
 } /* sock_wr_send_receive() */
 
 /* Socket Subroutine: sock_rd_receive
@@ -463,10 +458,10 @@ sock_rd_receive(state_t *s)
         TEST_ERROR;
     }
 
-    return TRUE;
+    return true;
 
 error:
-    return FALSE;
+    return false;
 } /* sock_rd_receive() */
 
 /* Socket Subroutine: sock_rd_send
@@ -484,10 +479,10 @@ sock_rd_send(state_t *s)
         H5_FAILED();
         AT();
         HDprintf("send failed\n");
-        return FALSE;
-    } 
+        return false;
+    }
     else {
-        return TRUE;
+        return true;
     }
 } /* sock_rd_send() */
 
@@ -524,37 +519,33 @@ state_init(state_t *s, int argc, char **argv)
     unsigned long          tmp;
     int                    opt;
     const hsize_t          dims  = 1;
-    char *                 tfile = NULL;
-    char *                 end;
-    const char *           s_opts   = "SGa:bc:i:n:Nqu:t:m:B:s:A:O:";
-    struct h5_long_options l_opts[] = {
-        {"ip_addr", require_arg, 'i'},
-        {NULL, 0, '\0'}
-    };
+    char                  *tfile = NULL;
+    char                  *end;
+    const char            *s_opts   = "SGa:bc:i:n:Nqu:t:m:B:s:A:O:";
+    struct h5_long_options l_opts[] = {{"ip_addr", require_arg, 'i'}, {NULL, 0, '\0'}};
 
-    s->file            = H5I_INVALID_HID;
-    s->one_by_one_sid  = H5I_INVALID_HID;
-    s->filetype        = H5T_NATIVE_UINT32;
-    s->asteps          = 10;
-    s->csteps          = 10;
-    s->nsteps          = 100;
-    s->update_interval = READER_WAIT_TICKS;
-    s->use_vfd_swmr    = TRUE;
-    s->old_style_grp   = FALSE;
-    s->use_communication = TRUE;
-    s->grp_op_pattern  = ' ';
-    s->grp_op_test     = FALSE;
-    s->at_pattern      = ' ';
-    s->attr_test       = FALSE;
-    s->tick_len        = 4;
-    s->max_lag         = 7;
-    s->ps              = 4096;
-    s->pbs             = 4096;
-    s->np_fd_w_to_r    = -1;
-    s->np_fd_r_to_w    = -1;
-    s->np_notify       = 0;
-    s->np_verify       = 0;
-
+    s->file              = H5I_INVALID_HID;
+    s->one_by_one_sid    = H5I_INVALID_HID;
+    s->filetype          = H5T_NATIVE_UINT32;
+    s->asteps            = 10;
+    s->csteps            = 10;
+    s->nsteps            = 100;
+    s->update_interval   = READER_WAIT_TICKS;
+    s->use_vfd_swmr      = true;
+    s->old_style_grp     = false;
+    s->use_communication = true;
+    s->grp_op_pattern    = ' ';
+    s->grp_op_test       = false;
+    s->at_pattern        = ' ';
+    s->attr_test         = false;
+    s->tick_len          = 4;
+    s->max_lag           = 7;
+    s->ps                = 4096;
+    s->pbs               = 4096;
+    s->np_fd_w_to_r      = -1;
+    s->np_fd_r_to_w      = -1;
+    s->np_notify         = 0;
+    s->np_verify         = 0;
 
     HDmemset(s->filename, 0, PATH_MAX);
     HDmemset(s->progname, 0, PATH_MAX);
@@ -574,10 +565,10 @@ state_init(state_t *s, int argc, char **argv)
     while ((opt = H5_get_option(argc, (const char *const *)argv, s_opts, l_opts)) != EOF) {
         switch (opt) {
             case 'S':
-                s->use_vfd_swmr = FALSE;
+                s->use_vfd_swmr = false;
                 break;
             case 'G':
-                s->old_style_grp = TRUE;
+                s->old_style_grp = true;
                 break;
             case 'a':
             case 'c':
@@ -623,7 +614,7 @@ state_init(state_t *s, int argc, char **argv)
                 s->filetype = H5T_STD_U32BE;
                 break;
             case 'N':
-                s->use_communication = FALSE;
+                s->use_communication = false;
                 break;
             case 'O':
                 if (HDstrcmp(H5_optarg, "grp-creation") == 0)
@@ -688,9 +679,9 @@ state_init(state_t *s, int argc, char **argv)
     argv += H5_optind;
 
     if (s->grp_op_pattern != ' ')
-        s->grp_op_test = TRUE;
+        s->grp_op_test = true;
     if (s->at_pattern != ' ')
-        s->attr_test = TRUE;
+        s->attr_test = true;
 
     if (!s->grp_op_test) {
         if (s->asteps < 1 || s->asteps > s->nsteps) {
@@ -726,14 +717,13 @@ state_init(state_t *s, int argc, char **argv)
 
     esnprintf(s->filename, sizeof(s->filename), "vfd_swmr_group.h5");
 
-    return TRUE;
+    return true;
 
 error:
     if (tfile)
         HDfree(tfile);
-    return FALSE;
-}/* state_init() */
-
+    return false;
+} /* state_init() */
 
 /* Named Pipe Subroutine: np_wr_send_receive
  * Description:
@@ -788,10 +778,10 @@ np_wr_send_receive(state_t *s)
         TEST_ERROR;
     }
 
-    return TRUE;
+    return true;
 
 error:
-    return FALSE;
+    return false;
 }
 
 /* Named Pipe Subroutine: np_rd_receive
@@ -830,10 +820,10 @@ np_rd_receive(state_t *s)
         TEST_ERROR;
     }
 
-    return TRUE;
+    return true;
 
 error:
-    return FALSE;
+    return false;
 }
 
 /* Named Pipe Subroutine: np_rd_send
@@ -851,10 +841,10 @@ np_rd_send(state_t *s)
         H5_FAILED();
         AT();
         HDprintf("HDwrite failed\n");
-        return FALSE;
+        return false;
     }
     else
-        return TRUE;
+        return true;
 }
 
 /* Named Pipe Subroutine: np_send_error
@@ -895,11 +885,11 @@ np_send_error(state_t *s, bool writer)
  *
  *              hbool_t one_chunk_ohr
  *              flag to indicate if the object header chunk is 1 or greater
- *              1: TRUE
- *              greater than 1: FALSE
+ *              1: true
+ *              greater than 1: false
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  *-------------------------------------------------------------------------
  */
@@ -916,7 +906,7 @@ check_ohr_num_chunk(hid_t g, hbool_t one_chunk_ohr)
         TEST_ERROR;
     }
 
-    if (TRUE == one_chunk_ohr) {
+    if (true == one_chunk_ohr) {
         if (ninfo.hdr.nchunks != 1) {
             HDprintf("Object header should have only one chunk,but it is not.\n");
             TEST_ERROR;
@@ -929,10 +919,10 @@ check_ohr_num_chunk(hid_t g, hbool_t one_chunk_ohr)
         }
     }
 
-    return TRUE;
+    return true;
 
 error:
-    return FALSE;
+    return false;
 }
 
 #ifdef H5_USE_SOCKETS
@@ -962,8 +952,8 @@ error:
  *              This parameter is used to generate correct group name in a key
  *              debugging message.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  *-------------------------------------------------------------------------
  */
@@ -1016,7 +1006,7 @@ add_attr(state_t *s, hid_t oid, unsigned int which, unsigned num_attrs, const ch
         /* If coming to an "object header continuation block" test,
          * we need to check if this test behaves as expected. */
         if (s->at_pattern == 'a' || s->at_pattern == 'R') {
-            if (FALSE == check_ohr_num_chunk(oid, FALSE)) {
+            if (false == check_ohr_num_chunk(oid, false)) {
                 HDprintf("An object header continuation block should be created. \n");
                 HDprintf("But it is not.\n");
                 TEST_ERROR;
@@ -1025,9 +1015,9 @@ add_attr(state_t *s, hid_t oid, unsigned int which, unsigned num_attrs, const ch
 
         /* Writer sends a message to reader: an attribute is successfully generated.
            then wait for the reader to verify and send an acknowledgement message back.*/
-        if (s->use_communication && s->attr_test == TRUE) {
+        if (s->use_communication && s->attr_test == true) {
             dbgf(2, "writer: write attr - ready to send/receive message: %d\n", s->sock.notify + 1);
-            if (sock_wr_send_receive(s) == FALSE) {
+            if (sock_wr_send_receive(s) == false) {
                 H5_FAILED();
                 AT();
                 dbgf(2, "writer: write attr - verification failed.\n");
@@ -1044,11 +1034,11 @@ add_attr(state_t *s, hid_t oid, unsigned int which, unsigned num_attrs, const ch
         TEST_ERROR;
     }
 
-    return TRUE;
+    return true;
 
 error:
     /* Writer needs to send an error message to the reader to stop the test*/
-    if (s->use_communication && s->attr_test == TRUE)
+    if (s->use_communication && s->attr_test == true)
         sock_send_error(s);
 
 error2:
@@ -1059,9 +1049,9 @@ error2:
     }
     H5E_END_TRY;
 
-    return FALSE;
+    return false;
 }
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
  * Function:    add_attr
  *
@@ -1088,8 +1078,8 @@ error2:
  *              This parameter is used to generate correct group name in a key
  *              debugging message.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  *-------------------------------------------------------------------------
  */
@@ -1142,7 +1132,7 @@ add_attr(state_t *s, hid_t oid, unsigned int which, unsigned num_attrs, const ch
         /* If coming to an "object header continuation block" test,
          * we need to check if this test behaves as expected. */
         if (s->at_pattern == 'a' || s->at_pattern == 'R') {
-            if (FALSE == check_ohr_num_chunk(oid, FALSE)) {
+            if (false == check_ohr_num_chunk(oid, false)) {
                 HDprintf("An object header continuation block should be created. \n");
                 HDprintf("But it is not.\n");
                 TEST_ERROR;
@@ -1151,9 +1141,9 @@ add_attr(state_t *s, hid_t oid, unsigned int which, unsigned num_attrs, const ch
 
         /* Writer sends a message to reader: an attribute is successfully generated.
            then wait for the reader to verify and send an acknowledgement message back.*/
-        if (s->use_communication && s->attr_test == TRUE) {
+        if (s->use_communication && s->attr_test == true) {
             dbgf(2, "writer: write attr - ready to send/receive message: %d\n", s->np_notify + 1);
-            if (np_wr_send_receive(s) == FALSE) {
+            if (np_wr_send_receive(s) == false) {
                 H5_FAILED();
                 AT();
                 dbgf(2, "writer: write attr - verification failed.\n");
@@ -1170,12 +1160,12 @@ add_attr(state_t *s, hid_t oid, unsigned int which, unsigned num_attrs, const ch
         TEST_ERROR;
     }
 
-    return TRUE;
+    return true;
 
 error:
     /* Writer needs to send an error message to the reader to stop the test*/
-    if (s->use_communication && s->attr_test == TRUE)
-        np_send_error(s, TRUE);
+    if (s->use_communication && s->attr_test == true)
+        np_send_error(s, true);
 
 error2:
     H5E_BEGIN_TRY
@@ -1185,7 +1175,7 @@ error2:
     }
     H5E_END_TRY;
 
-    return FALSE;
+    return false;
 }
 #endif /* H5_USE_SOCKETS */
 
@@ -1208,8 +1198,8 @@ error2:
  *              is "attr-which".
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This function is used for the "dense" storage test.
  *              It is also used by the group-only, "add-ohr-block"
@@ -1247,8 +1237,8 @@ add_default_group_attr(state_t *s, hid_t g, unsigned int which)
  *              is "attr-which".
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is for the "vstr" test.
  *-------------------------------------------------------------------------
@@ -1312,9 +1302,9 @@ add_vlstr_attr(state_t *s, hid_t g, unsigned int which)
 
     /* Writer sends a message to reader: a VL string attribute is successfully generated.
        then wait for the reader to verify and send an acknowledgement message back. */
-    if (s->use_communication && s->attr_test == TRUE) {
+    if (s->use_communication && s->attr_test == true) {
         dbgf(2, "writer: write attr - ready to send the message: %d\n", s->sock.notify + 1);
-        if (sock_wr_send_receive(s) == FALSE) {
+        if (sock_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             dbgf(2, "writer: write attr - verification failed.\n");
@@ -1322,11 +1312,11 @@ add_vlstr_attr(state_t *s, hid_t g, unsigned int which)
         }
     }
 
-    return TRUE;
+    return true;
 
 error:
     /* Writer needs to send an error message to the reader to stop the test*/
-    if (s->use_communication && s->attr_test == TRUE)
+    if (s->use_communication && s->attr_test == true)
         sock_send_error(s);
     H5E_BEGIN_TRY
     {
@@ -1339,7 +1329,7 @@ error:
         HDfree(astr_val);
 
 error2:
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -1370,8 +1360,8 @@ error2:
  *              compact.
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  *-------------------------------------------------------------------------
  */
@@ -1395,9 +1385,9 @@ del_one_attr(state_t *s, hid_t obj_id, hbool_t is_dense, hbool_t is_vl_or_ohrc, 
     dbgf(2, "writer: coming to delete the attribute.\n");
 
     /* Construct the attribute name */
-    if (is_dense == TRUE)
+    if (is_dense == true)
         HDsprintf(attrname, aname_format_d, which, 0);
-    else if (is_vl_or_ohrc == TRUE)
+    else if (is_vl_or_ohrc == true)
         HDsprintf(attrname, aname_format_vl, which, 0);
     else
         HDsprintf(attrname, aname_format, which, 0);
@@ -1411,16 +1401,16 @@ del_one_attr(state_t *s, hid_t obj_id, hbool_t is_dense, hbool_t is_vl_or_ohrc, 
     /* If coming to an "object header continuation block" test,
      * we need to check if this test behaves as expected. */
     if (s->at_pattern == 'R') {
-        if (FALSE == check_ohr_num_chunk(obj_id, TRUE)) {
+        if (false == check_ohr_num_chunk(obj_id, true)) {
             HDprintf("The object header chunk should not continue. \n");
             TEST_ERROR;
         }
     }
     /* Writer sends a message to reader: an attribute is successfully generated.
        then wait for the reader to verify and send an acknowledgement message back. */
-    if (s->use_communication && s->attr_test == TRUE) {
+    if (s->use_communication && s->attr_test == true) {
         dbgf(2, "writer: delete attr - ready to send the message: %d\n", s->sock.notify + 1);
-        if (sock_wr_send_receive(s) == FALSE) {
+        if (sock_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             dbgf(2, "writer: delete attr - verification failed.\n");
@@ -1428,17 +1418,17 @@ del_one_attr(state_t *s, hid_t obj_id, hbool_t is_dense, hbool_t is_vl_or_ohrc, 
         }
     }
 
-    return TRUE;
+    return true;
 
 error:
-    if (s->use_communication && s->attr_test == TRUE)
+    if (s->use_communication && s->attr_test == true)
         if (!sock_send_error(s))
             HDfprintf(stderr, "Sending error message failed");
 
 error2:
-    return FALSE;
+    return false;
 }
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
  * Function:    add_vlstr_attr
  *
@@ -1458,8 +1448,8 @@ error2:
  *              is "attr-which".
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is for the "vstr" test.
  *-------------------------------------------------------------------------
@@ -1523,9 +1513,9 @@ add_vlstr_attr(state_t *s, hid_t g, unsigned int which)
 
     /* Writer sends a message to reader: a VL string attribute is successfully generated.
        then wait for the reader to verify and send an acknowledgement message back. */
-    if (s->use_communication && s->attr_test == TRUE) {
+    if (s->use_communication && s->attr_test == true) {
         dbgf(2, "writer: write attr - ready to send the message: %d\n", s->np_notify + 1);
-        if (np_wr_send_receive(s) == FALSE) {
+        if (np_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             dbgf(2, "writer: write attr - verification failed.\n");
@@ -1533,12 +1523,12 @@ add_vlstr_attr(state_t *s, hid_t g, unsigned int which)
         }
     }
 
-    return TRUE;
+    return true;
 
 error:
     /* Writer needs to send an error message to the reader to stop the test*/
-    if (s->use_communication && s->attr_test == TRUE)
-        np_send_error(s, TRUE);
+    if (s->use_communication && s->attr_test == true)
+        np_send_error(s, true);
     H5E_BEGIN_TRY
     {
         H5Aclose(aid);
@@ -1550,7 +1540,7 @@ error:
         HDfree(astr_val);
 
 error2:
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -1581,8 +1571,8 @@ error2:
  *              compact.
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  *-------------------------------------------------------------------------
  */
@@ -1606,9 +1596,9 @@ del_one_attr(state_t *s, hid_t obj_id, hbool_t is_dense, hbool_t is_vl_or_ohrc, 
     dbgf(2, "writer: coming to delete the attribute.\n");
 
     /* Construct the attribute name */
-    if (is_dense == TRUE)
+    if (is_dense == true)
         HDsprintf(attrname, aname_format_d, which, 0);
-    else if (is_vl_or_ohrc == TRUE)
+    else if (is_vl_or_ohrc == true)
         HDsprintf(attrname, aname_format_vl, which, 0);
     else
         HDsprintf(attrname, aname_format, which, 0);
@@ -1622,16 +1612,16 @@ del_one_attr(state_t *s, hid_t obj_id, hbool_t is_dense, hbool_t is_vl_or_ohrc, 
     /* If coming to an "object header continuation block" test,
      * we need to check if this test behaves as expected. */
     if (s->at_pattern == 'R') {
-        if (FALSE == check_ohr_num_chunk(obj_id, TRUE)) {
+        if (false == check_ohr_num_chunk(obj_id, true)) {
             HDprintf("The object header chunk should not continue. \n");
             TEST_ERROR;
         }
     }
     /* Writer sends a message to reader: an attribute is successfully generated.
        then wait for the reader to verify and send an acknowledgement message back. */
-    if (s->use_communication && s->attr_test == TRUE) {
+    if (s->use_communication && s->attr_test == true) {
         dbgf(2, "writer: delete attr - ready to send the message: %d\n", s->np_notify + 1);
-        if (np_wr_send_receive(s) == FALSE) {
+        if (np_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             dbgf(2, "writer: delete attr - verification failed.\n");
@@ -1639,15 +1629,15 @@ del_one_attr(state_t *s, hid_t obj_id, hbool_t is_dense, hbool_t is_vl_or_ohrc, 
         }
     }
 
-    return TRUE;
+    return true;
 
 error:
-    if (s->use_communication && s->attr_test == TRUE)
-        if (!np_send_error(s, TRUE))
+    if (s->use_communication && s->attr_test == true)
+        if (!np_send_error(s, true))
             HDfprintf(stderr, "Sending error message failed");
 
 error2:
-    return FALSE;
+    return false;
 }
 #endif /* H5_USE_SOCKETS */
 
@@ -1671,8 +1661,8 @@ error2:
  *              is "attr-which".
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is for the "remove-vstr" test.
  *-------------------------------------------------------------------------
@@ -1682,12 +1672,12 @@ static hbool_t
 add_del_vlstr_attr(state_t *s, hid_t g, unsigned int which)
 {
 
-    hbool_t ret_value = FALSE;
+    hbool_t ret_value = false;
 
     /* Add a VL string attribute then delete it. */
     ret_value = add_vlstr_attr(s, g, which);
-    if (ret_value == TRUE)
-        ret_value = del_one_attr(s, g, FALSE, TRUE, which);
+    if (ret_value == true)
+        ret_value = del_one_attr(s, g, false, true, which);
 
     return ret_value;
 }
@@ -1713,8 +1703,8 @@ add_del_vlstr_attr(state_t *s, hid_t g, unsigned int which)
  *              newly created group name. The group name is "group-which".
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  *-------------------------------------------------------------------------
  */
@@ -1757,9 +1747,9 @@ modify_attr(state_t *s, hid_t g, const char *aname_fmt, unsigned int which)
 
     /* Writer sends a message to reader: an attribute is successfully modified.
            then wait for the reader to verify and send an acknowledgement message back.*/
-    if (s->use_communication && s->attr_test == TRUE) {
+    if (s->use_communication && s->attr_test == true) {
         dbgf(2, "writer: modify attr - ready to send the message: %d\n", s->sock.notify + 1);
-        if (sock_wr_send_receive(s) == FALSE) {
+        if (sock_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             dbgf(2, "writer: write attr - verification failed.\n");
@@ -1770,10 +1760,10 @@ modify_attr(state_t *s, hid_t g, const char *aname_fmt, unsigned int which)
         }
     }
 
-    return TRUE;
+    return true;
 error:
     /* Writer needs to send an error message to the reader to stop the test*/
-    if (s->use_communication && s->attr_test == TRUE)
+    if (s->use_communication && s->attr_test == true)
         sock_send_error(s);
     H5E_BEGIN_TRY
     {
@@ -1783,7 +1773,7 @@ error:
     H5E_END_TRY;
 
 error2:
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -1803,8 +1793,8 @@ error2:
  *              newly created group name. The group name is "group-which".
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  *-------------------------------------------------------------------------
  */
@@ -1868,9 +1858,9 @@ modify_vlstr_attr(state_t *s, hid_t g, unsigned int which)
 
     /* Writer sends a message to reader: a VL string attribute is successfully generated.
        then wait for the reader to verify and send an acknowledgement message back. */
-    if (s->use_communication && s->attr_test == TRUE) {
+    if (s->use_communication && s->attr_test == true) {
         dbgf(2, "writer: modify vl attr - ready to send the message: %d\n", s->sock.notify + 1);
-        if (sock_wr_send_receive(s) == FALSE) {
+        if (sock_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             dbgf(2, "writer: write attr - verification failed.\n");
@@ -1878,7 +1868,7 @@ modify_vlstr_attr(state_t *s, hid_t g, unsigned int which)
         }
     }
 
-    return TRUE;
+    return true;
 
 error:
     H5E_BEGIN_TRY
@@ -1891,13 +1881,13 @@ error:
     if (astr_val)
         HDfree(astr_val);
 
-    if (s->use_communication && s->attr_test == TRUE)
+    if (s->use_communication && s->attr_test == true)
         sock_send_error(s);
 
 error2:
-    return FALSE;
+    return false;
 }
-#else/* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
  * Function:    modify_attr
  *
@@ -1918,8 +1908,8 @@ error2:
  *              newly created group name. The group name is "group-which".
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  *-------------------------------------------------------------------------
  */
@@ -1962,9 +1952,9 @@ modify_attr(state_t *s, hid_t g, const char *aname_fmt, unsigned int which)
 
     /* Writer sends a message to reader: an attribute is successfully modified.
            then wait for the reader to verify and send an acknowledgement message back.*/
-    if (s->use_communication && s->attr_test == TRUE) {
+    if (s->use_communication && s->attr_test == true) {
         dbgf(2, "writer: modify attr - ready to send the message: %d\n", s->np_notify + 1);
-        if (np_wr_send_receive(s) == FALSE) {
+        if (np_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             dbgf(2, "writer: write attr - verification failed.\n");
@@ -1975,11 +1965,11 @@ modify_attr(state_t *s, hid_t g, const char *aname_fmt, unsigned int which)
         }
     }
 
-    return TRUE;
+    return true;
 error:
     /* Writer needs to send an error message to the reader to stop the test*/
-    if (s->use_communication && s->attr_test == TRUE)
-        np_send_error(s, TRUE);
+    if (s->use_communication && s->attr_test == true)
+        np_send_error(s, true);
     H5E_BEGIN_TRY
     {
         H5Aclose(aid);
@@ -1988,7 +1978,7 @@ error:
     H5E_END_TRY;
 
 error2:
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -2008,8 +1998,8 @@ error2:
  *              newly created group name. The group name is "group-which".
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  *-------------------------------------------------------------------------
  */
@@ -2073,9 +2063,9 @@ modify_vlstr_attr(state_t *s, hid_t g, unsigned int which)
 
     /* Writer sends a message to reader: a VL string attribute is successfully generated.
        then wait for the reader to verify and send an acknowledgement message back. */
-    if (s->use_communication && s->attr_test == TRUE) {
+    if (s->use_communication && s->attr_test == true) {
         dbgf(2, "writer: modify vl attr - ready to send the message: %d\n", s->np_notify + 1);
-        if (np_wr_send_receive(s) == FALSE) {
+        if (np_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             dbgf(2, "writer: write attr - verification failed.\n");
@@ -2083,7 +2073,7 @@ modify_vlstr_attr(state_t *s, hid_t g, unsigned int which)
         }
     }
 
-    return TRUE;
+    return true;
 
 error:
     H5E_BEGIN_TRY
@@ -2096,11 +2086,11 @@ error:
     if (astr_val)
         HDfree(astr_val);
 
-    if (s->use_communication && s->attr_test == TRUE)
-        np_send_error(s, TRUE);
+    if (s->use_communication && s->attr_test == true)
+        np_send_error(s, true);
 
 error2:
-    return FALSE;
+    return false;
 }
 #endif /* H5_USE_SOCKETS */
 
@@ -2124,8 +2114,8 @@ error2:
  *              is "attr-which".
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is for the "modify-vstr" test.
  *-------------------------------------------------------------------------
@@ -2135,9 +2125,9 @@ static hbool_t
 add_modify_vlstr_attr(state_t *s, hid_t g, unsigned int which)
 {
 
-    hbool_t ret_value = FALSE;
+    hbool_t ret_value = false;
     ret_value         = add_vlstr_attr(s, g, which);
-    if (TRUE == ret_value)
+    if (true == ret_value)
         ret_value = modify_vlstr_attr(s, g, which);
 
     return ret_value;
@@ -2168,8 +2158,8 @@ add_modify_vlstr_attr(state_t *s, hid_t g, unsigned int which)
  *              is "attr-which".
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is for the "modify-vstr" test.
  *              For attribute compact/dense storage, check the reference
@@ -2202,10 +2192,10 @@ add_attrs_compact(state_t *s, hid_t g, hid_t gcpl, unsigned int which)
     return add_attr(s, g, which, max_compact, aname_format, which);
 
 error:
-    if (s->use_communication && s->attr_test == TRUE){
+    if (s->use_communication && s->attr_test == true) {
         sock_send_error(s);
     }
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -2230,8 +2220,8 @@ error:
  *              The number of iterations for group creation, use to generate
  *              newly created group and attribute names.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is for the "compact-to-dense" test.
  *              For attribute compact/dense storage, check the reference
@@ -2246,7 +2236,7 @@ add_attrs_compact_dense(state_t *s, hid_t g, hid_t gcpl, unsigned int which)
     unsigned    max_compact  = 0;
     unsigned    min_dense    = 0;
     const char *aname_format = "attr-d-%u-%u";
-    hbool_t     ret_value    = FALSE;
+    hbool_t     ret_value    = false;
 
     if (H5Pget_attr_phase_change(gcpl, &max_compact, &min_dense) < 0) {
         HDprintf("H5Pget_attr_phase_change failed\n");
@@ -2257,17 +2247,16 @@ add_attrs_compact_dense(state_t *s, hid_t g, hid_t gcpl, unsigned int which)
     ret_value = add_attrs_compact(s, g, gcpl, which);
 
     /* Add another attribute, the storage becomes dense. */
-    if (ret_value == TRUE)
+    if (ret_value == true)
         ret_value = add_attr(s, g, which + max_compact, 1, aname_format, which);
 
     return ret_value;
 
 error:
-    if (s->use_communication && s->attr_test == TRUE)
+    if (s->use_communication && s->attr_test == true)
         sock_send_error(s);
-    return FALSE;
+    return false;
 }
-
 
 /*-------------------------------------------------------------------------
  * Function:    del_attrs_compact_dense_compact
@@ -2291,8 +2280,8 @@ error:
  *              The number of iterations for group creation, use to generate
  *              newly created group and attribute names.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is an internal function used by the
  *              "dense-del-to-compact" test.
@@ -2334,9 +2323,9 @@ del_attrs_compact_dense_compact(state_t *s, hid_t obj_id, hid_t gcpl, unsigned i
          * from the reader.
          * So writer sends a message to reader: an attribute is successfully deleted.
            then wait for reader to verify and send an acknowledgement message back. */
-        if (s->use_communication && s->attr_test == TRUE) {
+        if (s->use_communication && s->attr_test == true) {
             dbgf(2, "writer: delete attr - ready to send the message: %d\n", s->sock.notify + 1);
-            if (sock_wr_send_receive(s) == FALSE) {
+            if (sock_wr_send_receive(s) == false) {
                 H5_FAILED();
                 AT();
                 dbgf(2, "writer: delete attr - verification failed.\n");
@@ -2359,9 +2348,9 @@ del_attrs_compact_dense_compact(state_t *s, hid_t obj_id, hid_t gcpl, unsigned i
         TEST_ERROR;
     }
     /* Again we need to notify the reader via Named pipe. */
-    if (s->use_communication && s->attr_test == TRUE) {
+    if (s->use_communication && s->attr_test == true) {
         dbgf(2, "writer: delete attr - ready to send the message: %d\n", s->sock.notify + 1);
-        if (sock_wr_send_receive(s) == FALSE) {
+        if (sock_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             dbgf(2, "writer: delete attr - verification failed.\n");
@@ -2369,16 +2358,16 @@ del_attrs_compact_dense_compact(state_t *s, hid_t obj_id, hid_t gcpl, unsigned i
         }
     }
 
-    return TRUE;
+    return true;
 
 error:
-    if (s->use_communication && s->attr_test == TRUE)
+    if (s->use_communication && s->attr_test == true)
         sock_send_error(s);
 
 error2:
-    return FALSE;
+    return false;
 }
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
  * Function:    add_attrs_compact
  *
@@ -2403,8 +2392,8 @@ error2:
  *              is "attr-which".
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is for the "modify-vstr" test.
  *              For attribute compact/dense storage, check the reference
@@ -2437,9 +2426,9 @@ add_attrs_compact(state_t *s, hid_t g, hid_t gcpl, unsigned int which)
     return add_attr(s, g, which, max_compact, aname_format, which);
 
 error:
-    if (s->use_communication && s->attr_test == TRUE)
-        np_send_error(s, TRUE);
-    return FALSE;
+    if (s->use_communication && s->attr_test == true)
+        np_send_error(s, true);
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -2464,8 +2453,8 @@ error:
  *              The number of iterations for group creation, use to generate
  *              newly created group and attribute names.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is for the "compact-to-dense" test.
  *              For attribute compact/dense storage, check the reference
@@ -2480,7 +2469,7 @@ add_attrs_compact_dense(state_t *s, hid_t g, hid_t gcpl, unsigned int which)
     unsigned    max_compact  = 0;
     unsigned    min_dense    = 0;
     const char *aname_format = "attr-d-%u-%u";
-    hbool_t     ret_value    = FALSE;
+    hbool_t     ret_value    = false;
 
     if (H5Pget_attr_phase_change(gcpl, &max_compact, &min_dense) < 0) {
         HDprintf("H5Pget_attr_phase_change failed\n");
@@ -2491,15 +2480,15 @@ add_attrs_compact_dense(state_t *s, hid_t g, hid_t gcpl, unsigned int which)
     ret_value = add_attrs_compact(s, g, gcpl, which);
 
     /* Add another attribute, the storage becomes dense. */
-    if (ret_value == TRUE)
+    if (ret_value == true)
         ret_value = add_attr(s, g, which + max_compact, 1, aname_format, which);
 
     return ret_value;
 
 error:
-    if (s->use_communication && s->attr_test == TRUE)
-        np_send_error(s, TRUE);
-    return FALSE;
+    if (s->use_communication && s->attr_test == true)
+        np_send_error(s, true);
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -2524,8 +2513,8 @@ error:
  *              The number of iterations for group creation, use to generate
  *              newly created group and attribute names.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is an internal function used by the
  *              "dense-del-to-compact" test.
@@ -2567,9 +2556,9 @@ del_attrs_compact_dense_compact(state_t *s, hid_t obj_id, hid_t gcpl, unsigned i
          * from the reader.
          * So writer sends a message to reader: an attribute is successfully deleted.
            then wait for reader to verify and send an acknowledgement message back. */
-        if (s->use_communication && s->attr_test == TRUE) {
+        if (s->use_communication && s->attr_test == true) {
             dbgf(2, "writer: delete attr - ready to send the message: %d\n", s->np_notify + 1);
-            if (np_wr_send_receive(s) == FALSE) {
+            if (np_wr_send_receive(s) == false) {
                 H5_FAILED();
                 AT();
                 dbgf(2, "writer: delete attr - verification failed.\n");
@@ -2592,9 +2581,9 @@ del_attrs_compact_dense_compact(state_t *s, hid_t obj_id, hid_t gcpl, unsigned i
         TEST_ERROR;
     }
     /* Again we need to notify the reader via Named pipe. */
-    if (s->use_communication && s->attr_test == TRUE) {
+    if (s->use_communication && s->attr_test == true) {
         dbgf(2, "writer: delete attr - ready to send the message: %d\n", s->np_notify + 1);
-        if (np_wr_send_receive(s) == FALSE) {
+        if (np_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             dbgf(2, "writer: delete attr - verification failed.\n");
@@ -2602,14 +2591,14 @@ del_attrs_compact_dense_compact(state_t *s, hid_t obj_id, hid_t gcpl, unsigned i
         }
     }
 
-    return TRUE;
+    return true;
 
 error:
-    if (s->use_communication && s->attr_test == TRUE)
-        np_send_error(s, TRUE);
+    if (s->use_communication && s->attr_test == true)
+        np_send_error(s, true);
 
 error2:
-    return FALSE;
+    return false;
 }
 #endif /* H5_USE_SOCKETS */
 
@@ -2635,8 +2624,8 @@ error2:
  *              The number of iterations for group creation, use to generate
  *              newly created group and attribute names.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is for the "compact-del" test.
  *              For attribute compact/dense storage, check the reference
@@ -2648,11 +2637,11 @@ static hbool_t
 add_del_attrs_compact(state_t *s, hid_t g, hid_t gcpl, unsigned int which)
 {
 
-    hbool_t ret_value = FALSE;
+    hbool_t ret_value = false;
     ret_value         = add_attrs_compact(s, g, gcpl, which);
-    if (ret_value == TRUE) {
+    if (ret_value == true) {
         dbgf(2, "writer: before deleting the attribute.\n");
-        ret_value = del_one_attr(s, g, FALSE, FALSE, which);
+        ret_value = del_one_attr(s, g, false, false, which);
     }
 
     return ret_value;
@@ -2682,8 +2671,8 @@ add_del_attrs_compact(state_t *s, hid_t g, hid_t gcpl, unsigned int which)
  *              The number of iterations for group creation, use to generate
  *              newly created group and attribute names.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is for the "dense-del" test.
  *              For attribute compact/dense storage, check the reference
@@ -2695,7 +2684,7 @@ static hbool_t
 add_del_attrs_compact_dense(state_t *s, hid_t g, hid_t gcpl, unsigned int which)
 {
 
-    hbool_t  ret_value   = FALSE;
+    hbool_t  ret_value   = false;
     unsigned max_compact = 0;
     unsigned min_dense   = 0;
 
@@ -2705,17 +2694,17 @@ add_del_attrs_compact_dense(state_t *s, hid_t g, hid_t gcpl, unsigned int which)
     }
 
     ret_value = add_attrs_compact_dense(s, g, gcpl, which);
-    if (ret_value == TRUE)
-        ret_value = del_one_attr(s, g, TRUE, FALSE, which + max_compact);
+    if (ret_value == true)
+        ret_value = del_one_attr(s, g, true, false, which + max_compact);
 
     return ret_value;
 
 error:
-    if (s->use_communication && s->attr_test == TRUE)
+    if (s->use_communication && s->attr_test == true)
         sock_send_error(s);
-    return FALSE;
+    return false;
 }
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
  * Function:    add_del_attrs_compact_dense
  *
@@ -2739,8 +2728,8 @@ error:
  *              The number of iterations for group creation, use to generate
  *              newly created group and attribute names.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is for the "dense-del" test.
  *              For attribute compact/dense storage, check the reference
@@ -2752,7 +2741,7 @@ static hbool_t
 add_del_attrs_compact_dense(state_t *s, hid_t g, hid_t gcpl, unsigned int which)
 {
 
-    hbool_t  ret_value   = FALSE;
+    hbool_t  ret_value   = false;
     unsigned max_compact = 0;
     unsigned min_dense   = 0;
 
@@ -2762,15 +2751,15 @@ add_del_attrs_compact_dense(state_t *s, hid_t g, hid_t gcpl, unsigned int which)
     }
 
     ret_value = add_attrs_compact_dense(s, g, gcpl, which);
-    if (ret_value == TRUE)
-        ret_value = del_one_attr(s, g, TRUE, FALSE, which + max_compact);
+    if (ret_value == true)
+        ret_value = del_one_attr(s, g, true, false, which + max_compact);
 
     return ret_value;
 
 error:
-    if (s->use_communication && s->attr_test == TRUE)
-        np_send_error(s, TRUE);
-    return FALSE;
+    if (s->use_communication && s->attr_test == true)
+        np_send_error(s, true);
+    return false;
 }
 #endif /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
@@ -2797,8 +2786,8 @@ error:
  *              The number of iterations for group creation, use to generate
  *              newly created group and attribute names.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is for the "dense-del-to-compact" test.
  *              For attribute compact/dense storage, check the reference
@@ -2810,9 +2799,9 @@ static hbool_t
 add_del_attrs_compact_dense_compact(state_t *s, hid_t g, hid_t gcpl, unsigned int which)
 {
 
-    hbool_t ret_value = FALSE;
+    hbool_t ret_value = false;
     ret_value         = add_attrs_compact_dense(s, g, gcpl, which);
-    if (ret_value == TRUE)
+    if (ret_value == true)
         ret_value = del_attrs_compact_dense_compact(s, g, gcpl, which);
 
     return ret_value;
@@ -2837,8 +2826,8 @@ add_del_attrs_compact_dense_compact(state_t *s, hid_t g, hid_t gcpl, unsigned in
  *              is "attr-which".
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This function is used for the "modify" test.
  *-------------------------------------------------------------------------
@@ -2848,10 +2837,10 @@ static hbool_t
 add_modify_default_group_attr(state_t *s, hid_t g, unsigned int which)
 {
 
-    hbool_t     ret_value    = FALSE;
+    hbool_t     ret_value    = false;
     const char *aname_format = "attr-%u";
     ret_value                = add_default_group_attr(s, g, which);
-    if (ret_value == TRUE)
+    if (ret_value == true)
         ret_value = modify_attr(s, g, aname_format, which);
     return ret_value;
 }
@@ -2877,8 +2866,8 @@ add_modify_default_group_attr(state_t *s, hid_t g, unsigned int which)
  *              is "attr-which".
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This function is used for the
  *              "deletion of object header continuation block" test.
@@ -2889,10 +2878,10 @@ static hbool_t
 del_ohr_block_attr(state_t *s, hid_t g, unsigned int which)
 {
 
-    hbool_t ret_value = FALSE;
+    hbool_t ret_value = false;
     ret_value         = add_default_group_attr(s, g, which);
-    if (ret_value == TRUE)
-        ret_value = del_one_attr(s, g, FALSE, TRUE, which);
+    if (ret_value == true)
+        ret_value = del_one_attr(s, g, false, true, which);
     return ret_value;
 }
 /*-------------------------------------------------------------------------
@@ -2916,8 +2905,8 @@ del_ohr_block_attr(state_t *s, hid_t g, unsigned int which)
  *              newly created group and attribute names.
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the write_group() function.
  *-------------------------------------------------------------------------
@@ -2927,7 +2916,7 @@ static hbool_t
 add_group_attribute(state_t *s, hid_t g, hid_t gcpl, unsigned int which)
 {
 
-    hbool_t ret_value    = FALSE;
+    hbool_t ret_value    = false;
     char    test_pattern = s->at_pattern;
 
     switch (test_pattern) {
@@ -2986,8 +2975,8 @@ add_group_attribute(state_t *s, hid_t g, hid_t gcpl, unsigned int which)
  *              The number of iterations for group creation
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the main() function.
  *-------------------------------------------------------------------------
@@ -3000,7 +2989,7 @@ write_group(state_t *s, unsigned int which)
     hid_t      g       = H5I_INVALID_HID;
     hid_t      dummy_d = H5I_INVALID_HID;
     hid_t      gcpl    = H5I_INVALID_HID;
-    hbool_t    result  = TRUE;
+    hbool_t    result  = true;
     H5G_info_t group_info;
 
     if (which >= s->nsteps) {
@@ -3064,7 +3053,7 @@ write_group(state_t *s, unsigned int which)
     /* If coming to an "object header continuation block" test,
      * we need to check if this test behaves as expected. */
     if (s->at_pattern == 'a' || s->at_pattern == 'R') {
-        if (FALSE == check_ohr_num_chunk(g, TRUE)) {
+        if (false == check_ohr_num_chunk(g, true)) {
             HDprintf("An object header continuation block should NOT be created. \n");
             HDprintf("But it is created.\n");
             TEST_ERROR;
@@ -3077,9 +3066,9 @@ write_group(state_t *s, unsigned int which)
      * group creation error.
      * Writer sends a message to reader: an attribute is successfully generated.
      * then wait for the reader to verify and send an acknowledgement message back.*/
-    if (s->use_communication && s->attr_test == TRUE) {
+    if (s->use_communication && s->attr_test == true) {
         dbgf(2, "writer: ready to send the message: %d\n", s->sock.notify + 1);
-        if (sock_wr_send_receive(s) == FALSE) {
+        if (sock_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             /* Note: This is (mostly) because the verification failure message
@@ -3113,7 +3102,7 @@ write_group(state_t *s, unsigned int which)
 
 error:
     /* Writer needs to send an error message to the reader to stop the test*/
-    if (s->use_communication && s->attr_test == TRUE)
+    if (s->use_communication && s->attr_test == true)
         sock_send_error(s);
 
 error2:
@@ -3128,9 +3117,9 @@ error2:
     }
     H5E_END_TRY;
 
-    return FALSE;
+    return false;
 }
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
  * Function:    write_group
  *
@@ -3145,8 +3134,8 @@ error2:
  *              The number of iterations for group creation
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the main() function.
  *-------------------------------------------------------------------------
@@ -3159,7 +3148,7 @@ write_group(state_t *s, unsigned int which)
     hid_t      g       = H5I_INVALID_HID;
     hid_t      dummy_d = H5I_INVALID_HID;
     hid_t      gcpl    = H5I_INVALID_HID;
-    hbool_t    result  = TRUE;
+    hbool_t    result  = true;
     H5G_info_t group_info;
 
     if (which >= s->nsteps) {
@@ -3223,7 +3212,7 @@ write_group(state_t *s, unsigned int which)
     /* If coming to an "object header continuation block" test,
      * we need to check if this test behaves as expected. */
     if (s->at_pattern == 'a' || s->at_pattern == 'R') {
-        if (FALSE == check_ohr_num_chunk(g, TRUE)) {
+        if (false == check_ohr_num_chunk(g, true)) {
             HDprintf("An object header continuation block should NOT be created. \n");
             HDprintf("But it is created.\n");
             TEST_ERROR;
@@ -3236,9 +3225,9 @@ write_group(state_t *s, unsigned int which)
      * group creation error.
      * Writer sends a message to reader: an attribute is successfully generated.
      * then wait for the reader to verify and send an acknowledgement message back.*/
-    if (s->use_communication && s->attr_test == TRUE) {
+    if (s->use_communication && s->attr_test == true) {
         dbgf(2, "writer: ready to send the message: %d\n", s->np_notify + 1);
-        if (np_wr_send_receive(s) == FALSE) {
+        if (np_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             /* Note: This is (mostly) because the verification failure message
@@ -3272,8 +3261,8 @@ write_group(state_t *s, unsigned int which)
 
 error:
     /* Writer needs to send an error message to the reader to stop the test*/
-    if (s->use_communication && s->attr_test == TRUE)
-        np_send_error(s, TRUE);
+    if (s->use_communication && s->attr_test == true)
+        np_send_error(s, true);
 
 error2:
 
@@ -3287,7 +3276,7 @@ error2:
     }
     H5E_END_TRY;
 
-    return FALSE;
+    return false;
 }
 #endif /* H5_USE_SOCKETS */
 
@@ -3300,12 +3289,12 @@ error2:
  *              HDF5 object ID (in this file: means group ID)
  *
  *              hbool_t is_compact
- *              TRUE if the attribute is stored in compact storage
- *              FALSE if the attribute is stored in dense storage
+ *              true if the attribute is stored in compact storage
+ *              false if the attribute is stored in dense storage
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  *-------------------------------------------------------------------------
  */
@@ -3335,10 +3324,10 @@ check_attr_storage_type(hid_t g, hbool_t is_compact)
         }
     }
 
-    return TRUE;
+    return true;
 
 error:
-    return FALSE;
+    return false;
 }
 
 #ifdef H5_USE_SOCKETS
@@ -3369,14 +3358,14 @@ error:
  *              a flag to indicate if the storage check is on
  *
  *              hbool_t is_compact
- *              TRUE if the attribute storage should be in compact
- *              FALSE if the attribute storage should be in dense
+ *              true if the attribute storage should be in compact
+ *              false if the attribute storage should be in dense
  *              Note: this parameter is not used if the check_storage
- *              is set to FALSE.
+ *              is set to false.
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  *-------------------------------------------------------------------------
  */
@@ -3394,8 +3383,8 @@ vrfy_attr(state_t *s, hid_t g, unsigned int which, const char *aname, unsigned i
      * for a few ticks or stop the test if receiving an error
      * message.
      */
-    if (s->use_communication && TRUE == s->attr_test) {
-        if (FALSE == sock_rd_receive(s)) {
+    if (s->use_communication && true == s->attr_test) {
+        if (false == sock_rd_receive(s)) {
             H5_FAILED();
             AT();
             /* Since receiving the error message from the writer,
@@ -3436,8 +3425,8 @@ vrfy_attr(state_t *s, hid_t g, unsigned int which, const char *aname, unsigned i
         TEST_ERROR;
     }
 
-    if (!s->old_style_grp && check_storage == TRUE) {
-        if (FALSE == check_attr_storage_type(g, is_compact)) {
+    if (!s->old_style_grp && check_storage == true) {
+        if (false == check_attr_storage_type(g, is_compact)) {
             HDprintf("The attribute storage type is wrong. \n");
             TEST_ERROR;
         }
@@ -3447,7 +3436,7 @@ vrfy_attr(state_t *s, hid_t g, unsigned int which, const char *aname, unsigned i
     /* If coming to an "object header continuation block" test,
      * we need to check if this test behaves as expected. */
     if (s->at_pattern == 'a' || s->at_pattern == 'R') {
-        if (FALSE == check_ohr_num_chunk(g, FALSE)) {
+        if (false == check_ohr_num_chunk(g, false)) {
             HDprintf("An object header continuation block should be created. \n");
             HDprintf("But it is not.\n");
             HDprintf("Verification of 'object header continuation block test' failed.\n");
@@ -3456,14 +3445,14 @@ vrfy_attr(state_t *s, hid_t g, unsigned int which, const char *aname, unsigned i
     }
 
     /* If the read value is expected, send back an OK message to the writer. */
-    if (s->use_communication && s->attr_test == TRUE) {
-        if (sock_rd_send(s) == FALSE) {
+    if (s->use_communication && s->attr_test == true) {
+        if (sock_rd_send(s) == false) {
             HDprintf("socket reader send message error\n");
             TEST_ERROR;
         }
         dbgf(2, "reader: finish sending back the message: %d\n", s->sock.notify);
     }
-    return TRUE;
+    return true;
 
 error:
     H5E_BEGIN_TRY
@@ -3474,12 +3463,12 @@ error:
     H5E_END_TRY;
 
     /* Send back an error message to the writer so that the writer can stop. */
-    if (s->use_communication && s->attr_test == TRUE)
+    if (s->use_communication && s->attr_test == true)
         sock_send_error(s);
 error2:
-    return FALSE;
+    return false;
 }
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
  * Function:    vrfy_attr
  *
@@ -3507,14 +3496,14 @@ error2:
  *              a flag to indicate if the storage check is on
  *
  *              hbool_t is_compact
- *              TRUE if the attribute storage should be in compact
- *              FALSE if the attribute storage should be in dense
+ *              true if the attribute storage should be in compact
+ *              false if the attribute storage should be in dense
  *              Note: this parameter is not used if the check_storage
- *              is set to FALSE.
+ *              is set to false.
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  *-------------------------------------------------------------------------
  */
@@ -3532,8 +3521,8 @@ vrfy_attr(state_t *s, hid_t g, unsigned int which, const char *aname, unsigned i
      * for a few ticks or stop the test if receiving an error
      * message.
      */
-    if (s->use_communication && TRUE == s->attr_test) {
-        if (FALSE == np_rd_receive(s)) {
+    if (s->use_communication && true == s->attr_test) {
+        if (false == np_rd_receive(s)) {
             H5_FAILED();
             AT();
             /* Since receiving the error message from the writer,
@@ -3574,8 +3563,8 @@ vrfy_attr(state_t *s, hid_t g, unsigned int which, const char *aname, unsigned i
         TEST_ERROR;
     }
 
-    if (!s->old_style_grp && check_storage == TRUE) {
-        if (FALSE == check_attr_storage_type(g, is_compact)) {
+    if (!s->old_style_grp && check_storage == true) {
+        if (false == check_attr_storage_type(g, is_compact)) {
             HDprintf("The attribute storage type is wrong. \n");
             TEST_ERROR;
         }
@@ -3585,7 +3574,7 @@ vrfy_attr(state_t *s, hid_t g, unsigned int which, const char *aname, unsigned i
     /* If coming to an "object header continuation block" test,
      * we need to check if this test behaves as expected. */
     if (s->at_pattern == 'a' || s->at_pattern == 'R') {
-        if (FALSE == check_ohr_num_chunk(g, FALSE)) {
+        if (false == check_ohr_num_chunk(g, false)) {
             HDprintf("An object header continuation block should be created. \n");
             HDprintf("But it is not.\n");
             HDprintf("Verification of 'object header continuation block test' failed.\n");
@@ -3594,14 +3583,14 @@ vrfy_attr(state_t *s, hid_t g, unsigned int which, const char *aname, unsigned i
     }
 
     /* If the read value is expected, send back an OK message to the writer. */
-    if (s->use_communication && s->attr_test == TRUE) {
-        if (np_rd_send(s) == FALSE) {
+    if (s->use_communication && s->attr_test == true) {
+        if (np_rd_send(s) == false) {
             HDprintf("named pipe reader send message error\n");
             TEST_ERROR;
         }
         dbgf(2, "reader: finish sending back the message: %d\n", s->np_notify);
     }
-    return TRUE;
+    return true;
 
 error:
     H5E_BEGIN_TRY
@@ -3612,10 +3601,10 @@ error:
     H5E_END_TRY;
 
     /* Send back an error message to the writer so that the writer can stop. */
-    if (s->use_communication && s->attr_test == TRUE)
-        np_send_error(s, FALSE);
+    if (s->use_communication && s->attr_test == true)
+        np_send_error(s, false);
 error2:
-    return FALSE;
+    return false;
 }
 #endif /* H5_USE_SOCKETS */
 
@@ -3636,8 +3625,8 @@ error2:
  *              The expected attribute value. It is also used to construct the
  *              group name.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This function is used for the "dense" storage test.
  *              It is also used by the group-only, "add-ohr-block"
@@ -3651,7 +3640,7 @@ verify_default_group_attr(state_t *s, hid_t g, unsigned int which)
     char        attrname[VS_ATTR_NAME_LEN];
     const char *aname_format = "attr-%u";
     HDsprintf(attrname, aname_format, which);
-    return vrfy_attr(s, g, which, attrname, which, FALSE, TRUE);
+    return vrfy_attr(s, g, which, attrname, which, false, true);
 }
 
 #ifdef H5_USE_SOCKETS
@@ -3674,8 +3663,8 @@ verify_default_group_attr(state_t *s, hid_t g, unsigned int which)
  *              group name. The modified attribute value can be derived from
  *              the expected attribute value.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This function is used for the "modified" test.
  *-------------------------------------------------------------------------
@@ -3685,8 +3674,8 @@ static hbool_t
 verify_modify_attr(state_t *s, hid_t g, unsigned int which)
 {
 
-    hbool_t      ret       = FALSE;
-    const char * aname_fmt = "attr-%u";
+    hbool_t      ret       = false;
+    const char  *aname_fmt = "attr-%u";
     unsigned int read_which;
     hid_t        aid    = H5I_INVALID_HID;
     hid_t        amtype = H5I_INVALID_HID;
@@ -3696,14 +3685,14 @@ verify_modify_attr(state_t *s, hid_t g, unsigned int which)
     ret = verify_default_group_attr(s, g, which);
 
     /* Then the modified value */
-    if (ret == TRUE) {
+    if (ret == true) {
 
         /* The reader receives a message from the writer.Then sleep
          * for a few ticks or stop the test if receiving an error
          * message.
          */
-        if (s->use_communication && TRUE == s->attr_test) {
-            if (FALSE == sock_rd_receive(s)) {
+        if (s->use_communication && true == s->attr_test) {
+            if (false == sock_rd_receive(s)) {
                 H5_FAILED();
                 AT();
                 goto error2;
@@ -3748,14 +3737,14 @@ verify_modify_attr(state_t *s, hid_t g, unsigned int which)
         }
 
         /* The reader sends an OK message back to the writer. */
-        if (s->use_communication && s->attr_test == TRUE) {
-            if (sock_rd_send(s) == FALSE)
+        if (s->use_communication && s->attr_test == true) {
+            if (sock_rd_send(s) == false)
                 goto error2;
             dbgf(2, "reader: modify_attr finish sending back the message: %d\n", s->sock.notify);
         }
-        return TRUE;
+        return true;
     }
-    return FALSE;
+    return false;
 
 error:
     H5E_BEGIN_TRY
@@ -3766,12 +3755,12 @@ error:
     H5E_END_TRY;
 
     /* The reader needs to send an error message back to the writer to stop the test.*/
-    if (s->use_communication && s->attr_test == TRUE)
+    if (s->use_communication && s->attr_test == true)
         sock_send_error(s);
 
 error2:
 
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -3792,11 +3781,11 @@ error2:
  *              to construct the group name.
  *
  *              hbool_t vrfy_mod
- *              TRUE if this function is used for the modified VL string test.
- *              FALSE if this function is just used for the VL string test.
+ *              true if this function is used for the modified VL string test.
+ *              false if this function is just used for the VL string test.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This function is an internal function used by
  *              both the "vlstr" and the "modify-vstr" tests.
@@ -3817,8 +3806,8 @@ verify_group_vlstr_attr(state_t *s, hid_t g, unsigned int which, hbool_t vrfy_mo
      * for a few ticks or stop the test if the received message
      * is an error message.
      */
-    if (s->use_communication && TRUE == s->attr_test) {
-        if (FALSE == sock_rd_receive(s)) {
+    if (s->use_communication && true == s->attr_test) {
+        if (false == sock_rd_receive(s)) {
             H5_FAILED();
             AT();
             goto error2;
@@ -3838,7 +3827,7 @@ verify_group_vlstr_attr(state_t *s, hid_t g, unsigned int which, hbool_t vrfy_mo
 
     /* Construct the expected VL string value,depending if
      * it is the modified value or the original value. */
-    if (vrfy_mod == TRUE)
+    if (vrfy_mod == true)
         HDsprintf(astr_val_exp, "%u%c", which, 'A');
     else
         HDsprintf(astr_val_exp, "%u", which);
@@ -3890,13 +3879,13 @@ verify_group_vlstr_attr(state_t *s, hid_t g, unsigned int which, hbool_t vrfy_mo
     HDfree(astr_val_exp);
 
     /* Reader sends an OK message back to the reader */
-    if (s->use_communication && s->attr_test == TRUE) {
-        if (sock_rd_send(s) == FALSE)
+    if (s->use_communication && s->attr_test == true) {
+        if (sock_rd_send(s) == false)
             goto error2;
         dbgf(2, "reader: finish sending back the message: %d\n", s->sock.notify);
     }
 
-    return TRUE;
+    return true;
 
 error:
     H5E_BEGIN_TRY
@@ -3911,12 +3900,12 @@ error:
         HDfree(astr_val_exp);
 
     /* The reader sends an error message to the writer to stop the test.*/
-    if (s->use_communication && s->attr_test == TRUE)
+    if (s->use_communication && s->attr_test == true)
         sock_send_error(s);
 
 error2:
 
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -3938,14 +3927,14 @@ error2:
  *              a flag to indicate if the storage check is on
  *
  *              hbool_t is_compact
- *              TRUE if after this attribute is deleted,
- *              the storage should still be in compact, FALSE
+ *              true if after this attribute is deleted,
+ *              the storage should still be in compact, false
  *              if the storage should be in dense.
  *              Note: this parameter is not used if the check_storage
- *              is set to FALSE.
+ *              is set to false.
 
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is an internal function used by "remove-vlstr",
  *              "compact-del","dense-del",dense-del-to-compact"  tests.
@@ -3956,14 +3945,14 @@ static hbool_t
 verify_del_one_attr(state_t *s, hid_t g, const char *aname, hbool_t check_storage, hbool_t is_compact)
 {
 
-    htri_t attr_exists = FALSE;
+    htri_t attr_exists = false;
 
     /* The reader receives a message from the writer.Then sleep
      * for a few ticks or stop the test if the received message
      * is an error message.
      */
-    if (s->use_communication && TRUE == s->attr_test) {
-        if (FALSE == sock_rd_receive(s)) {
+    if (s->use_communication && true == s->attr_test) {
+        if (false == sock_rd_receive(s)) {
             H5_FAILED();
             AT();
             goto error2;
@@ -3974,11 +3963,11 @@ verify_del_one_attr(state_t *s, hid_t g, const char *aname, hbool_t check_storag
 
     /* Check if the deleted attribute still exists. */
     attr_exists = H5Aexists_by_name(g, ".", aname, H5P_DEFAULT);
-    if (attr_exists == FALSE) {
+    if (attr_exists == false) {
         dbgf(1, "verify_del_attrs_compact() test: \n");
         dbgf(1, "  attribute %s is successfully deleted. \n", aname);
     }
-    else if (attr_exists == TRUE) {
+    else if (attr_exists == true) {
         HDprintf("The supposed deleted attribute %s still exists \n", aname);
         HDprintf("verify_del_attrs_compact() test failed \n");
         TEST_ERROR;
@@ -3988,8 +3977,8 @@ verify_del_one_attr(state_t *s, hid_t g, const char *aname, hbool_t check_storag
         TEST_ERROR;
     }
 
-    if (!s->old_style_grp && check_storage == TRUE) {
-        if (FALSE == check_attr_storage_type(g, is_compact)) {
+    if (!s->old_style_grp && check_storage == true) {
+        if (false == check_attr_storage_type(g, is_compact)) {
             HDprintf("The attribute storage type is wrong. \n");
             TEST_ERROR;
         }
@@ -3999,7 +3988,7 @@ verify_del_one_attr(state_t *s, hid_t g, const char *aname, hbool_t check_storag
     /* If coming to an "object header continuation block" test,
      * we need to check if this test behaves as expected. */
     if (s->at_pattern == 'R') {
-        if (FALSE == check_ohr_num_chunk(g, TRUE)) {
+        if (false == check_ohr_num_chunk(g, true)) {
             HDprintf("An object header continuation block should be removed. \n");
             HDprintf("But it is NOT.\n");
             HDprintf("Verification of an 'object header continuation block test' failed.\n");
@@ -4008,22 +3997,22 @@ verify_del_one_attr(state_t *s, hid_t g, const char *aname, hbool_t check_storag
     }
 
     /* Reader sends an OK message back to the reader */
-    if (s->use_communication && s->attr_test == TRUE) {
-        if (sock_rd_send(s) == FALSE)
+    if (s->use_communication && s->attr_test == true) {
+        if (sock_rd_send(s) == false)
             TEST_ERROR;
         dbgf(2, "reader: finish sending back the message: %d\n", s->sock.notify);
     }
 
-    return TRUE;
+    return true;
 error:
     /* The reader sends an error message to the writer to stop the test.*/
-    if (s->use_communication && s->attr_test == TRUE)
+    if (s->use_communication && s->attr_test == true)
         sock_send_error(s);
 
 error2:
-    return FALSE;
+    return false;
 }
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
  * Function:    verify_modify_attr
  *
@@ -4043,8 +4032,8 @@ error2:
  *              group name. The modified attribute value can be derived from
  *              the expected attribute value.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This function is used for the "modified" test.
  *-------------------------------------------------------------------------
@@ -4054,8 +4043,8 @@ static hbool_t
 verify_modify_attr(state_t *s, hid_t g, unsigned int which)
 {
 
-    hbool_t      ret       = FALSE;
-    const char * aname_fmt = "attr-%u";
+    hbool_t      ret       = false;
+    const char  *aname_fmt = "attr-%u";
     unsigned int read_which;
     hid_t        aid    = H5I_INVALID_HID;
     hid_t        amtype = H5I_INVALID_HID;
@@ -4065,14 +4054,14 @@ verify_modify_attr(state_t *s, hid_t g, unsigned int which)
     ret = verify_default_group_attr(s, g, which);
 
     /* Then the modified value */
-    if (ret == TRUE) {
+    if (ret == true) {
 
         /* The reader receives a message from the writer.Then sleep
          * for a few ticks or stop the test if receiving an error
          * message.
          */
-        if (s->use_communication && TRUE == s->attr_test) {
-            if (FALSE == np_rd_receive(s)) {
+        if (s->use_communication && true == s->attr_test) {
+            if (false == np_rd_receive(s)) {
                 H5_FAILED();
                 AT();
                 goto error2;
@@ -4117,14 +4106,14 @@ verify_modify_attr(state_t *s, hid_t g, unsigned int which)
         }
 
         /* The reader sends an OK message back to the writer. */
-        if (s->use_communication && s->attr_test == TRUE) {
-            if (np_rd_send(s) == FALSE)
+        if (s->use_communication && s->attr_test == true) {
+            if (np_rd_send(s) == false)
                 goto error2;
             dbgf(2, "reader: modify_attr finish sending back the message: %d\n", s->np_notify);
         }
-        return TRUE;
+        return true;
     }
-    return FALSE;
+    return false;
 
 error:
     H5E_BEGIN_TRY
@@ -4135,12 +4124,12 @@ error:
     H5E_END_TRY;
 
     /* The reader needs to send an error message back to the writer to stop the test.*/
-    if (s->use_communication && s->attr_test == TRUE)
-        np_send_error(s, FALSE);
+    if (s->use_communication && s->attr_test == true)
+        np_send_error(s, false);
 
 error2:
 
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -4161,11 +4150,11 @@ error2:
  *              to construct the group name.
  *
  *              hbool_t vrfy_mod
- *              TRUE if this function is used for the modified VL string test.
- *              FALSE if this function is just used for the VL string test.
+ *              true if this function is used for the modified VL string test.
+ *              false if this function is just used for the VL string test.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This function is an internal function used by
  *              both the "vlstr" and the "modify-vstr" tests.
@@ -4186,8 +4175,8 @@ verify_group_vlstr_attr(state_t *s, hid_t g, unsigned int which, hbool_t vrfy_mo
      * for a few ticks or stop the test if the received message
      * is an error message.
      */
-    if (s->use_communication && TRUE == s->attr_test) {
-        if (FALSE == np_rd_receive(s)) {
+    if (s->use_communication && true == s->attr_test) {
+        if (false == np_rd_receive(s)) {
             H5_FAILED();
             AT();
             goto error2;
@@ -4207,7 +4196,7 @@ verify_group_vlstr_attr(state_t *s, hid_t g, unsigned int which, hbool_t vrfy_mo
 
     /* Construct the expected VL string value,depending if
      * it is the modified value or the original value. */
-    if (vrfy_mod == TRUE)
+    if (vrfy_mod == true)
         HDsprintf(astr_val_exp, "%u%c", which, 'A');
     else
         HDsprintf(astr_val_exp, "%u", which);
@@ -4259,13 +4248,13 @@ verify_group_vlstr_attr(state_t *s, hid_t g, unsigned int which, hbool_t vrfy_mo
     HDfree(astr_val_exp);
 
     /* Reader sends an OK message back to the reader */
-    if (s->use_communication && s->attr_test == TRUE) {
-        if (np_rd_send(s) == FALSE)
+    if (s->use_communication && s->attr_test == true) {
+        if (np_rd_send(s) == false)
             goto error2;
         dbgf(2, "reader: finish sending back the message: %d\n", s->np_notify);
     }
 
-    return TRUE;
+    return true;
 
 error:
     H5E_BEGIN_TRY
@@ -4280,12 +4269,12 @@ error:
         HDfree(astr_val_exp);
 
     /* The reader sends an error message to the writer to stop the test.*/
-    if (s->use_communication && s->attr_test == TRUE)
-        np_send_error(s, FALSE);
+    if (s->use_communication && s->attr_test == true)
+        np_send_error(s, false);
 
 error2:
 
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -4307,14 +4296,14 @@ error2:
  *              a flag to indicate if the storage check is on
  *
  *              hbool_t is_compact
- *              TRUE if after this attribute is deleted,
- *              the storage should still be in compact, FALSE
+ *              true if after this attribute is deleted,
+ *              the storage should still be in compact, false
  *              if the storage should be in dense.
  *              Note: this parameter is not used if the check_storage
- *              is set to FALSE.
+ *              is set to false.
 
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is an internal function used by "remove-vlstr",
  *              "compact-del","dense-del",dense-del-to-compact"  tests.
@@ -4325,14 +4314,14 @@ static hbool_t
 verify_del_one_attr(state_t *s, hid_t g, const char *aname, hbool_t check_storage, hbool_t is_compact)
 {
 
-    htri_t attr_exists = FALSE;
+    htri_t attr_exists = false;
 
     /* The reader receives a message from the writer.Then sleep
      * for a few ticks or stop the test if the received message
      * is an error message.
      */
-    if (s->use_communication && TRUE == s->attr_test) {
-        if (FALSE == np_rd_receive(s)) {
+    if (s->use_communication && true == s->attr_test) {
+        if (false == np_rd_receive(s)) {
             H5_FAILED();
             AT();
             goto error2;
@@ -4343,11 +4332,11 @@ verify_del_one_attr(state_t *s, hid_t g, const char *aname, hbool_t check_storag
 
     /* Check if the deleted attribute still exists. */
     attr_exists = H5Aexists_by_name(g, ".", aname, H5P_DEFAULT);
-    if (attr_exists == FALSE) {
+    if (attr_exists == false) {
         dbgf(1, "verify_del_attrs_compact() test: \n");
         dbgf(1, "  attribute %s is successfully deleted. \n", aname);
     }
-    else if (attr_exists == TRUE) {
+    else if (attr_exists == true) {
         HDprintf("The supposed deleted attribute %s still exists \n", aname);
         HDprintf("verify_del_attrs_compact() test failed \n");
         TEST_ERROR;
@@ -4357,8 +4346,8 @@ verify_del_one_attr(state_t *s, hid_t g, const char *aname, hbool_t check_storag
         TEST_ERROR;
     }
 
-    if (!s->old_style_grp && check_storage == TRUE) {
-        if (FALSE == check_attr_storage_type(g, is_compact)) {
+    if (!s->old_style_grp && check_storage == true) {
+        if (false == check_attr_storage_type(g, is_compact)) {
             HDprintf("The attribute storage type is wrong. \n");
             TEST_ERROR;
         }
@@ -4368,7 +4357,7 @@ verify_del_one_attr(state_t *s, hid_t g, const char *aname, hbool_t check_storag
     /* If coming to an "object header continuation block" test,
      * we need to check if this test behaves as expected. */
     if (s->at_pattern == 'R') {
-        if (FALSE == check_ohr_num_chunk(g, TRUE)) {
+        if (false == check_ohr_num_chunk(g, true)) {
             HDprintf("An object header continuation block should be removed. \n");
             HDprintf("But it is NOT.\n");
             HDprintf("Verification of an 'object header continuation block test' failed.\n");
@@ -4377,20 +4366,20 @@ verify_del_one_attr(state_t *s, hid_t g, const char *aname, hbool_t check_storag
     }
 
     /* Reader sends an OK message back to the reader */
-    if (s->use_communication && s->attr_test == TRUE) {
-        if (np_rd_send(s) == FALSE)
+    if (s->use_communication && s->attr_test == true) {
+        if (np_rd_send(s) == false)
             TEST_ERROR;
         dbgf(2, "reader: finish sending back the message: %d\n", s->np_notify);
     }
 
-    return TRUE;
+    return true;
 error:
     /* The reader sends an error message to the writer to stop the test.*/
-    if (s->use_communication && s->attr_test == TRUE)
-        np_send_error(s, FALSE);
+    if (s->use_communication && s->attr_test == true)
+        np_send_error(s, false);
 
 error2:
-    return FALSE;
+    return false;
 }
 #endif /* H5_USE_SOCKETS */
 
@@ -4413,8 +4402,8 @@ error2:
  *              the attribute name.
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This function is for the "remove-vstr" test.
  *              Also note this function first verifies if
@@ -4426,14 +4415,14 @@ error2:
 static hbool_t
 verify_remove_vlstr_attr(state_t *s, hid_t g, unsigned int which)
 {
-    hbool_t     ret = FALSE;
+    hbool_t     ret = false;
     char        attrname[VS_ATTR_NAME_LEN];
     const char *aname_format = "attr-%u";
 
-    ret = verify_group_vlstr_attr(s, g, which, FALSE);
-    if (ret == TRUE) {
+    ret = verify_group_vlstr_attr(s, g, which, false);
+    if (ret == true) {
         HDsprintf(attrname, aname_format, which);
-        ret = verify_del_one_attr(s, g, attrname, FALSE, FALSE);
+        ret = verify_del_one_attr(s, g, attrname, false, false);
     }
     return ret;
 }
@@ -4457,8 +4446,8 @@ verify_remove_vlstr_attr(state_t *s, hid_t g, unsigned int which)
  *              the attribute name.
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This function is for the "modify-vstr" test.
  *              Also note this function first verifies if
@@ -4471,11 +4460,11 @@ static hbool_t
 verify_modify_vlstr_attr(state_t *s, hid_t g, unsigned int which)
 {
 
-    hbool_t ret = FALSE;
+    hbool_t ret = false;
 
-    ret = verify_group_vlstr_attr(s, g, which, FALSE);
-    if (ret == TRUE)
-        ret = verify_group_vlstr_attr(s, g, which, TRUE);
+    ret = verify_group_vlstr_attr(s, g, which, false);
+    if (ret == true)
+        ret = verify_group_vlstr_attr(s, g, which, true);
     return ret;
 }
 
@@ -4492,7 +4481,7 @@ verify_modify_vlstr_attr(state_t *s, hid_t g, unsigned int which)
  *              hid_t g
  *              HDF5 object ID (in this file: means group ID)
  *
- *              unsigend max_c
+ *              unsigned max_c
  *              The maximal number of attributes the compact storage
  *              can hold
  *
@@ -4502,8 +4491,8 @@ verify_modify_vlstr_attr(state_t *s, hid_t g, unsigned int which)
  *              attribute names.
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This function is used by the "compact" test.
  *-------------------------------------------------------------------------
@@ -4514,7 +4503,7 @@ verify_attrs_compact(state_t *s, hid_t g, unsigned max_c, unsigned int which)
 {
 
     unsigned    u;
-    hbool_t     ret          = TRUE;
+    hbool_t     ret          = true;
     const char *aname_format = "attr-%u-%u";
     char        attrname[VS_ATTR_NAME_LEN];
 
@@ -4522,8 +4511,8 @@ verify_attrs_compact(state_t *s, hid_t g, unsigned max_c, unsigned int which)
     for (u = 0; u < max_c; u++) {
 
         HDsprintf(attrname, aname_format, which, u);
-        if (FALSE == vrfy_attr(s, g, u + which, attrname, which, TRUE, TRUE)) {
-            ret = FALSE;
+        if (false == vrfy_attr(s, g, u + which, attrname, which, true, true)) {
+            ret = false;
             break;
         }
     }
@@ -4543,7 +4532,7 @@ verify_attrs_compact(state_t *s, hid_t g, unsigned max_c, unsigned int which)
  *              hid_t g
  *              HDF5 object ID (in this file: means group ID)
  *
- *              unsigend max_c
+ *              unsigned max_c
  *              The maximal number of attributes the compact storage
  *              can hold
  *
@@ -4553,8 +4542,8 @@ verify_attrs_compact(state_t *s, hid_t g, unsigned max_c, unsigned int which)
  *              attribute names.
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This function is used by the "compact-dense" test.
  *-------------------------------------------------------------------------
@@ -4569,12 +4558,12 @@ verify_attrs_compact_dense(state_t *s, hid_t g, unsigned max_c, unsigned int whi
 
     hbool_t ret = verify_attrs_compact(s, g, max_c, which);
 
-    if (ret == TRUE) {
+    if (ret == true) {
 
         /* Now the storage is in dense. Verify if the
          * retrieved value is correct. */
         HDsprintf(attrname, aname_format, max_c + which, 0);
-        ret = vrfy_attr(s, g, which + max_c, attrname, which, TRUE, FALSE);
+        ret = vrfy_attr(s, g, which + max_c, attrname, which, true, false);
     }
     return ret;
 }
@@ -4592,7 +4581,7 @@ verify_attrs_compact_dense(state_t *s, hid_t g, unsigned max_c, unsigned int whi
  *              hid_t g
  *              HDF5 object ID (in this file: means group ID)
  *
- *              unsigend max_c
+ *              unsigned max_c
  *              The maximal number of attributes the compact storage
  *              can hold
  *
@@ -4602,8 +4591,8 @@ verify_attrs_compact_dense(state_t *s, hid_t g, unsigned max_c, unsigned int whi
  *              attribute names.
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This function is used by the "compact-del" test.
  *              Also note this function first verifies if
@@ -4621,10 +4610,10 @@ verify_del_attrs_compact(state_t *s, hid_t g, unsigned max_c, unsigned int which
 
     hbool_t ret = verify_attrs_compact(s, g, max_c, which);
 
-    if (ret == TRUE) {
+    if (ret == true) {
         /* The writer only deletes the attribute attr-which-0 */
         HDsprintf(attrname, aname_format, which, 0);
-        ret = verify_del_one_attr(s, g, attrname, TRUE, TRUE);
+        ret = verify_del_one_attr(s, g, attrname, true, true);
     }
 
     return ret;
@@ -4643,7 +4632,7 @@ verify_del_attrs_compact(state_t *s, hid_t g, unsigned max_c, unsigned int which
  *              hid_t g
  *              HDF5 object ID (in this file: means group ID)
  *
- *              unsigend max_c
+ *              unsigned max_c
  *              The maximal number of attributes the compact storage
  *              can hold
  *
@@ -4653,8 +4642,8 @@ verify_del_attrs_compact(state_t *s, hid_t g, unsigned max_c, unsigned int which
  *              attribute names.
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This function is used by the "dense-del" test.
  *              Also note this function first verifies if
@@ -4673,10 +4662,10 @@ verify_del_attrs_compact_dense(state_t *s, hid_t g, unsigned max_c, unsigned int
 
     hbool_t ret = verify_attrs_compact_dense(s, g, max_c, which);
 
-    if (ret == TRUE) {
+    if (ret == true) {
         /* The writer only deletes the attribute attr-d-which-0 */
         HDsprintf(attrname, aname_format, max_c + which, 0);
-        ret = verify_del_one_attr(s, g, attrname, TRUE, FALSE);
+        ret = verify_del_one_attr(s, g, attrname, true, false);
     }
 
     return ret;
@@ -4696,11 +4685,11 @@ verify_del_attrs_compact_dense(state_t *s, hid_t g, unsigned max_c, unsigned int
  *              hid_t g
  *              HDF5 object ID (in this file: means group ID)
  *
- *              unsigend max_c
+ *              unsigned max_c
  *              The maximal number of attributes the compact storage
  *              can hold
  *
- *              unsigend min_d
+ *              unsigned min_d
  *              The minimal number of attributes to be stored in
  *              dense storage
  *
@@ -4710,8 +4699,8 @@ verify_del_attrs_compact_dense(state_t *s, hid_t g, unsigned max_c, unsigned int
  *              attribute names.
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This function is used by the "dense-del-to-compact" test.
  *              Also note this function first verifies if
@@ -4735,7 +4724,7 @@ verify_del_attrs_compact_dense_compact(state_t *s, hid_t g, unsigned max_c, unsi
      * compact to dense storage*/
     hbool_t ret = verify_attrs_compact_dense(s, g, max_c, which);
 
-    if (ret == TRUE) {
+    if (ret == true) {
 
         /* Then verify the deletion of attributes
          * from dense to compact.
@@ -4744,15 +4733,15 @@ verify_del_attrs_compact_dense_compact(state_t *s, hid_t g, unsigned max_c, unsi
         for (u--; u >= (min_d - 1); u--) {
             HDsprintf(attrname, aname_format, which, max_c - u);
             if (u == (min_d - 1))
-                ret = verify_del_one_attr(s, g, attrname, TRUE, TRUE);
+                ret = verify_del_one_attr(s, g, attrname, true, true);
             else
-                ret = verify_del_one_attr(s, g, attrname, TRUE, FALSE);
+                ret = verify_del_one_attr(s, g, attrname, true, false);
         }
 
         /* Just verify one more deleted attribute by the writer.
            The storage is still compact. */
         HDsprintf(attrname, aname_format, max_c + which, 0);
-        ret = verify_del_one_attr(s, g, attrname, TRUE, TRUE);
+        ret = verify_del_one_attr(s, g, attrname, true, true);
     }
 
     return ret;
@@ -4777,8 +4766,8 @@ verify_del_attrs_compact_dense_compact(state_t *s, hid_t g, unsigned max_c, unsi
  *              group and attribute names.
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the verify_group() function.
  *-------------------------------------------------------------------------
@@ -4788,14 +4777,14 @@ static hbool_t
 verify_del_ohr_block_attr(state_t *s, hid_t g, unsigned int which)
 {
 
-    hbool_t     ret_value = FALSE;
+    hbool_t     ret_value = false;
     char        attrname[VS_ATTR_NAME_LEN];
     const char *aname_format = "attr-%u";
 
     ret_value = verify_default_group_attr(s, g, which);
-    if (ret_value == TRUE) {
+    if (ret_value == true) {
         HDsprintf(attrname, aname_format, which);
-        ret_value = verify_del_one_attr(s, g, attrname, FALSE, TRUE);
+        ret_value = verify_del_one_attr(s, g, attrname, false, true);
     }
     return ret_value;
 }
@@ -4819,8 +4808,8 @@ verify_del_ohr_block_attr(state_t *s, hid_t g, unsigned int which)
  *              group and attribute names.
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the verify_group() function.
  *-------------------------------------------------------------------------
@@ -4830,7 +4819,7 @@ static hbool_t
 verify_group_attribute(state_t *s, hid_t g, unsigned int which)
 {
     char     test_pattern = s->at_pattern;
-    hbool_t  ret          = FALSE;
+    hbool_t  ret          = false;
     unsigned max_compact  = 0;
     unsigned min_dense    = 0;
     hid_t    gcpl         = H5I_INVALID_HID;
@@ -4898,7 +4887,7 @@ verify_group_attribute(state_t *s, hid_t g, unsigned int which)
             ret = verify_modify_attr(s, g, which);
             break;
         case 'v':
-            ret = verify_group_vlstr_attr(s, g, which, FALSE);
+            ret = verify_group_vlstr_attr(s, g, which, false);
             break;
         case 'r':
             ret = verify_remove_vlstr_attr(s, g, which);
@@ -4921,14 +4910,13 @@ verify_group_attribute(state_t *s, hid_t g, unsigned int which)
 
 error:
     /* Still to finish the handshaking */
-    if (s->use_communication && s->attr_test == TRUE) {
+    if (s->use_communication && s->attr_test == true) {
 
         sock_rd_receive(s);
         sock_send_error(s);
     }
-    return FALSE;
+    return false;
 }
-
 
 /*-------------------------------------------------------------------------
  * Function:    verify_group
@@ -4945,8 +4933,8 @@ error:
  *              The number of iterations for group creation
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the main() function.
  *-------------------------------------------------------------------------
@@ -4957,16 +4945,16 @@ verify_group(state_t *s, unsigned int which)
 {
     char       name[sizeof("/group-9999999999")];
     hid_t      g      = H5I_INVALID_HID;
-    hbool_t    result = TRUE;
+    hbool_t    result = true;
     H5G_info_t group_info;
 
     /* The reader receives a message from the writer.Then sleep
      * for a few ticks or stop the test if the received message
      * is an error message.
      */
-    if (s->use_communication && TRUE == s->attr_test) {
+    if (s->use_communication && true == s->attr_test) {
 
-        if (FALSE == sock_rd_receive(s)) {
+        if (false == sock_rd_receive(s)) {
             H5_FAILED();
             AT();
             goto error2;
@@ -5011,7 +4999,7 @@ verify_group(state_t *s, unsigned int which)
     /* If coming to an "object header continuation block" test,
      * we need to check if this test behaves as expected. */
     if (s->at_pattern == 'a' || s->at_pattern == 'R') {
-        if (FALSE == check_ohr_num_chunk(g, TRUE)) {
+        if (false == check_ohr_num_chunk(g, true)) {
             HDprintf("An object header continuation block should NOT be created. \n");
             HDprintf("But it is created.\n");
             HDprintf("Verification of an 'object header continuation block test' failed.\n");
@@ -5020,9 +5008,9 @@ verify_group(state_t *s, unsigned int which)
     }
 
     /* Reader sends an OK message back to the writer */
-    if (s->use_communication && s->attr_test == TRUE) {
+    if (s->use_communication && s->attr_test == true) {
 
-        if (sock_rd_send(s) == FALSE)
+        if (sock_rd_send(s) == false)
             TEST_ERROR;
         dbgf(1, "Reader: finish sending back the message: %d\n", s->sock.notify);
     }
@@ -5031,7 +5019,7 @@ verify_group(state_t *s, unsigned int which)
     if (s->asteps != 0 && which % s->asteps == 0)
         result = verify_group_attribute(s, g, which);
     else
-        result = TRUE;
+        result = true;
 
     if (H5Gclose(g) < 0) {
         HDprintf("H5Gclose failed\n");
@@ -5049,12 +5037,12 @@ error:
     H5E_END_TRY;
 
     /* The reader sends an error message to the writer to stop the test.*/
-    if (s->use_communication && s->attr_test == TRUE)
+    if (s->use_communication && s->attr_test == true)
         sock_send_error(s);
 
 error2:
 
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -5071,8 +5059,8 @@ error2:
  *              This is used to generate the group name.
  *
  *              hbool_t dense_to_compact
- *              TRUE if this function is used to test the transition from dense to
- *              compact, FALSE if the test is from compact to dense.
+ *              true if this function is used to test the transition from dense to
+ *              compact, false if the test is from compact to dense.
  *
  * Return:      Success:    the group ID
  *              Failure:    -1
@@ -5141,9 +5129,9 @@ create_group_id(state_t *s, unsigned int which, hbool_t dense_to_compact)
      * the writer should send and receive messages after the group creation.
      * Writer sends a message to reader: a group is successfully created.
      * then wait for the reader to verify and send an acknowledgement message back.*/
-    if (s->use_communication && s->grp_op_test == TRUE) {
+    if (s->use_communication && s->grp_op_test == true) {
         dbgf(2, "Writer: ready to send the message: %d\n", s->sock.notify + 1);
-        if (sock_wr_send_receive(s) == FALSE) {
+        if (sock_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             /* Note: This is (mostly) because the verification failure message
@@ -5157,7 +5145,7 @@ create_group_id(state_t *s, unsigned int which, hbool_t dense_to_compact)
 
 error:
     /* Writer needs to send an error message to the reader to stop the test*/
-    if (s->use_communication && s->grp_op_test == TRUE)
+    if (s->use_communication && s->grp_op_test == true)
         sock_send_error(s);
 
 error2:
@@ -5183,8 +5171,8 @@ error2:
  *              hid_t g
  *              The ID of the group to be closed.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is used by the link storage transit functions.
  *-------------------------------------------------------------------------
@@ -5203,25 +5191,25 @@ close_group_id(state_t *s, hid_t g)
      * link storage test,
      * Writer sends a message to reader: the group is successfully closed.
      * then wait for the reader to verify and send an acknowledgement message back.*/
-    if (s->use_communication && s->grp_op_test == TRUE) {
+    if (s->use_communication && s->grp_op_test == true) {
         dbgf(2, "Writer: ready to send the message: %d\n", s->sock.notify + 1);
-        if (sock_wr_send_receive(s) == FALSE) {
+        if (sock_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             goto error2;
         }
     }
 
-    return TRUE;
+    return true;
 
 error:
     /* Writer needs to send an error message to the reader to stop the test*/
-    if (s->use_communication && s->grp_op_test == TRUE)
+    if (s->use_communication && s->grp_op_test == true)
         sock_send_error(s);
 
 error2:
 
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -5237,8 +5225,8 @@ error2:
  *              The number of iterations for group creation
  *              This is used to generate the group name.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the main() function.
  *-------------------------------------------------------------------------
@@ -5290,20 +5278,20 @@ create_group(state_t *s, unsigned int which)
 
     /* Writer sends a message to reader,
      * then wait for the reader to verify and send an acknowledgement message back.*/
-    if (s->use_communication && s->grp_op_test == TRUE) {
+    if (s->use_communication && s->grp_op_test == true) {
         dbgf(2, "Writer: ready to send the message: %d\n", s->sock.notify + 1);
-        if (sock_wr_send_receive(s) == FALSE) {
+        if (sock_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             goto error2;
         }
     }
 
-    return TRUE;
+    return true;
 
 error:
     /* Writer needs to send an error message to the reader to stop the test*/
-    if (s->use_communication && s->grp_op_test == TRUE)
+    if (s->use_communication && s->grp_op_test == true)
         sock_send_error(s);
 
 error2:
@@ -5314,7 +5302,7 @@ error2:
     }
     H5E_END_TRY;
 
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -5342,8 +5330,8 @@ error2:
  *              The number of iterations for group creation
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is used by delete_groups() and delete_links() functions.
  *-------------------------------------------------------------------------
@@ -5395,25 +5383,25 @@ delete_one_link(state_t *s, hid_t obj_id, const char *name, short link_storage, 
 
     /* Writer sends a message to reader:
      * then wait for the reader to verify and send an acknowledgement message back.*/
-    if (s->use_communication && s->grp_op_test == TRUE) {
+    if (s->use_communication && s->grp_op_test == true) {
         dbgf(2, "writer: ready to send the message: %d\n", s->sock.notify + 1);
-        if (sock_wr_send_receive(s) == FALSE) {
+        if (sock_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             goto error2;
         }
     }
 
-    return TRUE;
+    return true;
 
 error:
     /* Writer needs to send an error message to the reader to stop the test*/
-    if (s->use_communication && s->grp_op_test == TRUE)
+    if (s->use_communication && s->grp_op_test == true)
         sock_send_error(s);
 
 error2:
 
-    return FALSE;
+    return false;
 }
 #else  /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
@@ -5434,8 +5422,8 @@ error2:
  *              group and attribute names.
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the verify_group() function.
  *-------------------------------------------------------------------------
@@ -5445,7 +5433,7 @@ static hbool_t
 verify_group_attribute(state_t *s, hid_t g, unsigned int which)
 {
     char     test_pattern = s->at_pattern;
-    hbool_t  ret          = FALSE;
+    hbool_t  ret          = false;
     unsigned max_compact  = 0;
     unsigned min_dense    = 0;
     hid_t    gcpl         = H5I_INVALID_HID;
@@ -5513,7 +5501,7 @@ verify_group_attribute(state_t *s, hid_t g, unsigned int which)
             ret = verify_modify_attr(s, g, which);
             break;
         case 'v':
-            ret = verify_group_vlstr_attr(s, g, which, FALSE);
+            ret = verify_group_vlstr_attr(s, g, which, false);
             break;
         case 'r':
             ret = verify_remove_vlstr_attr(s, g, which);
@@ -5536,11 +5524,11 @@ verify_group_attribute(state_t *s, hid_t g, unsigned int which)
 
 error:
     /* Still to finish the handshaking */
-    if (s->use_communication && s->attr_test == TRUE) {
+    if (s->use_communication && s->attr_test == true) {
         np_rd_receive(s);
-        np_send_error(s, FALSE);
+        np_send_error(s, false);
     }
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -5558,8 +5546,8 @@ error:
  *              The number of iterations for group creation
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the main() function.
  *-------------------------------------------------------------------------
@@ -5570,16 +5558,16 @@ verify_group(state_t *s, unsigned int which)
 {
     char       name[sizeof("/group-9999999999")];
     hid_t      g      = H5I_INVALID_HID;
-    hbool_t    result = TRUE;
+    hbool_t    result = true;
     H5G_info_t group_info;
 
     /* The reader receives a message from the writer.Then sleep
      * for a few ticks or stop the test if the received message
      * is an error message.
      */
-    if (s->use_communication && TRUE == s->attr_test) {
+    if (s->use_communication && true == s->attr_test) {
 
-        if (FALSE == np_rd_receive(s)) {
+        if (false == np_rd_receive(s)) {
             H5_FAILED();
             AT();
             goto error2;
@@ -5624,7 +5612,7 @@ verify_group(state_t *s, unsigned int which)
     /* If coming to an "object header continuation block" test,
      * we need to check if this test behaves as expected. */
     if (s->at_pattern == 'a' || s->at_pattern == 'R') {
-        if (FALSE == check_ohr_num_chunk(g, TRUE)) {
+        if (false == check_ohr_num_chunk(g, true)) {
             HDprintf("An object header continuation block should NOT be created. \n");
             HDprintf("But it is created.\n");
             HDprintf("Verification of an 'object header continuation block test' failed.\n");
@@ -5633,9 +5621,9 @@ verify_group(state_t *s, unsigned int which)
     }
 
     /* Reader sends an OK message back to the writer */
-    if (s->use_communication && s->attr_test == TRUE) {
+    if (s->use_communication && s->attr_test == true) {
 
-        if (np_rd_send(s) == FALSE)
+        if (np_rd_send(s) == false)
             TEST_ERROR;
         dbgf(1, "Reader: finish sending back the message: %d\n", s->np_notify);
     }
@@ -5644,7 +5632,7 @@ verify_group(state_t *s, unsigned int which)
     if (s->asteps != 0 && which % s->asteps == 0)
         result = verify_group_attribute(s, g, which);
     else
-        result = TRUE;
+        result = true;
 
     if (H5Gclose(g) < 0) {
         HDprintf("H5Gclose failed\n");
@@ -5662,12 +5650,12 @@ error:
     H5E_END_TRY;
 
     /* The reader sends an error message to the writer to stop the test.*/
-    if (s->use_communication && s->attr_test == TRUE)
-        np_send_error(s, FALSE);
+    if (s->use_communication && s->attr_test == true)
+        np_send_error(s, false);
 
 error2:
 
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -5684,8 +5672,8 @@ error2:
  *              This is used to generate the group name.
  *
  *              hbool_t dense_to_compact
- *              TRUE if this function is used to test the transition from dense to
- *              compact, FALSE if the test is from compact to dense.
+ *              true if this function is used to test the transition from dense to
+ *              compact, false if the test is from compact to dense.
  *
  * Return:      Success:    the group ID
  *              Failure:    -1
@@ -5754,9 +5742,9 @@ create_group_id(state_t *s, unsigned int which, hbool_t dense_to_compact)
      * the writer should send and receive messages after the group creation.
      * Writer sends a message to reader: a group is successfully created.
      * then wait for the reader to verify and send an acknowledgement message back.*/
-    if (s->use_communication && s->grp_op_test == TRUE) {
+    if (s->use_communication && s->grp_op_test == true) {
         dbgf(2, "Writer: ready to send the message: %d\n", s->np_notify + 1);
-        if (np_wr_send_receive(s) == FALSE) {
+        if (np_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             /* Note: This is (mostly) because the verification failure message
@@ -5770,8 +5758,8 @@ create_group_id(state_t *s, unsigned int which, hbool_t dense_to_compact)
 
 error:
     /* Writer needs to send an error message to the reader to stop the test*/
-    if (s->use_communication && s->grp_op_test == TRUE)
-        np_send_error(s, TRUE);
+    if (s->use_communication && s->grp_op_test == true)
+        np_send_error(s, true);
 
 error2:
 
@@ -5796,8 +5784,8 @@ error2:
  *              hid_t g
  *              The ID of the group to be closed.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is used by the link storage transit functions.
  *-------------------------------------------------------------------------
@@ -5816,25 +5804,25 @@ close_group_id(state_t *s, hid_t g)
      * link storage test,
      * Writer sends a message to reader: the group is successfully closed.
      * then wait for the reader to verify and send an acknowledgement message back.*/
-    if (s->use_communication && s->grp_op_test == TRUE) {
+    if (s->use_communication && s->grp_op_test == true) {
         dbgf(2, "Writer: ready to send the message: %d\n", s->np_notify + 1);
-        if (np_wr_send_receive(s) == FALSE) {
+        if (np_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             goto error2;
         }
     }
 
-    return TRUE;
+    return true;
 
 error:
     /* Writer needs to send an error message to the reader to stop the test*/
-    if (s->use_communication && s->grp_op_test == TRUE)
-        np_send_error(s, TRUE);
+    if (s->use_communication && s->grp_op_test == true)
+        np_send_error(s, true);
 
 error2:
 
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -5850,8 +5838,8 @@ error2:
  *              The number of iterations for group creation
  *              This is used to generate the group name.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the main() function.
  *-------------------------------------------------------------------------
@@ -5903,21 +5891,21 @@ create_group(state_t *s, unsigned int which)
 
     /* Writer sends a message to reader,
      * then wait for the reader to verify and send an acknowledgement message back.*/
-    if (s->use_communication && s->grp_op_test == TRUE) {
+    if (s->use_communication && s->grp_op_test == true) {
         dbgf(2, "Writer: ready to send the message: %d\n", s->np_notify + 1);
-        if (np_wr_send_receive(s) == FALSE) {
+        if (np_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             goto error2;
         }
     }
 
-    return TRUE;
+    return true;
 
 error:
     /* Writer needs to send an error message to the reader to stop the test*/
-    if (s->use_communication && s->grp_op_test == TRUE)
-        np_send_error(s, TRUE);
+    if (s->use_communication && s->grp_op_test == true)
+        np_send_error(s, true);
 
 error2:
 
@@ -5927,7 +5915,7 @@ error2:
     }
     H5E_END_TRY;
 
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -5955,8 +5943,8 @@ error2:
  *              The number of iterations for group creation
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is used by delete_groups() and delete_links() functions.
  *-------------------------------------------------------------------------
@@ -6008,25 +5996,25 @@ delete_one_link(state_t *s, hid_t obj_id, const char *name, short link_storage, 
 
     /* Writer sends a message to reader:
      * then wait for the reader to verify and send an acknowledgement message back.*/
-    if (s->use_communication && s->grp_op_test == TRUE) {
+    if (s->use_communication && s->grp_op_test == true) {
         dbgf(2, "writer: ready to send the message: %d\n", s->np_notify + 1);
-        if (np_wr_send_receive(s) == FALSE) {
+        if (np_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             goto error2;
         }
     }
 
-    return TRUE;
+    return true;
 
 error:
     /* Writer needs to send an error message to the reader to stop the test*/
-    if (s->use_communication && s->grp_op_test == TRUE)
-        np_send_error(s, TRUE);
+    if (s->use_communication && s->grp_op_test == true)
+        np_send_error(s, true);
 
 error2:
 
-    return FALSE;
+    return false;
 }
 #endif /* H5_USE_SOCKETS */
 
@@ -6045,8 +6033,8 @@ error2:
  *              This is used to generate the group name
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the group_operations() function.
  *-------------------------------------------------------------------------
@@ -6058,7 +6046,7 @@ delete_group(state_t *s, unsigned int which)
 
     char    name[sizeof("/group-9999999999")];
     hbool_t ret_value = create_group(s, which);
-    if (ret_value == TRUE) {
+    if (ret_value == true) {
         esnprintf(name, sizeof(name), "/group-%u", which);
         ret_value = delete_one_link(s, s->file, name, 0, which);
     }
@@ -6089,8 +6077,8 @@ delete_group(state_t *s, unsigned int which)
  *              The number of iterations for group creation
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the move_group() function.
  *-------------------------------------------------------------------------
@@ -6112,25 +6100,25 @@ move_one_group(state_t *s, hid_t obj_id, const char *name, const char *newname, 
 
     /* Writer sends a message to reader:
      * then wait for the reader to verify and send an acknowledgement message back.*/
-    if (s->use_communication && s->grp_op_test == TRUE) {
+    if (s->use_communication && s->grp_op_test == true) {
         dbgf(2, "writer: ready to send the message: %d\n", s->sock.notify + 1);
-        if (sock_wr_send_receive(s) == FALSE) {
+        if (sock_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             goto error2;
         }
     }
 
-    return TRUE;
+    return true;
 
 error:
     /* Writer needs to send an error message to the reader to stop the test*/
-    if (s->use_communication && s->grp_op_test == TRUE)
+    if (s->use_communication && s->grp_op_test == true)
         sock_send_error(s);
 
 error2:
 
-    return FALSE;
+    return false;
 }
 #else  /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
@@ -6155,8 +6143,8 @@ error2:
  *              The number of iterations for group creation
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the move_group() function.
  *-------------------------------------------------------------------------
@@ -6178,25 +6166,25 @@ move_one_group(state_t *s, hid_t obj_id, const char *name, const char *newname, 
 
     /* Writer sends a message to reader:
      * then wait for the reader to verify and send an acknowledgement message back.*/
-    if (s->use_communication && s->grp_op_test == TRUE) {
+    if (s->use_communication && s->grp_op_test == true) {
         dbgf(2, "writer: ready to send the message: %d\n", s->np_notify + 1);
-        if (np_wr_send_receive(s) == FALSE) {
+        if (np_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             goto error2;
         }
     }
 
-    return TRUE;
+    return true;
 
 error:
     /* Writer needs to send an error message to the reader to stop the test*/
-    if (s->use_communication && s->grp_op_test == TRUE)
-        np_send_error(s, TRUE);
+    if (s->use_communication && s->grp_op_test == true)
+        np_send_error(s, true);
 
 error2:
 
-    return FALSE;
+    return false;
 }
 #endif /* H5_USE_SOCKETS */
 
@@ -6213,8 +6201,8 @@ error2:
  *              The number of iterations for group creation
  *              used to generate the group name.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the group_operations() function.
  *-------------------------------------------------------------------------
@@ -6227,7 +6215,7 @@ move_group(state_t *s, unsigned int which)
     char    name[sizeof("/group-9999999999")];
     char    new_name[sizeof("/new-group-9999999999")];
     hbool_t ret_value = create_group(s, which);
-    if (ret_value == TRUE) {
+    if (ret_value == true) {
         esnprintf(name, sizeof(name), "/group-%u", which);
         esnprintf(new_name, sizeof(new_name), "/new-group-%u", which);
         ret_value = move_one_group(s, s->file, name, new_name, which);
@@ -6256,8 +6244,8 @@ move_group(state_t *s, unsigned int which)
  *              The name of the linked objects
  *
  *              hbool_t is_hard
- *              TRUE if inserting a hard link
- *              FALSE if inserting a soft link
+ *              true if inserting a hard link
+ *              false if inserting a soft link
  *
  *              short link_storage
  *              <=0: link storage is ignored.
@@ -6267,8 +6255,8 @@ move_group(state_t *s, unsigned int which)
  *              unsigned int which
  *              The number of iterations for group creation
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the insert_links and link storage transit functions.
  *              For link storage, we test at both the writer and the reader.
@@ -6347,25 +6335,25 @@ insert_one_link(state_t *s, hid_t obj_id, const char *name, const char *newname,
 
     /* Writer sends a message to reader,
      * then wait for the reader to verify and send an acknowledgement message back.*/
-    if (s->use_communication && s->grp_op_test == TRUE) {
+    if (s->use_communication && s->grp_op_test == true) {
         dbgf(2, "writer: ready to send the message: %d\n", s->sock.notify + 1);
-        if (sock_wr_send_receive(s) == FALSE) {
+        if (sock_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             goto error2;
         }
     }
 
-    return TRUE;
+    return true;
 
 error:
     /* Writer needs to send an error message to the reader to stop the test*/
-    if (s->use_communication && s->grp_op_test == TRUE)
+    if (s->use_communication && s->grp_op_test == true)
         sock_send_error(s);
 
 error2:
 
-    return FALSE;
+    return false;
 }
 #else  /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
@@ -6387,8 +6375,8 @@ error2:
  *              The name of the linked objects
  *
  *              hbool_t is_hard
- *              TRUE if inserting a hard link
- *              FALSE if inserting a soft link
+ *              true if inserting a hard link
+ *              false if inserting a soft link
  *
  *              short link_storage
  *              <=0: link storage is ignored.
@@ -6398,8 +6386,8 @@ error2:
  *              unsigned int which
  *              The number of iterations for group creation
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the insert_links and link storage transit functions.
  *              For link storage, we test at both the writer and the reader.
@@ -6478,25 +6466,25 @@ insert_one_link(state_t *s, hid_t obj_id, const char *name, const char *newname,
 
     /* Writer sends a message to reader,
      * then wait for the reader to verify and send an acknowledgement message back.*/
-    if (s->use_communication && s->grp_op_test == TRUE) {
+    if (s->use_communication && s->grp_op_test == true) {
         dbgf(2, "writer: ready to send the message: %d\n", s->np_notify + 1);
-        if (np_wr_send_receive(s) == FALSE) {
+        if (np_wr_send_receive(s) == false) {
             H5_FAILED();
             AT();
             goto error2;
         }
     }
 
-    return TRUE;
+    return true;
 
 error:
     /* Writer needs to send an error message to the reader to stop the test*/
-    if (s->use_communication && s->grp_op_test == TRUE)
-        np_send_error(s, TRUE);
+    if (s->use_communication && s->grp_op_test == true)
+        np_send_error(s, true);
 
 error2:
 
-    return FALSE;
+    return false;
 }
 #endif /* H5_USE_SOCKETS */
 
@@ -6513,8 +6501,8 @@ error2:
  *              The number of iterations
  *              used to generate the group name.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the group_operations() function.
  *-------------------------------------------------------------------------
@@ -6529,13 +6517,13 @@ insert_links(state_t *s, unsigned int which)
     char st_name[sizeof("/st-group-9999999999")];
 
     hbool_t ret_value = create_group(s, which);
-    if (ret_value == TRUE) {
+    if (ret_value == true) {
         esnprintf(name, sizeof(name), "/group-%u", which);
         esnprintf(hd_name, sizeof(hd_name), "/hd-group-%u", which);
         esnprintf(st_name, sizeof(st_name), "/st-group-%u", which);
-        ret_value = insert_one_link(s, s->file, name, hd_name, TRUE, 0, which);
-        if (ret_value == TRUE)
-            ret_value = insert_one_link(s, s->file, name, st_name, FALSE, 0, which);
+        ret_value = insert_one_link(s, s->file, name, hd_name, true, 0, which);
+        if (ret_value == true)
+            ret_value = insert_one_link(s, s->file, name, st_name, false, 0, which);
     }
 
     return ret_value;
@@ -6554,8 +6542,8 @@ insert_links(state_t *s, unsigned int which)
  *              The number of iterations
  *              used to generate the group name.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the group_operations() function.
  *-------------------------------------------------------------------------
@@ -6570,12 +6558,12 @@ delete_links(state_t *s, unsigned int which)
     char st_name[sizeof("/st-group-9999999999")];
 
     hbool_t ret_value = insert_links(s, which);
-    if (ret_value == TRUE) {
+    if (ret_value == true) {
         esnprintf(name, sizeof(name), "/group-%u", which);
         esnprintf(hd_name, sizeof(hd_name), "/hd-group-%u", which);
         esnprintf(st_name, sizeof(st_name), "/st-group-%u", which);
         ret_value = delete_one_link(s, s->file, hd_name, 0, which);
-        if (ret_value == TRUE)
+        if (ret_value == true)
             ret_value = delete_one_link(s, s->file, st_name, 0, which);
     }
 
@@ -6595,8 +6583,8 @@ delete_links(state_t *s, unsigned int which)
  *              unsigned int which
  *              The number of iterations used to generate the group name.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the group_operations() function.
  *-------------------------------------------------------------------------
@@ -6610,7 +6598,7 @@ transit_storage_compact_to_dense(state_t *s, unsigned int which)
     char hd_name[sizeof("/hd-group-9999999999")];
     char st_name[sizeof("/st-group-9999999999")];
 
-    hid_t g = create_group_id(s, which, FALSE);
+    hid_t g = create_group_id(s, which, false);
     if (g < 0) {
         HDprintf("create_group_id failed\n");
         TEST_ERROR;
@@ -6619,24 +6607,24 @@ transit_storage_compact_to_dense(state_t *s, unsigned int which)
     /* First insert a hard link, compact storage. */
     esnprintf(name, sizeof(name), "/group-%u", which);
     esnprintf(hd_name, sizeof(hd_name), "hd-group-%u", which);
-    if (insert_one_link(s, g, name, hd_name, TRUE, 1, which) == FALSE) {
+    if (insert_one_link(s, g, name, hd_name, true, 1, which) == false) {
         HDprintf("insert_one_link for compact storage failed\n");
         TEST_ERROR;
     }
 
     /* Then insert a soft link, the storage becomes dense. */
     esnprintf(st_name, sizeof(st_name), "st-group-%u", which);
-    if (insert_one_link(s, g, name, st_name, FALSE, 2, which) == FALSE) {
+    if (insert_one_link(s, g, name, st_name, false, 2, which) == false) {
         HDprintf("insert_one_link for dense storage failed\n");
         TEST_ERROR;
     }
 
-    if (close_group_id(s, g) == FALSE) {
+    if (close_group_id(s, g) == false) {
         HDprintf("insert_one_link for dense storage failed\n");
         TEST_ERROR;
     }
 
-    return TRUE;
+    return true;
 
 error:
     H5E_BEGIN_TRY
@@ -6645,7 +6633,7 @@ error:
     }
     H5E_END_TRY;
 
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -6661,8 +6649,8 @@ error:
  *              unsigned int which
  *              The number of iterations used to generate the group name.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the group_operations() function.
  *-------------------------------------------------------------------------
@@ -6677,7 +6665,7 @@ transit_storage_dense_to_compact(state_t *s, unsigned int which)
     char st_name[sizeof("st-group-9999999999")];
     char st2_name[sizeof("st2-group-9999999999")];
 
-    hid_t g = create_group_id(s, which, TRUE);
+    hid_t g = create_group_id(s, which, true);
     if (g < 0) {
         HDprintf("create_group_id failed\n");
         TEST_ERROR;
@@ -6686,43 +6674,43 @@ transit_storage_dense_to_compact(state_t *s, unsigned int which)
     /* Insert a link, storage is compact. */
     esnprintf(name, sizeof(name), "/group-%u", which);
     esnprintf(hd_name, sizeof(hd_name), "hd-group-%u", which);
-    if (insert_one_link(s, g, name, hd_name, TRUE, 1, which) == FALSE) {
+    if (insert_one_link(s, g, name, hd_name, true, 1, which) == false) {
         HDprintf("insert_one_link for compact storage failed\n");
         TEST_ERROR;
     }
 
     /* Insert a link, storage is still compact. */
     esnprintf(st_name, sizeof(st_name), "st-group-%u", which);
-    if (insert_one_link(s, g, name, st_name, FALSE, 1, which) == FALSE) {
+    if (insert_one_link(s, g, name, st_name, false, 1, which) == false) {
         HDprintf("insert_one_link for compact storage failed\n");
         TEST_ERROR;
     }
 
     /* Insert a link, storage becomes dense. */
     esnprintf(st2_name, sizeof(st2_name), "st2-group-%u", which);
-    if (insert_one_link(s, g, name, st2_name, FALSE, 2, which) == FALSE) {
+    if (insert_one_link(s, g, name, st2_name, false, 2, which) == false) {
         HDprintf("insert_one_link for dense storage failed\n");
         TEST_ERROR;
     }
 
     /* Delete a link, storage is still dense */
-    if (delete_one_link(s, g, st_name, 2, which) == FALSE) {
+    if (delete_one_link(s, g, st_name, 2, which) == false) {
         HDprintf("delete_one_link for dense storage failed\n");
         TEST_ERROR;
     }
 
     /* Delete another link, storage becomes compact */
-    if (delete_one_link(s, g, st2_name, 1, which) == FALSE) {
+    if (delete_one_link(s, g, st2_name, 1, which) == false) {
         HDprintf("delete_one_link for compact storage failed\n");
         TEST_ERROR;
     }
 
-    if (close_group_id(s, g) == FALSE) {
+    if (close_group_id(s, g) == false) {
         HDprintf("insert_one_link for dense storage failed\n");
         TEST_ERROR;
     }
 
-    return TRUE;
+    return true;
 
 error:
     H5E_BEGIN_TRY
@@ -6731,7 +6719,7 @@ error:
     }
     H5E_END_TRY;
 
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -6748,8 +6736,8 @@ error:
  *              The number of iterations for group creation
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the main() function. The check of attribute
  *              operations is inside the write_group() function.
@@ -6759,7 +6747,7 @@ static hbool_t
 group_operations(state_t *s, unsigned int which)
 {
 
-    hbool_t ret_value    = FALSE;
+    hbool_t ret_value    = false;
     char    test_pattern = s->grp_op_pattern;
 
     switch (test_pattern) {
@@ -6806,8 +6794,8 @@ group_operations(state_t *s, unsigned int which)
  *              The number of iterations for group creation
  *              used to generate the group name.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the verify_group_operations() function.
  *-------------------------------------------------------------------------
@@ -6827,9 +6815,9 @@ vrfy_create_group(state_t *s, unsigned int which)
      * for a few ticks or stop the test if the received message
      * is an error message.
      */
-    if (s->use_communication && TRUE == s->grp_op_test) {
+    if (s->use_communication && true == s->grp_op_test) {
 
-        if (FALSE == sock_rd_receive(s)) {
+        if (false == sock_rd_receive(s)) {
             H5_FAILED();
             AT();
             goto error2;
@@ -6877,14 +6865,14 @@ vrfy_create_group(state_t *s, unsigned int which)
     }
 
     /* Reader sends an OK message back to the writer */
-    if (s->use_communication && s->grp_op_test == TRUE) {
+    if (s->use_communication && s->grp_op_test == true) {
 
-        if (sock_rd_send(s) == FALSE)
+        if (sock_rd_send(s) == false)
             TEST_ERROR;
         dbgf(1, "Reader: finish sending back the message: %d\n", s->sock.notify);
     }
 
-    return TRUE;
+    return true;
 
 error:
 
@@ -6895,12 +6883,12 @@ error:
     H5E_END_TRY;
 
     /* The reader sends an error message to the writer to stop the test.*/
-    if (s->use_communication && s->grp_op_test == TRUE)
+    if (s->use_communication && s->grp_op_test == true)
         sock_send_error(s);
 
 error2:
 
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -6918,8 +6906,8 @@ error2:
  *              used to generate the group name.
  *
  *              hbool_t dense_to_compact
- *              TRUE if this function is used to test the transition from dense to
- *              compact, FALSE if the test is from compact to dense.
+ *              true if this function is used to test the transition from dense to
+ *              compact, false if the test is from compact to dense.
  *
  * Return:      Success:    the group ID
  *              Failure:    -1
@@ -6944,9 +6932,9 @@ vrfy_create_group_id(state_t *s, unsigned int which, hbool_t dense_to_compact)
      * for a few ticks or stop the test if the received message
      * is an error message.
      */
-    if (s->use_communication && TRUE == s->grp_op_test) {
+    if (s->use_communication && true == s->grp_op_test) {
 
-        if (FALSE == sock_rd_receive(s)) {
+        if (false == sock_rd_receive(s)) {
             H5_FAILED();
             AT();
             goto error2;
@@ -7025,9 +7013,9 @@ vrfy_create_group_id(state_t *s, unsigned int which, hbool_t dense_to_compact)
     dbgf(2, "Storage info is %d\n", group_info.storage_type);
 
     /* Reader sends an OK message back to the reader */
-    if (s->use_communication && s->grp_op_test == TRUE) {
+    if (s->use_communication && s->grp_op_test == true) {
 
-        if (sock_rd_send(s) == FALSE)
+        if (sock_rd_send(s) == false)
             TEST_ERROR;
         dbgf(1, "Reader: finish sending back the message: %d\n", s->sock.notify);
     }
@@ -7044,7 +7032,7 @@ error:
     H5E_END_TRY;
 
     /* The reader sends an error message to the writer to stop the test.*/
-    if (s->use_communication && s->grp_op_test == TRUE)
+    if (s->use_communication && s->grp_op_test == true)
         sock_send_error(s);
 
 error2:
@@ -7064,8 +7052,8 @@ error2:
  *              hid_t g
  *              The ID of the group to be closed.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is used by the link storage transit functions.
  *-------------------------------------------------------------------------
@@ -7079,9 +7067,9 @@ vrfy_close_group_id(state_t *s, hid_t g)
      * for a few ticks or stop the test if the received message
      * is an error message.
      */
-    if (s->use_communication && TRUE == s->grp_op_test) {
+    if (s->use_communication && true == s->grp_op_test) {
 
-        if (FALSE == sock_rd_receive(s)) {
+        if (false == sock_rd_receive(s)) {
             H5_FAILED();
             AT();
             goto error2;
@@ -7096,23 +7084,23 @@ vrfy_close_group_id(state_t *s, hid_t g)
     }
 
     /* Reader sends an OK message back to the reader */
-    if (s->use_communication && s->grp_op_test == TRUE) {
+    if (s->use_communication && s->grp_op_test == true) {
 
-        if (sock_rd_send(s) == FALSE)
+        if (sock_rd_send(s) == false)
             TEST_ERROR;
         dbgf(1, "Reader: finish sending back the message: %d\n", s->sock.notify);
     }
 
-    return TRUE;
+    return true;
 
 error:
 
     /* The reader sends an error message to the writer to stop the test.*/
-    if (s->use_communication && s->grp_op_test == TRUE)
+    if (s->use_communication && s->grp_op_test == true)
         sock_send_error(s);
 
 error2:
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -7136,8 +7124,8 @@ error2:
  *              1: link storage is expected to be compact.
  *              >1: link storage is expected to be dense.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        Helper function to check if links are inserted or deleted.
  *              The link storage is also checked.
@@ -7156,9 +7144,9 @@ vrfy_one_link_exist(state_t *s, hid_t obj_id, const char *name, hbool_t expect_e
      * for a few ticks or stop the test if the received message
      * is an error message.
      */
-    if (s->use_communication && TRUE == s->grp_op_test) {
+    if (s->use_communication && true == s->grp_op_test) {
 
-        if (FALSE == sock_rd_receive(s)) {
+        if (false == sock_rd_receive(s)) {
             H5_FAILED();
             AT();
             goto error2;
@@ -7174,13 +7162,13 @@ vrfy_one_link_exist(state_t *s, hid_t obj_id, const char *name, hbool_t expect_e
         TEST_ERROR;
     }
     else if (link_exists == 1) {
-        if (expect_exist == FALSE) {
+        if (expect_exist == false) {
             HDprintf("This link should be moved or deleted but it still exists.\n");
             TEST_ERROR;
         }
     }
     else if (link_exists == 0) {
-        if (expect_exist == TRUE) {
+        if (expect_exist == true) {
             HDprintf("This link should exist but it is moved or deleted.\n");
             TEST_ERROR;
         }
@@ -7213,24 +7201,24 @@ vrfy_one_link_exist(state_t *s, hid_t obj_id, const char *name, hbool_t expect_e
     }
 
     /* Reader sends an OK message back to the reader */
-    if (s->use_communication && s->grp_op_test == TRUE) {
-        if (sock_rd_send(s) == FALSE) {
+    if (s->use_communication && s->grp_op_test == true) {
+        if (sock_rd_send(s) == false) {
             TEST_ERROR;
         }
         dbgf(1, "Reader: finish sending back the message: %d\n", s->sock.notify);
     }
 
-    return TRUE;
+    return true;
 
 error:
 
     /* The reader sends an error message to the writer to stop the test.*/
-    if (s->use_communication && s->grp_op_test == TRUE)
+    if (s->use_communication && s->grp_op_test == true)
         sock_send_error(s);
 
 error2:
 
-    return FALSE;
+    return false;
 }
 #else  /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
@@ -7246,8 +7234,8 @@ error2:
  *              The number of iterations for group creation
  *              used to generate the group name.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the verify_group_operations() function.
  *-------------------------------------------------------------------------
@@ -7267,9 +7255,9 @@ vrfy_create_group(state_t *s, unsigned int which)
      * for a few ticks or stop the test if the received message
      * is an error message.
      */
-    if (s->use_communication && TRUE == s->grp_op_test) {
+    if (s->use_communication && true == s->grp_op_test) {
 
-        if (FALSE == np_rd_receive(s)) {
+        if (false == np_rd_receive(s)) {
             H5_FAILED();
             AT();
             goto error2;
@@ -7317,14 +7305,14 @@ vrfy_create_group(state_t *s, unsigned int which)
     }
 
     /* Reader sends an OK message back to the writer */
-    if (s->use_communication && s->grp_op_test == TRUE) {
+    if (s->use_communication && s->grp_op_test == true) {
 
-        if (np_rd_send(s) == FALSE)
+        if (np_rd_send(s) == false)
             TEST_ERROR;
         dbgf(1, "Reader: finish sending back the message: %d\n", s->np_notify);
     }
 
-    return TRUE;
+    return true;
 
 error:
 
@@ -7335,12 +7323,12 @@ error:
     H5E_END_TRY;
 
     /* The reader sends an error message to the writer to stop the test.*/
-    if (s->use_communication && s->grp_op_test == TRUE)
-        np_send_error(s, FALSE);
+    if (s->use_communication && s->grp_op_test == true)
+        np_send_error(s, false);
 
 error2:
 
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -7358,8 +7346,8 @@ error2:
  *              used to generate the group name.
  *
  *              hbool_t dense_to_compact
- *              TRUE if this function is used to test the transition from dense to
- *              compact, FALSE if the test is from compact to dense.
+ *              true if this function is used to test the transition from dense to
+ *              compact, false if the test is from compact to dense.
  *
  * Return:      Success:    the group ID
  *              Failure:    -1
@@ -7384,9 +7372,9 @@ vrfy_create_group_id(state_t *s, unsigned int which, hbool_t dense_to_compact)
      * for a few ticks or stop the test if the received message
      * is an error message.
      */
-    if (s->use_communication && TRUE == s->grp_op_test) {
+    if (s->use_communication && true == s->grp_op_test) {
 
-        if (FALSE == np_rd_receive(s)) {
+        if (false == np_rd_receive(s)) {
             H5_FAILED();
             AT();
             goto error2;
@@ -7465,9 +7453,9 @@ vrfy_create_group_id(state_t *s, unsigned int which, hbool_t dense_to_compact)
     dbgf(2, "Storage info is %d\n", group_info.storage_type);
 
     /* Reader sends an OK message back to the reader */
-    if (s->use_communication && s->grp_op_test == TRUE) {
+    if (s->use_communication && s->grp_op_test == true) {
 
-        if (np_rd_send(s) == FALSE)
+        if (np_rd_send(s) == false)
             TEST_ERROR;
         dbgf(1, "Reader: finish sending back the message: %d\n", s->np_notify);
     }
@@ -7484,8 +7472,8 @@ error:
     H5E_END_TRY;
 
     /* The reader sends an error message to the writer to stop the test.*/
-    if (s->use_communication && s->grp_op_test == TRUE)
-        np_send_error(s, FALSE);
+    if (s->use_communication && s->grp_op_test == true)
+        np_send_error(s, false);
 
 error2:
 
@@ -7504,8 +7492,8 @@ error2:
  *              hid_t g
  *              The ID of the group to be closed.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is used by the link storage transit functions.
  *-------------------------------------------------------------------------
@@ -7519,9 +7507,9 @@ vrfy_close_group_id(state_t *s, hid_t g)
      * for a few ticks or stop the test if the received message
      * is an error message.
      */
-    if (s->use_communication && TRUE == s->grp_op_test) {
+    if (s->use_communication && true == s->grp_op_test) {
 
-        if (FALSE == np_rd_receive(s)) {
+        if (false == np_rd_receive(s)) {
             H5_FAILED();
             AT();
             goto error2;
@@ -7536,23 +7524,23 @@ vrfy_close_group_id(state_t *s, hid_t g)
     }
 
     /* Reader sends an OK message back to the reader */
-    if (s->use_communication && s->grp_op_test == TRUE) {
+    if (s->use_communication && s->grp_op_test == true) {
 
-        if (np_rd_send(s) == FALSE)
+        if (np_rd_send(s) == false)
             TEST_ERROR;
         dbgf(1, "Reader: finish sending back the message: %d\n", s->np_notify);
     }
 
-    return TRUE;
+    return true;
 
 error:
 
     /* The reader sends an error message to the writer to stop the test.*/
-    if (s->use_communication && s->grp_op_test == TRUE)
-        np_send_error(s, FALSE);
+    if (s->use_communication && s->grp_op_test == true)
+        np_send_error(s, false);
 
 error2:
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -7576,8 +7564,8 @@ error2:
  *              1: link storage is expected to be compact.
  *              >1: link storage is expected to be dense.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        Helper function to check if links are inserted or deleted.
  *              The link storage is also checked.
@@ -7596,9 +7584,9 @@ vrfy_one_link_exist(state_t *s, hid_t obj_id, const char *name, hbool_t expect_e
      * for a few ticks or stop the test if the received message
      * is an error message.
      */
-    if (s->use_communication && TRUE == s->grp_op_test) {
+    if (s->use_communication && true == s->grp_op_test) {
 
-        if (FALSE == np_rd_receive(s)) {
+        if (false == np_rd_receive(s)) {
             H5_FAILED();
             AT();
             goto error2;
@@ -7614,13 +7602,13 @@ vrfy_one_link_exist(state_t *s, hid_t obj_id, const char *name, hbool_t expect_e
         TEST_ERROR;
     }
     else if (link_exists == 1) {
-        if (expect_exist == FALSE) {
+        if (expect_exist == false) {
             HDprintf("This link should be moved or deleted but it still exists.\n");
             TEST_ERROR;
         }
     }
     else if (link_exists == 0) {
-        if (expect_exist == TRUE) {
+        if (expect_exist == true) {
             HDprintf("This link should exist but it is moved or deleted.\n");
             TEST_ERROR;
         }
@@ -7653,24 +7641,24 @@ vrfy_one_link_exist(state_t *s, hid_t obj_id, const char *name, hbool_t expect_e
     }
 
     /* Reader sends an OK message back to the reader */
-    if (s->use_communication && s->grp_op_test == TRUE) {
-        if (np_rd_send(s) == FALSE) {
+    if (s->use_communication && s->grp_op_test == true) {
+        if (np_rd_send(s) == false) {
             TEST_ERROR;
         }
         dbgf(1, "Reader: finish sending back the message: %d\n", s->np_notify);
     }
 
-    return TRUE;
+    return true;
 
 error:
 
     /* The reader sends an error message to the writer to stop the test.*/
-    if (s->use_communication && s->grp_op_test == TRUE)
-        np_send_error(s, FALSE);
+    if (s->use_communication && s->grp_op_test == true)
+        np_send_error(s, false);
 
 error2:
 
-    return FALSE;
+    return false;
 }
 #endif /* H5_USE_SOCKETS */
 
@@ -7687,8 +7675,8 @@ error2:
  *              The number of iterations for group creation
  *              used to generate the group name.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the verify_group_operations() function.
  *-------------------------------------------------------------------------
@@ -7698,13 +7686,13 @@ static hbool_t
 vrfy_delete_group(state_t *s, unsigned int which)
 {
 
-    hbool_t ret_value = FALSE;
+    hbool_t ret_value = false;
     char    name[sizeof("/group-9999999999")];
 
     ret_value = vrfy_create_group(s, which);
-    if (ret_value == TRUE) {
+    if (ret_value == true) {
         esnprintf(name, sizeof(name), "/group-%u", which);
-        ret_value = vrfy_one_link_exist(s, s->file, name, FALSE, 0);
+        ret_value = vrfy_one_link_exist(s, s->file, name, false, 0);
     }
 
     return ret_value;
@@ -7732,8 +7720,8 @@ vrfy_delete_group(state_t *s, unsigned int which)
  *              unsigned int which
  *              The number of iterations for group creation
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the verify_move_group() function.
  *-------------------------------------------------------------------------
@@ -7752,9 +7740,9 @@ vrfy_move_one_group(state_t *s, hid_t obj_id, const char *name, const char *newn
      * for a few ticks or stop the test if the received message
      * is an error message.
      */
-    if (s->use_communication && TRUE == s->grp_op_test) {
+    if (s->use_communication && true == s->grp_op_test) {
 
-        if (FALSE == sock_rd_receive(s)) {
+        if (false == sock_rd_receive(s)) {
             H5_FAILED();
             AT();
             goto error2;
@@ -7810,15 +7798,15 @@ vrfy_move_one_group(state_t *s, hid_t obj_id, const char *name, const char *newn
     }
 
     /* Reader sends an OK message back to the reader */
-    if (s->use_communication && s->grp_op_test == TRUE) {
+    if (s->use_communication && s->grp_op_test == true) {
 
-        if (sock_rd_send(s) == FALSE) {
+        if (sock_rd_send(s) == false) {
             TEST_ERROR;
         }
         dbgf(1, "Reader: finish sending back the message: %d\n", s->sock.notify);
     }
 
-    return TRUE;
+    return true;
 
 error:
 
@@ -7829,12 +7817,12 @@ error:
     H5E_END_TRY;
 
     /* The reader sends an error message to the writer to stop the test.*/
-    if (s->use_communication && s->grp_op_test == TRUE)
+    if (s->use_communication && s->grp_op_test == true)
         sock_send_error(s);
 
 error2:
 
-    return FALSE;
+    return false;
 }
 #else  /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
@@ -7858,8 +7846,8 @@ error2:
  *              unsigned int which
  *              The number of iterations for group creation
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the verify_move_group() function.
  *-------------------------------------------------------------------------
@@ -7878,9 +7866,9 @@ vrfy_move_one_group(state_t *s, hid_t obj_id, const char *name, const char *newn
      * for a few ticks or stop the test if the received message
      * is an error message.
      */
-    if (s->use_communication && TRUE == s->grp_op_test) {
+    if (s->use_communication && true == s->grp_op_test) {
 
-        if (FALSE == np_rd_receive(s)) {
+        if (false == np_rd_receive(s)) {
             H5_FAILED();
             AT();
             goto error2;
@@ -7936,15 +7924,15 @@ vrfy_move_one_group(state_t *s, hid_t obj_id, const char *name, const char *newn
     }
 
     /* Reader sends an OK message back to the reader */
-    if (s->use_communication && s->grp_op_test == TRUE) {
+    if (s->use_communication && s->grp_op_test == true) {
 
-        if (np_rd_send(s) == FALSE) {
+        if (np_rd_send(s) == false) {
             TEST_ERROR;
         }
         dbgf(1, "Reader: finish sending back the message: %d\n", s->np_notify);
     }
 
-    return TRUE;
+    return true;
 
 error:
 
@@ -7955,12 +7943,12 @@ error:
     H5E_END_TRY;
 
     /* The reader sends an error message to the writer to stop the test.*/
-    if (s->use_communication && s->grp_op_test == TRUE)
-        np_send_error(s, FALSE);
+    if (s->use_communication && s->grp_op_test == true)
+        np_send_error(s, false);
 
 error2:
 
-    return FALSE;
+    return false;
 }
 #endif /* H5_USE_SOCKETS */
 /*-------------------------------------------------------------------------
@@ -7976,8 +7964,8 @@ error2:
  *              The number of iterations for group creation
  *              used to generate the group name.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the verify_group_operations() function.
  *-------------------------------------------------------------------------
@@ -7990,7 +7978,7 @@ vrfy_move_group(state_t *s, unsigned int which)
     char    name[sizeof("/group-9999999999")];
     char    new_name[sizeof("/new-group-9999999999")];
     hbool_t ret_value = vrfy_create_group(s, which);
-    if (ret_value == TRUE) {
+    if (ret_value == true) {
         esnprintf(name, sizeof(name), "/group-%u", which);
         esnprintf(new_name, sizeof(new_name), "/new-group-%u", which);
         ret_value = vrfy_move_one_group(s, s->file, name, new_name, which);
@@ -8012,8 +8000,8 @@ vrfy_move_group(state_t *s, unsigned int which)
  *              The number of iterations for group creation
  *              used to generate the group name.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the verify_group_operations() function.
  *-------------------------------------------------------------------------
@@ -8023,18 +8011,18 @@ static hbool_t
 vrfy_insert_links(state_t *s, unsigned int which)
 {
 
-    hbool_t ret_value = FALSE;
+    hbool_t ret_value = false;
     char    hd_name[sizeof("/hd-group-9999999999")];
     char    st_name[sizeof("/st-group-9999999999")];
 
     ret_value = vrfy_create_group(s, which);
 
-    if (ret_value == TRUE) {
+    if (ret_value == true) {
         esnprintf(hd_name, sizeof(hd_name), "/hd-group-%u", which);
         esnprintf(st_name, sizeof(st_name), "/st-group-%u", which);
-        ret_value = vrfy_one_link_exist(s, s->file, hd_name, TRUE, 0);
-        if (ret_value == TRUE)
-            ret_value = vrfy_one_link_exist(s, s->file, st_name, TRUE, 0);
+        ret_value = vrfy_one_link_exist(s, s->file, hd_name, true, 0);
+        if (ret_value == true)
+            ret_value = vrfy_one_link_exist(s, s->file, st_name, true, 0);
     }
 
     return ret_value;
@@ -8053,8 +8041,8 @@ vrfy_insert_links(state_t *s, unsigned int which)
  *              The number of iterations for group creation
  *              used to generate the group name.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the verify_group_operations() function.
  *-------------------------------------------------------------------------
@@ -8064,7 +8052,7 @@ static hbool_t
 vrfy_delete_links(state_t *s, unsigned int which)
 {
 
-    hbool_t ret_value = FALSE;
+    hbool_t ret_value = false;
     char    hd_name[sizeof("/hd-group-9999999999")];
     char    st_name[sizeof("/st-group-9999999999")];
 
@@ -8072,12 +8060,12 @@ vrfy_delete_links(state_t *s, unsigned int which)
     ret_value = vrfy_insert_links(s, which);
 
     /* Then if these links are deleted correctly. */
-    if (ret_value == TRUE) {
+    if (ret_value == true) {
         esnprintf(hd_name, sizeof(hd_name), "/hd-group-%u", which);
         esnprintf(st_name, sizeof(st_name), "/st-group-%u", which);
-        ret_value = vrfy_one_link_exist(s, s->file, hd_name, FALSE, 0);
-        if (ret_value == TRUE)
-            ret_value = vrfy_one_link_exist(s, s->file, st_name, FALSE, 0);
+        ret_value = vrfy_one_link_exist(s, s->file, hd_name, false, 0);
+        if (ret_value == true)
+            ret_value = vrfy_one_link_exist(s, s->file, st_name, false, 0);
     }
 
     return ret_value;
@@ -8097,8 +8085,8 @@ vrfy_delete_links(state_t *s, unsigned int which)
  *              The number of iterations for group creation
  *              used to generate the group name.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the verify_group_operations() function.
  *-------------------------------------------------------------------------
@@ -8112,29 +8100,29 @@ vrfy_transit_storage_compact_to_dense(state_t *s, unsigned int which)
     char  hd_name[sizeof("hd-group-9999999999")];
     char  st_name[sizeof("st-group-9999999999")];
 
-    g = vrfy_create_group_id(s, which, FALSE);
+    g = vrfy_create_group_id(s, which, false);
     if (g < 0) {
         HDprintf("verify create_group_id failed\n");
         TEST_ERROR;
     }
 
     esnprintf(hd_name, sizeof(hd_name), "hd-group-%u", which);
-    if (vrfy_one_link_exist(s, g, hd_name, TRUE, 1) == FALSE) {
+    if (vrfy_one_link_exist(s, g, hd_name, true, 1) == false) {
         HDprintf("verify the compact storage failed for 'link compact to dense' test\n");
         TEST_ERROR;
     }
 
     esnprintf(st_name, sizeof(st_name), "st-group-%u", which);
-    if (vrfy_one_link_exist(s, g, st_name, TRUE, 2) == FALSE) {
+    if (vrfy_one_link_exist(s, g, st_name, true, 2) == false) {
         HDprintf("verify the dense link storage failed for 'link compact to dense' test\n");
         TEST_ERROR;
     }
 
-    if (vrfy_close_group_id(s, g) == FALSE) {
+    if (vrfy_close_group_id(s, g) == false) {
         HDprintf("verify the group close for 'link compact to dense' test\n");
         TEST_ERROR;
     }
-    return TRUE;
+    return true;
 
 error:
     H5E_BEGIN_TRY
@@ -8142,7 +8130,7 @@ error:
         H5Gclose(g);
     }
     H5E_END_TRY;
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -8159,8 +8147,8 @@ error:
  *              The number of iterations for group creation
  *              used to generate the group name.
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the verify_group_operations() function.
  *-------------------------------------------------------------------------
@@ -8175,7 +8163,7 @@ vrfy_transit_storage_dense_to_compact(state_t *s, unsigned int which)
     char  st_name[sizeof("st-group-9999999999")];
     char  st2_name[sizeof("st2-group-9999999999")];
 
-    g = vrfy_create_group_id(s, which, TRUE);
+    g = vrfy_create_group_id(s, which, true);
     if (g < 0) {
         HDprintf("verify create_group_id failed\n");
         TEST_ERROR;
@@ -8183,42 +8171,42 @@ vrfy_transit_storage_dense_to_compact(state_t *s, unsigned int which)
 
     /* Add a link, verify it is still the compact storage */
     esnprintf(hd_name, sizeof(hd_name), "hd-group-%u", which);
-    if (vrfy_one_link_exist(s, g, hd_name, TRUE, 1) == FALSE) {
+    if (vrfy_one_link_exist(s, g, hd_name, true, 1) == false) {
         HDprintf("verify the compact storage failed for 'link compact to dense' test\n");
         TEST_ERROR;
     }
 
     /* Add another link, verify it is still the compact storage */
     esnprintf(st_name, sizeof(st_name), "st-group-%u", which);
-    if (vrfy_one_link_exist(s, g, st_name, TRUE, 1) == FALSE) {
+    if (vrfy_one_link_exist(s, g, st_name, true, 1) == false) {
         HDprintf("verify the compact link storage failed for 'link compact to dense' test\n");
         TEST_ERROR;
     }
 
     /* Add the third link, verify it becomes the dense storage */
     esnprintf(st2_name, sizeof(st2_name), "st2-group-%u", which);
-    if (vrfy_one_link_exist(s, g, st2_name, TRUE, 2) == FALSE) {
+    if (vrfy_one_link_exist(s, g, st2_name, true, 2) == false) {
         HDprintf("verify the dense link storage failed for 'link compact to dense' test\n");
         TEST_ERROR;
     }
 
     /* Remove a link, verify the link doesn't exist and still dense storage */
-    if (vrfy_one_link_exist(s, g, st_name, FALSE, 2) == FALSE) {
+    if (vrfy_one_link_exist(s, g, st_name, false, 2) == false) {
         HDprintf("verify the dense link storage failed for 'link compact to dense' test\n");
         TEST_ERROR;
     }
 
     /* Remove a link, verify the link doesn't exist and it becomes compact storage */
-    if (vrfy_one_link_exist(s, g, st2_name, FALSE, 1) == FALSE) {
+    if (vrfy_one_link_exist(s, g, st2_name, false, 1) == false) {
         HDprintf("verify the compact link storage failed for 'link compact to dense' test\n");
         TEST_ERROR;
     }
 
-    if (vrfy_close_group_id(s, g) == FALSE) {
+    if (vrfy_close_group_id(s, g) == false) {
         HDprintf("verify the group close for 'link compact to dense' test\n");
         TEST_ERROR;
     }
-    return TRUE;
+    return true;
 
 error:
     H5E_BEGIN_TRY
@@ -8226,7 +8214,7 @@ error:
         H5Gclose(g);
     }
     H5E_END_TRY;
-    return FALSE;
+    return false;
 }
 
 /*-------------------------------------------------------------------------
@@ -8244,8 +8232,8 @@ error:
  *              The number of iterations for group creation
  *
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  * Note:        This is called by the main() function.
  *-------------------------------------------------------------------------
@@ -8254,7 +8242,7 @@ error:
 static hbool_t
 verify_group_operations(state_t *s, unsigned int which)
 {
-    hbool_t ret_value    = FALSE;
+    hbool_t ret_value    = false;
     char    test_pattern = s->grp_op_pattern;
 
     switch (test_pattern) {
@@ -8293,12 +8281,12 @@ main(int argc, char **argv)
 {
     hid_t                  fapl = H5I_INVALID_HID, fcpl = H5I_INVALID_HID;
     unsigned               step;
-    hbool_t                writer = FALSE;
-    state_t *              s      = NULL;
-    const char *           personality;
-    H5F_vfd_swmr_config_t *config                = NULL;
-    hbool_t                wg_ret = FALSE;
-    hbool_t                vg_ret = FALSE;
+    hbool_t                writer = false;
+    state_t               *s      = NULL;
+    const char            *personality;
+    H5F_vfd_swmr_config_t *config = NULL;
+    hbool_t                wg_ret = false;
+    hbool_t                vg_ret = false;
 
     if (NULL == (s = HDcalloc(1, sizeof(state_t))))
         TEST_ERROR;
@@ -8313,9 +8301,9 @@ main(int argc, char **argv)
     personality = HDstrstr(s->progname, "vfd_swmr_group_");
 
     if (personality != NULL && HDstrcmp(personality, "vfd_swmr_group_writer") == 0)
-        writer = TRUE;
+        writer = true;
     else if (personality != NULL && HDstrcmp(personality, "vfd_swmr_group_reader") == 0)
-        writer = FALSE;
+        writer = false;
     else {
         HDprintf("unknown personality, expected vfd_swmr_group_{reader,writer}\n");
         TEST_ERROR;
@@ -8324,7 +8312,7 @@ main(int argc, char **argv)
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
      * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
      * md_file_path, md_file_name, updater_file_path */
-    init_vfd_swmr_config(config, s->tick_len, s->max_lag, FALSE, writer, TRUE, FALSE, TRUE, 128, "./",
+    init_vfd_swmr_config(config, s->tick_len, s->max_lag, false, writer, true, false, true, 128, "./",
                          "group-shadow", NULL);
 
     /* If old-style option is chosen, use the earliest file format(H5F_LIBVER_EARLIEST)
@@ -8332,7 +8320,7 @@ main(int argc, char **argv)
      * vfd_swmr_create_fapl. Otherwise, the latest file format(H5F_LIBVER_LATEST)
      * should be used as the second parameter of H5Pset_libver_bound().
      * Also pass the use_vfd_swmr, only_meta_page, page_buf_size, config to vfd_swmr_create_fapl().*/
-    if ((fapl = vfd_swmr_create_fapl(!s->old_style_grp, s->use_vfd_swmr, TRUE, s->pbs, config)) < 0) {
+    if ((fapl = vfd_swmr_create_fapl(!s->old_style_grp, s->use_vfd_swmr, true, s->pbs, config)) < 0) {
         HDprintf("vfd_swmr_create_fapl failed\n");
         TEST_ERROR;
     }
@@ -8383,10 +8371,10 @@ main(int argc, char **argv)
 
             wg_ret = group_operations(s, step);
 
-            if (wg_ret == FALSE) {
+            if (wg_ret == false) {
 
                 /* At communication interval, notifies the reader about the failure and quit */
-                if (s->use_communication && s->attr_test != TRUE && s->grp_op_test != TRUE &&
+                if (s->use_communication && s->attr_test != true && s->grp_op_test != true &&
                     step % s->csteps == 0)
                     sock_send_error(s);
                 HDprintf("write_group failed at step %d\n", step);
@@ -8395,10 +8383,10 @@ main(int argc, char **argv)
             else {
 
                 /* At communication interval, notifies the reader and waits for its response */
-                if (s->use_communication && s->attr_test != TRUE && s->grp_op_test != TRUE &&
+                if (s->use_communication && s->attr_test != true && s->grp_op_test != true &&
                     step % s->csteps == 0) {
 
-                    if (sock_wr_send_receive(s) == FALSE) {
+                    if (sock_wr_send_receive(s) == false) {
                         HDprintf("writer: write group - verification failed.\n");
                         TEST_ERROR;
                     }
@@ -8412,25 +8400,25 @@ main(int argc, char **argv)
 
             /* At communication interval, waits for the writer to finish creation before starting verification
              */
-            if (s->use_communication && s->attr_test != TRUE && s->grp_op_test != TRUE &&
+            if (s->use_communication && s->attr_test != true && s->grp_op_test != true &&
                 step % s->csteps == 0) {
-                if (FALSE == sock_rd_receive(s)) {
+                if (false == sock_rd_receive(s)) {
                     TEST_ERROR;
                 }
             }
 
             /* For the default test, wait for a few ticks for the update to happen */
-            if (s->use_communication && s->attr_test == FALSE)
+            if (s->use_communication && s->attr_test == false)
                 decisleep(config->tick_len * s->update_interval);
 
             vg_ret = verify_group_operations(s, step);
 
-            if (vg_ret == FALSE) {
+            if (vg_ret == false) {
 
                 HDprintf("verify_group_operations failed\n");
 
                 /* At communication interval, tell the writer about the failure and exit */
-                if (s->use_communication && s->attr_test != TRUE && s->grp_op_test != TRUE &&
+                if (s->use_communication && s->attr_test != true && s->grp_op_test != true &&
                     step % s->csteps == 0)
                     sock_send_error(s);
                 TEST_ERROR;
@@ -8439,9 +8427,9 @@ main(int argc, char **argv)
 
                 /* Send back the same notify value for acknowledgement to tell the writer
                  * move to the next step. */
-                if (s->use_communication && s->attr_test != TRUE && s->grp_op_test != TRUE &&
+                if (s->use_communication && s->attr_test != true && s->grp_op_test != true &&
                     step % s->csteps == 0) {
-                    if (sock_rd_send(s) == FALSE) {
+                    if (sock_rd_send(s) == false) {
                         TEST_ERROR;
                     }
                 }
@@ -8497,22 +8485,22 @@ error:
 
     return EXIT_FAILURE;
 }
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 int
 main(int argc, char **argv)
 {
     hid_t                  fapl = H5I_INVALID_HID, fcpl = H5I_INVALID_HID;
     unsigned               step;
-    hbool_t                writer = FALSE;
-    state_t *              s      = NULL;
-    const char *           personality;
+    hbool_t                writer = false;
+    state_t               *s      = NULL;
+    const char            *personality;
     H5F_vfd_swmr_config_t *config                = NULL;
-    const char *           fifo_writer_to_reader = "./fifo_group_writer_to_reader";
-    const char *           fifo_reader_to_writer = "./fifo_group_reader_to_writer";
+    const char            *fifo_writer_to_reader = "./fifo_group_writer_to_reader";
+    const char            *fifo_reader_to_writer = "./fifo_group_reader_to_writer";
     int                    fd_writer_to_reader = -1, fd_reader_to_writer = -1;
     int                    notify = 0, verify = 0;
-    hbool_t                wg_ret = FALSE;
-    hbool_t                vg_ret = FALSE;
+    hbool_t                wg_ret = false;
+    hbool_t                vg_ret = false;
 
     if (NULL == (s = HDcalloc(1, sizeof(state_t))))
         TEST_ERROR;
@@ -8527,9 +8515,9 @@ main(int argc, char **argv)
     personality = HDstrstr(s->progname, "vfd_swmr_group_");
 
     if (personality != NULL && HDstrcmp(personality, "vfd_swmr_group_writer") == 0)
-        writer = TRUE;
+        writer = true;
     else if (personality != NULL && HDstrcmp(personality, "vfd_swmr_group_reader") == 0)
-        writer = FALSE;
+        writer = false;
     else {
         HDprintf("unknown personality, expected vfd_swmr_group_{reader,writer}\n");
         TEST_ERROR;
@@ -8538,7 +8526,7 @@ main(int argc, char **argv)
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
      * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
      * md_file_path, md_file_name, updater_file_path */
-    init_vfd_swmr_config(config, s->tick_len, s->max_lag, FALSE, writer, TRUE, FALSE, TRUE, 128, "./",
+    init_vfd_swmr_config(config, s->tick_len, s->max_lag, false, writer, true, false, true, 128, "./",
                          "group-shadow", NULL);
 
     /* If old-style option is chosen, use the earliest file format(H5F_LIBVER_EARLIEST)
@@ -8546,7 +8534,7 @@ main(int argc, char **argv)
      * vfd_swmr_create_fapl. Otherwise, the latest file format(H5F_LIBVER_LATEST)
      * should be used as the second parameter of H5Pset_libver_bound().
      * Also pass the use_vfd_swmr, only_meta_page, page_buf_size, config to vfd_swmr_create_fapl().*/
-    if ((fapl = vfd_swmr_create_fapl(!s->old_style_grp, s->use_vfd_swmr, TRUE, s->pbs, config)) < 0) {
+    if ((fapl = vfd_swmr_create_fapl(!s->old_style_grp, s->use_vfd_swmr, true, s->pbs, config)) < 0) {
         HDprintf("vfd_swmr_create_fapl failed\n");
         TEST_ERROR;
     }
@@ -8621,22 +8609,22 @@ main(int argc, char **argv)
 
             wg_ret = group_operations(s, step);
 
-            if (wg_ret == FALSE) {
+            if (wg_ret == false) {
 
                 /* At communication interval, notifies the reader about the failure and quit */
-                if (s->use_communication && s->attr_test != TRUE && s->grp_op_test != TRUE &&
+                if (s->use_communication && s->attr_test != true && s->grp_op_test != true &&
                     step % s->csteps == 0)
-                    np_send_error(s, TRUE);
+                    np_send_error(s, true);
                 HDprintf("write_group failed at step %d\n", step);
                 TEST_ERROR;
             }
             else {
 
                 /* At communication interval, notifies the reader and waits for its response */
-                if (s->use_communication && s->attr_test != TRUE && s->grp_op_test != TRUE &&
+                if (s->use_communication && s->attr_test != true && s->grp_op_test != true &&
                     step % s->csteps == 0) {
 
-                    if (np_wr_send_receive(s) == FALSE) {
+                    if (np_wr_send_receive(s) == false) {
                         HDprintf("writer: write group - verification failed.\n");
                         TEST_ERROR;
                     }
@@ -8650,36 +8638,36 @@ main(int argc, char **argv)
 
             /* At communication interval, waits for the writer to finish creation before starting verification
              */
-            if (s->use_communication && s->attr_test != TRUE && s->grp_op_test != TRUE &&
+            if (s->use_communication && s->attr_test != true && s->grp_op_test != true &&
                 step % s->csteps == 0) {
-                if (FALSE == np_rd_receive(s)) {
+                if (false == np_rd_receive(s)) {
                     TEST_ERROR;
                 }
             }
 
             /* For the default test, wait for a few ticks for the update to happen */
-            if (s->use_communication && s->attr_test == FALSE)
+            if (s->use_communication && s->attr_test == false)
                 decisleep(config->tick_len * s->update_interval);
 
             vg_ret = verify_group_operations(s, step);
 
-            if (vg_ret == FALSE) {
+            if (vg_ret == false) {
 
                 HDprintf("verify_group_operations failed\n");
 
                 /* At communication interval, tell the writer about the failure and exit */
-                if (s->use_communication && s->attr_test != TRUE && s->grp_op_test != TRUE &&
+                if (s->use_communication && s->attr_test != true && s->grp_op_test != true &&
                     step % s->csteps == 0)
-                    np_send_error(s, FALSE);
+                    np_send_error(s, false);
                 TEST_ERROR;
             }
             else {
 
                 /* Send back the same notify value for acknowledgement to tell the writer
                  * move to the next step. */
-                if (s->use_communication && s->attr_test != TRUE && s->grp_op_test != TRUE &&
+                if (s->use_communication && s->attr_test != true && s->grp_op_test != true &&
                     step % s->csteps == 0) {
-                    if (np_rd_send(s) == FALSE) {
+                    if (np_rd_send(s) == false) {
                         TEST_ERROR;
                     }
                 }

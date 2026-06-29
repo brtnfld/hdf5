@@ -1,11 +1,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -38,7 +37,6 @@ LinkAccPropList *LinkAccPropList::DEFAULT_ = 0;
 //              If LinkAccPropList::DEFAULT_ already points to an allocated
 //              object, throw a PropListIException.  This scenario should not
 //              happen.
-// Programmer   Binh-Minh Ribler - December, 2016
 //--------------------------------------------------------------------------
 LinkAccPropList *
 LinkAccPropList::getConstant()
@@ -65,7 +63,6 @@ LinkAccPropList::getConstant()
 // Purpose:     Deletes the constant object that LinkAccPropList::DEFAULT_
 //              points to.
 // exception    H5::PropListIException
-// Programmer   Binh-Minh Ribler - December, 2016
 //--------------------------------------------------------------------------
 void
 LinkAccPropList::deleteConstants()
@@ -83,7 +80,6 @@ const LinkAccPropList &LinkAccPropList::DEFAULT = *getConstant();
 //--------------------------------------------------------------------------
 // Function:    Default Constructor
 ///\brief       Creates a file access property list
-// Programmer   Binh-Minh Ribler - December, 2016
 //--------------------------------------------------------------------------
 LinkAccPropList::LinkAccPropList() : PropList(H5P_LINK_ACCESS)
 {
@@ -93,7 +89,6 @@ LinkAccPropList::LinkAccPropList() : PropList(H5P_LINK_ACCESS)
 // Function:    LinkAccPropList copy constructor
 ///\brief       Copy Constructor: same HDF5 object as \a original
 ///\param       original - IN: LinkAccPropList instance to copy
-// Programmer   Binh-Minh Ribler - December, 2016
 //--------------------------------------------------------------------------
 LinkAccPropList::LinkAccPropList(const LinkAccPropList &original) : PropList(original)
 {
@@ -103,7 +98,6 @@ LinkAccPropList::LinkAccPropList(const LinkAccPropList &original) : PropList(ori
 // Function:    LinkAccPropList overloaded constructor
 ///\brief       Creates a file access property list using the id of an
 ///             existing one.
-// Programmer   Binh-Minh Ribler - December, 2016
 //--------------------------------------------------------------------------
 LinkAccPropList::LinkAccPropList(const hid_t plist_id) : PropList(plist_id)
 {
@@ -116,7 +110,6 @@ LinkAccPropList::LinkAccPropList(const hid_t plist_id) : PropList(plist_id)
 ///             traversal.
 ///
 ///\exception   H5::PropListIException
-// Programmer   Binh-Minh Ribler - March 1, 2017
 //--------------------------------------------------------------------------
 void
 LinkAccPropList::setNumLinks(size_t nlinks) const
@@ -134,7 +127,6 @@ LinkAccPropList::setNumLinks(size_t nlinks) const
 ///             traversed before a failure occurs.
 ///
 ///\exception   H5::PropListIException
-// Programmer   Binh-Minh Ribler - March 1, 2017
 //--------------------------------------------------------------------------
 size_t
 LinkAccPropList::getNumLinks() const
@@ -146,15 +138,6 @@ LinkAccPropList::getNumLinks() const
         throw PropListIException("getNumLinks", "H5Pget_nlinks failed");
     }
     return (nlinks);
-}
-
-//--------------------------------------------------------------------------
-// Function:    LinkAccPropList destructor
-///\brief       Noop destructor
-// Programmer   Binh-Minh Ribler - December, 2016
-//--------------------------------------------------------------------------
-LinkAccPropList::~LinkAccPropList()
-{
 }
 
 } // namespace H5

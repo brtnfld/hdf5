@@ -1,258 +1,363 @@
 name: hdf5 dev CI
 
-# Controls when the action will run. Triggers the workflow on push or pull request
+# Triggers the workflow on a call from another workflow
 on:
-  workflow_dispatch:
-  push:
-    branches: [ develop, hdf5_1_12, hdf5_1_10, hdf5_1_8, feature/vfd_swmr]
-    paths-ignore:
-    - '.github/CODEOWNERS'
-    - '.github/FUNDING.yml'
-    - 'doc/**'
-    - 'release_docs/**'
-    - 'ACKNOWLEDGEMENTS'
-    - 'COPYING**'
-    - '**.md'
-    
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+  workflow_call:
+    inputs:
+      cmake_version:
+        description: "3.26.0 or later, latest"
+        required: true
+        type: string
+      thread_safety:
+        description: "TS or empty"
+        required: true
+        type: string
+      concurrent:
+        description: "CC or empty"
+        required: true
+        type: string
+      build_mode:
+        description: "release vs. debug build"
+        required: true
+        type: string
+      save_binary:
+        description: "binary-ext-name or missing"
+        required: false
+        default: "skip"
+        type: string
+      java_version:
+        description: "Java version for testing (11, 17, 21, 24, latest, auto)"
+        required: false
+        default: "auto"
+        type: string
+      force_java_implementation:
+        description: "Force specific Java implementation (auto, ffm, jni)"
+        required: false
+        default: "jni"
+        type: string
+      win_runner:
+        description: "Windows runner version to use (windows-2022, windows-latest, etc.)"
+        required: false
+        default: "windows-latest"
+        type: string
+      win_vs_generator:
+        description: "CMake generator to use for Visual Studio"
+        required: false
+        default: "Visual Studio 18 2026"
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  CTEST_OUTPUT_ON_FAILURE: 1
+
 jobs:
-  # This workflow contains a single job called "build"
-  build:
+
+  # A workflow that builds the library and runs all the tests
+  Build_and_test:
     strategy:
-#      fail-fast: false
+      # The current matrix has one dimensions:
+      #
+      # * config name
+      #
+      # Most configuration information is added via the 'include' mechanism,
+      # which will append the key-value pairs in the configuration where the
+      # names match.
       matrix:
-        name: ["Windows Latest MSVC", "Ubuntu Latest GCC", "Ubuntu Debug GCC", "macOS Latest Clang", "Ubuntu Autotools GCC", "Ubuntu Debug Autotools GCC", "-Werror Ubuntu Debug Autotools GCC", "Windows TS MSVC", "Ubuntu TS GCC", "TS Debug GCC", "macOS TS Clang", "TS Autotools GCC"]
+        name:
+          - "Windows MSVC"
+          - "Ubuntu gcc"
+          - "MacOS Clang"
+
+        # This is where we list the bulk of the options for each configuration.
+        # The key-value pair values are usually appropriate for being CMake
+        # configure values, so be aware of that.
+
         include:
-          - name: "Windows Latest MSVC"
-            artifact: "Windows-MSVC.tar.xz"
-            os: windows-2022
-            build_type: "Release"
-            toolchain: ""
+
+          # Windows w/ MSVC
+          #
+          # No Fortran, parallel, or VFDs that rely on POSIX things
+          - name: "Windows MSVC"
+            ostype: windows
+            os: ${{ inputs.win_runner }}
+            shared: ON
             cpp: ON
             fortran: OFF
             java: ON
-            ts: OFF
-            hl: ON
+            docs: ON
+            libaecfc: ON
+            localaec: OFF
+            zlibfc: ON
+            localzlib: OFF
             parallel: OFF
-            generator: "-G \"Visual Studio 17 2022\" -A x64"
-            flags: ""
-          - name: "Ubuntu Latest GCC"
-            artifact: "Linux.tar.xz"
+            mirror_vfd: OFF
+            direct_vfd: OFF
+            generator: "-G \"${{ inputs.win_vs_generator }}\" -A x64"
+            run_tests: true
+
+          # Linux (Ubuntu) w/ gcc
+          #
+          - name: "Ubuntu gcc"
+            ostype: ubuntu
             os: ubuntu-latest
-            build_type: "Release"
+            shared: ON
             cpp: ON
             fortran: ON
             java: ON
-            ts: OFF
-            hl: ON
+            docs: ON
+            libaecfc: ON
+            localaec: OFF
+            zlibfc: ON
+            localzlib: OFF
             parallel: OFF
-            toolchain: "config/toolchain/GCC.cmake"
+            mirror_vfd: ON
+            direct_vfd: ON
             generator: "-G Ninja"
-            flags: ""
-          - name: "macOS Latest Clang"
-            artifact: "macOS.tar.xz"
+            run_tests: true
+
+          # MacOS w/ Clang
+          #
+          - name: "MacOS Clang"
+            ostype: macos
             os: macos-latest
-            build_type: "Release"
+            shared: ON
             cpp: ON
             fortran: OFF
             java: ON
-            ts: OFF
-            hl: ON
+            docs: ON
+            libaecfc: ON
+            localaec: OFF
+            zlibfc: ON
+            localzlib: OFF
             parallel: OFF
-            toolchain: "config/toolchain/clang.cmake"
+            mirror_vfd: ON
+            direct_vfd: OFF
             generator: "-G Ninja"
-            flags: ""
-          - name: "Ubuntu Debug GCC"
-            artifact: "LinuxDBG.tar.xz"
-            os: ubuntu-latest
-            build_type: "Debug"
-            cpp: ON
-            fortran: OFF
-            java: OFF
-            ts: OFF
-            hl: ON
-            parallel: OFF
-            toolchain: "config/toolchain/GCC.cmake"
-            generator: "-G Ninja"
-            flags: ""
-          - name: "Ubuntu Autotools GCC"
-            artifact: "LinuxA.tar.xz"
-            os: ubuntu-latest
-            build_type: "production"
-            cpp: enable
-            fortran: enable
-            java: enable
-            ts: disable
-            hl: enable
-            parallel: disable
-            toolchain: ""
-            generator: "autogen"
-            flags: ""
-          - name: "Ubuntu Debug Autotools GCC"
-            artifact: "LinuxA.tar.xz"
-            os: ubuntu-latest
-            build_type: "debug"
-            cpp: enable
-            fortran: enable
-            java: enable
-            ts: disable
-            hl: enable
-            parallel: disable
-            toolchain: ""
-            generator: "autogen"
-            flags: ""
-          # Build that ensures no new warnings sneak into the library.
-          - name: "-Werror Ubuntu Debug Autotools GCC"
-            artifact: "LinuxA.tar.xz"
-            os: ubuntu-latest
-            build_type: "debug"
-            cpp: disable
-            fortran: disable
-            java: disable
-            ts: disable
-            hl: enable
-            parallel: disable
-            toolchain: ""
-            generator: "autogen"
-            flags: "CFLAGS=-Werror"
-#  Threadsafe runs
-          - name: "Windows TS MSVC"
-            artifact: "Windows-MSVCTS.tar.xz"
-            os: windows-2019
-            build_type: "Release"
-            toolchain: ""
-            cpp: OFF
-            fortran: OFF
-            java: OFF
-            ts: ON
-            hl: OFF
-            parallel: OFF
-            generator: "-G \"Visual Studio 16 2019\" -A x64"
-            flags: ""
-          - name: "Ubuntu TS GCC"
-            artifact: "LinuxTS.tar.xz"
-            os: ubuntu-latest
-            build_type: "Release"
-            cpp: OFF
-            fortran: OFF
-            java: OFF
-            ts: ON
-            hl: OFF
-            parallel: OFF
-            toolchain: "config/toolchain/GCC.cmake"
-            generator: "-G Ninja"
-            flags: ""
-          - name: "macOS TS Clang"
-            artifact: "macOSTS.tar.xz"
-            os: macos-latest
-            build_type: "Release"
-            cpp: OFF
-            fortran: OFF
-            java: OFF
-            ts: ON
-            hl: OFF
-            parallel: OFF
-            toolchain: "config/toolchain/clang.cmake"
-            generator: "-G Ninja"
-            flags: ""
-          - name: "TS Debug GCC"
-            artifact: "LinuxTSDBG.tar.xz"
-            os: ubuntu-latest
-            build_type: "Debug"
-            cpp: OFF
-            fortran: OFF
-            java: OFF
-            ts: ON
-            hl: OFF
-            parallel: OFF
-            toolchain: "config/toolchain/GCC.cmake"
-            generator: "-G Ninja"
-            flags: ""
-          - name: "TS Autotools GCC"
-            artifact: "LinuxATS.tar.xz"
-            os: ubuntu-latest
-            build_type: "production"
-            cpp: disable
-            fortran: disable
-            java: disable
-            ts: enable
-            hl: disable
-            parallel: disable
-            toolchain: ""
-            generator: "autogen"
-            flags: ""
+            run_tests: true
 
-    name: ${{ matrix.name }}
+    # Sets the job's name from the properties
+    name: "${{ matrix.name }}-${{ inputs.build_mode }}-${{ inputs.thread_safety }}-${{ inputs.concurrent }}"
+
+    # Don't run the action if the commit message says to skip CI
+    if: "!contains(github.event.head_commit.message, 'skip-ci')"
+
     # The type of runner that the job will run on
     runs-on: ${{ matrix.os }}
-    if: "!contains(github.event.head_commit.message, 'skip-ci')"
-          
+
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-    - name: Install Dependencies (Linux)
-      run: sudo apt-get install ninja-build
-      if: matrix.os == 'ubuntu-latest'
-    - name: Install Autotools Dependencies (Linux)
-      run: |
-           sudo apt update
-           sudo apt install automake autoconf libtool libtool-bin
-           sudo apt install gcc-11 g++-11 gfortran-11
-           sudo apt install openmpi-bin openmpi-common
-      if: matrix.generator == 'autogen'
-    - name: Install Dependencies (Windows)
-      run: choco install ninja
-      if: matrix.os == 'windows-latest'
-    - name: Install Dependencies (macOS)
-      run: brew install ninja
-      if: matrix.os == 'macos-latest'
-    - name: Set environment for MSVC (Windows)
-      if:  matrix.os == 'windows-latest'
-      run: |
-        # Set these env vars so cmake picks the correct compiler
-        echo "CXX=cl.exe" >> $GITHUB_ENV
-        echo "CC=cl.exe" >> $GITHUB_ENV
-    
-    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-    - name: Get Sources
-      uses: actions/checkout@v2
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Get Sources
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
-    - name: Autotools Configure 
-      if: matrix.generator == 'autogen'
-      run: |
-        sh ./autogen.sh
-        mkdir "${{ runner.workspace }}/build"
-        cd "${{ runner.workspace }}/build"
-        ${{ matrix.flags }} $GITHUB_WORKSPACE/configure --enable-build-mode=${{ matrix.build_type }} --enable-shared --${{ matrix.ts }}-threadsafe --${{ matrix.hl }}-hl --${{ matrix.parallel }}-parallel --${{ matrix.cpp }}-cxx --${{ matrix.fortran }}-fortran --${{ matrix.java }}-java
-      shell: bash
-      env:
-        CC:   gcc-11
-        CXX:  g++-11
-        FC:   gfortran-11
+      - name: Setup Doxygen
+        uses: ./.github/actions/setup-doxygen
 
-    - name: Configure
-      if: matrix.generator != 'autogen'
-      run: |
-        mkdir "${{ runner.workspace }}/build"
-        cd "${{ runner.workspace }}/build"
-        cmake ${{ matrix.generator }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_TOOLCHAIN_FILE=${{ matrix.toolchain }} -DBUILD_SHARED_LIBS=ON -DHDF5_ENABLE_ALL_WARNINGS=ON -DHDF5_ENABLE_THREADSAFE:BOOL=${{ matrix.ts }} -DHDF5_BUILD_HL_LIB:BOOL=${{ matrix.hl }} -DHDF5_ENABLE_PARALLEL:BOOL=${{ matrix.parallel }} -DHDF5_BUILD_CPP_LIB:BOOL=${{ matrix.cpp }} -DHDF5_BUILD_FORTRAN=${{ matrix.fortran }} -DHDF5_BUILD_JAVA=${{ matrix.java }} $GITHUB_WORKSPACE
-      shell: bash
+      #Useful for debugging
+      - name: Dump matrix context
+        run: echo '${{ toJSON(matrix) }}'
 
-    - name: Autotools Build
-      if: matrix.generator == 'autogen'
-      run: make
-      working-directory: ${{ runner.workspace }}/build      
+      - name: Install Dependencies (Linux)
+        run: |
+           sudo apt-get update
+           sudo apt-get install ninja-build graphviz
+           sudo apt install libssl3 libssl-dev libcurl4 libcurl4-openssl-dev
+        if: matrix.ostype == 'ubuntu'
 
-    - name: Build
-      if: matrix.generator != 'autogen'
-      run: cmake --build . --config ${{ matrix.build_type }}
-      working-directory: ${{ runner.workspace }}/build      
+      # CMake gets libaec from fetchcontent
 
-    - name: Autotools Test
-      if: matrix.generator == 'autogen'
-      run: make check
-      working-directory: ${{ runner.workspace }}/build
+      - name: Install CMake
+        uses: lukka/get-cmake@591817e96fcad43505fb4eae36172462abb3a42e # latest
+        with:
+            cmakeVersion: ${{ inputs.cmake_version }}
+            ninjaVersion: latest
 
-    - name: Test
-      if: matrix.generator != 'autogen'
-      run: ctest --build . -C ${{ matrix.build_type }} -V
-      working-directory: ${{ runner.workspace }}/build
+      - name: Check CMake Version
+        shell: bash
+        run: |
+          which cmake
+          cmake --version
+
+      - name: Set up Java (if specified or FFM required)
+        if: inputs.java_version != 'auto' || inputs.force_java_implementation == 'ffm'
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          distribution: ${{ inputs.force_java_implementation == 'ffm' && 'oracle' || 'temurin' }}
+          java-version: |
+            ${{
+              inputs.force_java_implementation == 'ffm' && '25' ||
+              inputs.java_version == 'latest' && '24' ||
+              inputs.java_version
+            }}
+
+      - name: Verify Java Setup
+        if: inputs.java_version != 'auto' || inputs.force_java_implementation == 'ffm'
+        run: |
+          java -version
+          echo "JAVA_HOME=$JAVA_HOME"
+          echo "Selected Java implementation: ${{ inputs.force_java_implementation }}"
+
+      - name: Set environment for MSVC (Windows)
+        run: |
+          # Set these environment variables so CMake picks the correct compiler
+          echo "CXX=cl.exe" >> $GITHUB_ENV
+          echo "CC=cl.exe" >> $GITHUB_ENV
+        if:  matrix.ostype == 'windows'
+
+      - name: Setup jextract (FFM builds only)
+        if: ${{ inputs.force_java_implementation == 'ffm' }}
+        uses: ./.github/actions/setup-jextract
+        with:
+          java-version: '25'
+
+      # CONFIGURE
+      - name: Configure
+        run: |
+          mkdir "${{ runner.workspace }}/build"
+          cd "${{ runner.workspace }}/build"
+          cmake -C $GITHUB_WORKSPACE/config/cmake/cacheinit.cmake \
+            ${{ matrix.generator }} \
+            --log-level=VERBOSE \
+            -DCMAKE_BUILD_TYPE=${{ inputs.build_mode }} \
+            -DBUILD_SHARED_LIBS:BOOL=${{ matrix.shared }} \
+            -DHDF5_ENABLE_ALL_WARNINGS:BOOL=ON \
+            -DHDF5_ENABLE_DOXY_WARNINGS:BOOL=ON \
+            -DHDF5_ENABLE_PARALLEL:BOOL=${{ matrix.parallel }} \
+            -DHDF5_BUILD_CPP_LIB:BOOL=${{ matrix.cpp }} \
+            -DHDF5_BUILD_FORTRAN:BOOL=${{ matrix.fortran }} \
+            -DHDF5_BUILD_JAVA:BOOL=${{ matrix.java }} \
+            -DHDF5_BUILD_DOC:BOOL=${{ matrix.docs }} \
+            -DHDF5_ENABLE_ZLIB_SUPPORT:BOOL=${{ matrix.zlibfc }} \
+            -DHDF5_ENABLE_SZIP_SUPPORT:BOOL=${{ matrix.libaecfc }} \
+            -DLIBAEC_USE_LOCALCONTENT:BOOL=${{ matrix.localaec }} \
+            -DZLIB_USE_LOCALCONTENT:BOOL=${{ matrix.localzlib }} \
+            -DHDF5_TEST_API:BOOL=ON \
+            -DHDF5_TEST_SHELL_SCRIPTS:BOOL=ON \
+            -DENABLE_EXTENDED_TESTS:BOOL=OFF \
+            -DHDF5_ENABLE_MIRROR_VFD:BOOL=${{ matrix.mirror_vfd }} \
+            -DHDF5_ENABLE_DIRECT_VFD:BOOL=${{ matrix.direct_vfd }} \
+            -DHDF5_PACK_EXAMPLES:BOOL=ON \
+            -DHDF5_PACKAGE_EXTLIBS:BOOL=ON \
+            -DHDF5_PACK_MACOSX_DMG:BOOL=OFF \
+            -DHDF5_ENABLE_JNI:BOOL=${{ inputs.force_java_implementation == 'jni' }} \
+            $GITHUB_WORKSPACE
+        shell: bash
+        if: ${{ inputs.thread_safety != 'TS' && inputs.concurrent != 'CC'}}
+
+      - name: Configure (Thread-Safe)
+        run: |
+          mkdir "${{ runner.workspace }}/build"
+          cd "${{ runner.workspace }}/build"
+          cmake -C $GITHUB_WORKSPACE/config/cmake/cacheinit.cmake \
+            ${{ matrix.generator }} \
+            -DCMAKE_BUILD_TYPE=${{ inputs.build_mode }} \
+            -DBUILD_SHARED_LIBS:BOOL=ON \
+            -DBUILD_STATIC_LIBS:BOOL=${{ (matrix.ostype != 'windows') }} \
+            -DHDF5_ENABLE_ALL_WARNINGS:BOOL=ON \
+            -DHDF5_ENABLE_THREADSAFE:BOOL=ON \
+            -DHDF5_ENABLE_CONCURRENCY:BOOL=OFF \
+            -DHDF5_ENABLE_PARALLEL:BOOL=${{ matrix.parallel }} \
+            -DHDF5_BUILD_CPP_LIB:BOOL=OFF \
+            -DHDF5_BUILD_FORTRAN:BOOL=OFF \
+            -DHDF5_BUILD_JAVA:BOOL=OFF \
+            -DHDF5_BUILD_HL_LIB:BOOL=OFF \
+            -DHDF5_BUILD_DOC:BOOL=OFF \
+            -DHDF5_ENABLE_ZLIB_SUPPORT:BOOL=${{ matrix.zlibfc }} \
+            -DHDF5_ENABLE_SZIP_SUPPORT:BOOL=${{ matrix.libaecfc }} \
+            -DLIBAEC_USE_LOCALCONTENT:BOOL=${{ matrix.localaec }} \
+            -DZLIB_USE_LOCALCONTENT:BOOL=${{ matrix.localzlib }} \
+            -DHDF5_ENABLE_MIRROR_VFD:BOOL=${{ matrix.mirror_vfd }} \
+            -DHDF5_ENABLE_DIRECT_VFD:BOOL=${{ matrix.direct_vfd }} \
+            -DHDF5_PACK_EXAMPLES:BOOL=ON \
+            -DHDF5_PACK_MACOSX_DMG:BOOL=OFF \
+            $GITHUB_WORKSPACE
+        shell: bash
+        if: ${{ inputs.thread_safety == 'TS' && inputs.concurrent != 'CC'}}
+
+      - name: Configure (Concurrency)
+        run: |
+          mkdir "${{ runner.workspace }}/build"
+          cd "${{ runner.workspace }}/build"
+          cmake -C $GITHUB_WORKSPACE/config/cmake/cacheinit.cmake \
+            ${{ matrix.generator }} \
+            -DCMAKE_BUILD_TYPE=${{ inputs.build_mode }} \
+            -DBUILD_SHARED_LIBS=ON \
+            -DBUILD_STATIC_LIBS=${{ (matrix.ostype != 'windows') }} \
+            -DHDF5_ENABLE_ALL_WARNINGS=ON \
+            -DHDF5_ENABLE_THREADSAFE:BOOL=OFF \
+            -DHDF5_ENABLE_CONCURRENCY:BOOL=ON \
+            -DHDF5_ENABLE_PARALLEL:BOOL=${{ matrix.parallel }} \
+            -DHDF5_BUILD_CPP_LIB:BOOL=OFF \
+            -DHDF5_BUILD_FORTRAN:BOOL=OFF \
+            -DHDF5_BUILD_JAVA:BOOL=OFF \
+            -DHDF5_BUILD_HL_LIB:BOOL=OFF \
+            -DHDF5_BUILD_DOC=OFF \
+            -DLIBAEC_USE_LOCALCONTENT=${{ matrix.localaec }} \
+            -DZLIB_USE_LOCALCONTENT=${{ matrix.localzlib }} \
+            -DHDF5_ENABLE_MIRROR_VFD:BOOL=${{ matrix.mirror_vfd }} \
+            -DHDF5_ENABLE_DIRECT_VFD:BOOL=${{ matrix.direct_vfd }} \
+            -DHDF5_PACK_EXAMPLES:BOOL=ON \
+            $GITHUB_WORKSPACE
+        shell: bash
+        if: ${{ inputs.thread_safety != 'TS' && inputs.concurrent == 'CC'}}
+
+      # BUILD
+      - name: Build
+        run: cmake --build . --parallel 3 --config ${{ inputs.build_mode }}
+        working-directory: ${{ runner.workspace }}/build
+
+      # RUN TESTS
+      - name: Run Tests
+        run: ctest . --parallel 2 -C ${{ inputs.build_mode }}
+        working-directory: ${{ runner.workspace }}/build
+        if: ${{ matrix.run_tests }}
+
+      - name: Run Package
+        run: |
+          if [[ "${{ matrix.ostype }}" == "macos" ]]; then
+            # Disable indexing to prevent file locking during CPack
+            sudo mdutil -i off / || true
+
+            # Run cpack with retry
+            cpack -C ${{ inputs.build_mode }} -V || (sleep 5 && cpack -C ${{ inputs.build_mode }} -V)
+          else
+            cpack -C ${{ inputs.build_mode }} -V
+          fi
+        working-directory: ${{ runner.workspace }}/build
+        shell: bash
+#        if: ${{ (matrix.ostype != 'macos') && (inputs.build_mode != 'Debug') }}
+
+#      - name: Run Package (Mac_latest)
+#        run: cpack -C ${{ inputs.build_mode }} -G STGZ -V
+#        if: ${{ (matrix.ostype == 'macos') }}
+
+      - name: List files in the space
+        run: |
+              ls -l ${{ runner.workspace }}/build
+
+      # Save files created by CTest script
+      - name: Save published binary (Windows)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5
+        with:
+              name: zip-vs2022_cl-${{ inputs.build_mode }}-${{ inputs.save_binary }}-binary
+              path: ${{ runner.workspace }}/build/HDF5-*-win64.zip
+              if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
+        if:  ${{ (matrix.ostype == 'windows') && ( inputs.save_binary != 'skip') }}
+
+      - name: Save published binary (linux)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5
+        with:
+              name: tgz-ubuntu-2404_gcc-${{ inputs.build_mode }}-${{ inputs.save_binary }}-binary
+              path: ${{ runner.workspace }}/build/HDF5-*-Linux.tar.gz
+              if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
+        if:  ${{ (matrix.ostype == 'ubuntu') && ( inputs.save_binary != 'skip') }}
+
+      - name: Save published binary (Mac_latest)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5
+        with:
+              name: tgz-macos14_clang-${{ inputs.build_mode }}-${{ inputs.save_binary }}-binary
+              path: ${{ runner.workspace }}/build/HDF5-*-Darwin.tar.gz
+              if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
+        if: ${{ (matrix.ostype == 'macos') && ( inputs.save_binary != 'skip') }}

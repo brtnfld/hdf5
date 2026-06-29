@@ -46,18 +46,36 @@ below_speed_limit(struct timespec *last, const struct timespec *ival)
     struct timespec now;
     hbool_t         result;
 
-    HDassert(0 <= last->tv_nsec && last->tv_nsec < 1000000000LL);
-    HDassert(0 <= ival->tv_nsec && ival->tv_nsec < 1000000000LL);
+    assert(0 <= last->tv_nsec && last->tv_nsec < 1000000000LL);
+    assert(0 <= ival->tv_nsec && ival->tv_nsec < 1000000000LL);
 
     /* NOTE: timespec_get() is C11. This may need further tweaks. */
-#ifdef H5_HAVE_WIN32_API
-    if (HDtimespec_get(&now, TIME_UTC) != TIME_UTC) {
-#else
-    if (HDclock_gettime(CLOCK_MONOTONIC, &now) == -1) {
-#endif
-        HDfprintf(stderr, "%s: clock_gettime", __func__);
-        HDexit(EXIT_FAILURE);
+#if defined(H5_HAVE_TIMESPEC_GET)
+    if (timespec_get(&now, TIME_UTC) != TIME_UTC) {
+        fprintf(stderr, "%s: timespec_get", __func__);
+        exit(EXIT_FAILURE);
     }
+#elif defined(H5_HAVE_CLOCK_GETTIME)
+    if (clock_gettime(CLOCK_MONOTONIC, &now) == -1) {
+        fprintf(stderr, "%s: clock_gettime", __func__);
+        exit(EXIT_FAILURE);
+    }
+#elif defined(H5_HAVE_WIN32_API)
+    {
+        /* GetSystemTimeAsFileTime: always available, no CRT version dependency */
+        FILETIME       ft;
+        ULARGE_INTEGER uli;
+        GetSystemTimeAsFileTime(&ft);
+        uli.LowPart  = ft.dwLowDateTime;
+        uli.HighPart = ft.dwHighDateTime;
+        /* Convert from 100-ns ticks since 1601-01-01 to Unix epoch */
+        uli.QuadPart -= 116444736000000000ULL;
+        now.tv_sec  = (time_t)(uli.QuadPart / 10000000ULL);
+        now.tv_nsec = (long)((uli.QuadPart % 10000000ULL) * 100ULL);
+    }
+#else
+#error "No suitable time function (timespec_get or clock_gettime) available"
+#endif
 
     if ((uint64_t)now.tv_sec - (uint64_t)last->tv_sec > (uint64_t)ival->tv_sec)
         result = true;
@@ -89,15 +107,15 @@ evsnprintf(char *buf, size_t bufsz, const char *fmt, va_list ap)
 {
     int rc;
 
-    rc = HDvsnprintf(buf, bufsz, fmt, ap);
+    rc = vsnprintf(buf, bufsz, fmt, ap);
 
     if (rc < 0) {
-        HDfprintf(stderr, "%s: HDvsnprintf", __func__);
-        HDexit(EXIT_FAILURE);
+        fprintf(stderr, "%s: HDvsnprintf", __func__);
+        exit(EXIT_FAILURE);
     }
     else if ((size_t)rc >= bufsz) {
-        HDfprintf(stderr, "%s: buffer too small", __func__);
-        HDexit(EXIT_FAILURE);
+        fprintf(stderr, "%s: buffer too small", __func__);
+        exit(EXIT_FAILURE);
     }
 }
 
@@ -109,9 +127,9 @@ esnprintf(char *buf, size_t bufsz, const char *fmt, ...)
 {
     va_list ap;
 
-    HDva_start(ap, fmt);
+    va_start(ap, fmt);
     evsnprintf(buf, bufsz, fmt, ap);
-    HDva_end(ap);
+    va_end(ap);
 }
 
 void
@@ -122,9 +140,9 @@ dbgf(int level, const char *fmt, ...)
     if (verbosity < level)
         return;
 
-    HDva_start(ap, fmt);
-    (void)HDvfprintf(stderr, fmt, ap);
-    HDva_end(ap);
+    va_start(ap, fmt);
+    (void)vfprintf(stderr, fmt, ap);
+    va_end(ap);
 }
 
 /* Disable HDF5 error-stack printing and return the previous state
@@ -167,14 +185,14 @@ block_signals(sigset_t *oldset)
 {
     sigset_t fullset;
 
-    if (HDsigfillset(&fullset) == -1) {
-        HDfprintf(stderr, "%s.%d: could not initialize signal masks", __func__, __LINE__);
-        HDexit(EXIT_FAILURE);
+    if (sigfillset(&fullset) == -1) {
+        fprintf(stderr, "%s.%d: could not initialize signal masks", __func__, __LINE__);
+        exit(EXIT_FAILURE);
     }
 
-    if (HDsigprocmask(SIG_BLOCK, &fullset, oldset) == -1) {
-        HDfprintf(stderr, "%s.%d: sigprocmask", __func__, __LINE__);
-        HDexit(EXIT_FAILURE);
+    if (sigprocmask(SIG_BLOCK, &fullset, oldset) == -1) {
+        fprintf(stderr, "%s.%d: sigprocmask", __func__, __LINE__);
+        exit(EXIT_FAILURE);
     }
 }
 
@@ -182,9 +200,9 @@ block_signals(sigset_t *oldset)
 void
 restore_signals(sigset_t *oldset)
 {
-    if (HDsigprocmask(SIG_SETMASK, oldset, NULL) == -1) {
-        HDfprintf(stderr, "%s.%d: sigprocmask", __func__, __LINE__);
-        HDexit(EXIT_FAILURE);
+    if (sigprocmask(SIG_SETMASK, oldset, NULL) == -1) {
+        fprintf(stderr, "%s.%d: sigprocmask", __func__, __LINE__);
+        exit(EXIT_FAILURE);
     }
 }
 
@@ -196,17 +214,17 @@ typedef struct timer_params_t {
 } timer_params_t;
 
 pthread_mutex_t timer_mutex;
-hbool_t         timer_stop = FALSE;
+hbool_t         timer_stop = false;
 
 static void *
 timer_function(void *arg)
 {
     timer_params_t *params = (timer_params_t *)arg;
     sigset_t        sleepset;
-    hbool_t         done = FALSE;
+    hbool_t         done = false;
 
     /* Ignore any signals */
-    HDsigfillset(&sleepset);
+    sigfillset(&sleepset);
     pthread_sigmask(SIG_SETMASK, &sleepset, NULL);
 
     for (;;) {
@@ -248,17 +266,17 @@ await_signal(hid_t fid)
     struct timespec tick = {.tv_sec = 0, .tv_nsec = 1000000000LL / 100};
     sigset_t        sleepset;
 
-    if (HDsigfillset(&sleepset) == -1) {
-        HDfprintf(stderr, "%s.%d: could not initialize signal mask", __func__, __LINE__);
-        HDexit(EXIT_FAILURE);
+    if (sigfillset(&sleepset) == -1) {
+        fprintf(stderr, "%s.%d: could not initialize signal mask", __func__, __LINE__);
+        exit(EXIT_FAILURE);
     }
 
     /* Avoid deadlock: flush the file before waiting for the reader's
      * message.
      */
     if (H5Fflush(fid, H5F_SCOPE_GLOBAL) < 0) {
-        HDfprintf(stderr, "%s: H5Fflush failed", __func__);
-        HDexit(EXIT_FAILURE);
+        fprintf(stderr, "%s: H5Fflush failed", __func__);
+        exit(EXIT_FAILURE);
     }
 
     dbgf(1, "waiting for signal\n");
@@ -279,18 +297,21 @@ await_signal(hid_t fid)
 
         pthread_create(&timer, NULL, timer_function, &params);
 
-        rc = sigwait(&sleepset, NULL);
+        {
+            int sig;
+            rc = sigwait(&sleepset, &sig);
+        }
 
         if (rc != -1) {
-            HDfprintf(stderr, "Received signal, wrapping things up.\n");
+            fprintf(stderr, "Received signal, wrapping things up.\n");
             pthread_mutex_lock(&timer_mutex);
-            timer_stop = TRUE;
+            timer_stop = true;
             pthread_mutex_unlock(&timer_mutex);
             pthread_join(timer, NULL);
         }
         else {
-            HDfprintf(stderr, "%s: sigwait", __func__);
-            HDexit(EXIT_FAILURE);
+            fprintf(stderr, "%s: sigwait", __func__);
+            exit(EXIT_FAILURE);
         }
     }
 #else
@@ -299,7 +320,7 @@ await_signal(hid_t fid)
         const int rc = HDsigtimedwait(&sleepset, NULL, &tick);
 
         if (rc != -1) {
-            HDfprintf(stderr, "Received %s, wrapping things up.\n", HDstrsignal(rc));
+            fprintf(stderr, "Received %s, wrapping things up.\n", HDstrsignal(rc));
             break;
         }
         else if (rc == -1 && errno == EAGAIN) {
@@ -317,8 +338,8 @@ await_signal(hid_t fid)
             restore_estack(es);
         }
         else if (rc == -1) {
-            HDfprintf(stderr, "%s: sigtimedwait", __func__);
-            HDexit(EXIT_FAILURE);
+            fprintf(stderr, "%s: sigtimedwait", __func__);
+            exit(EXIT_FAILURE);
         }
     }
 #endif /* H5_HAVE_SIGTIMEDWAIT */
@@ -338,7 +359,7 @@ init_vfd_swmr_config(H5F_vfd_swmr_config_t *config, uint32_t tick_len, uint32_t 
 {
     va_list ap;
 
-    HDmemset(config, 0, sizeof(H5F_vfd_swmr_config_t));
+    memset(config, 0, sizeof(H5F_vfd_swmr_config_t));
 
     config->version                = H5F__CURR_VFD_SWMR_CONFIG_VERSION;
     config->pb_expansion_threshold = 0;
@@ -355,23 +376,23 @@ init_vfd_swmr_config(H5F_vfd_swmr_config_t *config, uint32_t tick_len, uint32_t 
     if (md_path_fmtstr == NULL)
         config->md_file_path[0] = '\0';
     else {
-        HDva_start(ap, updater_path_fmtstr);
+        va_start(ap, updater_path_fmtstr);
         evsnprintf(config->md_file_path, sizeof(config->md_file_path), md_path_fmtstr, ap);
-        HDva_end(ap);
+        va_end(ap);
     }
 
     if (md_file_fmtstr == NULL)
         config->md_file_name[0] = '\0';
     else {
-        HDva_start(ap, updater_path_fmtstr);
+        va_start(ap, updater_path_fmtstr);
         evsnprintf(config->md_file_name, sizeof(config->md_file_name), md_file_fmtstr, ap);
-        HDva_end(ap);
+        va_end(ap);
     }
 
     if (config->generate_updater_files && updater_path_fmtstr != NULL) {
-        HDva_start(ap, updater_path_fmtstr);
+        va_start(ap, updater_path_fmtstr);
         evsnprintf(config->updater_file_path, sizeof(config->updater_file_path), updater_path_fmtstr, ap);
-        HDva_end(ap);
+        va_end(ap);
     }
 
 } /* init_vfd_swmr_config() */
@@ -382,9 +403,9 @@ init_vfd_swmr_log(H5F_vfd_swmr_config_t *config, const char *log_file_fmtstr, ..
 {
     va_list ap;
 
-    HDva_start(ap, log_file_fmtstr);
+    va_start(ap, log_file_fmtstr);
     evsnprintf(config->log_file_path, sizeof(config->log_file_path), log_file_fmtstr, ap);
-    HDva_end(ap);
+    va_end(ap);
 
 } /* init_vfd_swmr_log() */
 
@@ -461,25 +482,25 @@ vfd_swmr_create_fcpl(H5F_fspace_strategy_t fs_strategy, hsize_t fs_page_size)
 int
 fetch_env_ulong(const char *varname, unsigned long limit, unsigned long *valp)
 {
-    char *        end;
+    char         *end;
     unsigned long ul;
-    char *        tmp;
+    char         *tmp;
 
-    if ((tmp = HDgetenv(varname)) == NULL)
+    if ((tmp = getenv(varname)) == NULL)
         return 0;
 
     errno = 0;
-    ul    = HDstrtoul(tmp, &end, 0);
+    ul    = strtoul(tmp, &end, 0);
     if (ul == ULONG_MAX && errno != 0) {
-        HDfprintf(stderr, "could not parse %s: %s\n", varname, HDstrerror(errno));
+        fprintf(stderr, "could not parse %s: %s\n", varname, strerror(errno));
         return -1;
     }
     if (end == tmp || *end != '\0') {
-        HDfprintf(stderr, "could not parse %s\n", varname);
+        fprintf(stderr, "could not parse %s\n", varname);
         return -1;
     }
     if (ul > limit) {
-        HDfprintf(stderr, "%s (%lu) out of range\n", varname, ul);
+        fprintf(stderr, "%s (%lu) out of range\n", varname, ul);
         return -1;
     }
     *valp = ul;
@@ -494,13 +515,13 @@ hbool_t
 socket_init(socket_state_t *sock)
 {
     if (sock == NULL) {
-        HDfprintf(stderr, "socket state structure is NULL\n");
+        fprintf(stderr, "socket state structure is NULL\n");
         return false;
     }
-    
+
     sock->ip_address = "127.0.0.1";
-    
-    sock->comm_fd = INVALID_SOCKET;
+
+    sock->comm_fd   = INVALID_SOCKET;
     sock->listen_fd = INVALID_SOCKET;
 
     sock->notify = 0;
@@ -513,69 +534,72 @@ socket_init(socket_state_t *sock)
  * If server is true, open a listening socket and wait for a connection.
  * If server is false, open a client socket and connect to the server at `ip_address`.
  * If `ip_address` is NULL, default to localhost (127.0.0.1).
- * 
+ *
  * Note: Only supports IPv4 sockets, and only a single connection at a time.
  */
-hbool_t 
-socket_connect(socket_state_t *sock, bool server) {
+#ifndef H5_HAVE_WIN32_API
+hbool_t
+socket_connect(socket_state_t *sock, bool server)
+{
     struct sockaddr_in servaddr;
 
-    /* Initilaize sock address structure memory */
-    HDmemset(&servaddr, 0, sizeof(servaddr));
+    /* Initialize sock address structure memory */
+    memset(&servaddr, 0, sizeof(servaddr));
 
-    if (server){ /* Server Code */
+    if (server) { /* Server Code */
         struct sockaddr_in client;
 
         /* Create listening socket */
-        if (INVALID_SOCKET == (sock->listen_fd = HDsocket(AF_INET, SOCK_STREAM, 0))) {
-            HDfprintf(stderr, "error creating listen socket\n");
+        if (INVALID_SOCKET == (sock->listen_fd = socket(AF_INET, SOCK_STREAM, 0))) {
+            fprintf(stderr, "error creating listen socket\n");
             goto error;
         }
 
         /* Configure server socket info */
-        servaddr.sin_family         = AF_INET;
-        servaddr.sin_addr.s_addr    = htonl(INADDR_ANY);
-        servaddr.sin_port           = htons(DEFAULT_PORT);
+        servaddr.sin_family      = AF_INET;
+        servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+        servaddr.sin_port        = htons(DEFAULT_PORT);
 
         /* Make address reusable so rerunning this program won't error if the previous run left
          * our chosen Address:Port for the listen socket in a TIME_WAIT state */
         const int enable = 1;
         if (setsockopt(sock->listen_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0) {
-            HDfprintf(stderr, "error setting socket options\n");
+            fprintf(stderr, "error setting socket options\n");
             goto error;
         }
 
         /* Bind socket */
-        if(bind(sock->listen_fd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0){
-            HDfprintf(stderr, "error binding server socket\n");
+        if (bind(sock->listen_fd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
+            fprintf(stderr, "error binding server socket\n");
             goto error;
         }
 
         /* Start listening on open socket */
-        if (listen(sock->listen_fd, 1) < 0){
-            HDfprintf(stderr, "error listening to server socket\n");
+        if (listen(sock->listen_fd, 1) < 0) {
+            fprintf(stderr, "error listening to server socket\n");
             goto error;
         }
-        
+
         /* Accept a connection */
         socklen_t len = sizeof(client);
-        sock->comm_fd = accept(sock->listen_fd, (struct sockaddr *) &client, &len);
+        sock->comm_fd = accept(sock->listen_fd, (struct sockaddr *)&client, &len);
         if (sock->comm_fd == INVALID_SOCKET) {
-            HDfprintf(stderr, "error accepting client connection\n");
+            fprintf(stderr, "error accepting client connection\n");
             goto error;
         }
 #ifdef DEBUG_SOCKETS
-        HDfprintf(stderr, "SERVER SOCKET: Accepted connection from client with IP: %s\n", inet_ntoa(client.sin_addr));
+        fprintf(stderr, "SERVER SOCKET: Accepted connection from client with IP: %s\n",
+                inet_ntoa(client.sin_addr));
 #endif
-        
-        /* Close the listening socket, we don't need it anymore */
-        HDclose(sock->listen_fd);
-        sock->listen_fd = INVALID_SOCKET;
 
-    } else { /* Client Code */
+        /* Close the listening socket, we don't need it anymore */
+        close(sock->listen_fd);
+        sock->listen_fd = INVALID_SOCKET;
+    }
+    else { /* Client Code */
         /* Create TCP socket */
-        if (INVALID_SOCKET == (sock->comm_fd = HDsocket(AF_INET, SOCK_STREAM, 0))) {
-            HDfprintf(stderr, "error creating client socket\n");
+        if (INVALID_SOCKET == (sock->comm_fd = socket(AF_INET, SOCK_STREAM, 0))) {
+            fprintf(stderr, "error creating client socket\n");
             goto error;
         }
 
@@ -585,20 +609,20 @@ socket_connect(socket_state_t *sock, bool server) {
 
         /* Get binary address for server connection */
         if (inet_pton(AF_INET, sock->ip_address, &servaddr.sin_addr) <= 0) {
-            HDfprintf(stderr, "socket communication inet_pton error\n");
+            fprintf(stderr, "socket communication inet_pton error\n");
             goto error;
         }
-        
+
         /* Attempt server connection */
-        if (connect(sock->comm_fd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
-            HDfprintf(stderr, "socket communication connection error\n");
+        if (connect(sock->comm_fd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
+            fprintf(stderr, "socket communication connection error\n");
             goto error;
         }
 #ifdef DEBUG_SOCKETS
-        HDfprintf(stderr, "CLIENT SOCKET: Connected to server with IP: %s\n", sock->ip_address);
+        fprintf(stderr, "CLIENT SOCKET: Connected to server with IP: %s\n", sock->ip_address);
 #endif
     }
-    
+
     return true;
 
 error:
@@ -608,24 +632,39 @@ error:
     }
 
     return false;
-} /* socket_init() */
-
+} /* socket_connect() */
 
 /* Safely close the sockets */
-void socket_close(socket_state_t *sock) {
+void
+socket_close(socket_state_t *sock)
+{
     if (sock == NULL) { /* Redundant check  */
         return;
     }
 
-    if (sock->comm_fd != INVALID_SOCKET && sock->comm_fd > 2) 
-    {
-        HDclose(sock->comm_fd);
+    if (sock->comm_fd != INVALID_SOCKET && sock->comm_fd > 2) {
+        close(sock->comm_fd);
     }
     if (sock->listen_fd != INVALID_SOCKET && sock->listen_fd > 2) {
-        HDclose(sock->listen_fd);
+        close(sock->listen_fd);
     }
 
     sock->ip_address = NULL;
-    sock->comm_fd = INVALID_SOCKET;
-    sock->listen_fd = INVALID_SOCKET;
+    sock->comm_fd    = INVALID_SOCKET;
+    sock->listen_fd  = INVALID_SOCKET;
 } /* socket_close() */
+
+#else /* H5_HAVE_WIN32_API */
+
+hbool_t
+socket_connect(socket_state_t H5_ATTR_UNUSED *sock, bool H5_ATTR_UNUSED server)
+{
+    return false;
+}
+
+void
+socket_close(socket_state_t H5_ATTR_UNUSED *sock)
+{
+}
+
+#endif /* H5_HAVE_WIN32_API */

@@ -12,12 +12,11 @@
 ! COPYRIGHT
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 !   Copyright by The HDF Group.                                               *
-!   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
 !   This file is part of HDF5.  The full HDF5 copyright notice, including     *
 !   terms governing use, modification, and redistribution, is contained in    *
-!   the COPYING file, which can be found at the root of the source code       *
+!   the LICENSE file, which can be found at the root of the source code       *
 !   distribution tree, or in https://www.hdfgroup.org/licenses.               *
 !   If you do not have access to either file, you may request a copy from     *
 !   help@hdfgroup.org.                                                        *
@@ -161,6 +160,7 @@ CONTAINS
     INTEGER(hid_t) :: file_id
     INTEGER(hid_t) :: fapl_id
     TYPE(C_PTR) :: f_ptr
+    LOGICAL :: are_same = .FALSE.
 
     CALL H5VLis_connector_registered_by_name_f( "FAKE_VOL_CONNECTOR_NAME", is_registered, error)
 
@@ -190,7 +190,9 @@ CONTAINS
 
        CALL H5Pget_vol_id_f(fapl_id, vol_id_out, error)
        CALL check("H5Pget_vol_id_f",error,total_error)
-       CALL VERIFY("H5Pget_vol_id_f", vol_id_out, vol_id, total_error)
+       CALL H5VLcmp_connector_cls_f(are_same, vol_id, vol_id_out, error)
+       CALL check("H5VLcmp_connector_cls_f",error,total_error)
+       CALL VERIFY("H5VLcmp_connector_cls_f", are_same, .TRUE., total_error)
 
        f_ptr = C_NULL_PTR
        CALL H5Pset_vol_f(fapl_id, vol_id, error, f_ptr)
@@ -198,14 +200,20 @@ CONTAINS
 
        CALL H5Pget_vol_id_f(fapl_id, vol_id_out, error)
        CALL check("H5Pget_vol_id_f",error,total_error)
-       CALL VERIFY("H5Pget_vol_id_f", vol_id_out, vol_id, total_error)
+       are_same = .FALSE.
+       CALL H5VLcmp_connector_cls_f(are_same, vol_id, vol_id_out, error)
+       CALL check("H5VLcmp_connector_cls_f",error,total_error)
+       CALL VERIFY("H5VLcmp_connector_cls_f", are_same, .TRUE., total_error)
     ENDIF
 
     CALL H5VLget_connector_id_by_name_f(NATIVE_VOL_CONNECTOR_NAME, vol_id_out, error)
     CALL check("H5VLget_connector_id_by_name_f",error,total_error)
-    CALL VERIFY("H5VLget_connector_id_by_name_f", vol_id_out, vol_id, total_error)
-    CALL H5Fcreate_f("voltest.h5",H5F_ACC_TRUNC_F, file_id, error, H5P_DEFAULT_F, fapl_id)
+    are_same = .FALSE.
+    CALL H5VLcmp_connector_cls_f(are_same, vol_id, vol_id_out, error)
+    CALL check("H5VLcmp_connector_cls_f",error,total_error)
+    CALL VERIFY("H5VLcmp_connector_cls_f", are_same, .TRUE., total_error)
 
+    CALL H5Fcreate_f("voltest.h5",H5F_ACC_TRUNC_F, file_id, error, H5P_DEFAULT_F, fapl_id)
     CALL check("H5F_create_f",error,total_error)
 
     CALL H5VLclose_f(vol_id_out, error)
@@ -228,7 +236,6 @@ END MODULE VOL_TMOD
 
 PROGRAM vol_connector
 
-  USE HDF5
   USE VOL_TMOD
 
   IMPLICIT NONE
@@ -236,8 +243,9 @@ PROGRAM vol_connector
   INTEGER :: error
   INTEGER :: ret_total_error
   LOGICAL :: cleanup, status
-  CHARACTER(LEN=12) :: VOL_CONNECTOR_ENV
+  CHARACTER(LEN=32) :: VOL_CONNECTOR_ENV
   INTEGER :: LEN = 0
+  INTEGER :: CONN_NAME_LEN
 
   CALL h5open_f(error)
   cleanup = .TRUE.
@@ -252,8 +260,9 @@ PROGRAM vol_connector
 
   ! Check to see if the VOL connector was set with an env variable
   CALL GET_ENVIRONMENT_VARIABLE("HDF5_VOL_CONNECTOR", VOL_CONNECTOR_ENV, LEN)
+  CONN_NAME_LEN = INDEX(VOL_CONNECTOR_ENV, ' ')
   IF(LEN.NE.0)THEN
-     NATIVE_VOL_CONNECTOR_NAME = TRIM(VOL_CONNECTOR_ENV)
+     NATIVE_VOL_CONNECTOR_NAME = TRIM(VOL_CONNECTOR_ENV(1:CONN_NAME_LEN))
   ELSE
      NATIVE_VOL_CONNECTOR_NAME = "native"
   ENDIF

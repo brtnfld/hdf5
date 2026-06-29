@@ -4,7 +4,7 @@
 #
 # This file is part of HDF5.  The full HDF5 copyright notice, including
 # terms governing use, modification, and redistribution, is contained in
-# the COPYING file, which can be found at the root of the source code
+# the LICENSE file, which can be found at the root of the source code
 # distribution tree, or in https://www.hdfgroup.org/licenses.
 # If you do not have access to either file, you may request a copy from
 # help@hdfgroup.org.
@@ -21,14 +21,16 @@
 #set (MAX_PROC_COUNT 8)
 
 #############################################################################################
-####      alternate toolsets       ####
+####      alternate toolsets (Windows usually)        ####
 #set (CMAKE_GENERATOR_TOOLSET "Intel C++ Compiler 17.0")
+
+#############################################################################################
+### use a toolchain file (supported everywhere)       ####
+#set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DCMAKE_TOOLCHAIN_FILE:STRING=config/toolchain/intel.cmake")
 
 #############################################################################################
 ####      Only build static libraries       ####
 #set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DBUILD_SHARED_LIBS:BOOL=OFF")
-####      Only build shared libraries       ####
-#set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DONLY_SHARED_LIBS:BOOL=OFF")
 ####      Add PIC option on linux/mac       ####
 #set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DCMAKE_ANSI_CFLAGS:STRING=-fPIC")
 
@@ -61,15 +63,16 @@ set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DHDF5_ALLOW_EXTERNAL_SUPPORT:STRIN
 #set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DZLIB_LIBRARY:FILEPATH=some_location/lib/zlib.lib -DZLIB_INCLUDE_DIR:PATH=some_location/include")
 #set(ENV{SZIP_ROOT} "some_location")
 #set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DSZIP_LIBRARY:FILEPATH=some_location/lib/szlib.lib -DSZIP_INCLUDE_DIR:PATH=some_location/include")
+#set(ENV{libaec_ROOT} "some_location")
+#set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -Dlibaec_LIBRARY:FILEPATH=some_location/lib/libaec.lib -Dlibaec_INCLUDE_DIR:PATH=some_location/include")
 
 ### disable using ext zlib
-#set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DHDF5_ENABLE_Z_LIB_SUPPORT:BOOL=OFF")
-### disable using ext szip
-#set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DHDF5_ENABLE_SZIP_SUPPORT:BOOL=OFF")
-#set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DHDF5_ENABLE_SZIP_ENCODING:BOOL=OFF")
+#set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DHDF5_ENABLE_ZLIB_SUPPORT:BOOL=OFF")
+### enable using ext szip
+#set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DHDF5_ENABLE_SZIP_SUPPORT:BOOL=ON")
 
 ####      package examples       ####
-#set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DHDF5_PACK_EXAMPLES:BOOL=ON -DHDF5_EXAMPLES_COMPRESSED:STRING=HDF5Examples-1.14.5-Source.tar.gz -DHDF5_EXAMPLES_COMPRESSED_DIR:PATH=${CTEST_SCRIPT_DIRECTORY}")
+#set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DHDF5_PACK_EXAMPLES:BOOL=ON -DHDF5_EXAMPLES_COMPRESSED:STRING=HDF5Examples-2.0.3-Source.tar.gz -DHDF5_EXAMPLES_COMPRESSED_DIR:PATH=${CTEST_SCRIPT_DIRECTORY}")
 
 #############################################################################################
 ### enable parallel builds
@@ -91,6 +94,7 @@ endif()
 #############################################################################################
 ### disable test program builds
 
+#If using CTestScript.cmake file be sure to uncomment set (LOCAL_SKIP_TEST "TRUE")
 #set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DBUILD_TESTING:BOOL=OFF")
 
 #############################################################################################
@@ -99,10 +103,5 @@ endif()
 #set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DHDF5_NO_PACKAGES:BOOL=ON")
 ### Create install package with external libraries (szip, zlib)
 set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DHDF5_PACKAGE_EXTLIBS:BOOL=ON")
-
-#############################################################################################
-### use a toolchain file
-
-#set (ADD_BUILD_OPTIONS "${ADD_BUILD_OPTIONS} -DCMAKE_TOOLCHAIN_FILE:STRING=config/toolchain/intel.cmake")
 
 #############################################################################################

@@ -2,17 +2,14 @@
  * Copyright by The HDF Group.                                               *
  * All rights reserved.                                                      *
  *                                                                           *
- * This file is part of HDF5. The full HDF5 copyright notice, including      *
+ * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*
- * Programmer:    Raymond Lu
- *        13 February 2013
- *
  * Purpose:    Tests the plugin module (H5PL)
  */
 
@@ -26,7 +23,7 @@ static size_t H5Z_filter_dynlib1(unsigned int flags, size_t cd_nelmts, const uns
                                  size_t nbytes, size_t *buf_size, void **buf);
 
 /* This message derives from H5Z */
-const H5Z_class2_t H5Z_DYNLIB1[1] = {{
+static const H5Z_class2_t H5Z_DYNLIB1[1] = {{
     H5Z_CLASS_T_VERS,   /* H5Z_class_t version             */
     H5Z_FILTER_DYNLIB1, /* Filter id number        */
     1, 1,               /* Encoding and decoding enabled   */
@@ -59,16 +56,13 @@ H5PLget_plugin_info(void)
  *
  *        Failure:    0
  *
- * Programmer:    Raymond Lu
- *              29 March 2013
- *
  *-------------------------------------------------------------------------
  */
 static size_t
 H5Z_filter_dynlib1(unsigned int flags, size_t cd_nelmts, const unsigned int *cd_values, size_t nbytes,
                    size_t *buf_size, void **buf)
 {
-    int *  int_ptr  = (int *)*buf; /* Pointer to the data values */
+    int   *int_ptr  = (int *)*buf; /* Pointer to the data values */
     size_t buf_left = *buf_size;   /* Amount of data buffer left to process */
     int    add_on   = 0;
 

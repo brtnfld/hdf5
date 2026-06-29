@@ -1,4 +1,4 @@
-HDF5 "d-tall_fp32.h5" {
+HDF5 "dstall_fp32.h5" {
 GROUP "/" {
    GROUP "g2" {
       DATASET "dset2.2" {
@@ -7,7 +7,7 @@ GROUP "/" {
          STORAGE_LAYOUT {
             CONTIGUOUS
             SIZE 8
-            OFFSET 2432
+            OFFSET 2048
          }
          FILTERS {
             NONE

@@ -19,10 +19,16 @@
 
 #include "h5test.h"
 
-/* Posix socket headers */
+/* Posix socket headers (not available on Windows) */
+#ifdef H5_HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
+#endif
+#ifdef H5_HAVE_NETINET_IN_H
 #include <netinet/in.h>
+#endif
+#ifdef H5_HAVE_ARPA_INET_H
 #include <arpa/inet.h>
+#endif
 
 /**********/
 /* Macros */
@@ -38,17 +44,16 @@
 /* The message sent by writer that the file open is done--releasing the file lock */
 #define VFD_SWMR_WRITER_MESSAGE "VFD_SWMR_WRITER_MESSAGE"
 
-
 #ifndef H5_USE_SOCKETS
 #define H5_USE_SOCKETS 1 /* Replace named pipes with socket communication */
-#endif /* H5_USE_SOCKETS */
+#endif                   /* H5_USE_SOCKETS */
 
 /* To make code more compatible with windows for later on. */
 #define INVALID_SOCKET -1
 
 /* Common definitions */
-#define MAX_IP_ADDR_LEN 16 /* xxx.xxx.xxx.xxx + null terminator */
-#define DEFAULT_PORT 42424 /* Random port number. Only a single socket connection is supported at a time. */
+#define MAX_IP_ADDR_LEN 16    /* xxx.xxx.xxx.xxx + null terminator */
+#define DEFAULT_PORT    42424 /* Random port number. Only a single socket connection is supported at a time. */
 
 /* Determines whether socket connection messages are printed for
  * purposes debugging
@@ -61,19 +66,19 @@
 
 typedef struct _estack_state {
     H5E_auto2_t efunc;
-    void *      edata;
+    void       *edata;
 } estack_state_t;
 
 typedef enum _testsel { TEST_NONE = 0, TEST_NULL, TEST_OOB } testsel_t;
 
 /* Structure: socket_state_t
- * 
+ *
  * Info:
  *   Holds information about the socket connection between server and client.
  *   Used for communication between VFD SWMR writer and reader processes.
- * 
+ *
  * Fields:
- *   const char * ip_address: IP address of the server, which the client will 
+ *   const char * ip_address: IP address of the server, which the client will
  *                connect to. Will be set to localhost (127.0.0.1) by default.
  *   int          comm_fd: Communication socket file descriptor. The main socket
  *                used for sending and receiving data between writer and reader.
@@ -83,13 +88,12 @@ typedef enum _testsel { TEST_NONE = 0, TEST_NULL, TEST_OOB } testsel_t;
  *   int          verify: Value used for verifying notification between writer and reader.
  */
 typedef struct {
-    const char * ip_address;
-    int          comm_fd;
-    int          listen_fd;
-    int          notify;
-    int          verify;
+    const char *ip_address;
+    int         comm_fd;
+    int         listen_fd;
+    int         notify;
+    int         verify;
 } socket_state_t;
-
 
 /********************/
 /* Global Variables */
@@ -107,7 +111,6 @@ extern "C" {
 H5TEST_DLL hbool_t socket_init(socket_state_t *sock);
 H5TEST_DLL hbool_t socket_connect(socket_state_t *sock, hbool_t client);
 H5TEST_DLL void    socket_close(socket_state_t *sock);
-
 
 H5TEST_DLL bool below_speed_limit(struct timespec *, const struct timespec *);
 H5TEST_DLL void decisleep(uint32_t tenths);

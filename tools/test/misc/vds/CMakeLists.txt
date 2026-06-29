@@ -1,10 +1,15 @@
-cmake_minimum_required (VERSION 3.12)
+# CMake configuration for building VDS (Virtual Dataset) generator test executables for HDF5 tools
+# Defines a macro to add generator executables with proper include directories, linking, and formatting
+# Lists all generator source files and iterates to create targets for each
+# Supports both static and shared builds, and conditional formatting
+
+cmake_minimum_required (VERSION 3.26)
 project (HDF5_TOOLS_TEST_MISC_VDS C)
 
 macro (ADD_H5_GENERATOR genfile)
   add_executable (${genfile} ${HDF5_TOOLS_TEST_MISC_VDS_SOURCE_DIR}/${genfile}.c)
-  target_include_directories (${genfile} PRIVATE "${HDF5_SRC_DIR};${HDF5_SRC_BINARY_DIR};$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:${MPI_C_INCLUDE_DIRS}>")
-  if (NOT ONLY_SHARED_LIBS)
+  target_include_directories (${genfile} PRIVATE "${HDF5_SRC_INCLUDE_DIRS};${HDF5_SRC_BINARY_DIR};$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:${MPI_C_INCLUDE_DIRS}>")
+  if (BUILD_STATIC_LIBS)
     TARGET_C_PROPERTIES (${genfile} STATIC)
     target_link_libraries (${genfile} PRIVATE ${HDF5_TOOLS_LIB_TARGET} ${HDF5_LIB_TARGET})
   else ()

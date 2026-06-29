@@ -1,11 +1,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -21,7 +20,7 @@
  *-------------------------------------------------------------------------
  */
 
-static hbool_t H5TB_find_field(const char *field, const char *field_list);
+static bool H5TB_find_field(const char *field, const char *field_list);
 
 static herr_t H5TB_attach_attributes(const char *table_title, hid_t loc_id, const char *dset_name,
                                      hsize_t nfields, hid_t tid);
@@ -37,19 +36,11 @@ static hid_t H5TB_create_type(hid_t loc_id, const char *dset_name, size_t type_s
  */
 
 /*-------------------------------------------------------------------------
- * Function: H5TBmake_table
+ * Function:    H5TBmake_table
  *
- * Purpose: Make a table
+ * Purpose:     Make a table
  *
- * Return: Success: 0, Failure: -1
- *
- * Programmer: Pedro Vicente
- *             Quincey Koziol
- *
- * Date: January 17, 2001
- *
- * Comments:
- *
+ * Return:      Success: 0, Failure: -1
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -66,7 +57,7 @@ H5TBmake_table(const char *table_title, hid_t loc_id, const char *dset_name, hsi
     hsize_t        dims_chunk[1];
     hsize_t        maxdims[1] = {H5S_UNLIMITED};
     char           attr_name[255];
-    char *         member_name = NULL;
+    char          *member_name = NULL;
     unsigned char *tmp_buf     = NULL;
     hsize_t        i;
     herr_t         ret_val = -1;
@@ -164,7 +155,7 @@ H5TBmake_table(const char *table_title, hid_t loc_id, const char *dset_name, hsi
         if (NULL == (member_name = H5Tget_member_name(mem_type_id, (unsigned)i)))
             goto out;
 
-        HDsnprintf(attr_name, sizeof(attr_name), "FIELD_%d_NAME", (int)i);
+        snprintf(attr_name, sizeof(attr_name), "FIELD_%d_NAME", (int)i);
 
         /* attach the attribute */
         if (H5LTset_attribute_string(loc_id, dset_name, attr_name, member_name) < 0)
@@ -186,7 +177,7 @@ H5TBmake_table(const char *table_title, hid_t loc_id, const char *dset_name, hsi
             goto out;
 
         for (i = 0; i < nfields; i++) {
-            HDsnprintf(attr_name, sizeof(attr_name), "FIELD_%d_FILL", (int)i);
+            snprintf(attr_name, sizeof(attr_name), "FIELD_%d_FILL", (int)i);
 
             if ((attr_id = H5Acreate2(did, attr_name, field_types[i], sid, H5P_DEFAULT, H5P_DEFAULT)) < 0)
                 goto out;
@@ -253,12 +244,6 @@ out:
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmers:
- *  Pedro Vicente
- *  Quincey Koziol
- *
- * Date: November 19, 2001
- *
  * Comments: Uses memory offsets
  *
  *-------------------------------------------------------------------------
@@ -319,10 +304,6 @@ out:
  * Purpose: Writes records
  *
  * Return: Success: 0, Failure: -1
- *
- * Programmer: Pedro Vicente
- *
- * Date: November 19, 2001
  *
  * Comments: Uses memory offsets
  *
@@ -412,10 +393,6 @@ out:
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente
- *
- * Date: November 21, 2001
- *
  * Comments:
  *
  *-------------------------------------------------------------------------
@@ -437,7 +414,7 @@ H5TBwrite_fields_name(hid_t loc_id, const char *dset_name, const char *field_nam
     hssize_t i, j;
     hsize_t  count[1];
     hsize_t  offset[1];
-    char *   member_name = NULL;
+    char    *member_name = NULL;
     size_t   size_native;
     herr_t   ret_val = -1;
 
@@ -520,6 +497,11 @@ H5TBwrite_fields_name(hid_t loc_id, const char *dset_name, const char *field_nam
         member_name = NULL;
     } /* end for */
 
+    /* check to make sure at least one field was found, no reason to continue if none exist;
+       ret_val is already -1 from initialization, so goto out returns failure */
+    if (j == 0)
+        goto out;
+
     /* get the dataspace handle */
     if ((file_space_id = H5Dget_space(did)) < 0)
         goto out;
@@ -570,10 +552,6 @@ out:
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente
- *
- * Date: November 21, 2001
- *
  * Comments: Uses memory offsets
  *
  *-------------------------------------------------------------------------
@@ -595,7 +573,7 @@ H5TBwrite_fields_index(hid_t loc_id, const char *dset_name, hsize_t nfields, con
     hsize_t offset[1];
     hsize_t i;
     size_t  size_native;
-    char *  member_name = NULL;
+    char   *member_name = NULL;
     herr_t  ret_val     = -1;
 
     /* check the arguments */
@@ -620,7 +598,7 @@ H5TBwrite_fields_index(hid_t loc_id, const char *dset_name, hsize_t nfields, con
     if ((write_type_id = H5Tcreate(H5T_COMPOUND, type_size)) < 0)
         goto out;
 
-    /* iterate tru the members */
+    /* iterate through the members */
     for (i = 0; i < nfields; i++) {
         unsigned j;
 
@@ -735,10 +713,6 @@ out:
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente
- *
- * Date: November 20, 2001
- *
  * Comments:
  *
  *-------------------------------------------------------------------------
@@ -808,10 +782,6 @@ out:
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente
- *
- * Date: November 19, 2001
- *
  * Comments:
  *
  *-------------------------------------------------------------------------
@@ -874,10 +844,6 @@ out:
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente
- *
- * Date: November 19, 2001
- *
  * Comments:
  *
  *-------------------------------------------------------------------------
@@ -899,7 +865,7 @@ H5TBread_fields_name(hid_t loc_id, const char *dset_name, const char *field_name
     hsize_t  offset[1];
     hsize_t  mem_size[1];
     size_t   size_native;
-    char *   member_name = NULL;
+    char    *member_name = NULL;
     hssize_t i, j;
     herr_t   ret_val = -1;
 
@@ -1031,10 +997,6 @@ out:
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente
- *
- * Date: November 19, 2001
- *
  * Comments:
  *
  *-------------------------------------------------------------------------
@@ -1056,7 +1018,7 @@ H5TBread_fields_index(hid_t loc_id, const char *dset_name, hsize_t nfields, cons
     hsize_t mem_size[1];
     hsize_t i;
     size_t  size_native;
-    char *  member_name = NULL;
+    char   *member_name = NULL;
     herr_t  ret_val     = -1;
 
     /* check the arguments */
@@ -1075,7 +1037,7 @@ H5TBread_fields_index(hid_t loc_id, const char *dset_name, hsize_t nfields, cons
     if ((read_type_id = H5Tcreate(H5T_COMPOUND, type_size)) < 0)
         goto out;
 
-    /* iterate tru the members */
+    /* iterate through the members */
     for (i = 0; i < nfields; i++) {
         unsigned j;
 
@@ -1189,10 +1151,6 @@ out:
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente
- *
- * Date: November 26, 2001
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -1212,8 +1170,8 @@ H5TBdelete_record(hid_t loc_id, const char *dset_name, hsize_t start, hsize_t nr
     hsize_t        mem_size[1];
     hsize_t        dims[1];
     size_t         src_size;
-    size_t *       src_offset = NULL;
-    size_t *       src_sizes  = NULL;
+    size_t        *src_offset = NULL;
+    size_t        *src_sizes  = NULL;
     unsigned char *tmp_buf    = NULL;
     herr_t         ret_val    = -1;
 
@@ -1230,9 +1188,9 @@ H5TBdelete_record(hid_t loc_id, const char *dset_name, hsize_t start, hsize_t nr
     if (H5TBget_table_info(loc_id, dset_name, &nfields, &ntotal_records) < 0)
         goto out;
 
-    if (NULL == (src_offset = (size_t *)HDmalloc((size_t)nfields * sizeof(size_t))))
+    if (NULL == (src_offset = (size_t *)malloc((size_t)nfields * sizeof(size_t))))
         goto out;
-    if (NULL == (src_sizes = (size_t *)HDmalloc((size_t)nfields * sizeof(size_t))))
+    if (NULL == (src_sizes = (size_t *)malloc((size_t)nfields * sizeof(size_t))))
         goto out;
 
     /* get field info */
@@ -1252,7 +1210,7 @@ H5TBdelete_record(hid_t loc_id, const char *dset_name, hsize_t start, hsize_t nr
     read_nrecords = ntotal_records - read_start;
 
     if (read_nrecords) {
-        if (NULL == (tmp_buf = (unsigned char *)HDcalloc((size_t)read_nrecords, src_size)))
+        if (NULL == (tmp_buf = (unsigned char *)calloc((size_t)read_nrecords, src_size)))
             goto out;
 
         /* read the records after the deleted one(s) */
@@ -1318,11 +1276,11 @@ H5TBdelete_record(hid_t loc_id, const char *dset_name, hsize_t start, hsize_t nr
 
 out:
     if (tmp_buf)
-        HDfree(tmp_buf);
+        free(tmp_buf);
     if (src_offset)
-        HDfree(src_offset);
+        free(src_offset);
     if (src_sizes)
-        HDfree(src_sizes);
+        free(src_sizes);
     if (mem_type_id > 0)
         if (H5Tclose(mem_type_id) < 0)
             ret_val = -1;
@@ -1348,10 +1306,6 @@ out:
  * Purpose: Inserts records into middle of table ("pushing down" all the records after it)
  *
  * Return: Success: 0, Failure: -1
- *
- * Programmer: Pedro Vicente
- *
- * Date: November 26, 2001
  *
  * Comments: Uses memory offsets
  *
@@ -1402,7 +1356,7 @@ H5TBinsert_record(hid_t loc_id, const char *dset_name, hsize_t start, hsize_t nr
         goto out;
 
     read_nrecords = ntotal_records - start;
-    if (NULL == (tmp_buf = (unsigned char *)HDcalloc((size_t)read_nrecords, type_size)))
+    if (NULL == (tmp_buf = (unsigned char *)calloc((size_t)read_nrecords, type_size)))
         goto out;
 
     /* read the records after the inserted one(s) */
@@ -1474,7 +1428,7 @@ H5TBinsert_record(hid_t loc_id, const char *dset_name, hsize_t start, hsize_t nr
 
 out:
     if (tmp_buf)
-        HDfree(tmp_buf);
+        free(tmp_buf);
     if (sid > 0)
         if (H5Sclose(sid) < 0)
             ret_val = -1;
@@ -1501,10 +1455,6 @@ out:
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente
- *
- * Date: December 5, 2001
- *
  * Comments:
  *
  *-------------------------------------------------------------------------
@@ -1524,8 +1474,8 @@ H5TBadd_records_from(hid_t loc_id, const char *dset_name1, hsize_t start1, hsize
     hsize_t        ntotal_records;
     size_t         type_size1;
     size_t         src_size;
-    size_t *       src_offset = NULL;
-    size_t *       src_sizes  = NULL;
+    size_t        *src_offset = NULL;
+    size_t        *src_sizes  = NULL;
     unsigned char *tmp_buf    = NULL;
     herr_t         ret_val    = -1;
 
@@ -1544,9 +1494,9 @@ H5TBadd_records_from(hid_t loc_id, const char *dset_name1, hsize_t start1, hsize
     if (H5TBget_table_info(loc_id, dset_name1, &nfields, &ntotal_records) < 0)
         goto out;
 
-    if (NULL == (src_offset = (size_t *)HDmalloc((size_t)nfields * sizeof(size_t))))
+    if (NULL == (src_offset = (size_t *)malloc((size_t)nfields * sizeof(size_t))))
         goto out;
-    if (NULL == (src_sizes = (size_t *)HDmalloc((size_t)nfields * sizeof(size_t))))
+    if (NULL == (src_sizes = (size_t *)malloc((size_t)nfields * sizeof(size_t))))
         goto out;
 
     /* get field info */
@@ -1574,7 +1524,7 @@ H5TBadd_records_from(hid_t loc_id, const char *dset_name1, hsize_t start1, hsize
     if (0 == (type_size1 = H5Tget_size(tid)))
         goto out;
 
-    if (NULL == (tmp_buf = (unsigned char *)HDcalloc((size_t)nrecords, type_size1)))
+    if (NULL == (tmp_buf = (unsigned char *)calloc((size_t)nrecords, type_size1)))
         goto out;
 
     /* define a hyperslab in the dataset of the size of the records */
@@ -1602,11 +1552,11 @@ H5TBadd_records_from(hid_t loc_id, const char *dset_name1, hsize_t start1, hsize
 
 out:
     if (tmp_buf)
-        HDfree(tmp_buf);
+        free(tmp_buf);
     if (src_offset)
-        HDfree(src_offset);
+        free(src_offset);
     if (src_sizes)
-        HDfree(src_sizes);
+        free(src_sizes);
     if (tid > 0)
         if (H5Tclose(tid) < 0)
             ret_val = -1;
@@ -1629,10 +1579,6 @@ out:
  * Purpose: Combine records from two tables into a third
  *
  * Return: Success: 0, Failure: -1
- *
- * Programmer: Pedro Vicente
- *
- * Date: December 10, 2001
  *
  * Comments:
  *
@@ -1672,8 +1618,8 @@ H5TBcombine_tables(hid_t loc_id1, const char *dset_name1, hid_t loc_id2, const c
     size_t         type_size;
     size_t         member_offset;
     size_t         src_size;
-    size_t *       src_offset = NULL;
-    size_t *       src_sizes  = NULL;
+    size_t        *src_offset = NULL;
+    size_t        *src_sizes  = NULL;
     char           attr_name[255];
     unsigned char *tmp_buf      = NULL;
     unsigned char *tmp_fill_buf = NULL;
@@ -1697,9 +1643,9 @@ H5TBcombine_tables(hid_t loc_id1, const char *dset_name1, hid_t loc_id2, const c
     if (H5TBget_table_info(loc_id1, dset_name1, &nfields, &nrecords) < 0)
         goto out;
 
-    if (NULL == (src_offset = (size_t *)HDmalloc((size_t)nfields * sizeof(size_t))))
+    if (NULL == (src_offset = (size_t *)malloc((size_t)nfields * sizeof(size_t))))
         goto out;
-    if (NULL == (src_sizes = (size_t *)HDmalloc((size_t)nfields * sizeof(size_t))))
+    if (NULL == (src_sizes = (size_t *)malloc((size_t)nfields * sizeof(size_t))))
         goto out;
 
     /* get field info */
@@ -1774,7 +1720,7 @@ H5TBcombine_tables(hid_t loc_id1, const char *dset_name1, hid_t loc_id2, const c
         goto out;
 
     /* alloc fill value attribute buffer */
-    if (NULL == (tmp_fill_buf = (unsigned char *)HDmalloc(type_size)))
+    if (NULL == (tmp_fill_buf = (unsigned char *)malloc(type_size)))
         goto out;
 
     /* get the fill value attributes */
@@ -1795,9 +1741,9 @@ H5TBcombine_tables(hid_t loc_id1, const char *dset_name1, hid_t loc_id2, const c
                 goto out;
 
             /* get the member offset */
-            member_offset = H5Tget_member_offset(tid_3, (unsigned)i);
+            member_offset = src_offset[i];
 
-            HDsnprintf(attr_name, sizeof(attr_name), "FIELD_%d_FILL", (int)i);
+            snprintf(attr_name, sizeof(attr_name), "FIELD_%d_FILL", (int)i);
 
             if ((attr_id = H5Acreate2(did_3, attr_name, member_type_id, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0)
                 goto out;
@@ -1824,7 +1770,7 @@ H5TBcombine_tables(hid_t loc_id1, const char *dset_name1, hid_t loc_id2, const c
      * read data from 1st table
      *-------------------------------------------------------------------------
      */
-    if (NULL == (tmp_buf = (unsigned char *)HDcalloc((size_t)nrecords, type_size)))
+    if (NULL == (tmp_buf = (unsigned char *)calloc((size_t)nrecords, type_size)))
         goto out;
 
     /* define a hyperslab in the dataset of the size of the records */
@@ -1857,7 +1803,7 @@ H5TBcombine_tables(hid_t loc_id1, const char *dset_name1, hid_t loc_id2, const c
     if (H5Sclose(m_sid) < 0)
         goto out;
     m_sid = H5I_INVALID_HID;
-    HDfree(tmp_buf);
+    free(tmp_buf);
     tmp_buf = NULL;
 
     /*-------------------------------------------------------------------------
@@ -1890,7 +1836,7 @@ H5TBcombine_tables(hid_t loc_id1, const char *dset_name1, hid_t loc_id2, const c
      *-------------------------------------------------------------------------
      */
 
-    if (NULL == (tmp_buf = (unsigned char *)HDcalloc((size_t)nrecords, type_size)))
+    if (NULL == (tmp_buf = (unsigned char *)calloc((size_t)nrecords, type_size)))
         goto out;
 
     /* define a hyperslab in the dataset of the size of the records */
@@ -1920,13 +1866,13 @@ H5TBcombine_tables(hid_t loc_id1, const char *dset_name1, hid_t loc_id2, const c
 
 out:
     if (tmp_buf)
-        HDfree(tmp_buf);
+        free(tmp_buf);
     if (tmp_fill_buf)
-        HDfree(tmp_fill_buf);
+        free(tmp_fill_buf);
     if (src_offset)
-        HDfree(src_offset);
+        free(src_offset);
     if (src_sizes)
-        HDfree(src_sizes);
+        free(src_sizes);
     if (member_type_id > 0)
         if (H5Tclose(member_type_id) < 0)
             ret_val = -1;
@@ -1986,10 +1932,6 @@ out:
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente
- *
- * Date: January 30, 2002
- *
  * Comments:
  *
  *-------------------------------------------------------------------------
@@ -2033,10 +1975,11 @@ H5TBinsert_field(hid_t loc_id, const char *dset_name, const char *field_name, hi
     hsize_t        i;
     char           table_title[255];
     char           attr_name[255];
-    char *         member_name  = NULL;
+    char          *member_name  = NULL;
     unsigned char *tmp_buf      = NULL;
     unsigned char *tmp_fill_buf = NULL;
-    hbool_t        inserted;
+    size_t        *src_offset   = NULL;
+    bool           inserted;
     herr_t         ret_val = -1;
 
     /* check the arguments */
@@ -2088,11 +2031,18 @@ H5TBinsert_field(hid_t loc_id, const char *dset_name, const char *field_name, hi
         goto out;
 
     /* alloc fill value attribute buffer */
-    if (NULL == (tmp_fill_buf = (unsigned char *)HDmalloc(total_size)))
+    if (NULL == (tmp_fill_buf = (unsigned char *)calloc(1, total_size)))
         goto out;
 
     /* get the fill value attributes */
     if ((H5TBAget_fill(loc_id, dset_name, did_1, tmp_fill_buf)) < 0)
+        goto out;
+
+    if (NULL == (src_offset = (size_t *)malloc((size_t)nfields * sizeof(size_t))))
+        goto out;
+
+    /* get field info */
+    if (H5TBget_field_info(loc_id, dset_name, NULL, NULL, src_offset, NULL) < 0)
         goto out;
 
     /*-------------------------------------------------------------------------
@@ -2109,7 +2059,7 @@ H5TBinsert_field(hid_t loc_id, const char *dset_name, const char *field_name, hi
         goto out;
 
     curr_offset = 0;
-    inserted    = FALSE;
+    inserted    = false;
 
     /* insert the old fields, counting with the new one */
     for (i = 0; i < nfields + 1; i++) {
@@ -2130,7 +2080,7 @@ H5TBinsert_field(hid_t loc_id, const char *dset_name, const char *field_name, hi
 
             curr_offset += new_member_size;
 
-            inserted = TRUE;
+            inserted = true;
         } /* end if */
         else {
             /* get the member name */
@@ -2189,7 +2139,7 @@ H5TBinsert_field(hid_t loc_id, const char *dset_name, const char *field_name, hi
      *-------------------------------------------------------------------------
      */
 
-    if (NULL == (tmp_buf = (unsigned char *)HDcalloc((size_t)nrecords, (size_t)total_size)))
+    if (NULL == (tmp_buf = (unsigned char *)calloc((size_t)nrecords, (size_t)total_size)))
         goto out;
 
     /* define a hyperslab in the dataset of the size of the records */
@@ -2295,9 +2245,8 @@ H5TBinsert_field(hid_t loc_id, const char *dset_name, const char *field_name, hi
             goto out;
 
         /* get the member offset */
-        member_offset = H5Tget_member_offset(tid_3, (unsigned)i);
-
-        HDsnprintf(attr_name, sizeof(attr_name), "FIELD_%d_FILL", (int)i);
+        member_offset = src_offset[i];
+        snprintf(attr_name, sizeof(attr_name), "FIELD_%d_FILL", (int)i);
 
         if ((attr_id = H5Acreate2(did_3, attr_name, member_type_id, sid_3, H5P_DEFAULT, H5P_DEFAULT)) < 0)
             goto out;
@@ -2320,7 +2269,7 @@ H5TBinsert_field(hid_t loc_id, const char *dset_name, const char *field_name, hi
      *-------------------------------------------------------------------------
      */
     if (fill_data) {
-        HDsnprintf(attr_name, sizeof(attr_name), "FIELD_%d_FILL", (int)(nfields - 1));
+        snprintf(attr_name, sizeof(attr_name), "FIELD_%d_FILL", (int)(nfields - 1));
 
         /* get the member type */
         if ((member_type_id = H5Tget_member_type(tid_3, (unsigned)nfields - 1)) < 0)
@@ -2346,10 +2295,12 @@ H5TBinsert_field(hid_t loc_id, const char *dset_name, const char *field_name, hi
 out:
     if (member_name)
         H5free_memory(member_name);
+    if (src_offset)
+        free(src_offset);
     if (tmp_buf)
-        HDfree(tmp_buf);
+        free(tmp_buf);
     if (tmp_fill_buf)
-        HDfree(tmp_fill_buf);
+        free(tmp_fill_buf);
     if (preserve_id > 0)
         if (H5Pclose(preserve_id) < 0)
             ret_val = -1;
@@ -2403,10 +2354,6 @@ out:
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente
- *
- * Date: January 30, 2002
- *
  * Comments:
  *
  *-------------------------------------------------------------------------
@@ -2446,10 +2393,11 @@ H5TBdelete_field(hid_t loc_id, const char *dset_name, const char *field_name)
     hsize_t        i;
     char           attr_name[255];
     char           table_title[255];
-    char *         member_name  = NULL;
+    char          *member_name  = NULL;
     unsigned char *tmp_buf      = NULL;
     unsigned char *tmp_fill_buf = NULL;
-    htri_t         has_fill     = FALSE;
+    size_t        *src_offset   = NULL;
+    htri_t         has_fill     = false;
     herr_t         ret_val      = -1;
 
     /* check the arguments */
@@ -2545,7 +2493,7 @@ H5TBdelete_field(hid_t loc_id, const char *dset_name, const char *field_name)
     curr_offset = 0;
 
     /* alloc fill value attribute buffer */
-    if (NULL == (tmp_fill_buf = (unsigned char *)HDmalloc((size_t)type_size2)))
+    if (NULL == (tmp_fill_buf = (unsigned char *)malloc((size_t)type_size2)))
         goto out;
 
     /*-------------------------------------------------------------------------
@@ -2582,7 +2530,7 @@ H5TBdelete_field(hid_t loc_id, const char *dset_name, const char *field_name)
              *-------------------------------------------------------------------------
              */
 
-            HDsnprintf(attr_name, sizeof(attr_name), "FIELD_%d_FILL", (int)i);
+            snprintf(attr_name, sizeof(attr_name), "FIELD_%d_FILL", (int)i);
 
             /* check if we have the _FILL attribute */
             if ((has_fill = H5Aexists(did_1, attr_name)) < 0)
@@ -2654,7 +2602,7 @@ H5TBdelete_field(hid_t loc_id, const char *dset_name, const char *field_name)
             if (H5Tinsert(read_type_id, member_name, (size_t)0, member_type_id) < 0)
                 goto out;
 
-            if (NULL == (tmp_buf = (unsigned char *)HDcalloc((size_t)nrecords, member_size)))
+            if (NULL == (tmp_buf = (unsigned char *)calloc((size_t)nrecords, member_size)))
                 goto out;
 
             /* read */
@@ -2699,7 +2647,7 @@ H5TBdelete_field(hid_t loc_id, const char *dset_name, const char *field_name)
                 goto out;
             write_type_id = H5I_INVALID_HID;
 
-            HDfree(tmp_buf);
+            free(tmp_buf);
             tmp_buf = NULL;
         } /* end if */
 
@@ -2743,6 +2691,13 @@ H5TBdelete_field(hid_t loc_id, const char *dset_name, const char *field_name)
     if (H5TB_attach_attributes(table_title, loc_id, dset_name, nfields, tid_3) < 0)
         goto out;
 
+    if (NULL == (src_offset = (size_t *)malloc((size_t)nfields * sizeof(size_t))))
+        goto out;
+
+    /* get field info */
+    if (H5TBget_field_info(loc_id, dset_name, NULL, NULL, src_offset, NULL) < 0)
+        goto out;
+
     /*-------------------------------------------------------------------------
      * attach the fill attributes from previous table
      *-------------------------------------------------------------------------
@@ -2757,9 +2712,9 @@ H5TBdelete_field(hid_t loc_id, const char *dset_name, const char *field_name)
                 goto out;
 
             /* get the member offset */
-            member_offset = H5Tget_member_offset(tid_3, (unsigned)i);
+            member_offset = src_offset[i];
 
-            HDsnprintf(attr_name, sizeof(attr_name), "FIELD_%d_FILL", (int)i);
+            snprintf(attr_name, sizeof(attr_name), "FIELD_%d_FILL", (int)i);
 
             if ((attr_id = H5Acreate2(did_3, attr_name, member_type_id, sid_1, H5P_DEFAULT, H5P_DEFAULT)) < 0)
                 goto out;
@@ -2788,10 +2743,12 @@ H5TBdelete_field(hid_t loc_id, const char *dset_name, const char *field_name)
 out:
     if (member_name)
         H5free_memory(member_name);
+    if (src_offset)
+        free(src_offset);
     if (tmp_fill_buf)
-        HDfree(tmp_fill_buf);
+        free(tmp_fill_buf);
     if (tmp_buf)
-        HDfree(tmp_buf);
+        free(tmp_buf);
     if (attr_id > 0)
         if (H5Aclose(attr_id) < 0)
             ret_val = -1;
@@ -2855,10 +2812,6 @@ out:
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente
- *
- * Date: January 30, 2001
- *
  * Comments:
  *
  *-------------------------------------------------------------------------
@@ -2879,11 +2832,7 @@ H5TBAget_title(hid_t loc_id, char *table_title)
  *
  * Purpose: Read the table attribute fill values
  *
- * Return: Success: TRUE/FALSE, Failure: -1
- *
- * Programmer: Pedro Vicente
- *
- * Date: January 30, 2002
+ * Return: Success: true/false, Failure: -1
  *
  * Comments:
  *
@@ -2897,7 +2846,7 @@ H5TBAget_fill(hid_t loc_id, const char *dset_name, hid_t dset_id, unsigned char 
     hsize_t i;
     size_t *src_offset = NULL;
     char    attr_name[255];
-    htri_t  has_fill = FALSE;
+    htri_t  has_fill = false;
     htri_t  ret_val  = -1;
 
     /* check the arguments */
@@ -2908,7 +2857,7 @@ H5TBAget_fill(hid_t loc_id, const char *dset_name, hid_t dset_id, unsigned char 
     if (H5TBget_table_info(loc_id, dset_name, &nfields, &nrecords) < 0)
         goto out;
 
-    if (NULL == (src_offset = (size_t *)HDmalloc((size_t)nfields * sizeof(size_t))))
+    if (NULL == (src_offset = (size_t *)malloc((size_t)nfields * sizeof(size_t))))
         goto out;
 
     /* get field info */
@@ -2916,7 +2865,7 @@ H5TBAget_fill(hid_t loc_id, const char *dset_name, hid_t dset_id, unsigned char 
         goto out;
 
     for (i = 0; i < nfields; i++) {
-        HDsnprintf(attr_name, sizeof(attr_name), "FIELD_%d_FILL", (int)i);
+        snprintf(attr_name, sizeof(attr_name), "FIELD_%d_FILL", (int)i);
 
         /* Check if we have the _FILL attribute */
         if ((has_fill = H5Aexists(dset_id, attr_name)) < 0)
@@ -2932,7 +2881,7 @@ H5TBAget_fill(hid_t loc_id, const char *dset_name, hid_t dset_id, unsigned char 
 
 out:
     if (src_offset)
-        HDfree(src_offset);
+        free(src_offset);
 
     return ret_val;
 } /* end H5TBAget_fill() */
@@ -2950,10 +2899,6 @@ out:
  * Purpose: Gets the number of records and fields of a table
  *
  * Return: Success: 0, Failure: -1
- *
- * Programmer: Pedro Vicente
- *
- * Date: November 19, 2001
  *
  * Comments:
  *
@@ -3036,10 +2981,6 @@ out:
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente
- *
- * Date: November 19, 2001
- *
  * Comments:
  *
  *-------------------------------------------------------------------------
@@ -3081,15 +3022,28 @@ H5TBget_field_info(hid_t loc_id, const char *dset_name, char *field_names[], siz
     if ((nfields = H5Tget_nmembers(tid)) < 0)
         goto out;
 
-    /* iterate tru the members */
+    /* iterate through the members */
     for (i = 0; i < nfields; i++) {
         /* get the member name */
         if (field_names) {
-            char *member_name;
+            char  *member_name;
+            size_t name_len;
 
             if (NULL == (member_name = H5Tget_member_name(tid, (unsigned)i)))
                 goto out;
-            strcpy(field_names[i], member_name);
+
+            name_len = strlen(member_name);
+            if (name_len >= HLTB_MAX_FIELD_LEN) {
+                memcpy(field_names[i], member_name, HLTB_MAX_FIELD_LEN - 1);
+                field_names[i][HLTB_MAX_FIELD_LEN - 1] = '\0';
+            }
+            else {
+                /* name fits within the limit: copy only name_len + 1 bytes (more efficient
+                 * than copying HLTB_MAX_FIELD_LEN - 1 bytes).  name_len + 1 <= HLTB_MAX_FIELD_LEN,
+                 * and callers must provide buffers of at least HLTB_MAX_FIELD_LEN bytes each
+                 * (documented in H5TBpublic.h), so this copy is within bounds. */
+                memcpy(field_names[i], member_name, name_len + 1);
+            }
             H5free_memory(member_name);
         } /* end if */
 
@@ -3151,15 +3105,11 @@ out:
  *
  * Purpose: Find a string field
  *
- * Return: Success: TRUE/FALSE, Failure: N/A
- *
- * Programmer: Pedro Vicente
- *
- * Date: November 19, 2001
+ * Return: Success: true/false, Failure: N/A
  *
  *-------------------------------------------------------------------------
  */
-H5_ATTR_PURE static hbool_t
+H5_ATTR_PURE static bool
 H5TB_find_field(const char *field, const char *field_list)
 {
     const char *start = field_list;
@@ -3167,22 +3117,22 @@ H5TB_find_field(const char *field, const char *field_list)
 
     /* check the arguments */
     if (field == NULL)
-        return FALSE;
+        return false;
     if (field_list == NULL)
-        return FALSE;
+        return false;
 
-    while ((end = HDstrstr(start, ",")) != 0) {
+    while ((end = strstr(start, ",")) != 0) {
         ptrdiff_t count = end - start;
 
-        if (HDstrncmp(start, field, (size_t)count) == 0 && (size_t)count == HDstrlen(field))
-            return TRUE;
+        if (strncmp(start, field, (size_t)count) == 0 && (size_t)count == strlen(field))
+            return true;
         start = end + 1;
     } /* end while */
 
-    if (HDstrncmp(start, field, HDstrlen(field)) == 0)
-        return TRUE;
+    if (strcmp(start, field) == 0)
+        return true;
 
-    return FALSE;
+    return false;
 } /* end H5TB_find_field() */
 
 /*-------------------------------------------------------------------------
@@ -3194,10 +3144,6 @@ H5TB_find_field(const char *field, const char *field_list)
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente
- *
- * Date: December 6, 2001
- *
  * Comments:
  *
  *-------------------------------------------------------------------------
@@ -3207,7 +3153,7 @@ H5TB_attach_attributes(const char *table_title, hid_t loc_id, const char *dset_n
                        hid_t tid)
 {
     char    attr_name[255];
-    char *  member_name = NULL;
+    char   *member_name = NULL;
     hsize_t i;
     herr_t  ret_val = -1;
 
@@ -3229,7 +3175,7 @@ H5TB_attach_attributes(const char *table_title, hid_t loc_id, const char *dset_n
         if (NULL == (member_name = H5Tget_member_name(tid, (unsigned)i)))
             goto out;
 
-        HDsnprintf(attr_name, sizeof(attr_name), "FIELD_%d_NAME", (int)i);
+        snprintf(attr_name, sizeof(attr_name), "FIELD_%d_NAME", (int)i);
 
         /* attach the attribute */
         if (H5LTset_attribute_string(loc_id, dset_name, attr_name, member_name) < 0)
@@ -3255,10 +3201,6 @@ out:
  *
  * Return: Success: the memory type ID, Failure: -1
  *
- * Programmer: Pedro Vicente
- *
- * Date: March 31, 2004
- *
  * Comments:
  *
  *-------------------------------------------------------------------------
@@ -3272,7 +3214,7 @@ H5TB_create_type(hid_t loc_id, const char *dset_name, size_t type_size, const si
     hid_t    nmtype_id   = H5I_INVALID_HID;
     size_t   size_native;
     hsize_t  nfields = 0;
-    char **  fnames  = NULL;
+    char   **fnames  = NULL;
     unsigned i;
     hid_t    ret_val = -1;
 
@@ -3280,11 +3222,11 @@ H5TB_create_type(hid_t loc_id, const char *dset_name, size_t type_size, const si
     if (H5TBget_table_info(loc_id, dset_name, &nfields, NULL) < 0)
         goto out;
 
-    if (NULL == (fnames = (char **)HDcalloc(sizeof(char *), (size_t)nfields)))
+    if (NULL == (fnames = (char **)calloc((size_t)nfields, sizeof(char *))))
         goto out;
 
     for (i = 0; i < nfields; i++)
-        if (NULL == (fnames[i] = (char *)HDmalloc(HLTB_MAX_FIELD_LEN)))
+        if (NULL == (fnames[i] = (char *)malloc(HLTB_MAX_FIELD_LEN)))
             goto out;
 
     /* get field info */
@@ -3322,8 +3264,8 @@ out:
     if (fnames) {
         for (i = 0; i < nfields; i++)
             if (fnames[i])
-                HDfree(fnames[i]);
-        HDfree(fnames);
+                free(fnames[i]);
+        free(fnames);
     } /* end if */
     if (mtype_id > 0)
         if (H5Tclose(mtype_id) < 0)
@@ -3351,10 +3293,6 @@ out:
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Nat Furrer
- *             James Laird
- *
- * Date: March 8, 2004
  *
  * Comments: Called by H5TBappend_records and H5PTappend_records
  *
@@ -3416,10 +3354,6 @@ out:
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Nat Furrer
- *             James Laird
- *
- * Date: March 8, 2004
  *
  * Comments: Called by H5TBread_records and H5PTread_records
  *

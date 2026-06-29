@@ -9,12 +9,11 @@
 ! COPYRIGHT
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 !   Copyright by The HDF Group.                                               *
-!   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
 !   This file is part of HDF5.  The full HDF5 copyright notice, including     *
 !   terms governing use, modification, and redistribution, is contained in    *
-!   the COPYING file, which can be found at the root of the source code       *
+!   the LICENSE file, which can be found at the root of the source code       *
 !   distribution tree, or in https://www.hdfgroup.org/licenses.               *
 !   If you do not have access to either file, you may request a copy from     *
 !   help@hdfgroup.org.                                                        *
@@ -26,14 +25,14 @@
 !*****
 MODULE TH5Z
 
+   USE HDF5 ! This module contains all necessary modules
+   USE TH5_MISC
+
 CONTAINS
 
     SUBROUTINE filters_test(total_error)
 
 !   This subroutine tests following functionalities: h5zfilter_avail_f, h5zunregister_f
-
-   USE HDF5 ! This module contains all necessary modules
-   USE TH5_MISC
 
      IMPLICIT NONE
      INTEGER, INTENT(OUT) :: total_error
@@ -165,8 +164,6 @@ CONTAINS
      END SUBROUTINE filters_test
 
         SUBROUTINE szip_test(szip_flag, cleanup, total_error)
-        USE HDF5 ! This module contains all necessary modules
-        USE TH5_MISC
 
           IMPLICIT NONE
           LOGICAL, INTENT(OUT) :: szip_flag
@@ -192,8 +189,8 @@ CONTAINS
           INTEGER(HSIZE_T), DIMENSION(2) :: chunk_dims = (/NN, MM/)
           INTEGER     ::   rank = 2                        ! Dataset rank
 
-          INTEGER, DIMENSION(N,M) :: dset_data ! Data buffers
-          INTEGER, DIMENSION(:,:), ALLOCATABLE :: data_out ! Data buffers
+          INTEGER, DIMENSION(:,:), ALLOCATABLE :: dset_data ! Data buffers
+          INTEGER, DIMENSION(:,:), ALLOCATABLE :: data_out  ! Data buffers
           INTEGER     ::   error ! Error flag
           INTEGER     ::   num_errors = 0 ! Number of data errors
 
@@ -252,6 +249,7 @@ CONTAINS
           !
           ! Initialize the dset_data array.
           !
+          ALLOCATE(dset_data(1:N,1:M))
           do i = 1, N
              do j = 1, M
                 dset_data(i,j) = (i-1)*6 + j;
@@ -387,6 +385,7 @@ CONTAINS
 100       IF (num_errors .GT. 0) THEN
             total_error=total_error + 1
           END IF
+          DEALLOCATE(dset_data)
           DEALLOCATE(data_out)
 
           !

@@ -211,7 +211,7 @@
 
 #define LIST_ENTRY(type)                                                                                     \
     struct {                                                                                                 \
-        struct type * le_next; /* next element */                                                            \
+        struct type  *le_next; /* next element */                                                            \
         struct type **le_prev; /* address of previous next element */                                        \
     }
 
@@ -316,8 +316,8 @@
  */
 #define _TAILQ_HEAD(name, type, qual)                                                                        \
     struct name {                                                                                            \
-        qual type *tqh_first;      /* first element */                                                       \
-        qual type *qual *tqh_last; /* addr of last next element */                                           \
+        qual type       *tqh_first; /* first element */                                                      \
+        qual type *qual *tqh_last;  /* addr of last next element */                                          \
     }
 #define TAILQ_HEAD(name, type) _TAILQ_HEAD(name, struct type, )
 
@@ -328,7 +328,7 @@
 
 #define _TAILQ_ENTRY(type, qual)                                                                             \
     struct {                                                                                                 \
-        qual type *tqe_next;       /* next element */                                                        \
+        qual type       *tqe_next; /* next element */                                                        \
         qual type *qual *tqe_prev; /* address of previous next element */                                    \
     }
 #define TAILQ_ENTRY(type)                _TAILQ_ENTRY(struct type, )
@@ -471,7 +471,7 @@
  */
 #define STAILQ_HEAD(name, type)                                                                              \
     struct name {                                                                                            \
-        struct type * stqh_first; /* first element */                                                        \
+        struct type  *stqh_first; /* first element */                                                        \
         struct type **stqh_last;  /* addr of last next element */                                            \
     }
 
@@ -570,7 +570,7 @@
  */
 #define SIMPLEQ_HEAD(name, type)                                                                             \
     struct name {                                                                                            \
-        struct type * sqh_first; /* first element */                                                         \
+        struct type  *sqh_first; /* first element */                                                         \
         struct type **sqh_last;  /* addr of last next element */                                             \
     }
 

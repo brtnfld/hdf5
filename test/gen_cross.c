@@ -1,20 +1,16 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:  Raymond Lu
- *              Thursday, March 23, 2006
- *
  *  This program writes floating-point data to the HDF5 file.  It generates
  *  the file to be read by cross_read.c, to test reading data from cross-systems.
  *  Run it on an OpenVMS, a little-endian, and a big-endian machine.  Change the
@@ -86,18 +82,13 @@ int create_nbit_dsets_float(hid_t fid, hid_t fsid, hid_t msid);
  * Return:      Success:        0
  *              Failure:        -1
  *
- * Programmer:  Raymond Lu
- *              Some time ago
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 int
 create_normal_dset(hid_t fid, hid_t fsid, hid_t msid)
 {
-    hid_t dataset = -1; /* file and dataset handles */
-    hid_t dcpl    = -1;
+    hid_t dataset = H5I_INVALID_HID; /* file and dataset handles */
+    hid_t dcpl    = H5I_INVALID_HID;
     float data[NX][NY]; /* data to write */
     float fillvalue = -2.2f;
     int   i, j;
@@ -179,7 +170,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 }
@@ -192,18 +183,13 @@ error:
  * Return:      Success:        0
  *              Failure:        -1
  *
- * Programmer:  Neil Fortner
- *              27 January 2011
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 int
 create_scale_offset_dsets_float(hid_t fid, hid_t fsid, hid_t msid)
 {
-    hid_t   dataset = -1; /* dataset handles */
-    hid_t   dcpl    = -1;
+    hid_t   dataset = H5I_INVALID_HID; /* dataset handles */
+    hid_t   dcpl    = H5I_INVALID_HID;
     float   data[NX][NY]; /* data to write */
     float   fillvalue   = -2.2f;
     hsize_t chunk[RANK] = {CHUNK0, CHUNK1};
@@ -269,7 +255,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 }
@@ -282,18 +268,13 @@ error:
  * Return:      Success:        0
  *              Failure:        -1
  *
- * Programmer:  Raymond Lu
- *              21 January 2011
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 int
 create_scale_offset_dsets_double(hid_t fid, hid_t fsid, hid_t msid)
 {
-    hid_t   dataset = -1; /* dataset handles */
-    hid_t   dcpl    = -1;
+    hid_t   dataset = H5I_INVALID_HID; /* dataset handles */
+    hid_t   dcpl    = H5I_INVALID_HID;
     double  data[NX][NY]; /* data to write */
     double  fillvalue   = -2.2;
     hsize_t chunk[RANK] = {CHUNK0, CHUNK1};
@@ -359,7 +340,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 }
@@ -372,18 +353,13 @@ error:
  * Return:      Success:        0
  *              Failure:        -1
  *
- * Programmer:  Neil Fortner
- *              27 January 2011
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 int
 create_scale_offset_dsets_char(hid_t fid, hid_t fsid, hid_t msid)
 {
-    hid_t   dataset = -1; /* dataset handles */
-    hid_t   dcpl    = -1;
+    hid_t   dataset = H5I_INVALID_HID; /* dataset handles */
+    hid_t   dcpl    = H5I_INVALID_HID;
     char    data[NX][NY]; /* data to write */
     char    fillvalue   = -2;
     hsize_t chunk[RANK] = {CHUNK0, CHUNK1};
@@ -457,7 +433,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 }
@@ -470,18 +446,13 @@ error:
  * Return:      Success:        0
  *              Failure:        -1
  *
- * Programmer:  Neil Fortner
- *              27 January 2011
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 int
 create_scale_offset_dsets_short(hid_t fid, hid_t fsid, hid_t msid)
 {
-    hid_t   dataset = -1; /* dataset handles */
-    hid_t   dcpl    = -1;
+    hid_t   dataset = H5I_INVALID_HID; /* dataset handles */
+    hid_t   dcpl    = H5I_INVALID_HID;
     short   data[NX][NY]; /* data to write */
     short   fillvalue   = -2;
     hsize_t chunk[RANK] = {CHUNK0, CHUNK1};
@@ -555,7 +526,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 }
@@ -568,18 +539,13 @@ error:
  * Return:      Success:        0
  *              Failure:        -1
  *
- * Programmer:  Raymond Lu
- *              21 January 2011
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 int
 create_scale_offset_dsets_int(hid_t fid, hid_t fsid, hid_t msid)
 {
-    hid_t   dataset = -1; /* dataset handles */
-    hid_t   dcpl    = -1;
+    hid_t   dataset = H5I_INVALID_HID; /* dataset handles */
+    hid_t   dcpl    = H5I_INVALID_HID;
     int     data[NX][NY]; /* data to write */
     int     fillvalue   = -2;
     hsize_t chunk[RANK] = {CHUNK0, CHUNK1};
@@ -653,7 +619,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 }
@@ -667,18 +633,13 @@ error:
  * Return:      Success:        0
  *              Failure:        -1
  *
- * Programmer:  Neil Fortner
- *              27 January 2011
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 int
 create_scale_offset_dsets_long_long(hid_t fid, hid_t fsid, hid_t msid)
 {
-    hid_t     dataset = -1; /* dataset handles */
-    hid_t     dcpl    = -1;
+    hid_t     dataset = H5I_INVALID_HID; /* dataset handles */
+    hid_t     dcpl    = H5I_INVALID_HID;
     long long data[NX][NY]; /* data to write */
     long long fillvalue   = -2;
     hsize_t   chunk[RANK] = {CHUNK0, CHUNK1};
@@ -752,7 +713,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 }
@@ -765,18 +726,13 @@ error:
  * Return:      Success:        0
  *              Failure:        -1
  *
- * Programmer:  Raymond Lu
- *              29 March 2011
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 int
 create_fletcher_dsets_float(hid_t fid, hid_t fsid, hid_t msid)
 {
-    hid_t   dataset = -1; /* dataset handles */
-    hid_t   dcpl    = -1;
+    hid_t   dataset = H5I_INVALID_HID; /* dataset handles */
+    hid_t   dcpl    = H5I_INVALID_HID;
     float   data[NX][NY]; /* data to write */
     float   fillvalue   = -2.2f;
     hsize_t chunk[RANK] = {CHUNK0, CHUNK1};
@@ -842,7 +798,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 }
@@ -855,19 +811,14 @@ error:
  * Return:      Success:        0
  *              Failure:        -1
  *
- * Programmer:  Raymond Lu
- *              29 March 2011
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 int
 create_deflate_dsets_float(hid_t fid, hid_t fsid, hid_t msid)
 {
 #ifdef H5_HAVE_FILTER_DEFLATE
-    hid_t   dataset = -1; /* dataset handles */
-    hid_t   dcpl    = -1;
+    hid_t   dataset = H5I_INVALID_HID; /* dataset handles */
+    hid_t   dcpl    = H5I_INVALID_HID;
     float   data[NX][NY]; /* data to write */
     float   fillvalue   = -2.2f;
     hsize_t chunk[RANK] = {CHUNK0, CHUNK1};
@@ -928,7 +879,7 @@ create_deflate_dsets_float(hid_t fid, hid_t fsid, hid_t msid)
 #else  /* H5_HAVE_FILTER_DEFLATE */
     const char *not_supported = "Deflate filter is not enabled. Can't create the dataset.";
 
-    HDputs(not_supported);
+    puts(not_supported);
 #endif /* H5_HAVE_FILTER_DEFLATE */
 
     return 0;
@@ -940,7 +891,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 #endif /* H5_HAVE_FILTER_DEFLATE */
@@ -955,11 +906,6 @@ error:
  *
  * Return:      Success:        0
  *              Failure:        -1
- *
- * Programmer:  Raymond Lu
- *              29 March 2011
- *
- * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -1033,7 +979,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 }
@@ -1047,18 +993,13 @@ error:
  * Return:      Success:        0
  *              Failure:        -1
  *
- * Programmer:  Raymond Lu
- *              29 March 2011
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 int
 create_shuffle_dsets_float(hid_t fid, hid_t fsid, hid_t msid)
 {
-    hid_t   dataset = -1; /* dataset handles */
-    hid_t   dcpl    = -1;
+    hid_t   dataset = H5I_INVALID_HID; /* dataset handles */
+    hid_t   dcpl    = H5I_INVALID_HID;
     float   data[NX][NY]; /* data to write */
     float   fillvalue   = -2.2f;
     hsize_t chunk[RANK] = {CHUNK0, CHUNK1};
@@ -1124,7 +1065,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 }
@@ -1137,19 +1078,14 @@ error:
  * Return:      Success:        0
  *              Failure:        -1
  *
- * Programmer:  Raymond Lu
- *              29 March 2011
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 int
 create_nbit_dsets_float(hid_t fid, hid_t fsid, hid_t msid)
 {
-    hid_t   dataset  = -1; /* dataset handles */
-    hid_t   datatype = -1;
-    hid_t   dcpl     = -1;
+    hid_t   dataset  = H5I_INVALID_HID; /* dataset handles */
+    hid_t   datatype = H5I_INVALID_HID;
+    hid_t   dcpl     = H5I_INVALID_HID;
     size_t  precision, offset;
     float   data[NX][NY]; /* data to write */
     float   fillvalue   = -2.2f;
@@ -1235,7 +1171,7 @@ error:
         H5Pclose(dcpl);
         H5Dclose(dataset);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
 
     return -1;
 }
@@ -1247,16 +1183,14 @@ error:
  *
  * Return:      EXIT_SUCCESS/EXIT_FAILURE
  *
- * Programmer:  Raymond Lu
- *
  *-------------------------------------------------------------------------
  */
 int
 main(void)
 {
-    hid_t   file      = -1;
-    hid_t   filespace = -1;
-    hid_t   memspace  = -1;
+    hid_t   file      = H5I_INVALID_HID;
+    hid_t   filespace = H5I_INVALID_HID;
+    hid_t   memspace  = H5I_INVALID_HID;
     hsize_t dimsf[RANK];
     hsize_t start[RANK] = {0, 0};
 
@@ -1283,8 +1217,8 @@ main(void)
 
     /* Create memory space.  This does not include the extra row for fill
      * values. */
-    HDassert(dimsf[0] == NX);
-    HDassert(dimsf[1] == NY);
+    assert(dimsf[0] == NX);
+    assert(dimsf[1] == NY);
     if ((memspace = H5Screate_simple(RANK, dimsf, NULL)) < 0)
         TEST_ERROR;
 
@@ -1329,7 +1263,7 @@ main(void)
     if (create_szip_dsets_float(file, filespace, memspace) < 0)
         TEST_ERROR;
 #else  /* H5_HAVE_FILTER_SZIP */
-    HDputs("Szip filter is not enabled. Can't create the dataset.");
+    puts("Szip filter is not enabled. Can't create the dataset.");
 #endif /* H5_HAVE_FILTER_SZIP */
 
     /* Create a dataset of FLOAT with shuffle filter */
@@ -1350,8 +1284,8 @@ main(void)
     if (H5Fclose(file) < 0)
         TEST_ERROR;
 
-    HDexit(EXIT_SUCCESS);
+    exit(EXIT_SUCCESS);
 
 error:
-    HDexit(EXIT_FAILURE);
+    exit(EXIT_FAILURE);
 } /* end main() */

@@ -1,11 +1,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -18,303 +17,25 @@
 #ifndef H5Fprivate_H
 #define H5Fprivate_H
 
-/* Early typedefs to avoid circular dependencies */
+/* This definition has to be early, before the other private headers,
+ * due to circular dependencies.
+ */
 typedef struct H5F_t H5F_t;
 
 /* Include package's public header */
 #include "H5Fpublic.h"
 
 /* Private headers needed by this file */
-#include "H5MMprivate.h" /* Memory management            */
 #include "H5FDprivate.h" /* File drivers                 */
+#include "H5queue.h"     /* Queue macros (TAILQ etc.)    */
 #ifdef H5_HAVE_PARALLEL
-#include "H5Pprivate.h"  /* Property lists               */
-#endif                   /* H5_HAVE_PARALLEL */
-#include "H5VMprivate.h" /* Vectors and arrays           */
+#include "H5Pprivate.h" /* Property lists               */
+#endif
 #include "H5VLprivate.h" /* Virtual Object Layer         */
 
 /**************************/
 /* Library Private Macros */
 /**************************/
-
-/*
- * Encode and decode macros for file meta-data.
- * Currently, all file meta-data is little-endian.
- */
-
-#define INT16ENCODE(p, i)                                                                                    \
-    {                                                                                                        \
-        *(p) = (uint8_t)((unsigned)(i)&0xff);                                                                \
-        (p)++;                                                                                               \
-        *(p) = (uint8_t)(((unsigned)(i) >> 8) & 0xff);                                                       \
-        (p)++;                                                                                               \
-    }
-
-#define UINT16ENCODE(p, i)                                                                                   \
-    {                                                                                                        \
-        *(p) = (uint8_t)((unsigned)(i)&0xff);                                                                \
-        (p)++;                                                                                               \
-        *(p) = (uint8_t)(((unsigned)(i) >> 8) & 0xff);                                                       \
-        (p)++;                                                                                               \
-    }
-
-#define INT32ENCODE(p, i)                                                                                    \
-    {                                                                                                        \
-        *(p) = (uint8_t)((uint32_t)(i)&0xff);                                                                \
-        (p)++;                                                                                               \
-        *(p) = (uint8_t)(((uint32_t)(i) >> 8) & 0xff);                                                       \
-        (p)++;                                                                                               \
-        *(p) = (uint8_t)(((uint32_t)(i) >> 16) & 0xff);                                                      \
-        (p)++;                                                                                               \
-        *(p) = (uint8_t)(((uint32_t)(i) >> 24) & 0xff);                                                      \
-        (p)++;                                                                                               \
-    }
-
-#define UINT32ENCODE(p, i)                                                                                   \
-    {                                                                                                        \
-        *(p) = (uint8_t)((i)&0xff);                                                                          \
-        (p)++;                                                                                               \
-        *(p) = (uint8_t)(((i) >> 8) & 0xff);                                                                 \
-        (p)++;                                                                                               \
-        *(p) = (uint8_t)(((i) >> 16) & 0xff);                                                                \
-        (p)++;                                                                                               \
-        *(p) = (uint8_t)(((i) >> 24) & 0xff);                                                                \
-        (p)++;                                                                                               \
-    }
-
-/* Encode an unsigned integer into a variable-sized buffer */
-/* (Assumes that the high bits of the integer are zero) */
-#define ENCODE_VAR(p, typ, n, l)                                                                             \
-    {                                                                                                        \
-        typ      _n = (n);                                                                                   \
-        size_t   _i;                                                                                         \
-        uint8_t *_p = (uint8_t *)(p);                                                                        \
-                                                                                                             \
-        for (_i = 0; _i < l; _i++, _n >>= 8)                                                                 \
-            *_p++ = (uint8_t)(_n & 0xff);                                                                    \
-        (p) = (uint8_t *)(p) + l;                                                                            \
-    }
-
-/* Encode a 32-bit unsigned integer into a variable-sized buffer */
-/* (Assumes that the high bits of the integer are zero) */
-#define UINT32ENCODE_VAR(p, n, l) ENCODE_VAR(p, uint32_t, n, l)
-
-#define INT64ENCODE(p, n)                                                                                    \
-    {                                                                                                        \
-        int64_t  _n = (n);                                                                                   \
-        size_t   _i;                                                                                         \
-        uint8_t *_p = (uint8_t *)(p);                                                                        \
-                                                                                                             \
-        for (_i = 0; _i < sizeof(int64_t); _i++, _n >>= 8)                                                   \
-            *_p++ = (uint8_t)(_n & 0xff);                                                                    \
-        for (/*void*/; _i < 8; _i++)                                                                         \
-            *_p++ = (uint8_t)((n) < 0 ? 0xff : 0);                                                           \
-        (p) = (uint8_t *)(p) + 8;                                                                            \
-    }
-
-#define UINT64ENCODE(p, n)                                                                                   \
-    {                                                                                                        \
-        uint64_t _n = (n);                                                                                   \
-        size_t   _i;                                                                                         \
-        uint8_t *_p = (uint8_t *)(p);                                                                        \
-                                                                                                             \
-        for (_i = 0; _i < sizeof(uint64_t); _i++, _n >>= 8)                                                  \
-            *_p++ = (uint8_t)(_n & 0xff);                                                                    \
-        for (/*void*/; _i < 8; _i++)                                                                         \
-            *_p++ = 0;                                                                                       \
-        (p) = (uint8_t *)(p) + 8;                                                                            \
-    }
-
-/* Encode a 64-bit unsigned integer into a variable-sized buffer */
-/* (Assumes that the high bits of the integer are zero) */
-#define UINT64ENCODE_VAR(p, n, l) ENCODE_VAR(p, uint64_t, n, l)
-
-/* Encode a 64-bit unsigned integer and its length into a variable-sized buffer */
-/* (Assumes that the high bits of the integer are zero) */
-#define UINT64ENCODE_VARLEN(p, n)                                                                            \
-    {                                                                                                        \
-        uint64_t __n = (uint64_t)(n);                                                                        \
-        unsigned _s  = H5VM_limit_enc_size(__n);                                                             \
-                                                                                                             \
-        *(p)++ = (uint8_t)_s;                                                                                \
-        UINT64ENCODE_VAR(p, __n, _s);                                                                        \
-    }
-
-#define H5_ENCODE_UNSIGNED(p, n)                                                                             \
-    {                                                                                                        \
-        HDcompile_assert(sizeof(unsigned) == sizeof(uint32_t));                                              \
-        UINT32ENCODE(p, n)                                                                                   \
-    }
-
-/* Assumes the endianness of uint64_t is the same as double */
-#define H5_ENCODE_DOUBLE(p, n)                                                                               \
-    {                                                                                                        \
-        uint64_t _n;                                                                                         \
-        size_t   _u;                                                                                         \
-        uint8_t *_p = (uint8_t *)(p);                                                                        \
-                                                                                                             \
-        HDcompile_assert(sizeof(double) == 8);                                                               \
-        HDcompile_assert(sizeof(double) == sizeof(uint64_t));                                                \
-        H5MM_memcpy(&_n, &n, sizeof(double));                                                                \
-        for (_u = 0; _u < sizeof(uint64_t); _u++, _n >>= 8)                                                  \
-            *_p++ = (uint8_t)(_n & 0xff);                                                                    \
-        (p) = (uint8_t *)(p) + 8;                                                                            \
-    }
-
-/* DECODE converts little endian bytes pointed by p to integer values and store
- * it in i.  For signed values, need to do sign-extension when converting
- * the last byte which carries the sign bit.
- * The macros does not require i be of a certain byte sizes.  It just requires
- * i be big enough to hold the intended value range.  E.g. INT16DECODE works
- * correctly even if i is actually a 64bit int like in a Cray.
- */
-
-#define INT16DECODE(p, i)                                                                                    \
-    {                                                                                                        \
-        (i) = (int16_t)((*(p)&0xff));                                                                        \
-        (p)++;                                                                                               \
-        (i) |= (int16_t)(((*(p)&0xff) << 8) | ((*(p)&0x80) ? ~0xffff : 0x0));                                \
-        (p)++;                                                                                               \
-    }
-
-#define UINT16DECODE(p, i)                                                                                   \
-    {                                                                                                        \
-        (i) = (uint16_t)(*(p)&0xff);                                                                         \
-        (p)++;                                                                                               \
-        (i) |= (uint16_t)((*(p)&0xff) << 8);                                                                 \
-        (p)++;                                                                                               \
-    }
-
-#define INT32DECODE(p, i)                                                                                    \
-    {                                                                                                        \
-        (i) = ((int32_t)(*(p)&0xff));                                                                        \
-        (p)++;                                                                                               \
-        (i) |= ((int32_t)(*(p)&0xff) << 8);                                                                  \
-        (p)++;                                                                                               \
-        (i) |= ((int32_t)(*(p)&0xff) << 16);                                                                 \
-        (p)++;                                                                                               \
-        (i) |= ((int32_t)(((*(p) & (unsigned)0xff) << 24) | ((*(p)&0x80) ? ~0xffffffffULL : 0x0ULL)));       \
-        (p)++;                                                                                               \
-    }
-
-#define UINT32DECODE(p, i)                                                                                   \
-    {                                                                                                        \
-        (i) = (uint32_t)(*(p)&0xff);                                                                         \
-        (p)++;                                                                                               \
-        (i) |= ((uint32_t)(*(p)&0xff) << 8);                                                                 \
-        (p)++;                                                                                               \
-        (i) |= ((uint32_t)(*(p)&0xff) << 16);                                                                \
-        (p)++;                                                                                               \
-        (i) |= ((uint32_t)(*(p)&0xff) << 24);                                                                \
-        (p)++;                                                                                               \
-    }
-
-/* Decode a variable-sized buffer */
-/* (Assumes that the high bits of the integer will be zero) */
-#define DECODE_VAR(p, n, l)                                                                                  \
-    {                                                                                                        \
-        size_t _i;                                                                                           \
-                                                                                                             \
-        n = 0;                                                                                               \
-        (p) += l;                                                                                            \
-        for (_i = 0; _i < l; _i++)                                                                           \
-            n = (n << 8) | *(--p);                                                                           \
-        (p) += l;                                                                                            \
-    }
-
-/* Decode a variable-sized buffer into a 32-bit unsigned integer */
-/* (Assumes that the high bits of the integer will be zero) */
-#define UINT32DECODE_VAR(p, n, l) DECODE_VAR(p, n, l)
-
-#define INT64DECODE(p, n)                                                                                    \
-    {                                                                                                        \
-        /* WE DON'T CHECK FOR OVERFLOW! */                                                                   \
-        size_t _i;                                                                                           \
-                                                                                                             \
-        n = 0;                                                                                               \
-        (p) += 8;                                                                                            \
-        for (_i = 0; _i < sizeof(int64_t); _i++)                                                             \
-            n = (n << 8) | *(--p);                                                                           \
-        (p) += 8;                                                                                            \
-    }
-
-#define UINT64DECODE(p, n)                                                                                   \
-    {                                                                                                        \
-        /* WE DON'T CHECK FOR OVERFLOW! */                                                                   \
-        size_t _i;                                                                                           \
-                                                                                                             \
-        n = 0;                                                                                               \
-        (p) += 8;                                                                                            \
-        for (_i = 0; _i < sizeof(uint64_t); _i++)                                                            \
-            n = (n << 8) | *(--p);                                                                           \
-        (p) += 8;                                                                                            \
-    }
-
-/* Decode a variable-sized buffer into a 64-bit unsigned integer */
-/* (Assumes that the high bits of the integer will be zero) */
-#define UINT64DECODE_VAR(p, n, l) DECODE_VAR(p, n, l)
-
-/* Decode a 64-bit unsigned integer and its length from a variable-sized buffer */
-/* (Assumes that the high bits of the integer will be zero) */
-#define UINT64DECODE_VARLEN(p, n)                                                                            \
-    {                                                                                                        \
-        unsigned _s = *(p)++;                                                                                \
-                                                                                                             \
-        UINT64DECODE_VAR(p, n, _s);                                                                          \
-    }
-
-#define H5_DECODE_UNSIGNED(p, n)                                                                             \
-    {                                                                                                        \
-        HDcompile_assert(sizeof(unsigned) == sizeof(uint32_t));                                              \
-        UINT32DECODE(p, n)                                                                                   \
-    }
-
-/* Assumes the endianness of uint64_t is the same as double */
-#define H5_DECODE_DOUBLE(p, n)                                                                               \
-    {                                                                                                        \
-        uint64_t _n;                                                                                         \
-        size_t   _u;                                                                                         \
-                                                                                                             \
-        HDcompile_assert(sizeof(double) == 8);                                                               \
-        HDcompile_assert(sizeof(double) == sizeof(uint64_t));                                                \
-        _n = 0;                                                                                              \
-        (p) += 8;                                                                                            \
-        for (_u = 0; _u < sizeof(uint64_t); _u++)                                                            \
-            _n = (_n << 8) | *(--p);                                                                         \
-        H5MM_memcpy(&(n), &_n, sizeof(double));                                                              \
-        (p) += 8;                                                                                            \
-    }
-
-/* clang-format off */
-/* Address-related macros */
-#define H5F_addr_overflow(X,Z)    (HADDR_UNDEF==(X) ||                      \
-                HADDR_UNDEF==(X)+(haddr_t)(Z) ||                            \
-                (X)+(haddr_t)(Z)<(X))
-#define H5F_addr_defined(X)    ((X)!=HADDR_UNDEF)
-/* The H5F_addr_eq() macro guarantees that Y is not HADDR_UNDEF by making
- * certain that X is not HADDR_UNDEF and then checking that X equals Y
- */
-#define H5F_addr_eq(X,Y)    ((X)!=HADDR_UNDEF &&                            \
-                (X)==(Y))
-#define H5F_addr_ne(X,Y)    (!H5F_addr_eq((X),(Y)))
-#define H5F_addr_lt(X,Y)     ((X)!=HADDR_UNDEF &&                           \
-                (Y)!=HADDR_UNDEF &&                                         \
-                (X)<(Y))
-#define H5F_addr_le(X,Y)    ((X)!=HADDR_UNDEF &&                            \
-                (Y)!=HADDR_UNDEF &&                                         \
-                (X)<=(Y))
-#define H5F_addr_gt(X,Y)    ((X)!=HADDR_UNDEF &&                            \
-                (Y)!=HADDR_UNDEF &&                                         \
-                (X)>(Y))
-#define H5F_addr_ge(X,Y)    ((X)!=HADDR_UNDEF &&                            \
-                (Y)!=HADDR_UNDEF &&                                         \
-                (X)>=(Y))
-#define H5F_addr_cmp(X,Y)    (H5F_addr_eq((X), (Y)) ? 0 :                   \
-                (H5F_addr_lt((X), (Y)) ? -1 : 1))
-#define H5F_addr_pow2(N)    ((haddr_t)1<<(N))
-#define H5F_addr_overlap(O1,L1,O2,L2) (((O1) < (O2) && ((O1) + (L1)) > (O2)) || \
-                                 ((O1) >= (O2) && (O1) < ((O2) + (L2))))
-/* clang-format on */
 
 /* If the module using this macro is allowed access to the private variables, access them directly */
 #ifdef H5F_MODULE
@@ -362,26 +83,25 @@ typedef struct H5F_t H5F_t;
 #define H5F_SET_STORE_MSG_CRT_IDX(F, FL) ((F)->shared->store_msg_crt_idx = (FL))
 #define H5F_GRP_BTREE_SHARED(F)          ((F)->shared->grp_btree_shared)
 #define H5F_SET_GRP_BTREE_SHARED(F, RC)  (((F)->shared->grp_btree_shared = (RC)) ? SUCCEED : FAIL)
-#define H5F_USE_TMP_SPACE(F)             ((F)->shared->fs.use_tmp_space)
-#define H5F_IS_TMP_ADDR(F, ADDR)         (H5F_addr_le((F)->shared->fs.tmp_addr, (ADDR)))
+#define H5F_USE_TMP_SPACE(F)             ((F)->shared->use_tmp_space)
+#define H5F_IS_TMP_ADDR(F, ADDR)         (H5_addr_le((F)->shared->tmp_addr, (ADDR)))
 #ifdef H5_HAVE_PARALLEL
-#define H5F_COLL_MD_READ(F) ((F)->shared->coll_md_read)
+#define H5F_COLL_MD_READ(F)           ((F)->shared->coll_md_read)
+#define H5F_SHARED_COLL_MD_READ(F_SH) ((F_SH)->coll_md_read)
 #endif /* H5_HAVE_PARALLEL */
 #define H5F_USE_MDC_LOGGING(F)         ((F)->shared->use_mdc_logging)
 #define H5F_START_MDC_LOG_ON_ACCESS(F) ((F)->shared->start_mdc_log_on_access)
 #define H5F_MDC_LOG_LOCATION(F)        ((F)->shared->mdc_log_location)
 #define H5F_ALIGNMENT(F)               ((F)->shared->alignment)
 #define H5F_THRESHOLD(F)               ((F)->shared->threshold)
-#define H5F_PGEND_META_THRES(F)        ((F)->shared->fs.pgend_meta_thres)
-#define H5F_POINT_OF_NO_RETURN(F)      ((F)->shared->fs.point_of_no_return)
-#define H5F_SHARED_USE_VFD_SWMR(F_SH)  ((F_SH)->vfd_swmr)
-#define H5F_USE_VFD_SWMR(F)            ((F)->shared->vfd_swmr)
+#define H5F_PGEND_META_THRES(F)        ((F)->shared->pgend_meta_thres)
+#define H5F_POINT_OF_NO_RETURN(F)      ((F)->shared->point_of_no_return)
 #define H5F_NULL_FSM_ADDR(F)           ((F)->shared->null_fsm_addr)
 #define H5F_GET_MIN_DSET_OHDR(F)       ((F)->shared->crt_dset_min_ohdr_flag)
 #define H5F_SET_MIN_DSET_OHDR(F, V)    ((F)->shared->crt_dset_min_ohdr_flag = (V))
-#define H5F_VOL_CLS(F)                 ((F)->shared->vol_cls)
 #define H5F_VOL_OBJ(F)                 ((F)->vol_obj)
 #define H5F_USE_FILE_LOCKING(F)        ((F)->shared->use_file_locking)
+#define H5F_RFIC_FLAGS(F)              ((F)->shared->rfic_flags)
 #else /* H5F_MODULE */
 #define H5F_LOW_BOUND(F)                 (H5F_get_low_bound(F))
 #define H5F_HIGH_BOUND(F)                (H5F_get_high_bound(F))
@@ -405,7 +125,7 @@ typedef struct H5F_t H5F_t;
 #define H5F_HAS_FEATURE(F, FL)           (H5F_has_feature(F, FL))
 #define H5F_BASE_ADDR(F)                 (H5F_get_base_addr(F))
 #define H5F_SYM_LEAF_K(F)                (H5F_sym_leaf_k(F))
-#define H5F_KVALUE(F, T)                 (H5F_Kvalue(F, T))
+#define H5F_KVALUE(F, T)                 (H5F_kvalue(F, T))
 #define H5F_NREFS(F)                     (H5F_get_nrefs(F))
 #define H5F_SIZEOF_ADDR(F)               (H5F_sizeof_addr(F))
 #define H5F_SIZEOF_SIZE(F)               (H5F_sizeof_size(F))
@@ -430,7 +150,8 @@ typedef struct H5F_t H5F_t;
 #define H5F_USE_TMP_SPACE(F)             (H5F_use_tmp_space(F))
 #define H5F_IS_TMP_ADDR(F, ADDR)         (H5F_is_tmp_addr((F), (ADDR)))
 #ifdef H5_HAVE_PARALLEL
-#define H5F_COLL_MD_READ(F) (H5F_coll_md_read(F))
+#define H5F_COLL_MD_READ(F)           (H5F_coll_md_read(F))
+#define H5F_SHARED_COLL_MD_READ(F_SH) (H5F_shared_coll_md_read(F))
 #endif /* H5_HAVE_PARALLEL */
 #define H5F_USE_MDC_LOGGING(F)         (H5F_use_mdc_logging(F))
 #define H5F_START_MDC_LOG_ON_ACCESS(F) (H5F_start_mdc_log_on_access(F))
@@ -439,76 +160,17 @@ typedef struct H5F_t H5F_t;
 #define H5F_THRESHOLD(F)               (H5F_get_threshold(F))
 #define H5F_PGEND_META_THRES(F)        (H5F_get_pgend_meta_thres(F))
 #define H5F_POINT_OF_NO_RETURN(F)      (H5F_get_point_of_no_return(F))
-#define H5F_SHARED_USE_VFD_SWMR(F_SH)  (H5F_shared_get_use_vfd_swmr(F_SH))
-#define H5F_USE_VFD_SWMR(F)            (H5F_get_use_vfd_swmr(F))
 #define H5F_NULL_FSM_ADDR(F)           (H5F_get_null_fsm_addr(F))
 #define H5F_GET_MIN_DSET_OHDR(F)       (H5F_get_min_dset_ohdr(F))
 #define H5F_SET_MIN_DSET_OHDR(F, V)    (H5F_set_min_dset_ohdr((F), (V)))
-#define H5F_VOL_CLS(F)                 (H5F_get_vol_cls(F))
 #define H5F_VOL_OBJ(F)                 (H5F_get_vol_obj(F))
 #define H5F_USE_FILE_LOCKING(F)        (H5F_get_use_file_locking(F))
+#define H5F_RFIC_FLAGS(F)              (H5F_get_rfic_flags(F))
 #endif /* H5F_MODULE */
 
 /* Macros to encode/decode offset/length's for storing in the file */
-#define H5F_ENCODE_OFFSET(f, p, o)                                                                           \
-    switch (H5F_SIZEOF_ADDR(f)) {                                                                            \
-        case 4:                                                                                              \
-            UINT32ENCODE(p, o);                                                                              \
-            break;                                                                                           \
-        case 8:                                                                                              \
-            UINT64ENCODE(p, o);                                                                              \
-            break;                                                                                           \
-        case 2:                                                                                              \
-            UINT16ENCODE(p, o);                                                                              \
-            break;                                                                                           \
-    }
-
-#define H5F_DECODE_OFFSET(f, p, o)                                                                           \
-    switch (H5F_SIZEOF_ADDR(f)) {                                                                            \
-        case 4:                                                                                              \
-            UINT32DECODE(p, o);                                                                              \
-            break;                                                                                           \
-        case 8:                                                                                              \
-            UINT64DECODE(p, o);                                                                              \
-            break;                                                                                           \
-        case 2:                                                                                              \
-            UINT16DECODE(p, o);                                                                              \
-            break;                                                                                           \
-    }
-
-#define H5F_ENCODE_LENGTH_LEN(p, l, s)                                                                       \
-    switch (s) {                                                                                             \
-        case 4:                                                                                              \
-            UINT32ENCODE(p, l);                                                                              \
-            break;                                                                                           \
-        case 8:                                                                                              \
-            UINT64ENCODE(p, l);                                                                              \
-            break;                                                                                           \
-        case 2:                                                                                              \
-            UINT16ENCODE(p, l);                                                                              \
-            break;                                                                                           \
-        default:                                                                                             \
-            HDassert("bad sizeof size" && 0);                                                                \
-    }
-
-#define H5F_ENCODE_LENGTH(f, p, l) H5F_ENCODE_LENGTH_LEN(p, l, H5F_SIZEOF_SIZE(f))
-
-#define H5F_DECODE_LENGTH_LEN(p, l, s)                                                                       \
-    switch (s) {                                                                                             \
-        case 4:                                                                                              \
-            UINT32DECODE(p, l);                                                                              \
-            break;                                                                                           \
-        case 8:                                                                                              \
-            UINT64DECODE(p, l);                                                                              \
-            break;                                                                                           \
-        case 2:                                                                                              \
-            UINT16DECODE(p, l);                                                                              \
-            break;                                                                                           \
-        default:                                                                                             \
-            HDassert("bad sizeof size" && 0);                                                                \
-    }
-
-#define H5F_DECODE_LENGTH(f, p, l) DECODE_VAR(p, l, H5F_SIZEOF_SIZE(f))
+#define H5F_ENCODE_LENGTH(f, p, l) H5_ENCODE_LENGTH_LEN(p, l, H5F_SIZEOF_SIZE(f))
+#define H5F_DECODE_LENGTH(f, p, l) H5_DECODE_LENGTH_LEN(p, l, H5F_SIZEOF_SIZE(f))
 
 /*
  * Macros that check for overflows.  These are somewhat dangerous to fiddle
@@ -621,6 +283,7 @@ typedef struct H5F_t H5F_t;
 #define H5F_ACS_MPI_PARAMS_COMM_NAME "mpi_params_comm" /* the MPI communicator */
 #define H5F_ACS_MPI_PARAMS_INFO_NAME "mpi_params_info" /* the MPI info struct */
 #endif                                                 /* H5_HAVE_PARALLEL */
+#define H5F_ACS_RFIC_FLAGS_NAME "rfic_flags"           /* Relaxed file integrity check (RFIC) flags */
 
 /* Default configuration for VFD SWMR: not configured */
 #define H5F_ACS_VFD_SWMR_CONFIG_NAME "vfd_swmr_config"
@@ -630,11 +293,11 @@ typedef struct H5F_t H5F_t;
         /* int32_t    version                 = */ 0,                                                        \
         /* int32_t    tick_len                = */ 0,                                                        \
         /* int32_t    max_lag                 = */ 0,                                                        \
-        /* hbool_t    presume_posix_semantics = */ FALSE,                                                    \
-        /* hbool_t    vfd_swmr_writer         = */ FALSE,                                                    \
-        /* hbool_t    maintain_metadata_file  = */ FALSE,                                                    \
-        /* hbool_t    generate_updater_files  = */ FALSE,                                                    \
-        /* hbool_t    flush_raw_data          = */ FALSE,                                                    \
+        /* hbool_t    presume_posix_semantics = */ false,                                                    \
+        /* hbool_t    vfd_swmr_writer         = */ false,                                                    \
+        /* hbool_t    maintain_metadata_file  = */ false,                                                    \
+        /* hbool_t    generate_updater_files  = */ false,                                                    \
+        /* hbool_t    flush_raw_data          = */ false,                                                    \
         /* int32_t    md_pages_reserved       = */ 0,                                                        \
         /* int32_t    pb_expansion_threshold  = */ 0,                                                        \
         /* char       md_file_path[]          = */ "",                                                       \
@@ -644,7 +307,7 @@ typedef struct H5F_t H5F_t;
     }
 /* clang-format on */
 
-/*  For VFD SWMR testing only: private property to generate checksum for metadata file via callback */
+/* For VFD SWMR testing only: private property to generate checksum for metadata file via callback */
 #define H5F_ACS_GENERATE_MD_CK_CB_NAME "generate md ck callback"
 
 /* ======================== File Mount properties ====================*/
@@ -659,7 +322,7 @@ typedef struct H5F_t H5F_t;
 #define H5F_SIGNATURE     "\211HDF\r\n\032\n"
 #define H5F_SIGNATURE_LEN 8
 
-/* Version #'s of the major components of the file format */
+/* Version number's of the major components of the file format */
 #define HDF5_SUPERBLOCK_VERSION_DEF 0 /* The default super block format      */
 #define HDF5_SUPERBLOCK_VERSION_1   1 /* Version with non-default B-tree 'K' value */
 #define HDF5_SUPERBLOCK_VERSION_2   2 /* Revised version with superblock extension and checksum */
@@ -689,7 +352,7 @@ typedef struct H5F_t H5F_t;
 #define H5F_FILE_SPACE_STRATEGY_DEF H5F_FSPACE_STRATEGY_FSM_AGGR
 
 /* Default free space section threshold used by free-space managers */
-#define H5F_FREE_SPACE_PERSIST_DEF FALSE
+#define H5F_FREE_SPACE_PERSIST_DEF false
 
 /* Default free space section threshold used by free-space managers */
 #define H5F_FREE_SPACE_THRESHOLD_DEF 1
@@ -716,10 +379,6 @@ typedef struct H5F_t H5F_t;
 /* Check for file using paged aggregation */
 #define H5F_SHARED_PAGED_AGGR(F_SH) ((F_SH)->fs_strategy == H5F_FSPACE_STRATEGY_PAGE && (F_SH)->fs_page_size)
 #define H5F_PAGED_AGGR(F)           (F->shared->fs_strategy == H5F_FSPACE_STRATEGY_PAGE && F->shared->fs_page_size)
-
-/* Check for file configured with VFD SWMR */
-#define H5F_SHARED_VFD_SWMR_CONFIG(S) (S->vfd_swmr_config.version >= H5F__CURR_VFD_SWMR_CONFIG_VERSION)
-#define H5F_VFD_SWMR_CONFIG(F)        H5F_SHARED_VFD_SWMR_CONFIG(F->shared)
 
 /* Metadata read attempt values */
 #define H5F_METADATA_READ_ATTEMPTS      1   /* Default # of read attempts for non-SWMR access */
@@ -779,8 +438,87 @@ typedef struct H5F_t H5F_t;
 #define H5SM_TABLE_MAGIC "SMTB" /* Shared Message Table */
 #define H5SM_LIST_MAGIC  "SMLI" /* Shared Message List */
 
+/****************************/
+/* Library Private Typedefs */
+/****************************/
+
+/* Forward declarations (for prototypes & type definitions) */
+struct H5B_class_t;
+struct H5UC_t;
+struct H5G_loc_t;
+struct H5O_loc_t;
+struct H5HG_heap_t;
+struct H5VL_class_t;
+struct H5P_genplist_t;
+struct H5S_t;
+
+/* Forward declarations for anonymous H5F objects */
+
+/* Main file structures */
+typedef struct H5F_shared_t H5F_shared_t;
+
+/* Block aggregation structure */
+typedef struct H5F_blk_aggr_t H5F_blk_aggr_t;
+
+/* Structure for object flush callback property (H5Pset_object_flush_cb)*/
+typedef struct H5F_object_flush_t {
+    H5F_flush_cb_t func;  /* The callback function */
+    void          *udata; /* User data */
+} H5F_object_flush_t;
+
+/* Concise info about a block of bytes in a file */
+typedef struct H5F_block_t {
+    haddr_t offset; /* Offset of the block in the file */
+    hsize_t length; /* Length of the block in the file */
+} H5F_block_t;
+
+/* Enum for free space manager state */
+typedef enum H5F_fs_state_t {
+    H5F_FS_STATE_CLOSED   = 0, /* Free space manager is closed */
+    H5F_FS_STATE_OPEN     = 1, /* Free space manager has been opened */
+    H5F_FS_STATE_DELETING = 2  /* Free space manager is being deleted */
+} H5F_fs_state_t;
+
+/* For paged aggregation */
+/* The values 0 to 6 is the same as H5F_mem_t */
+typedef enum H5F_mem_page_t {
+    H5F_MEM_PAGE_DEFAULT     = 0, /* Not used */
+    H5F_MEM_PAGE_SUPER       = 1,
+    H5F_MEM_PAGE_BTREE       = 2,
+    H5F_MEM_PAGE_DRAW        = 3,
+    H5F_MEM_PAGE_GHEAP       = 4,
+    H5F_MEM_PAGE_LHEAP       = 5,
+    H5F_MEM_PAGE_OHDR        = 6,
+    H5F_MEM_PAGE_LARGE_SUPER = 7,
+    H5F_MEM_PAGE_LARGE_BTREE = 8,
+    H5F_MEM_PAGE_LARGE_DRAW  = 9,
+    H5F_MEM_PAGE_LARGE_GHEAP = 10,
+    H5F_MEM_PAGE_LARGE_LHEAP = 11,
+    H5F_MEM_PAGE_LARGE_OHDR  = 12,
+    H5F_MEM_PAGE_NTYPES      = 13 /* Sentinel value - must be last */
+} H5F_mem_page_t;
+
+/* Aliases for H5F_mem_page_t enum values */
+#define H5F_MEM_PAGE_META    H5F_MEM_PAGE_SUPER       /* Small-sized meta data */
+#define H5F_MEM_PAGE_GENERIC H5F_MEM_PAGE_LARGE_SUPER /* Large-sized generic: meta and raw */
+
+/* Type of prefix for opening prefixed files */
+typedef enum H5F_prefix_open_t {
+    H5F_PREFIX_VDS   = 0, /* Virtual dataset prefix */
+    H5F_PREFIX_ELINK = 1, /* External link prefix   */
+    H5F_PREFIX_EFILE = 2  /* External file prefix   */
+} H5F_prefix_open_t;
+
+/* VFD SWMR testing: callback function type to generate checksum for metadata file */
+typedef herr_t (*H5F_generate_md_ck_t)(char *md_path, uint64_t updater_seq_num);
+
+/* VFD SWMR testing: struct to hold the callback */
+typedef struct H5F_generate_md_ck_cb_t {
+    H5F_generate_md_ck_t func;
+} H5F_generate_md_ck_cb_t;
+
 /*
- * VFD SWMR
+ * VFD SWMR updater file macros
  */
 
 /* Updater file header */
@@ -833,156 +571,52 @@ typedef struct H5F_t H5F_t;
      + H5F_SIZEOF_CHKSUM          /* Updater file change list checksum */                                    \
     )
 
-/****************************/
-/* Library Private Typedefs */
-/****************************/
-
-/* Forward declarations (for prototypes & type definitions) */
-struct H5B_class_t;
-struct H5UC_t;
-struct H5G_loc_t;
-struct H5O_loc_t;
-struct H5HG_heap_t;
-struct H5VL_class_t;
-struct H5P_genplist_t;
-struct H5S_t;
-struct H5FD_vfd_swmr_idx_entry_t;
-
-/* Forward declarations for anonymous H5F objects */
-
-/* Main file structures */
-typedef struct H5F_shared_t H5F_shared_t;
-
-/* Block aggregation structure */
-typedef struct H5F_blk_aggr_t H5F_blk_aggr_t;
-
-/* Structure for object flush callback property (H5Pset_object_flush_cb)*/
-typedef struct H5F_object_flush_t {
-    H5F_flush_cb_t func;  /* The callback function */
-    void *         udata; /* User data */
-} H5F_object_flush_t;
-
-/* Concise info about a block of bytes in a file */
-typedef struct H5F_block_t {
-    haddr_t offset; /* Offset of the block in the file */
-    hsize_t length; /* Length of the block in the file */
-} H5F_block_t;
-
-/* Enum for free space manager state */
-typedef enum H5F_fs_state_t {
-    H5F_FS_STATE_CLOSED   = 0, /* Free space manager is closed */
-    H5F_FS_STATE_OPEN     = 1, /* Free space manager has been opened */
-    H5F_FS_STATE_DELETING = 2  /* Free space manager is being deleted */
-} H5F_fs_state_t;
-
-/* For paged aggregation */
-/* The values 0 to 6 is the same as H5F_mem_t */
-typedef enum H5F_mem_page_t {
-    H5F_MEM_PAGE_DEFAULT     = 0, /* Not used */
-    H5F_MEM_PAGE_SUPER       = 1,
-    H5F_MEM_PAGE_BTREE       = 2,
-    H5F_MEM_PAGE_DRAW        = 3,
-    H5F_MEM_PAGE_GHEAP       = 4,
-    H5F_MEM_PAGE_LHEAP       = 5,
-    H5F_MEM_PAGE_OHDR        = 6,
-    H5F_MEM_PAGE_LARGE_SUPER = 7,
-    H5F_MEM_PAGE_LARGE_BTREE = 8,
-    H5F_MEM_PAGE_LARGE_DRAW  = 9,
-    H5F_MEM_PAGE_LARGE_GHEAP = 10,
-    H5F_MEM_PAGE_LARGE_LHEAP = 11,
-    H5F_MEM_PAGE_LARGE_OHDR  = 12,
-    H5F_MEM_PAGE_NTYPES      = 13 /* Sentinel value - must be last */
-} H5F_mem_page_t;
-
-/* Aliases for H5F_mem_page_t enum values */
-#define H5F_MEM_PAGE_META    H5F_MEM_PAGE_SUPER       /* Small-sized meta data */
-#define H5F_MEM_PAGE_GENERIC H5F_MEM_PAGE_LARGE_SUPER /* Large-sized generic: meta and raw */
-
-/* Type of prefix for opening prefixed files */
-typedef enum H5F_prefix_open_t {
-    H5F_PREFIX_VDS   = 0, /* Virtual dataset prefix */
-    H5F_PREFIX_ELINK = 1, /* External link prefix   */
-    H5F_PREFIX_EFILE = 2  /* External file prefix   */
-} H5F_prefix_open_t;
-
 /*
- * VFD SWMR
+ * VFD SWMR EOT queue types
+ *
+ * Forward declaration to avoid circular include dependency (H5FDprivate.h
+ * → H5Sprivate.h → H5Fprivate.h happens before H5FD types are defined).
+ */
+struct H5FD_vfd_swmr_idx_entry_t;
+/*
  */
 
 /*----------------------------------------------------------------------------
  *
  *  struct eot_queue_entry_t
  *
- *  This is the structure for an entry on the end-of-tick queue (EOT queue) of files
- *  opened in either VFD SWMR write or VFD SWMR read mode.  This queue is maintained
- *  in increasing end of tick time order.
- *  The structure contains all information required to determine whether the end
- *  of tick has arrived for the specified file, and to initiate end of tick processing
- *  if it has.
+ *  This is the structure for an entry on the end-of-tick queue (EOT queue)
+ *  of files opened in either VFD SWMR write or VFD SWMR read mode.
  *
- *  The fields of eot_queue_entry_t are discussed below:
+ *  vfd_swmr_file: Pointer to the H5F_t instance for the associated file.
+ *  vfd_swmr_writer: true if opened in VFD SWMR writer mode.
+ *  tick_num: Number of the current tick.
+ *  end_of_tick: Expiration time of the current tick.
+ *  link: Linkage for the EOT queue.
  *
- *  vfd_swmr_file: Pointer to the instance of H5F_shared_t containing the shared
- *      fields of the associated file that has been opened in VFD SWMR mode
- *  NOTE: for the time being use H5F_t instead of H5F_shared_t
- *
- *  vfd_swmr_writer:  Boolean flag that is set to TRUE if the associated file
- *      has been opened in VFD SWMR writer mode, and FALSE if it has been
- *      opened in VFD SWMR reader mode.
- *
- *  tick_num: Number of the current tick of the target file.
- *
- *  end_of_tick: Expiration time of the current tick of the target file.
- *
- *  link: Forward and backward linkage between the next element and the previous
- *  element (or the queue head).  Note that if there is a following entry,
- *  `next`, then `next->end_of_tick` must be greater than or equal to
- *  `end_of_tick`.
+ *----------------------------------------------------------------------------
  */
 typedef struct eot_queue_entry {
     hbool_t         vfd_swmr_writer;
     uint64_t        tick_num;
     struct timespec end_of_tick;
-    H5F_t *         vfd_swmr_file;
+    H5F_t          *vfd_swmr_file;
     TAILQ_ENTRY(eot_queue_entry) link;
 } eot_queue_entry_t;
+
+/* EOT queue head type */
+typedef TAILQ_HEAD(eot_queue, eot_queue_entry) eot_queue_t;
 
 /*----------------------------------------------------------------------------
  *
  *  struct H5F_vfd_swmr_updater_cl_entry_t
  *
- *  An array of instances of H5F_vfd_swmr_updater_cl_entry_t of length equal to
- *  the number of metadata pages and multi-page metadata entries modified in
- *  the past tick is used to assemble the associated data in preparation for
- *  writing an updater file.
- *
- *  Each entry in this array pertains to a given modified metadata page or
- *  multi-page metadata entry, and contains the following fields:
- *
- *  entry_image_ptr: void pointer to a buffer containing the image of the
- *      target metadata page or multi-page metadata entry as modified in
- *      this tick, or NULL if undefined.
- *
- *  entry_image_ud_file_page_offset: Page offset of the entry in the
- *      updater file, or 0 if undefined.
- *
- *  entry_image_md_file_page_offset: Page offset of the entry in the
- *      metadata file, or 0 if undefined.
- *
- *  entry_image_h5_file_page_offset: Page offset of the entry in the
- *      HDF5 file.  In this case, a page offset of zero is valid,
- *      so we havd no easy marker for an invalid value.  Instead,
- *      presume that this field is invalid if the entry_image_md_file_page_offset
- *      is invalid.
- *
- *  entry_image_len: The size of the metadata page or multi-page metadata
- *      entry in bytes.
- *  entry_image_checksum: Checksum of the entry image.
+ *  Array entry used to assemble change list data for writing an updater file.
  *
  *----------------------------------------------------------------------------
  */
 typedef struct H5F_vfd_swmr_updater_cl_entry_t {
-    void *   entry_image_ptr;
+    void    *entry_image_ptr;
     uint32_t entry_image_ud_file_page_offset;
     uint32_t entry_image_md_file_page_offset;
     uint32_t entry_image_h5_file_page_offset;
@@ -994,100 +628,7 @@ typedef struct H5F_vfd_swmr_updater_cl_entry_t {
  *
  *  struct H5F_vfd_swmr_updater_t
  *
- *  Instances of this structure are used to assemble the data required to
- *  write a metadata file updater file.
- *
- *  Updater file header related fields:
- *
- *  version: Version of the updater file format to be used.  At present this
- *          must be zero.
- *
- *  flags: This field contains any flags to be set in the updater file header.
- *      Currently defined flags are:
- *
- *              0x0001        CREATE_METADATA_FILE_ONLY_FLAG
- *      If set, the auxiliary process should create the metadata file,
- *      but leave it empty.  This flag may only be set if sequence_num
- *      is zero.
- *
- *              0x0002        FINAL_UPDATE_FLAG
- *      If set, the VFD SWMR writer is closing the target file, and this
- *      updater contains the final set of updates to the metadata file.
- *      On receipt, the auxiliary process should apply the enclosed
- *      changes to the metadata file, unlink it, and exit.
- *
- *  sequence_num: This field contains the sequence number of this updater file.
- *      The sequence number of the first updater file must be zero, and
- *      this sequence number must be increased by one for each new updater
- *      file.  Note that under some circumstances, the sequence number
- *      will not match the tick_num.
- *
- *  tick_num: Number of the tick for which this updater file is to be generated.
- *      This value should match that of the index used to fill our this
- *      structure.
- *
- *  header_image_ptr: void pointer to the buffer in which the
- *      updater file header is constructed.
- *      This field is NULL if the buffer is undefined.
- *
- *  header_image_len: This field contains the length of the updater file
- *      header in bytes.
- *
- *  change_list_image_ptr: void pointer to a buffer containing the on disk image
- *      of the updater file change list, or NULL if that buffer does not exist.
- *
- *  change_list_offset: This field contains the offset in bytes of the change
- *      list in the updater file.  This will typically be the offset of
- *      the first byte in the updater file after the header.
- *
- *  change_list_len: This field contains the size in bytes of the on disk image
- *      of the change list in the updater file.
- *
- *  Updater File Change List Related Fields:
- *
- *  The updater file change list is a section of the updater file that details the
- *  locations and lengths of all metadata file entries that must be modified for
- *  this tick.
- *
- *  md_file_header_image_ptr: void pointer to a buffer containing the on disk image
- *      of the metadata file header as updated for tick_num.
- *
- *  md_file_header_ud_file_page_offset: This field contains the updater file
- *           page offset of the metadata file header image.  Note that we do
- *           not store the metadata file page offset of the metadata file header,
- *           as it is always written to offset 0 in the metadata file.
- *
- *  md_file_header_len: This field contains the size of the metadata file header
- *           image in bytes.
- *
- *  md_file_index_image: void pointer to a buffer containing the on disk image
- *           of the metadata file index as updated for tick_num.
- *
- *  md_file_index_md_file_offset: This field contains the offset of the
- *           metadata file index in the metadata file in bytes.
- *
- *           This value will either be the size of the metadata file header
- *           (if the metadata file header and index are adjacent), or a page
- *           aligned value.
- *
- *  md_file_index_ud_file_page_offset: This field contains the page offset of the
- *           metadata file index in the updater file.
- *
- *  md_file_index_len: This field contains the size of the metadata file index in
- *           bytes.
- *
- *  num_change_list_entries: This field contains the number of entries in the
- *           array of H5F_vfd_swmr_updater_cl_ entry_t whose base address
- *           is stored in the change_list field below.  This value is also the
- *           number of metadata pages and multi-page metadata entries that have
- *           been modified in the past tick.
- *
- *           If this field is zero, there is no change list, and the change_list
- *           field below is NULL.
- *
- *  change_list: This field contains the base address of a dynamically allocated
- *          array of H5F_vfd_swmr_updater_cl_entry_t of length num_change_list_entries,
- *          or NULL if undefined.
+ *  Assembles data required to write a metadata file updater file.
  *
  *----------------------------------------------------------------------------
  */
@@ -1098,17 +639,17 @@ typedef struct H5F_vfd_swmr_updater_t {
     uint32_t page_size;
     uint64_t sequence_number;
     uint64_t tick_num;
-    void *   header_image_ptr;
+    void    *header_image_ptr;
     size_t   header_image_len;
-    void *   change_list_image_ptr;
+    void    *change_list_image_ptr;
     uint64_t change_list_offset;
     size_t   change_list_len;
     /* Updater file change list related fields */
-    void *                           md_file_header_image_ptr;
+    void                            *md_file_header_image_ptr;
     uint32_t                         md_file_header_image_chksum;
     uint32_t                         md_file_header_ud_file_page_offset;
     size_t                           md_file_header_len;
-    void *                           md_file_index_image_ptr;
+    void                            *md_file_index_image_ptr;
     uint32_t                         md_file_index_image_chksum;
     uint64_t                         md_file_index_md_file_offset;
     uint32_t                         md_file_index_ud_file_page_offset;
@@ -1116,14 +657,6 @@ typedef struct H5F_vfd_swmr_updater_t {
     uint32_t                         num_change_list_entries;
     H5F_vfd_swmr_updater_cl_entry_t *change_list;
 } H5F_vfd_swmr_updater_t;
-
-/* Callback routine to generate checksum for metadata file specified by md_path */
-typedef herr_t (*H5F_generate_md_ck_t)(char *md_path, uint64_t updater_seq_num);
-
-/* Structure for "generate checksum callback" private property */
-typedef struct H5F_generate_md_ck_cb_t {
-    H5F_generate_md_ck_t func;
-} H5F_generate_md_ck_cb_t;
 
 /*****************************/
 /* Library-private Variables */
@@ -1135,45 +668,46 @@ typedef struct H5F_generate_md_ck_cb_t {
 
 /* Private functions */
 H5_DLL herr_t H5F_init(void);
-H5_DLL H5F_t *H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id);
-H5_DLL herr_t H5F_try_close(H5F_t *f, hbool_t *was_closed /*out*/);
-H5_DLL hid_t  H5F_get_file_id(H5VL_object_t *vol_obj, H5I_type_t obj_type, hbool_t app_ref);
+H5_DLL herr_t H5F_open(bool attempt, H5F_t **file, const char *name, unsigned flags, hid_t fcpl_id,
+                       hid_t fapl_id);
+H5_DLL herr_t H5F_try_close(H5F_t *f, bool *was_closed /*out*/);
+H5_DLL hid_t  H5F_get_file_id(H5VL_object_t *vol_obj, H5I_type_t obj_type, bool app_ref);
 
 /* Functions that retrieve values from the file struct */
-H5_DLL H5F_libver_t H5F_get_low_bound(const H5F_t *f);
-H5_DLL H5F_libver_t H5F_get_high_bound(const H5F_t *f);
-H5_DLL unsigned     H5F_shared_get_intent(const H5F_shared_t *f);
-H5_DLL unsigned     H5F_get_intent(const H5F_t *f);
-H5_DLL char *       H5F_get_open_name(const H5F_t *f);
-H5_DLL char *       H5F_get_actual_name(const H5F_t *f);
-H5_DLL char *       H5F_get_extpath(const H5F_t *f);
+H5_DLL H5F_libver_t  H5F_get_low_bound(const H5F_t *f);
+H5_DLL H5F_libver_t  H5F_get_high_bound(const H5F_t *f);
+H5_DLL unsigned      H5F_shared_get_intent(const H5F_shared_t *f);
+H5_DLL unsigned      H5F_get_intent(const H5F_t *f);
+H5_DLL char         *H5F_get_open_name(const H5F_t *f);
+H5_DLL char         *H5F_get_actual_name(const H5F_t *f);
+H5_DLL char         *H5F_get_extpath(const H5F_t *f);
 H5_DLL H5F_shared_t *H5F_get_shared(const H5F_t *f);
-H5_DLL hbool_t       H5F_same_shared(const H5F_t *f1, const H5F_t *f2);
+H5_DLL bool          H5F_same_shared(const H5F_t *f1, const H5F_t *f2);
 H5_DLL unsigned      H5F_get_nopen_objs(const H5F_t *f);
 H5_DLL unsigned      H5F_incr_nopen_objs(H5F_t *f);
 H5_DLL unsigned      H5F_decr_nopen_objs(H5F_t *f);
-H5_DLL hbool_t       H5F_file_id_exists(const H5F_t *f);
-H5_DLL H5F_t *  H5F_get_parent(const H5F_t *f);
-H5_DLL unsigned H5F_get_nmounts(const H5F_t *f);
-H5_DLL unsigned H5F_get_read_attempts(const H5F_t *f);
-H5_DLL hid_t    H5F_get_access_plist(H5F_t *f, hbool_t app_ref);
-H5_DLL hid_t    H5F_get_id(H5F_t *file);
-H5_DLL herr_t   H5F_get_obj_count(const H5F_t *f, unsigned types, hbool_t app_ref, size_t *obj_id_count_ptr);
-H5_DLL herr_t   H5F_get_obj_ids(const H5F_t *f, unsigned types, size_t max_objs, hid_t *oid_list,
-                                hbool_t app_ref, size_t *obj_id_count_ptr);
-H5_DLL hsize_t  H5F_get_pgend_meta_thres(const H5F_t *f);
-H5_DLL hbool_t  H5F_get_point_of_no_return(const H5F_t *f);
-H5_DLL hbool_t  H5F_get_null_fsm_addr(const H5F_t *f);
-H5_DLL hbool_t  H5F_get_min_dset_ohdr(const H5F_t *f);
-H5_DLL herr_t   H5F_set_min_dset_ohdr(H5F_t *f, hbool_t minimize);
-H5_DLL const H5VL_class_t *H5F_get_vol_cls(const H5F_t *f);
+H5_DLL bool          H5F_file_id_exists(const H5F_t *f);
+H5_DLL H5F_t        *H5F_get_parent(const H5F_t *f);
+H5_DLL unsigned      H5F_get_nmounts(const H5F_t *f);
+H5_DLL unsigned      H5F_get_read_attempts(const H5F_t *f);
+H5_DLL hid_t         H5F_get_access_plist(H5F_t *f, bool app_ref);
+H5_DLL hid_t         H5F_get_id(H5F_t *file);
+H5_DLL herr_t  H5F_get_obj_count(const H5F_t *f, unsigned types, bool app_ref, size_t *obj_id_count_ptr);
+H5_DLL herr_t  H5F_get_obj_ids(const H5F_t *f, unsigned types, size_t max_objs, hid_t *oid_list, bool app_ref,
+                               size_t *obj_id_count_ptr);
+H5_DLL hsize_t H5F_get_pgend_meta_thres(const H5F_t *f);
+H5_DLL bool    H5F_get_point_of_no_return(const H5F_t *f);
+H5_DLL bool    H5F_get_null_fsm_addr(const H5F_t *f);
+H5_DLL bool    H5F_get_min_dset_ohdr(const H5F_t *f);
+H5_DLL herr_t  H5F_set_min_dset_ohdr(H5F_t *f, bool minimize);
 H5_DLL H5VL_object_t *H5F_get_vol_obj(const H5F_t *f);
-H5_DLL hbool_t        H5F_get_file_locking(const H5F_t *f);
+H5_DLL bool           H5F_get_use_file_locking(const H5F_t *f);
+H5_DLL uint64_t       H5F_get_rfic_flags(const H5F_t *f);
 
 /* Functions than retrieve values set/cached from the superblock/FCPL */
 H5_DLL haddr_t            H5F_get_base_addr(const H5F_t *f);
 H5_DLL unsigned           H5F_sym_leaf_k(const H5F_t *f);
-H5_DLL unsigned           H5F_Kvalue(const H5F_t *f, const struct H5B_class_t *type);
+H5_DLL unsigned           H5F_kvalue(const H5F_t *f, const struct H5B_class_t *type);
 H5_DLL unsigned           H5F_get_nrefs(const H5F_t *f);
 H5_DLL uint8_t            H5F_sizeof_addr(const H5F_t *f);
 H5_DLL uint8_t            H5F_sizeof_size(const H5F_t *f);
@@ -1185,68 +719,46 @@ H5_DLL unsigned           H5F_get_sohm_nindexes(const H5F_t *f);
 H5_DLL herr_t             H5F_set_sohm_nindexes(H5F_t *f, unsigned nindexes);
 H5_DLL hid_t              H5F_get_fcpl(const H5F_t *f);
 H5_DLL H5F_close_degree_t H5F_get_fc_degree(const H5F_t *f);
-H5_DLL hbool_t            H5F_get_evict_on_close(const H5F_t *f);
+H5_DLL bool               H5F_get_evict_on_close(const H5F_t *f);
 H5_DLL size_t             H5F_rdcc_nbytes(const H5F_t *f);
 H5_DLL size_t             H5F_rdcc_nslots(const H5F_t *f);
 H5_DLL double             H5F_rdcc_w0(const H5F_t *f);
 H5_DLL size_t             H5F_sieve_buf_size(const H5F_t *f);
 H5_DLL unsigned           H5F_gc_ref(const H5F_t *f);
-H5_DLL hbool_t            H5F_store_msg_crt_idx(const H5F_t *f);
-H5_DLL herr_t             H5F_set_store_msg_crt_idx(H5F_t *f, hbool_t flag);
-H5_DLL struct H5UC_t *    H5F_grp_btree_shared(const H5F_t *f);
+H5_DLL bool               H5F_store_msg_crt_idx(const H5F_t *f);
+H5_DLL herr_t             H5F_set_store_msg_crt_idx(H5F_t *f, bool flag);
+H5_DLL struct H5UC_t     *H5F_grp_btree_shared(const H5F_t *f);
 H5_DLL herr_t             H5F_set_grp_btree_shared(H5F_t *f, struct H5UC_t *rc);
-H5_DLL hbool_t            H5F_use_tmp_space(const H5F_t *f);
-H5_DLL hbool_t            H5F_is_tmp_addr(const H5F_t *f, haddr_t addr);
+H5_DLL bool               H5F_use_tmp_space(const H5F_t *f);
+H5_DLL bool               H5F_is_tmp_addr(const H5F_t *f, haddr_t addr);
 H5_DLL hsize_t            H5F_get_alignment(const H5F_t *f);
 H5_DLL hsize_t            H5F_get_threshold(const H5F_t *f);
 #ifdef H5_HAVE_PARALLEL
 H5_DLL H5P_coll_md_read_flag_t H5F_coll_md_read(const H5F_t *f);
+H5_DLL H5P_coll_md_read_flag_t H5F_shared_coll_md_read(const H5F_shared_t *f_sh);
 #endif /* H5_HAVE_PARALLEL */
-H5_DLL hbool_t H5F_use_mdc_logging(const H5F_t *f);
-H5_DLL hbool_t H5F_start_mdc_log_on_access(const H5F_t *f);
-H5_DLL char *  H5F_mdc_log_location(const H5F_t *f);
+H5_DLL bool  H5F_use_mdc_logging(const H5F_t *f);
+H5_DLL bool  H5F_start_mdc_log_on_access(const H5F_t *f);
+H5_DLL char *H5F_mdc_log_location(const H5F_t *f);
 
 /* Functions that retrieve values from VFD layer */
 H5_DLL hid_t   H5F_get_driver_id(const H5F_t *f);
 H5_DLL herr_t  H5F_get_fileno(const H5F_t *f, unsigned long *filenum);
-H5_DLL hbool_t H5F_shared_has_feature(const H5F_shared_t *f, unsigned feature);
-H5_DLL hbool_t H5F_has_feature(const H5F_t *f, unsigned feature);
+H5_DLL bool    H5F_shared_has_feature(const H5F_shared_t *f, unsigned feature);
+H5_DLL bool    H5F_has_feature(const H5F_t *f, unsigned feature);
 H5_DLL haddr_t H5F_shared_get_eoa(const H5F_shared_t *f_sh, H5FD_mem_t type);
 H5_DLL haddr_t H5F_get_eoa(const H5F_t *f, H5FD_mem_t type);
 H5_DLL herr_t  H5F_shared_get_file_driver(const H5F_shared_t *f_sh, H5FD_t **file_handle);
 H5_DLL herr_t  H5F_get_vfd_handle(const H5F_t *file, hid_t fapl, void **file_handle);
-
-/* VFD SWMR functions */
-H5_DLL hbool_t  H5F_get_use_vfd_swmr(const H5F_t *f);
-H5_DLL unsigned H5F_shared_get_use_vfd_swmr(const H5F_shared_t *f_sh);
-H5_DLL herr_t   H5F_vfd_swmr_init(H5F_t *f, hbool_t file_create);
-H5_DLL herr_t   H5F_vfd_swmr_build_md_path_name(H5F_vfd_swmr_config_t *config, const char *hdf5_filename,
-                                                char *name /*out*/);
-H5_DLL herr_t   H5F_vfd_swmr_close_or_flush(H5F_t *f, hbool_t closing);
-H5_DLL herr_t   H5F_update_vfd_swmr_metadata_file(H5F_t *f, uint32_t index_len,
-                                                  struct H5FD_vfd_swmr_idx_entry_t *index);
-H5_DLL herr_t   H5F_vfd_swmr_writer_delay_write(H5F_shared_t *shared, uint64_t page, uint64_t *untilp);
-H5_DLL herr_t   H5F_vfd_swmr_writer_prep_for_flush_or_close(H5F_t *f);
-H5_DLL herr_t   H5F_vfd_swmr_writer_end_of_tick(H5F_t *f);
-H5_DLL herr_t   H5F_vfd_swmr_writer_dump_index(H5F_shared_t *shared);
-H5_DLL herr_t   H5F_vfd_swmr_reader_end_of_tick(H5F_t *f, hbool_t entering_api);
-H5_DLL herr_t   H5F_vfd_swmr_remove_entry_eot(H5F_t *f);
-H5_DLL herr_t   H5F_vfd_swmr_insert_entry_eot(H5F_t *f);
-H5_DLL void     H5F_vfd_swmr_update_entry_eot(eot_queue_entry_t *entry);
-H5_DLL herr_t   H5F_dump_eot_queue(void);
-H5_DLL herr_t   H5F_shadow_image_defer_free(H5F_shared_t *                          shared,
-                                            const struct H5FD_vfd_swmr_idx_entry_t *entry);
-H5_DLL struct   H5FD_vfd_swmr_idx_entry_t *H5F_vfd_swmr_enlarge_shadow_index(H5F_t *f);
-H5_DLL herr_t   H5F_load_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_t fcpl_id,
-                                                 hbool_t writer, hbool_t create_file);
+H5_DLL bool    H5F_has_vector_select_io(const H5F_t *f, bool is_write);
 
 /* File mounting routines */
-H5_DLL herr_t  H5F_mount(const struct H5G_loc_t *loc, const char *name, H5F_t *child, hid_t plist_id);
-H5_DLL herr_t  H5F_unmount(const struct H5G_loc_t *loc, const char *name);
-H5_DLL hbool_t H5F_is_mount(const H5F_t *file);
-H5_DLL hbool_t H5F_has_mount(const H5F_t *file);
-H5_DLL herr_t  H5F_traverse_mount(struct H5O_loc_t *oloc /*in,out*/);
-H5_DLL herr_t  H5F_flush_mounts(H5F_t *f);
+H5_DLL herr_t H5F_mount(const struct H5G_loc_t *loc, const char *name, H5F_t *child, hid_t plist_id);
+H5_DLL herr_t H5F_unmount(const struct H5G_loc_t *loc, const char *name);
+H5_DLL bool   H5F_is_mount(const H5F_t *file);
+H5_DLL bool   H5F_has_mount(const H5F_t *file);
+H5_DLL herr_t H5F_traverse_mount(struct H5O_loc_t *oloc /*in,out*/);
+H5_DLL herr_t H5F_flush_mounts(H5F_t *f);
 
 /* Functions that operate on blocks of bytes wrt super block */
 H5_DLL herr_t H5F_shared_block_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size,
@@ -1264,9 +776,14 @@ H5_DLL herr_t H5F_shared_select_write(H5F_shared_t *f_sh, H5FD_mem_t type, uint3
                                       struct H5S_t **mem_spaces, struct H5S_t **file_spaces,
                                       haddr_t offsets[], size_t element_sizes[], const void *bufs[]);
 
+/* Functions that operate on I/O vectors */
+H5_DLL herr_t H5F_shared_vector_read(H5F_shared_t *f_sh, uint32_t count, H5FD_mem_t types[], haddr_t addrs[],
+                                     size_t sizes[], void *bufs[]);
+H5_DLL herr_t H5F_shared_vector_write(H5F_shared_t *f_sh, uint32_t count, H5FD_mem_t types[], haddr_t addrs[],
+                                      size_t sizes[], const void *bufs[]);
+
 /* Functions that flush or evict */
 H5_DLL herr_t H5F_flush_tagged_metadata(H5F_t *f, haddr_t tag);
-H5_DLL herr_t H5F_evict_tagged_metadata(H5F_t *f, haddr_t tag);
 
 /* Functions that verify a piece of metadata with checksum */
 H5_DLL herr_t H5F_get_checksums(const uint8_t *buf, size_t chk_size, uint32_t *s_chksum, uint32_t *c_chksum);
@@ -1300,29 +817,66 @@ H5_DLL herr_t H5F_eoa_dirty(H5F_t *f);
 #ifdef H5_HAVE_PARALLEL
 H5_DLL int      H5F_mpi_get_rank(const H5F_t *f);
 H5_DLL MPI_Comm H5F_mpi_get_comm(const H5F_t *f);
+H5_DLL MPI_Info H5F_mpi_get_info(const H5F_t *f);
 H5_DLL int      H5F_shared_mpi_get_size(const H5F_shared_t *f_sh);
 H5_DLL int      H5F_mpi_get_size(const H5F_t *f);
 H5_DLL herr_t   H5F_mpi_retrieve_comm(hid_t loc_id, hid_t acspl_id, MPI_Comm *mpi_comm);
-H5_DLL herr_t  H5F_mpi_get_file_block_type(hbool_t commit, MPI_Datatype *new_type, hbool_t *new_type_derived);
-H5_DLL hbool_t H5F_get_coll_metadata_reads(const H5F_t *f);
-H5_DLL void H5F_set_coll_metadata_reads(H5F_t *f, H5P_coll_md_read_flag_t *file_flag, hbool_t *context_flag);
+H5_DLL herr_t   H5F_mpi_get_file_block_type(bool commit, MPI_Datatype *new_type, bool *new_type_derived);
+H5_DLL bool     H5F_get_coll_metadata_reads(const H5F_t *f);
+H5_DLL bool     H5F_shared_get_coll_metadata_reads(const H5F_shared_t *f_sh);
+H5_DLL void     H5F_set_coll_metadata_reads(H5F_t *f, H5P_coll_md_read_flag_t *file_flag, bool *context_flag);
+H5_DLL herr_t   H5F_shared_get_mpi_file_sync_required(const H5F_shared_t *f_sh, bool *flag);
 #endif /* H5_HAVE_PARALLEL */
 
 /* External file cache routines */
 H5_DLL herr_t H5F_efc_close(H5F_t *parent, H5F_t *file);
 
 /* File prefix routines */
-H5_DLL H5F_t *H5F_prefix_open_file(H5F_t *primary_file, H5F_prefix_open_t prefix_type,
-                                   const char *prop_prefix, const char *file_name, unsigned file_intent,
-                                   hid_t fapl_id);
+H5_DLL herr_t H5F_prefix_open_file(bool attempt, H5F_t **file, H5F_t *primary_file,
+                                   H5F_prefix_open_t prefix_type, const char *prop_prefix,
+                                   const char *file_name, unsigned file_intent, hid_t fapl_id);
 
 /* Global heap CWFS routines */
 H5_DLL herr_t H5F_cwfs_add(H5F_t *f, struct H5HG_heap_t *heap);
 H5_DLL herr_t H5F_cwfs_find_free_heap(H5F_t *f, size_t need, haddr_t *addr);
-H5_DLL herr_t H5F_cwfs_advance_heap(H5F_t *f, struct H5HG_heap_t *heap, hbool_t add_heap);
+H5_DLL herr_t H5F_cwfs_advance_heap(H5F_t *f, struct H5HG_heap_t *heap, bool add_heap);
 H5_DLL herr_t H5F_cwfs_remove_heap(H5F_shared_t *shared, struct H5HG_heap_t *heap);
 
 /* Debugging functions */
 H5_DLL herr_t H5F_debug(H5F_t *f, FILE *stream, int indent, int fwidth);
+
+/* VFD SWMR functions */
+H5_DLL hbool_t  H5F_get_use_vfd_swmr(const H5F_t *f);
+H5_DLL unsigned H5F_shared_get_use_vfd_swmr(const H5F_shared_t *f_sh);
+H5_DLL herr_t   H5F_vfd_swmr_init(H5F_t *f, hbool_t file_create);
+H5_DLL herr_t   H5F_vfd_swmr_build_md_path_name(H5F_vfd_swmr_config_t *config, const char *hdf5_filename,
+                                                char *name /*out*/);
+H5_DLL herr_t   H5F_vfd_swmr_close_or_flush(H5F_t *f, hbool_t closing);
+H5_DLL herr_t   H5F_update_vfd_swmr_metadata_file(H5F_t *f, uint32_t num_entries,
+                                                  struct H5FD_vfd_swmr_idx_entry_t *index);
+H5_DLL herr_t   H5F_vfd_swmr_writer_delay_write(H5F_shared_t *shared, uint64_t page, uint64_t *untilp);
+H5_DLL herr_t   H5F_vfd_swmr_writer_prep_for_flush_or_close(H5F_t *f);
+H5_DLL herr_t   H5F_vfd_swmr_writer_end_of_tick(H5F_t *f);
+H5_DLL herr_t   H5F_vfd_swmr_writer_dump_index(H5F_shared_t *shared);
+H5_DLL herr_t   H5F_vfd_swmr_reader_end_of_tick(H5F_t *f, hbool_t entering_api);
+H5_DLL herr_t   H5F_vfd_swmr_remove_entry_eot(H5F_t *f);
+H5_DLL herr_t   H5F_vfd_swmr_insert_entry_eot(H5F_t *f);
+H5_DLL void     H5F_vfd_swmr_update_entry_eot(eot_queue_entry_t *entry);
+H5_DLL herr_t   H5F_dump_eot_queue(void);
+H5_DLL herr_t   H5F_shadow_image_defer_free(H5F_shared_t                           *shared,
+                                            const struct H5FD_vfd_swmr_idx_entry_t *entry);
+H5_DLL struct H5FD_vfd_swmr_idx_entry_t *H5F_vfd_swmr_enlarge_shadow_index(H5F_t *f);
+H5_DLL herr_t H5F_load_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_t fcpl_id,
+                                               hbool_t writer, hbool_t create_file);
+H5_DLL herr_t H5Fswmr_config_file(const char *file_path, hid_t fapl_id, hid_t fcpl_id, hbool_t writer,
+                                  hbool_t create_file);
+H5_DLL herr_t H5Fswmr_config_string(const char *config_str, hid_t fapl_id, hid_t fcpl_id, hbool_t writer,
+                                    hbool_t create_file);
+H5_DLL herr_t H5Fswmr_config_env(hid_t fapl_id, hid_t fcpl_id, hbool_t writer, hbool_t create_file,
+                                 const char *env_var_name);
+H5_DLL herr_t H5F_vfd_swmr_process_eot_queue(hbool_t entering_api);
+
+/* EOT queue global */
+H5_DLL extern eot_queue_t eot_queue_g;
 
 #endif /* H5Fprivate_H */

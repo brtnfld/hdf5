@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -26,7 +26,7 @@
 /*****************/
 
 /* Identifier for the native VOL connector */
-#define H5VL_NATIVE (H5VL_native_register())
+#define H5VL_NATIVE (H5OPEN H5VL_NATIVE_g)
 
 /* Characteristics of the native VOL connector */
 #define H5VL_NATIVE_NAME    "native"
@@ -48,9 +48,9 @@
 /* Parameters for attribute 'iterate old' operation */
 typedef struct H5VL_native_attr_iterate_old_t {
     hid_t           loc_id;
-    unsigned *      attr_num;
+    unsigned       *attr_num;
     H5A_operator1_t op;
-    void *          op_data;
+    void           *op_data;
 } H5VL_native_attr_iterate_old_t;
 
 /* Parameters for native connector's attribute 'optional' operations */
@@ -64,17 +64,17 @@ typedef union H5VL_native_attr_optional_args_t {
 /* NOTE: If new values are added here, the H5VL__native_introspect_opt_query
  *      routine must be updated.
  */
-#define H5VL_NATIVE_DATASET_FORMAT_CONVERT          0  /* H5Dformat_convert (internal) */
-#define H5VL_NATIVE_DATASET_GET_CHUNK_INDEX_TYPE    1  /* H5Dget_chunk_index_type      */
-#define H5VL_NATIVE_DATASET_GET_CHUNK_STORAGE_SIZE  2  /* H5Dget_chunk_storage_size    */
-#define H5VL_NATIVE_DATASET_GET_NUM_CHUNKS          3  /* H5Dget_num_chunks            */
-#define H5VL_NATIVE_DATASET_GET_CHUNK_INFO_BY_IDX   4  /* H5Dget_chunk_info            */
-#define H5VL_NATIVE_DATASET_GET_CHUNK_INFO_BY_COORD 5  /* H5Dget_chunk_info_by_coord   */
-#define H5VL_NATIVE_DATASET_CHUNK_READ              6  /* H5Dchunk_read                */
-#define H5VL_NATIVE_DATASET_CHUNK_WRITE             7  /* H5Dchunk_write               */
-#define H5VL_NATIVE_DATASET_GET_VLEN_BUF_SIZE       8  /* H5Dvlen_get_buf_size         */
-#define H5VL_NATIVE_DATASET_GET_OFFSET              9  /* H5Dget_offset                */
-#define H5VL_NATIVE_DATASET_CHUNK_ITER              10 /* H5Dchunk_iter                */
+#define H5VL_NATIVE_DATASET_FORMAT_CONVERT          0  /**< H5Dformat_convert (internal) \since 1.12.0 */
+#define H5VL_NATIVE_DATASET_GET_CHUNK_INDEX_TYPE    1  /**< H5Dget_chunk_index_type \since 1.12.0      */
+#define H5VL_NATIVE_DATASET_GET_CHUNK_STORAGE_SIZE  2  /**< H5Dget_chunk_storage_size \since 1.12.0    */
+#define H5VL_NATIVE_DATASET_GET_NUM_CHUNKS          3  /**< H5Dget_num_chunks \since 1.12.0            */
+#define H5VL_NATIVE_DATASET_GET_CHUNK_INFO_BY_IDX   4  /**< H5Dget_chunk_info \since 1.12.0            */
+#define H5VL_NATIVE_DATASET_GET_CHUNK_INFO_BY_COORD 5  /**< H5Dget_chunk_info_by_coord \since 1.12.0   */
+#define H5VL_NATIVE_DATASET_CHUNK_READ              6  /**< H5Dchunk_read \since 1.12.0                */
+#define H5VL_NATIVE_DATASET_CHUNK_WRITE             7  /**< H5Dchunk_write \since 1.12.0               */
+#define H5VL_NATIVE_DATASET_GET_VLEN_BUF_SIZE       8  /**< H5Dvlen_get_buf_size \since 1.12.0         */
+#define H5VL_NATIVE_DATASET_GET_OFFSET              9  /**< H5Dget_offset \since 1.12.0                */
+#define H5VL_NATIVE_DATASET_CHUNK_ITER              10 /**< H5Dchunk_iter \since 1.12.3                */
 /* NOTE: If values over 1023 are added, the H5VL_RESERVED_NATIVE_OPTIONAL macro
  *      must be updated.
  */
@@ -83,15 +83,16 @@ typedef union H5VL_native_attr_optional_args_t {
 typedef struct H5VL_native_dataset_chunk_read_t {
     const hsize_t *offset;
     uint32_t       filters;
-    void *         buf;
+    void          *buf;
+    size_t        *buf_size;
 } H5VL_native_dataset_chunk_read_t;
 
 /* Parameters for native connector's dataset 'chunk write' operation */
 typedef struct H5VL_native_dataset_chunk_write_t {
     const hsize_t *offset;
     uint32_t       filters;
-    uint32_t       size;
-    const void *   buf;
+    size_t         size;
+    const void    *buf;
 } H5VL_native_dataset_chunk_write_t;
 
 /* Parameters for native connector's dataset 'get vlen buf size' operation */
@@ -104,7 +105,7 @@ typedef struct H5VL_native_dataset_get_vlen_buf_size_t {
 /* Parameters for native connector's dataset 'get chunk storage size' operation */
 typedef struct H5VL_native_dataset_get_chunk_storage_size_t {
     const hsize_t *offset; /* Offset of chunk */
-    hsize_t *      size;   /* Size of chunk (OUT) */
+    hsize_t       *size;   /* Size of chunk (OUT) */
 } H5VL_native_dataset_get_chunk_storage_size_t;
 
 /* Parameters for native connector's dataset 'get num chunks' operation */
@@ -117,18 +118,18 @@ typedef struct H5VL_native_dataset_get_num_chunks_t {
 typedef struct H5VL_native_dataset_get_chunk_info_by_idx_t {
     hid_t     space_id;    /* Space selection */
     hsize_t   chk_index;   /* Chunk index within space */
-    hsize_t * offset;      /* Chunk coordinates (OUT) */
+    hsize_t  *offset;      /* Chunk coordinates (OUT) */
     unsigned *filter_mask; /* Filter mask for chunk (OUT) */
-    haddr_t * addr;        /* Address of chunk in file (OUT) */
-    hsize_t * size;        /* Size of chunk in file (OUT) */
+    haddr_t  *addr;        /* Address of chunk in file (OUT) */
+    hsize_t  *size;        /* Size of chunk in file (OUT) */
 } H5VL_native_dataset_get_chunk_info_by_idx_t;
 
 /* Parameters for native connector's dataset 'get chunk info by coord' operation */
 typedef struct H5VL_native_dataset_get_chunk_info_by_coord_t {
     const hsize_t *offset;      /* Chunk coordinates */
-    unsigned *     filter_mask; /* Filter mask for chunk (OUT) */
-    haddr_t *      addr;        /* Address of chunk in file (OUT) */
-    hsize_t *      size;        /* Size of chunk in file (OUT) */
+    unsigned      *filter_mask; /* Filter mask for chunk (OUT) */
+    haddr_t       *addr;        /* Address of chunk in file (OUT) */
+    hsize_t       *size;        /* Size of chunk in file (OUT) */
 } H5VL_native_dataset_get_chunk_info_by_coord_t;
 
 /* Parameters for native connector's dataset 'optional' operations */
@@ -170,7 +171,7 @@ typedef union H5VL_native_dataset_optional_args_t {
     /* H5VL_NATIVE_DATASET_CHUNK_ITER */
     struct {
         H5D_chunk_iter_op_t op;      /* Chunk iteration callback */
-        void *              op_data; /* Context to pass to iteration callback */
+        void               *op_data; /* Context to pass to iteration callback */
     } chunk_iter;
 
 } H5VL_native_dataset_optional_args_t;
@@ -179,40 +180,43 @@ typedef union H5VL_native_dataset_optional_args_t {
 /* NOTE: If new values are added here, the H5VL__native_introspect_opt_query
  *      routine must be updated.
  */
-#define H5VL_NATIVE_FILE_CLEAR_ELINK_CACHE            0  /* H5Fclear_elink_file_cache            */
-#define H5VL_NATIVE_FILE_GET_FILE_IMAGE               1  /* H5Fget_file_image                    */
-#define H5VL_NATIVE_FILE_GET_FREE_SECTIONS            2  /* H5Fget_free_sections                 */
-#define H5VL_NATIVE_FILE_GET_FREE_SPACE               3  /* H5Fget_freespace                     */
-#define H5VL_NATIVE_FILE_GET_INFO                     4  /* H5Fget_info1/2                       */
-#define H5VL_NATIVE_FILE_GET_MDC_CONF                 5  /* H5Fget_mdc_config                    */
-#define H5VL_NATIVE_FILE_GET_MDC_HR                   6  /* H5Fget_mdc_hit_rate                  */
-#define H5VL_NATIVE_FILE_GET_MDC_SIZE                 7  /* H5Fget_mdc_size                      */
-#define H5VL_NATIVE_FILE_GET_SIZE                     8  /* H5Fget_filesize                      */
-#define H5VL_NATIVE_FILE_GET_VFD_HANDLE               9  /* H5Fget_vfd_handle                    */
-#define H5VL_NATIVE_FILE_RESET_MDC_HIT_RATE           10 /* H5Freset_mdc_hit_rate_stats          */
-#define H5VL_NATIVE_FILE_SET_MDC_CONFIG               11 /* H5Fset_mdc_config                    */
-#define H5VL_NATIVE_FILE_GET_METADATA_READ_RETRY_INFO 12 /* H5Fget_metadata_read_retry_info      */
-#define H5VL_NATIVE_FILE_START_SWMR_WRITE             13 /* H5Fstart_swmr_write                  */
-#define H5VL_NATIVE_FILE_START_MDC_LOGGING            14 /* H5Fstart_mdc_logging                 */
-#define H5VL_NATIVE_FILE_STOP_MDC_LOGGING             15 /* H5Fstop_mdc_logging                  */
-#define H5VL_NATIVE_FILE_GET_MDC_LOGGING_STATUS       16 /* H5Fget_mdc_logging_status            */
-#define H5VL_NATIVE_FILE_FORMAT_CONVERT               17 /* H5Fformat_convert                    */
-#define H5VL_NATIVE_FILE_RESET_PAGE_BUFFERING_STATS   18 /* H5Freset_page_buffering_stats        */
-#define H5VL_NATIVE_FILE_GET_PAGE_BUFFERING_STATS     19 /* H5Fget_page_buffering_stats          */
-#define H5VL_NATIVE_FILE_GET_MDC_IMAGE_INFO           20 /* H5Fget_mdc_image_info                */
-#define H5VL_NATIVE_FILE_GET_EOA                      21 /* H5Fget_eoa                           */
-#define H5VL_NATIVE_FILE_INCR_FILESIZE                22 /* H5Fincrement_filesize                */
-#define H5VL_NATIVE_FILE_SET_LIBVER_BOUNDS            23 /* H5Fset_latest_format/libver_bounds   */
-#define H5VL_NATIVE_FILE_GET_MIN_DSET_OHDR_FLAG       24 /* H5Fget_dset_no_attrs_hint            */
-#define H5VL_NATIVE_FILE_SET_MIN_DSET_OHDR_FLAG       25 /* H5Fset_dset_no_attrs_hint            */
+#define H5VL_NATIVE_FILE_CLEAR_ELINK_CACHE  0  /**< H5Fclear_elink_file_cache \since 1.12.0            */
+#define H5VL_NATIVE_FILE_GET_FILE_IMAGE     1  /**< H5Fget_file_image \since 1.12.0                    */
+#define H5VL_NATIVE_FILE_GET_FREE_SECTIONS  2  /**< H5Fget_free_sections \since 1.12.0                 */
+#define H5VL_NATIVE_FILE_GET_FREE_SPACE     3  /**< H5Fget_freespace \since 1.12.0                     */
+#define H5VL_NATIVE_FILE_GET_INFO           4  /**< H5Fget_info1/2 \since 1.12.0                       */
+#define H5VL_NATIVE_FILE_GET_MDC_CONF       5  /**< H5Fget_mdc_config \since 1.12.0                    */
+#define H5VL_NATIVE_FILE_GET_MDC_HR         6  /**< H5Fget_mdc_hit_rate \since 1.12.0                  */
+#define H5VL_NATIVE_FILE_GET_MDC_SIZE       7  /**< H5Fget_mdc_size \since 1.12.0                      */
+#define H5VL_NATIVE_FILE_GET_SIZE           8  /**< H5Fget_filesize \since 1.12.0                      */
+#define H5VL_NATIVE_FILE_GET_VFD_HANDLE     9  /**< H5Fget_vfd_handle \since 1.12.0                    */
+#define H5VL_NATIVE_FILE_RESET_MDC_HIT_RATE 10 /**< H5Freset_mdc_hit_rate_stats \since 1.12.0          */
+#define H5VL_NATIVE_FILE_SET_MDC_CONFIG     11 /**< H5Fset_mdc_config \since 1.12.0                    */
+#define H5VL_NATIVE_FILE_GET_METADATA_READ_RETRY_INFO                                                        \
+    12                                             /**< H5Fget_metadata_read_retry_info \since 1.12.0      */
+#define H5VL_NATIVE_FILE_START_SWMR_WRITE       13 /**< H5Fstart_swmr_write \since 1.12.0                  */
+#define H5VL_NATIVE_FILE_START_MDC_LOGGING      14 /**< H5Fstart_mdc_logging \since 1.12.0                 */
+#define H5VL_NATIVE_FILE_STOP_MDC_LOGGING       15 /**< H5Fstop_mdc_logging \since 1.12.0                  */
+#define H5VL_NATIVE_FILE_GET_MDC_LOGGING_STATUS 16 /**< H5Fget_mdc_logging_status \since 1.12.0 */
+#define H5VL_NATIVE_FILE_FORMAT_CONVERT         17 /**< H5Fformat_convert \since 1.12.0                    */
+#define H5VL_NATIVE_FILE_RESET_PAGE_BUFFERING_STATS                                                          \
+    18 /**< H5Freset_page_buffering_stats \since 1.12.0        */
+#define H5VL_NATIVE_FILE_GET_PAGE_BUFFERING_STATS                                                            \
+    19                                             /**< H5Fget_page_buffering_stats \since 1.12.0          */
+#define H5VL_NATIVE_FILE_GET_MDC_IMAGE_INFO     20 /**< H5Fget_mdc_image_info \since 1.12.0                */
+#define H5VL_NATIVE_FILE_GET_EOA                21 /**< H5Fget_eoa \since 1.12.0                           */
+#define H5VL_NATIVE_FILE_INCR_FILESIZE          22 /**< H5Fincrement_filesize \since 1.12.0                */
+#define H5VL_NATIVE_FILE_SET_LIBVER_BOUNDS      23 /**< H5Fset_latest_format/libver_bounds \since 1.12.0   */
+#define H5VL_NATIVE_FILE_GET_MIN_DSET_OHDR_FLAG 24 /**< H5Fget_dset_no_attrs_hint \since 1.12.0 */
+#define H5VL_NATIVE_FILE_SET_MIN_DSET_OHDR_FLAG 25 /**< H5Fset_dset_no_attrs_hint \since 1.12.0 */
 #ifdef H5_HAVE_PARALLEL
-#define H5VL_NATIVE_FILE_GET_MPI_ATOMICITY 26 /* H5Fget_mpi_atomicity                 */
-#define H5VL_NATIVE_FILE_SET_MPI_ATOMICITY 27 /* H5Fset_mpi_atomicity                 */
+#define H5VL_NATIVE_FILE_GET_MPI_ATOMICITY 26 /**< H5Fget_mpi_atomicity \since 1.12.0                 */
+#define H5VL_NATIVE_FILE_SET_MPI_ATOMICITY 27 /**< H5Fset_mpi_atomicity \since 1.12.0                 */
 #endif
-#define H5VL_NATIVE_FILE_POST_OPEN            28 /* Adjust file after open, with wrapping context */
-#define H5VL_NATIVE_FILE_VFD_SWMR_DISABLE_EOT 29
-#define H5VL_NATIVE_FILE_VFD_SWMR_ENABLE_EOT  30
-#define H5VL_NATIVE_FILE_VFD_SWMR_END_TICK    31
+#define H5VL_NATIVE_FILE_POST_OPEN            28 /**< Adjust file after open, with wrapping context \since 1.12.0 */
+#define H5VL_NATIVE_FILE_VFD_SWMR_DISABLE_EOT 29 /* H5Fvfd_swmr_disable_end_of_tick */
+#define H5VL_NATIVE_FILE_VFD_SWMR_ENABLE_EOT  30 /* H5Fvfd_swmr_enable_end_of_tick  */
+#define H5VL_NATIVE_FILE_VFD_SWMR_END_TICK    31 /* H5Fvfd_swmr_end_tick            */
 /* NOTE: If values over 1023 are added, the H5VL_RESERVED_NATIVE_OPTIONAL macro
  *      must be updated.
  */
@@ -220,7 +224,7 @@ typedef union H5VL_native_dataset_optional_args_t {
 /* Parameters for native connector's file 'get file image' operation */
 typedef struct H5VL_native_file_get_file_image_t {
     size_t  buf_size;  /* Size of file image buffer */
-    void *  buf;       /* Buffer for file image (OUT) */
+    void   *buf;       /* Buffer for file image (OUT) */
     size_t *image_len; /* Size of file image (OUT) */
 } H5VL_native_file_get_file_image_t;
 
@@ -229,7 +233,7 @@ typedef struct H5VL_native_file_get_free_sections_t {
     H5F_mem_t        type;       /* Type of file memory to query */
     H5F_sect_info_t *sect_info;  /* Array of sections (OUT) */
     size_t           nsects;     /* Size of section array */
-    size_t *         sect_count; /* Actual # of sections of type (OUT) */
+    size_t          *sect_count; /* Actual # of sections of type (OUT) */
 } H5VL_native_file_get_free_sections_t;
 
 /* Parameters for native connector's file 'get freespace' operation */
@@ -245,9 +249,9 @@ typedef struct H5VL_native_file_get_info_t {
 
 /* Parameters for native connector's file 'get metadata cache size' operation */
 typedef struct H5VL_native_file_get_mdc_size_t {
-    size_t *  max_size;        /* Maximum amount of cached data (OUT) */
-    size_t *  min_clean_size;  /* Minimum amount of cached data to keep clean (OUT) */
-    size_t *  cur_size;        /* Current amount of cached data (OUT) */
+    size_t   *max_size;        /* Maximum amount of cached data (OUT) */
+    size_t   *min_clean_size;  /* Minimum amount of cached data to keep clean (OUT) */
+    size_t   *cur_size;        /* Current amount of cached data (OUT) */
     uint32_t *cur_num_entries; /* Current # of cached entries (OUT) */
 } H5VL_native_file_get_mdc_size_t;
 
@@ -259,8 +263,8 @@ typedef struct H5VL_native_file_get_vfd_handle_t {
 
 /* Parameters for native connector's file 'get MDC logging status' operation */
 typedef struct H5VL_native_file_get_mdc_logging_status_t {
-    hbool_t *is_enabled;           /* Whether logging is enabled (OUT) */
-    hbool_t *is_currently_logging; /* Whether currently logging (OUT) */
+    bool *is_enabled;           /* Whether logging is enabled (OUT) */
+    bool *is_currently_logging; /* Whether currently logging (OUT) */
 } H5VL_native_file_get_mdc_logging_status_t;
 
 /* Parameters for native connector's file 'get page buffering stats' operation */
@@ -374,38 +378,28 @@ typedef union H5VL_native_file_optional_args_t {
 
     /* H5VL_NATIVE_FILE_GET_MIN_DSET_OHDR_FLAG */
     struct {
-        hbool_t *minimize; /* Flag whether dataset object headers are minimal (OUT) */
+        bool *minimize; /* Flag whether dataset object headers are minimal (OUT) */
     } get_min_dset_ohdr_flag;
 
     /* H5VL_NATIVE_FILE_SET_MIN_DSET_OHDR_FLAG */
     struct {
-        hbool_t minimize; /* Flag whether dataset object headers should be minimal */
+        bool minimize; /* Flag whether dataset object headers should be minimal */
     } set_min_dset_ohdr_flag;
 
 #ifdef H5_HAVE_PARALLEL
     /* H5VL_NATIVE_FILE_GET_MPI_ATOMICITY */
     struct {
-        hbool_t *flag; /* Flag whether MPI atomicity is set for files (OUT) */
+        bool *flag; /* Flag whether MPI atomicity is set for files (OUT) */
     } get_mpi_atomicity;
 
     /* H5VL_NATIVE_FILE_SET_MPI_ATOMICITY */
     struct {
-        hbool_t flag; /* Flag whether to set MPI atomicity for files */
+        bool flag; /* Flag whether to set MPI atomicity for files */
     } set_mpi_atomicity;
 #endif /* H5_HAVE_PARALLEL */
 
     /* H5VL_NATIVE_FILE_POST_OPEN */
     /* No args */
-
-    /* H5VL_NATIVE_FILE_VFD_SWMR_DISABLE_EOT */
-    /* No args */
-
-    /* H5VL_NATIVE_FILE_VFD_SWMR_ENABLE_EOT */
-    /* No args */
-
-    /* H5VL_NATIVE_FILE_VFD_SWMR_END_TICK */
-    /* No args */
-
 } H5VL_native_file_optional_args_t;
 
 /* Values for native VOL connector group optional VOL operations */
@@ -425,16 +419,16 @@ typedef union H5VL_native_file_optional_args_t {
 typedef struct H5VL_native_group_iterate_old_t {
     H5VL_loc_params_t loc_params; /* Location parameters for iteration */
     hsize_t           idx;        /* Index of link to begin iteration at */
-    hsize_t *         last_obj;   /* Index of last link looked at (OUT) */
+    hsize_t          *last_obj;   /* Index of last link looked at (OUT) */
     H5G_iterate_t     op;         /* Group (link) operator callback */
-    void *            op_data;    /* Context to pass to iterator callback */
+    void             *op_data;    /* Context to pass to iterator callback */
 } H5VL_native_group_iterate_old_t;
 
 /* Parameters for group 'get objinfo' operation */
 typedef struct H5VL_native_group_get_objinfo_t {
     H5VL_loc_params_t loc_params;  /* Location parameters for iteration */
-    hbool_t           follow_link; /* Whether to follow links for query */
-    H5G_stat_t *      statbuf;     /* Pointer to object info struct (OUT) */
+    bool              follow_link; /* Whether to follow links for query */
+    H5G_stat_t       *statbuf;     /* Pointer to object info struct (OUT) */
 } H5VL_native_group_get_objinfo_t;
 
 /* Parameters for native connector's group 'optional' operations */
@@ -464,7 +458,7 @@ typedef union H5VL_native_group_optional_args_t {
 /* Parameters for native connector's object 'get comment' operation */
 typedef struct H5VL_native_object_get_comment_t {
     size_t  buf_size;    /* Size of comment buffer */
-    void *  buf;         /* Buffer for comment (OUT) */
+    void   *buf;         /* Buffer for comment (OUT) */
     size_t *comment_len; /* Actual size of comment (OUT) */
 } H5VL_native_object_get_comment_t;
 
@@ -492,7 +486,7 @@ typedef union H5VL_native_object_optional_args_t {
 
     /* H5VL_NATIVE_OBJECT_ARE_MDC_FLUSHES_DISABLED */
     struct {
-        hbool_t *flag; /* Flag whether metadata cache flushes are disabled for this object (OUT) */
+        bool *flag; /* Flag whether metadata cache flushes are disabled for this object (OUT) */
     } are_mdc_flushes_disabled;
 
     /* H5VL_NATIVE_OBJECT_GET_NATIVE_INFO */
@@ -527,18 +521,45 @@ typedef union H5VL_native_object_optional_args_t {
 extern "C" {
 #endif
 
+/* Global variable to hold the VOL connector ID */
+H5_DLLVAR hid_t H5VL_NATIVE_g;
+
 /* Token <--> address converters */
+
 /**
  * \ingroup H5VLNAT
+ *
+ * \brief Convert a haddr_t address to a native VOL connector token
+ *
+ * \fgdta_loc_obj_id{loc_id}
+ * \param[in] addr Object address
+ * \param[out] token Object token
+ *
+ * \return \herr_t
+ *
+ * \details This API call maps pre-VOL haddr_t native file format addresses
+ *          to the more generic H5O_token_t tokens used by the VOL.
+ *
+ * \since 1.12.0
  */
 H5_DLL herr_t H5VLnative_addr_to_token(hid_t loc_id, haddr_t addr, H5O_token_t *token);
 /**
  * \ingroup H5VLNAT
+ *
+ * \brief Convert a native VOL connector token to a haddr_t address
+ *
+ * \fgdta_loc_obj_id{loc_id}
+ * \param[in] token Object token
+ * \param[out] addr Object address
+ *
+ * \return \herr_t
+ *
+ * \details This API call maps generic H5O_token_t tokens used by the VOL to
+ *          pre-VOL haddr_t native file format addresses.
+ *
+ * \since 1.12.0
  */
 H5_DLL herr_t H5VLnative_token_to_addr(hid_t loc_id, H5O_token_t token, haddr_t *addr);
-
-/* Not really public but must be included here */
-H5_DLL hid_t H5VL_native_register(void);
 
 #ifdef __cplusplus
 }

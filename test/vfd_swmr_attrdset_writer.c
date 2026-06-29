@@ -46,8 +46,8 @@
 
 #define READER_WAIT_TICKS 4
 
-/* Controls whether vfd configuration settings should be set 
- * using configuration file instead of using hardcoded 
+/* Controls whether vfd configuration settings should be set
+ * using configuration file instead of using hardcoded
  * configurations */
 /* Configuration file usage disabled for now so we don't have to update build tests yet. \
  * Will be implemented in the future -- Cody S. 6/18/26 */
@@ -108,14 +108,14 @@ typedef struct {
         .implicit_max_compact = 0, .fa_max_compact = 0, .ea_max_compact = 0, .bt2_max_compact = 0            \
     }
 
-
 static hbool_t state_init(state_t *s, socket_state_t *sock, int argc, const char *const *argv);
 
 static hbool_t sock_writer(hbool_t result, unsigned step, const state_t *s, socket_state_t *sock,
-                         H5F_vfd_swmr_config_t *config);
+                           H5F_vfd_swmr_config_t *config);
 static hbool_t sock_reader(hbool_t result, unsigned step, const state_t *s, socket_state_t *sock);
 static hbool_t sock_confirm_verify_notify(unsigned step, const state_t *s, socket_state_t *sock);
-static hbool_t sock_reader_no_verification(const state_t *s, socket_state_t *sock, H5F_vfd_swmr_config_t *config);
+static hbool_t sock_reader_no_verification(const state_t *s, socket_state_t *sock,
+                                           H5F_vfd_swmr_config_t *config);
 
 static hbool_t create_dsets(const state_t *s, dsets_state_t *ds);
 static hbool_t open_dsets(const state_t *s, dsets_state_t *ds);
@@ -141,7 +141,6 @@ static hbool_t verify_delete_attr(hid_t did, char *attr_name);
 static hbool_t verify_storage_cont(unsigned action, hid_t did, unsigned int which, unsigned max_compact,
                                    unsigned min_dense, unsigned asteps);
 static hbool_t verify_storage_cont_real(hid_t did, unsigned int which, unsigned cut_point);
-
 
 /* Names for datasets */
 #define DSET_COMPACT_NAME  "compact_dset"
@@ -199,13 +198,10 @@ state_init(state_t *s, socket_state_t *sock, int argc, const char *const *argv)
     unsigned long          tmp;
     int                    opt;
     const hsize_t          dims  = 1;
-    char *                 tfile = NULL;
-    char *                 end;
-    const char *           s_opts   = "pgkvmbqSNa:d:u:c:i:";
-    struct h5_long_options l_opts[] = {
-        {"ip_addr", require_arg, 'i'},    
-        {NULL, 0, '\0'}
-    };
+    char                  *tfile = NULL;
+    char                  *end;
+    const char            *s_opts   = "pgkvmbqSNa:d:u:c:i:";
+    struct h5_long_options l_opts[] = {{"ip_addr", require_arg, 'i'}, {NULL, 0, '\0'}};
 
     s->file              = H5I_INVALID_HID;
     s->one_by_one_sid    = H5I_INVALID_HID;
@@ -213,14 +209,14 @@ state_init(state_t *s, socket_state_t *sock, int argc, const char *const *argv)
     s->asteps            = 0;
     s->csteps            = 1;
     s->dattrs            = 0;
-    s->use_communication = TRUE;
-    s->use_vfd_swmr     = TRUE;
-    s->compact          = FALSE;
-    s->contig           = FALSE;
-    s->chunked          = FALSE;
-    s->vl_attr          = FALSE;
-    s->mod_attr         = FALSE;
-    s->update_interval  = READER_WAIT_TICKS;
+    s->use_communication = true;
+    s->use_vfd_swmr      = true;
+    s->compact           = false;
+    s->contig            = false;
+    s->chunked           = false;
+    s->vl_attr           = false;
+    s->mod_attr          = false;
+    s->update_interval   = READER_WAIT_TICKS;
 
     HDmemset(s->filename, 0, PATH_MAX);
     HDmemset(s->progname, 0, PATH_MAX);
@@ -241,23 +237,23 @@ state_init(state_t *s, socket_state_t *sock, int argc, const char *const *argv)
         switch (opt) {
 
             case 'p':
-                s->compact = TRUE;
+                s->compact = true;
                 break;
 
             case 'g':
-                s->contig = TRUE;
+                s->contig = true;
                 break;
 
             case 'k':
-                s->chunked = TRUE;
+                s->chunked = true;
                 break;
 
             case 'v':
-                s->vl_attr = TRUE;
+                s->vl_attr = true;
                 break;
 
             case 'm':
-                s->mod_attr = TRUE;
+                s->mod_attr = true;
                 break;
             case 'b':
                 s->filetype = H5T_STD_U32BE;
@@ -266,10 +262,10 @@ state_init(state_t *s, socket_state_t *sock, int argc, const char *const *argv)
                 verbosity = 0;
                 break;
             case 'S':
-                s->use_vfd_swmr = FALSE;
+                s->use_vfd_swmr = false;
                 break;
             case 'N':
-                s->use_communication = FALSE;
+                s->use_communication = false;
                 break;
             case 'a':
             case 'd':
@@ -534,10 +530,10 @@ create_dsets(const state_t *s, dsets_state_t *ds)
         hsize_t     max_dims2[2]   = {100, H5S_UNLIMITED};
         hsize_t     chunk_dims2[2] = {2, 2};
         const char *vdata2[5][5]   = {{"one", "two", "three", "four", "five"},
-                                    {"two", "three", "four", "five", "six"},
-                                    {"three", "four", "five", "six", "seven"},
-                                    {"four", "five", "six", "seven", "eight"},
-                                    {"five", "six", "seven", "eight", "nine"}};
+                                      {"two", "three", "four", "five", "six"},
+                                      {"three", "four", "five", "six", "seven"},
+                                      {"four", "five", "six", "seven", "eight"},
+                                      {"five", "six", "seven", "eight", "nine"}};
 
         /* Create variable length datatype */
         if ((vl_tid = H5Tcopy(H5T_C_S1)) < 0) {
@@ -931,7 +927,7 @@ perform_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *c
     if (s->mod_attr) {
 
         /* Need to sync up writer/reader before moving onto the next phase */
-        if (s->use_communication && !sock_writer(TRUE, 0, s, sock, config)) {
+        if (s->use_communication && !sock_writer(true, 0, s, sock, config)) {
             HDprintf("sock_writer() for modification failed\n");
             TEST_ERROR;
         }
@@ -952,7 +948,7 @@ perform_dsets_operations(state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *c
     if (s->dattrs) {
 
         /* Need to sync up writer/reader before moving onto the next phase */
-        if (s->use_communication && !sock_writer(TRUE, 0, s, sock, config)) {
+        if (s->use_communication && !sock_writer(true, 0, s, sock, config)) {
             HDprintf("sock_writer() for deletion failed\n");
             TEST_ERROR;
         }
@@ -987,7 +983,7 @@ static hbool_t
 attr_dsets_action(unsigned action, const state_t *s, const dsets_state_t *ds, unsigned which)
 {
     int     nerrors = 0;
-    hbool_t ret     = TRUE;
+    hbool_t ret     = true;
 
     if (s->compact) {
         HDassert(ds->compact_did != H5I_INVALID_HID);
@@ -1163,7 +1159,7 @@ modify_attr(const state_t *s, hid_t did, unsigned int which)
     hid_t    tid    = H5I_INVALID_HID;
     hid_t    vl_tid = H5I_INVALID_HID;
     char     name[sizeof("attr-9999999999")];
-    char *   val     = NULL;
+    char    *val     = NULL;
     unsigned tmp_val = 0;
 
     esnprintf(name, sizeof(name), "attr-%u", which);
@@ -1372,7 +1368,7 @@ static hbool_t
 verify_attr_dsets_action(unsigned action, const state_t *s, const dsets_state_t *ds, unsigned which)
 {
     int     nerrors = 0;
-    hbool_t ret     = TRUE;
+    hbool_t ret     = true;
 
     if (s->compact) {
         HDassert(ds->compact_did != H5I_INVALID_HID);
@@ -1451,7 +1447,7 @@ verify_attr_dsets_action(unsigned action, const state_t *s, const dsets_state_t 
     }
 
     if (nerrors)
-        ret = FALSE;
+        ret = false;
 
     return (ret);
 
@@ -1497,11 +1493,11 @@ verify_add_or_modify_attr(unsigned action, hid_t did, char *attr_name, unsigned 
     unsigned int read_which;
     unsigned int tmp_val;
     char         tmp_vl_val[sizeof("attr-9999999999")];
-    char *       read_vl_which;
-    hbool_t      is_vl = FALSE;
+    char        *read_vl_which;
+    hbool_t      is_vl = false;
     hid_t        aid   = H5I_INVALID_HID;
     hid_t        atid  = H5I_INVALID_HID;
-    hbool_t      ret   = FALSE;
+    hbool_t      ret   = false;
 
     HDassert(did != H5I_INVALID_HID);
     HDassert(action == ADD_ATTR || action == MODIFY_ATTR);
@@ -1547,7 +1543,7 @@ verify_add_or_modify_attr(unsigned action, hid_t did, char *attr_name, unsigned 
     if (is_vl) {
         dbgf(2, "read_vl_which = %s, tmp_vl_val= %s\n", read_vl_which, tmp_vl_val);
         if (!HDstrcmp(read_vl_which, tmp_vl_val))
-            ret = TRUE;
+            ret = true;
     }
     else {
         dbgf(2, "read_which = %u, tmp_val = %u\n", read_which, tmp_val);
@@ -1686,12 +1682,12 @@ error:
 
 } /* verify_storage_cont_real() */
 
-
 /*
  *  Writer synchronization depending on the result from the attribute action performed.
  */
 static hbool_t
-sock_writer(hbool_t result, unsigned step, const state_t *s, socket_state_t *sock, H5F_vfd_swmr_config_t *config)
+sock_writer(hbool_t result, unsigned step, const state_t *s, socket_state_t *sock,
+            H5F_vfd_swmr_config_t *config)
 {
     unsigned int i;
 
@@ -1769,7 +1765,7 @@ sock_reader(hbool_t result, unsigned step, const state_t *s, socket_state_t *soc
             }
             goto error;
         }
-        
+
     } /* The verification succeeds */
     else {
         if (step % s->csteps == 0) {
@@ -1857,11 +1853,11 @@ main(int argc, char **argv)
 {
     hid_t                  fapl   = H5I_INVALID_HID;
     hid_t                  fcpl   = H5I_INVALID_HID;
-    hbool_t                writer = FALSE;
+    hbool_t                writer = false;
     socket_state_t        *sock   = NULL;
-    state_t *              s      = NULL;
+    state_t               *s      = NULL;
     H5F_vfd_swmr_config_t *config = NULL;
-    const char *           personality;
+    const char            *personality;
     dsets_state_t          ds;
 
     if (NULL == (sock = HDcalloc(1, sizeof(socket_state_t)))) {
@@ -1893,9 +1889,9 @@ main(int argc, char **argv)
     personality = HDstrstr(s->progname, "vfd_swmr_attrdset_");
 
     if (personality != NULL && HDstrcmp(personality, "vfd_swmr_attrdset_writer") == 0)
-        writer = TRUE;
+        writer = true;
     else if (personality != NULL && HDstrcmp(personality, "vfd_swmr_attrdset_reader") == 0)
-        writer = FALSE;
+        writer = false;
     else {
         HDprintf("unknown personality, expected vfd_swmr_attrdset_{reader,writer}\n");
         TEST_ERROR;
@@ -1903,21 +1899,22 @@ main(int argc, char **argv)
 #ifdef USE_CONFIGURATION_FILE
 
     if (!s->use_vfd_swmr) {
-        /* When VFD SWMR is disabled, perform only the normal FAPL/FCPL setup. The 
-        * configuration-file initialization also sets a VFD SWMR configuration on 
-        * the property lists, which should not happen when use_vfd_swmr is false. 
-        * We still need the usual property list configuration (libver bounds, page 
-        * buffer size, file space settings, etc.), so those steps are performed 
-        * separately here.
-        */
-        
+        /* When VFD SWMR is disabled, perform only the normal FAPL/FCPL setup. The
+         * configuration-file initialization also sets a VFD SWMR configuration on
+         * the property lists, which should not happen when use_vfd_swmr is false.
+         * We still need the usual property list configuration (libver bounds, page
+         * buffer size, file space settings, etc.), so those steps are performed
+         * separately here.
+         */
+
         /* config, tick_len, max_lag, presume_posix_semantics, writer,
-        * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
-        * md_file_path, md_file_name, updater_file_path */
-        init_vfd_swmr_config(config, 4, 7, FALSE, writer, TRUE, FALSE, TRUE, 128, "./", "attrdset-shadow", NULL);
+         * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
+         * md_file_path, md_file_name, updater_file_path */
+        init_vfd_swmr_config(config, 4, 7, false, writer, true, false, true, 128, "./", "attrdset-shadow",
+                             NULL);
 
         /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */
-        if ((fapl = vfd_swmr_create_fapl(TRUE, s->use_vfd_swmr, TRUE, 4096, config)) < 0) {
+        if ((fapl = vfd_swmr_create_fapl(true, s->use_vfd_swmr, true, 4096, config)) < 0) {
             HDprintf("vfd_swmr_create_fapl() failed\n");
             TEST_ERROR;
         }
@@ -1926,9 +1923,8 @@ main(int argc, char **argv)
             HDprintf("vfd_swmr_create_fcpl() failed\n");
             TEST_ERROR;
         }
-
-
-    } else {
+    }
+    else {
         /* This was originally called in vfd_swmr_create_fapl() */
         if ((fapl = h5_fileaccess()) < 0) {
             HDprintf("h5_fileaccess() failed\n");
@@ -1944,7 +1940,7 @@ main(int argc, char **argv)
             HDprintf("H5Fswmr_config_env() failed\n");
             TEST_ERROR;
         }
-    
+
         /* config values are still needed later in this program */
         if (H5Pget_vfd_swmr_config(fapl, config) < 0) {
             HDprintf("H5Pget_vfd_swmr_config() failed\n");
@@ -1957,10 +1953,10 @@ main(int argc, char **argv)
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
      * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
      * md_file_path, md_file_name, updater_file_path */
-    init_vfd_swmr_config(config, 4, 7, FALSE, writer, TRUE, FALSE, TRUE, 128, "./", "attrdset-shadow", NULL);
+    init_vfd_swmr_config(config, 4, 7, false, writer, true, false, true, 128, "./", "attrdset-shadow", NULL);
 
     /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */
-    if ((fapl = vfd_swmr_create_fapl(TRUE, s->use_vfd_swmr, TRUE, 4096, config)) < 0) {
+    if ((fapl = vfd_swmr_create_fapl(true, s->use_vfd_swmr, true, 4096, config)) < 0) {
         HDprintf("vfd_swmr_create_fapl() failed\n");
         TEST_ERROR;
     }
@@ -2046,7 +2042,7 @@ main(int argc, char **argv)
     }
 
     if (sock != NULL) {
-        socket_close(sock); 
+        socket_close(sock);
         HDfree(sock);
     }
 

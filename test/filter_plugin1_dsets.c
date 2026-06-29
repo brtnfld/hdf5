@@ -2,9 +2,9 @@
  * Copyright by The HDF Group.                                               *
  * All rights reserved.                                                      *
  *                                                                           *
- * This file is part of HDF5. The full HDF5 copyright notice, including      *
+ * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -64,7 +64,7 @@ static size_t
 add_sub_value(unsigned int flags, size_t cd_nelmts, const unsigned int *cd_values, size_t nbytes,
               size_t *buf_size, void **buf)
 {
-    int *  int_ptr  = (int *)*buf; /* Pointer to the data values               */
+    int   *int_ptr  = (int *)*buf; /* Pointer to the data values               */
     size_t buf_left = *buf_size;   /* Amount of data buffer left to process    */
     int    value    = 0;           /* Data value to add/subtract               */
 

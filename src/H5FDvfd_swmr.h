@@ -16,8 +16,10 @@
 #ifndef H5FDvfd_swmr_H
 #define H5FDvfd_swmr_H
 
-#define H5FD_VFD_SWMR       (H5FDperform_init(H5FD_vfd_swmr_init))
+#define H5FD_VFD_SWMR       (H5OPEN H5FD_VFD_SWMR_id_g)
 #define H5FD_VFD_SWMR_VALUE H5_VFD_SWMR
+
+H5_DLLVAR hid_t H5FD_VFD_SWMR_id_g;
 
 /* Semi-unique constant used to help identify structure pointers */
 #define H5FD_VFD_SWMR_READER_MAGIC 0xABC123
@@ -32,7 +34,7 @@
  * When a file is opened in VFD SWMR mode, the VFD SWMR reader VFD is inserted
  * at the top of the user supplied (or default) VFD stack.
  *
- * The fields of this structure are discussed indvidually below.  Note that
+ * The fields of this structure are discussed individually below.  Note that
  * there is no version field, since this structure should not be accessible
  * to the user.  The set of fields is quite limited, as most of the necessary
  * configuration data is taken from the VFD SWMR configuration FAPL entry
@@ -59,9 +61,16 @@ typedef struct H5FD_vfd_swmr_reader_fapl_t {
 extern "C" {
 #endif
 
-H5_DLL hid_t  H5FD_vfd_swmr_init(void);
-H5_DLL herr_t H5P_pop_vfd_swmr_reader_vfd_off_fapl(hid_t fapl_id);
-H5_DLL herr_t H5P_push_vfd_swmr_reader_vfd_on_fapl(hid_t fapl_id);
+H5_DLL hid_t   H5FD_vfd_swmr_init(void);
+H5_DLL herr_t  H5P_pop_vfd_swmr_reader_vfd_off_fapl(hid_t fapl_id);
+H5_DLL herr_t  H5P_push_vfd_swmr_reader_vfd_on_fapl(hid_t fapl_id);
+H5_DLL hbool_t H5FD_vfd_swmr_get_make_believe(H5FD_t *_file);
+H5_DLL void    H5FD_vfd_swmr_set_make_believe(H5FD_t *_file, hbool_t make_believe);
+H5_DLL htri_t  H5FD_vfd_swmr_assess_make_believe(H5FD_t *_file);
+H5_DLL void    H5FD_vfd_swmr_record_elapsed_ticks(H5FD_t *_file, uint64_t elapsed);
+H5_DLL void    H5FD_vfd_swmr_dump_status(H5FD_t *_file, uint64_t page);
+H5_DLL void    H5FD_vfd_swmr_set_pb_configured(H5FD_t *_file);
+H5_DLL void    H5FD_vfd_swmr_get_md_path_name(H5FD_t *_file, char **name);
 
 #ifdef __cplusplus
 }

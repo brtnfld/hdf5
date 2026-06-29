@@ -9,40 +9,33 @@
  * help@lifeboat.llc                                                         *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-
 /*-------------------------------------------------------------------------
  *
  * Created:             H5CLpublic.h
  *
- * Purpose:             Public declarations for the VFD configuration 
+ * Purpose:             Public declarations for the VFD configuration
  *                      language.
  *
  *-------------------------------------------------------------------------
  */
 
-
 #ifndef H5CL_public_H
 #define H5CL_public_H
-
 
 /*****************/
 /* Public Macros */
 /*****************/
 
-
 /*******************/
 /* Public Typedefs */
 /*******************/
-
 
 /********************/
 /* Public Variables */
 /********************/
 
-
 /*********************/
 /* Public Prototypes */
 /*********************/
-
 
 #endif /* H5CL_public_H */

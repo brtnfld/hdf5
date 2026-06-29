@@ -1,11 +1,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -53,13 +52,13 @@ typedef enum H5FA_cls_id_t {
  */
 typedef struct H5FA_class_t {
     H5FA_cls_id_t id;            /* ID of Fixed Array class, as found in file    */
-    const char *  name;          /* Name of class (for debugging)                */
+    const char   *name;          /* Name of class (for debugging)                */
     size_t        nat_elmt_size; /* Size of native (memory) element              */
 
     /* Fixed array client callback methods */
     void *(*crt_context)(void *udata); /* Create context for other callbacks */
     herr_t (*dst_context)(void *ctx);  /* Destroy context */
-    herr_t (*fill)(void * nat_blk,
+    herr_t (*fill)(void  *nat_blk,
                    size_t nelmts); /* Fill array of elements with encoded form of "missing element" value */
     herr_t (*encode)(void *raw, const void *elmt, size_t nelmts,
                      void *ctx); /* Encode elements from native form to disk storage form */

@@ -27,45 +27,57 @@
 /***********/
 /* Headers */
 /***********/
-#include "H5private.h"   /* Generic Functions                        */
-#include "H5Aprivate.h"  /* Attributes                               */
-#include "H5ACprivate.h" /* Metadata cache                           */
-#include "H5CXprivate.h" /* API Contexts                             */
-#include "H5Dprivate.h"  /* Datasets                                 */
-#include "H5Eprivate.h"  /* Error handling                           */
-#include "H5Fpkg.h"      /* File access                              */
-#include "H5FDpkg.h"     /* File drivers                             */
-#include "H5Gprivate.h"  /* Groups                                   */
-#include "H5Iprivate.h"  /* IDs                                      */
-#include "H5Lprivate.h"  /* Links                                    */
-#include "H5MFprivate.h" /* File memory management                   */
-#include "H5MVprivate.h" /* File memory management for VFD SWMR      */
-#include "H5MMprivate.h" /* Memory management                        */
+#include "H5private.h"    /* Generic Functions                        */
+#include "H5Aprivate.h"   /* Attributes                               */
+#include "H5ACprivate.h"  /* Metadata cache                           */
+#include "H5CXprivate.h"  /* API Contexts                             */
+#include "H5Dprivate.h"   /* Datasets                                 */
+#include "H5Eprivate.h"   /* Error handling                           */
+#include "H5Fpkg.h"       /* File access                              */
+#include "H5FDpkg.h"      /* File drivers                             */
+#include "H5FDvfd_swmr.h" /* VFD SWMR file driver                    */
+#include "H5Gprivate.h"   /* Groups                                   */
+#include "H5Iprivate.h"   /* IDs                                      */
+#include "H5Lprivate.h"   /* Links                                    */
+#include "H5MFprivate.h"  /* File memory management                   */
+#include "H5MVprivate.h"  /* File memory management for VFD SWMR      */
+#include "H5MMprivate.h"  /* Memory management                        */
 #include "H5Ppublic.h"
 #include "H5Pprivate.h"  /* Property lists                           */
 #include "H5SMprivate.h" /* Shared Object Header Messages            */
 #include "H5Tprivate.h"  /* Datatypes                                */
 #include "H5CLprivate.h"
 
+/* TIME_UTC is C11 but may be missing on some MinGW builds */
+#ifndef TIME_UTC
+#define TIME_UTC 1
+#endif
+
 /****************/
 /* Local Macros */
 /****************/
+
+/* Portable timespec comparison macro (timespeccmp is BSD-only) */
+#ifndef timespeccmp
+#define timespeccmp(tsp, usp, cmp)                                                                           \
+    (((tsp)->tv_sec == (usp)->tv_sec) ? ((tsp)->tv_nsec cmp(usp)->tv_nsec) : ((tsp)->tv_sec cmp(usp)->tv_sec))
+#endif
+
 #define FILE_NAME_LEN           1024
 #define VFD_SWMR_MD_FILE_SUFFIX ".md"
 #define NANOSECS_PER_SECOND     1000000000LL /* nanoseconds per second */
 #define NANOSECS_PER_TENTH_SEC  100000000LL  /* nanoseconds per 0.1 second */
 
-/* Maximum number of name value pairs that may appear in configuration language 
+/* Maximum number of name value pairs that may appear in configuration language
  * configuration string for the vfd swmr configuration */
-#define VFD_SWMR_CONFIG_DATA__MAX_PARAMS  4 
-#define VFD_SWMR_CONFIG__MAX_PARAMS       13 
+#define VFD_SWMR_CONFIG_DATA__MAX_PARAMS  4
+#define VFD_SWMR_CONFIG__MAX_PARAMS       13
 #define VFD_SWMR_PB_CONFIG__MAX_PARAMS    2
 #define VFD_SWMR_FS_STRATEGY__MAX_PARAMS  1
 #define VFD_SWMR_FS_PAGE_SIZE__MAX_PARAMS 1
 
 /* Environment variable that will hold name of config file */
-#define VFD_SWMR_CONFIG_FILE_ENV_VAR      "HDF5_VFD_SWMR_CONFIG"
-
+#define VFD_SWMR_CONFIG_FILE_ENV_VAR "HDF5_VFD_SWMR_CONFIG"
 
 /* Declare an array of string to identify the VFD SMWR Log tags.
  * Note this array is used to generate the entry tag by the log reporting macro
@@ -124,14 +136,12 @@ static herr_t H5F__generate_updater_file(H5F_t *f, uint32_t num_entries, uint16_
                                          uint8_t *md_file_index_image_ptr, uint64_t md_file_index_offset,
                                          size_t md_file_index_image_len);
 
-static herr_t H5F__load_vfd_swmr_config(H5CL_nv_pair_t *nv_pairs, hbool_t writer, 
-                                       H5F_vfd_swmr_config_t *config_ptr);
-static herr_t H5F__load_vfd_swmr_page_buffer_config(H5CL_nv_pair_t *nv_pairs, size_t *page_buf_size, 
-                                                   hbool_t *metadata_pages_only);
-static herr_t H5F__load_vfd_swmr_fs_strategy_config(H5CL_nv_pair_t *nv_pairs, 
-                                                   hbool_t *fs_strategy_persist);
+static herr_t H5F__load_vfd_swmr_config(H5CL_nv_pair_t *nv_pairs, hbool_t writer,
+                                        H5F_vfd_swmr_config_t *config_ptr);
+static herr_t H5F__load_vfd_swmr_page_buffer_config(H5CL_nv_pair_t *nv_pairs, size_t *page_buf_size,
+                                                    hbool_t *metadata_pages_only);
+static herr_t H5F__load_vfd_swmr_fs_strategy_config(H5CL_nv_pair_t *nv_pairs, hbool_t *fs_strategy_persist);
 static herr_t H5F__load_vfd_swmr_fs_page_size_config(H5CL_nv_pair_t *nv_pairs, hsize_t *fs_page_size);
-
 
 /*********************/
 /* Package Variables */
@@ -196,38 +206,34 @@ H5F_vfd_swmr_init(H5F_t *f, hbool_t file_create)
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(H5F_SHARED_VFD_SWMR_CONFIG(shared));
+    assert(shared->vfd_swmr_config.version >= H5F__CURR_VFD_SWMR_CONFIG_VERSION);
 
-    shared->vfd_swmr = TRUE;
+    shared->vfd_swmr = true;
 
     if (H5F_SHARED_INTENT(shared) & H5F_ACC_RDWR) {
 
-        HDassert(shared->vfd_swmr_config.writer);
-        HDassert(shared->vfd_swmr_config.maintain_metadata_file ||
-                 shared->vfd_swmr_config.generate_updater_files);
+        assert(shared->vfd_swmr_config.writer);
+        assert(shared->vfd_swmr_config.maintain_metadata_file ||
+               shared->vfd_swmr_config.generate_updater_files);
 
         SIMPLEQ_INIT(&shared->lower_defrees);
-        shared->vfd_swmr_writer = TRUE;
+        shared->vfd_swmr_writer = true;
         shared->tick_num        = 0;
 
         /* Allocate space for the (possibly constructed) metadata file name */
         if (NULL == (shared->md_file_path_name = H5MM_calloc((H5FD_MAX_FILENAME_LEN + 1) * sizeof(char))))
-            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL, "can't allocate memory for mdc log file name")
-
+            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, FAIL, "can't allocate memory for mdc log file name");
         if (H5F_vfd_swmr_build_md_path_name(&(shared->vfd_swmr_config), f->open_name,
                                             shared->md_file_path_name) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL, "unable to build metadata file name")
-
-        if (((shared->vfd_swmr_md_fd = HDopen(shared->md_file_path_name, O_CREAT | O_RDWR | O_TRUNC,
-                                              H5_POSIX_CREATE_MODE_RW))) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL, "unable to create the metadata file")
-
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL, "unable to build metadata file name");
+        if (((shared->vfd_swmr_md_fd =
+                  open(shared->md_file_path_name, O_CREAT | O_RDWR | O_TRUNC, H5_POSIX_CREATE_MODE_RW))) < 0)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL, "unable to create the metadata file");
         md_size = (hsize_t)shared->vfd_swmr_config.md_pages_reserved * shared->fs_page_size;
 
         if ((hdr_addr = H5MV_alloc(f, md_size)) == HADDR_UNDEF)
-            HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "error allocating shadow-file header")
-
-        HDassert(H5F_addr_eq(hdr_addr, H5FD_MD_HEADER_OFF));
+            HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "error allocating shadow-file header");
+        assert(H5_addr_eq(hdr_addr, H5FD_MD_HEADER_OFF));
 
         shared->writer_index_offset = H5FD_MD_HEADER_SIZE;
         shared->vfd_swmr_md_eoa     = (haddr_t)md_size;
@@ -238,16 +244,15 @@ H5F_vfd_swmr_init(H5F_t *f, hbool_t file_create)
         if (!file_create) {
 
             if (H5F__vfd_swmr_construct_write_md_idx(shared, 0, NULL, md_idx_image) < 0)
-                HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "fail to create index in md")
-
+                HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "fail to create index in md");
             if (H5F__vfd_swmr_construct_write_md_hdr(shared, 0, md_hdr_image) < 0)
-                HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "fail to create header in md")
+                HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "fail to create header in md");
         }
 
         /* For VFD SWMR testing: invoke callback if set to generate metadata file checksum */
         if (shared->generate_md_ck_cb) {
             if (shared->generate_md_ck_cb(shared->md_file_path_name, shared->updater_seq_num) < 0)
-                HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "error from generate_md_ck_cb()")
+                HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "error from generate_md_ck_cb()");
         }
 
         /* Generate updater files if configuration indicates so */
@@ -256,19 +261,19 @@ H5F_vfd_swmr_init(H5F_t *f, hbool_t file_create)
             if (H5F__generate_updater_file(f, 0, file_create ? CREATE_METADATA_FILE_ONLY_FLAG : 0,
                                            md_hdr_image, H5FD_MD_HEADER_SIZE, md_idx_image,
                                            shared->writer_index_offset, H5FD_MD_INDEX_SIZE(0)) < 0)
-                HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't generate updater file")
+                HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't generate updater file");
         }
 
         shared->tick_num = 1;
 
         if (H5PB_vfd_swmr__set_tick(shared) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "Can't update page buffer current tick")
+            HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "Can't update page buffer current tick");
     }
     else { /* VFD SWMR reader  */
 
-        HDassert(!shared->vfd_swmr_config.writer);
+        assert(!shared->vfd_swmr_config.writer);
 
-        HDassert(shared->fs_page_size > 0);
+        assert(shared->fs_page_size > 0);
         /* This is a bug uncovered by issue #3 of the group test failures.
          *  See Kent's documentation "Designed to Fail Tests and Issues".
          *  The file opening process in H5F__new() initializes the cache copy of
@@ -279,30 +284,28 @@ H5F_vfd_swmr_init(H5F_t *f, hbool_t file_create)
          *  f->shared->fs_page_size.
          */
         if (shared->cache) {
-            if (H5AC_set_vfd_swmr_reader(shared->cache, TRUE, shared->fs_page_size) < 0)
+            if (H5AC_set_vfd_swmr_reader(shared->cache, true, shared->fs_page_size) < 0)
                 HGOTO_ERROR(H5E_CACHE, H5E_CANTSET, FAIL, "can't set page size in cache for VFD SWMR reader");
         }
 
-        shared->vfd_swmr_writer = FALSE;
+        shared->vfd_swmr_writer = false;
         shared->max_jump_ticks  = 0;
 
-        HDassert(shared->mdf_idx == NULL);
+        assert(shared->mdf_idx == NULL);
 
         /* allocate an index to save the initial index */
         if (H5F__vfd_swmr_create_index(shared) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, FAIL, "unable to allocate metadata file index")
-
+            HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, FAIL, "unable to allocate metadata file index");
         /* Set tick_num to the current tick read from the metadata file */
         shared->mdf_idx_entries_used = shared->mdf_idx_len;
-        if (H5FD_vfd_swmr_get_tick_and_idx(shared->lf, FALSE, &shared->tick_num,
+        if (H5FD_vfd_swmr_get_tick_and_idx(shared->lf, false, &shared->tick_num,
                                            &(shared->mdf_idx_entries_used), shared->mdf_idx) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTLOAD, FAIL, "unable to load/decode metadata file")
+            HGOTO_ERROR(H5E_FILE, H5E_CANTLOAD, FAIL, "unable to load/decode metadata file");
     }
 
     /* Update end_of_tick */
-    if (H5F__vfd_swmr_update_end_of_tick_and_tick_num(shared, FALSE) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to update end of tick")
-
+    if (H5F__vfd_swmr_update_end_of_tick_and_tick_num(shared, false) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to update end of tick");
 done:
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -340,27 +343,29 @@ H5F_vfd_swmr_build_md_path_name(H5F_vfd_swmr_config_t *config, const char *hdf5_
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if ((tot_len = HDstrlen(config->md_file_path)) != 0) {
+    name[0] = '\0';
+
+    if ((tot_len = strlen(config->md_file_path)) != 0) {
 
         /* md_file_path + '/' */
         if (++tot_len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN)
             HGOTO_ERROR(H5E_FILE, H5E_CANTCOPY, FAIL, "md_file_path and md_file_name exceeds maximum");
-        HDstrcat(name, config->md_file_path);
-        HDstrcat(name, "/");
+        strcat(name, config->md_file_path);
+        strcat(name, "/");
     }
 
-    if ((tmp_len = HDstrlen(config->md_file_name)) != 0) {
+    if ((tmp_len = strlen(config->md_file_name)) != 0) {
         if ((tot_len += tmp_len) > H5F__MAX_VFD_SWMR_FILE_NAME_LEN)
             HGOTO_ERROR(H5E_FILE, H5E_CANTCOPY, FAIL, "md_file_path and md_file_name exceeds maximum");
-        HDstrcat(name, config->md_file_name);
+        strcat(name, config->md_file_name);
     }
     else {
         /* Automatic generation of metadata file name based on hdf5_filename + '.md' */
-        if ((tot_len += (HDstrlen(hdf5_filename) + 3)) > H5F__MAX_VFD_SWMR_FILE_NAME_LEN)
+        if ((tot_len += (strlen(hdf5_filename) + 3)) > H5F__MAX_VFD_SWMR_FILE_NAME_LEN)
             HGOTO_ERROR(H5E_FILE, H5E_CANTCOPY, FAIL, "md_file_path and md_file_name maximum");
 
-        HDstrcat(name, hdf5_filename);
-        HDstrcat(name, VFD_SWMR_MD_FILE_SUFFIX);
+        strcat(name, hdf5_filename);
+        strcat(name, VFD_SWMR_MD_FILE_SUFFIX);
     }
 
 done:
@@ -394,7 +399,7 @@ done:
 herr_t
 H5F_vfd_swmr_close_or_flush(H5F_t *f, hbool_t closing)
 {
-    H5F_shared_t *   shared = f->shared;
+    H5F_shared_t    *shared = f->shared;
     shadow_defree_t *curr;
     uint8_t          md_idx_image[H5FD_MD_INDEX_SIZE(0)]; /* Buffer for metadata file index */
     uint8_t          md_hdr_image[H5FD_MD_HEADER_SIZE];   /* Buffer for metadata file header */
@@ -402,32 +407,30 @@ H5F_vfd_swmr_close_or_flush(H5F_t *f, hbool_t closing)
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(shared->vfd_swmr_writer);
-    HDassert(shared->vfd_swmr_md_fd >= 0);
+    assert(shared->vfd_swmr_writer);
+    assert(shared->vfd_swmr_md_fd >= 0);
 
     /* Write empty index to the md file */
     if (H5F__vfd_swmr_construct_write_md_idx(shared, 0, NULL, md_idx_image) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "fail to create index in md")
-
+        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "fail to create index in md");
     /* Write header to the md file */
     if (H5F__vfd_swmr_construct_write_md_hdr(shared, 0, md_hdr_image) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "fail to create header in md")
-
+        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "fail to create header in md");
     if (closing) { /* For file close */
 
         /* Close the md file */
-        if (HDclose(shared->vfd_swmr_md_fd) < 0)
+        if (close(shared->vfd_swmr_md_fd) < 0)
             HSYS_GOTO_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "unable to close the metadata file")
         shared->vfd_swmr_md_fd = -1;
 
         /* For VFD SWMR testing: invoke callback if set to generate metadata file checksum */
         if (shared->generate_md_ck_cb) {
             if (shared->generate_md_ck_cb(shared->md_file_path_name, shared->updater_seq_num) < 0)
-                HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "error from generate_md_ck_cb()")
+                HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "error from generate_md_ck_cb()");
         }
 
         /* Unlink the md file */
-        if (HDunlink(shared->md_file_path_name) < 0)
+        if (unlink(shared->md_file_path_name) < 0)
             HSYS_GOTO_ERROR(H5E_FILE, H5E_CANTREMOVE, FAIL, "unable to unlink the metadata file")
 
         shared->md_file_path_name = (char *)H5MM_xfree(shared->md_file_path_name);
@@ -435,27 +438,26 @@ H5F_vfd_swmr_close_or_flush(H5F_t *f, hbool_t closing)
         /* Close the free-space manager for the metadata file */
         if (H5MV_close(f) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL,
-                        "unable to close the free-space manager for the metadata file")
-
+                        "unable to close the free-space manager for the metadata file");
         /* Free the delayed list */
         while ((curr = TAILQ_FIRST(&shared->shadow_defrees)) != NULL) {
             TAILQ_REMOVE(&shared->shadow_defrees, curr, link);
             H5FL_FREE(shadow_defree_t, curr);
         }
 
-        HDassert(TAILQ_EMPTY(&shared->shadow_defrees));
+        assert(TAILQ_EMPTY(&shared->shadow_defrees));
 
         if (shared->vfd_swmr_config.generate_updater_files) {
             if (H5F__generate_updater_file(f, 0, FINAL_UPDATE_FLAG, md_hdr_image, H5FD_MD_HEADER_SIZE,
                                            md_idx_image, shared->writer_index_offset,
                                            H5FD_MD_INDEX_SIZE(0)) < 0)
-                HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't generate updater file")
+                HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't generate updater file");
         }
     }
     else { /* For file flush */
         /* Update end_of_tick */
-        if (H5F__vfd_swmr_update_end_of_tick_and_tick_num(shared, TRUE) < 0)
-            HDONE_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to update end of tick")
+        if (H5F__vfd_swmr_update_end_of_tick_and_tick_num(shared, true) < 0)
+            HDONE_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to update end of tick");
     }
 #if 1 /* Save the end of close info. to the log file, subject to comment out. */
     if (closing)
@@ -469,7 +471,7 @@ done:
      */
     if (shared->vfd_swmr_log_on && closing) {
         H5_timer_stop(&(shared->vfd_swmr_log_start_time));
-        HDfclose(shared->vfd_swmr_log_file_ptr);
+        fclose(shared->vfd_swmr_log_file_ptr);
     }
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -545,12 +547,12 @@ H5F_shadow_image_defer_free(H5F_shared_t *shared, const H5FD_vfd_swmr_idx_entry_
 herr_t
 H5F_update_vfd_swmr_metadata_file(H5F_t *f, uint32_t num_entries, H5FD_vfd_swmr_idx_entry_t *index)
 {
-    H5F_shared_t *   shared = f->shared;
+    H5F_shared_t    *shared = f->shared;
     shadow_defree_t *prev;
     shadow_defree_t *shadow_defree;
     haddr_t          md_addr; /* Address in the metadata file */
     uint32_t         i;       /* Local index variable */
-    uint8_t *        md_idx_image = NULL;
+    uint8_t         *md_idx_image = NULL;
     uint8_t          md_hdr_image[H5FD_MD_HEADER_SIZE]; /* Buffer for metadata file header */
     herr_t           ret_value = SUCCEED;               /* Return value */
 
@@ -558,10 +560,10 @@ H5F_update_vfd_swmr_metadata_file(H5F_t *f, uint32_t num_entries, H5FD_vfd_swmr_
 
     /* Sort index entries by increasing offset in the HDF5 file */
     if (num_entries > 0) {
-        HDqsort(index, num_entries, sizeof(*index), H5F__idx_entry_cmp);
+        qsort(index, num_entries, sizeof(*index), H5F__idx_entry_cmp);
         /* Assert that no HDF5 page offsets are duplicated. */
         for (i = 1; i < num_entries; i++)
-            HDassert(index[i - 1].hdf5_page_offset < index[i].hdf5_page_offset);
+            assert(index[i - 1].hdf5_page_offset < index[i].hdf5_page_offset);
     }
 
     /* For each non-null entry_ptr in the index:
@@ -581,20 +583,19 @@ H5F_update_vfd_swmr_metadata_file(H5F_t *f, uint32_t num_entries, H5FD_vfd_swmr_
         if (index[i].entry_ptr == NULL)
             continue;
 
-        HDassert(index[i].tick_of_last_change == f->shared->tick_num);
+        assert(index[i].tick_of_last_change == f->shared->tick_num);
 
         /* Prepend previous image of the entry to the delayed list */
         if (index[i].md_file_page_offset) {
             if (H5F_shadow_image_defer_free(shared, &index[i]) == -1) {
-                HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, FAIL, "unable to allocate the delayed entry")
+                HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, FAIL, "unable to allocate the delayed entry");
             }
         }
 
         /* Allocate space for the entry in the metadata file */
         if ((md_addr = H5MV_alloc(f, index[i].length)) == HADDR_UNDEF)
-            HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "error in allocating space from the metadata file")
-
-        HDassert(md_addr % shared->fs_page_size == 0);
+            HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "error in allocating space from the metadata file");
+        assert(md_addr % shared->fs_page_size == 0);
 
         /* Compute checksum and update the index entry */
         index[i].md_file_page_offset = md_addr / shared->fs_page_size;
@@ -603,34 +604,30 @@ H5F_update_vfd_swmr_metadata_file(H5F_t *f, uint32_t num_entries, H5FD_vfd_swmr_
         if (shared->vfd_swmr_config.maintain_metadata_file) {
 
             /* Seek and write the entry to the metadata file */
-            if (HDlseek(shared->vfd_swmr_md_fd, (HDoff_t)md_addr, SEEK_SET) < 0)
+            if (lseek(shared->vfd_swmr_md_fd, (off_t)md_addr, SEEK_SET) < 0)
 
-                HGOTO_ERROR(H5E_FILE, H5E_SEEKERROR, FAIL, "unable to seek in the metadata file")
-
-            if (HDwrite(shared->vfd_swmr_md_fd, index[i].entry_ptr, index[i].length) !=
+                HGOTO_ERROR(H5E_FILE, H5E_SEEKERROR, FAIL, "unable to seek in the metadata file");
+            if (write(shared->vfd_swmr_md_fd, index[i].entry_ptr, index[i].length) !=
                 (ssize_t)index[i].length)
 
                 HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL,
-                            "error in writing the page/multi-page entry to metadata file")
+                            "error in writing the page/multi-page entry to metadata file");
         }
 
         if (!shared->vfd_swmr_config.generate_updater_files)
             index[i].entry_ptr = NULL;
     }
 
-    if ((md_idx_image = HDmalloc(H5FD_MD_INDEX_SIZE(num_entries))) == NULL)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for md index")
-
+    if ((md_idx_image = malloc(H5FD_MD_INDEX_SIZE(num_entries))) == NULL)
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for md index");
     /* Construct and write index to the metadata file */
     if (H5F__vfd_swmr_construct_write_md_idx(shared, num_entries, index, md_idx_image) < 0)
 
-        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "fail to construct & write index to md")
-
+        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "fail to construct & write index to md");
     /* Construct and write header to the md file */
     if (H5F__vfd_swmr_construct_write_md_hdr(shared, num_entries, md_hdr_image) < 0)
 
-        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "fail to construct & write header to md")
-
+        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "fail to construct & write header to md");
     /*
      * Release time out entries from the delayed list by scanning the
      * list from the bottom up:
@@ -654,8 +651,7 @@ H5F_update_vfd_swmr_metadata_file(H5F_t *f, uint32_t num_entries, H5FD_vfd_swmr_
                 break; // No more entries are due for reclamation.
 
             if (H5MV_free(f, shadow_defree->offset, shadow_defree->length) < 0)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush clean entry")
-
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush clean entry");
             TAILQ_REMOVE(&shared->shadow_defrees, shadow_defree, link);
 
             H5FL_FREE(shadow_defree_t, shadow_defree);
@@ -665,18 +661,17 @@ H5F_update_vfd_swmr_metadata_file(H5F_t *f, uint32_t num_entries, H5FD_vfd_swmr_
     /* For VFD SWMR testing: invoke callback if set to generate metadata file checksum */
     if (shared->generate_md_ck_cb) {
         if (shared->generate_md_ck_cb(shared->md_file_path_name, shared->updater_seq_num) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "error from generate_md_ck_cb()")
+            HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "error from generate_md_ck_cb()");
     }
 
     /* Generate updater files with num_entries */
     if (shared->vfd_swmr_config.generate_updater_files)
         if (H5F__generate_updater_file(f, num_entries, 0, md_hdr_image, H5FD_MD_HEADER_SIZE, md_idx_image,
                                        shared->writer_index_offset, H5FD_MD_INDEX_SIZE(num_entries)) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't generate updater file")
-
+            HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't generate updater file");
 done:
 
-    HDfree(md_idx_image);
+    free(md_idx_image);
 
     FUNC_LEAVE_NOAPI(ret_value)
 
@@ -726,13 +721,13 @@ H5F_vfd_swmr_writer_delay_write(H5F_shared_t *shared, uint64_t page, uint64_t *u
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(shared);
-    HDassert(shared->vfd_swmr);
-    HDassert(shared->vfd_swmr_writer);
+    assert(shared);
+    assert(shared->vfd_swmr);
+    assert(shared->vfd_swmr_writer);
 
     idx = shared->mdf_idx;
 
-    HDassert(idx != NULL || shared->tick_num <= 1);
+    assert(idx != NULL || shared->tick_num <= 1);
 
     /* Do a binary search on the metadata file index to see if
      * it already contains an entry for `page`
@@ -741,7 +736,7 @@ H5F_vfd_swmr_writer_delay_write(H5F_shared_t *shared, uint64_t page, uint64_t *u
     if (idx == NULL)
         ie_ptr = NULL;
     else
-        ie_ptr = H5FD_vfd_swmr_pageno_to_mdf_idx_entry(idx, shared->mdf_idx_entries_used, page, FALSE);
+        ie_ptr = H5FD_vfd_swmr_pageno_to_mdf_idx_entry(idx, shared->mdf_idx_entries_used, page, false);
 
     if (ie_ptr == NULL)
         until = shared->tick_num + shared->vfd_swmr_config.max_lag;
@@ -752,8 +747,7 @@ H5F_vfd_swmr_writer_delay_write(H5F_shared_t *shared, uint64_t page, uint64_t *u
 
     if (until != 0 &&
         (until < shared->tick_num || shared->tick_num + shared->vfd_swmr_config.max_lag < until))
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "VFD SWMR write delay out of range")
-
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "VFD SWMR write delay out of range");
     *untilp = until;
 
 done:
@@ -789,20 +783,19 @@ H5F_vfd_swmr_writer_prep_for_flush_or_close(H5F_t *f)
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(shared->vfd_swmr);
-    HDassert(shared->vfd_swmr_writer);
-    HDassert(shared->page_buf);
+    assert(shared->vfd_swmr);
+    assert(shared->vfd_swmr_writer);
+    assert(shared->page_buf);
 
     /* since we are about to flush the page buffer, force and end of
      * tick so as to avoid attempts to flush entries on the page buffer
      * tick list that were modified during the current tick.
      */
     if (H5F_vfd_swmr_writer_end_of_tick(f) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "H5F_vfd_swmr_writer_end_of_tick() failed.")
-
+        HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "H5F_vfd_swmr_writer_end_of_tick() failed.");
     while (shared->page_buf->dwl_len > 0) {
         if (H5F__vfd_swmr_writer_wait_a_tick(f) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTFLUSH, FAIL, "wait a tick failed.")
+            HGOTO_ERROR(H5E_FILE, H5E_CANTFLUSH, FAIL, "wait a tick failed.");
     }
 
 done:
@@ -814,7 +807,7 @@ done:
 static int
 H5F__clean_shadow_index(H5F_t *f, uint32_t nentries, H5FD_vfd_swmr_idx_entry_t *idx, uint32_t *ndeletedp)
 {
-    H5F_shared_t *             shared = f->shared;
+    H5F_shared_t              *shared = f->shared;
     uint32_t                   i, j, ndeleted, max_lag = shared->vfd_swmr_config.max_lag;
     uint64_t                   tick_num = shared->tick_num;
     H5FD_vfd_swmr_idx_entry_t *ie;
@@ -824,8 +817,8 @@ H5F__clean_shadow_index(H5F_t *f, uint32_t nentries, H5FD_vfd_swmr_idx_entry_t *
 
         if (ie->clean && ie->tick_of_last_flush + max_lag < tick_num) {
 
-            HDassert(!ie->garbage);
-            HDassert(ie->entry_ptr == NULL);
+            assert(!ie->garbage);
+            assert(ie->entry_ptr == NULL);
 
             if (ie->md_file_page_offset != 0) {
                 if (H5F_shadow_image_defer_free(shared, ie) == -1)
@@ -905,29 +898,29 @@ H5F_vfd_swmr_writer_end_of_tick(H5F_t *f)
     uint32_t      idx_ent_not_in_tl         = 0;
     uint32_t      idx_ent_not_in_tl_flushed = 0;
     herr_t        ret_value                 = SUCCEED; /* Return value */
-    hbool_t       incr_tick                 = FALSE;
+    hbool_t       incr_tick                 = false;
 
     /* Local variables to calculate the EOT time and write to the log file */
     H5_timevals_t current_time;
     double        start_elapsed_time = 0.0;
     double        end_elapsed_time   = 0.0;
     unsigned int  temp_time;
-    char *        log_msg;
+    char         *log_msg;
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(shared);
-    HDassert(shared->page_buf);
-    HDassert(shared->vfd_swmr_writer);
+    assert(shared);
+    assert(shared->page_buf);
+    assert(shared->vfd_swmr_writer);
 
     /* Obtain the starting time for the logging info: the processing time of this function. */
-    if (shared->vfd_swmr_log_on == TRUE) {
+    if (shared->vfd_swmr_log_on == true) {
         if (H5_timer_get_times(shared->vfd_swmr_log_start_time, &current_time) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time from H5_timer_get_times")
+            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time from H5_timer_get_times");
         start_elapsed_time = current_time.elapsed;
     }
 
-    incr_tick = TRUE;
+    incr_tick = true;
 
     /* 1) If requested, flush all raw data to the HDF5 file.
      *
@@ -943,11 +936,10 @@ H5F_vfd_swmr_writer_end_of_tick(H5F_t *f)
 
         if (H5D_flush_all(f) < 0)
 
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush dataset cache")
-
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush dataset cache");
         if (H5MF_free_aggrs(f) < 0)
 
-            HGOTO_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "can't release file space")
+            HGOTO_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "can't release file space");
     }
 
     /* 2) If it exists, flush the metadata cache to the page buffer. */
@@ -955,28 +947,25 @@ H5F_vfd_swmr_writer_end_of_tick(H5F_t *f)
 
         if (H5AC_prep_for_file_flush(f) < 0)
 
-            HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "prep for MDC flush failed")
+            HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "prep for MDC flush failed");
 
         if (H5AC_flush(f) < 0)
 
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't flush metadata cache to the page buffer")
-
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't flush metadata cache to the page buffer");
         if (H5AC_secure_from_file_flush(f) < 0)
 
-            HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "secure from MDC flush failed")
+            HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "secure from MDC flush failed");
     }
 
-    if (H5FD_truncate(shared->lf, FALSE) < 0)
+    if (H5FD_truncate(shared->lf, false) < 0)
 
-        HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "low level truncate failed")
-
+        HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "low level truncate failed");
     /* 3) If this is the first tick (i.e. tick == 1), create the
      *    in memory version of the metadata file index.
      */
     if ((shared->tick_num == 1) && (H5F__vfd_swmr_create_index(shared) < 0))
 
-        HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, FAIL, "unable to allocate metadata file index")
-
+        HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, FAIL, "unable to allocate metadata file index");
     /* 4) Scan the page buffer tick list, and use it to update
      *    the metadata file index, adding or modifying entries as
      *    appropriate.
@@ -984,8 +973,7 @@ H5F_vfd_swmr_writer_end_of_tick(H5F_t *f)
     if (H5PB_vfd_swmr__update_index(f, &idx_entries_added, &idx_entries_modified, &idx_ent_not_in_tl,
                                     &idx_ent_not_in_tl_flushed) < 0)
 
-        HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't update MD file index")
-
+        HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't update MD file index");
     /* 5) Scan the metadata file index for entries that can be
      *    removed -- specifically entries that have been written
      *    to the HDF5 file more than max_lag ticks ago, and haven't
@@ -993,8 +981,7 @@ H5F_vfd_swmr_writer_end_of_tick(H5F_t *f)
      */
     if (H5F__clean_shadow_index(f, shared->mdf_idx_entries_used + idx_entries_added, shared->mdf_idx,
                                 &idx_entries_removed) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't clean shadow file index")
-
+        HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't clean shadow file index");
     /* 6) Update the metadata file.  Must do this before we
      *    release the tick list, as otherwise the page buffer
      *    entry images may not be available.
@@ -1004,49 +991,44 @@ H5F_vfd_swmr_writer_end_of_tick(H5F_t *f)
      */
     if (H5F_update_vfd_swmr_metadata_file(
             f, shared->mdf_idx_entries_used + idx_entries_added - idx_entries_removed, shared->mdf_idx) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't update MD file")
-
+        HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't update MD file");
     /* at this point the metadata file index should be sorted -- update
      * shared->mdf_idx_entries_used.
      */
     shared->mdf_idx_entries_used += idx_entries_added;
     shared->mdf_idx_entries_used -= idx_entries_removed;
 
-    HDassert(shared->mdf_idx_entries_used <= shared->mdf_idx_len);
+    assert(shared->mdf_idx_entries_used <= shared->mdf_idx_len);
 
     /* 7) Release the page buffer tick list. */
     if (H5PB_vfd_swmr__release_tick_list(shared) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't release tick list")
-
+        HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't release tick list");
     /* 8) Release any delayed writes whose delay has expired */
     if (H5PB_vfd_swmr__release_delayed_writes(shared) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't release delayed writes")
-
+        HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't release delayed writes");
     /* 9) Increment the tick, and update the end of tick. */
 
     /* Update end_of_tick */
     if (H5F__vfd_swmr_update_end_of_tick_and_tick_num(shared, incr_tick) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to update end of tick")
-
+        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to update end of tick");
     /* Remove the entry from the EOT queue */
     if (H5F_vfd_swmr_remove_entry_eot(f) < 0)
-        HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "unable to remove entry from EOT queue")
+        HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "unable to remove entry from EOT queue");
 
     /* Re-insert the entry that corresponds to f onto the EOT queue */
     if (H5F_vfd_swmr_insert_entry_eot(f) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to insert entry into the EOT queue")
-
+        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to insert entry into the EOT queue");
 done:
     /* Calculate the processing time and write the time info to the log file */
-    if (shared->vfd_swmr_log_on == TRUE) {
+    if (shared->vfd_swmr_log_on == true) {
         if (H5_timer_get_times(shared->vfd_swmr_log_start_time, &current_time) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time from H5_timer_get_times")
+            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time from H5_timer_get_times");
         end_elapsed_time = current_time.elapsed;
-        if (NULL != (log_msg = HDmalloc(eot_pt_log_mesg_length * sizeof(char)))) {
+        if (NULL != (log_msg = malloc(eot_pt_log_mesg_length * sizeof(char)))) {
             temp_time = (unsigned int)((end_elapsed_time - start_elapsed_time) * 1000);
-            HDsprintf(log_msg, "Writer time is %u milliseconds", temp_time);
+            sprintf(log_msg, "Writer time is %u milliseconds", temp_time);
             H5F_POST_VFD_SWMR_LOG_ENTRY(f, EOT_PROCESSING_TIME, log_msg);
-            HDfree(log_msg);
+            free(log_msg);
         }
     }
 
@@ -1070,23 +1052,23 @@ H5F_vfd_swmr_writer_dump_index(H5F_shared_t *shared)
     H5FD_vfd_swmr_idx_entry_t *index     = NULL;
     herr_t                     ret_value = SUCCEED; /* Return value */
 
-    FUNC_ENTER_NOAPI_NOERR
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-    HDassert(shared);
-    HDassert(shared->vfd_swmr);
-    HDassert(shared->mdf_idx);
+    assert(shared);
+    assert(shared->vfd_swmr);
+    assert(shared->mdf_idx);
 
     index                = shared->mdf_idx;
     mdf_idx_len          = shared->mdf_idx_len;
     mdf_idx_entries_used = shared->mdf_idx_entries_used;
 
-    HDfprintf(stderr, "\n\nDumping Index:\n\n");
-    HDfprintf(stderr, "index len / entries used = %" PRIu32 " / %" PRIu32 "\n\n", mdf_idx_len,
-              mdf_idx_entries_used);
+    fprintf(stderr, "\n\nDumping Index:\n\n");
+    fprintf(stderr, "index len / entries used = %" PRIu32 " / %" PRIu32 "\n\n", mdf_idx_len,
+            mdf_idx_entries_used);
 
     for (i = 0; i < mdf_idx_entries_used; i++)
-        HDfprintf(stderr, "%u: %" PRIu64 " %" PRIu64 " %" PRIu32 "\n", i, index[i].hdf5_page_offset,
-                  index[i].md_file_page_offset, index[i].length);
+        fprintf(stderr, "%u: %" PRIu64 " %" PRIu64 " %" PRIu32 "\n", i, index[i].hdf5_page_offset,
+                index[i].md_file_page_offset, index[i].length);
 
     FUNC_LEAVE_NOAPI(ret_value)
 
@@ -1146,22 +1128,22 @@ H5F_vfd_swmr_reader_end_of_tick(H5F_t *f, hbool_t entering_api)
     uint32_t                   tmp_mdf_idx_entries_used;
     uint32_t                   mdf_idx_entries_used;
     uint32_t                   vfd_entries;
-    H5F_shared_t *             shared = f->shared;
+    H5F_shared_t              *shared = f->shared;
     struct {
         uint64_t pgno;
         uint32_t length;
-    } *change          = NULL;
+    }       *change    = NULL;
     herr_t   ret_value = SUCCEED;
     uint32_t i, j, nchanges;
-    H5FD_t * file = shared->lf;
+    H5FD_t  *file = shared->lf;
     htri_t   ret;
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(shared->page_buf);
-    HDassert(shared->vfd_swmr);
-    HDassert(!shared->vfd_swmr_writer);
-    HDassert(file);
+    assert(shared->page_buf);
+    assert(shared->vfd_swmr);
+    assert(!shared->vfd_swmr_writer);
+    assert(file);
 
     /* 1) Direct the VFD SWMR reader VFD to load the current header
      *    from the metadata file, and report the current tick.
@@ -1177,30 +1159,28 @@ H5F_vfd_swmr_reader_end_of_tick(H5F_t *f, hbool_t entering_api)
     /* Check if make_believe is set */
     if (H5FD_vfd_swmr_get_make_believe(file)) {
 
-        /* Return value is TRUE: metadata file is not found, continue with make_believe
+        /* Return value is true: metadata file is not found, continue with make_believe
            and skip eot processing */
-        if ((ret = H5FD_vfd_swmr_assess_make_believe(file)) == TRUE) {
+        if ((ret = H5FD_vfd_swmr_assess_make_believe(file)) == true) {
             /* Skip most of the EOT processing */
             goto reader_update_eot;
         }
         else if (ret == FAIL)
-            HGOTO_ERROR(H5E_ARGS, H5E_CANTGET, FAIL, "error in assessing make_believe from driver")
-
-        /* Return value is FALSE i.e. found the metadata file */
-        HDassert(!ret);
+            HGOTO_ERROR(H5E_ARGS, H5E_CANTGET, FAIL, "error in assessing make_believe from driver");
+        /* Return value is false i.e. found the metadata file */
+        assert(!ret);
 
         /* Try to load the metadata file header and index */
-        if (H5FD_vfd_swmr_get_tick_and_idx(file, TRUE, &tmp_tick_num, &vfd_entries, NULL) < 0)
-            HGOTO_ERROR(H5E_ARGS, H5E_CANTGET, FAIL, "error in retrieving tick_num from driver")
-
-        /* Set make_believe to FALSE;
+        if (H5FD_vfd_swmr_get_tick_and_idx(file, true, &tmp_tick_num, &vfd_entries, NULL) < 0)
+            HGOTO_ERROR(H5E_ARGS, H5E_CANTGET, FAIL, "error in retrieving tick_num from driver");
+        /* Set make_believe to false;
            get out from make_believe state, continue normal processing */
-        H5FD_vfd_swmr_set_make_believe(file, FALSE);
+        H5FD_vfd_swmr_set_make_believe(file, false);
     }
     else {
         /* make_believe is not set, continue normal processing */
-        if (H5FD_vfd_swmr_get_tick_and_idx(file, TRUE, &tmp_tick_num, &vfd_entries, NULL) < 0)
-            HGOTO_ERROR(H5E_ARGS, H5E_CANTGET, FAIL, "error in retrieving tick_num from driver")
+        if (H5FD_vfd_swmr_get_tick_and_idx(file, true, &tmp_tick_num, &vfd_entries, NULL) < 0)
+            HGOTO_ERROR(H5E_ARGS, H5E_CANTGET, FAIL, "error in retrieving tick_num from driver");
     }
 
     /* This is ok if we're entering the API, but it should
@@ -1248,7 +1228,7 @@ H5F_vfd_swmr_reader_end_of_tick(H5F_t *f, hbool_t entering_api)
             H5FD_vfd_swmr_idx_entry_t *new_idx;
             H5FD_vfd_swmr_idx_entry_t *old_idx;
 
-            HDassert(shared->old_mdf_idx_len <= shared->mdf_idx_len);
+            assert(shared->old_mdf_idx_len <= shared->mdf_idx_len);
 
             /* Determine the size needed for the index */
             inc_mdf_idx_len = shared->mdf_idx_len * 2;
@@ -1258,23 +1238,23 @@ H5F_vfd_swmr_reader_end_of_tick(H5F_t *f, hbool_t entering_api)
             /* Allocate more space for shared->mdf_idx and shared->old_mdf_idx */
             new_idx = H5MM_realloc(shared->mdf_idx, inc_mdf_idx_len * sizeof(shared->mdf_idx[0]));
             if (new_idx == NULL)
-                HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, FAIL, "new index null after H5MM_realloc()")
+                HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, FAIL, "new index null after H5MM_realloc()");
             shared->mdf_idx     = new_idx;
             shared->mdf_idx_len = inc_mdf_idx_len;
 
             old_idx = H5MM_realloc(shared->old_mdf_idx, inc_mdf_idx_len * sizeof(shared->old_mdf_idx[0]));
             if (old_idx == NULL)
-                HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, FAIL, "old index null after H5MM_realloc()")
+                HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, FAIL, "old index null after H5MM_realloc()");
             shared->old_mdf_idx     = old_idx;
             shared->old_mdf_idx_len = inc_mdf_idx_len;
         }
 
         mdf_idx_entries_used = shared->mdf_idx_len;
 
-        if (H5FD_vfd_swmr_get_tick_and_idx(file, FALSE, NULL, &mdf_idx_entries_used, shared->mdf_idx) < 0)
+        if (H5FD_vfd_swmr_get_tick_and_idx(file, false, NULL, &mdf_idx_entries_used, shared->mdf_idx) < 0)
             HGOTO_ERROR(H5E_ARGS, H5E_CANTGET, FAIL, "error in retrieving tick_num from driver");
 
-        HDassert(mdf_idx_entries_used <= shared->mdf_idx_len);
+        assert(mdf_idx_entries_used <= shared->mdf_idx_len);
 
         shared->mdf_idx_entries_used = mdf_idx_entries_used;
 
@@ -1283,7 +1263,7 @@ H5F_vfd_swmr_reader_end_of_tick(H5F_t *f, hbool_t entering_api)
         new_mdf_idx_entries_used = shared->mdf_idx_entries_used;
         old_mdf_idx_entries_used = shared->old_mdf_idx_entries_used;
 
-        change = HDmalloc(sizeof(change[0]) * (old_mdf_idx_entries_used + new_mdf_idx_entries_used));
+        change = malloc(sizeof(change[0]) * (old_mdf_idx_entries_used + new_mdf_idx_entries_used));
 
         if (change == NULL) {
             HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, FAIL, "unable to allocate removed pages list");
@@ -1303,9 +1283,9 @@ H5F_vfd_swmr_reader_end_of_tick(H5F_t *f, hbool_t entering_api)
             const H5FD_vfd_swmr_idx_entry_t *oent = &old_mdf_idx[i], *nent = &new_mdf_idx[j];
 
             /* Verify that the old and new indices are sorted as expected. */
-            HDassert(i == 0 || oent[-1].hdf5_page_offset < oent[0].hdf5_page_offset);
+            assert(i == 0 || oent[-1].hdf5_page_offset < oent[0].hdf5_page_offset);
 
-            HDassert(j == 0 || nent[-1].hdf5_page_offset < nent[0].hdf5_page_offset);
+            assert(j == 0 || nent[-1].hdf5_page_offset < nent[0].hdf5_page_offset);
 
             if (oent->hdf5_page_offset == nent->hdf5_page_offset) {
 
@@ -1322,10 +1302,10 @@ H5F_vfd_swmr_reader_end_of_tick(H5F_t *f, hbool_t entering_api)
                      * group test failures.  See Kent's documentation
                      * "Designed to Fail Tests and Issues".
                      * nent->length can be <, =, > to oent->length.
-                     * Fix: HDassert the 1st two cases: < and =.
+                     * Fix: assert the 1st two cases: < and =.
                      * John will address the > case.
                      */
-                    HDassert(nent->length <= oent->length);
+                    assert(nent->length <= oent->length);
 
                     /* the page has been altered -- evict it and
                      * any contained metadata cache entries.
@@ -1411,7 +1391,7 @@ H5F_vfd_swmr_reader_end_of_tick(H5F_t *f, hbool_t entering_api)
         shared->tick_num = tmp_tick_num;
 
         /* Update end_of_tick */
-        if (H5F__vfd_swmr_update_end_of_tick_and_tick_num(shared, FALSE) < 0) {
+        if (H5F__vfd_swmr_update_end_of_tick_and_tick_num(shared, false) < 0) {
             HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to update end of tick");
         }
     }
@@ -1420,16 +1400,15 @@ reader_update_eot:
 
     /* Remove the entry from the EOT queue */
     if (H5F_vfd_swmr_remove_entry_eot(f) < 0)
-        HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "unable to remove entry from EOT queue")
+        HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "unable to remove entry from EOT queue");
 
     /* Re-insert the entry that corresponds to f onto the EOT queue */
     if (H5F_vfd_swmr_insert_entry_eot(f) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to insert entry into the EOT queue")
-
+        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to insert entry into the EOT queue");
 done:
 
     if (change != NULL)
-        HDfree(change);
+        free(change);
 
     FUNC_LEAVE_NOAPI(ret_value)
 
@@ -1453,7 +1432,7 @@ H5F__vfd_swmr_insert_eot_entry(eot_queue_entry_t *entry_ptr)
     /* Find the insertion point for the entry on the EOT queue */
     TAILQ_FOREACH_REVERSE(prec_ptr, &eot_queue_g, eot_queue, link)
     {
-        if (HDtimespeccmp(&prec_ptr->end_of_tick, &entry_ptr->end_of_tick, <=))
+        if (timespeccmp(&prec_ptr->end_of_tick, &entry_ptr->end_of_tick, <=))
             break;
     }
 
@@ -1477,16 +1456,16 @@ H5F__vfd_swmr_insert_eot_entry(eot_queue_entry_t *entry_ptr)
 void
 H5F_vfd_swmr_update_entry_eot(eot_queue_entry_t *entry)
 {
-    H5F_t *       f      = entry->vfd_swmr_file;
+    H5F_t        *f      = entry->vfd_swmr_file;
     H5F_shared_t *shared = f->shared;
 
-    FUNC_ENTER_NOAPI_NOERR
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* Free the entry on the EOT queue that corresponds to f */
 
     TAILQ_REMOVE(&eot_queue_g, entry, link);
 
-    HDassert(entry->vfd_swmr_writer == shared->vfd_swmr_writer);
+    assert(entry->vfd_swmr_writer == shared->vfd_swmr_writer);
     entry->tick_num    = shared->tick_num;
     entry->end_of_tick = shared->end_of_tick;
 
@@ -1537,7 +1516,7 @@ H5F_vfd_swmr_remove_entry_eot(H5F_t *f)
 herr_t
 H5F_vfd_swmr_insert_entry_eot(H5F_t *f)
 {
-    H5F_shared_t *     shared = f->shared;
+    H5F_shared_t      *shared = f->shared;
     eot_queue_entry_t *entry_ptr;           /* An entry on the EOT end of tick queue */
     herr_t             ret_value = SUCCEED; /* Return value */
 
@@ -1545,8 +1524,7 @@ H5F_vfd_swmr_insert_entry_eot(H5F_t *f)
 
     /* Allocate an entry to be inserted onto the EOT queue */
     if (NULL == (entry_ptr = H5FL_CALLOC(eot_queue_entry_t)))
-        HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, FAIL, "unable to allocate the end of tick queue entry")
-
+        HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, FAIL, "unable to allocate the end of tick queue entry");
     /* Initialize the entry */
     entry_ptr->vfd_swmr_writer = shared->vfd_swmr_writer;
     entry_ptr->tick_num        = shared->tick_num;
@@ -1576,13 +1554,13 @@ H5F_dump_eot_queue(void)
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     for (curr = TAILQ_FIRST(&eot_queue_g), i = 0; curr != NULL; curr = TAILQ_NEXT(curr, link), i++) {
-        HDfprintf(stderr, "%d: %s tick_num %" PRIu64 ", end_of_tick %jd.%09ld, vfd_swmr_file %p\n", i,
-                  curr->vfd_swmr_writer ? "writer" : "not writer", curr->tick_num, curr->end_of_tick.tv_sec,
-                  curr->end_of_tick.tv_nsec, (void *)curr->vfd_swmr_file);
+        fprintf(stderr, "%d: %s tick_num %" PRIu64 ", end_of_tick %jd.%09ld, vfd_swmr_file %p\n", i,
+                curr->vfd_swmr_writer ? "writer" : "not writer", curr->tick_num, curr->end_of_tick.tv_sec,
+                curr->end_of_tick.tv_nsec, (void *)curr->vfd_swmr_file);
     }
 
     if (i == 0)
-        HDfprintf(stderr, "EOT head is null\n");
+        fprintf(stderr, "EOT head is null\n");
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5F_dump_eot_queue() */
@@ -1609,13 +1587,27 @@ H5F__vfd_swmr_update_end_of_tick_and_tick_num(H5F_shared_t *shared, hbool_t incr
     FUNC_ENTER_PACKAGE
 
     /* Get current time in struct timespec */
-#ifdef H5_HAVE_WIN32_API
-    if (HDtimespec_get(&curr, TIME_UTC) != TIME_UTC)
+#if defined(H5_HAVE_TIMESPEC_GET)
+    if (timespec_get(&curr, TIME_UTC) != TIME_UTC)
         HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time via timespec_get");
-#else
-    if (HDclock_gettime(CLOCK_MONOTONIC, &curr) < 0) {
+#elif defined(H5_HAVE_CLOCK_GETTIME)
+    if (clock_gettime(CLOCK_REALTIME, &curr) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time via clock_gettime");
+#elif defined(H5_HAVE_WIN32_API)
+    {
+        /* GetSystemTimeAsFileTime: always available, no CRT version dependency */
+        FILETIME       ft;
+        ULARGE_INTEGER uli;
+        GetSystemTimeAsFileTime(&ft);
+        uli.LowPart  = ft.dwLowDateTime;
+        uli.HighPart = ft.dwHighDateTime;
+        /* Convert from 100-ns ticks since 1601-01-01 to Unix epoch */
+        uli.QuadPart -= 116444736000000000ULL;
+        curr.tv_sec  = (time_t)(uli.QuadPart / 10000000ULL);
+        curr.tv_nsec = (long)((uli.QuadPart % 10000000ULL) * 100ULL);
     }
+#else
+#error "No suitable time function (timespec_get or clock_gettime) available"
 #endif
 
     /* Convert curr to nsecs */
@@ -1630,7 +1622,7 @@ H5F__vfd_swmr_update_end_of_tick_and_tick_num(H5F_shared_t *shared, hbool_t incr
         shared->tick_num++;
 
         if (H5PB_vfd_swmr__set_tick(shared) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "Can't update page buffer current tick")
+            HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "Can't update page buffer current tick");
     }
 
     /*
@@ -1685,7 +1677,7 @@ H5F__vfd_swmr_construct_write_md_hdr(H5F_shared_t *shared, uint32_t num_entries,
     p = image;
 
     /* Encode magic for header */
-    HDmemcpy(p, H5FD_MD_HEADER_MAGIC, (size_t)H5_SIZEOF_MAGIC);
+    memcpy(p, H5FD_MD_HEADER_MAGIC, (size_t)H5_SIZEOF_MAGIC);
     p += H5_SIZEOF_MAGIC;
 
     /* Encode page size, tick number, index offset, index length */
@@ -1701,18 +1693,17 @@ H5F__vfd_swmr_construct_write_md_hdr(H5F_shared_t *shared, uint32_t num_entries,
     UINT32ENCODE(p, metadata_chksum);
 
     /* Sanity checks on header */
-    HDassert(p - image == (ptrdiff_t)hdr_size);
+    assert(p - image == (ptrdiff_t)hdr_size);
 
     if (shared->vfd_swmr_config.maintain_metadata_file) {
         /* Set to beginning of the file */
-        if (HDlseek(shared->vfd_swmr_md_fd, H5FD_MD_HEADER_OFF, SEEK_SET) < 0)
-            HGOTO_ERROR(H5E_VFL, H5E_SEEKERROR, FAIL, "unable to seek in metadata file")
-
-        nwritten = HDwrite(shared->vfd_swmr_md_fd, image, hdr_size);
+        if (lseek(shared->vfd_swmr_md_fd, H5FD_MD_HEADER_OFF, SEEK_SET) < 0)
+            HGOTO_ERROR(H5E_VFL, H5E_SEEKERROR, FAIL, "unable to seek in metadata file");
+        nwritten = write(shared->vfd_swmr_md_fd, image, hdr_size);
 
         /* Write header to the metadata file */
         if (nwritten != (ssize_t)hdr_size)
-            HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "error in writing header to metadata file")
+            HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "error in writing header to metadata file");
     }
 
 done:
@@ -1748,13 +1739,13 @@ H5F__vfd_swmr_construct_write_md_idx(H5F_shared_t *shared, uint32_t num_entries,
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(num_entries == 0 || index != NULL);
+    assert(num_entries == 0 || index != NULL);
 
     /* Encode metadata file index */
     p = image;
 
     /* Encode magic for index */
-    HDmemcpy(p, H5FD_MD_INDEX_MAGIC, H5_SIZEOF_MAGIC);
+    memcpy(p, H5FD_MD_INDEX_MAGIC, H5_SIZEOF_MAGIC);
     p += H5_SIZEOF_MAGIC;
 
     /* Encode tick number */
@@ -1778,21 +1769,20 @@ H5F__vfd_swmr_construct_write_md_idx(H5F_shared_t *shared, uint32_t num_entries,
     UINT32ENCODE(p, metadata_chksum);
 
     /* Sanity checks on index */
-    HDassert(p - image == (ptrdiff_t)idx_size);
+    assert(p - image == (ptrdiff_t)idx_size);
 
     /* Verify the md file descriptor exists */
-    HDassert(shared->vfd_swmr_md_fd >= 0);
+    assert(shared->vfd_swmr_md_fd >= 0);
 
     if (shared->vfd_swmr_config.maintain_metadata_file) {
 
-        if (HDlseek(shared->vfd_swmr_md_fd, (HDoff_t)shared->writer_index_offset, SEEK_SET) < 0)
-            HGOTO_ERROR(H5E_VFL, H5E_SEEKERROR, FAIL, "unable to seek in metadata file")
-
-        nwritten = HDwrite(shared->vfd_swmr_md_fd, image, idx_size);
+        if (lseek(shared->vfd_swmr_md_fd, (off_t)shared->writer_index_offset, SEEK_SET) < 0)
+            HGOTO_ERROR(H5E_VFL, H5E_SEEKERROR, FAIL, "unable to seek in metadata file");
+        nwritten = write(shared->vfd_swmr_md_fd, image, idx_size);
 
         /* Write index to the metadata file */
         if (nwritten != (ssize_t)idx_size)
-            HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "error in writing index to metadata file")
+            HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "error in writing index to metadata file");
     }
 
 done:
@@ -1802,7 +1792,7 @@ done:
 /*-------------------------------------------------------------------------
  * Function:    H5F__idx_entry_cmp()
  *
- * Purpose:     Callback used by HDqsort to sort entries in the index
+ * Purpose:     Callback used by qsort to sort entries in the index
  *
  * Return:      0 if the entries are the same
  *              -1 if entry1's offset is less than that of entry2
@@ -1820,8 +1810,8 @@ H5F__idx_entry_cmp(const void *_entry1, const void *_entry2)
     FUNC_ENTER_PACKAGE_NOERR
 
     /* Sanity checks */
-    HDassert(entry1);
-    HDassert(entry2);
+    assert(entry1);
+    assert(entry2);
 
     if (entry1->hdf5_page_offset < entry2->hdf5_page_offset)
         ret_value = -1;
@@ -1850,25 +1840,24 @@ H5F__vfd_swmr_create_index(H5F_shared_t *shared)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(shared->vfd_swmr);
-    HDassert(shared->mdf_idx == NULL);
-    HDassert(shared->mdf_idx_len == 0);
-    HDassert(shared->mdf_idx_entries_used == 0);
+    assert(shared->vfd_swmr);
+    assert(shared->mdf_idx == NULL);
+    assert(shared->mdf_idx_len == 0);
+    assert(shared->mdf_idx_entries_used == 0);
 
     bytes_available = (size_t)shared->fs_page_size * (size_t)(shared->vfd_swmr_config.md_pages_reserved - 1);
 
-    HDassert(bytes_available > 0);
+    assert(bytes_available > 0);
 
     entries_in_index = (bytes_available - H5FD_MD_INDEX_SIZE(0)) / H5FD_MD_INDEX_ENTRY_SIZE;
 
-    HDassert(entries_in_index > 0);
+    assert(entries_in_index > 0);
 
     index = H5MM_calloc(entries_in_index * sizeof(index[0]));
 
     if (index == NULL)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for md index")
-
-    HDassert(entries_in_index <= UINT32_MAX);
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for md index");
+    assert(entries_in_index <= UINT32_MAX);
 
     shared->mdf_idx              = index;
     shared->mdf_idx_len          = (uint32_t)entries_in_index;
@@ -1889,7 +1878,7 @@ done:
 H5FD_vfd_swmr_idx_entry_t *
 H5F_vfd_swmr_enlarge_shadow_index(H5F_t *f)
 {
-    H5F_shared_t *             shared = f->shared;
+    H5F_shared_t              *shared = f->shared;
     haddr_t                    idx_addr;
     haddr_t                    old_writer_index_offset;
     hsize_t                    idx_size;
@@ -1913,13 +1902,12 @@ H5F_vfd_swmr_enlarge_shadow_index(H5F_t *f)
     idx_addr = H5MV_alloc(f, idx_size);
 
     if (idx_addr == HADDR_UNDEF)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "shadow-file allocation failed for index")
-
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "shadow-file allocation failed for index");
     new_mdf_idx = H5MM_calloc(new_mdf_idx_len * sizeof(new_mdf_idx[0]));
 
     if (new_mdf_idx == NULL) {
         (void)H5MV_free(f, idx_addr, idx_size);
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for md index")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for md index");
     }
 
     /* Copy the old index in its entirety to the new, instead of copying
@@ -1977,18 +1965,17 @@ H5F__vfd_swmr_writer_wait_a_tick(H5F_t *f)
 
     FUNC_ENTER_PACKAGE
 
-    HDassert(f);
+    assert(f);
     shared = f->shared;
-    HDassert(shared->vfd_swmr);
-    HDassert(shared->vfd_swmr_writer);
+    assert(shared->vfd_swmr);
+    assert(shared->vfd_swmr_writer);
 
     tick_in_nsec = shared->vfd_swmr_config.tick_len * NANOSECS_PER_TENTH_SEC;
 
     H5_nanosleep(tick_in_nsec);
 
     if (H5F_vfd_swmr_writer_end_of_tick(f) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "H5F_vfd_swmr_writer_end_of_tick() failed")
-
+        HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "H5F_vfd_swmr_writer_end_of_tick() failed");
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5F__vfd_swmr_writer_wait_a_tick() */
@@ -2013,17 +2000,32 @@ H5F_vfd_swmr_process_eot_queue(hbool_t entering_api)
     first_head = head = TAILQ_FIRST(&eot_queue_g);
 
     do {
-        H5F_t *       f      = head->vfd_swmr_file;
+        H5F_t        *f      = head->vfd_swmr_file;
         H5F_shared_t *shared = f->shared;
 
-#ifdef H5_HAVE_WIN32_API
-        if (HDtimespec_get(&now, TIME_UTC) != TIME_UTC)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time via timespec_get")
+#if defined(H5_HAVE_TIMESPEC_GET)
+        if (timespec_get(&now, TIME_UTC) != TIME_UTC)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time via timespec_get");
+#elif defined(H5_HAVE_CLOCK_GETTIME)
+        if (clock_gettime(CLOCK_REALTIME, &now) < 0)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time via clock_gettime");
+#elif defined(H5_HAVE_WIN32_API)
+        {
+            /* GetSystemTimeAsFileTime: always available, no CRT version dependency */
+            FILETIME       ft;
+            ULARGE_INTEGER uli;
+            GetSystemTimeAsFileTime(&ft);
+            uli.LowPart  = ft.dwLowDateTime;
+            uli.HighPart = ft.dwHighDateTime;
+            /* Convert from 100-ns ticks since 1601-01-01 to Unix epoch */
+            uli.QuadPart -= 116444736000000000ULL;
+            now.tv_sec  = (time_t)(uli.QuadPart / 10000000ULL);
+            now.tv_nsec = (long)((uli.QuadPart % 10000000ULL) * 100ULL);
+        }
 #else
-        if (HDclock_gettime(CLOCK_MONOTONIC, &now) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time via clock_gettime")
+#error "No suitable time function (timespec_get or clock_gettime) available"
 #endif
-        if (HDtimespeccmp(&now, &head->end_of_tick, <))
+        if (timespeccmp(&now, &head->end_of_tick, <))
             break;
         /* If the H5F_shared_t is labeled with a later EOT time than
          * the queue entry is, then we have already performed the
@@ -2031,15 +2033,15 @@ H5F_vfd_swmr_process_eot_queue(hbool_t entering_api)
          * multiple H5F_t share the H5F_shared_t.  Just update the
          * EOT queue entry and move to the next.
          */
-        if (HDtimespeccmp(&head->end_of_tick, &shared->end_of_tick, <)) {
+        if (timespeccmp(&head->end_of_tick, &shared->end_of_tick, <)) {
             H5F_vfd_swmr_update_entry_eot(head);
         }
         else if (shared->vfd_swmr_writer) {
             if (H5F_vfd_swmr_writer_end_of_tick(f) < 0)
-                HGOTO_ERROR(H5E_FUNC, H5E_CANTSET, FAIL, "end of tick error for VFD SWMR writer")
+                HGOTO_ERROR(H5E_FUNC, H5E_CANTSET, FAIL, "end of tick error for VFD SWMR writer");
         }
         else if (H5F_vfd_swmr_reader_end_of_tick(f, entering_api) < 0) {
-            HGOTO_ERROR(H5E_FUNC, H5E_CANTSET, FAIL, "end of tick error for VFD SWMR reader")
+            HGOTO_ERROR(H5E_FUNC, H5E_CANTSET, FAIL, "end of tick error for VFD SWMR reader");
         }
     } while ((head = TAILQ_FIRST(&eot_queue_g)) != NULL && head != first_head);
 
@@ -2066,7 +2068,7 @@ H5F__post_vfd_swmr_log_entry(H5F_t *f, int entry_type_code, const char *log_info
 {
     double        temp_time;
     H5_timevals_t current_time;
-    char *        gettime_error = NULL;
+    char         *gettime_error = NULL;
 
     FUNC_ENTER_PACKAGE_NOERR
 
@@ -2075,17 +2077,17 @@ H5F__post_vfd_swmr_log_entry(H5F_t *f, int entry_type_code, const char *log_info
      * created and write the time to the log file.
      */
     if (H5_timer_get_times(f->shared->vfd_swmr_log_start_time, &current_time) < 0) {
-        if (NULL != (gettime_error = HDmalloc(log_err_mesg_length * sizeof(char)))) {
-            HDsprintf(gettime_error, "gettime_error");
-            HDfprintf(f->shared->vfd_swmr_log_file_ptr, "%-26s:  %s\n", H5Fvfd_swmr_log_tags[entry_type_code],
-                      gettime_error);
-            HDfree(gettime_error);
+        if (NULL != (gettime_error = malloc(log_err_mesg_length * sizeof(char)))) {
+            sprintf(gettime_error, "gettime_error");
+            fprintf(f->shared->vfd_swmr_log_file_ptr, "%-26s:  %s\n", H5Fvfd_swmr_log_tags[entry_type_code],
+                    gettime_error);
+            free(gettime_error);
         }
     }
     else {
         temp_time = current_time.elapsed;
-        HDfprintf(f->shared->vfd_swmr_log_file_ptr, log_fmt_str, H5Fvfd_swmr_log_tags[entry_type_code],
-                  temp_time, log_info);
+        fprintf(f->shared->vfd_swmr_log_file_ptr, log_fmt_str, H5Fvfd_swmr_log_tags[entry_type_code],
+                temp_time, log_info);
     }
 
     FUNC_LEAVE_NOAPI_VOID
@@ -2113,7 +2115,7 @@ H5F__vfd_swmr_construct_ud_hdr(H5F_vfd_swmr_updater_t *updater)
     p = image;
 
     /* Encode magic for header */
-    HDmemcpy(p, H5F_UD_HEADER_MAGIC, (size_t)H5_SIZEOF_MAGIC);
+    memcpy(p, H5F_UD_HEADER_MAGIC, (size_t)H5_SIZEOF_MAGIC);
     p += H5_SIZEOF_MAGIC;
 
     /* Encode version number, flags, page size, sequence number, tick number,
@@ -2135,7 +2137,7 @@ H5F__vfd_swmr_construct_ud_hdr(H5F_vfd_swmr_updater_t *updater)
     UINT32ENCODE(p, metadata_chksum);
 
     /* Sanity checks on header */
-    HDassert(p - image == (ptrdiff_t)updater->header_image_len);
+    assert(p - image == (ptrdiff_t)updater->header_image_len);
 
     FUNC_LEAVE_NOAPI(ret_value)
 
@@ -2165,7 +2167,7 @@ H5F__vfd_swmr_construct_ud_cl(H5F_vfd_swmr_updater_t *updater)
     p = image;
 
     /* Encode magic for ud cl */
-    HDmemcpy(p, H5F_UD_CL_MAGIC, H5_SIZEOF_MAGIC);
+    memcpy(p, H5F_UD_CL_MAGIC, H5_SIZEOF_MAGIC);
     p += H5_SIZEOF_MAGIC;
 
     /* Encode tick number */
@@ -2218,7 +2220,7 @@ H5F__vfd_swmr_construct_ud_cl(H5F_vfd_swmr_updater_t *updater)
     UINT32ENCODE(p, metadata_chksum);
 
     /* Sanity checks on index */
-    HDassert(p - image == (ptrdiff_t)updater->change_list_len);
+    assert(p - image == (ptrdiff_t)updater->change_list_len);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F__vfd_swmr_construct_ud_cl() */
@@ -2236,10 +2238,10 @@ H5F__generate_updater_file(H5F_t *f, uint32_t num_entries, uint16_t flags, uint8
                            size_t md_file_hdr_image_len, uint8_t *md_file_index_image_ptr,
                            uint64_t md_file_index_offset, size_t md_file_index_image_len)
 {
-    H5F_shared_t *         shared = f->shared; /* shared file pointer */
+    H5F_shared_t          *shared = f->shared; /* shared file pointer */
     H5F_vfd_swmr_updater_t updater;            /* Updater struct */
     uint32_t               next_page_offset;
-    H5FD_t *               ud_file = NULL; /* Low-level file struct            */
+    H5FD_t                *ud_file = NULL; /* Low-level file struct            */
     char                   namebuf[H5F__MAX_VFD_SWMR_FILE_NAME_LEN];
     char                   newname[H5F__MAX_VFD_SWMR_FILE_NAME_LEN];
     unsigned               i, j;
@@ -2285,7 +2287,7 @@ H5F__generate_updater_file(H5F_t *f, uint32_t num_entries, uint16_t flags, uint8
     }
 
     if (flags == CREATE_METADATA_FILE_ONLY_FLAG)
-        HDassert(updater.sequence_number == 0);
+        assert(updater.sequence_number == 0);
     /* For file creation, just generate a header with this flag set */
     else {
         /* Update 2 updater file header fields: change_list_len, change_list_offset */
@@ -2294,34 +2296,31 @@ H5F__generate_updater_file(H5F_t *f, uint32_t num_entries, uint16_t flags, uint8
     }
 
     /* Create the updater file with a temporary file name */
-    sz = HDsnprintf(namebuf, H5F__MAX_VFD_SWMR_FILE_NAME_LEN, "%s.ud_tmp",
-                    shared->vfd_swmr_config.updater_file_path);
+    sz = snprintf(namebuf, H5F__MAX_VFD_SWMR_FILE_NAME_LEN, "%s.ud_tmp",
+                  shared->vfd_swmr_config.updater_file_path);
     if (sz < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "error processing snprintf format string")
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "error processing snprintf format string");
     if (sz > H5F__MAX_VFD_SWMR_FILE_NAME_LEN)
-        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "string passed to snprintf would be truncated")
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "string passed to snprintf would be truncated");
     namebuf[H5F__MAX_VFD_SWMR_FILE_NAME_LEN - 1] = '\0';
 
-    if ((ud_file = H5FD_open(namebuf, H5F_ACC_TRUNC | H5F_ACC_RDWR | H5F_ACC_CREAT, H5P_FILE_ACCESS_DEFAULT,
-                             HADDR_UNDEF)) == NULL)
+    if (H5FD_open(false, &ud_file, namebuf, H5F_ACC_TRUNC | H5F_ACC_RDWR | H5F_ACC_CREAT,
+                  H5P_FILE_ACCESS_DEFAULT, HADDR_UNDEF) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "fail to open updater file");
 
-    if ((updater.header_image_ptr = HDmalloc(updater.header_image_len)) == NULL)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for ud header")
-
+    if ((updater.header_image_ptr = malloc(updater.header_image_len)) == NULL)
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for ud header");
     /* Serialize updater file hdr in updater.header_image_ptr */
     if (H5F__vfd_swmr_construct_ud_hdr(&updater) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "fail to create updater file header ");
 
     /* Allocate space in updater file for updater file header */
     if (H5FD__alloc_real(ud_file, H5FD_MEM_DEFAULT, updater.header_image_len, NULL, NULL) == HADDR_UNDEF)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to allocate file memory")
-
+        HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to allocate file memory");
     /* Write updater file header */
     if (H5FD_write(ud_file, H5FD_MEM_DEFAULT, H5F_UD_HEADER_OFF, updater.header_image_len,
                    updater.header_image_ptr) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "ud file write failed")
-
+        HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "ud file write failed");
     if (flags != CREATE_METADATA_FILE_ONLY_FLAG) {
 
         next_page_offset =
@@ -2330,10 +2329,9 @@ H5F__generate_updater_file(H5F_t *f, uint32_t num_entries, uint16_t flags, uint8
         if (updater.num_change_list_entries) {
 
             /* Allocate space for change list entries */
-            if ((updater.change_list = HDmalloc(sizeof(H5F_vfd_swmr_updater_cl_entry_t) *
-                                                updater.num_change_list_entries)) == NULL)
-                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for ud cl")
-
+            if ((updater.change_list = malloc(sizeof(H5F_vfd_swmr_updater_cl_entry_t) *
+                                              updater.num_change_list_entries)) == NULL)
+                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for ud cl");
             /* Initialize change list entries */
             i = 0;
             for (j = 0; j < num_entries; j++) {
@@ -2370,9 +2368,8 @@ H5F__generate_updater_file(H5F_t *f, uint32_t num_entries, uint16_t flags, uint8
         next_page_offset += (((uint32_t)updater.md_file_index_len / updater.page_size) + 1);
         updater.md_file_header_ud_file_page_offset = next_page_offset;
 
-        if ((updater.change_list_image_ptr = HDmalloc(updater.change_list_len)) == NULL)
-            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for ud cl ")
-
+        if ((updater.change_list_image_ptr = malloc(updater.change_list_len)) == NULL)
+            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for ud cl ");
         /* Serialize updater file change list in updater.change_list_image_ptr */
         if (H5F__vfd_swmr_construct_ud_cl(&updater) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "fail to create updater file cl");
@@ -2380,73 +2377,66 @@ H5F__generate_updater_file(H5F_t *f, uint32_t num_entries, uint16_t flags, uint8
         /* Allocate space in updater file for updater file change list */
         if (H5FD__alloc_real(ud_file, H5FD_MEM_DEFAULT, updater.header_image_len + updater.change_list_len,
                              NULL, NULL) == HADDR_UNDEF)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to allocate file memory")
-
+            HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to allocate file memory");
         /* Write updater file change list */
         if (H5FD_write(ud_file, H5FD_MEM_DEFAULT, updater.header_image_len, updater.change_list_len,
                        updater.change_list_image_ptr) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "ud file write failed")
-
+            HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "ud file write failed");
         /* Allocate and write metadata pages */
         for (i = 0; i < updater.num_change_list_entries; i++) {
             alloc_size = updater.change_list[i].entry_image_ud_file_page_offset * updater.page_size +
                          updater.change_list[i].entry_image_len;
 
             if (H5FD__alloc_real(ud_file, H5FD_MEM_DEFAULT, alloc_size, NULL, NULL) == HADDR_UNDEF)
-                HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to allocate file memory")
-
+                HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to allocate file memory");
             if (H5FD_write(ud_file, H5FD_MEM_DEFAULT,
                            updater.change_list[i].entry_image_ud_file_page_offset * updater.page_size,
                            updater.change_list[i].entry_image_len,
                            updater.change_list[i].entry_image_ptr) < 0)
-                HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "ud file write failed")
+                HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "ud file write failed");
         }
 
         /* Allocate and write metadata file index */
         alloc_size =
             updater.md_file_index_ud_file_page_offset * updater.page_size + updater.md_file_index_len;
         if (H5FD__alloc_real(ud_file, H5FD_MEM_DEFAULT, alloc_size, NULL, NULL) == HADDR_UNDEF)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to allocate file memory")
-
+            HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to allocate file memory");
         if (H5FD_write(ud_file, H5FD_MEM_DEFAULT,
                        updater.md_file_index_ud_file_page_offset * updater.page_size,
                        updater.md_file_index_len, updater.md_file_index_image_ptr) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "ud file write failed")
-
+            HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "ud file write failed");
         /* Allocate and write metadata file header */
         alloc_size =
             updater.md_file_header_ud_file_page_offset * updater.page_size + updater.md_file_header_len;
         if (H5FD__alloc_real(ud_file, H5FD_MEM_DEFAULT, alloc_size, NULL, NULL) == HADDR_UNDEF)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to allocate file memory")
-
+            HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to allocate file memory");
         if (H5FD_write(ud_file, H5FD_MEM_DEFAULT,
                        updater.md_file_header_ud_file_page_offset * updater.page_size,
                        updater.md_file_header_len, updater.md_file_header_image_ptr) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "ud file write failed")
+            HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "ud file write failed");
     }
 
     /* Close the updater file and rename the file */
     if (H5FD_close(ud_file) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "unable to close updater file")
-    sz = HDsnprintf(newname, H5F__MAX_VFD_SWMR_FILE_NAME_LEN, "%s.%" PRIu64 "",
-                    shared->vfd_swmr_config.updater_file_path, shared->updater_seq_num);
+        HGOTO_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "unable to close updater file");
+    sz = snprintf(newname, H5F__MAX_VFD_SWMR_FILE_NAME_LEN, "%s.%" PRIu64 "",
+                  shared->vfd_swmr_config.updater_file_path, shared->updater_seq_num);
     if (sz < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "error processing snprintf format string")
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "error processing snprintf format string");
     if (sz > H5F__MAX_VFD_SWMR_FILE_NAME_LEN)
-        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "string passed to snprintf would be truncated")
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "string passed to snprintf would be truncated");
     newname[H5F__MAX_VFD_SWMR_FILE_NAME_LEN - 1] = '\0';
-    if (HDrename(namebuf, newname) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "error from renaming the updater file")
-
+    if (rename(namebuf, newname) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "error from renaming the updater file");
     ++shared->updater_seq_num;
 
 done:
     if (updater.header_image_ptr)
-        HDfree(updater.header_image_ptr);
+        free(updater.header_image_ptr);
     if (updater.change_list_image_ptr)
-        HDfree(updater.change_list_image_ptr);
+        free(updater.change_list_image_ptr);
     if (updater.change_list)
-        HDfree(updater.change_list);
+        free(updater.change_list);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F__generate_updater_file() */
@@ -2468,13 +2458,12 @@ H5F__vfd_swmr_end_tick(H5F_t *f)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(f);
-    HDassert(f->shared);
+    assert(f);
+    assert(f->shared);
 
     /* The file should be opened with VFD SWMR configured.*/
     if (!(H5F_USE_VFD_SWMR(f)))
-        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "must have VFD SWMR configured for this public routine")
-
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "must have VFD SWMR configured for this public routine");
     /* Search EOT queue */
     TAILQ_FOREACH(curr, &eot_queue_g, link)
     {
@@ -2484,14 +2473,13 @@ H5F__vfd_swmr_end_tick(H5F_t *f)
 
     /* If the file does not exist on the EOT queue, flag an error */
     if (curr == NULL)
-        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "EOT for the file has been disabled")
-
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "EOT for the file has been disabled");
     if (f->shared->vfd_swmr_writer) {
         if (H5F_vfd_swmr_writer_end_of_tick(f) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "end of tick error for VFD SWMR writer")
+            HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "end of tick error for VFD SWMR writer");
     }
-    else if (H5F_vfd_swmr_reader_end_of_tick(f, TRUE) < 0) {
-        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "end of tick error for VFD SWMR reader")
+    else if (H5F_vfd_swmr_reader_end_of_tick(f, true) < 0) {
+        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "end of tick error for VFD SWMR reader");
     }
 
 done:
@@ -2515,13 +2503,12 @@ H5F__vfd_swmr_disable_end_of_tick(H5F_t *f)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(f);
-    HDassert(f->shared);
+    assert(f);
+    assert(f->shared);
 
     /* The file should be opened with VFD SWMR configured.*/
     if (!(H5F_USE_VFD_SWMR(f)))
-        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "must have VFD SWMR configured for this public routine")
-
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "must have VFD SWMR configured for this public routine");
     /* Search EOT queue */
     TAILQ_FOREACH(curr, &eot_queue_g, link)
     {
@@ -2531,11 +2518,10 @@ H5F__vfd_swmr_disable_end_of_tick(H5F_t *f)
 
     /* If the file does not exist on the EOT queue, flag an error */
     if (curr == NULL)
-        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "EOT for the file has already been disabled")
-
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "EOT for the file has already been disabled");
     /* Remove the entry that corresponds to "f" from the EOT queue */
     if (H5F_vfd_swmr_remove_entry_eot(f) < 0)
-        HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "unable to remove entry from EOT queue")
+        HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "unable to remove entry from EOT queue");
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -2558,13 +2544,12 @@ H5F__vfd_swmr_enable_end_of_tick(H5F_t *f)
     FUNC_ENTER_PACKAGE
 
     /* Sanity check */
-    HDassert(f);
-    HDassert(f->shared);
+    assert(f);
+    assert(f->shared);
 
     /* The file should be opened with VFD SWMR configured.*/
     if (!(H5F_USE_VFD_SWMR(f)))
-        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "must have VFD SWMR configured for this public routine")
-
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "must have VFD SWMR configured for this public routine");
     /* Search EOT queue */
     TAILQ_FOREACH(curr, &eot_queue_g, link)
     {
@@ -2574,16 +2559,13 @@ H5F__vfd_swmr_enable_end_of_tick(H5F_t *f)
 
     /* If the file already exists on the EOT queue, flag an error */
     if (curr != NULL)
-        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "EOT for the file has already been enabled")
-
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "EOT for the file has already been enabled");
     /* Insert the entry that corresponds to "f" onto the EOT queue */
     if (H5F_vfd_swmr_insert_entry_eot(f) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to insert entry into the EOT queue")
-
+        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to insert entry into the EOT queue");
     /* Check if the tick has expired, if so call end of tick processing */
-    if (H5F_vfd_swmr_process_eot_queue(TRUE) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "error processing EOT queue")
-
+    if (H5F_vfd_swmr_process_eot_queue(true) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "error processing EOT queue");
     /* FUNC_LEAVE_API could do the check, but not so for reader_end_of_tick() */
 
 done:
@@ -2597,13 +2579,13 @@ done:
 /*----------------------------------------------------------------------------
  * Function:    H5F__load_vfd_swmr_config()
  *
- * Purpose:     Set the configuration parameters for the 'H5F_vfd_swmr_config' 
- *              group using the provided nv_pairs. This function ensures that 
- *              required configuration parameters are present and correctly 
- *              assigned. Errors are triggered if any required parameters are 
- *              missing, if parameter types do not match the expected types, 
+ * Purpose:     Set the configuration parameters for the 'H5F_vfd_swmr_config'
+ *              group using the provided nv_pairs. This function ensures that
+ *              required configuration parameters are present and correctly
+ *              assigned. Errors are triggered if any required parameters are
+ *              missing, if parameter types do not match the expected types,
  *              or if duplicate parameters are found in the input.
- * 
+ *
  *                                                   Cody S. -- 4/13/26
  *
  * Return:      SUCCEED/FAIL
@@ -2615,19 +2597,19 @@ H5F__load_vfd_swmr_config(H5CL_nv_pair_t *nv_pairs, hbool_t writer, H5F_vfd_swmr
     int i;
 
     /* flags for tracking duplicate/required parameters */
-    hbool_t seen_version                = FALSE;
-    hbool_t seen_tick_len               = FALSE;
-    hbool_t seen_max_lag                = FALSE;
-    hbool_t seen_posix_semantics        = FALSE;
-    hbool_t seen_maintain_md_file       = FALSE;
-    hbool_t seen_gen_updater_files      = FALSE;
-    hbool_t seen_flush_raw_data         = FALSE;
-    hbool_t seen_md_pages_reserved      = FALSE;
-    hbool_t seen_md_file_path           = FALSE;
-    hbool_t seen_md_file_name           = FALSE;
-    hbool_t seen_updater_file_path      = FALSE;
-    hbool_t seen_log_file_path          = FALSE;
-    hbool_t seen_pb_expansion_threshold = FALSE;
+    hbool_t seen_version                = false;
+    hbool_t seen_tick_len               = false;
+    hbool_t seen_max_lag                = false;
+    hbool_t seen_posix_semantics        = false;
+    hbool_t seen_maintain_md_file       = false;
+    hbool_t seen_gen_updater_files      = false;
+    hbool_t seen_flush_raw_data         = false;
+    hbool_t seen_md_pages_reserved      = false;
+    hbool_t seen_md_file_path           = false;
+    hbool_t seen_md_file_name           = false;
+    hbool_t seen_updater_file_path      = false;
+    hbool_t seen_log_file_path          = false;
+    hbool_t seen_pb_expansion_threshold = false;
 
     herr_t ret_value = SUCCEED;
 
@@ -2636,13 +2618,13 @@ H5F__load_vfd_swmr_config(H5CL_nv_pair_t *nv_pairs, hbool_t writer, H5F_vfd_swmr
     /* Parameter checks */
     assert(config_ptr);
     assert(nv_pairs);
-    
+
     config_ptr->writer = writer;
 
     /* Set default values for non required configurations */
     config_ptr->version                 = H5F__CURR_VFD_SWMR_CONFIG_VERSION;
-    config_ptr->presume_posix_semantics = FALSE;
-    config_ptr->flush_raw_data          = FALSE;
+    config_ptr->presume_posix_semantics = false;
+    config_ptr->flush_raw_data          = false;
     config_ptr->md_file_path[0]         = '\0';
     config_ptr->md_file_name[0]         = '\0';
     config_ptr->updater_file_path[0]    = '\0';
@@ -2650,305 +2632,303 @@ H5F__load_vfd_swmr_config(H5CL_nv_pair_t *nv_pairs, hbool_t writer, H5F_vfd_swmr
     config_ptr->pb_expansion_threshold  = 0;
 
     /* Iterate over nv_pairs */
-    for ( i = 0; i < VFD_SWMR_CONFIG__MAX_PARAMS; i++ ) {
-        
-        if ( H5CL_VAL_NONE != nv_pairs[i].val_type ) {
-            
+    for (i = 0; i < VFD_SWMR_CONFIG__MAX_PARAMS; i++) {
+
+        if (H5CL_VAL_NONE != nv_pairs[i].val_type) {
+
             /* Match each parameter name to its corresponding configuration field */
-            if ( 0 == strcmp("version", nv_pairs[i].name_ptr) ) {
-                
+            if (0 == strcmp("version", nv_pairs[i].name_ptr)) {
+
                 /* Duplicate detection + mark parameter as handled */
-                if ( seen_version ) {
+                if (seen_version) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: version");
                 }
-                seen_version = TRUE;
+                seen_version = true;
 
-                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                if (H5CL_VAL_INT != nv_pairs[i].val_type) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
                 }
 
-                if ( nv_pairs[i].int_val < INT32_MIN || nv_pairs[i].int_val > INT32_MAX ) {
+                if (nv_pairs[i].int_val < INT32_MIN || nv_pairs[i].int_val > INT32_MAX) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "version value out of range");
                 }
 
-                config_ptr->version = (int32_t)(nv_pairs[i].int_val); 
-
-            } else if ( 0 == strcmp("tick_len", nv_pairs[i].name_ptr) ) {
+                config_ptr->version = (int32_t)(nv_pairs[i].int_val);
+            }
+            else if (0 == strcmp("tick_len", nv_pairs[i].name_ptr)) {
 
                 /* Duplicate detection + mark parameter as handled */
-                if ( seen_tick_len ) {
+                if (seen_tick_len) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: tick_len");
                 }
-                seen_tick_len = TRUE;
+                seen_tick_len = true;
 
-                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                if (H5CL_VAL_INT != nv_pairs[i].val_type) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
                 }
-                
-                if ( nv_pairs[i].int_val < 0 || nv_pairs[i].int_val > (int64_t)(UINT32_MAX) ) {
+
+                if (nv_pairs[i].int_val < 0 || nv_pairs[i].int_val > (int64_t)(UINT32_MAX)) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "tick_len value out of range");
                 }
 
                 config_ptr->tick_len = (uint32_t)(nv_pairs[i].int_val);
-
-            } else if ( 0 == strcmp("max_lag", nv_pairs[i].name_ptr) ) {
+            }
+            else if (0 == strcmp("max_lag", nv_pairs[i].name_ptr)) {
 
                 /* Duplicate detection + mark parameter as handled */
-                if ( seen_max_lag ) {
+                if (seen_max_lag) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: max_lag");
                 }
-                seen_max_lag = TRUE;
+                seen_max_lag = true;
 
-                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                if (H5CL_VAL_INT != nv_pairs[i].val_type) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
                 }
-                
-                if ( nv_pairs[i].int_val < 0 || nv_pairs[i].int_val > (int64_t)(UINT32_MAX) ) {
+
+                if (nv_pairs[i].int_val < 0 || nv_pairs[i].int_val > (int64_t)(UINT32_MAX)) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "max_lag value out of range");
                 }
 
                 config_ptr->max_lag = (uint32_t)(nv_pairs[i].int_val);
-
-            } else if ( 0 == strcmp("presume_posix_semantics", nv_pairs[i].name_ptr) ) {
+            }
+            else if (0 == strcmp("presume_posix_semantics", nv_pairs[i].name_ptr)) {
 
                 /* Duplicate detection + mark parameter as handled */
-                if ( seen_posix_semantics ) {
+                if (seen_posix_semantics) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: presume_posix_semantics");
                 }
-                seen_posix_semantics = TRUE;
+                seen_posix_semantics = true;
 
-                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                if (H5CL_VAL_INT != nv_pairs[i].val_type) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
                 }
-                
+
                 /* Boolean range check */
-                if ( nv_pairs[i].int_val != 0 && nv_pairs[i].int_val != 1 ) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
-                        "presume_posix_semantics must have value of either 0 or 1");
+                if (nv_pairs[i].int_val != 0 && nv_pairs[i].int_val != 1) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                                "presume_posix_semantics must have value of either 0 or 1");
                 }
 
                 config_ptr->presume_posix_semantics = (hbool_t)(nv_pairs[i].int_val);
-
-            } else if ( 0 == strcmp("maintain_metadata_file", nv_pairs[i].name_ptr) ) {
+            }
+            else if (0 == strcmp("maintain_metadata_file", nv_pairs[i].name_ptr)) {
 
                 /* Duplicate detection + mark parameter as handled */
-                if ( seen_maintain_md_file ) {
+                if (seen_maintain_md_file) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: maintain_metadata_file");
                 }
-                seen_maintain_md_file = TRUE;
-                
-                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                seen_maintain_md_file = true;
+
+                if (H5CL_VAL_INT != nv_pairs[i].val_type) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
                 }
 
                 /* Boolean range check */
-                if ( nv_pairs[i].int_val != 0 && nv_pairs[i].int_val != 1 ) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
-                        "maintain_metadata_file must have value of either 0 or 1");
+                if (nv_pairs[i].int_val != 0 && nv_pairs[i].int_val != 1) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                                "maintain_metadata_file must have value of either 0 or 1");
                 }
 
                 config_ptr->maintain_metadata_file = (hbool_t)(nv_pairs[i].int_val);
-
-            } else if ( 0 == strcmp("generate_updater_files", nv_pairs[i].name_ptr) ) {
+            }
+            else if (0 == strcmp("generate_updater_files", nv_pairs[i].name_ptr)) {
 
                 /* Duplicate detection + mark parameter as handled */
-                if ( seen_gen_updater_files ) {
+                if (seen_gen_updater_files) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: generate_updater_files");
                 }
-                seen_gen_updater_files = TRUE;
+                seen_gen_updater_files = true;
 
-                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                if (H5CL_VAL_INT != nv_pairs[i].val_type) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
                 }
 
                 /* Boolean range check */
-                if ( nv_pairs[i].int_val != 0 && nv_pairs[i].int_val != 1 ) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
-                        "generate_updater_files must have value of either 0 or 1");
+                if (nv_pairs[i].int_val != 0 && nv_pairs[i].int_val != 1) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                                "generate_updater_files must have value of either 0 or 1");
                 }
 
                 config_ptr->generate_updater_files = (hbool_t)(nv_pairs[i].int_val);
-
-            } else if ( 0 == strcmp("flush_raw_data", nv_pairs[i].name_ptr) ) {
+            }
+            else if (0 == strcmp("flush_raw_data", nv_pairs[i].name_ptr)) {
 
                 /* Duplicate detection + mark parameter as handled */
-                if ( seen_flush_raw_data ) {
+                if (seen_flush_raw_data) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: flush_raw_data");
                 }
-                seen_flush_raw_data = TRUE;
+                seen_flush_raw_data = true;
 
-                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                if (H5CL_VAL_INT != nv_pairs[i].val_type) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
-                } 
+                }
 
                 /* Boolean range check */
-                if ( nv_pairs[i].int_val != 0 && nv_pairs[i].int_val != 1 ) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
-                        "flush_raw_data must have value of either 0 or 1");
+                if (nv_pairs[i].int_val != 0 && nv_pairs[i].int_val != 1) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                                "flush_raw_data must have value of either 0 or 1");
                 }
 
                 config_ptr->flush_raw_data = (hbool_t)(nv_pairs[i].int_val);
-
-            } else if ( 0 == strcmp("md_pages_reserved", nv_pairs[i].name_ptr) ) {
+            }
+            else if (0 == strcmp("md_pages_reserved", nv_pairs[i].name_ptr)) {
 
                 /* Duplicate detection + mark parameter as handled */
-                if ( seen_md_pages_reserved ) {
+                if (seen_md_pages_reserved) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: md_pages_reserved");
                 }
-                seen_md_pages_reserved = TRUE;
+                seen_md_pages_reserved = true;
 
-                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                if (H5CL_VAL_INT != nv_pairs[i].val_type) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
                 }
 
-                if ( nv_pairs[i].int_val < 0 || nv_pairs[i].int_val > (int64_t)(UINT32_MAX) ) {
+                if (nv_pairs[i].int_val < 0 || nv_pairs[i].int_val > (int64_t)(UINT32_MAX)) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "md_pages_reserved value out of range");
                 }
 
                 config_ptr->md_pages_reserved = (uint32_t)(nv_pairs[i].int_val);
-
-            } else if ( 0 == strcmp("md_file_path", nv_pairs[i].name_ptr) ) {
+            }
+            else if (0 == strcmp("md_file_path", nv_pairs[i].name_ptr)) {
 
                 /* Duplicate detection + mark parameter as handled */
-                if ( seen_md_file_path )
+                if (seen_md_file_path)
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: md_file_path");
 
-                seen_md_file_path = TRUE;
+                seen_md_file_path = true;
 
-                if ( H5CL_VAL_QSTR != nv_pairs[i].val_type ) {
+                if (H5CL_VAL_QSTR != nv_pairs[i].val_type) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
                 }
 
-                if ( nv_pairs[i].vlen_val_ptr == NULL ) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
-                        "Expected string data for md_file_path but vlen_val_ptr is NULL.");
+                if (nv_pairs[i].vlen_val_ptr == NULL) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                                "Expected string data for md_file_path but vlen_val_ptr is NULL.");
                 }
-                if ( nv_pairs[i].len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN ) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
-                        "string data for md_file_path is too large.");
+                if (nv_pairs[i].len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "string data for md_file_path is too large.");
                 }
 
                 strncpy(config_ptr->md_file_path, (const char *)nv_pairs[i].vlen_val_ptr, nv_pairs[i].len);
                 config_ptr->md_file_path[nv_pairs[i].len] = '\0'; /* null-terminate */
-
-            } else if ( 0 == strcmp("md_file_name", nv_pairs[i].name_ptr) ) {
+            }
+            else if (0 == strcmp("md_file_name", nv_pairs[i].name_ptr)) {
 
                 /* Duplicate detection + mark parameter as handled */
-                if ( seen_md_file_name ) {
+                if (seen_md_file_name) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: md_file_name");
                 }
-                seen_md_file_name = TRUE;
+                seen_md_file_name = true;
 
-                if ( H5CL_VAL_QSTR != nv_pairs[i].val_type ) {
+                if (H5CL_VAL_QSTR != nv_pairs[i].val_type) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
                 }
 
-                if ( nv_pairs[i].vlen_val_ptr == NULL ) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
-                        "Expected string data for md_file_name but vlen_val_ptr is NULL.");
+                if (nv_pairs[i].vlen_val_ptr == NULL) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                                "Expected string data for md_file_name but vlen_val_ptr is NULL.");
                 }
-                if ( nv_pairs[i].len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN ) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
-                        "string data for md_file_name is too large.");
+                if (nv_pairs[i].len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "string data for md_file_name is too large.");
                 }
 
                 strncpy(config_ptr->md_file_name, (const char *)nv_pairs[i].vlen_val_ptr, nv_pairs[i].len);
                 config_ptr->md_file_name[nv_pairs[i].len] = '\0'; /* null-terminate */
-
-            } else if ( 0 == strcmp("updater_file_path", nv_pairs[i].name_ptr) ) {
+            }
+            else if (0 == strcmp("updater_file_path", nv_pairs[i].name_ptr)) {
 
                 /* Duplicate detection + mark parameter as handled */
-                if ( seen_updater_file_path ) {
+                if (seen_updater_file_path) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: updater_file_path");
                 }
-                seen_updater_file_path = TRUE;
+                seen_updater_file_path = true;
 
-                if ( H5CL_VAL_QSTR != nv_pairs[i].val_type ) {
+                if (H5CL_VAL_QSTR != nv_pairs[i].val_type) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
                 }
 
-                if ( nv_pairs[i].vlen_val_ptr == NULL ) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
-                        "Expected string data for updater_file_path but vlen_val_ptr is NULL.");
-                }
-                
-                if ( nv_pairs[i].len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN ) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
-                        "string data for updater_file_path is too large.");
+                if (nv_pairs[i].vlen_val_ptr == NULL) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                                "Expected string data for updater_file_path but vlen_val_ptr is NULL.");
                 }
 
-                strncpy(config_ptr->updater_file_path, (const char *)nv_pairs[i].vlen_val_ptr, nv_pairs[i].len);
+                if (nv_pairs[i].len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                                "string data for updater_file_path is too large.");
+                }
+
+                strncpy(config_ptr->updater_file_path, (const char *)nv_pairs[i].vlen_val_ptr,
+                        nv_pairs[i].len);
                 config_ptr->updater_file_path[nv_pairs[i].len] = '\0'; /* null-terminate */
-
-            } else if ( 0 == strcmp("log_file_path", nv_pairs[i].name_ptr) ) {
+            }
+            else if (0 == strcmp("log_file_path", nv_pairs[i].name_ptr)) {
 
                 /* Duplicate detection + mark parameter as handled */
-                if ( seen_log_file_path ) {
+                if (seen_log_file_path) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: log_file_path");
                 }
-                seen_log_file_path = TRUE;
+                seen_log_file_path = true;
 
-                if ( H5CL_VAL_QSTR != nv_pairs[i].val_type ) {
+                if (H5CL_VAL_QSTR != nv_pairs[i].val_type) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
                 }
 
-                if ( nv_pairs[i].vlen_val_ptr == NULL ) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
-                        "Expected string data for log_file_path but vlen_val_ptr is NULL.");
+                if (nv_pairs[i].vlen_val_ptr == NULL) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                                "Expected string data for log_file_path but vlen_val_ptr is NULL.");
                 }
 
-                if ( nv_pairs[i].len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN ) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
-                        "string data for log_file_path is too large.");
+                if (nv_pairs[i].len > H5F__MAX_VFD_SWMR_FILE_NAME_LEN) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "string data for log_file_path is too large.");
                 }
 
                 strncpy(config_ptr->log_file_path, (const char *)nv_pairs[i].vlen_val_ptr, nv_pairs[i].len);
                 config_ptr->log_file_path[nv_pairs[i].len] = '\0'; /* null-terminate */
-
-            } else if ( 0 == strcmp("pb_expansion_threshold", nv_pairs[i].name_ptr) ) {
+            }
+            else if (0 == strcmp("pb_expansion_threshold", nv_pairs[i].name_ptr)) {
 
                 /* Duplicate detection + mark parameter as handled */
-                if ( seen_pb_expansion_threshold ) {
+                if (seen_pb_expansion_threshold) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: pb_expansion_threshold");
                 }
-                seen_pb_expansion_threshold = TRUE;
+                seen_pb_expansion_threshold = true;
 
-                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                if (H5CL_VAL_INT != nv_pairs[i].val_type) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
                 }
 
-                if ( nv_pairs[i].int_val < 0 || nv_pairs[i].int_val > (int64_t)(UINT32_MAX) ) {
+                if (nv_pairs[i].int_val < 0 || nv_pairs[i].int_val > (int64_t)(UINT32_MAX)) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "pb_expansion_threshold value out of range");
                 }
 
                 config_ptr->pb_expansion_threshold = (uint32_t)(nv_pairs[i].int_val);
-
-            } else {
+            }
+            else {
 
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unknown parameter name.");
             }
         }
     }
-    
+
     /* Ensure required fields have been provided */
-    if ( !seen_tick_len ) {
+    if (!seen_tick_len) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: tick_len");
-    } 
-    if ( !seen_max_lag ) {
+    }
+    if (!seen_max_lag) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: max_lag");
-    } 
-    if ( !seen_maintain_md_file ) {
+    }
+    if (!seen_maintain_md_file) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: maintain_metadata_file");
     }
-    if ( !seen_gen_updater_files ) {
+    if (!seen_gen_updater_files) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: generate_updater_files");
     }
-    if ( !seen_md_pages_reserved ) {
+    if (!seen_md_pages_reserved) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: md_pages_reserved");
     }
 
     /* Sanity check provided values */
-    if ( H5P_check_vfd_swmr_config(config_ptr) < 0 ) {
+    if (H5P_check_vfd_swmr_config(config_ptr) < 0) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "configuration contains invalid values");
     }
 
@@ -2956,79 +2936,79 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5F__load_vfd_swmr_config() */
 
-
 /*----------------------------------------------------------------------------
  * Function:    H5F__load_vfd_swmr_page_buffer_config()
  *
- * Purpose:     Set the configuration parameters for the 'page_buffer_config' 
- *              group using the provided nv_pairs. This function ensures that 
- *              required configuration parameters are present and correctly 
- *              assigned. Errors are triggered if any required parameters are 
- *              missing, if parameter types do not match the expected types, 
+ * Purpose:     Set the configuration parameters for the 'page_buffer_config'
+ *              group using the provided nv_pairs. This function ensures that
+ *              required configuration parameters are present and correctly
+ *              assigned. Errors are triggered if any required parameters are
+ *              missing, if parameter types do not match the expected types,
  *              or if duplicate parameters are found in the input.
- * 
+ *
  *                                                   Cody S. -- 4/13/26
  *
  * Return:      SUCCEED/FAIL
  *----------------------------------------------------------------------------
  */
 static herr_t
-H5F__load_vfd_swmr_page_buffer_config(H5CL_nv_pair_t *nv_pairs, size_t *page_buf_size, hbool_t *metadata_pages_only)
+H5F__load_vfd_swmr_page_buffer_config(H5CL_nv_pair_t *nv_pairs, size_t *page_buf_size,
+                                      hbool_t *metadata_pages_only)
 {
     int i;
 
     /* flags for tracking duplicate/required parameters */
-    hbool_t seen_page_buf_size  = FALSE;
-    hbool_t seen_md_pages_only  = FALSE;
+    hbool_t seen_page_buf_size = false;
+    hbool_t seen_md_pages_only = false;
 
     herr_t ret_value = SUCCEED;
-    
+
     FUNC_ENTER_PACKAGE
 
     assert(nv_pairs);
 
     /* Iterate over nv_pairs */
-    for ( i = 0; i < VFD_SWMR_PB_CONFIG__MAX_PARAMS; i++ ) {
-        
-        if ( H5CL_VAL_NONE != nv_pairs[i].val_type ) {
+    for (i = 0; i < VFD_SWMR_PB_CONFIG__MAX_PARAMS; i++) {
+
+        if (H5CL_VAL_NONE != nv_pairs[i].val_type) {
 
             /* Match each parameter name to its corresponding configuration */
-            if ( 0 == strcmp("page_buf_size", nv_pairs[i].name_ptr) ) {
+            if (0 == strcmp("page_buf_size", nv_pairs[i].name_ptr)) {
 
-                if ( seen_page_buf_size ) {
+                if (seen_page_buf_size) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: page_buf_size");
                 }
-                seen_page_buf_size = TRUE;
-                
-                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                seen_page_buf_size = true;
+
+                if (H5CL_VAL_INT != nv_pairs[i].val_type) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
                 }
 
-                if ( nv_pairs[i].int_val < 0 || (uint64_t)(nv_pairs[i].int_val) > SIZE_MAX ) {
+                if (nv_pairs[i].int_val < 0 || (uint64_t)(nv_pairs[i].int_val) > SIZE_MAX) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "page_buf_size value is out of range");
                 }
 
                 *page_buf_size = (size_t)(nv_pairs[i].int_val);
+            }
+            else if (0 == strcmp("metadata_pages_only", nv_pairs[i].name_ptr)) {
 
-            } else if ( 0 == strcmp("metadata_pages_only", nv_pairs[i].name_ptr) ) {
-                
-                if ( seen_md_pages_only ) {
+                if (seen_md_pages_only) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "duplicate parameter: metadata_pages_only");
                 }
-                seen_md_pages_only = TRUE;
-                
-                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                seen_md_pages_only = true;
+
+                if (H5CL_VAL_INT != nv_pairs[i].val_type) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
                 }
 
-                if ( nv_pairs[i].int_val != 0 && nv_pairs[i].int_val != 1 ) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
-                        "metadata_pages_only must have value of either 0 or 1");
+                if (nv_pairs[i].int_val != 0 && nv_pairs[i].int_val != 1) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                                "metadata_pages_only must have value of either 0 or 1");
                 }
 
                 *metadata_pages_only = (hbool_t)(nv_pairs[i].int_val);
-
-            } else {
+            }
+            else {
 
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unknown parameter name.");
             }
@@ -3036,10 +3016,10 @@ H5F__load_vfd_swmr_page_buffer_config(H5CL_nv_pair_t *nv_pairs, size_t *page_buf
     }
 
     /* Ensure required fields have been provided */
-    if ( !seen_page_buf_size ) {
+    if (!seen_page_buf_size) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: page_buf_size");
     }
-    if ( !seen_md_pages_only ) {
+    if (!seen_md_pages_only) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: metadata_pages_only");
     }
 
@@ -3050,12 +3030,12 @@ done:
 /*----------------------------------------------------------------------------
  * Function:    H5F__load_vfd_swmr_fs_strategy_config()
  *
- * Purpose:     Set the configuration parameters for the 'file_space_strategy_config' 
- *              group using the provided nv_pairs. This function ensures that 
- *              required configuration parameters are present and correctly 
- *              assigned. Errors are triggered if any required parameters are 
+ * Purpose:     Set the configuration parameters for the 'file_space_strategy_config'
+ *              group using the provided nv_pairs. This function ensures that
+ *              required configuration parameters are present and correctly
+ *              assigned. Errors are triggered if any required parameters are
  *              missing, or if parameter types do not match the expected types.
- * 
+ *
  *                                                   Cody S. -- 4/13/26
  *
  * Return:      SUCCEED/FAIL
@@ -3066,33 +3046,33 @@ H5F__load_vfd_swmr_fs_strategy_config(H5CL_nv_pair_t *nv_pairs, hbool_t *fs_stra
 {
     int i;
 
-    /* flag for tracking that required paramater is set (+ duplication tracking if more parameters are added) */
-    hbool_t seen_fs_strategy_persist = FALSE;
+    /* flag for tracking that required parameter is set (+ duplication tracking if more parameters are added)
+     */
+    hbool_t seen_fs_strategy_persist = false;
 
     herr_t ret_value = SUCCEED;
-    
+
     FUNC_ENTER_PACKAGE
 
     assert(nv_pairs);
 
     /* Iterate over nv_pairs (currently only one expected, but loop maintained
      * for consistency and potential future expansion) */
-    for ( i = 0; i < VFD_SWMR_FS_STRATEGY__MAX_PARAMS; i++ ) {
-        
-        if ( H5CL_VAL_NONE != nv_pairs[i].val_type ) {
+    for (i = 0; i < VFD_SWMR_FS_STRATEGY__MAX_PARAMS; i++) {
 
-            if ( 0 == strcmp("persist", nv_pairs[i].name_ptr) ) {
+        if (H5CL_VAL_NONE != nv_pairs[i].val_type) {
+
+            if (0 == strcmp("persist", nv_pairs[i].name_ptr)) {
 
                 /* No need to check for duplicates when only 1 parameter is allowed */
-                seen_fs_strategy_persist = TRUE;
+                seen_fs_strategy_persist = true;
 
-                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                if (H5CL_VAL_INT != nv_pairs[i].val_type) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
                 }
 
                 if (nv_pairs[i].int_val != 0 && nv_pairs[i].int_val != 1) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
-                        "persist must have value of either 0 or 1");
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "persist must have value of either 0 or 1");
                 }
 
                 *fs_strategy_persist = (hbool_t)(nv_pairs[i].int_val);
@@ -3101,7 +3081,7 @@ H5F__load_vfd_swmr_fs_strategy_config(H5CL_nv_pair_t *nv_pairs, hbool_t *fs_stra
     }
 
     /* Ensure required fields have been provided */
-    if ( !seen_fs_strategy_persist ) {
+    if (!seen_fs_strategy_persist) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: persist");
     }
 
@@ -3112,12 +3092,12 @@ done:
 /*----------------------------------------------------------------------------
  * Function:    H5F_set_vfd_swmr_fs_page_size_config()
  *
- * Purpose:     Set the configuration parameters for the 'file_space_page_size' 
- *              group using the provided nv_pairs. This function ensures that 
- *              required configuration parameters are present and correctly 
- *              assigned. Errors are triggered if any required parameters are 
+ * Purpose:     Set the configuration parameters for the 'file_space_page_size'
+ *              group using the provided nv_pairs. This function ensures that
+ *              required configuration parameters are present and correctly
+ *              assigned. Errors are triggered if any required parameters are
  *              missing, or if parameter types do not match the expected types.
- * 
+ *
  *                                                   Cody S. -- 4/13/26
  *
  * Return:      SUCCEED/FAIL
@@ -3128,34 +3108,37 @@ H5F__load_vfd_swmr_fs_page_size_config(H5CL_nv_pair_t *nv_pairs, hsize_t *fs_pag
 {
     int i;
 
-    /* flag for tracking that required paramater is set (+ duplication tracking if more parameters are added) */
-    hbool_t seen_fs_page_size = FALSE;
+    /* flag for tracking that required parameter is set (+ duplication tracking if more parameters are added)
+     */
+    hbool_t seen_fs_page_size = false;
 
     herr_t ret_value = SUCCEED;
-    
+
     FUNC_ENTER_PACKAGE
 
     /* Iterate over nv_pairs (currently only one expected, but loop maintained
-    * for consistency and potential future expansion) */
-    for ( i = 0; i < VFD_SWMR_FS_PAGE_SIZE__MAX_PARAMS; i++ ) {
-        
-        if ( H5CL_VAL_NONE != nv_pairs[i].val_type ) {
-            
-            if ( 0 == strcmp("page_size", nv_pairs[i].name_ptr) ) {
-                
+     * for consistency and potential future expansion) */
+    for (i = 0; i < VFD_SWMR_FS_PAGE_SIZE__MAX_PARAMS; i++) {
+
+        if (H5CL_VAL_NONE != nv_pairs[i].val_type) {
+
+            if (0 == strcmp("page_size", nv_pairs[i].name_ptr)) {
+
                 /* No need to check for duplicates when only 1 parameter is allowed */
-                seen_fs_page_size = TRUE;
-                
-                if ( H5CL_VAL_INT != nv_pairs[i].val_type ) {
+                seen_fs_page_size = true;
+
+                if (H5CL_VAL_INT != nv_pairs[i].val_type) {
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parameter name / type mismatch.");
                 }
 
                 /* Sanity check value */
-                if ( nv_pairs[i].int_val < H5F_FILE_SPACE_PAGE_SIZE_MIN ) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "cannot set file space page size to less than 512");
+                if (nv_pairs[i].int_val < H5F_FILE_SPACE_PAGE_SIZE_MIN) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                                "cannot set file space page size to less than 512");
                 }
-                if ( nv_pairs[i].int_val > H5F_FILE_SPACE_PAGE_SIZE_MAX ) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "cannot set file space page size to more than 1GB");
+                if (nv_pairs[i].int_val > H5F_FILE_SPACE_PAGE_SIZE_MAX) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                                "cannot set file space page size to more than 1GB");
                 }
 
                 *fs_page_size = (hsize_t)(nv_pairs[i].int_val);
@@ -3164,14 +3147,13 @@ H5F__load_vfd_swmr_fs_page_size_config(H5CL_nv_pair_t *nv_pairs, hsize_t *fs_pag
     }
 
     /* Ensure required fields have been provided */
-    if ( !seen_fs_page_size ) {
+    if (!seen_fs_page_size) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "missing required parameter: page_size");
     }
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5F_load_vfd_swmr_fs_page_size() */
-
 
 /*-------------------------------------------------------------------------
  * Function:    H5Fswmr_config_env()
@@ -3180,54 +3162,48 @@ done:
  *              file specified by an environment variable and apply it
  *              to the provided file access and file creation property
  *              lists (FAPL and FCPL).
- * 
+ *
  *              If supplied, env_var_name is used in place of the
  *              default environment variable HDF5_VFD_SWMR_CONFIG.
- * 
+ *
  *                                              Cody S. -- 6/17/26
  *
  * Return:      SUCCEED/FAIL
  *-------------------------------------------------------------------------
  */
-herr_t 
-H5Fswmr_config_env(hid_t fapl_id, hid_t fcpl_id, hbool_t writer, 
-                   hbool_t create_file, const char *env_var_name)
+herr_t
+H5Fswmr_config_env(hid_t fapl_id, hid_t fcpl_id, hbool_t writer, hbool_t create_file,
+                   const char *env_var_name)
 {
     char  *config_file_path = NULL;
     herr_t ret_value        = SUCCEED;
-    
+
     FUNC_ENTER_API(FAIL)
 
     /* Check if user provided custom environment variable */
     if (env_var_name && env_var_name[0] != '\0') {
 
         config_file_path = getenv(env_var_name);
-    } 
+    }
     else { /* otherwise use default environment variable */
 
         config_file_path = getenv(VFD_SWMR_CONFIG_FILE_ENV_VAR);
     }
 
     /* check that environment variable is valid */
-    if ( config_file_path == NULL || config_file_path[0] == '\0' )
-        HGOTO_ERROR(H5E_PATH, H5E_BADVALUE, FAIL,
-                    "configuration environment variable not set");
+    if (config_file_path == NULL || config_file_path[0] == '\0')
+        HGOTO_ERROR(H5E_PATH, H5E_BADVALUE, FAIL, "configuration environment variable not set");
 
-    if ( strlen(config_file_path) >= FILE_NAME_LEN )
-        HGOTO_ERROR(H5E_PATH, H5E_BADVALUE, FAIL,
-                    "configuration file path is too long");
+    if (strlen(config_file_path) >= FILE_NAME_LEN)
+        HGOTO_ERROR(H5E_PATH, H5E_BADVALUE, FAIL, "configuration file path is too long");
 
-    if ( H5Fswmr_config_file(config_file_path, fapl_id, fcpl_id, writer, 
-                             create_file) < 0 ) 
-    {
-        HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL,
-                    "failed to load VFD SWMR configuration file");
+    if (H5Fswmr_config_file(config_file_path, fapl_id, fcpl_id, writer, create_file) < 0) {
+        HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL, "failed to load VFD SWMR configuration file");
     }
 
 done:
     FUNC_LEAVE_API(ret_value)
 } /* H5Fswmr_config_env() */
-
 
 /*-------------------------------------------------------------------------
  * Function:    H5Fswmr_config_file()
@@ -3235,15 +3211,14 @@ done:
  * Purpose:     Load VFD SWMR configuration data from the supplied
  *              configuration file and apply it to the provided file
  *              access and file creation property lists (FAPL and FCPL).
- * 
+ *
  *                                              Cody S. -- 6/17/26
  *
  * Return:      SUCCEED/FAIL
  *-------------------------------------------------------------------------
  */
-herr_t 
-H5Fswmr_config_file(const char *file_path, hid_t fapl_id, hid_t fcpl_id,
-                    hbool_t writer, hbool_t create_file)
+herr_t
+H5Fswmr_config_file(const char *file_path, hid_t fapl_id, hid_t fcpl_id, hbool_t writer, hbool_t create_file)
 {
     char  *config_str = NULL;
     herr_t ret_value  = SUCCEED;
@@ -3252,19 +3227,18 @@ H5Fswmr_config_file(const char *file_path, hid_t fapl_id, hid_t fcpl_id,
 
     assert(file_path);
 
-    if ( H5CL_load_config_string_from_file(file_path, &config_str) < 0 )
+    if (H5CL_load_config_string_from_file(file_path, &config_str) < 0)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "failed to load config string from file");
 
-    if ( H5F_load_swmr_config_from_string(config_str, fapl_id, fcpl_id, writer, create_file) < 0 )
+    if (H5F_load_swmr_config_from_string(config_str, fapl_id, fcpl_id, writer, create_file) < 0)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "failed to load vfd swmr configuration");
 
 done:
     if (config_str)
-        free(config_str);
+        H5MM_xfree(config_str);
 
     FUNC_LEAVE_API(ret_value)
 } /* H5Fswmr_config_file() */
-
 
 /*-------------------------------------------------------------------------
  * Function:    H5Fswmr_config_string()
@@ -3272,20 +3246,20 @@ done:
  * Purpose:     Parse VFD SWMR configuration data from the supplied
  *              configuration string and apply it to the provided file
  *              access and file creation property lists (FAPL and FCPL).
- * 
+ *
  *                                              Cody S. -- 6/18/26
  *
  * Return:      SUCCEED/FAIL
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Fswmr_config_string(const char *config_str, hid_t fapl_id, hid_t fcpl_id,
-                      hbool_t writer, hbool_t create_file)
+H5Fswmr_config_string(const char *config_str, hid_t fapl_id, hid_t fcpl_id, hbool_t writer,
+                      hbool_t create_file)
 {
     H5P_genplist_t *fapl_plist;
     H5P_genplist_t *fcpl_plist;
 
-    herr_t ret_value  = SUCCEED;
+    herr_t ret_value = SUCCEED;
 
     FUNC_ENTER_API(FAIL)
 
@@ -3294,26 +3268,25 @@ H5Fswmr_config_string(const char *config_str, hid_t fapl_id, hid_t fcpl_id,
     }
 
     /* Get the FAPL structure and verify it */
-    if (NULL == (fapl_plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS)))
+    if (NULL == (fapl_plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS, false)))
         HGOTO_ERROR(H5E_ID, H5E_BADID, FAIL, "can't find object for ID");
-
 
     /* File creation mode:
      * Writer mode required for file creation. FCPL must be valid when creating a file
      */
-    if ( create_file ) {
-        
-        if ( !writer ) {
+    if (create_file) {
+
+        if (!writer) {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "must be in writer mode to create file");
         }
 
         /* Get the FCPL structure and verify it */
-        if ( NULL == (fcpl_plist = H5P_object_verify(fcpl_id, H5P_FILE_CREATE)) )
+        if (NULL == (fcpl_plist = H5P_object_verify(fcpl_id, H5P_FILE_CREATE, false)))
             HGOTO_ERROR(H5E_ID, H5E_BADID, FAIL, "can't find object for ID");
     }
 
     /* Load configurations from string into property lists */
-    if ( H5F_load_swmr_config_from_string(config_str, fapl_id, fcpl_id, writer, create_file) )
+    if (H5F_load_swmr_config_from_string(config_str, fapl_id, fcpl_id, writer, create_file))
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "H5F_load_swmr_config_from_string() failed");
 
 done:
@@ -3321,38 +3294,38 @@ done:
     FUNC_LEAVE_API(ret_value)
 }
 
-#define USE_PRIVATE_APIS 1 
+#define USE_PRIVATE_APIS 1
 /*-------------------------------------------------------------------------
  * Function:    H5F_load_swmr_config_from_string()
  *
  * Purpose:     Parse VFD SWMR configuration data from the supplied
  *              configuration string and apply it to the provided file
  *              access and file creation property lists (FAPL and FCPL).
- * 
+ *
  *                                              Cody S. -- 6/17/26
  *
  * Return:      SUCCEED/FAIL
  *-------------------------------------------------------------------------
  */
-herr_t 
-H5F_load_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_t fcpl_id,
-                                     hbool_t writer, hbool_t create_file)
+herr_t
+H5F_load_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_t fcpl_id, hbool_t writer,
+                                 hbool_t create_file)
 {
     int i;
     int j;
 
     /* Define variables used within config handling routines */
-    size_t                  page_buf_size;
-    hbool_t                 metadata_pages_only;
-    hbool_t                 fs_strategy_persist;
-    hsize_t                 fs_page_size;
-    H5F_vfd_swmr_config_t  *config_ptr = NULL;
+    size_t                 page_buf_size;
+    hbool_t                metadata_pages_only = false;
+    hbool_t                fs_strategy_persist;
+    hsize_t                fs_page_size;
+    H5F_vfd_swmr_config_t *config_ptr = NULL;
 
     /* flags for tracking required configuration groups */
-    hbool_t configured_H5F_vfd_swmr_config = FALSE;
-    hbool_t configured_page_buffer_config  = FALSE;
-    hbool_t configured_fs_strategy_config  = FALSE;
-    hbool_t configured_fs_page_size        = FALSE;
+    hbool_t configured_H5F_vfd_swmr_config = false;
+    hbool_t configured_page_buffer_config  = false;
+    hbool_t configured_fs_strategy_config  = false;
+    hbool_t configured_fs_page_size        = false;
 
     herr_t ret_value = SUCCEED;
 
@@ -3363,7 +3336,7 @@ H5F_load_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_t fc
     H5CL_nv_pair_t file_space_page_size_nv_pairs[VFD_SWMR_FS_PAGE_SIZE__MAX_PARAMS];
 
     /* Track nv_pair initialization (to prevent possible invalid free()'s ) */
-    hbool_t nv_pairs_initialized = FALSE;
+    hbool_t nv_pairs_initialized = false;
 
     /* Initialize configuration names */
     char vfd_swmr_config_data[]       = "vfd_swmr_config_data";
@@ -3373,37 +3346,27 @@ H5F_load_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_t fc
     char file_space_page_size[]       = "file_space_page_size";
 
     /* Initialize top level group config schema */
-    H5CL_config_spec configs[VFD_SWMR_CONFIG_DATA__MAX_PARAMS] =
-    {
-      {
-        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ H5F_vfd_swmr_config,
-        /* max_num_params = */ VFD_SWMR_CONFIG__MAX_PARAMS,
-        /* nv_pairs       = */ vfd_swmr_config_nv_pairs,
-        /* parse          = */ false
-      },
-      {
-        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ page_buffer_config,
-        /* max_num_params = */ VFD_SWMR_PB_CONFIG__MAX_PARAMS,
-        /* nv_pairs       = */ page_buffer_config_nv_pairs,
-        /* parse          = */ false
-      },
-      {
-        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ file_space_strategy_config,
-        /* max_num_params = */ VFD_SWMR_FS_STRATEGY__MAX_PARAMS,
-        /* nv_pairs       = */ file_space_strategy_nv_pairs,
-        /* parse          = */ false
-      },
-      {
-        /* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
-        /* config_name    = */ file_space_page_size,
-        /* max_num_params = */ VFD_SWMR_FS_PAGE_SIZE__MAX_PARAMS,
-        /* nv_pairs       = */ file_space_page_size_nv_pairs,
-        /* parse          = */ false
-      }
-    };
+    H5CL_config_spec configs[VFD_SWMR_CONFIG_DATA__MAX_PARAMS] = {
+        {/* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+         /* config_name    = */ H5F_vfd_swmr_config,
+         /* max_num_params = */ VFD_SWMR_CONFIG__MAX_PARAMS,
+         /* nv_pairs       = */ vfd_swmr_config_nv_pairs,
+         /* parse          = */ false},
+        {/* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+         /* config_name    = */ page_buffer_config,
+         /* max_num_params = */ VFD_SWMR_PB_CONFIG__MAX_PARAMS,
+         /* nv_pairs       = */ page_buffer_config_nv_pairs,
+         /* parse          = */ false},
+        {/* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+         /* config_name    = */ file_space_strategy_config,
+         /* max_num_params = */ VFD_SWMR_FS_STRATEGY__MAX_PARAMS,
+         /* nv_pairs       = */ file_space_strategy_nv_pairs,
+         /* parse          = */ false},
+        {/* struct_tag     = */ H5CL_CONFIG_SPEC_STRUCT_TAG,
+         /* config_name    = */ file_space_page_size,
+         /* max_num_params = */ VFD_SWMR_FS_PAGE_SIZE__MAX_PARAMS,
+         /* nv_pairs       = */ file_space_page_size_nv_pairs,
+         /* parse          = */ false}};
 
 #ifdef USE_PRIVATE_APIS
     /* Variables needed for direct property list manipulation */
@@ -3429,22 +3392,22 @@ H5F_load_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_t fc
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Initialize nv_pair arrays in each config entry */
-    for ( i = 0; i < VFD_SWMR_CONFIG_DATA__MAX_PARAMS; i++ ) {
+    for (i = 0; i < VFD_SWMR_CONFIG_DATA__MAX_PARAMS; i++) {
 
-        for ( j = 0; j < configs[i].max_num_params; j++ ) {
+        for (j = 0; j < configs[i].max_num_params; j++) {
 
             configs[i].nv_pairs[j].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
 
-            if ( H5CL_init_nv_pair(&(configs[i].nv_pairs[j])) > 0 )
+            if (H5CL_init_nv_pair(&(configs[i].nv_pairs[j])) > 0)
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't configure specific nv pair.");
         }
     }
-    nv_pairs_initialized = TRUE;
-    
+    nv_pairs_initialized = true;
+
     assert(config_str);
 
     /* allocate config_ptr and initialize memory */
-    if ( NULL == (config_ptr = calloc(1, sizeof(H5F_vfd_swmr_config_t))) ) {
+    if (NULL == (config_ptr = calloc(1, sizeof(H5F_vfd_swmr_config_t)))) {
         HGOTO_ERROR(H5E_INTERNAL, H5E_CANTALLOC, FAIL, "cannot allocate config structure");
     }
     memset(config_ptr, 0, sizeof(H5F_vfd_swmr_config_t));
@@ -3453,33 +3416,32 @@ H5F_load_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_t fc
 #ifdef USE_PRIVATE_APIS
 
     /* Get the FAPL structure */
-    if (NULL == (fapl_plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS)))
+    if (NULL == (fapl_plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS, false)))
         HGOTO_ERROR(H5E_ID, H5E_BADID, FAIL, "can't find object for ID");
-#else /* USE_PRIVATE_APIS */
+#else  /* USE_PRIVATE_APIS */
 
-    if ( H5Iis_valid(fapl_id) <= 0 || H5Pisa_class(fapl_id, H5P_FILE_ACCESS) <= 0 ) {
+    if (H5Iis_valid(fapl_id) <= 0 || H5Pisa_class(fapl_id, H5P_FILE_ACCESS) <= 0) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid FAPL");
     }
 #endif /* USE_PRIVATE_APIS */
-    
 
     /* File creation mode:
      * Writer mode required for file creation. FCPL must be valid when creating a file */
-    if ( use_fcpl ) {
-        
-        if ( !writer ) {
+    if (use_fcpl) {
+
+        if (!writer) {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "must be in writer mode to create file");
         }
 
 #ifdef USE_PRIVATE_APIS
 
         /* Get the FCPL structure and verify it */
-        if (NULL == (fcpl_plist = H5P_object_verify(fcpl_id, H5P_FILE_CREATE)))
+        if (NULL == (fcpl_plist = H5P_object_verify(fcpl_id, H5P_FILE_CREATE, false)))
             HGOTO_ERROR(H5E_ID, H5E_BADID, FAIL, "can't find object for ID");
 #else /* USE_PRIVATE_APIS */
 
         /* fcpl only needs to be valid if we are creating a file rather than opening */
-        if ( H5Iis_valid(fcpl_id) <= 0 || H5Pisa_class(fcpl_id, H5P_FILE_CREATE) <= 0 ) {
+        if (H5Iis_valid(fcpl_id) <= 0 || H5Pisa_class(fcpl_id, H5P_FILE_CREATE) <= 0) {
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid FCPL");
         }
 
@@ -3487,55 +3449,60 @@ H5F_load_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_t fc
     }
 
     /* Parse the configuration group into configs array */
-    if ( H5CL_parse_config_group(config_str, vfd_swmr_config_data, VFD_SWMR_CONFIG_DATA__MAX_PARAMS, configs) < 0 ) {
+    if (H5CL_parse_config_group(config_str, vfd_swmr_config_data, VFD_SWMR_CONFIG_DATA__MAX_PARAMS, configs) <
+        0) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "failed to load and parse config group");
     }
 
-    for ( i = 0; i < VFD_SWMR_CONFIG_DATA__MAX_PARAMS; i++ ) {
+    for (i = 0; i < VFD_SWMR_CONFIG_DATA__MAX_PARAMS; i++) {
 
-        if ( configs[i].parsed ) {
+        if (configs[i].parsed) {
 
-            if ( 0 == strcmp("H5F_vfd_swmr_config", configs[i].config_name) ) {
+            if (0 == strcmp("H5F_vfd_swmr_config", configs[i].config_name)) {
 
-                if ( H5F__load_vfd_swmr_config(configs[i].nv_pairs, writer, config_ptr) < 0 ) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Failed to set H5F_vfd_swmr_config configurations");
+                if (H5F__load_vfd_swmr_config(configs[i].nv_pairs, writer, config_ptr) < 0) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                                "Failed to set H5F_vfd_swmr_config configurations");
                 }
 
-                configured_H5F_vfd_swmr_config = TRUE;
-                    
-            } else if ( 0 == strcmp("page_buffer_config", configs[i].config_name) ) {
-                
-                if ( H5F__load_vfd_swmr_page_buffer_config(configs[i].nv_pairs, &page_buf_size, &metadata_pages_only) < 0 ) {
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Failed to set parse_buffer_config configurations");
+                configured_H5F_vfd_swmr_config = true;
+            }
+            else if (0 == strcmp("page_buffer_config", configs[i].config_name)) {
+
+                if (H5F__load_vfd_swmr_page_buffer_config(configs[i].nv_pairs, &page_buf_size,
+                                                          &metadata_pages_only) < 0) {
+                    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                                "Failed to set parse_buffer_config configurations");
                 }
 
-                configured_page_buffer_config = TRUE;
+                configured_page_buffer_config = true;
+            }
+            else if (0 == strcmp("file_space_strategy_config", configs[i].config_name)) {
 
-            } else if ( 0 == strcmp("file_space_strategy_config", configs[i].config_name) ) {
-                
-                if ( create_file ) {
+                if (create_file) {
 
-                    if ( H5F__load_vfd_swmr_fs_strategy_config(configs[i].nv_pairs, &fs_strategy_persist) < 0 ) {
-                        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
-                            "Failed to set file_space_strategy_config configurations");
+                    if (H5F__load_vfd_swmr_fs_strategy_config(configs[i].nv_pairs, &fs_strategy_persist) <
+                        0) {
+                        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                                    "Failed to set file_space_strategy_config configurations");
                     }
 
-                    configured_fs_strategy_config = TRUE;
+                    configured_fs_strategy_config = true;
                 }
+            }
+            else if (0 == strcmp("file_space_page_size", configs[i].config_name)) {
 
-            } else if ( 0 == strcmp("file_space_page_size", configs[i].config_name) ) {
-                
-                if ( create_file ) {
-            
-                    if ( H5F__load_vfd_swmr_fs_page_size_config(configs[i].nv_pairs, &fs_page_size) < 0 ) {
-                        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
-                            "Failed to set file_space_page_size configurations");
+                if (create_file) {
+
+                    if (H5F__load_vfd_swmr_fs_page_size_config(configs[i].nv_pairs, &fs_page_size) < 0) {
+                        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                                    "Failed to set file_space_page_size configurations");
                     }
 
-                    configured_fs_page_size = TRUE;
+                    configured_fs_page_size = true;
                 }
-
-            } else {
+            }
+            else {
 
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unknown parameter name.");
             }
@@ -3543,16 +3510,17 @@ H5F_load_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_t fc
     }
 
     /* Validate always-required configs */
-    if ( !configured_H5F_vfd_swmr_config || !configured_page_buffer_config ) {
+    if (!configured_H5F_vfd_swmr_config || !configured_page_buffer_config) {
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "required configuration groups missing");
     }
 
     /* File creation mode: validate and apply FCPL properties */
-    if ( use_fcpl ) {
+    if (use_fcpl) {
 
-        if ( !configured_fs_strategy_config || !configured_fs_page_size ) {
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, 
-                "file_space_strategy_config and file_space_page_size must both be configured if create_file is TRUE");
+        if (!configured_fs_strategy_config || !configured_fs_page_size) {
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                        "file_space_strategy_config and file_space_page_size must both be configured if "
+                        "create_file is true");
         }
 
 #ifdef USE_PRIVATE_APIS
@@ -3568,7 +3536,6 @@ H5F_load_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_t fc
 
         if (H5P_set(fcpl_plist, H5F_CRT_FREE_SPACE_THRESHOLD_NAME, &fs_threshold) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set free-space threshold");
-
 
         /* Set parsed file space page size property */
         if (H5P_set(fcpl_plist, H5F_CRT_FILE_SPACE_PAGE_SIZE_NAME, &fs_page_size) < 0)
@@ -3597,10 +3564,9 @@ H5F_load_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_t fc
     if (H5P_set(fapl_plist, H5F_ACS_LIBVER_HIGH_BOUND_NAME, &high) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set high bound for library format versions");
 
-
     /* Set page buffer size properties */
     min_meta_perc = metadata_pages_only ? 100 : 0;
-    min_raw_perc = 0;
+    min_raw_perc  = 0;
 
     if (H5P_set(fapl_plist, H5F_ACS_PAGE_BUFFER_SIZE_NAME, &page_buf_size) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set page buffer size");
@@ -3611,39 +3577,37 @@ H5F_load_swmr_config_from_string(const char *config_str, hid_t fapl_id, hid_t fc
     if (H5P_set(fapl_plist, H5F_ACS_PAGE_BUFFER_MIN_RAW_PERC_NAME, &min_raw_perc) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set percentage of min rawdata entries");
 
-
     /* Set vfd swmr configuration property */
     if (H5P_set(fapl_plist, H5F_ACS_VFD_SWMR_CONFIG_NAME, config_ptr) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set vfd swmr config");
 
-#else /* USE_PRIVATE_APIS */
+#else  /* USE_PRIVATE_APIS */
     if (H5Pset_libver_bounds(fapl_id, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0) {
         HGOTO_ERROR(H5E_INTERNAL, H5E_CANTSET, FAIL, "Failed to set file library version bounds");
     }
     if (H5Pset_page_buffer_size(fapl_id, page_buf_size, metadata_pages_only ? 100 : 0, 0) < 0) {
         HGOTO_ERROR(H5E_INTERNAL, H5E_CANTSET, FAIL, "Failed to set page buffer size");
     }
-    if ( H5Pset_vfd_swmr_config(fapl_id, config_ptr) < 0 ) {
+    if (H5Pset_vfd_swmr_config(fapl_id, config_ptr) < 0) {
         HGOTO_ERROR(H5E_INTERNAL, H5E_CANTSET, FAIL, "failed to set VFD SWMR configuration in FAPL");
     }
 #endif /* USE_PRIVATE_APIS */
 
 done:
 
-    if ( config_ptr ) {
+    if (config_ptr) {
         free(config_ptr);
     }
 
-    if ( nv_pairs_initialized ) {
+    if (nv_pairs_initialized) {
         /* Handle cleanup of nv_pair arrays referenced by each config entry */
-        for ( i = 0; i < VFD_SWMR_CONFIG_DATA__MAX_PARAMS; i++ ) {
+        for (i = 0; i < VFD_SWMR_CONFIG_DATA__MAX_PARAMS; i++) {
 
-            for ( j = 0; j < configs[i].max_num_params; j++ ) {
+            for (j = 0; j < configs[i].max_num_params; j++) {
 
                 /* Attempt cleanup only if struct_tag is valid */
-                if ( ( configs[i].nv_pairs[j].struct_tag == H5CL_NV_PAIR_STRUCT_TAG ) &&
-                    ( H5CL_take_down_nv_pair(&configs[i].nv_pairs[j]) < 0 ) )
-                {
+                if ((configs[i].nv_pairs[j].struct_tag == H5CL_NV_PAIR_STRUCT_TAG) &&
+                    (H5CL_take_down_nv_pair(&configs[i].nv_pairs[j]) < 0)) {
 
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't take down nv_pair.");
                 }
@@ -3654,4 +3618,3 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 
 } /* H5F_load_swmr_config_from_string() */
-

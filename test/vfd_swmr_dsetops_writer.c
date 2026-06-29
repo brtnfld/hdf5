@@ -72,7 +72,7 @@ typedef struct {
     hid_t        filetype;           /* Datatype ID */
     unsigned int update_interval;    /* For -u option */
     unsigned int csteps;             /* For -c <csteps> option */
-    bool         use_communication;             /* For -N option */
+    bool         use_communication;  /* For -N option */
     bool         use_vfd_swmr;       /* For -S option */
     bool         flush_raw_data;     /* For -U option */
     bool         obj_ref;            /* For -O option */
@@ -90,7 +90,6 @@ typedef struct {
     unsigned int wwrites;   /* -w <wwrites> option: modify raw data to contiguous and/or chunked datasets */
     unsigned int lastwrite; /* The last operation (-s, -r, -l or -w) performed. */
 } state_t;
-
 
 /* Structure to hold info for different dataset types */
 typedef struct {
@@ -128,7 +127,7 @@ typedef struct {
 static bool state_init(state_t *, socket_state_t *, int, char **);
 
 static bool sock_writer(bool result, unsigned step, const state_t *s, socket_state_t *sock,
-                      H5F_vfd_swmr_config_t *config);
+                        H5F_vfd_swmr_config_t *config);
 static bool sock_reader(bool result, unsigned step, const state_t *s, socket_state_t *sock);
 static bool sock_confirm_verify_notify(unsigned step, const state_t *s, socket_state_t *sock);
 
@@ -297,25 +296,22 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
 {
     unsigned long          tmp;
     int                    opt;
-    char *                 tfile = NULL;
-    char *                 end;
-    const char *           s_opts   = "pte:gkm:n:s:r:l:w:bqSNUORu:c:i:";
-    struct h5_long_options l_opts[] = {
-        {"ip_addr", require_arg, 'i'},
-        {NULL, 0, '\0'}
-    };
+    char                  *tfile = NULL;
+    char                  *end;
+    const char            *s_opts   = "pte:gkm:n:s:r:l:w:bqSNUORu:c:i:";
+    struct h5_long_options l_opts[] = {{"ip_addr", require_arg, 'i'}, {NULL, 0, '\0'}};
 
     s->file              = H5I_INVALID_HID;
     s->filetype          = H5T_NATIVE_UINT32;
     s->update_interval   = READER_WAIT_TICKS;
     s->csteps            = 1;
-    s->use_communication = TRUE;
-    s->use_vfd_swmr      = TRUE;
-    s->flush_raw_data    = TRUE;
-    s->compact           = FALSE;
-    s->compact_write     = FALSE;
+    s->use_communication = true;
+    s->use_vfd_swmr      = true;
+    s->flush_raw_data    = true;
+    s->compact           = false;
+    s->compact_write     = false;
     s->compact_elmts     = MAX_COMPACT_ELMS;
-    s->contig            = FALSE;
+    s->contig            = false;
     s->rows              = 10;
     s->cols              = 5;
     s->swrites           = 0;
@@ -323,8 +319,8 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
     s->lwrites           = 0;
     s->wwrites           = 0;
     s->lastwrite         = 0;
-    s->obj_ref           = FALSE;
-    s->reg_ref           = FALSE;
+    s->obj_ref           = false;
+    s->reg_ref           = false;
 
     HDmemset(s->filename, 0, PATH_MAX);
     HDmemset(s->progname, 0, PATH_MAX);
@@ -532,7 +528,7 @@ error:
     return false;
 
 } /* state_init() */
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 /*
  * Initialize option info in state_t
  */
@@ -541,22 +537,22 @@ state_init(state_t *s, int argc, char **argv)
 {
     unsigned long          tmp;
     int                    opt;
-    char *                 tfile = NULL;
-    char *                 end;
-    const char *           s_opts   = "pte:gkm:n:s:r:l:w:bqSNUORu:c:";
+    char                  *tfile = NULL;
+    char                  *end;
+    const char            *s_opts   = "pte:gkm:n:s:r:l:w:bqSNUORu:c:";
     struct h5_long_options l_opts[] = {{NULL, 0, '\0'}};
 
     s->file              = H5I_INVALID_HID;
     s->filetype          = H5T_NATIVE_UINT32;
     s->update_interval   = READER_WAIT_TICKS;
     s->csteps            = 1;
-    s->use_communication = TRUE;
-    s->use_vfd_swmr      = TRUE;
-    s->flush_raw_data    = TRUE;
-    s->compact           = FALSE;
-    s->compact_write     = FALSE;
+    s->use_communication = true;
+    s->use_vfd_swmr      = true;
+    s->flush_raw_data    = true;
+    s->compact           = false;
+    s->compact_write     = false;
     s->compact_elmts     = MAX_COMPACT_ELMS;
-    s->contig            = FALSE;
+    s->contig            = false;
     s->rows              = 10;
     s->cols              = 5;
     s->swrites           = 0;
@@ -564,8 +560,8 @@ state_init(state_t *s, int argc, char **argv)
     s->lwrites           = 0;
     s->wwrites           = 0;
     s->lastwrite         = 0;
-    s->obj_ref           = FALSE;
-    s->reg_ref           = FALSE;
+    s->obj_ref           = false;
+    s->reg_ref           = false;
 
     HDmemset(s->filename, 0, PATH_MAX);
     HDmemset(s->progname, 0, PATH_MAX);
@@ -1530,7 +1526,7 @@ error:
     return false;
 
 } /* perform_dsets_operations() */
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 /*
  *  Writer
  */
@@ -1887,7 +1883,6 @@ error:
 
 } /* write_dset_compact() */
 
-
 #ifdef H5_USE_SOCKETS
 /*
  * Reader
@@ -2068,7 +2063,7 @@ error:
     return false;
 
 } /* verify_dsets_operations() */
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 /*
  * Reader
  */
@@ -2623,7 +2618,8 @@ error:
  *      Verify the data
  */
 static bool
-closing_on_noflush(bool writer, state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *config, socket_state_t *sock)
+closing_on_noflush(bool writer, state_t *s, dsets_state_t *ds, H5F_vfd_swmr_config_t *config,
+                   socket_state_t *sock)
 {
     HDassert(s->use_communication);
 
@@ -2699,9 +2695,9 @@ main(int argc, char **argv)
 {
     hid_t                  fapl   = H5I_INVALID_HID;
     hid_t                  fcpl   = H5I_INVALID_HID;
-    bool                   writer = FALSE;
-    state_t *              s      = NULL;
-    const char *           personality;
+    bool                   writer = false;
+    state_t               *s      = NULL;
+    const char            *personality;
     H5F_vfd_swmr_config_t *config = NULL;
     socket_state_t        *sock   = NULL;
     dsets_state_t          ds;
@@ -2740,7 +2736,7 @@ main(int argc, char **argv)
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
      * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
      * md_file_path, md_file_name, updater_file_path */
-    init_vfd_swmr_config(config, 4, 7, FALSE, writer, TRUE, FALSE, s->flush_raw_data, 128, "./",
+    init_vfd_swmr_config(config, 4, 7, false, writer, true, false, s->flush_raw_data, 128, "./",
                          "dsetops-shadow", NULL);
 
     /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */
@@ -2860,7 +2856,7 @@ error:
 
     return EXIT_FAILURE;
 }
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 /*
  * Named pipes handling
  */
@@ -3181,9 +3177,9 @@ main(int argc, char **argv)
 {
     hid_t                  fapl   = H5I_INVALID_HID;
     hid_t                  fcpl   = H5I_INVALID_HID;
-    bool                   writer = FALSE;
-    state_t *              s      = NULL;
-    const char *           personality;
+    bool                   writer = false;
+    state_t               *s      = NULL;
+    const char            *personality;
     H5F_vfd_swmr_config_t *config = NULL;
     np_state_t             np;
     dsets_state_t          ds;
@@ -3212,7 +3208,7 @@ main(int argc, char **argv)
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
      * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
      * md_file_path, md_file_name, updater_file_path */
-    init_vfd_swmr_config(config, 4, 7, FALSE, writer, TRUE, FALSE, s->flush_raw_data, 128, "./",
+    init_vfd_swmr_config(config, 4, 7, false, writer, true, false, s->flush_raw_data, 128, "./",
                          "dsetops-shadow", NULL);
 
     /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */

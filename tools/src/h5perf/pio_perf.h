@@ -4,7 +4,7 @@
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -13,15 +13,10 @@
 #ifndef PIO_PERF_H
 #define PIO_PERF_H
 
-#ifndef STANDALONE
 #include "io_timer.h"
 #include "H5private.h"
 #include "h5tools.h"
 #include "h5tools_utils.h"
-#else
-#include "io_timer.h"
-#include "pio_standalone.h"
-#endif
 
 #ifdef H5_HAVE_PARALLEL
 extern MPI_Info h5_io_info_g; /* MPI INFO object for IO */
@@ -76,7 +71,7 @@ typedef struct results_ {
 #define FAIL -1
 #endif /* !FAIL */
 
-extern FILE *     output;              /* output file                          */
+extern FILE      *output;              /* output file                          */
 extern io_time_t *timer_g;             /* timer: global for stub functions     */
 extern int        comm_world_rank_g;   /* my rank in MPI_COMM_RANK             */
 extern int        comm_world_nprocs_g; /* num. of processes of MPI_COMM_WORLD  */
@@ -91,10 +86,10 @@ extern int        pio_debug_level;     /* The debug level:
                                         *   4 - Even More Debugging (timer stuff)
                                         */
 
-#define HDprint_rank(f)      /* print rank in MPI_COMM_WORLD */ HDfprintf(f, "%d: ", comm_world_rank_g);
-#define HDprint_size(f)      /* print size of MPI_COMM_WORLD */ HDfprintf(f, "%d", comm_world_nprocs_g);
+#define HDprint_rank(f)      /* print rank in MPI_COMM_WORLD */ fprintf(f, "%d: ", comm_world_rank_g);
+#define HDprint_size(f)      /* print size of MPI_COMM_WORLD */ fprintf(f, "%d", comm_world_nprocs_g);
 #define HDprint_rank_size(f) /* print rank/size of MPI_COMM_WORLD */                                         \
-    HDfprintf(f, "%d/%d: ", comm_world_rank_g, comm_world_nprocs_g);
+    fprintf(f, "%d/%d: ", comm_world_rank_g, comm_world_nprocs_g);
 
 #ifdef __cplusplus
 extern "C" {

@@ -1,5 +1,10 @@
-cmake_minimum_required (VERSION 3.12)
+cmake_minimum_required (VERSION 3.26)
 project (HDF5_TOOLS_TEST_H5LS C)
+
+# CMake configuration for building and testing the h5ls tool
+# Configures dynamic plugin library for h5ls if shared builds are enabled
+# Sets up include directories, linking, and formatting for plugin targets
+# Includes test scripts for h5ls and VDS if test tools and serial tests are enabled
 
 #-----------------------------------------------------------------------------
 # If plugin library tests can be tested
@@ -10,7 +15,7 @@ if (BUILD_SHARED_LIBS)
   set (H5LS_TOOL_PLUGIN_LIB_TARGET           ${H5LS_TOOL_PLUGIN_LIB_CORENAME})
 
   add_library (${H5LS_TOOL_PLUGIN_LIB_TARGET} SHARED dynlib_ls.c)
-  target_include_directories (${H5LS_TOOL_PLUGIN_LIB_TARGET} PRIVATE "${HDF5_SRC_DIR};${HDF5_SRC_BINARY_DIR};$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:${MPI_C_INCLUDE_DIRS}>")
+  target_include_directories (${H5LS_TOOL_PLUGIN_LIB_TARGET} PRIVATE "${HDF5_SRC_INCLUDE_DIRS};${HDF5_SRC_BINARY_DIR};$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:${MPI_C_INCLUDE_DIRS}>")
   TARGET_C_PROPERTIES (${H5LS_TOOL_PLUGIN_LIB_TARGET} SHARED)
   target_link_libraries (${H5LS_TOOL_PLUGIN_LIB_TARGET} PRIVATE ${HDF5_LIBSH_TARGET})
   H5_SET_LIB_OPTIONS (${H5LS_TOOL_PLUGIN_LIB_TARGET} ${H5LS_TOOL_PLUGIN_LIB_NAME} SHARED "LIB")
@@ -36,6 +41,11 @@ if (BUILD_SHARED_LIBS)
           "$<TARGET_FILE:${H5LS_TOOL_PLUGIN_LIB_TARGET}>"
           "${CMAKE_BINARY_DIR}/plugins/$<TARGET_FILE_NAME:${H5LS_TOOL_PLUGIN_LIB_TARGET}>"
   )
+
+  #-----------------------------------------------------------------------------
+  # Sign the plugin if signature verification is enabled
+  #-----------------------------------------------------------------------------
+  sign_plugin_target(${H5LS_TOOL_PLUGIN_LIB_TARGET} "${CMAKE_BINARY_DIR}/plugins")
 endif ()
 
 if (HDF5_TEST_TOOLS AND HDF5_TEST_SERIAL)

@@ -1,11 +1,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -69,9 +68,6 @@ const H5Z_class2_t H5Z_BOGUS[1] = {{
  * Return       Success: Data chunk size
  *
  *              Failure: 0
- *
- * Programmer   Robb Matzke
- *              Tuesday, April 21, 1998
  *-------------------------------------------------------------------------
  */
 static size_t
@@ -93,12 +89,6 @@ filter_bogus(unsigned int flags, size_t cd_nelmts, const unsigned int *cd_values
  * Purpose      Test null I/O filter by itself.
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler (use C version, from dsets.c/test_filters)
- *              January, 2007
- *
- * Modifications:
- *              Note: H5Z interface is not implemented yet.
  *-------------------------------------------------------------------------
  */
 const hsize_t chunk_size[2] = {FILTER_CHUNK_DIM1, FILTER_CHUNK_DIM2};
@@ -142,12 +132,6 @@ test_null_filter()
  * Purpose      Test SZIP filter by itself.
  *
  * Return       None
- *
- * Programmer   Binh-Minh Ribler (partly from dsets.c/test_filters)
- *              January, 2007
- *
- * Modifications:
- *              Note: H5Z interface is not implemented yet.
  *-------------------------------------------------------------------------
  */
 const H5std_string DSET_SZIP_NAME("szipped dataset");
@@ -156,7 +140,6 @@ static void
 test_szip_filter(H5File &file1)
 {
 #ifdef H5_HAVE_FILTER_SZIP
-    int      points[DSET_DIM1][DSET_DIM2], check[DSET_DIM1][DSET_DIM2];
     unsigned szip_options_mask     = H5_SZIP_NN_OPTION_MASK;
     unsigned szip_pixels_per_block = 4;
 
@@ -165,6 +148,8 @@ test_szip_filter(H5File &file1)
 
     if (h5_szip_can_encode() == 1) {
         char *tconv_buf = new char[1000];
+        auto  points    = new int[DSET_DIM1][DSET_DIM2];
+        auto  check     = new int[DSET_DIM1][DSET_DIM2];
 
         try {
             const hsize_t size[2] = {DSET_DIM1, DSET_DIM2};
@@ -190,13 +175,15 @@ test_szip_filter(H5File &file1)
             hsize_t i, j, n;
             for (i = n = 0; i < size[0]; i++) {
                 for (j = 0; j < size[1]; j++) {
-                    points[i][j] = (int)n++;
+                    points[i][j] = static_cast<int>(n++);
                 }
             }
 
             // Write to the dataset then read back the values
-            dataset.write((void *)points, PredType::NATIVE_INT, DataSpace::ALL, DataSpace::ALL, xfer);
-            dataset.read((void *)check, PredType::NATIVE_INT, DataSpace::ALL, DataSpace::ALL, xfer);
+            dataset.write(static_cast<void *>(points), PredType::NATIVE_INT, DataSpace::ALL, DataSpace::ALL,
+                          xfer);
+            dataset.read(static_cast<void *>(check), PredType::NATIVE_INT, DataSpace::ALL, DataSpace::ALL,
+                         xfer);
 
             // Check that the values read are the same as the values written
             for (i = 0; i < size[0]; i++)
@@ -215,6 +202,8 @@ test_szip_filter(H5File &file1)
         }
 
         delete[] tconv_buf;
+        delete[] points;
+        delete[] check;
     } // if szip presents
     else {
         SKIPPED();
@@ -238,8 +227,10 @@ test_szip_filter(H5File &file1)
  */
 const H5std_string FILE1("tfilters.h5");
 extern "C" void
-test_filters()
+test_filters(void *params)
 {
+    (void)params;
+
     // Output message about test being performed
     MESSAGE(5, ("Testing Various Filters\n"));
 
@@ -270,7 +261,11 @@ test_filters()
  *-------------------------------------------------------------------------
  */
 extern "C" void
-cleanup_filters()
+cleanup_filters(void *params)
 {
-    HDremove(FILE1.c_str());
+    (void)params;
+
+    if (GetTestCleanup()) {
+        HDremove(FILE1.c_str());
+    }
 }

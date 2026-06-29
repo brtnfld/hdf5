@@ -1,11 +1,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -14,8 +13,6 @@
 /*-------------------------------------------------------------------------
  *
  * Created:             H5MFprivate.h
- *                      Jul 11 1997
- *                      Robb Matzke
  *
  * Purpose:             Private header file for file memory management.
  *
@@ -68,8 +65,8 @@ herr_t H5MF_process_deferred_frees(H5F_t *, uint64_t);
 H5_DLL herr_t H5MF_free_aggrs(H5F_t *f);
 
 /* Free space manager settling routines */
-H5_DLL herr_t H5MF_settle_raw_data_fsm(H5F_t *f, hbool_t *fsm_settled);
-H5_DLL herr_t H5MF_settle_meta_data_fsm(H5F_t *f, hbool_t *fsm_settled);
+H5_DLL herr_t H5MF_settle_raw_data_fsm(H5F_t *f, bool *fsm_settled);
+H5_DLL herr_t H5MF_settle_meta_data_fsm(H5F_t *f, bool *fsm_settled);
 
 /* This function has to be declared in H5MFprivate.h as it is needed
  * in our test code to allow us to manually start a self referential

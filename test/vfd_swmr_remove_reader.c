@@ -213,8 +213,8 @@ read_records(const char *filename, unsigned verbose, unsigned long nseconds, uns
 {
     time_t                 start_time;      /* Starting time */
     time_t                 curr_time;       /* Current time */
-    symbol_info_t **       sym_com  = NULL; /* Pointers to array of common dataset IDs */
-    symbol_info_t **       sym_rand = NULL; /* Pointers to array of random dataset IDs */
+    symbol_info_t        **sym_com  = NULL; /* Pointers to array of common dataset IDs */
+    symbol_info_t        **sym_rand = NULL; /* Pointers to array of random dataset IDs */
     hid_t                  dapl     = H5I_INVALID_HID;
     hid_t                  mem_sid  = H5I_INVALID_HID; /* Memory dataspace ID */
     hid_t                  fid      = H5I_INVALID_HID; /* SWMR test file ID */
@@ -306,10 +306,10 @@ read_records(const char *filename, unsigned verbose, unsigned long nseconds, uns
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
      * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
      * md_file_path, md_file_name, updater_file_path */
-    init_vfd_swmr_config(config, 4, 5, FALSE, FALSE, TRUE, FALSE, TRUE, 128, NULL, "rw-shadow", NULL);
+    init_vfd_swmr_config(config, 4, 5, false, false, true, false, true, 128, NULL, "rw-shadow", NULL);
 
     /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */
-    if ((fapl = vfd_swmr_create_fapl(FALSE, TRUE, FALSE, 4096, config)) < 0) {
+    if ((fapl = vfd_swmr_create_fapl(false, true, false, 4096, config)) < 0) {
         HDfprintf(stderr, "%s.%d: vfd_swmr_create_fapl failed\n", __func__, __LINE__);
         goto error;
     }

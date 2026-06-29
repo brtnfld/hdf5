@@ -1,12 +1,11 @@
 #!/usr/bin/perl 
 #
 # Copyright by The HDF Group.
-# Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
 # This file is part of HDF5.  The full HDF5 copyright notice, including
 # terms governing use, modification, and redistribution, is contained in
-# the COPYING file, which can be found at the root of the source code
+# the LICENSE file, which can be found at the root of the source code
 # distribution tree, or in https://www.hdfgroup.org/licenses.
 # If you do not have access to either file, you may request a copy from
 # help@hdfgroup.org.
@@ -391,7 +390,7 @@ sub plot_default_graph1 {
 	print GNUPLOT_PIPE  "set term x11 1\n";
 	print GNUPLOT_PIPE  "set xlabel \"Number of Processors\"\n";
 	print GNUPLOT_PIPE  "set title \"" . $data_type . " Performance (Speed vs. Num. Procs)\"\n";
-	print GNUPLOT_PIPE  "set ylabel \"Bandwdith (MB/s)\"\n";
+	print GNUPLOT_PIPE  "set ylabel \"Bandwidth (MB/s)\"\n";
 	print GNUPLOT_PIPE  "set label 1 \"Transfer buffer size: " . $transfer_buffer_size . "K\" at graph 0.7, graph 0.7 left \n";
 
 #the next line attempts to hack gnuplot to get around it's inability to linearly scale, but logarithmically label an axis
@@ -435,7 +434,7 @@ sub plot_default_graph2 {
 	print GNUPLOT_PIPE  "set term x11 2\n";
 	print GNUPLOT_PIPE  "set xlabel \"Transfer Buffer Size (in bytes)\"\n";
 	print GNUPLOT_PIPE  "set title \"" . $data_type . " Performance (Speed vs. Transfer Buffer Size)\"\n";
-	print GNUPLOT_PIPE  "set ylabel \"Bandwdith (MB/s)\"\n";
+	print GNUPLOT_PIPE  "set ylabel \"Bandwidth (MB/s)\"\n";
 	print GNUPLOT_PIPE  "set label 1 \"Procs: " . $num_procs_graph . "\" at graph 0.7, graph 0.7 left \n";
 
 #the next line attempts to hack gnuplot to get around it's inability to linearly scale, but logarithmically label an axis

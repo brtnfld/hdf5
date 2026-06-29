@@ -9,12 +9,11 @@
 ! COPYRIGHT
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 !   Copyright by The HDF Group.                                               *
-!   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
 !   This file is part of HDF5.  The full HDF5 copyright notice, including     *
 !   terms governing use, modification, and redistribution, is contained in    *
-!   the COPYING file, which can be found at the root of the source code       *
+!   the LICENSE file, which can be found at the root of the source code       *
 !   distribution tree, or in https://www.hdfgroup.org/licenses.               *
 !   If you do not have access to either file, you may request a copy from     *
 !   help@hdfgroup.org.                                                        *
@@ -110,6 +109,7 @@ CONTAINS
      CHARACTER(LEN=1024) :: cmpd_buf
      INTEGER(SIZE_T) :: cmpd_buf_size=0
      INTEGER(HID_T) :: decoded_tid1
+     INTEGER(HID_T) :: decoded_tid2
 
      INTEGER(HID_T) :: fixed_str1, fixed_str2
      LOGICAL :: are_equal
@@ -554,7 +554,10 @@ CONTAINS
      CALL H5Tencode_f(dtype_id, cmpd_buf, cmpd_buf_size, error)
      CALL check("H5Tencode_f", error, total_error)
 
-     !  Try decoding bogus buffer
+     !  Try decoding bogus buffer with and without optional buffer size
+
+     CALL H5Tdecode_f(cmpd_buf, decoded_tid1, error, cmpd_buf_size)
+     CALL verify("H5Tdecode_f", error, -1, total_error)
 
      CALL H5Tdecode_f(cmpd_buf, decoded_tid1, error)
      CALL verify("H5Tdecode_f", error, -1, total_error)
@@ -563,7 +566,7 @@ CONTAINS
      CALL check("H5Tencode_f", error, total_error)
 
      !  Decode from the compound buffer and return an object handle
-     CALL H5Tdecode_f(cmpd_buf, decoded_tid1, error)
+     CALL H5Tdecode_f(cmpd_buf, decoded_tid1, error, cmpd_buf_size)
      CALL check("H5Tdecode_f", error, total_error)
 
      !  Verify that the datatype was copied exactly
@@ -571,6 +574,15 @@ CONTAINS
      CALL H5Tequal_f(decoded_tid1, dtype_id, flag, error)
      CALL check("H5Tequal_f", error, total_error)
      CALL verify("H5Tequal_f", flag, .TRUE., total_error)
+
+     ! Decode from the compound buffer without the optional parameter
+     CALL H5Tdecode_f(cmpd_buf, decoded_tid2, error)
+     CALL check("H5Tdecode_f", error, total_error)
+
+     !  Verify that the datatype was copied exactly
+     CALL H5Tequal_f(decoded_tid2, dtype_id, flag, error)
+     CALL check("H5Tequal_f", error, total_error)
+
      !
      ! Close all open objects.
      !
@@ -820,8 +832,6 @@ CONTAINS
 
     SUBROUTINE enumtest(cleanup, total_error)
 
-    USE HDF5
-    USE TH5_MISC
     IMPLICIT NONE
 
     LOGICAL, INTENT(IN)  :: cleanup
@@ -862,7 +872,7 @@ CONTAINS
     CALL h5fcreate_f(fix_filename,H5F_ACC_TRUNC_F,file_id,error)
     CALL check("h5fcreate_f", error, total_error)
     !
-    ! Create enumeration datatype with tow values
+    ! Create enumeration datatype with two values
     !
     CALL h5tenum_create_f(H5T_NATIVE_INTEGER,dtype_id,error)
     CALL check("h5tenum_create_f", error, total_error)
@@ -871,7 +881,7 @@ CONTAINS
     CALL h5tenum_insert_f(dtype_id,false,DATA(2),error)
     CALL check("h5tenum_insert_f", error, total_error)
     !
-    ! Create write  and close a dataset with enum datatype
+    ! Create write and close a dataset with enum datatype
     !
     CALL h5screate_simple_f(1,dsize,dspace_id,error)
     CALL check("h5screate_simple_f", error, total_error)
@@ -944,18 +954,12 @@ CONTAINS
 !-------------------------------------------------------------------------
 ! * Function:    test_derived_flt
 ! *
-! * Purpose:     Tests user-define and query functions of floating-point types.
+! * Purpose:     Tests user-defined and query functions of floating-point types.
 ! *              test h5tget/set_fields_f.
 ! *
 ! * Return:      Success:        0
 ! *
 ! *              Failure:        number of errors
-! *
-! * Fortran Programmer:  M.S. Breitenfeld
-! *                      September 9, 2008
-! *
-! * Modifications:
-! *
 ! *-------------------------------------------------------------------------
 !
 

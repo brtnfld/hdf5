@@ -1,11 +1,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -42,21 +41,23 @@ typedef struct h5dump_table_list_t {
     struct {
         unsigned long fileno;      /* File number that these tables refer to */
         hid_t         oid;         /* ID of an object in this file, held open so fileno is consistent */
-        table_t *     group_table; /* Table of groups */
-        table_t *     dset_table;  /* Table of datasets */
-        table_t *     type_table;  /* Table of datatypes */
-    } * tables;
+        table_t      *group_table; /* Table of groups */
+        table_t      *dset_table;  /* Table of datasets */
+        table_t      *type_table;  /* Table of datatypes */
+    } *tables;
 } h5dump_table_list_t;
 
 extern h5dump_table_list_t table_list;
-extern table_t *           group_table, *dset_table, *type_table;
+extern table_t            *group_table, *dset_table, *type_table;
 
 extern unsigned    dump_indent; /* how far in to indent the line */
 extern int         unamedtype;  /* shared datatype with no name */
-extern hbool_t     hit_elink;   /* whether we have traversed an external link */
+extern bool        hit_elink;   /* whether we have traversed an external link */
 extern size_t      prefix_len;
-extern char *      prefix;
+extern char       *prefix;
 extern const char *fp_format;
+extern const char *fp_lformat;
+extern const char *complex_format; /* format for complex number */
 
 /* things to display or which are set via command line parameters */
 typedef struct {

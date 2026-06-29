@@ -1,26 +1,21 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/*
- * Programmer:  Robb Matzke
- *              Monday, July 26, 1999
- */
 #ifndef H5FDpublic_H
 #define H5FDpublic_H
 
-/* Public headers needed by this file */
-#include "H5public.h"  /* Generic Functions */
-#include "H5Fpublic.h" /* Files */
+#include "H5public.h"  /* Generic Functions                        */
+#include "H5Fpublic.h" /* Files                                    */
+#include "H5Ipublic.h" /* Identifiers                              */
 
 /*****************/
 /* Public Macros */
@@ -31,30 +26,23 @@
 /* VFD identifier values
  * These are H5FD_class_value_t values, NOT hid_t values!
  */
-#define H5_VFD_INVALID  ((H5FD_class_value_t)(-1))
-#define H5_VFD_SEC2     ((H5FD_class_value_t)(0))
-#define H5_VFD_CORE     ((H5FD_class_value_t)(1))
-#define H5_VFD_LOG      ((H5FD_class_value_t)(2))
-#define H5_VFD_FAMILY   ((H5FD_class_value_t)(3))
-#define H5_VFD_MULTI    ((H5FD_class_value_t)(4))
-#define H5_VFD_STDIO    ((H5FD_class_value_t)(5))
-#define H5_VFD_SPLITTER ((H5FD_class_value_t)(6))
-#ifdef H5_HAVE_PARALLEL
-#define H5_VFD_MPIO ((H5FD_class_value_t)(7))
-#endif
-#ifdef H5_HAVE_DIRECT
-#define H5_VFD_DIRECT ((H5FD_class_value_t)(8))
-#endif
-#ifdef H5_HAVE_MIRROR_VFD
-#define H5_VFD_MIRROR ((H5FD_class_value_t)(9))
-#endif
-#ifdef H5_HAVE_LIBHDFS
-#define H5_VFD_HDFS ((H5FD_class_value_t)(10))
-#endif
-#ifdef H5_HAVE_ROS3_VFD
-#define H5_VFD_ROS3 ((H5FD_class_value_t)(11))
-#endif
-#define H5_VFD_SWMR ((H5FD_class_value_t)(12))
+#define H5_VFD_INVALID   ((H5FD_class_value_t)(-1))
+#define H5_VFD_SEC2      ((H5FD_class_value_t)(0))
+#define H5_VFD_CORE      ((H5FD_class_value_t)(1))
+#define H5_VFD_LOG       ((H5FD_class_value_t)(2))
+#define H5_VFD_FAMILY    ((H5FD_class_value_t)(3))
+#define H5_VFD_MULTI     ((H5FD_class_value_t)(4))
+#define H5_VFD_STDIO     ((H5FD_class_value_t)(5))
+#define H5_VFD_SPLITTER  ((H5FD_class_value_t)(6))
+#define H5_VFD_MPIO      ((H5FD_class_value_t)(7))
+#define H5_VFD_DIRECT    ((H5FD_class_value_t)(8))
+#define H5_VFD_MIRROR    ((H5FD_class_value_t)(9))
+#define H5_VFD_HDFS      ((H5FD_class_value_t)(10))
+#define H5_VFD_ROS3      ((H5FD_class_value_t)(11))
+#define H5_VFD_SUBFILING ((H5FD_class_value_t)(12))
+#define H5_VFD_IOC       ((H5FD_class_value_t)(13))
+#define H5_VFD_ONION     ((H5FD_class_value_t)(14))
+#define H5_VFD_SWMR      ((H5FD_class_value_t)(15))
 
 /* VFD IDs below this value are reserved for library use. */
 #define H5_VFD_RESERVED 256
@@ -89,9 +77,9 @@
 /*
  * Defining H5FD_FEAT_DATA_SIEVE for a VFL driver means that
  * the library will attempt to cache raw data as it is read from/written to
- * a file in a "data seive" buffer.  See Rajeev Thakur's papers:
- *  http://www.mcs.anl.gov/~thakur/papers/romio-coll.ps.gz
- *  http://www.mcs.anl.gov/~thakur/papers/mpio-high-perf.ps.gz
+ * a file in a "data sieve" buffer.  See Rajeev Thakur's papers:
+ *  https://web.cels.anl.gov/~thakur/papers/romio-coll.pdf
+ *  https://web.cels.anl.gov/~thakur/papers/users-guide.pdf
  */
 #define H5FD_FEAT_DATA_SIEVE 0x00000008
 /*
@@ -107,11 +95,12 @@
  * from the file when it is flushed/closed, if the file is opened R/W).
  */
 #define H5FD_FEAT_IGNORE_DRVRINFO 0x00000020
-/*
+/**
  * Defining the H5FD_FEAT_DIRTY_DRVRINFO_LOAD for a VFL driver means that
  * the library will mark the driver info dirty when the file is opened
  * R/W.  This will cause the driver info to be re-encoded when the file
  * is flushed/closed.
+ * \since 1.10.0
  */
 #define H5FD_FEAT_DIRTY_DRVRINFO_LOAD 0x00000040
 /*
@@ -120,18 +109,22 @@
  * of type 'int' and is compatible with POSIX I/O calls.
  */
 #define H5FD_FEAT_POSIX_COMPAT_HANDLE 0x00000080
-/*
+
+/**
  * Defining H5FD_FEAT_HAS_MPI for a VFL driver means that
  * the driver makes use of MPI communication and code may retrieve
  * communicator/rank information from it
+ * \since 1.8.15
  */
 #define H5FD_FEAT_HAS_MPI 0x00000100
-/*
- * Defining the H5FD_FEAT_ALLOCATE_EARLY for a VFL driver will force
- * the library to use the H5D_ALLOC_TIME_EARLY on dataset create
- * instead of the default H5D_ALLOC_TIME_LATE
+
+/** Defining the H5FD_FEAT_ALLOCATE_EARLY for a VFL driver will force
+ *   the library to use the H5D_ALLOC_TIME_EARLY on dataset create
+ *   instead of the default H5D_ALLOC_TIME_LATE
+ * \since 1.8.15
  */
 #define H5FD_FEAT_ALLOCATE_EARLY 0x00000200
+
 /*
  * Defining H5FD_FEAT_ALLOW_FILE_IMAGE for a VFL driver means that
  * the driver is able to use a file image in the fapl as the initial
@@ -144,31 +137,35 @@
  * image to store in memory.
  */
 #define H5FD_FEAT_CAN_USE_FILE_IMAGE_CALLBACKS 0x00000800
-/*
+/**
  * Defining H5FD_FEAT_SUPPORTS_SWMR_IO for a VFL driver means that the
  * driver supports the single-writer/multiple-readers I/O pattern.
+ * \since 1.10.0
  */
 #define H5FD_FEAT_SUPPORTS_SWMR_IO 0x00001000
-/*
+/**
  * Defining H5FD_FEAT_USE_ALLOC_SIZE for a VFL driver
  * means that the library will just pass the allocation size to the
  * the driver's allocation callback which will eventually handle alignment.
  * This is specifically used for the multi/split driver.
+ * \since 1.10.1
  */
 #define H5FD_FEAT_USE_ALLOC_SIZE 0x00002000
-/*
+/**
  * Defining H5FD_FEAT_PAGED_AGGR for a VFL driver
  * means that the driver needs special file space mapping for paged aggregation.
  * This is specifically used for the multi/split driver.
+ * \since 1.10.1
  */
 #define H5FD_FEAT_PAGED_AGGR 0x00004000
-/*
+/**
  * Defining H5FD_FEAT_DEFAULT_VFD_COMPATIBLE for a VFL driver
  * that creates a file which is compatible with the default VFD.
  * Generally, this means that the VFD creates a single file that follows
  * the canonical HDF5 file format.
  * Regarding the Splitter VFD specifically, only drivers with this flag
  * enabled may be used as the Write-Only (W/O) channel driver.
+ * \since 1.10.2
  */
 #define H5FD_FEAT_DEFAULT_VFD_COMPATIBLE 0x00008000
 /*
@@ -181,29 +178,33 @@
 #define H5FD_FEAT_MEMMANAGE 0x00010000
 /*
  * Defining H5FD_FEAT_SUPPORTS_VFD_SWMR for a VFL driver means that the
- * driver supports the SWMR feature that is implemented in a more modular
- * fashion and simplifies maintenance.
+ * driver supports the VFD SWMR feature -- i.e. it is capable of being
+ * used as the lower driver in a VFD SWMR reader VFD stack.
  */
 #define H5FD_FEAT_SUPPORTS_VFD_SWMR 0x00020000
 
 /* ctl function definitions: */
-#define H5FD_CTL_OPC_RESERVED 512 /* Opcodes below this value are reserved for library use */
-#define H5FD_CTL_OPC_EXPER_MIN                                                                               \
-    H5FD_CTL_OPC_RESERVED /* Minimum opcode value available for experimental use                             \
-                           */
-#define H5FD_CTL_OPC_EXPER_MAX                                                                               \
-    (H5FD_CTL_OPC_RESERVED + 511) /* Maximum opcode value available for experimental use */
+
+/** Opcodes below this value are reserved for library use */
+#define H5FD_CTL_OPC_RESERVED 512
+
+/** Minimum opcode value available for experimental use */
+#define H5FD_CTL_OPC_EXPER_MIN H5FD_CTL_OPC_RESERVED
+
+/** Maximum opcode value available for experimental use */
+#define H5FD_CTL_OPC_EXPER_MAX (H5FD_CTL_OPC_RESERVED + 511)
 
 /* ctl function op codes: */
 #define H5FD_CTL_INVALID_OPCODE              0
 #define H5FD_CTL_TEST_OPCODE                 1
 #define H5FD_CTL_GET_MPI_COMMUNICATOR_OPCODE 2
+#define H5FD_CTL_GET_MPI_INFO_OPCODE         9
 #define H5FD_CTL_GET_MPI_RANK_OPCODE         3
 #define H5FD_CTL_GET_MPI_SIZE_OPCODE         4
 #define H5FD_CTL_MEM_ALLOC                   5
 #define H5FD_CTL_MEM_FREE                    6
 #define H5FD_CTL_MEM_COPY                    7
-#define H5FD_CTL_GET_TERMINAL_VFD            8
+#define H5FD_CTL_GET_MPI_FILE_SYNC_OPCODE    8
 
 /* ctl function flags: */
 
@@ -333,6 +334,7 @@ typedef struct {
     /**
      * \param[in] dest Address of the destination buffer
      * \param[in] src Address of the source buffer
+     * \param[in] size Size in bytes of the file image buffer to allocate
      * \param[in] file_image_op A value from #H5FD_file_image_op_t indicating
      *                          the operation being performed on the file image
      *                          when this callback is invoked
@@ -345,6 +347,7 @@ typedef struct {
     //! <!-- [image_memcpy_snip] -->
     /**
      * \param[in] ptr Pointer to the buffer being reallocated
+     * \param[in] size Size in bytes of the file image buffer to allocate
      * \param[in] file_image_op A value from #H5FD_file_image_op_t indicating
      *                          the operation being performed on the file image
      *                          when this callback is invoked
@@ -355,6 +358,10 @@ typedef struct {
     void *(*image_realloc)(void *ptr, size_t size, H5FD_file_image_op_t file_image_op, void *udata);
     //! <!-- [image_realloc_snip] -->
     /**
+     * \param[in] ptr Pointer to the buffer being reallocated
+     * \param[in] file_image_op A value from #H5FD_file_image_op_t indicating
+     *                          the operation being performed on the file image
+     *                          when this callback is invoked
      * \param[in] udata Value passed in in the H5Pset_file_image_callbacks
      *            parameter \p udata
      */
@@ -391,7 +398,7 @@ typedef struct {
  */
 //! <!-- [H5FD_ctl_memcpy_args_t_snip] -->
 typedef struct H5FD_ctl_memcpy_args_t {
-    void *      dstbuf;  /**< Destination buffer */
+    void       *dstbuf;  /**< Destination buffer */
     hsize_t     dst_off; /**< Offset within destination buffer */
     const void *srcbuf;  /**< Source buffer */
     hsize_t     src_off; /**< Offset within source buffer */
@@ -412,7 +419,27 @@ extern "C" {
 #endif
 
 /* Function prototypes */
-/* Allows querying a VFD ID for features before the file is opened */
+
+/**
+ * \ingroup H5VFD
+ *
+ * \brief Allows querying a VFD ID for features before the file is opened
+ *
+ * \param[in] driver_id Virtual File Driver (VFD) ID
+ * \param[out] flags VFD flags supported
+ *
+ * \return \herr_t
+ *
+ * \details Queries a virtual file driver (VFD) for feature flags. Takes a
+ *          VFD hid_t so it can be used before the file is opened. For example,
+ *          this could be used to check if a VFD supports SWMR.
+ *
+ * \note The flags obtained here are just those of the base driver and
+ *       do not take any configuration options (e.g., set via a fapl
+ *       call) into consideration.
+ *
+ * \since 1.10.2
+ */
 H5_DLL herr_t H5FDdriver_query(hid_t driver_id, unsigned long *flags /*out*/);
 
 #ifdef __cplusplus

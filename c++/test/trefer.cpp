@@ -1,11 +1,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -80,10 +79,10 @@ test_reference_params()
             *tbuf;        // temp. buffer read from disk
 
         // Allocate write & read buffers
-        int temp_size = MAX(sizeof(unsigned), sizeof(hobj_ref_t));
-        wbuf          = static_cast<hobj_ref_t *>(HDmalloc(temp_size * SPACE1_DIM1));
-        rbuf          = static_cast<hobj_ref_t *>(HDmalloc(temp_size * SPACE1_DIM1));
-        tbuf          = static_cast<hobj_ref_t *>(HDmalloc(temp_size * SPACE1_DIM1));
+        size_t temp_size = MAX(sizeof(unsigned), sizeof(hobj_ref_t));
+        wbuf             = static_cast<hobj_ref_t *>(malloc(temp_size * SPACE1_DIM1));
+        rbuf             = static_cast<hobj_ref_t *>(malloc(temp_size * SPACE1_DIM1));
+        tbuf             = static_cast<hobj_ref_t *>(malloc(temp_size * SPACE1_DIM1));
 
         // Create file FILE1
         file1 = new H5File(FILE1, H5F_ACC_TRUNC);
@@ -102,7 +101,7 @@ test_reference_params()
         DataSet dataset = group.createDataSet(DSET1_NAME, PredType::NATIVE_UINT, sid1);
 
         unsigned *tu32; // Temporary pointer to uint32 data
-        int       i;
+        unsigned  i;
         for (tu32 = reinterpret_cast<unsigned *>(wbuf), i = 0; i < SPACE1_DIM1; i++)
             *tu32++ = i * 3; // from C test
 
@@ -169,9 +168,9 @@ test_reference_params()
         // Let sid1 go out of scope
 
         // Free memory buffers
-        HDfree(wbuf);
-        HDfree(rbuf);
-        HDfree(tbuf);
+        free(wbuf);
+        free(rbuf);
+        free(tbuf);
 
         PASSED();
     } // end try
@@ -194,7 +193,6 @@ test_reference_params()
 static void
 test_reference_obj()
 {
-    int                i;                      // counting variables
     const H5std_string write_comment = "Foo!"; // Comments for group
 
     // Output message about test being performed
@@ -207,10 +205,10 @@ test_reference_obj()
             *tbuf;        // temp. buffer read from disk
 
         // Allocate write & read buffers
-        int temp_size = MAX(sizeof(unsigned), sizeof(hobj_ref_t));
-        wbuf          = static_cast<hobj_ref_t *>(HDmalloc(temp_size * SPACE1_DIM1));
-        rbuf          = static_cast<hobj_ref_t *>(HDmalloc(temp_size * SPACE1_DIM1));
-        tbuf          = static_cast<hobj_ref_t *>(HDmalloc(temp_size * SPACE1_DIM1));
+        size_t temp_size = MAX(sizeof(unsigned), sizeof(hobj_ref_t));
+        wbuf             = static_cast<hobj_ref_t *>(malloc(temp_size * SPACE1_DIM1));
+        rbuf             = static_cast<hobj_ref_t *>(malloc(temp_size * SPACE1_DIM1));
+        tbuf             = static_cast<hobj_ref_t *>(malloc(temp_size * SPACE1_DIM1));
 
         // Create file FILE1
         file1 = new H5File(FILE1, H5F_ACC_TRUNC);
@@ -232,6 +230,7 @@ test_reference_obj()
         DataSet dataset = group.createDataSet(DSET1_NAME, PredType::NATIVE_UINT, sid1);
 
         unsigned *tu32; // Temporary pointer to uint32 data
+        unsigned  i;
         for (tu32 = reinterpret_cast<unsigned *>(wbuf), i = 0; i < SPACE1_DIM1; i++)
             *tu32++ = i * 3; // from C test
 
@@ -369,9 +368,9 @@ test_reference_obj()
         file1->close();
 
         // Free allocated buffers
-        HDfree(wbuf);
-        HDfree(rbuf);
-        HDfree(tbuf);
+        free(wbuf);
+        free(rbuf);
+        free(tbuf);
 
         PASSED();
     } // end try
@@ -449,7 +448,7 @@ test_reference_group()
         file1->close();
 
         /*
-         * Re-open the file and test deferencing group
+         * Re-open the file and test dereferencing group
          */
 
         // Re-open file
@@ -489,14 +488,14 @@ test_reference_group()
 
         // Check object type using Group::getObjinfo()
         H5O_info2_t oinfo;
-        HDmemset(&oinfo, 0, sizeof(oinfo));
+        memset(&oinfo, 0, sizeof(oinfo));
         group.getObjinfo(".", H5_INDEX_NAME, H5_ITER_INC, 0, oinfo);
         verify_val(static_cast<long>(oinfo.type), static_cast<long>(H5O_TYPE_DATASET), "Group::getObjinfo",
                    __LINE__, __FILE__);
 
         // Check for out of bound query by index
         try {
-            HDmemset(&oinfo, 0, sizeof(oinfo));
+            memset(&oinfo, 0, sizeof(oinfo));
             group.getObjinfo(".", H5_INDEX_NAME, H5_ITER_INC, 9, oinfo);
 
             // Should FAIL but didn't, so throw an invalid action exception
@@ -556,10 +555,10 @@ test_reference_region_1D()
             *drbuf;            // Buffer for reading numeric data from disk
 
         // Allocate write & read buffers
-        wbuf  = static_cast<hdset_reg_ref_t *>(HDcalloc(sizeof(hdset_reg_ref_t), SPACE1_DIM1));
-        rbuf  = static_cast<hdset_reg_ref_t *>(HDmalloc(sizeof(hdset_reg_ref_t) * SPACE1_DIM1));
-        dwbuf = static_cast<uint8_t *>(HDmalloc(sizeof(uint8_t) * SPACE3_DIM1));
-        drbuf = static_cast<uint8_t *>(HDcalloc(sizeof(uint8_t), SPACE3_DIM1));
+        wbuf  = static_cast<hdset_reg_ref_t *>(calloc(SPACE1_DIM1, sizeof(hdset_reg_ref_t)));
+        rbuf  = static_cast<hdset_reg_ref_t *>(calloc(SPACE1_DIM1, sizeof(hdset_reg_ref_t)));
+        dwbuf = static_cast<uint8_t *>(calloc(SPACE3_DIM1, sizeof(uint8_t)));
+        drbuf = static_cast<uint8_t *>(calloc(SPACE3_DIM1, sizeof(uint8_t)));
 
         // Create file FILE1
         H5File file1(FILE2, H5F_ACC_TRUNC);
@@ -714,7 +713,8 @@ test_reference_region_1D()
         verify_val(static_cast<long>(nelms), 15, "DataSpace::getSelectNpoints", __LINE__, __FILE__);
 
         /* Allocate space for the hyperslab blocks */
-        coords = static_cast<hsize_t *>(HDmalloc(nelms * SPACE3_RANK * sizeof(hsize_t) * 2));
+        coords =
+            static_cast<hsize_t *>(malloc(static_cast<size_t>(nelms) * SPACE3_RANK * sizeof(hsize_t) * 2));
 
         // Get the list of hyperslab blocks currently selected
         reg_sp.getSelectHyperBlocklist(0, static_cast<hsize_t>(nelms), coords);
@@ -751,7 +751,7 @@ test_reference_region_1D()
         verify_val(static_cast<long>(coords[28]), 72, "Hyperslab Coordinates", __LINE__, __FILE__);
         verify_val(static_cast<long>(coords[29]), 73, "Hyperslab Coordinates", __LINE__, __FILE__);
 
-        HDfree(coords);
+        free(coords);
 
         // Check boundaries
         reg_sp.getSelectBounds(low, high);
@@ -773,7 +773,8 @@ test_reference_region_1D()
         verify_val(static_cast<long>(nelmspts), 10, "DataSpace::getSelectNpoints", __LINE__, __FILE__);
 
         /* Allocate space for the hyperslab blocks */
-        coords = static_cast<hsize_t *>(HDmalloc(nelmspts * SPACE3_RANK * sizeof(hsize_t)));
+        coords =
+            static_cast<hsize_t *>(malloc(static_cast<size_t>(nelmspts) * SPACE3_RANK * sizeof(hsize_t)));
 
         // Get the list of element points currently selected
         elm_sp.getSelectElemPointlist(0, static_cast<hsize_t>(nelmspts), coords);
@@ -790,7 +791,7 @@ test_reference_region_1D()
         verify_val(coords[8], coord1[8][0], "Element Coordinates", __LINE__, __FILE__);
         verify_val(coords[9], coord1[9][0], "Element Coordinates", __LINE__, __FILE__);
 
-        HDfree(coords);
+        free(coords);
 
         // Check boundaries
         elm_sp.getSelectBounds(low, high);
@@ -807,10 +808,10 @@ test_reference_region_1D()
         file1.close();
 
         // Free memory buffers
-        HDfree(wbuf);
-        HDfree(rbuf);
-        HDfree(dwbuf);
-        HDfree(drbuf);
+        free(wbuf);
+        free(rbuf);
+        free(dwbuf);
+        free(drbuf);
 
         PASSED();
     } // end try
@@ -826,8 +827,10 @@ test_reference_region_1D()
  *-------------------------------------------------------------------------
  */
 extern "C" void
-test_reference()
+test_reference(void *params)
 {
+    (void)params;
+
     // Output message about test being performed
     MESSAGE(5, ("Testing References\n"));
 
@@ -847,8 +850,12 @@ test_reference()
  *-------------------------------------------------------------------------
  */
 extern "C" void
-cleanup_reference()
+cleanup_reference(void *params)
 {
-    HDremove(FILE1.c_str());
-    HDremove(FILE2.c_str());
+    (void)params;
+
+    if (GetTestCleanup()) {
+        HDremove(FILE1.c_str());
+        HDremove(FILE2.c_str());
+    }
 }

@@ -1,12 +1,11 @@
 // C++ informative line for the emacs editor: -*- C++ -*-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -22,7 +21,7 @@ namespace H5 {
     wrappers for the HDF5 link access property list.
 */
 // Inheritance: PropList -> IdComponent
-class H5_DLLCPP LinkAccPropList : public PropList {
+class H5CPP_DLL LinkAccPropList : public PropList {
   public:
     ///\brief Default link access property list.
     static const LinkAccPropList &DEFAULT;
@@ -52,7 +51,7 @@ class H5_DLLCPP LinkAccPropList : public PropList {
     size_t getNumLinks() const;
 
     // Noop destructor
-    virtual ~LinkAccPropList() override;
+    virtual ~LinkAccPropList() override = default;
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 

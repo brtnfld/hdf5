@@ -1,5 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by Akadio, Inc.                                                 *
+ * Copyright by The HDF Group.                                               *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
@@ -23,7 +23,7 @@
 #define _H5MVprivate_H
 
 /* Private headers needed by this file */
-#include "H5Fprivate.h" /* File access				*/
+#include "H5Fprivate.h" /* File access */
 
 /**************************/
 /* Library Private Macros */
@@ -42,7 +42,6 @@
 /***************************************/
 
 /* File space manager routines */
-
 H5_DLL herr_t H5MV_close(H5F_t *f);
 
 /* File space allocation routines */
@@ -50,5 +49,6 @@ H5_DLL haddr_t H5MV_alloc(H5F_t *f, hsize_t size);
 H5_DLL herr_t  H5MV_free(H5F_t *f, haddr_t addr, hsize_t size);
 H5_DLL herr_t  H5MV_try_extend(H5F_t *f, haddr_t addr, hsize_t size, hsize_t extra_requested);
 H5_DLL htri_t  H5MV_try_shrink(H5F_t *f, haddr_t addr, hsize_t size);
+H5_DLL haddr_t H5MV_get_vfd_swmr_md_eoa(const H5F_shared_t *shared);
 
 #endif /* end _H5MVprivate_H */

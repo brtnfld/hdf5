@@ -33,28 +33,25 @@ typedef struct _shared_ticks {
     uint64_t reader_tick;
 } shared_ticks_t;
 
-
 /* Need to remove and replace named pipe variables when using socket code. */
 #ifndef H5_USE_SOCKETS
 
-int                           fd_writer_to_reader = -1, fd_reader_to_writer = -1;
-const char *                  fifo_writer_to_reader = "./fifo_writer_to_reader";
-const char *                  fifo_reader_to_writer = "./fifo_reader_to_writer";
+int         fd_writer_to_reader = -1, fd_reader_to_writer = -1;
+const char *fifo_writer_to_reader = "./fifo_writer_to_reader";
+const char *fifo_reader_to_writer = "./fifo_reader_to_writer";
 
 #endif /* !H5_USE_SOCKETS */
 
-hbool_t                       use_communication     = TRUE;
-hbool_t                       use_vfd_swmr          = TRUE;
-hbool_t                       print_estack          = FALSE;
-static H5F_vfd_swmr_config_t *swmr_config           = NULL;
+hbool_t                       use_communication = true;
+hbool_t                       use_vfd_swmr      = true;
+hbool_t                       print_estack      = false;
+static H5F_vfd_swmr_config_t *swmr_config       = NULL;
 static hbool_t                writer;
 struct timespec ival = {MAX_READ_LEN_IN_SECONDS, 0}; /* Expected maximal time for reader's validation */
 
-
-
 zoo_config_t config = {.proc_num        = 0,
-                       .skip_compact    = FALSE,
-                       .skip_varlen     = TRUE,
+                       .skip_compact    = false,
+                       .skip_varlen     = true,
                        .max_pause_msecs = 0,
                        .msgival         = {.tv_sec = 0, .tv_nsec = 0}};
 
@@ -94,7 +91,8 @@ usage(const char *progname)
     HDfprintf(stderr, "  -a: run all tests, including variable-length data\n");
     HDfprintf(stderr, "  -e: print error stacks\n");
 #ifdef H5_USE_SOCKETS
-    HDfprintf(stderr, "  -i --ip_addr ip_address: IP address that the reader can use to connect to the writer\n");
+    HDfprintf(stderr,
+              "  -i --ip_addr ip_address: IP address that the reader can use to connect to the writer\n");
 #endif
     HDfprintf(stderr, "  -l tick_num: expected maximal number of ticks from \n");
     HDfprintf(stderr,
@@ -112,26 +110,23 @@ parse_command_line_options(socket_state_t *sock, int argc, char **argv)
 {
     int                    opt;
     unsigned long          tmpl;
-    char *                 end;
-    const char *           s_opts   = "CSaei:l:Nqv";
-    struct h5_long_options l_opts[] = {
-        {"ip_addr", require_arg, 'i'},
-        {NULL, 0, '\0'}
-    };
+    char                  *end;
+    const char            *s_opts   = "CSaei:l:Nqv";
+    struct h5_long_options l_opts[] = {{"ip_addr", require_arg, 'i'}, {NULL, 0, '\0'}};
 
     while ((opt = H5_get_option(argc, (const char *const *)argv, s_opts, l_opts)) != EOF) {
         switch (opt) {
             case 'C':
-                config.skip_compact = TRUE;
+                config.skip_compact = true;
                 break;
             case 'S':
-                use_vfd_swmr = FALSE;
+                use_vfd_swmr = false;
                 break;
             case 'a':
-                config.skip_varlen = FALSE;
+                config.skip_varlen = false;
                 break;
             case 'e':
-                print_estack = TRUE;
+                print_estack = true;
                 break;
             case 'i':
                 if (HDstrlen(H5_optarg) >= MAX_IP_ADDR_LEN) {
@@ -172,7 +167,7 @@ parse_command_line_options(socket_state_t *sock, int argc, char **argv)
                 break;
             case 'N':
                 /* Disable communication, mainly for running the writer and reader separately */
-                use_communication = FALSE;
+                use_communication = false;
                 break;
             case 'q':
                 verbosity = 1;
@@ -200,7 +195,6 @@ parse_command_line_options(socket_state_t *sock, int argc, char **argv)
 error:
     return -1;
 }
-
 
 /* Notify the reader of finishing zoo creation by sending the timestamp
  * and wait for the reader to finish validation before proceeding */
@@ -377,19 +371,18 @@ error:
     return -1;
 }
 
-
 int
 main(int argc, char **argv)
 {
     hid_t                  fapl = H5I_INVALID_HID, fcpl = H5I_INVALID_HID, fid = H5I_INVALID_HID;
-    H5F_t *                f;
-    H5C_t *                cache;
+    H5F_t                 *f;
+    H5C_t                 *cache;
     struct timespec        lastmsgtime = {.tv_sec = 0, .tv_nsec = 0};
-    char *                 progname    = NULL;
-    char *                 personality;
+    char                  *progname    = NULL;
+    char                  *personality;
     estack_state_t         es;
     H5F_vfd_swmr_config_t *vfd_swmr_config = NULL;
-    socket_state_t *       sock            = NULL;
+    socket_state_t        *sock            = NULL;
 
     if (NULL == (vfd_swmr_config = HDcalloc(1, sizeof(H5F_vfd_swmr_config_t)))) {
         H5_FAILED();
@@ -430,9 +423,9 @@ main(int argc, char **argv)
     personality = HDstrstr(progname, "vfd_swmr_zoo_");
 
     if (personality != NULL && HDstrcmp(personality, "vfd_swmr_zoo_writer") == 0)
-        writer = TRUE;
+        writer = true;
     else if (personality != NULL && HDstrcmp(personality, "vfd_swmr_zoo_reader") == 0)
-        writer = FALSE;
+        writer = false;
     else {
         H5_FAILED();
         AT();
@@ -445,12 +438,12 @@ main(int argc, char **argv)
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
      * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
      * md_file_path, md_file_name, updater_file_path */
-    init_vfd_swmr_config(vfd_swmr_config, TICK_LEN, 7, FALSE, writer, TRUE, FALSE, TRUE, 128, "./",
+    init_vfd_swmr_config(vfd_swmr_config, TICK_LEN, 7, false, writer, true, false, true, 128, "./",
                          "zoo-shadow", NULL);
 
     /* ? turn off use latest format argument via 1st argument? since later on it reset to early format */
     /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */
-    if ((fapl = vfd_swmr_create_fapl(TRUE, use_vfd_swmr, TRUE, 4096, vfd_swmr_config)) < 0) {
+    if ((fapl = vfd_swmr_create_fapl(true, use_vfd_swmr, true, 4096, vfd_swmr_config)) < 0) {
         H5_FAILED();
         AT();
         HDprintf("vfd_swmr_create_fapl");
@@ -658,30 +651,30 @@ error:
     return EXIT_FAILURE;
 }
 
-#else /* H5_USE_SOCKETS */
+#else  /* H5_USE_SOCKETS */
 /* Private function to help parsing command-line options */
 static int
 parse_command_line_options(int argc, char **argv)
 {
     int                    opt;
     unsigned long          tmpl;
-    char *                 end;
-    const char *           s_opts   = "CSael:Nqv";
+    char                  *end;
+    const char            *s_opts   = "CSael:Nqv";
     struct h5_long_options l_opts[] = {{NULL, 0, '\0'}};
 
     while ((opt = H5_get_option(argc, (const char *const *)argv, s_opts, l_opts)) != EOF) {
         switch (opt) {
             case 'C':
-                config.skip_compact = TRUE;
+                config.skip_compact = true;
                 break;
             case 'S':
-                use_vfd_swmr = FALSE;
+                use_vfd_swmr = false;
                 break;
             case 'a':
-                config.skip_varlen = FALSE;
+                config.skip_varlen = false;
                 break;
             case 'e':
-                print_estack = TRUE;
+                print_estack = true;
                 break;
             case 'l':
                 /* Expected maximal number of ticks from the writer's finishing zoo creation or deletion
@@ -715,7 +708,7 @@ parse_command_line_options(int argc, char **argv)
                 break;
             case 'N':
                 /* Disable named pipes, mainly for running the writer and reader separately */
-                use_communication = FALSE;
+                use_communication = false;
                 break;
             case 'q':
                 verbosity = 1;
@@ -1011,11 +1004,11 @@ int
 main(int argc, char **argv)
 {
     hid_t                  fapl = H5I_INVALID_HID, fcpl = H5I_INVALID_HID, fid = H5I_INVALID_HID;
-    H5F_t *                f;
-    H5C_t *                cache;
+    H5F_t                 *f;
+    H5C_t                 *cache;
     struct timespec        lastmsgtime = {.tv_sec = 0, .tv_nsec = 0};
-    char *                 progname    = NULL;
-    char *                 personality;
+    char                  *progname    = NULL;
+    char                  *personality;
     estack_state_t         es;
     H5F_vfd_swmr_config_t *vfd_swmr_config = NULL;
     int                    notify = 0, verify = 0;
@@ -1044,9 +1037,9 @@ main(int argc, char **argv)
     personality = HDstrstr(progname, "vfd_swmr_zoo_");
 
     if (personality != NULL && HDstrcmp(personality, "vfd_swmr_zoo_writer") == 0)
-        writer = TRUE;
+        writer = true;
     else if (personality != NULL && HDstrcmp(personality, "vfd_swmr_zoo_reader") == 0)
-        writer = FALSE;
+        writer = false;
     else {
         H5_FAILED();
         AT();
@@ -1059,12 +1052,12 @@ main(int argc, char **argv)
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
      * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
      * md_file_path, md_file_name, updater_file_path */
-    init_vfd_swmr_config(vfd_swmr_config, TICK_LEN, 7, FALSE, writer, TRUE, FALSE, TRUE, 128, "./",
+    init_vfd_swmr_config(vfd_swmr_config, TICK_LEN, 7, false, writer, true, false, true, 128, "./",
                          "zoo-shadow", NULL);
 
     /* ? turn off use latest format argument via 1st argument? since later on it reset to early format */
     /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */
-    if ((fapl = vfd_swmr_create_fapl(TRUE, use_vfd_swmr, TRUE, 4096, vfd_swmr_config)) < 0) {
+    if ((fapl = vfd_swmr_create_fapl(true, use_vfd_swmr, true, 4096, vfd_swmr_config)) < 0) {
         H5_FAILED();
         AT();
         HDprintf("vfd_swmr_create_fapl");

@@ -1,42 +1,48 @@
 # Lines starting with '#' are comments.
 # Each line is a file pattern followed by one or more owners.
+# Last matching pattern takes the most precedence.
 
-# These owners will be the default owners for everything in the repo.
-*       @lrknox
+# Global fallback — fires only for files not covered by a more specific rule
+# below. Keep this list small; add specific path rules instead of expanding it.
+* @jhendersonHDF
 
-# Order is important. The last matching pattern has the most precedence.
-# So if a pull request only touches javascript files, only these owners
-# will be requested to review.
-*.cmake           @byrnHDF @ChristopherHogan @gnuoyd @derobins
-CMakeLists.txt    @byrnHDF @ChristopherHogan @gnuoyd @derobins
-CMakeTests.*      @byrnHDF @ChristopherHogan @gnuoyd @derobins
+# ── Language bindings ─────────────────────────────────────────────────────────
+/fortran/             @brtnfld @bmribler
+/java/                @jhendersonHDF @mattjala
+/c++/                 @bmribler @glennsong09
 
-/bin/             @lrknox @ChristopherHogan @gnuoyd @derobins @qkoziol
+# ── Core C library ────────────────────────────────────────────────────────────
+/src/                 @fortnern @jhendersonHDF @mattjala @vchoi-hdfgroup @glennsong09
+/src/H5FDsubfiling/   @jhendersonHDF @brtnfld @fortnern
+/utils/               @brtnfld @mattjala @jhendersonHDF @bmribler
 
-/c++/             @bmribler @byrnHDF @ChristopherHogan @gnuoyd @derobins
+# ── Tests ─────────────────────────────────────────────────────────────────────
+/test/                @fortnern @jhendersonHDF @mattjala @vchoi-hdfgroup @glennsong09
+/testpar/             @jhendersonHDF @fortnern @mattjala @brtnfld
 
-/config/          @lrknox @byrnHDF @ChristopherHogan @gnuoyd @derobins @qkoziol
+# ── High-level API ────────────────────────────────────────────────────────────
+/hl/                  @brtnfld @mattjala
 
-/doc/             @ChristopherHogan @gnuoyd @jrmainzer
+# ── Tools ─────────────────────────────────────────────────────────────────────
+/tools/               @jhendersonHDF @mattjala @bmribler
 
-/examples/        @lrknox @bmribler @ChristopherHogan @gnuoyd @derobins
+# ── Examples ──────────────────────────────────────────────────────────────────
+/HDF5Examples/        @brtnfld @jhendersonHDF @mattjala @vchoi-hdfgroup @glennsong09
 
-/fortran/         @brtnfld @epourmal
+# ── Build system ──────────────────────────────────────────────────────────────
+/CMakeLists.txt       @jhendersonHDF @mattjala @lrknox
+/CMakePresets.json    @jhendersonHDF @mattjala @lrknox
+*.cmake               @jhendersonHDF @mattjala @lrknox
+/config/              @jhendersonHDF @mattjala @lrknox
 
-/hl/              @bmribler @byrnHDF @ChristopherHogan @gnuoyd @derobins
+# ── Documentation ─────────────────────────────────────────────────────────────
+/docs/                @brtnfld @gheber @vchoi-hdfgroup @glennsong09 @lrknox
+/docs/INSTALL*        @lrknox @hyoklee
+/release_docs/        @lrknox @hyoklee @glennsong09
 
-/java/            @jhendersonHDF @byrnHDF
+# ── CI / GitHub Actions ───────────────────────────────────────────────────────
+/.github/             @hyoklee @lrknox @jhendersonHDF @glennsong09
 
-/m4/              @lrknox @ChristopherHogan @gnuoyd @derobins
+# The HDF Group website verification — must stay in sync with hdfgroup.org
+/.github/.well-known  @lkurz @lrknox
 
-/release_docs/    @lrknox @bmribler @byrnHDF
-
-/src/             @jhendersonHDF @fortnern @soumagne @vchoi-hdfgroup @ChristopherHogan @gnuoyd @derobins @jrmainzer @qkoziol
-
-/test/            @jhendersonHDF @fortnern @soumagne @vchoi-hdfgroup @ChristopherHogan @gnuoyd @derobins @jrmainzer @qkoziol
-
-/testpar/         @jhendersonHDF @ChristopherHogan @gnuoyd @jrmainzer @qkoziol
-
-/tools/           @byrnHDF @bmribler @ChristopherHogan @gnuoyd @derobins
-
-/utils/           @lrknox @byrnHDF @ChristopherHogan @gnuoyd @derobins

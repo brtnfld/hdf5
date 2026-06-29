@@ -135,7 +135,7 @@ usage(const char *progname)
         "                                       attribute deleted, in compact \n"
         "              `dense-del`            - Attributes added until the storage\n"
         "                                       is dense then an attribute deleted\n"
-        "                                       the storge still in dense\n"
+        "                                       the storage still in dense\n"
         "              `compact-add-to-dense` - Attributes added first in compact\n"
         "                                       then in dense storage\n"
         "              `dense-del-to-compact` - Attributes added until the storage\n"
@@ -194,24 +194,24 @@ state_init(state_t *s, int argc, char **argv)
     unsigned long tmp;
     int           ch;
     const hsize_t dims  = 1;
-    char *        tfile = NULL;
-    char *        end;
+    char         *tfile = NULL;
+    char         *end;
 
     s->file           = H5I_INVALID_HID;
     s->one_by_one_sid = H5I_INVALID_HID;
     s->filetype       = H5T_NATIVE_UINT32;
     s->asteps         = 1;
     s->nsteps         = 100;
-    s->use_vfd_swmr   = TRUE;
-    s->old_style_grp  = FALSE;
+    s->use_vfd_swmr   = true;
+    s->old_style_grp  = false;
     s->grp_op_pattern = ' ';
-    s->grp_op_test    = FALSE;
+    s->grp_op_test    = false;
     s->at_pattern     = ' ';
-    s->attr_test      = FALSE;
+    s->attr_test      = false;
     s->tick_len       = 4;
     s->max_lag        = 7;
-    s->gperf          = FALSE;
-    s->glog           = FALSE;
+    s->gperf          = false;
+    s->glog           = false;
     s->min_gc_time    = 100;
     s->max_gc_time    = 100;
     s->mean_gc_time   = 0.0;
@@ -221,7 +221,7 @@ state_init(state_t *s, int argc, char **argv)
     s->fo_total_time  = 0.0;
     s->fc_total_time  = 0.0;
     s->num_attrs      = 1;
-    s->vlstr_test     = FALSE;
+    s->vlstr_test     = false;
     s->ps             = 4096;
     s->pbs            = 4096;
     s->nglevels       = 0;
@@ -413,11 +413,11 @@ error:
  *
  *              bool one_chunk_ohr
  *              flag to indicate if the object header chunk is 1 or greater
- *              1: TRUE
- *              greater than 1: FALSE
+ *              1: true
+ *              greater than 1: false
  *
- * Return:      Success:    TRUE
- *              Failure:    FALSE
+ * Return:      Success:    true
+ *              Failure:    false
  *
  *-------------------------------------------------------------------------
  */
@@ -2794,8 +2794,8 @@ main(int argc, char **argv)
     hid_t                  fapl = H5I_INVALID_HID, fcpl = H5I_INVALID_HID;
     unsigned               step;
     bool                   writer = false;
-    state_t *              s      = NULL;
-    const char *           personality;
+    state_t               *s      = NULL;
+    const char            *personality;
     H5F_vfd_swmr_config_t *config = NULL;
     bool                   wg_ret = false;
     struct timespec        start_time, end_time;
@@ -2834,7 +2834,7 @@ main(int argc, char **argv)
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
      * maintain_metadata_file, generate_updater_files, flush_raw_data, md_pages_reserved,
      * md_file_path, md_file_name, updater_file_path */
-    init_vfd_swmr_config(config, s->tick_len, s->max_lag, FALSE, writer, TRUE, FALSE, FALSE, 128, "./",
+    init_vfd_swmr_config(config, s->tick_len, s->max_lag, false, writer, true, false, false, 128, "./",
                          "group-shadow", NULL);
 
     /* If the log flag is on, create the log file log-test under the current directory. */

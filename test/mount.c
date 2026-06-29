@@ -1,34 +1,31 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:  Robb Matzke
- *              Wednesday, October  7, 1998
- *
  * Purpose:	Tests file mounting.
  */
 #include "h5test.h"
 #include "H5Fprivate.h" /* File access				*/
 #include "H5Iprivate.h" /* IDs			  		*/
 
-const char *FILENAME[] = {"mount_1", "mount_2", "mount_3", "mount_4", "mount_5", "mount_6", "mount_7", NULL};
+static const char *FILENAME[] = {"mount_1", "mount_2", "mount_3", "mount_4",
+                                 "mount_5", "mount_6", "mount_7", NULL};
 
 /* For "mount_after_close" test */
 #define RANK          2
 #define NX            4
 #define NY            5
 #define NAME_BUF_SIZE 40
-int bm[NX][NY], bm_out[NX][NY]; /* Data buffers */
+static int bm[NX][NY]; /* Data buffers */
 
 /*-------------------------------------------------------------------------
  * Function:	setup
@@ -39,17 +36,12 @@ int bm[NX][NY], bm_out[NX][NY]; /* Data buffers */
  *
  *		Failure:	-1
  *
- * Programmer:	Robb Matzke
- *              Wednesday, October  7, 1998
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 setup(hid_t fapl)
 {
-    hid_t file = -1;
+    hid_t file = H5I_INVALID_HID;
     char  filename[1024];
 
     /* file 1 */
@@ -100,7 +92,7 @@ error:
     {
         H5Fclose(file);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return -1;
 } /* end setup() */
 
@@ -114,17 +106,12 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Robb Matzke
- *              Wednesday, October  7, 1998
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_basic(hid_t fapl)
 {
-    hid_t file1 = -1, file2 = -1, grp = -1;
+    hid_t file1 = H5I_INVALID_HID, file2 = H5I_INVALID_HID, grp = H5I_INVALID_HID;
     char  filename1[1024], filename2[1024];
 
     TESTING("basic functionality");
@@ -156,7 +143,7 @@ error:
         H5Fclose(file1);
         H5Fclose(file2);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_basic() */
 
@@ -170,17 +157,14 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Robb Matzke
- *              Wednesday, October  7, 1998
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_illegal(hid_t fapl)
 {
-    hid_t  file1 = -1, file1b = -1, file2 = -1, file3 = -1, file3b = -1, mnt = -1;
+    hid_t file1 = H5I_INVALID_HID, file1b = H5I_INVALID_HID, file2 = H5I_INVALID_HID, file3 = H5I_INVALID_HID,
+          file3b = H5I_INVALID_HID, mnt = H5I_INVALID_HID;
+    hid_t  dtype = H5I_INVALID_HID; /* To test invalid ID */
     char   filename1[1024], filename2[1024], filename3[1024];
     herr_t status;
 
@@ -204,10 +188,10 @@ test_illegal(hid_t fapl)
     {
         status = H5Fmount(file1, "/mnt1", file1, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (status >= 0) {
         H5_FAILED();
-        HDputs("    Mounting a file on itself should have failed.");
+        puts("    Mounting a file on itself should have failed.");
         TEST_ERROR;
     } /* end if */
 
@@ -224,10 +208,10 @@ test_illegal(hid_t fapl)
     {
         status = H5Fmount(mnt, ".", file3, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (status >= 0) {
         H5_FAILED();
-        HDputs("    Mounting two files at one mount point should have failed.");
+        puts("    Mounting two files at one mount point should have failed.");
         TEST_ERROR;
     } /* end if */
     if (H5Funmount(mnt, ".") < 0)
@@ -249,10 +233,10 @@ test_illegal(hid_t fapl)
     {
         status = H5Fmount(mnt, ".", file3b, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (status >= 0) {
         H5_FAILED();
-        HDputs("    Mounting same file opened twice at one mount point should have failed.");
+        puts("    Mounting same file opened twice at one mount point should have failed.");
         TEST_ERROR;
     } /* end if */
     if (H5Funmount(mnt, ".") < 0)
@@ -267,14 +251,38 @@ test_illegal(hid_t fapl)
     {
         status = H5Fmount(file2, "/mnt1/file2", file1b, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (status >= 0) {
         H5_FAILED();
-        HDputs("    Creating a cycle with mount points should have failed.");
+        puts("    Creating a cycle with mount points should have failed.");
         TEST_ERROR;
     } /* end if */
     if (H5Funmount(file1, "/mnt1") < 0)
         FAIL_STACK_ERROR;
+
+    /* Try passing in IDs that are not a file or group ID */
+    if ((dtype = H5Tcopy(H5T_C_S1)) < 0)
+        FAIL_STACK_ERROR;
+    H5E_BEGIN_TRY
+    {
+        status = H5Fmount(dtype, "/mnt1", file1b, H5P_DEFAULT);
+    }
+    H5E_END_TRY
+    if (status >= 0) {
+        H5_FAILED();
+        puts("    Passing in an ID other than file or group ID should have failed.");
+        TEST_ERROR;
+    } /* end if */
+    H5E_BEGIN_TRY
+    {
+        status = H5Funmount(dtype, "/mnt1");
+    }
+    H5E_END_TRY
+    if (status >= 0) {
+        H5_FAILED();
+        puts("    Passing in an ID other than file or group ID should have failed.");
+        TEST_ERROR;
+    } /* end if */
 
     /* Close everything and return */
     if (H5Fclose(file1) < 0)
@@ -301,7 +309,7 @@ error:
         H5Fclose(file3);
         H5Fclose(file3b);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_illegal() */
 
@@ -314,16 +322,14 @@ error:
  * Return:	Success:	0
  *		Failure:	number of errors
  *
- * Programmer:	Quincey Koziol
- *              Tuesday, July 15, 2008
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_samefile(hid_t fapl)
 {
-    hid_t      file1a = -1, file1b = -1, file2 = -1, file3 = -1;
-    hid_t      mnt1a = -1, mnt1b = -1;
+    hid_t file1a = H5I_INVALID_HID, file1b = H5I_INVALID_HID, file2 = H5I_INVALID_HID,
+          file3      = H5I_INVALID_HID;
+    hid_t      mnt1a = H5I_INVALID_HID, mnt1b = H5I_INVALID_HID;
     char       filename1[1024], filename2[1024], filename3[1024];
     H5G_info_t grp_info;
     herr_t     status;
@@ -372,7 +378,7 @@ test_samefile(hid_t fapl)
     {
         status = H5Fmount(mnt1b, ".", file3, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (status >= 0)
         FAIL_PUTS_ERROR("    Mounting different files at one mount point should have failed.");
     if (H5Funmount(mnt1a, ".") < 0)
@@ -411,7 +417,7 @@ test_samefile(hid_t fapl)
     {
         status = H5Fmount(mnt1b, ".", file2, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (status >= 0)
         FAIL_PUTS_ERROR("    Mounting same files at one mount point should have failed.");
     if (H5Funmount(mnt1a, ".") < 0)
@@ -444,7 +450,7 @@ error:
         H5Fclose(file2);
         H5Fclose(file3);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_samefile() */
 
@@ -459,20 +465,15 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Robb Matzke
- *              Wednesday, October  7, 1998
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_hide(hid_t fapl)
 {
-    hid_t       file1 = -1, file2 = -1, grp = -1;
+    hid_t       file1 = H5I_INVALID_HID, file2 = H5I_INVALID_HID, grp = H5I_INVALID_HID;
     H5O_info2_t oi1, oi2;
     char        filename1[1024], filename2[1024];
-    hbool_t     same_obj;
+    bool        same_obj;
 
     TESTING("name hiding under mount point");
     h5_fixname(FILENAME[0], fapl, filename1, sizeof(filename1));
@@ -495,10 +496,10 @@ test_hide(hid_t fapl)
     {
         grp = H5Gopen2(file1, "/mnt1/file1", H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (grp >= 0) {
         H5_FAILED();
-        HDputs("    Name is still accessible under mount point.");
+        puts("    Name is still accessible under mount point.");
         TEST_ERROR;
     }
 
@@ -509,21 +510,21 @@ test_hide(hid_t fapl)
     if (H5Oget_info_by_name3(file1, "/file1", &oi2, H5O_INFO_BASIC, H5P_DEFAULT) < 0)
         FAIL_STACK_ERROR;
 
-    same_obj = TRUE;
+    same_obj = true;
     if (oi1.fileno == oi2.fileno) {
         int token_cmp;
 
         if (H5Otoken_cmp(file1, &oi1.token, &oi2.token, &token_cmp) < 0)
             FAIL_STACK_ERROR;
         if (token_cmp)
-            same_obj = FALSE;
+            same_obj = false;
     }
     else
-        same_obj = FALSE;
+        same_obj = false;
 
     if (!same_obj) {
         H5_FAILED();
-        HDputs("    Hard link failed for hidden object.");
+        puts("    Hard link failed for hidden object.");
         TEST_ERROR;
     }
 
@@ -545,7 +546,7 @@ error:
         H5Fclose(file1);
         H5Fclose(file2);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_hide() */
 
@@ -559,20 +560,15 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Robb Matzke
- *              Tuesday, October 13, 1998
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_assoc(hid_t fapl)
 {
-    hid_t       file1 = -1, file2 = -1;
+    hid_t       file1 = H5I_INVALID_HID, file2 = H5I_INVALID_HID;
     H5O_info2_t oi1, oi2;
     char        filename1[1024], filename2[1024];
-    hbool_t     same_obj;
+    bool        same_obj;
 
     TESTING("mount point open");
     h5_fixname(FILENAME[0], fapl, filename1, sizeof filename1);
@@ -598,21 +594,21 @@ test_assoc(hid_t fapl)
     if (H5Oget_info_by_name3(file1, "/mnt1", &oi2, H5O_INFO_BASIC, H5P_DEFAULT) < 0)
         FAIL_STACK_ERROR;
 
-    same_obj = TRUE;
+    same_obj = true;
     if (oi1.fileno == oi2.fileno) {
         int token_cmp;
 
         if (H5Otoken_cmp(file1, &oi1.token, &oi2.token, &token_cmp) < 0)
             FAIL_STACK_ERROR;
         if (token_cmp)
-            same_obj = FALSE;
+            same_obj = false;
     }
     else
-        same_obj = FALSE;
+        same_obj = false;
 
     if (!same_obj) {
         H5_FAILED();
-        HDputs("    Association failed.");
+        puts("    Association failed.");
         TEST_ERROR;
     } /* end if */
 
@@ -633,7 +629,7 @@ error:
         H5Fclose(file2);
         H5Fclose(file1);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_assoc() */
 
@@ -648,17 +644,12 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Robb Matzke
- *              Wednesday, October  7, 1998
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_mntlnk(hid_t fapl)
 {
-    hid_t file1 = -1, file2 = -1, grp = -1;
+    hid_t file1 = H5I_INVALID_HID, file2 = H5I_INVALID_HID, grp = H5I_INVALID_HID;
     char  filename1[1024], filename2[1024];
 
     TESTING("multi-linked mount point");
@@ -703,7 +694,7 @@ error:
         H5Fclose(file1);
         H5Fclose(file2);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_mntlnk() */
 
@@ -718,17 +709,12 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Robb Matzke
- *              Wednesday, October  7, 1998
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_move(hid_t fapl)
 {
-    hid_t  file1 = -1, file2 = -1;
+    hid_t  file1 = H5I_INVALID_HID, file2 = H5I_INVALID_HID;
     herr_t status;
     char   filename1[1024], filename2[1024];
 
@@ -750,10 +736,10 @@ test_move(hid_t fapl)
     {
         status = H5Lmove(file1, "/mnt1/rename_b/y", H5L_SAME_LOC, "/y", H5P_DEFAULT, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (status >= 0) {
         H5_FAILED();
-        HDputs("    Moving an object across files shouldn't have been possible");
+        puts("    Moving an object across files shouldn't have been possible");
         TEST_ERROR;
     } /* end if */
 
@@ -774,7 +760,7 @@ error:
         H5Fclose(file1);
         H5Fclose(file2);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_move() */
 
@@ -788,17 +774,12 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Robb Matzke
- *              Wednesday, October  7, 1998
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_preopen(hid_t fapl)
 {
-    hid_t       file1 = -1, file2 = -1, grp = -1;
+    hid_t       file1 = H5I_INVALID_HID, file2 = H5I_INVALID_HID, grp = H5I_INVALID_HID;
     H5O_info2_t oinfo;
     char        filename1[1024], filename2[1024];
 
@@ -842,7 +823,7 @@ error:
         H5Fclose(file2);
         H5Fclose(file1);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_preopen() */
 
@@ -857,18 +838,13 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Robb Matzke
- *              Wednesday, October 14, 1998
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_postopen(hid_t fapl)
 {
 
-    hid_t       file1 = -1, file2 = -1, grp = -1;
+    hid_t       file1 = H5I_INVALID_HID, file2 = H5I_INVALID_HID, grp = H5I_INVALID_HID;
     H5O_info2_t oinfo;
     char        filename1[1024], filename2[1024];
 
@@ -917,7 +893,7 @@ error:
         H5Fclose(file2);
         H5Fclose(file1);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_postopen() */
 
@@ -932,17 +908,12 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Robb Matzke
- *              Tuesday, October 13, 1998
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_unlink(hid_t fapl)
 {
-    hid_t       file1 = -1, file2 = -1, mnt = -1, root = -1;
+    hid_t file1 = H5I_INVALID_HID, file2 = H5I_INVALID_HID, mnt = H5I_INVALID_HID, root = H5I_INVALID_HID;
     H5O_info2_t oinfo;
     char        filename1[1024], filename2[1024];
     herr_t      status;
@@ -986,10 +957,10 @@ test_unlink(hid_t fapl)
     {
         status = H5Oget_info_by_name3(mnt, "file2", &oinfo, H5O_INFO_BASIC, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (status >= 0) {
         H5_FAILED();
-        HDputs("    Incorrect traversal from mount point!");
+        puts("    Incorrect traversal from mount point!");
         TEST_ERROR;
     } /* end if */
 
@@ -1007,20 +978,20 @@ test_unlink(hid_t fapl)
     {
         status = H5Oget_info_by_name3(mnt, "file2", &oinfo, H5O_INFO_BASIC, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (status >= 0) {
         H5_FAILED();
-        HDputs("    Traversal through mount point should not have worked!");
+        puts("    Traversal through mount point should not have worked!");
         TEST_ERROR;
     } /* end if */
     H5E_BEGIN_TRY
     {
         status = H5Oget_info_by_name3(file2, "/mnt_unlink/file2", &oinfo, H5O_INFO_BASIC, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (status >= 0) {
         H5_FAILED();
-        HDputs("    Traversal through mount point should not have worked!");
+        puts("    Traversal through mount point should not have worked!");
         TEST_ERROR;
     } /* end if */
 
@@ -1033,20 +1004,20 @@ test_unlink(hid_t fapl)
     {
         status = H5Funmount(file1, "/mnt_unlink");
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (status >= 0) {
         H5_FAILED();
-        HDprintf("    %d: Unmount by name should not have been allowed!\n", __LINE__);
+        printf("    %d: Unmount by name should not have been allowed!\n", __LINE__);
         TEST_ERROR;
     } /* end if */
     H5E_BEGIN_TRY
     {
         status = H5Funmount(file2, "/");
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (status >= 0) {
         H5_FAILED();
-        HDprintf("    %d: Unmount by name should not have been allowed!\n", __LINE__);
+        printf("    %d: Unmount by name should not have been allowed!\n", __LINE__);
         TEST_ERROR;
     } /* end if */
     if (H5Funmount(mnt, ".") < 0)
@@ -1073,7 +1044,7 @@ error:
         H5Fclose(file2);
         H5Fclose(file1);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_unlink() */
 
@@ -1086,17 +1057,12 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Robb Matzke
- *              Tuesday, October 13, 1998
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_mvmpt(hid_t fapl)
 {
-    hid_t       file1 = -1, file2 = -1;
+    hid_t       file1 = H5I_INVALID_HID, file2 = H5I_INVALID_HID;
     H5O_info2_t oinfo;
     char        filename1[1024], filename2[1024];
 
@@ -1136,7 +1102,7 @@ error:
         H5Fclose(file1);
         H5Fclose(file2);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_mvmpt() */
 
@@ -1149,19 +1115,14 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Robb Matzke
- *              Wednesday, October 14, 1998
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_interlink(hid_t fapl)
 {
-    hid_t file1 = -1, file2 = -1;
+    hid_t file1 = H5I_INVALID_HID, file2 = H5I_INVALID_HID;
 #ifdef NOT_NOW
-    hid_t   type = -1, space = -1, dset = -1;
+    hid_t   type = H5I_INVALID_HID, space = H5I_INVALID_HID, dset = H5I_INVALID_HID;
     hsize_t cur_dims[1] = {2};
 #endif /* NOT_NOW */
     char   filename1[1024], filename2[1024];
@@ -1183,10 +1144,10 @@ test_interlink(hid_t fapl)
     {
         status = H5Lcreate_hard(file1, "/mnt1/file2", H5L_SAME_LOC, "/file2", H5P_DEFAULT, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (status >= 0) {
         H5_FAILED();
-        HDputs("    Interfile hard link should not have been allowed!");
+        puts("    Interfile hard link should not have been allowed!");
         TEST_ERROR;
     } /* end if */
 
@@ -1195,10 +1156,10 @@ test_interlink(hid_t fapl)
     {
         status = H5Lmove(file1, "/mnt1/file2", H5L_SAME_LOC, "/file2", H5P_DEFAULT, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (status >= 0) {
         H5_FAILED();
-        HDputs("    Interfile renaming should not have been allowed!");
+        puts("    Interfile renaming should not have been allowed!");
         TEST_ERROR;
     } /* end if */
 
@@ -1218,10 +1179,10 @@ test_interlink(hid_t fapl)
     {
         dset = H5Dcreate2(file1, "/mnt1/file2/dset", type, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (dset >= 0) {
         H5_FAILED();
-        HDputs("    Dataset and shared type must be in the same file!");
+        puts("    Dataset and shared type must be in the same file!");
         TEST_ERROR;
     } /* end if */
 
@@ -1232,7 +1193,7 @@ test_interlink(hid_t fapl)
         FAIL_STACK_ERROR;
 #else  /* NOT_NOW */
     SKIPPED();
-    HDputs("    Test skipped due file pointer sharing issue (Jira 7638).");
+    puts("    Test skipped due file pointer sharing issue (Jira 7638).");
 #endif /* NOT_NOW */
 
     /* Shut down */
@@ -1257,7 +1218,7 @@ error:
         H5Fclose(file1);
         H5Fclose(file2);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_interlink() */
 
@@ -1271,17 +1232,12 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Robb Matzke
- *              Wednesday, October 14, 1998
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_uniformity(hid_t fapl)
 {
-    hid_t       file1 = -1, file2 = -1;
+    hid_t       file1 = H5I_INVALID_HID, file2 = H5I_INVALID_HID;
     H5O_info2_t oinfo;
     char        filename1[1024], filename2[1024];
 
@@ -1337,7 +1293,7 @@ error:
         H5Fclose(file1);
         H5Fclose(file2);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_uniformity() */
 
@@ -1350,17 +1306,12 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Robb Matzke
- *              Wednesday, October 14, 1998
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_close(hid_t fapl)
 {
-    hid_t       file1 = -1, file2 = -1;
+    hid_t       file1 = H5I_INVALID_HID, file2 = H5I_INVALID_HID;
     H5O_info2_t oinfo;
     char        filename1[1024], filename2[1024];
 
@@ -1383,7 +1334,7 @@ test_close(hid_t fapl)
         FAIL_STACK_ERROR;
     if (H5Oget_info_by_name3(file2, "/mnt1", &oinfo, H5O_INFO_BASIC, H5P_DEFAULT) < 0) {
         H5_FAILED();
-        HDputs("    File1 contents are not accessible!");
+        puts("    File1 contents are not accessible!");
         TEST_ERROR;
     } /* end if */
     if (H5Fclose(file2) < 0)
@@ -1426,7 +1377,7 @@ error:
         H5Fclose(file1);
         H5Fclose(file2);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_close() */
 
@@ -1440,25 +1391,22 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Quincey Koziol
- *              Wednesday, May  4, 2005
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_mount_after_close(hid_t fapl)
 {
-    hid_t   fid1 = -1, fid2 = -1;                                      /* File IDs */
-    hid_t   gidA = -1, gidAB = -1, gidABM = -1, gidX = -1, gidXY = -1; /* Group identifiers */
-    hid_t   gidABMX = -1, gidABC = -1, gidABT = -1;                    /* Group IDs for testing */
-    hid_t   didABMXYD = -1;                                            /* Dataset ID for testing */
-    hid_t   did = -1, sid = -1;                                        /* Dataset and dataspace identifiers */
-    char    filename1[1024], filename2[1024];                          /* Name of files to mount */
-    char    objname[NAME_BUF_SIZE];                                    /* Name of object opened */
-    hsize_t dims[] = {NX, NY};                                         /* Dataset dimensions */
-    int     i, j;                                                      /* Local index variable */
+    hid_t fid1 = H5I_INVALID_HID, fid2 = H5I_INVALID_HID; /* File IDs */
+    hid_t gidA = H5I_INVALID_HID, gidAB = H5I_INVALID_HID, gidABM = H5I_INVALID_HID, gidX = H5I_INVALID_HID,
+          gidXY   = H5I_INVALID_HID; /* Group identifiers */
+    hid_t gidABMX = H5I_INVALID_HID, gidABC = H5I_INVALID_HID,
+          gidABT      = H5I_INVALID_HID;                  /* Group IDs for testing */
+    hid_t   didABMXYD = H5I_INVALID_HID;                  /* Dataset ID for testing */
+    hid_t   did = H5I_INVALID_HID, sid = H5I_INVALID_HID; /* Dataset and dataspace identifiers */
+    char    filename1[1024], filename2[1024];             /* Name of files to mount */
+    char    objname[NAME_BUF_SIZE];                       /* Name of object opened */
+    hsize_t dims[] = {NX, NY};                            /* Dataset dimensions */
+    int     i, j;                                         /* Local index variable */
 
     TESTING("mounting on group after file is closed");
     h5_fixname(FILENAME[0], fapl, filename1, sizeof filename1);
@@ -1583,7 +1531,7 @@ test_mount_after_close(hid_t fapl)
     *objname = '\0';
     if (H5Iget_name(gidABMX, objname, (size_t)NAME_BUF_SIZE) < 0)
         FAIL_STACK_ERROR;
-    if (HDstrcmp(objname, "/A/B/M/X") != 0)
+    if (strcmp(objname, "/A/B/M/X") != 0)
         TEST_ERROR;
 
     /* Close object in mounted file */
@@ -1598,7 +1546,7 @@ test_mount_after_close(hid_t fapl)
     *objname = '\0';
     if (H5Iget_name(gidABC, objname, (size_t)NAME_BUF_SIZE) < 0)
         FAIL_STACK_ERROR;
-    if (HDstrcmp(objname, "/A/B/C") != 0)
+    if (strcmp(objname, "/A/B/C") != 0)
         TEST_ERROR;
 
     /* Close object in mounted file */
@@ -1613,7 +1561,7 @@ test_mount_after_close(hid_t fapl)
     *objname = '\0';
     if (H5Iget_name(gidABT, objname, (size_t)NAME_BUF_SIZE) < 0)
         FAIL_STACK_ERROR;
-    if (HDstrcmp(objname, "/A/B/T") != 0)
+    if (strcmp(objname, "/A/B/T") != 0)
         TEST_ERROR;
 
     /* Close object in original file */
@@ -1628,7 +1576,7 @@ test_mount_after_close(hid_t fapl)
     *objname = '\0';
     if (H5Iget_name(didABMXYD, objname, (size_t)NAME_BUF_SIZE) < 0)
         FAIL_STACK_ERROR;
-    if (HDstrcmp(objname, "/A/B/M/X/Y/D") != 0)
+    if (strcmp(objname, "/A/B/M/X/Y/D") != 0)
         TEST_ERROR;
 
     /* Close object in mounted file */
@@ -1661,7 +1609,7 @@ error:
         H5Fclose(fid1);
         H5Fclose(fid2);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_mount_after_close() */
 
@@ -1675,26 +1623,23 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Quincey Koziol
- *              Monday, June  6, 2005
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_mount_after_unmount(hid_t fapl)
 {
-    hid_t fid1 = -1, fid2 = -1, fid3 = -1, fid4 = -1;                         /* File IDs */
-    hid_t gidA = -1, gidB = -1, gidX = -1, gidY = -1, gidZ = -1;              /* Group identifiers */
-    hid_t gidBM    = -1;                                                      /* Group identifiers */
-    hid_t gidBMZ   = -1;                                                      /* Group identifiers */
-    hid_t gidAM    = -1;                                                      /* Group identifiers */
-    hid_t gidAMX   = -1;                                                      /* Group identifiers */
-    hid_t gidAMXX  = -1;                                                      /* Group identifiers */
-    hid_t gidAMXMY = -1;                                                      /* Group identifiers */
-    hid_t gidXM    = -1;                                                      /* Group identifiers */
-    hid_t gidXX    = -1;                                                      /* Group identifiers */
+    hid_t fid1 = H5I_INVALID_HID, fid2 = H5I_INVALID_HID, fid3 = H5I_INVALID_HID,
+          fid4 = H5I_INVALID_HID; /* File IDs */
+    hid_t gidA = H5I_INVALID_HID, gidB = H5I_INVALID_HID, gidX = H5I_INVALID_HID, gidY = H5I_INVALID_HID,
+          gidZ     = H5I_INVALID_HID;                                         /* Group identifiers */
+    hid_t gidBM    = H5I_INVALID_HID;                                         /* Group identifiers */
+    hid_t gidBMZ   = H5I_INVALID_HID;                                         /* Group identifiers */
+    hid_t gidAM    = H5I_INVALID_HID;                                         /* Group identifiers */
+    hid_t gidAMX   = H5I_INVALID_HID;                                         /* Group identifiers */
+    hid_t gidAMXX  = H5I_INVALID_HID;                                         /* Group identifiers */
+    hid_t gidAMXMY = H5I_INVALID_HID;                                         /* Group identifiers */
+    hid_t gidXM    = H5I_INVALID_HID;                                         /* Group identifiers */
+    hid_t gidXX    = H5I_INVALID_HID;                                         /* Group identifiers */
     char  filename1[1024], filename2[1024], filename3[1024], filename4[1024]; /* Name of files to mount */
     char  objname[NAME_BUF_SIZE];                                             /* Name of object opened */
 
@@ -1801,7 +1746,7 @@ test_mount_after_unmount(hid_t fapl)
     *objname = '\0';
     if (H5Iget_name(gidAMXX, objname, (size_t)NAME_BUF_SIZE) < 0)
         TEST_ERROR;
-    if (HDstrcmp(objname, "/A/M/X/X") != 0)
+    if (strcmp(objname, "/A/M/X/X") != 0)
         TEST_ERROR;
 
     /* Open group in mounted file #2 */
@@ -1821,7 +1766,7 @@ test_mount_after_unmount(hid_t fapl)
     *objname = '\0';
     if (H5Iget_name(gidAMXMY, objname, (size_t)NAME_BUF_SIZE) < 0)
         TEST_ERROR;
-    if (HDstrcmp(objname, "/A/M/X/M/Y") != 0)
+    if (strcmp(objname, "/A/M/X/M/Y") != 0)
         TEST_ERROR;
 
     /* Unmount second file */
@@ -1832,7 +1777,7 @@ test_mount_after_unmount(hid_t fapl)
     *objname = '\0';
     if (H5Iget_name(gidAMXMY, objname, (size_t)NAME_BUF_SIZE) < 0)
         TEST_ERROR;
-    if (HDstrcmp(objname, "/X/M/Y") != 0)
+    if (strcmp(objname, "/X/M/Y") != 0)
         TEST_ERROR;
 
     /* Rename object in file #3 that is "disconnected" from name hierarchy */
@@ -1852,7 +1797,7 @@ test_mount_after_unmount(hid_t fapl)
     *objname = '\0';
     if (H5Iget_name(gidAMXMY, objname, (size_t)NAME_BUF_SIZE) < 0)
         TEST_ERROR;
-    if (HDstrcmp(objname, "/X/M/Z") != 0)
+    if (strcmp(objname, "/X/M/Z") != 0)
         TEST_ERROR;
 
     /* Mount fourth file */
@@ -1868,7 +1813,7 @@ test_mount_after_unmount(hid_t fapl)
     *objname = '\0';
     if (H5Iget_name(gidBMZ, objname, (size_t)NAME_BUF_SIZE) < 0)
         TEST_ERROR;
-    if (HDstrcmp(objname, "/B/M/Z") != 0)
+    if (strcmp(objname, "/B/M/Z") != 0)
         TEST_ERROR;
 
     /* Unmount third file */
@@ -1930,7 +1875,7 @@ error:
         H5Fclose(fid2);
         H5Fclose(fid1);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 }
 
@@ -1944,20 +1889,15 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Quincey Koziol
- *              Thursday, June 30, 2005
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_missing_unmount(hid_t fapl)
 {
-    hid_t fid1 = -1, fid2 = -1, fid3 = -1;                   /* File IDs */
-    hid_t gidA = -1, gidE = -1, gidM = -1;                   /* Group IDs */
-    hid_t gidAE = -1, gidAEM = -1;                           /* Group IDs */
-    char  filename1[1024], filename2[1024], filename3[1024]; /* Name of files to mount */
+    hid_t fid1 = H5I_INVALID_HID, fid2 = H5I_INVALID_HID, fid3 = H5I_INVALID_HID; /* File IDs */
+    hid_t gidA = H5I_INVALID_HID, gidE = H5I_INVALID_HID, gidM = H5I_INVALID_HID; /* Group IDs */
+    hid_t gidAE = H5I_INVALID_HID, gidAEM = H5I_INVALID_HID;                      /* Group IDs */
+    char  filename1[1024], filename2[1024], filename3[1024];                      /* Name of files to mount */
 
     TESTING("missing unmount");
 
@@ -2082,7 +2022,7 @@ error:
         H5Fclose(fid2);
         H5Fclose(fid1);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_missing_unmount() */
 
@@ -2096,18 +2036,13 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Quincey Koziol
- *              Tuesday, July  5, 2005
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_hold_open_file(hid_t fapl)
 {
-    hid_t fid1 = -1, fid2 = -1;             /* File IDs */
-    hid_t gidA = -1, gidM = -1, gidAM = -1; /* Group IDs */
+    hid_t fid1 = H5I_INVALID_HID, fid2 = H5I_INVALID_HID;                          /* File IDs */
+    hid_t gidA = H5I_INVALID_HID, gidM = H5I_INVALID_HID, gidAM = H5I_INVALID_HID; /* Group IDs */
     char  filename1[1024], filename2[1024]; /* Name of files to mount */
 
     TESTING("hold open w/file");
@@ -2212,7 +2147,7 @@ error:
         H5Fclose(fid2);
         H5Fclose(fid1);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_hold_open_file() */
 
@@ -2226,19 +2161,15 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Quincey Koziol
- *              Thursday, July 14, 2005
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_hold_open_group(hid_t fapl)
 {
-    hid_t fid1 = -1, fid2 = -1;                                    /* File IDs */
-    hid_t gid = -1, gidA = -1, gidM = -1, gidAM = -1, gidAM2 = -1; /* Group IDs */
-    char  filename1[1024], filename2[1024];                        /* Name of files to mount */
+    hid_t fid1 = H5I_INVALID_HID, fid2 = H5I_INVALID_HID; /* File IDs */
+    hid_t gid = H5I_INVALID_HID, gidA = H5I_INVALID_HID, gidM = H5I_INVALID_HID, gidAM = H5I_INVALID_HID,
+          gidAM2 = H5I_INVALID_HID;        /* Group IDs */
+    char filename1[1024], filename2[1024]; /* Name of files to mount */
 
     TESTING("hold open w/group");
 
@@ -2368,7 +2299,7 @@ error:
         H5Fclose(fid2);
         H5Fclose(fid1);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_hold_open_group() */
 
@@ -2382,20 +2313,15 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Quincey Koziol
- *              Tuesday, July 19, 2005
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_fcdegree_same(hid_t fapl)
 {
-    hid_t  fid1 = -1, fid2 = -1;             /* File IDs */
-    hid_t  gidA = -1, gidM = -1, gidAM = -1; /* Group IDs */
-    hid_t  fapl_id = -1;                     /* FAPL IDs */
-    herr_t ret;                              /* Generic return value */
+    hid_t  fid1 = H5I_INVALID_HID, fid2 = H5I_INVALID_HID;                          /* File IDs */
+    hid_t  gidA = H5I_INVALID_HID, gidM = H5I_INVALID_HID, gidAM = H5I_INVALID_HID; /* Group IDs */
+    hid_t  fapl_id = H5I_INVALID_HID;                                               /* FAPL IDs */
+    herr_t ret;                                                                     /* Generic return value */
     char   filename1[1024], filename2[1024]; /* Name of files to mount */
 
     TESTING("file close degrees must be same");
@@ -2452,7 +2378,7 @@ test_fcdegree_same(hid_t fapl)
     {
         ret = H5Fmount(gidA, ".", fid2, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (ret >= 0)
         TEST_ERROR;
 
@@ -2512,7 +2438,7 @@ error:
         H5Fclose(fid2);
         H5Fclose(fid1);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_fcdegree_same() */
 
@@ -2526,20 +2452,15 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Quincey Koziol
- *              Tuesday, July 19, 2005
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_fcdegree_semi(hid_t fapl)
 {
-    hid_t  fid1 = -1, fid2 = -1;             /* File IDs */
-    hid_t  gidA = -1, gidM = -1, gidAM = -1; /* Group IDs */
-    hid_t  fapl_id = -1;                     /* FAPL IDs */
-    herr_t ret;                              /* Generic return value */
+    hid_t  fid1 = H5I_INVALID_HID, fid2 = H5I_INVALID_HID;                          /* File IDs */
+    hid_t  gidA = H5I_INVALID_HID, gidM = H5I_INVALID_HID, gidAM = H5I_INVALID_HID; /* Group IDs */
+    hid_t  fapl_id = H5I_INVALID_HID;                                               /* FAPL IDs */
+    herr_t ret;                                                                     /* Generic return value */
     char   filename1[1024], filename2[1024]; /* Name of files to mount */
 
     TESTING("'semi' file close degree");
@@ -2608,7 +2529,7 @@ test_fcdegree_semi(hid_t fapl)
     {
         ret = H5Fclose(fid2);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (ret >= 0)
         TEST_ERROR;
 
@@ -2621,7 +2542,7 @@ test_fcdegree_semi(hid_t fapl)
     {
         ret = H5Fclose(fid2);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (ret >= 0)
         TEST_ERROR;
 
@@ -2655,7 +2576,7 @@ error:
         H5Fclose(fid2);
         H5Fclose(fid1);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_fcdegree_semi() */
 
@@ -2669,19 +2590,14 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Quincey Koziol
- *              Tuesday, July 19, 2005
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_fcdegree_strong(hid_t fapl)
 {
-    hid_t       fid1 = -1, fid2 = -1;             /* File IDs */
-    hid_t       gidA = -1, gidM = -1, gidAM = -1; /* Group IDs */
-    hid_t       fapl_id = -1;                     /* FAPL IDs */
+    hid_t       fid1 = H5I_INVALID_HID, fid2 = H5I_INVALID_HID;                          /* File IDs */
+    hid_t       gidA = H5I_INVALID_HID, gidM = H5I_INVALID_HID, gidAM = H5I_INVALID_HID; /* Group IDs */
+    hid_t       fapl_id = H5I_INVALID_HID;                                               /* FAPL IDs */
     H5O_info2_t oinfo;
     char        filename1[1024], filename2[1024]; /* Name of files to mount */
     herr_t      ret;                              /* Generic return value */
@@ -2762,14 +2678,14 @@ test_fcdegree_strong(hid_t fapl)
     {
         ret = H5Oget_info3(gidA, &oinfo, H5O_INFO_BASIC);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (ret >= 0)
         TEST_ERROR;
     H5E_BEGIN_TRY
     {
         ret = H5Oget_info3(gidAM, &oinfo, H5O_INFO_BASIC);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (ret >= 0)
         TEST_ERROR;
 
@@ -2795,7 +2711,7 @@ error:
         H5Fclose(fid2);
         H5Fclose(fid1);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_fcdegree_strong() */
 
@@ -2811,19 +2727,15 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Quincey Koziol
- *              Tuesday, July 19, 2005
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_acc_perm(hid_t fapl)
 {
-    hid_t fid1 = -1, fid2 = -1, fid3 = -1;                                     /* File IDs */
-    hid_t gidA = -1, gidB = -1, gidC = -1, gidM = -1, gidAM = -1, gidAMZ = -1; /* Group IDs */
-    hid_t bad_id = -1;                                                         /* Bad ID from object create */
+    hid_t fid1 = H5I_INVALID_HID, fid2 = H5I_INVALID_HID, fid3 = H5I_INVALID_HID; /* File IDs */
+    hid_t gidA = H5I_INVALID_HID, gidB = H5I_INVALID_HID, gidC = H5I_INVALID_HID, gidM = H5I_INVALID_HID,
+          gidAM = H5I_INVALID_HID, gidAMZ = H5I_INVALID_HID; /* Group IDs */
+    hid_t bad_id = H5I_INVALID_HID;                          /* Bad ID from object create */
     char  name[NAME_BUF_SIZE];                               /* Buffer for filename retrieved */
     char  filename1[1024], filename2[1024], filename3[1024]; /* Name of files to mount */
 
@@ -2869,7 +2781,7 @@ test_acc_perm(hid_t fapl)
     /* Get and verify file name */
     if (H5Fget_name(gidA, name, NAME_BUF_SIZE) < 0)
         TEST_ERROR;
-    if (HDstrcmp(name, filename1) != 0)
+    if (strcmp(name, filename1) != 0)
         TEST_ERROR;
 
     if ((fid2 = H5Fopen(filename2, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0)
@@ -2878,7 +2790,7 @@ test_acc_perm(hid_t fapl)
     /* Get and verify file name */
     if (H5Fget_name(fid2, name, NAME_BUF_SIZE) < 0)
         TEST_ERROR;
-    if (HDstrcmp(name, filename2) != 0)
+    if (strcmp(name, filename2) != 0)
         TEST_ERROR;
 
     /* Mount files together */
@@ -2888,7 +2800,7 @@ test_acc_perm(hid_t fapl)
     /* Get and verify file name */
     if (H5Fget_name(fid2, name, NAME_BUF_SIZE) < 0)
         TEST_ERROR;
-    if (HDstrcmp(name, filename2) != 0)
+    if (strcmp(name, filename2) != 0)
         TEST_ERROR;
 
     /* Open group in mounted file */
@@ -2898,7 +2810,7 @@ test_acc_perm(hid_t fapl)
     /* Get and verify file name */
     if (H5Fget_name(gidAM, name, NAME_BUF_SIZE) < 0)
         TEST_ERROR;
-    if (HDstrcmp(name, filename2) != 0)
+    if (strcmp(name, filename2) != 0)
         TEST_ERROR;
 
     /* Attempt to create objects in read only file (should fail) */
@@ -2906,14 +2818,14 @@ test_acc_perm(hid_t fapl)
     {
         bad_id = H5Gcreate2(gidAM, "Z", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (bad_id >= 0)
         TEST_ERROR;
     H5E_BEGIN_TRY
     {
         bad_id = H5Gcreate2(fid1, "/A/L", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (bad_id >= 0)
         TEST_ERROR;
 
@@ -2944,7 +2856,7 @@ test_acc_perm(hid_t fapl)
     /* Get and verify file name */
     if (H5Fget_name(gidAMZ, name, NAME_BUF_SIZE) < 0)
         TEST_ERROR;
-    if (HDstrcmp(name, filename3) != 0)
+    if (strcmp(name, filename3) != 0)
         TEST_ERROR;
 
     /* Close object in file #3 */
@@ -2956,7 +2868,7 @@ test_acc_perm(hid_t fapl)
     {
         bad_id = H5Gcreate2(fid1, "/A/L", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (bad_id >= 0)
         TEST_ERROR;
 
@@ -3001,7 +2913,7 @@ error:
         H5Fclose(fid2);
         H5Fclose(fid1);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_acc_perm() */
 
@@ -3015,22 +2927,19 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Quincey Koziol
- *              Monday, July 25, 2005
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_mult_mount(hid_t fapl)
 {
-    hid_t fid1 = -1, fid2 = -1, fid3 = -1, fid3_2 = -1;             /* File IDs */
-    hid_t gidA = -1, gidB = -1;                                     /* Group IDs in file #1 */
-    hid_t gidM = -1, gidN = -1, gidAM = -1;                         /* Group IDs in file #2 */
-    hid_t gidS = -1, gidT = -1, gidU = -1, gidBS = -1, gidAMT = -1; /* Group IDs in file #3 */
-    char  name[NAME_BUF_SIZE];                                      /* Buffer for filename retrieved */
-    char  filename1[1024], filename2[1024], filename3[1024];        /* Name of files to mount */
+    hid_t fid1 = H5I_INVALID_HID, fid2 = H5I_INVALID_HID, fid3 = H5I_INVALID_HID,
+          fid3_2 = H5I_INVALID_HID;                                                /* File IDs */
+    hid_t gidA = H5I_INVALID_HID, gidB = H5I_INVALID_HID;                          /* Group IDs in file #1 */
+    hid_t gidM = H5I_INVALID_HID, gidN = H5I_INVALID_HID, gidAM = H5I_INVALID_HID; /* Group IDs in file #2 */
+    hid_t gidS = H5I_INVALID_HID, gidT = H5I_INVALID_HID, gidU = H5I_INVALID_HID, gidBS = H5I_INVALID_HID,
+          gidAMT = H5I_INVALID_HID;                         /* Group IDs in file #3 */
+    char name[NAME_BUF_SIZE];                               /* Buffer for filename retrieved */
+    char filename1[1024], filename2[1024], filename3[1024]; /* Name of files to mount */
 
     TESTING("multiple mounts");
 
@@ -3140,7 +3049,7 @@ test_mult_mount(hid_t fapl)
     *name = '\0';
     if (H5Iget_name(gidAMT, name, (size_t)NAME_BUF_SIZE) < 0)
         TEST_ERROR;
-    if (HDstrcmp(name, "/A/M/T") != 0)
+    if (strcmp(name, "/A/M/T") != 0)
         TEST_ERROR;
 
     /* Create object in file #3 */
@@ -3158,7 +3067,7 @@ test_mult_mount(hid_t fapl)
     *name = '\0';
     if (H5Iget_name(gidBS, name, (size_t)NAME_BUF_SIZE) < 0)
         TEST_ERROR;
-    if (HDstrcmp(name, "/B/S") != 0)
+    if (strcmp(name, "/B/S") != 0)
         TEST_ERROR;
 
     /* Re-open object created in file #3 through file #1 mount path */
@@ -3224,7 +3133,7 @@ error:
         H5Fclose(fid2);
         H5Fclose(fid1);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_mult_mount() */
 
@@ -3238,20 +3147,16 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Quincey Koziol
- *              Monday, July 25, 2005
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_nested_survive(hid_t fapl)
 {
-    hid_t   fid1 = -1, fid2 = -1, fid3 = -1;                   /* File IDs */
-    hid_t   gidA = -1;                                         /* Group IDs in file #1 */
-    hid_t   gidM = -1, gidAM = -1;                             /* Group IDs in file #2 */
-    hid_t   gidS = -1, gidMS = -1, gidAMS = -1;                /* Group IDs in file #3 */
+    hid_t fid1 = H5I_INVALID_HID, fid2 = H5I_INVALID_HID, fid3 = H5I_INVALID_HID; /* File IDs */
+    hid_t gidA = H5I_INVALID_HID;                                                 /* Group IDs in file #1 */
+    hid_t gidM = H5I_INVALID_HID, gidAM = H5I_INVALID_HID;                        /* Group IDs in file #2 */
+    hid_t gidS = H5I_INVALID_HID, gidMS = H5I_INVALID_HID,
+          gidAMS = H5I_INVALID_HID;                            /* Group IDs in file #3 */
     char    name[NAME_BUF_SIZE];                               /* Buffer for filename retrieved */
     ssize_t name_len;                                          /* Filename length */
     char    filename1[1024], filename2[1024], filename3[1024]; /* Name of files to mount */
@@ -3339,7 +3244,7 @@ test_nested_survive(hid_t fapl)
     *name = '\0';
     if ((name_len = H5Iget_name(gidAM, name, (size_t)NAME_BUF_SIZE)) < 0)
         TEST_ERROR;
-    if (name_len == 0 || HDstrcmp(name, "/A/M") != 0)
+    if (name_len == 0 || strcmp(name, "/A/M") != 0)
         TEST_ERROR;
 
     /* Unmount file #2 from file #1 */
@@ -3350,7 +3255,7 @@ test_nested_survive(hid_t fapl)
     *name = '\0';
     if ((name_len = H5Iget_name(gidAM, name, (size_t)NAME_BUF_SIZE)) < 0)
         TEST_ERROR;
-    if (name_len != 0 || HDstrcmp(name, "") != 0)
+    if (name_len != 0 || strcmp(name, "") != 0)
         TEST_ERROR;
 
     /* Open object in file #3 through file #1 mount path (should fail) */
@@ -3358,7 +3263,7 @@ test_nested_survive(hid_t fapl)
     {
         gidAMS = H5Gopen2(fid1, "A/M/S", H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (gidAMS >= 0)
         TEST_ERROR;
 
@@ -3370,7 +3275,7 @@ test_nested_survive(hid_t fapl)
     *name = '\0';
     if (H5Iget_name(gidMS, name, (size_t)NAME_BUF_SIZE) < 0)
         TEST_ERROR;
-    if (HDstrcmp(name, "/M/S") != 0)
+    if (strcmp(name, "/M/S") != 0)
         TEST_ERROR;
 
     /* Close group in file #3 */
@@ -3389,7 +3294,7 @@ test_nested_survive(hid_t fapl)
     *name = '\0';
     if (H5Iget_name(gidAMS, name, (size_t)NAME_BUF_SIZE) < 0)
         TEST_ERROR;
-    if (HDstrcmp(name, "/A/M/S") != 0)
+    if (strcmp(name, "/A/M/S") != 0)
         TEST_ERROR;
 
     /* Close group in file #3 */
@@ -3437,7 +3342,7 @@ error:
         H5Fclose(fid2);
         H5Fclose(fid1);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_nested_survive() */
 
@@ -3451,22 +3356,17 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Quincey Koziol
- *              Monday, July 25, 2005
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_close_parent(hid_t fapl)
 {
-    hid_t   fid1 = -1, fid2 = -1;             /* File IDs */
-    hid_t   gidA = -1;                        /* Group IDs in file #1 */
-    hid_t   gidM = -1;                        /* Group IDs in file #2 */
-    char    name[NAME_BUF_SIZE];              /* Buffer for filename retrieved */
-    ssize_t name_len;                         /* Filename length */
-    char    filename1[1024], filename2[1024]; /* Name of files to mount */
+    hid_t   fid1 = H5I_INVALID_HID, fid2 = H5I_INVALID_HID; /* File IDs */
+    hid_t   gidA = H5I_INVALID_HID;                         /* Group IDs in file #1 */
+    hid_t   gidM = H5I_INVALID_HID;                         /* Group IDs in file #2 */
+    char    name[NAME_BUF_SIZE];                            /* Buffer for filename retrieved */
+    ssize_t name_len;                                       /* Filename length */
+    char    filename1[1024], filename2[1024];               /* Name of files to mount */
 
     TESTING("close parent");
 
@@ -3538,7 +3438,7 @@ test_close_parent(hid_t fapl)
     *name = '\0';
     if ((name_len = H5Iget_name(gidM, name, (size_t)NAME_BUF_SIZE)) < 0)
         TEST_ERROR;
-    if (name_len == 0 || HDstrcmp(name, "/A/M") != 0)
+    if (name_len == 0 || strcmp(name, "/A/M") != 0)
         TEST_ERROR;
 
     /* Unmount file #2 from file #1, closing file #1 */
@@ -3549,7 +3449,7 @@ test_close_parent(hid_t fapl)
     *name = '\0';
     if ((name_len = H5Iget_name(gidM, name, (size_t)NAME_BUF_SIZE)) < 0)
         TEST_ERROR;
-    if (name_len == 0 || HDstrcmp(name, "/M") != 0)
+    if (name_len == 0 || strcmp(name, "/M") != 0)
         TEST_ERROR;
 
     /* Just file #2's underlying shared file should be open still */
@@ -3573,7 +3473,7 @@ error:
         H5Fclose(fid2);
         H5Fclose(fid1);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_close_parent() */
 
@@ -3622,27 +3522,23 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Quincey Koziol
- *              Monday, July 25, 2005
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_cut_graph(hid_t fapl)
 {
-    hid_t   fid1 = -1, fid2 = -1, fid3 = -1, fid4 = -1, fid5 = -1, fid6 = -1, fid7 = -1; /* File IDs */
-    hid_t   gidA = -1, gidB = -1; /* Group IDs in file #1 */
-    hid_t   gidD = -1, gidE = -1; /* Group IDs in file #2 */
-    hid_t   gidH = -1, gidI = -1; /* Group IDs in file #3 */
-    hid_t   gidK = -1;            /* Group IDs in file #4 */
-    hid_t   gidM = -1;            /* Group IDs in file #5 */
-    hid_t   gidO = -1;            /* Group IDs in file #6 */
-    hid_t   gidQ = -1;            /* Group IDs in file #7 */
-    char    name[NAME_BUF_SIZE];  /* Buffer for filename retrieved */
-    ssize_t name_len;             /* Filename length */
-    ssize_t obj_count;            /* Number of objects open */
+    hid_t fid1 = H5I_INVALID_HID, fid2 = H5I_INVALID_HID, fid3 = H5I_INVALID_HID, fid4 = H5I_INVALID_HID,
+          fid5 = H5I_INVALID_HID, fid6 = H5I_INVALID_HID, fid7 = H5I_INVALID_HID; /* File IDs */
+    hid_t   gidA = H5I_INVALID_HID, gidB = H5I_INVALID_HID;                       /* Group IDs in file #1 */
+    hid_t   gidD = H5I_INVALID_HID, gidE = H5I_INVALID_HID;                       /* Group IDs in file #2 */
+    hid_t   gidH = H5I_INVALID_HID, gidI = H5I_INVALID_HID;                       /* Group IDs in file #3 */
+    hid_t   gidK = H5I_INVALID_HID;                                               /* Group IDs in file #4 */
+    hid_t   gidM = H5I_INVALID_HID;                                               /* Group IDs in file #5 */
+    hid_t   gidO = H5I_INVALID_HID;                                               /* Group IDs in file #6 */
+    hid_t   gidQ = H5I_INVALID_HID;                                               /* Group IDs in file #7 */
+    char    name[NAME_BUF_SIZE]; /* Buffer for filename retrieved */
+    ssize_t name_len;            /* Filename length */
+    ssize_t obj_count;           /* Number of objects open */
     char    filename1[NAME_BUF_SIZE], filename2[NAME_BUF_SIZE], filename3[NAME_BUF_SIZE],
         filename4[NAME_BUF_SIZE], filename5[NAME_BUF_SIZE], filename6[NAME_BUF_SIZE],
         filename7[NAME_BUF_SIZE]; /* Name of files to mount */
@@ -3816,7 +3712,7 @@ test_cut_graph(hid_t fapl)
     *name = '\0';
     if ((name_len = H5Iget_name(gidM, name, (size_t)NAME_BUF_SIZE)) < 0)
         TEST_ERROR;
-    if (name_len == 0 || HDstrcmp(name, "/A/E/M") != 0)
+    if (name_len == 0 || strcmp(name, "/A/E/M") != 0)
         TEST_ERROR;
 
     /* Open object in file #7 */
@@ -3827,7 +3723,7 @@ test_cut_graph(hid_t fapl)
     *name = '\0';
     if ((name_len = H5Iget_name(gidQ, name, (size_t)NAME_BUF_SIZE)) < 0)
         TEST_ERROR;
-    if (name_len == 0 || HDstrcmp(name, "/B/I/Q") != 0)
+    if (name_len == 0 || strcmp(name, "/B/I/Q") != 0)
         TEST_ERROR;
 
     /* Close file #1 */
@@ -3875,7 +3771,7 @@ test_cut_graph(hid_t fapl)
     {
         gidK = H5Gopen2(gidQ, "/A/D/K", H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (gidK >= 0)
         TEST_ERROR;
 
@@ -3887,7 +3783,7 @@ test_cut_graph(hid_t fapl)
     *name = '\0';
     if ((name_len = H5Iget_name(gidK, name, (size_t)NAME_BUF_SIZE)) < 0)
         TEST_ERROR;
-    if (name_len == 0 || HDstrcmp(name, "/D/K") != 0)
+    if (name_len == 0 || strcmp(name, "/D/K") != 0)
         TEST_ERROR;
 
     if (H5Gclose(gidK) < 0)
@@ -3898,7 +3794,7 @@ test_cut_graph(hid_t fapl)
     {
         gidO = H5Gopen2(gidM, "/B/H/O", H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (gidO >= 0)
         TEST_ERROR;
 
@@ -3910,7 +3806,7 @@ test_cut_graph(hid_t fapl)
     *name = '\0';
     if ((name_len = H5Iget_name(gidO, name, (size_t)NAME_BUF_SIZE)) < 0)
         TEST_ERROR;
-    if (name_len == 0 || HDstrcmp(name, "/B/H/O") != 0)
+    if (name_len == 0 || strcmp(name, "/B/H/O") != 0)
         TEST_ERROR;
 
     if (H5Gclose(gidO) < 0)
@@ -3920,14 +3816,14 @@ test_cut_graph(hid_t fapl)
     *name = '\0';
     if ((name_len = H5Iget_name(gidM, name, (size_t)NAME_BUF_SIZE)) < 0)
         TEST_ERROR;
-    if (name_len == 0 || HDstrcmp(name, "/E/M") != 0)
+    if (name_len == 0 || strcmp(name, "/E/M") != 0)
         TEST_ERROR;
 
     /* Check the name of "Q" is still defined */
     *name = '\0';
     if ((name_len = H5Iget_name(gidQ, name, (size_t)NAME_BUF_SIZE)) < 0)
         TEST_ERROR;
-    if (name_len == 0 || HDstrcmp(name, "/B/I/Q") != 0)
+    if (name_len == 0 || strcmp(name, "/B/I/Q") != 0)
         TEST_ERROR;
 
     /* Check that all seven underlying files are still opened */
@@ -3952,7 +3848,7 @@ test_cut_graph(hid_t fapl)
     *name = '\0';
     if ((name_len = H5Iget_name(gidQ, name, (size_t)NAME_BUF_SIZE)) < 0)
         TEST_ERROR;
-    if (name_len == 0 || HDstrcmp(name, "/I/Q") != 0)
+    if (name_len == 0 || strcmp(name, "/I/Q") != 0)
         TEST_ERROR;
 
     /* Open object in file #6 from file #7 */
@@ -3963,7 +3859,7 @@ test_cut_graph(hid_t fapl)
     *name = '\0';
     if ((name_len = H5Iget_name(gidO, name, (size_t)NAME_BUF_SIZE)) < 0)
         TEST_ERROR;
-    if (name_len == 0 || HDstrcmp(name, "/H/O") != 0)
+    if (name_len == 0 || strcmp(name, "/H/O") != 0)
         TEST_ERROR;
 
     if (H5Gclose(gidO) < 0)
@@ -4000,7 +3896,7 @@ error:
         H5Fclose(fid2);
         H5Fclose(fid1);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_cut_graph() */
 
@@ -4014,23 +3910,18 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Quincey Koziol
- *              Monday, July 25, 2005
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_symlink(hid_t fapl)
 {
-    hid_t   fid1 = -1, fid2 = -1, fid3 = -1; /* File IDs */
-    hid_t   gidA = -1, gidB = -1;            /* Group IDs in file #1 */
-    hid_t   gidD = -1, gidE = -1;            /* Group IDs in file #2 */
-    hid_t   gidH = -1, gidI = -1;            /* Group IDs in file #3 */
-    hid_t   gidL = -1;                       /* Group IDs through soft link to file #3 */
-    char    name[NAME_BUF_SIZE];             /* Buffer for filename retrieved */
-    ssize_t name_len;                        /* Filename length */
+    hid_t   fid1 = H5I_INVALID_HID, fid2 = H5I_INVALID_HID, fid3 = H5I_INVALID_HID; /* File IDs */
+    hid_t   gidA = H5I_INVALID_HID, gidB = H5I_INVALID_HID;                         /* Group IDs in file #1 */
+    hid_t   gidD = H5I_INVALID_HID, gidE = H5I_INVALID_HID;                         /* Group IDs in file #2 */
+    hid_t   gidH = H5I_INVALID_HID, gidI = H5I_INVALID_HID;                         /* Group IDs in file #3 */
+    hid_t   gidL = H5I_INVALID_HID; /* Group IDs through soft link to file #3 */
+    char    name[NAME_BUF_SIZE];    /* Buffer for filename retrieved */
+    ssize_t name_len;               /* Filename length */
     char    filename1[NAME_BUF_SIZE], filename2[NAME_BUF_SIZE],
         filename3[NAME_BUF_SIZE]; /* Name of files to mount */
 
@@ -4112,7 +4003,7 @@ test_symlink(hid_t fapl)
     {
         gidL = H5Gopen2(fid1, "L", H5P_DEFAULT);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     if (gidL >= 0)
         TEST_ERROR;
 
@@ -4132,7 +4023,7 @@ test_symlink(hid_t fapl)
     *name = '\0';
     if ((name_len = H5Iget_name(gidL, name, (size_t)NAME_BUF_SIZE)) < 0)
         TEST_ERROR;
-    if (name_len == 0 || HDstrcmp(name, "/L") != 0)
+    if (name_len == 0 || strcmp(name, "/L") != 0)
         TEST_ERROR;
 
     /* Close file #1 */
@@ -4166,7 +4057,7 @@ error:
         H5Fclose(fid2);
         H5Fclose(fid1);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_symlink() */
 
@@ -4179,18 +4070,14 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Neil Fortner
- *              Friday, August 1, 2008
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_sharedacc(hid_t fapl)
 {
-    hid_t fid1[2] = {-1, -1}, fid2[2] = {-1, -1}; /* File IDs */
-    hid_t gid = -1;
+    hid_t fid1[2] = {H5I_INVALID_HID, H5I_INVALID_HID},
+          fid2[2] = {H5I_INVALID_HID, H5I_INVALID_HID}; /* File IDs */
+    hid_t gid     = H5I_INVALID_HID;
     char  filename1[NAME_BUF_SIZE], filename2[NAME_BUF_SIZE],
         filename3[NAME_BUF_SIZE]; /* Name of files to mount */
     int i, j, k;                  /* Counters */
@@ -4271,7 +4158,7 @@ error:
             H5Fclose(fid2[i]);
         }
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_sharedacc() */
 
@@ -4285,18 +4172,13 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Neil Fortner
- *              Friday, August 6, 2008
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_sharedclose(hid_t fapl)
 {
-    hid_t fid1a = -1, fid1b = -1, fid2 = -1, fid3 = -2; /* File IDs */
-    hid_t gid1 = -1, gid2 = -1, gid3 = -1;
+    hid_t fid1a = H5I_INVALID_HID, fid1b = H5I_INVALID_HID, fid2 = H5I_INVALID_HID, fid3 = -2; /* File IDs */
+    hid_t gid1 = H5I_INVALID_HID, gid2 = H5I_INVALID_HID, gid3 = H5I_INVALID_HID;
     char  filename1[NAME_BUF_SIZE], filename2[NAME_BUF_SIZE],
         filename3[NAME_BUF_SIZE]; /* Name of files to mount */
 
@@ -4430,7 +4312,7 @@ error:
         H5Fclose(fid2);
         H5Fclose(fid3);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_sharedclose() */
 
@@ -4444,18 +4326,13 @@ error:
  *
  *		Failure:	number of errors
  *
- * Programmer:	Neil Fortner
- *              Friday, November 14, 2008
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static int
 test_multisharedclose(hid_t fapl)
 {
-    hid_t fid1 = -1, fid2 = -1; /* File IDs */
-    hid_t gid1 = -1, gid2 = -1, gid3 = -1;
+    hid_t fid1 = H5I_INVALID_HID, fid2 = H5I_INVALID_HID; /* File IDs */
+    hid_t gid1 = H5I_INVALID_HID, gid2 = H5I_INVALID_HID, gid3 = H5I_INVALID_HID;
     char  filename1[NAME_BUF_SIZE], filename2[NAME_BUF_SIZE], filename3[NAME_BUF_SIZE],
         filename4[NAME_BUF_SIZE]; /* Name of files to mount */
 
@@ -4585,7 +4462,7 @@ error:
         H5Fclose(fid2);
         H5Fclose(fid2);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end test_multisharedclose() */
 
@@ -4598,20 +4475,15 @@ error:
  *
  *		Failure:	non-zero
  *
- * Programmer:	Robb Matzke
- *              Wednesday, October  7, 1998
- *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 int
 main(void)
 {
     int   nerrors = 0;
-    hid_t fapl    = -1;
+    hid_t fapl    = H5I_INVALID_HID;
 
-    h5_reset();
+    h5_test_init();
     fapl = h5_fileaccess();
     if (setup(fapl) < 0)
         goto error;
@@ -4654,12 +4526,12 @@ main(void)
     if (nerrors)
         goto error;
 
-    HDputs("All mount tests passed.");
+    puts("All mount tests passed.");
     h5_cleanup(FILENAME, fapl);
 
     return 0;
 
 error:
-    HDputs("***** MOUNT ERRORS *****");
+    puts("***** MOUNT ERRORS *****");
     return 1;
 }

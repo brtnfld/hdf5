@@ -1,20 +1,15 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/*
- * Programmer:  Robb Matzke
- *              Monday, July 26, 1999
- */
 #ifndef H5FDprivate_H
 #define H5FDprivate_H
 
@@ -40,9 +35,8 @@
 #define H5FD_MAX_FILENAME_LEN 1024
 
 /*
- * VFD SWMR
+ * VFD SWMR metadata file constants
  */
-/* Metadata file header */
 #define H5FD_MD_HEADER_OFF   0      /* Header offset in the metadata file */
 #define H5FD_MD_HEADER_MAGIC "VHDR" /* Header magic */
 #define H5FD_SIZEOF_CHKSUM   4      /* Size of checksum */
@@ -53,124 +47,102 @@
      + 4                  /* Page size */                                                                    \
      + 8                  /* Tick number */                                                                  \
      + 8                  /* Index offset */                                                                 \
-     + 8                  /* Index length number */                                                          \
-     + H5FD_SIZEOF_CHKSUM /* Metadata header checksum */                                                     \
+     + 8                  /* Index length */                                                                 \
+     + H5FD_SIZEOF_CHKSUM /* Header checksum */                                                              \
     )
 
 /* Size of an index entry in the metadata file */
 #define H5FD_MD_INDEX_ENTRY_SIZE                                                                             \
     (4                    /* HDF5 file page offset */                                                        \
-     + 4                  /* Metadata file page offset */                                                    \
+     + 4                  /* MD file page offset */                                                          \
      + 4                  /* Length */                                                                       \
-     + H5FD_SIZEOF_CHKSUM /* Index entry checksum */                                                         \
+     + H5FD_SIZEOF_CHKSUM /* Entry checksum */                                                               \
     )
 
 /* Metadata file index magic */
-#define H5FD_MD_INDEX_MAGIC "VIDX" /* Index magic */
+#define H5FD_MD_INDEX_MAGIC "VIDX"
 
-/* Size of the metadata file index */
-#define H5FD_MD_INDEX_SIZE(N)         /* N is number of entries in index */                                  \
-    (H5_SIZEOF_MAGIC                  /* Signature */                                                        \
-     + 8                              /* Tick num */                                                         \
-     + 4                              /* Number of entries */                                                \
-     + (N * H5FD_MD_INDEX_ENTRY_SIZE) /* Index entries */                                                    \
-     + H5FD_SIZEOF_CHKSUM             /* Metadata index checksum */                                          \
+/* Size of the metadata file index (N = number of entries) */
+#define H5FD_MD_INDEX_SIZE(N)                                                                                \
+    (H5_SIZEOF_MAGIC                    /* Signature */                                                      \
+     + 8                                /* Tick num */                                                       \
+     + 4                                /* Number of entries */                                              \
+     + ((N) * H5FD_MD_INDEX_ENTRY_SIZE) /* Index entries */                                                  \
+     + H5FD_SIZEOF_CHKSUM               /* Index checksum */                                                 \
     )
 
 /* Retries for metadata file */
-#define H5FD_VFD_SWMR_MD_FILE_RETRY_MAX 50 /* Maximum retries when opening the MD file */
-#define H5FD_VFD_SWMR_MD_LOAD_RETRY_MAX                                                                      \
-    120 /* Maximum retries when trying to load the MD file header and index */
-#define H5FD_VFD_SWMR_MD_INDEX_RETRY_MAX 5 /* Maximum retries when deserializing the MD file index */
+#define H5FD_VFD_SWMR_MD_FILE_RETRY_MAX  50
+#define H5FD_VFD_SWMR_MD_LOAD_RETRY_MAX  120
+#define H5FD_VFD_SWMR_MD_INDEX_RETRY_MAX 5
 
-/*  Internal representation of metadata file index entry */
+#ifdef H5_HAVE_PARALLEL
+/* ======== Temporary data transfer properties ======== */
+/* Definitions for memory MPI type property */
+#define H5FD_MPI_XFER_MEM_MPI_TYPE_NAME "H5FD_mpi_mem_mpi_type"
+/* Definitions for file MPI type property */
+#define H5FD_MPI_XFER_FILE_MPI_TYPE_NAME "H5FD_mpi_file_mpi_type"
 
-/*----------------------------------------------------------------------------
- *
- *  struct H5FD_vfd_swmr_idx_entry_t
- *
- * Indices into the VFD SWMR metadata file are maintained in arrays of
- * instances of H5FD_vfd_swmr_index_t.
- *
- * The fields of H5FD_vfd_swmr_idx_entry_t are discussed below.
- *
- * hdf5_page_offset: Unsigned 64-bit value containing the base address of the
- *              metadata page, or multi page metadata entry in the HDF5
- *              file IN PAGES.
- *
- *              To obtain byte offset, multiply this value by the page size.
- *
- * md_file_page_offset: Unsigned 64-bit value containing the base address of
- *              the metadata page, or multi page metadata entry in the metadata
- *              file IN PAGES.
- *
- *              To obtain byte offset, multiply this value by the page size.
- *
- * length:      The length of the metadata page or multi- page metadata entry
- *              in BYTES.
- *
- * chksum:      Checksum for the metadata page or multi-page metadata entry.
- *              For the VFD SWMR writer, this value is undefined until the
- *              referenced entry has been written to the metadata file.
- *
- * entry_ptr:   Used by the VFD SWMR writer only.
- *
- *              For the VFD SWMR reader, this field should always be NULL.
- *              If the referenced metadata page or multi-page metadata
- *              entry was modified in the current tick, this field points to
- *              a buffer in the page buffer containing its value.
- *              This field is used by the metadata file creation/update code
- *              to access the metadata pages or multi-page metadata entries
- *              so that their current values can be copied into the metadata
- *              file.  After this copy, this field should be set to NULL.
- *
- * tick_of_last_change: Number of the last tick in which this index entry
- *              was changed.
- *
- *              Used by the VFD SWMR writer only.
- *
- *              For the VFD SWMR reader, this field will always be set to 0.
- *
- * clean:       Used by the VFD SWMR writer only.
- *
- *              Set to TRUE whenever the referenced metadata page or
- *              multi-page metadata entry is written to the HDF5 file.
- *              Set to FALSE whenever it is marked dirty in the page buffer.
- *
- * tick_of_last_flush: Number of the tick in which this entry was last
- *              written to the lower file or zero if it has never been flushed.
- *
- *              Used by the VFD SWMR writer only.
- *
- *              For the VFD SWMR reader, this field should always be 0.
- *
- * delayed_flush: If the flush of the referenced metadata page or multi-page
- *              metadata entry must be delayed, the earliest tick in which
- *              it may be flushed, or zero if there is no such constraint.
- *
- *              Used by the VFD SWMR writer only.
- *
- * moved_to_lower_file: Set to TRUE iff the entry referenced is in the
- *              lower file and is therefore about to be removed from the
- *              metadata file
- *
- * garbage: `true` if the entry is marked for garbage collection and is
- *              thus invalid.
- *
- *              For n the number of entries, deleting an entry is O(n).
- *              H5PB_dest() deletes all entries.  Instead of deleting
- *              entries one-by-one at O(n^2) cost, H5PB_dest() marks
- *              each disused entry for garbage collection and sweeps all
- *              entries up before it is done.
- *
- *----------------------------------------------------------------------------
- */
+#endif
+
+/****************************/
+/* Library Private Typedefs */
+/****************************/
+
+/* File operations */
+typedef enum {
+    OP_UNKNOWN = 0, /* Unknown last file operation */
+    OP_READ    = 1, /* Last file I/O operation was a read */
+    OP_WRITE   = 2  /* Last file I/O operation was a write */
+} H5FD_file_op_t;
+
+/* Define structure to hold initial file image and other relevant information */
+typedef struct {
+    void                       *buffer;
+    size_t                      size;
+    H5FD_file_image_callbacks_t callbacks;
+} H5FD_file_image_info_t;
+
+/* Define default file image info */
+#define H5FD_DEFAULT_FILE_IMAGE_INFO                                                                         \
+    {                                                                                                        \
+        NULL,         /* file image buffer */                                                                \
+            0,        /* buffer size */                                                                      \
+        {             /* Callbacks */                                                                        \
+            NULL,     /* image_malloc */                                                                     \
+                NULL, /* image_memcpy */                                                                     \
+                NULL, /* image_realloc */                                                                    \
+                NULL, /* image_free */                                                                       \
+                NULL, /* udata_copy */                                                                       \
+                NULL, /* udata_free */                                                                       \
+                NULL, /* udata */                                                                            \
+        }                                                                                                    \
+    }
+
+#define SKIP_NO_CB        0x00u
+#define SKIP_SELECTION_CB 0x01u
+#define SKIP_VECTOR_CB    0x02u
+
+/* Define structure to hold driver ID, info & configuration string for FAPLs */
+typedef struct {
+    hid_t       driver_id;         /* Driver's ID */
+    const void *driver_info;       /* Driver info, for open callbacks */
+    const char *driver_config_str; /* Driver configuration string */
+} H5FD_driver_prop_t;
+
+/* Which kind of VFD field to use for searching */
+typedef enum H5FD_get_driver_kind_t {
+    H5FD_GET_DRIVER_BY_NAME, /* Name field is set */
+    H5FD_GET_DRIVER_BY_VALUE /* Value field is set */
+} H5FD_get_driver_kind_t;
+
+/* VFD SWMR index entry: internal representation of metadata file index entry */
 typedef struct H5FD_vfd_swmr_idx_entry_t {
     uint64_t hdf5_page_offset;
     uint64_t md_file_page_offset;
     uint32_t length;
     uint32_t checksum;
-    void *   entry_ptr;
+    void    *entry_ptr;
     uint64_t tick_of_last_change;
     hbool_t  clean;
     uint64_t tick_of_last_flush;
@@ -179,28 +151,14 @@ typedef struct H5FD_vfd_swmr_idx_entry_t {
     bool     garbage;
 } H5FD_vfd_swmr_idx_entry_t;
 
-/*
- *  tick_num:       Sequence number of the current tick.
- *                  Initialized to zero on file creation/open, and incremented
- *                  by the VFD SWMR writer at the end of each tick.
- *  num_entries:    The number of entries in the index.
- *  entries:        The array of index entries
- */
+/* VFD SWMR metadata file index */
 typedef struct H5FD_vfd_swmr_md_index {
     uint64_t                   tick_num;
     uint32_t                   num_entries;
     H5FD_vfd_swmr_idx_entry_t *entries;
 } H5FD_vfd_swmr_md_index;
 
-/*
- *  fs_page_size:   Size of pages in both the HDF5 file and the metadata file IN BYTES
- *  tick_num:       Sequence number of the current tick.
- *                  Initialized to zero on file creation/open, and incremented by the
- *                  VFD SWMR writer at the end of each tick.
- *  index_offset:   The offset of the current metadata file index in the metadata file
- *                  IN BYTES.
- *  index_length:   The length of the current metadata file index IN BYTES.
- */
+/* VFD SWMR metadata file header */
 typedef struct H5FD_vfd_swmr_md_header {
     uint32_t fs_page_size;
     uint64_t tick_num;
@@ -208,17 +166,113 @@ typedef struct H5FD_vfd_swmr_md_header {
     size_t   index_length;
 } H5FD_vfd_swmr_md_header;
 
+/* Forward declarations for prototype arguments */
+struct H5S_t;
+
+/*****************************/
+/* Library Private Variables */
+/*****************************/
+
+/******************************/
+/* Library Private Prototypes */
+/******************************/
+
+/* Forward declarations for prototype arguments */
+struct H5F_t;
+union H5PL_key_t;
+
+H5_DLL herr_t        H5FD_init(void);
+H5_DLL int           H5FD_term_interface(void);
+H5_DLL herr_t        H5FD_locate_signature(H5FD_t *file, haddr_t *sig_addr);
+H5_DLL H5FD_class_t *H5FD_get_class(hid_t id);
+H5_DLL hsize_t       H5FD_sb_size(H5FD_t *file);
+H5_DLL herr_t        H5FD_sb_encode(H5FD_t *file, char *name /*out*/, uint8_t *buf);
+H5_DLL herr_t        H5FD_sb_load(H5FD_t *file, const char *name, const uint8_t *buf);
+H5_DLL void         *H5FD_fapl_get(H5FD_t *file);
+H5_DLL herr_t        H5FD_free_driver_info(hid_t driver_id, const void *driver_info);
+H5_DLL hid_t         H5FD_register(const void *cls, size_t size, bool app_ref);
+H5_DLL hid_t         H5FD_register_driver_by_name(const char *name, bool app_ref);
+H5_DLL hid_t         H5FD_register_driver_by_value(H5FD_class_value_t value, bool app_ref);
+H5_DLL htri_t        H5FD_is_driver_registered_by_name(const char *driver_name, hid_t *registered_id);
+H5_DLL htri_t  H5FD_is_driver_registered_by_value(H5FD_class_value_t driver_value, hid_t *registered_id);
+H5_DLL hid_t   H5FD_get_driver_id_by_name(const char *name, bool is_api);
+H5_DLL hid_t   H5FD_get_driver_id_by_value(H5FD_class_value_t value, bool is_api);
+H5_DLL herr_t  H5FD_open(bool attempt, H5FD_t **file, const char *name, unsigned flags, hid_t fapl_id,
+                         haddr_t maxaddr);
+H5_DLL herr_t  H5FD_close(H5FD_t *file);
+H5_DLL int     H5FD_cmp(const H5FD_t *f1, const H5FD_t *f2);
+H5_DLL herr_t  H5FD_driver_query(const H5FD_class_t *driver, unsigned long *flags /*out*/);
+H5_DLL herr_t  H5FD_check_plugin_load(const H5FD_class_t *cls, const union H5PL_key_t *key, bool *success);
+H5_DLL haddr_t H5FD_alloc(H5FD_t *file, H5FD_mem_t type, struct H5F_t *f, hsize_t size, haddr_t *frag_addr,
+                          hsize_t *frag_size);
+H5_DLL herr_t  H5FD_free(H5FD_t *file, H5FD_mem_t type, struct H5F_t *f, haddr_t addr, hsize_t size);
+H5_DLL htri_t  H5FD_try_extend(H5FD_t *file, H5FD_mem_t type, struct H5F_t *f, haddr_t blk_end,
+                               hsize_t extra_requested);
+H5_DLL haddr_t H5FD_get_eoa(const H5FD_t *file, H5FD_mem_t type);
+H5_DLL herr_t  H5FD_set_eoa(H5FD_t *file, H5FD_mem_t type, haddr_t addr);
+H5_DLL haddr_t H5FD_get_eof(const H5FD_t *file, H5FD_mem_t type);
+H5_DLL haddr_t H5FD_get_maxaddr(const H5FD_t *file);
+H5_DLL herr_t  H5FD_get_feature_flags(const H5FD_t *file, unsigned long *feature_flags);
+H5_DLL herr_t  H5FD_set_feature_flags(H5FD_t *file, unsigned long feature_flags);
+H5_DLL herr_t  H5FD_get_fs_type_map(const H5FD_t *file, H5FD_mem_t *type_map);
+H5_DLL herr_t  H5FD_read(H5FD_t *file, H5FD_mem_t type, haddr_t addr, size_t size, void *buf /*out*/);
+H5_DLL herr_t  H5FD_write(H5FD_t *file, H5FD_mem_t type, haddr_t addr, size_t size, const void *buf);
+H5_DLL herr_t  H5FD_read_vector(H5FD_t *file, uint32_t count, H5FD_mem_t types[], haddr_t addrs[],
+                                size_t sizes[], void *bufs[] /* out */);
+H5_DLL herr_t  H5FD_write_vector(H5FD_t *file, uint32_t count, H5FD_mem_t types[], haddr_t addrs[],
+                                 size_t sizes[], const void *bufs[] /* out */);
+H5_DLL herr_t  H5FD_read_selection(H5FD_t *file, H5FD_mem_t type, uint32_t count, struct H5S_t **mem_spaces,
+                                   struct H5S_t **file_spaces, haddr_t offsets[], size_t element_sizes[],
+                                   void *bufs[] /* out */);
+H5_DLL herr_t  H5FD_write_selection(H5FD_t *file, H5FD_mem_t type, uint32_t count, struct H5S_t **mem_spaces,
+                                    struct H5S_t **file_spaces, haddr_t offsets[], size_t element_sizes[],
+                                    const void *bufs[]);
+H5_DLL herr_t  H5FD_read_selection_id(uint32_t skip_cb, H5FD_t *file, H5FD_mem_t type, uint32_t count,
+                                      hid_t mem_space_ids[], hid_t file_space_ids[], haddr_t offsets[],
+                                      size_t element_sizes[], void *bufs[] /* out */);
+H5_DLL herr_t  H5FD_write_selection_id(uint32_t skip_cb, H5FD_t *file, H5FD_mem_t type, uint32_t count,
+                                       hid_t mem_space_ids[], hid_t file_space_ids[], haddr_t offsets[],
+                                       size_t element_sizes[], const void *bufs[]);
+H5_DLL herr_t  H5FD_read_vector_from_selection(H5FD_t *file, H5FD_mem_t type, uint32_t count,
+                                               hid_t mem_space_ids[], hid_t file_space_ids[],
+                                               haddr_t offsets[], size_t element_sizes[], void *bufs[]);
+
+H5_DLL herr_t H5FD_write_vector_from_selection(H5FD_t *file, H5FD_mem_t type, uint32_t count,
+                                               hid_t mem_space_ids[], hid_t file_space_ids[],
+                                               haddr_t offsets[], size_t element_sizes[], const void *bufs[]);
+
+H5_DLL herr_t H5FD_read_from_selection(H5FD_t *file, H5FD_mem_t type, uint32_t count, hid_t mem_space_ids[],
+                                       hid_t file_space_ids[], haddr_t offsets[], size_t element_sizes[],
+                                       void *bufs[]);
+
+H5_DLL herr_t  H5FD_write_from_selection(H5FD_t *file, H5FD_mem_t type, uint32_t count, hid_t mem_space_ids[],
+                                         hid_t file_space_ids[], haddr_t offsets[], size_t element_sizes[],
+                                         const void *bufs[]);
+H5_DLL herr_t  H5FD_flush(H5FD_t *file, bool closing);
+H5_DLL herr_t  H5FD_truncate(H5FD_t *file, bool closing);
+H5_DLL herr_t  H5FD_lock(H5FD_t *file, bool rw);
+H5_DLL herr_t  H5FD_unlock(H5FD_t *file);
+H5_DLL herr_t  H5FD_delete(const char *name, hid_t fapl_id);
+H5_DLL herr_t  H5FD_ctl(H5FD_t *file, uint64_t op_code, uint64_t flags, const void *input, void **output);
+H5_DLL herr_t  H5FD_get_fileno(const H5FD_t *file, unsigned long *filenum);
+H5_DLL herr_t  H5FD_get_vfd_handle(H5FD_t *file, hid_t fapl, void **file_handle);
+H5_DLL herr_t  H5FD_set_base_addr(H5FD_t *file, haddr_t base_addr);
+H5_DLL haddr_t H5FD_get_base_addr(const H5FD_t *file);
+H5_DLL herr_t  H5FD_set_paged_aggr(H5FD_t *file, bool paged);
+
+H5_DLL herr_t H5FD_sort_vector_io_req(bool *vector_was_sorted, uint32_t count, H5FD_mem_t types[],
+                                      haddr_t addrs[], size_t sizes[], H5_flexible_const_ptr_t bufs[],
+                                      H5FD_mem_t **s_types_ptr, haddr_t **s_addrs_ptr, size_t **s_sizes_ptr,
+                                      H5_flexible_const_ptr_t **s_bufs_ptr);
+
+H5_DLL herr_t H5FD_sort_selection_io_req(bool *selection_was_sorted, size_t count, hid_t mem_space_ids[],
+                                         hid_t file_space_ids[], haddr_t offsets[], size_t element_sizes[],
+                                         H5_flexible_const_ptr_t bufs[], hid_t **s_mem_space_ids,
+                                         hid_t **s_file_space_ids, haddr_t **s_offsets_ptr,
+                                         size_t **s_element_sizes_ptr, H5_flexible_const_ptr_t **s_bufs_ptr);
+
 /* Lookup the shadow-index entry corresponding to page number `target_page`
- * in the HDF5 file and return it.  If there is no match, return NULL.
- *
- * The lookup is performed by binary search on the `nentries` shadow index
- * entries at `idx`.  The entries must be sorted by their offset in the
- * HDF5 file.  Each entry must have a unique HDF5 file offset.
- *
- * If `reuse_garbage` is true, then entries marked for garbage collection
- * are eligible search results.  Return NULL if a matching entry is
- * found, but the entry is marked for garbage collection and `reuse_garbage`
- * is false.
+ * in the HDF5 file.  Returns NULL if no match.
  */
 static inline H5FD_vfd_swmr_idx_entry_t *
 H5FD_vfd_swmr_pageno_to_mdf_idx_entry(H5FD_vfd_swmr_idx_entry_t *idx, uint32_t nentries, uint64_t target_page,
@@ -244,163 +298,13 @@ H5FD_vfd_swmr_pageno_to_mdf_idx_entry(H5FD_vfd_swmr_idx_entry_t *idx, uint32_t n
         else /* found it */
             return (reuse_garbage || !idx[probe].garbage) ? &idx[probe] : NULL;
     } while (bottom < top);
-    /* Previous interval was [top - 1, top] or [bottom, bottom + 1].
-     * The new interval is [top, top] or [bottom, bottom], respectively.
-     * We probed idx[bottom] in the last step, and idx[top] (if it is
-     * not out of bounds) in an earlier round.  So there is nothing
-     * to be found at (top + bottom) / 2.
-     */
+
     return NULL;
 }
 
-#ifdef H5_HAVE_PARALLEL
-/* ======== Temporary data transfer properties ======== */
-/* Definitions for memory MPI type property */
-#define H5FD_MPI_XFER_MEM_MPI_TYPE_NAME "H5FD_mpi_mem_mpi_type"
-/* Definitions for file MPI type property */
-#define H5FD_MPI_XFER_FILE_MPI_TYPE_NAME "H5FD_mpi_file_mpi_type"
-
-#endif
-
-/****************************/
-/* Library Private Typedefs */
-/****************************/
-
-/* File operations */
-typedef enum {
-    OP_UNKNOWN = 0, /* Unknown last file operation */
-    OP_READ    = 1, /* Last file I/O operation was a read */
-    OP_WRITE   = 2  /* Last file I/O operation was a write */
-} H5FD_file_op_t;
-
-/* Define structure to hold initial file image and other relevant information */
-typedef struct {
-    void *                      buffer;
-    size_t                      size;
-    H5FD_file_image_callbacks_t callbacks;
-} H5FD_file_image_info_t;
-
-/* Define default file image info */
-#define H5FD_DEFAULT_FILE_IMAGE_INFO                                                                         \
-    {                                                                                                        \
-        NULL,         /* file image buffer */                                                                \
-            0,        /* buffer size */                                                                      \
-        {             /* Callbacks */                                                                        \
-            NULL,     /* image_malloc */                                                                     \
-                NULL, /* image_memcpy */                                                                     \
-                NULL, /* image_realloc */                                                                    \
-                NULL, /* image_free */                                                                       \
-                NULL, /* udata_copy */                                                                       \
-                NULL, /* udata_free */                                                                       \
-                NULL, /* udata */                                                                            \
-        }                                                                                                    \
-    }
-
-/* Define structure to hold driver ID, info & configuration string for FAPLs */
-typedef struct {
-    hid_t       driver_id;         /* Driver's ID */
-    const void *driver_info;       /* Driver info, for open callbacks */
-    const char *driver_config_str; /* Driver configuration string */
-} H5FD_driver_prop_t;
-
-/* Which kind of VFD field to use for searching */
-typedef enum H5FD_get_driver_kind_t {
-    H5FD_GET_DRIVER_BY_NAME, /* Name field is set */
-    H5FD_GET_DRIVER_BY_VALUE /* Value field is set */
-} H5FD_get_driver_kind_t;
-
-/*****************************/
-/* Library Private Variables */
-/*****************************/
-
-/******************************/
-/* Library Private Prototypes */
-/******************************/
-
-/* Forward declarations for prototype arguments */
-struct H5F_t;
-struct H5S_t;
-union H5PL_key_t;
-
-H5_DLL int    H5FD_term_interface(void);
-H5_DLL herr_t H5FD_locate_signature(H5FD_t *file, haddr_t *sig_addr);
-H5_DLL H5FD_class_t *H5FD_get_class(hid_t id);
-H5_DLL hsize_t       H5FD_sb_size(H5FD_t *file);
-H5_DLL herr_t        H5FD_sb_encode(H5FD_t *file, char *name /*out*/, uint8_t *buf);
-H5_DLL herr_t        H5FD_sb_load(H5FD_t *file, const char *name, const uint8_t *buf);
-H5_DLL void *        H5FD_fapl_get(H5FD_t *file);
-H5_DLL herr_t        H5FD_free_driver_info(hid_t driver_id, const void *driver_info);
-H5_DLL hid_t         H5FD_register(const void *cls, size_t size, hbool_t app_ref);
-H5_DLL hid_t         H5FD_register_driver_by_name(const char *name, hbool_t app_ref);
-H5_DLL hid_t         H5FD_register_driver_by_value(H5FD_class_value_t value, hbool_t app_ref);
-H5_DLL htri_t        H5FD_is_driver_registered_by_name(const char *driver_name, hid_t *registered_id);
-H5_DLL htri_t H5FD_is_driver_registered_by_value(H5FD_class_value_t driver_value, hid_t *registered_id);
-H5_DLL hid_t  H5FD_get_driver_id_by_name(const char *name, hbool_t is_api);
-H5_DLL hid_t  H5FD_get_driver_id_by_value(H5FD_class_value_t value, hbool_t is_api);
-H5_DLL H5FD_t *H5FD_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr);
-H5_DLL herr_t  H5FD_close(H5FD_t *file);
-H5_DLL int     H5FD_cmp(const H5FD_t *f1, const H5FD_t *f2);
-H5_DLL herr_t  H5FD_driver_query(const H5FD_class_t *driver, unsigned long *flags /*out*/);
-H5_DLL herr_t  H5FD_check_plugin_load(const H5FD_class_t *cls, const union H5PL_key_t *key, hbool_t *success);
-H5_DLL haddr_t H5FD_alloc(H5FD_t *file, H5FD_mem_t type, struct H5F_t *f, hsize_t size, haddr_t *frag_addr,
-                          hsize_t *frag_size);
-H5_DLL herr_t  H5FD_free(H5FD_t *file, H5FD_mem_t type, struct H5F_t *f, haddr_t addr, hsize_t size);
-H5_DLL htri_t  H5FD_try_extend(H5FD_t *file, H5FD_mem_t type, struct H5F_t *f, haddr_t blk_end,
-                               hsize_t extra_requested);
-H5_DLL haddr_t H5FD_get_eoa(const H5FD_t *file, H5FD_mem_t type);
-H5_DLL herr_t  H5FD_set_eoa(H5FD_t *file, H5FD_mem_t type, haddr_t addr);
-H5_DLL haddr_t H5FD_get_eof(const H5FD_t *file, H5FD_mem_t type);
-H5_DLL haddr_t H5FD_get_maxaddr(const H5FD_t *file);
-H5_DLL herr_t  H5FD_get_feature_flags(const H5FD_t *file, unsigned long *feature_flags);
-H5_DLL herr_t  H5FD_set_feature_flags(H5FD_t *file, unsigned long feature_flags);
-H5_DLL herr_t  H5FD_get_fs_type_map(const H5FD_t *file, H5FD_mem_t *type_map);
-H5_DLL herr_t  H5FD_read(H5FD_t *file, H5FD_mem_t type, haddr_t addr, size_t size, void *buf /*out*/);
-H5_DLL herr_t  H5FD_write(H5FD_t *file, H5FD_mem_t type, haddr_t addr, size_t size, const void *buf);
-H5_DLL herr_t  H5FD_read_vector(H5FD_t *file, uint32_t count, H5FD_mem_t types[], haddr_t addrs[],
-                                size_t sizes[], void *bufs[] /* out */);
-H5_DLL herr_t  H5FD_write_vector(H5FD_t *file, uint32_t count, H5FD_mem_t types[], haddr_t addrs[],
-                                 size_t sizes[], const void *bufs[] /* out */);
-H5_DLL herr_t  H5FD_read_selection(H5FD_t *file, H5FD_mem_t type, uint32_t count, struct H5S_t **mem_spaces,
-                                   struct H5S_t **file_spaces, haddr_t offsets[], size_t element_sizes[],
-                                   void *bufs[] /* out */);
-H5_DLL herr_t  H5FD_write_selection(H5FD_t *file, H5FD_mem_t type, uint32_t count, struct H5S_t **mem_spaces,
-                                    struct H5S_t **file_spaces, haddr_t offsets[], size_t element_sizes[],
-                                    const void *bufs[]);
-H5_DLL herr_t  H5FD_read_selection_id(H5FD_t *file, H5FD_mem_t type, uint32_t count, hid_t mem_space_ids[],
-                                      hid_t file_space_ids[], haddr_t offsets[], size_t element_sizes[],
-                                      void *bufs[] /* out */);
-H5_DLL herr_t  H5FD_write_selection_id(H5FD_t *file, H5FD_mem_t type, uint32_t count, hid_t mem_space_ids[],
-                                       hid_t file_space_ids[], haddr_t offsets[], size_t element_sizes[],
-                                       const void *bufs[]);
-H5_DLL herr_t  H5FD_flush(H5FD_t *file, hbool_t closing);
-H5_DLL herr_t  H5FD_truncate(H5FD_t *file, hbool_t closing);
-H5_DLL herr_t  H5FD_lock(H5FD_t *file, hbool_t rw);
-H5_DLL herr_t  H5FD_unlock(H5FD_t *file);
-H5_DLL herr_t  H5FD_delete(const char *name, hid_t fapl_id);
-H5_DLL herr_t  H5FD_ctl(H5FD_t *file, uint64_t op_code, uint64_t flags, const void *input, void **output);
-H5_DLL herr_t  H5FD_get_fileno(const H5FD_t *file, unsigned long *filenum);
-H5_DLL herr_t  H5FD_get_vfd_handle(H5FD_t *file, hid_t fapl, void **file_handle);
-H5_DLL herr_t  H5FD_set_base_addr(H5FD_t *file, haddr_t base_addr);
-H5_DLL haddr_t H5FD_get_base_addr(const H5FD_t *file);
-H5_DLL herr_t  H5FD_set_paged_aggr(H5FD_t *file, hbool_t paged);
-
-H5_DLL herr_t H5FD_sort_vector_io_req(hbool_t *vector_was_sorted, uint32_t count, H5FD_mem_t types[],
-                                      haddr_t addrs[], size_t sizes[], H5_flexible_const_ptr_t bufs[],
-                                      H5FD_mem_t **s_types_ptr, haddr_t **s_addrs_ptr, size_t **s_sizes_ptr,
-                                      H5_flexible_const_ptr_t **s_bufs_ptr);
-H5_DLL herr_t H5FD_init(void);
-
 /* Function prototypes for VFD SWMR */
-H5_DLL herr_t  H5FD_vfd_swmr_get_tick_and_idx(H5FD_t *_file, hbool_t read_index, uint64_t *tick_ptr,
-                                              uint32_t *num_entries_ptr, H5FD_vfd_swmr_idx_entry_t index[]);
-H5_DLL void    H5FD_vfd_swmr_dump_status(H5FD_t *file, uint64_t page);
-H5_DLL void    H5FD_vfd_swmr_set_pb_configured(H5FD_t *_file);
-H5_DLL void    H5FD_vfd_swmr_record_elapsed_ticks(H5FD_t *_file, uint64_t elapsed);
-H5_DLL void    H5FD_vfd_swmr_get_md_path_name(H5FD_t *_file, char **name);
-H5_DLL hbool_t H5FD_vfd_swmr_get_make_believe(H5FD_t *_file);
-H5_DLL void    H5FD_vfd_swmr_set_make_believe(H5FD_t *_file, hbool_t make_believe);
-H5_DLL htri_t  H5FD_vfd_swmr_assess_make_believe(H5FD_t *_file);
-H5_DLL H5FD_t *H5FD_vfd_swmr_dedup(H5FD_t *_self, H5FD_t *_other, hid_t fapl_id);
+H5_DLL herr_t H5FD_vfd_swmr_get_tick_and_idx(H5FD_t *_file, hbool_t read_index, uint64_t *tick_ptr,
+                                             uint32_t *num_entries_ptr, H5FD_vfd_swmr_idx_entry_t index[]);
 
 /* Function prototypes for MPI based VFDs*/
 #ifdef H5_HAVE_PARALLEL
@@ -411,13 +315,15 @@ H5_DLL herr_t  H5FD_mpi_haddr_to_MPIOff(haddr_t addr, MPI_Offset *mpi_off /*out*
 H5_DLL herr_t H5FD_mpio_wait_for_left_neighbor(H5FD_t *file);
 H5_DLL herr_t H5FD_mpio_signal_right_neighbor(H5FD_t *file);
 #endif /* NOT_YET */
-H5_DLL herr_t H5FD_set_mpio_atomicity(H5FD_t *file, hbool_t flag);
-H5_DLL herr_t H5FD_get_mpio_atomicity(H5FD_t *file, hbool_t *flag);
+H5_DLL herr_t H5FD_set_mpio_atomicity(H5FD_t *file, bool flag);
+H5_DLL herr_t H5FD_get_mpio_atomicity(H5FD_t *file, bool *flag);
 
 /* Driver specific methods */
 H5_DLL int      H5FD_mpi_get_rank(H5FD_t *file);
 H5_DLL int      H5FD_mpi_get_size(H5FD_t *file);
 H5_DLL MPI_Comm H5FD_mpi_get_comm(H5FD_t *file);
+H5_DLL MPI_Info H5FD_mpi_get_info(H5FD_t *file);
+H5_DLL herr_t   H5FD_mpi_get_file_sync_required(H5FD_t *file, bool *file_sync_required);
 #endif /* H5_HAVE_PARALLEL */
 
 #endif /* H5FDprivate_H */

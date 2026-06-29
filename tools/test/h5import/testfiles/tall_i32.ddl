@@ -1,4 +1,4 @@
-HDF5 "d-tall_i32.h5" {
+HDF5 "dstall_i32.h5" {
 GROUP "/" {
    GROUP "g1" {
       GROUP "g1.1" {
@@ -8,7 +8,7 @@ GROUP "/" {
             STORAGE_LAYOUT {
                CONTIGUOUS
                SIZE 24
-               OFFSET 3464
+               OFFSET 2048
             }
             FILTERS {
                NONE

@@ -1,11 +1,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
@@ -34,11 +33,10 @@ extern "C" {
  *          It will return failure if \p cur_dims is NULL.
  *
  * \note See Also:
- * \note Dataset Watch functions (used with \ref h5watch):
+ * \note Dataset Watch functions (used with \ref sec_cltools_h5watch):
  *       - H5LDget_dset_dims()
  *       - H5LDget_dset_elmts()
  *       - H5LDget_dset_type_size()
- *       .
  *
  * \par Example:
  * See the example code in H5LDget_dset_elmts() for usage of this routine.
@@ -46,24 +44,24 @@ extern "C" {
  * \since 1.10.0
  *
  */
-H5_HLDLL herr_t H5LDget_dset_dims(hid_t did, hsize_t *cur_dims);
+H5HL_DLL herr_t H5LDget_dset_dims(hid_t did, hsize_t *cur_dims);
 
 /**
  *-------------------------------------------------------------------------
  * \ingroup H5LT
  *
- * \brief Returns the size in bytes of the dataset’s datatype
+ * \brief Returns the size in bytes of the dataset's datatype
  *
  * \param[in] did       The dataset identifier
  * \param[in] fields    The pointer to a comma-separated list of fields for a compound datatype
  *
  * \return If successful, returns the size in bytes of the
- *         dataset’s datatype. Otherwise, returns 0.
+ *         dataset's datatype. Otherwise, returns 0.
  *
  * \details H5LDget_dset_type_size() allows the user to find out the datatype
  *          size for the dataset associated with \p did. If the
  *          parameter \p fields is NULL, this routine just returns the size
- *          of the dataset’s datatype. If the dataset has a compound datatype
+ *          of the dataset's datatype. If the dataset has a compound datatype
  *          and \p fields is non-NULL, this routine returns the size of the
  *          datatype(s) for the selected fields specified in \p fields.
  *          Note that ’,’ is the separator for the fields of a compound
@@ -72,11 +70,10 @@ H5_HLDLL herr_t H5LDget_dset_dims(hid_t did, hsize_t *cur_dims);
  *          conflict with these two separators.
  *
  * \note See Also:
- * \note Dataset Watch functions (used with \ref h5watch):
+ * \note Dataset Watch functions (used with \ref sec_cltools_h5watch):
  *       - H5LDget_dset_dims()
  *       - H5LDget_dset_elmts()
  *       - H5LDget_dset_type_size()
- *       .
  *
  * \par Example:
  * See the example code in H5LDget_dset_elmts() for usage of this routine.
@@ -84,7 +81,7 @@ H5_HLDLL herr_t H5LDget_dset_dims(hid_t did, hsize_t *cur_dims);
  * \since 1.10.0
  *
  */
-H5_HLDLL size_t H5LDget_dset_type_size(hid_t did, const char *fields);
+H5HL_DLL size_t H5LDget_dset_type_size(hid_t did, const char *fields);
 
 /**
  *-------------------------------------------------------------------------
@@ -109,7 +106,7 @@ H5_HLDLL size_t H5LDget_dset_type_size(hid_t did, const char *fields);
  *          selected from the dataset. Note that \p cur_dims must have
  *          at least one dimension whose size is greater than the
  *          corresponding dimension in \p prev_dims. Users can
- *          determine the size of buf by multipling the datatype
+ *          determine the size of buf by multiplying the datatype
  *          size of the dataset by the number of selected elements.
  *
  *          If the parameter \p fields is NULL, this routine returns
@@ -125,11 +122,10 @@ H5_HLDLL size_t H5LDget_dset_type_size(hid_t did, const char *fields);
  *          two separators.
  *
  * \note See Also:
- * \note Dataset Watch functions (used with \ref h5watch):
+ * \note Dataset Watch functions (used with \ref sec_cltools_h5watch):
  *       - H5LDget_dset_dims()
  *       - H5LDget_dset_elmts()
  *       - H5LDget_dset_type_size()
- *       .
  *
  * \par Examples:
  *
@@ -161,7 +157,7 @@ H5_HLDLL size_t H5LDget_dset_type_size(hid_t did, const char *fields);
  * \since 1.10.0
  *
  */
-H5_HLDLL herr_t H5LDget_dset_elmts(hid_t did, const hsize_t *prev_dims, const hsize_t *cur_dims,
+H5HL_DLL herr_t H5LDget_dset_elmts(hid_t did, const hsize_t *prev_dims, const hsize_t *cur_dims,
                                    const char *fields, void *buf);
 
 #ifdef __cplusplus

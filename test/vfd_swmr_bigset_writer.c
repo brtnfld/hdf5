@@ -72,7 +72,7 @@
 
 /* This program does not currently support the VFD SWMR
  * configuration language. Supporting it would require significant
- * restructuring due to conflicting configuration initialization 
+ * restructuring due to conflicting configuration initialization
  * requirements.
  *                      -- Cody Sloan 6/2/2026
  */
@@ -142,8 +142,8 @@ typedef struct _sources {
 #define N_FILES 4
 
 typedef struct {
-    hid_t *     dataset;
-    sources_t * sources;
+    hid_t      *dataset;
+    sources_t  *sources;
     hid_t       file[N_FILES];
     hid_t       dapl, filetype, memspace, one_by_one_sid, quadrant_dcpl;
     unsigned    ndatasets;
@@ -182,13 +182,12 @@ typedef struct {
     size_t          chunk_cache_size;
     unsigned int    deflate_level;
     struct timespec ival;
-    const char      *md_dir;
+    const char     *md_dir;
 #ifdef ADD_UNIQUE_STEP_FILE
-    int             fd_step_file;
-    const char *    step_file_name;
+    int         fd_step_file;
+    const char *step_file_name;
 #endif /* ADD_UNIQUE_STEP_FILE */
 } state_t;
-
 
 typedef struct {
     unsigned        step;
@@ -203,29 +202,28 @@ static hsize_t three_dee_max_dims[RANK3];
 static void
 usage(const char *progname)
 {
-    HDfprintf(
-        stderr,
-        "usage: %s [-A] [-C] [-F] [-M] [-N] [-P] [-R] [-S] [-V] [-W] [-a steps] [-b] [-c cols]\n"
-        "    [-d dims] [-e depth] [-f tick_len] [-g max_lag] [-j skip_chunk] [-k part_chunk]\n"
-        "    [-l tick_num] [-n iterations] [-o page_buf_size] [-p fsp_size] [-r rows]\n"
-        "    [-s datasets] [-t] [-u over_extend] [-v chunk_cache_size] [-w deflate_level]\n"
-        "    [-i -ip_addr <IP address>] [--md_dir <directory>]\n"
-        "\n"
-        "-A:                   use the auxiliary process to update the metadata file\n"
-        "-C:                   cross-over chunk read during chunk verification\n"
-        "-F:                   fixed maximal dimension for the chunked datasets\n"
-        "-M:                   use virtual datasets and many source\n"
-        "                      files\n"
-        "-N:                   do not use interprocess communication between reader and writer\n"
-        "-P:                   do the performance measurement\n"
-        "-R:                   flush raw data\n"
-        "-S:                   do not use VFD SWMR\n"
-        "-T:                   use legacy SWMR (-S and -N must also be specified)\n"
-        "-V:                   use virtual datasets and a single\n"
-        "                      source file\n"
-        "-a steps:	       `steps` between adding attributes\n"
-        "-b:                   write data in big-endian byte order\n",
-        progname);
+    HDfprintf(stderr,
+              "usage: %s [-A] [-C] [-F] [-M] [-N] [-P] [-R] [-S] [-V] [-W] [-a steps] [-b] [-c cols]\n"
+              "    [-d dims] [-e depth] [-f tick_len] [-g max_lag] [-j skip_chunk] [-k part_chunk]\n"
+              "    [-l tick_num] [-n iterations] [-o page_buf_size] [-p fsp_size] [-r rows]\n"
+              "    [-s datasets] [-t] [-u over_extend] [-v chunk_cache_size] [-w deflate_level]\n"
+              "    [-i -ip_addr <IP address>] [--md_dir <directory>]\n"
+              "\n"
+              "-A:                   use the auxiliary process to update the metadata file\n"
+              "-C:                   cross-over chunk read during chunk verification\n"
+              "-F:                   fixed maximal dimension for the chunked datasets\n"
+              "-M:                   use virtual datasets and many source\n"
+              "                      files\n"
+              "-N:                   do not use interprocess communication between reader and writer\n"
+              "-P:                   do the performance measurement\n"
+              "-R:                   flush raw data\n"
+              "-S:                   do not use VFD SWMR\n"
+              "-T:                   use legacy SWMR (-S and -N must also be specified)\n"
+              "-V:                   use virtual datasets and a single\n"
+              "                      source file\n"
+              "-a steps:	       `steps` between adding attributes\n"
+              "-b:                   write data in big-endian byte order\n",
+              progname);
     /* Split print function to avoid line too long warning */
     HDfprintf(
         stderr,
@@ -291,20 +289,19 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
     unsigned long     tmp;
     int               opt;
     const hsize_t     dims  = 1;
-    char *            tfile = NULL;
-    char *            end;
+    char             *tfile = NULL;
+    char             *end;
     size_t            rdcc_nslots, rdcc_nbytes;
     double            rdcc_w0;
     quadrant_t *const ul = &s->quadrants.ul, *const ur = &s->quadrants.ur, *const bl = &s->quadrants.bl,
                       *const br = &s->quadrants.br, *const src = &s->quadrants.src;
-    const char *           personality;
-    const char *           s_opts   = "ACFMNPRSTVa:bc:d:e:f:g:i:j:k:l:m:n:o:p:qr:s:tu:v:w:";
+    const char            *personality;
+    const char            *s_opts   = "ACFMNPRSTVa:bc:d:e:f:g:i:j:k:l:m:n:o:p:qr:s:tu:v:w:";
     struct h5_long_options l_opts[] = {
         {"ip_addr", require_arg, 'i'},
         {"md_dir", require_arg, -127}, /* Valid char value that can't be typed in command line */
         {"help", no_arg, 'h'},
-        {NULL, 0, '\0'}
-    };
+        {NULL, 0, '\0'}};
 
     s->memspace          = H5I_INVALID_HID;
     s->dapl              = H5I_INVALID_HID;
@@ -994,8 +991,8 @@ static int
 notify_and_wait_for_reader(state_t *s, socket_state_t *sock)
 {
     unsigned int    i;
-    struct timespec last   = {0, 0};
-    sock->verify = 2;
+    struct timespec last = {0, 0};
+    sock->verify         = 2;
 
     /* Get the time when finishing creation */
     if (HDclock_gettime(CLOCK_MONOTONIC, &last) < 0) {
@@ -1055,7 +1052,7 @@ static int
 reader_check_time_and_notify_writer(state_t *s, socket_state_t *sock)
 {
     struct timespec last = {0, 0};
-    sock->notify = 2;
+    sock->notify         = 2;
 
     /* Receive the notice of the writer finishing creation (timestamp) */
     if (recv(sock->comm_fd, &last, sizeof(last), 0) < 0) {
@@ -1064,7 +1061,8 @@ reader_check_time_and_notify_writer(state_t *s, socket_state_t *sock)
     }
 
 #ifdef DEBUG_RW_COMMS
-    HDfprintf(stderr, "[DEBUG-COMM] reader_check_time_and_notify_writer(): reader received: last = (%lld, %lld)\n", 
+    HDfprintf(stderr,
+              "[DEBUG-COMM] reader_check_time_and_notify_writer(): reader received: last = (%lld, %lld)\n",
               (unsigned long long)(last.tv_sec), (unsigned long long)(last.tv_nsec));
 #endif /* DEBUG_RW_COMMS */
 
@@ -1083,7 +1081,8 @@ reader_check_time_and_notify_writer(state_t *s, socket_state_t *sock)
     }
 
 #ifdef DEBUG_RW_COMMS
-    HDfprintf(stderr, "[DEBUG-COMM] reader_check_time_and_notify_writer(): reader sent: notify = %d\n", sock->notify);
+    HDfprintf(stderr, "[DEBUG-COMM] reader_check_time_and_notify_writer(): reader sent: notify = %d\n",
+              sock->notify);
 #endif /* DEBUG_RW_COMMS */
 
     return 0;
@@ -1096,7 +1095,7 @@ error:
 static int
 notify_reader(state_t *s, socket_state_t *sock, unsigned step)
 {
-    exchange_info_t *last         = HDcalloc(1, sizeof(exchange_info_t));
+    exchange_info_t *last = HDcalloc(1, sizeof(exchange_info_t));
 
     /* Get the time */
     if (HDclock_gettime(CLOCK_MONOTONIC, &(last->time)) < 0) {
@@ -1125,7 +1124,7 @@ notify_reader(state_t *s, socket_state_t *sock, unsigned step)
         TEST_ERROR;
     }
     s->fd_step_file = -1;
-#else /* ADD_UNIQUE_STEP_FILE */
+#else  /* ADD_UNIQUE_STEP_FILE */
     (void)s; /* silence compiler warning about unused variable */
 
     if (send(sock->comm_fd, last, sizeof(exchange_info_t), 0) < 0) {
@@ -1135,8 +1134,8 @@ notify_reader(state_t *s, socket_state_t *sock, unsigned step)
 #endif /* ADD_UNIQUE_STEP_FILE */
 
 #ifdef DEBUG_RW_COMMS
-    HDfprintf(stderr, "[DEBUG-COMM] notify_reader(): writer sent: last.step = %d, last.time = (%lld, %lld)\n", 
-              (int)(last->step), (unsigned long long)(last->time.tv_sec), 
+    HDfprintf(stderr, "[DEBUG-COMM] notify_reader(): writer sent: last.step = %d, last.time = (%lld, %lld)\n",
+              (int)(last->step), (unsigned long long)(last->time.tv_sec),
               (unsigned long long)(last->time.tv_nsec));
 #endif /* DEBUG_RW_COMMS */
 
@@ -1148,7 +1147,6 @@ notify_reader(state_t *s, socket_state_t *sock, unsigned step)
 error:
     return -1;
 } /* notify_reader() */
-
 
 /*-------------------------------------------------------------------------
  * Function:    md_ck_cb()
@@ -1168,10 +1166,10 @@ error:
 static herr_t
 md_ck_cb(char *md_file_path, uint64_t updater_seq_num)
 {
-    FILE *   md_fp  = NULL;      /* Metadata file pointer */
-    FILE *   chk_fp = NULL;      /* Checksum file pointer */
+    FILE    *md_fp  = NULL;      /* Metadata file pointer */
+    FILE    *chk_fp = NULL;      /* Checksum file pointer */
     long     size   = 0;         /* File size returned from HDftell() */
-    void *   buf    = NULL;      /* Buffer for holding the metadata file content */
+    void    *buf    = NULL;      /* Buffer for holding the metadata file content */
     uint32_t chksum = 0;         /* The checksum generated for the metadata file */
     char     chk_name[1024 + 4]; /* Buffer for the checksum file name */
     size_t   ret;                /* Return value */
@@ -2156,7 +2154,7 @@ error:
     H5E_END_TRY;
 
     return false;
- } /* verify_extensible_dset() */
+} /* verify_extensible_dset() */
 
 static bool
 verify_dsets(state_t *s, socket_state_t *sock, mat_t *mat)
@@ -2198,15 +2196,18 @@ verify_dsets(state_t *s, socket_state_t *sock, mat_t *mat)
         (void)attempts; /* silence compiler warning about unused variable */
 
         if (recv(sock->comm_fd, &last, sizeof(last), 0) < 0) {
-                HDfprintf(stderr, "recv() failed\n");
-                TEST_ERROR;
+            HDfprintf(stderr, "recv() failed\n");
+            TEST_ERROR;
         }
 #endif /* ADD_UNIQUE_STEP_FILE */
 
 #ifdef DEBUG_RW_COMMS
         if (s->use_communication) {
-            HDfprintf(stderr, "[DEBUG-COMM] verify_dsets(): reader received: last.step = %d, last.time = (%lld, %lld)\n",
-                (int)(last.step), (unsigned long long)(last.time.tv_sec), (unsigned long long)(last.time.tv_nsec));
+            HDfprintf(
+                stderr,
+                "[DEBUG-COMM] verify_dsets(): reader received: last.step = %d, last.time = (%lld, %lld)\n",
+                (int)(last.step), (unsigned long long)(last.time.tv_sec),
+                (unsigned long long)(last.time.tv_nsec));
         }
 #endif /* DEBUG_RW_COMMS */
 
@@ -2263,7 +2264,6 @@ verify_dsets(state_t *s, socket_state_t *sock, mat_t *mat)
 error:
     return false;
 } /* verify_dsets() */
-
 
 static bool
 add_dset_attribute(const state_t *s, hid_t ds, hid_t sid, unsigned int which, unsigned int step)
@@ -2477,7 +2477,7 @@ write_dsets(state_t *s, socket_state_t *sock, mat_t *mat)
 {
     unsigned           last_step, step, total_steps, which;
     unsigned long long old_tick_num;
-    H5F_t *            f = NULL;
+    H5F_t             *f = NULL;
     struct timespec    start_time, end_time;
 
     if (NULL == (f = (H5F_t *)H5VL_object(s->file[0]))) {
@@ -2567,12 +2567,12 @@ error:
 int
 main(int argc, char **argv)
 {
-    mat_t *                mat    = NULL;
+    mat_t                 *mat    = NULL;
     hid_t                  fcpl   = H5I_INVALID_HID;
-    state_t *              s      = NULL;
-    socket_state_t *       sock   = NULL;
+    state_t               *s      = NULL;
+    socket_state_t        *sock   = NULL;
     H5F_vfd_swmr_config_t *config = NULL;
-    
+
     if (NULL == (sock = HDcalloc(1, sizeof(socket_state_t)))) {
         TEST_ERROR;
     }
@@ -2582,7 +2582,7 @@ main(int argc, char **argv)
     if (NULL == (config = HDcalloc(1, sizeof(H5F_vfd_swmr_config_t)))) {
         TEST_ERROR;
     }
-   
+
     if (!socket_init(sock)) {
         HDfprintf(stderr, "socket_init failed\n");
         TEST_ERROR;
@@ -2592,7 +2592,6 @@ main(int argc, char **argv)
         HDfprintf(stderr, "state_init failed\n");
         TEST_ERROR;
     }
-
 
     if ((mat = newmat(s)) == NULL) {
         HDfprintf(stderr, "could not allocate matrix\n");
@@ -2625,21 +2624,21 @@ main(int argc, char **argv)
         /* If using the auxiliary process, the writer creates the updater files.
          * The reader uses the metadata file generated by the auxiliary process. */
         if (s->writer) {
-            init_vfd_swmr_config(config, s->tick_len, s->max_lag, FALSE, s->writer, FALSE, TRUE,
+            init_vfd_swmr_config(config, s->tick_len, s->max_lag, false, s->writer, false, true,
                                  s->flush_raw_data, 128, s->md_dir, "bigset-shadow-%zu", "bigset_updater", i);
         }
         else {
-            init_vfd_swmr_config(config, s->tick_len, s->max_lag, FALSE, s->writer, TRUE, FALSE,
+            init_vfd_swmr_config(config, s->tick_len, s->max_lag, false, s->writer, true, false,
                                  s->flush_raw_data, 128, s->md_dir, "mdfile", NULL);
         }
 #else /* H5_HAVE_AUX_PROCESS */
 
         if (s->vds == vds_multi || s->vds == vds_single) {
-            init_vfd_swmr_config(config, s->tick_len, s->max_lag, TRUE, s->writer, TRUE, FALSE,
+            init_vfd_swmr_config(config, s->tick_len, s->max_lag, true, s->writer, true, false,
                                  s->flush_raw_data, 128, "", "%s", NULL, "");
         }
         else {
-            init_vfd_swmr_config(config, s->tick_len, s->max_lag, FALSE, s->writer, TRUE, FALSE,
+            init_vfd_swmr_config(config, s->tick_len, s->max_lag, false, s->writer, true, false,
                                  s->flush_raw_data, 128, s->md_dir, "bigset-shadow-%zu", NULL, i);
         }
 
@@ -2663,7 +2662,7 @@ main(int argc, char **argv)
             }
 
             /* Convert the value to megabytes */
-            mdc_config.set_initial_size = TRUE;
+            mdc_config.set_initial_size = true;
             mdc_config.initial_size     = s->mdc_init_size * 1024 * 1024;
 
             if (H5Pset_mdc_config(fapl, &mdc_config) < 0) {
@@ -2720,7 +2719,7 @@ main(int argc, char **argv)
         }
 
 #ifdef DEBUG_RW_COMMS
-        if ( s->use_communication ) {
+        if (s->use_communication) {
             HDfprintf(stderr, "[DEBUG-COMM] main()/writer: writer sent: notify = %d\n", (int)(sock->notify));
         }
 #endif /* DEBUG_RW_COMMS */
@@ -2818,7 +2817,7 @@ main(int argc, char **argv)
     }
 
 #ifdef ADD_UNIQUE_STEP_FILE
-    if(!s->writer && s->step_file_name){
+    if (!s->writer && s->step_file_name) {
         HDremove(s->step_file_name);
         s->step_file_name = NULL;
     }
@@ -2847,7 +2846,7 @@ error:
     H5E_END_TRY;
 
 #ifdef ADD_UNIQUE_STEP_FILE
-    if(!s->writer && s->step_file_name){
+    if (!s->writer && s->step_file_name) {
         HDremove(s->step_file_name);
         s->step_file_name = NULL;
     }

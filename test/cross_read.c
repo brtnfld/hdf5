@@ -1,20 +1,16 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
  * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
+ * the LICENSE file, which can be found at the root of the source code       *
  * distribution tree, or in https://www.hdfgroup.org/licenses.               *
  * If you do not have access to either file, you may request a copy from     *
  * help@hdfgroup.org.                                                        *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:  Raymond Lu
- *              Thursday, March 23, 2006
- *
  * Purpose:     Check if floating-point data created on big-endian and
  *              little-endian machines can be read on the machine running this test.
  */
@@ -22,7 +18,7 @@
 #include "h5test.h"
 #include "H5srcdir.h"
 
-const char *FILENAME[] = {"vms_data", "le_data", "be_data", NULL};
+static const char *FILENAME[] = {"vms_data", "le_data", "be_data", NULL};
 
 #define DATASETNAME   "Array_le"
 #define DATASETNAME1  "Array_be"
@@ -65,19 +61,16 @@ const char *FILENAME[] = {"vms_data", "le_data", "be_data", NULL};
  * Return:      Success:        0
  *              Failure:        1
  *
- * Programmer:  Raymond Lu
- *              17 May 2011
- *
  *-------------------------------------------------------------------------
  */
 static int
 check_data_i(const char *dsetname, hid_t fid)
 {
-    hid_t     did = -1;             /* dataset ID                       */
-    long long data_in[NX + 1][NY];  /* input buffer                     */
-    long long data_out[NX + 1][NY]; /* output buffer                    */
-    int       i, j;                 /* iterators                        */
-    int       nerrors = 0;          /* # errors in dataset values       */
+    hid_t     did = H5I_INVALID_HID; /* dataset ID                       */
+    long long data_in[NX + 1][NY];   /* input buffer                     */
+    long long data_out[NX + 1][NY];  /* output buffer                    */
+    int       i, j;                  /* iterators                        */
+    int       nerrors = 0;           /* # errors in dataset values       */
 
     /* Open the dataset. */
     if ((did = H5Dopen2(fid, dsetname, H5P_DEFAULT)) < 0)
@@ -91,7 +84,7 @@ check_data_i(const char *dsetname, hid_t fid)
     for (i = 0; i < NY; i++)
         data_in[NX][i] = -2;
     /* Output */
-    HDmemset(data_out, 0, (NX + 1) * NY * sizeof(long long));
+    memset(data_out, 0, (NX + 1) * NY * sizeof(long long));
 
     /* Read data from hyperslab in the file into the hyperslab in
      * memory and display.
@@ -105,8 +98,8 @@ check_data_i(const char *dsetname, hid_t fid)
             if (data_out[i][j] != data_in[i][j])
                 if (!nerrors++) {
                     H5_FAILED();
-                    HDprintf("element [%d][%d] is %lld but should have been %lld\n", (int)i, (int)j,
-                             data_out[i][j], data_in[i][j]);
+                    printf("element [%d][%d] is %lld but should have been %lld\n", (int)i, (int)j,
+                           data_out[i][j], data_in[i][j]);
                 } /* end if */
 
     /* Close/release resources. */
@@ -115,7 +108,7 @@ check_data_i(const char *dsetname, hid_t fid)
 
     /* Failure */
     if (nerrors) {
-        HDprintf("total of %d errors out of %d elements\n", nerrors, (int)(NX * NY));
+        printf("total of %d errors out of %d elements\n", nerrors, (int)(NX * NY));
         return 1;
     } /* end if */
 
@@ -127,7 +120,7 @@ error:
     {
         H5Dclose(did);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end check_data_i() */
 
@@ -139,19 +132,16 @@ error:
  * Return:      Success:        0
  *              Failure:        1
  *
- * Programmer:  Raymond Lu
- *              17 May 2011
- *
  *-------------------------------------------------------------------------
  */
 static int
 check_data_f(const char *dsetname, hid_t fid)
 {
-    hid_t  did = -1;             /* dataset ID                       */
-    double data_in[NX + 1][NY];  /* input buffer                     */
-    double data_out[NX + 1][NY]; /* output buffer                    */
-    int    i, j;                 /* iterators                        */
-    int    nerrors = 0;          /* # of errors in dataset values    */
+    hid_t  did = H5I_INVALID_HID; /* dataset ID                       */
+    double data_in[NX + 1][NY];   /* input buffer                     */
+    double data_out[NX + 1][NY];  /* output buffer                    */
+    int    i, j;                  /* iterators                        */
+    int    nerrors = 0;           /* # of errors in dataset values    */
 
     /* Open the dataset. */
     if ((did = H5Dopen2(fid, dsetname, H5P_DEFAULT)) < 0)
@@ -165,7 +155,7 @@ check_data_f(const char *dsetname, hid_t fid)
     for (i = 0; i < NY; i++)
         data_in[NX][i] = -2.2;
     /* Output */
-    HDmemset(data_out, 0, (NX + 1) * NY * sizeof(double));
+    memset(data_out, 0, (NX + 1) * NY * sizeof(double));
 
     /* Read data from hyperslab in the file into the hyperslab in
      * memory and display.
@@ -179,8 +169,8 @@ check_data_f(const char *dsetname, hid_t fid)
             if (!H5_DBL_REL_EQUAL(data_out[i][j], data_in[i][j], 0.001))
                 if (!nerrors++) {
                     H5_FAILED();
-                    HDprintf("element [%d][%d] is %g but should have been %g\n", (int)i, (int)j,
-                             data_out[i][j], data_in[i][j]);
+                    printf("element [%d][%d] is %g but should have been %g\n", (int)i, (int)j, data_out[i][j],
+                           data_in[i][j]);
                 } /* end if */
 
     /* Close/release resources. */
@@ -189,7 +179,7 @@ check_data_f(const char *dsetname, hid_t fid)
 
     /* Failure */
     if (nerrors) {
-        HDprintf("total of %d errors out of %d elements\n", nerrors, (int)(NX * NY));
+        printf("total of %d errors out of %d elements\n", nerrors, (int)(NX * NY));
         return 1;
     } /* end if */
 
@@ -201,7 +191,7 @@ error:
     {
         H5Dclose(did);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return 1;
 } /* end check_data_f() */
 
@@ -213,16 +203,13 @@ error:
  * Return:      Success:        0
  *              Failure:        Number of failures
  *
- * Programmer:  Raymond Lu
- *              21 January 2011
- *
  *-------------------------------------------------------------------------
  */
 static int
 check_file(char *filename)
 {
     const char *pathname = H5_get_srcdir_filename(filename); /* Corrected test file name     */
-    hid_t       fid      = -1;                               /* file ID                      */
+    hid_t       fid      = H5I_INVALID_HID;                  /* file ID                      */
     int         nerrors  = 0;                                /* # of datasets with errors    */
 #if !defined(H5_HAVE_FILTER_DEFLATE) || !defined(H5_HAVE_FILTER_SZIP)
     const char *not_supported = "    filter is not enabled."; /* no filter message            */
@@ -287,7 +274,7 @@ check_file(char *filename)
     nerrors += check_data_f(DATASETNAME16, fid);
 #else  /*H5_HAVE_FILTER_DEFLATE*/
     SKIPPED();
-    HDputs(not_supported);
+    puts(not_supported);
 #endif /*H5_HAVE_FILTER_DEFLATE*/
 
     TESTING("dataset of BE FLOAT with Deflate filter");
@@ -295,7 +282,7 @@ check_file(char *filename)
     nerrors += check_data_f(DATASETNAME17, fid);
 #else  /*H5_HAVE_FILTER_DEFLATE*/
     SKIPPED();
-    HDputs(not_supported);
+    puts(not_supported);
 #endif /*H5_HAVE_FILTER_DEFLATE*/
 
     TESTING("dataset of LE FLOAT with Szip filter");
@@ -303,7 +290,7 @@ check_file(char *filename)
     nerrors += check_data_f(DATASETNAME18, fid);
 #else  /*H5_HAVE_FILTER_SZIP*/
     SKIPPED();
-    HDputs(not_supported);
+    puts(not_supported);
 #endif /*H5_HAVE_FILTER_SZIP*/
 
     TESTING("dataset of BE FLOAT with Szip filter");
@@ -311,7 +298,7 @@ check_file(char *filename)
     nerrors += check_data_f(DATASETNAME19, fid);
 #else  /*H5_HAVE_FILTER_SZIP*/
     SKIPPED();
-    HDputs(not_supported);
+    puts(not_supported);
 #endif /*H5_HAVE_FILTER_SZIP*/
 
     TESTING("dataset of LE FLOAT with Shuffle filter");
@@ -335,7 +322,7 @@ error:
     {
         H5Fclose(fid);
     }
-    H5E_END_TRY;
+    H5E_END_TRY
     return nerrors;
 } /* end check_file() */
 
@@ -346,42 +333,44 @@ error:
  *
  * Return:      EXIT_SUCCESS/EXIT_FAILURE
  *
- * Programmer:  Raymond Lu
- *              Thursday, March 23, 2006
- *
  *-------------------------------------------------------------------------
  */
 int
 main(void)
 {
+    bool driver_is_default_compatible;
     char filename[1024];
     int  nerrors = 0;
 
-    h5_reset();
+    h5_test_init();
 
     /*
-     * Skip tests for VFDs that need modified filenames.
+     * Skip tests for VFDs that aren't compatible with default VFD.
      */
-    if (h5_driver_uses_modified_filename()) {
-        HDputs(" -- SKIPPED for incompatible VFD --");
-        HDexit(EXIT_SUCCESS);
+    if (h5_driver_is_default_vfd_compatible(H5P_DEFAULT, &driver_is_default_compatible) < 0) {
+        puts(" -- couldn't check if VFD is compatible with default VFD --");
+        exit(EXIT_SUCCESS);
+    }
+    if (!driver_is_default_compatible) {
+        puts(" -- SKIPPED for incompatible VFD --");
+        exit(EXIT_SUCCESS);
     }
 
-    HDputs("\n");
-    HDputs("Testing reading data created on Linux");
+    puts("\n");
+    puts("Testing reading data created on Linux");
     h5_fixname(FILENAME[1], H5P_DEFAULT, filename, sizeof(filename));
     nerrors += check_file(filename);
 
-    HDputs("\n");
-    HDputs("Testing reading data created on Solaris");
+    puts("\n");
+    puts("Testing reading data created on Solaris");
     h5_fixname(FILENAME[2], H5P_DEFAULT, filename, sizeof(filename));
     nerrors += check_file(filename);
 
     if (nerrors) {
-        HDprintf("***** %d FAILURE%s! *****\n", nerrors, 1 == nerrors ? "" : "S");
+        printf("***** %d FAILURE%s! *****\n", nerrors, 1 == nerrors ? "" : "S");
         return EXIT_FAILURE;
     } /* end if */
 
-    HDprintf("All data type tests passed.\n");
+    printf("All data type tests passed.\n");
     return EXIT_SUCCESS;
 } /* end main() */
