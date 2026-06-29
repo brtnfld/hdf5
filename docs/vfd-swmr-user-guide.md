@@ -90,18 +90,14 @@ Clone the HDF5 repository in a new directory, then switch to the
 ## Build
 
 There are no special instructions for building VFD SWMR. Simply follow
-the usual build procedure for CMake or the Autotools using the guides
-in the `release_docs` directory.
+the usual CMake build procedure using the guide in the `docs` directory
+([INSTALL_CMake.md](INSTALL_CMake.md)).
 
 IMPORTANT:
 
 The VFD SWMR branches are maintenance branches and will default to a debug
 build. They also do not come with generated files, so Perl will be required
-when building with CMake and Perl and the Autotools (autoconf, etc.) will
-be required when building with the Autotools.
-
-Run `autogen.sh` script in the top
-directory if building with Autotools to generate required files. 
+when building with CMake.
 
 Some notes:
 
@@ -179,8 +175,8 @@ usage: vfd_swmr_bigset_writer [-F] [-M] [-S] [-V] [-W] [-a steps] [-b] [-c cols]
 
 The VFD SWMR demos are located in the `examples` directory of this source
 tree. Instructions for building the example programs are given in the README
-file in that directory. These programs are NOT installed via `make install`
-and have to built by hand with h5cc as described in the README.
+file in that directory. These programs are NOT installed via `cmake --install`
+and have to be built by hand with h5cc as described in the README.
 
 Two Gaussian programs are built, `wgaussians` and `rgaussians`.  If you start
 both from the same directory in different terminals, you should see the
