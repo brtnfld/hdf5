@@ -700,7 +700,17 @@ decode_cl_top_fields(updater_t *updater, handler_t *hand)
      * the checksum of the change list
      *----------------------------------------------
      */
+    if (updater->change_list_len < (uint64_t)(UD_CL_TOP_LEN + 4)) {
+        fprintf(stderr, "change list length (%" PRIu64 ") too small to be valid\n",
+                updater->change_list_len);
+        goto error;
+    }
+
     updater->cl_buf = (unsigned char *)malloc(updater->change_list_len);
+    if (updater->cl_buf == NULL) {
+        fprintf(stderr, "failed to allocate memory for change list buffer\n");
+        goto error;
+    }
 
     /* Seek the beginning of the change list in the updater file */
     if (fseek(updater->file, (long)updater->change_list_offset, SEEK_SET) != 0) {
@@ -777,6 +787,16 @@ decode_cl_top_fields(updater_t *updater, handler_t *hand)
     /* Get the number of change list entries */
     UINT32DECODE(ptr, updater->num_cl_entries);
 
+    /* Validate num_cl_entries against available buffer length */
+    {
+        uint64_t max_entries = (updater->change_list_len - UD_CL_TOP_LEN - 4) / CL_ENTRY_LEN;
+        if ((uint64_t)updater->num_cl_entries > max_entries) {
+            fprintf(stderr, "num_cl_entries (%" PRIu32 ") exceeds what fits in change list buffer\n",
+                    updater->num_cl_entries);
+            goto error;
+        }
+    }
+
     /* Output the log info */
     if (hand->output) {
         fprintf(hand->output, "change list signature=%s\n", updater->cl_signature);
@@ -830,8 +850,13 @@ static int
 copy_data(handler_t *hand, FILE *src_file, int dst_fd, off_t src_file_offset, off_t dst_file_offset,
           size_t data_len, uint32_t received_checksum)
 {
-    uint32_t verified_checksum;           /* calculated checksum for the data being copied */
-    void    *data_buf = malloc(data_len); /* buffer for the data being copied              */
+    uint32_t verified_checksum;                /* calculated checksum for the data being copied */
+    void    *data_buf = malloc(data_len);      /* buffer for the data being copied              */
+
+    if (data_buf == NULL) {
+        fprintf(stderr, "failed to allocate memory for data buffer (len=%zu)\n", data_len);
+        goto error;
+    }
 
     /* Seek and read in the data from the source file */
     if (fseek(src_file, src_file_offset, SEEK_SET) != 0) {
@@ -959,6 +984,10 @@ decode_and_copy_cl_entries_recovery_only(updater_t *updater, handler_t *hand)
     if (updater->num_cl_entries) {
         /* Allocate the buffer for the change list */
         updater->change_list = (cl_entry_t *)malloc(sizeof(cl_entry_t) * updater->num_cl_entries);
+        if (updater->change_list == NULL) {
+            fprintf(stderr, "failed to allocate memory for change list entries\n");
+            goto error;
+        }
 
         ptr = updater->cl_buf + UD_CL_TOP_LEN;
 
@@ -1403,8 +1432,15 @@ check_h5clear_path(handler_t *hand)
     }
     else {
         /* Check for h5clear in PATH */
-        bool  found    = false;
-        char *path_env = strdup(getenv("PATH"));
+        bool        found        = false;
+        const char *path_env_raw = getenv("PATH");
+        char       *path_env;
+
+        if (path_env_raw == NULL) {
+            fprintf(stderr, "ERROR: PATH environment variable is not set\n");
+            return -1;
+        }
+        path_env = strdup(path_env_raw);
         char *s        = path_env;
         char *p        = NULL;
 

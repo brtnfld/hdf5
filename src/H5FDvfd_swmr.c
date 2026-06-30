@@ -1570,6 +1570,13 @@ H5FD__vfd_swmr_index_deserialize(const H5FD_vfd_swmr_t *file, H5FD_vfd_swmr_md_i
     UINT64DECODE(p, md_index->tick_num);
     UINT32DECODE(p, md_index->num_entries);
 
+    /* Validate num_entries against the declared index_length before allocating.
+     * num_entries comes from the shadow file and must be bounded to prevent
+     * OOB reads and oversized allocations. */
+    if (H5FD_MD_INDEX_SIZE(md_index->num_entries) > md_header->index_length)
+        HGOTO_ERROR(H5E_VFL, H5E_BADVALUE, FAIL,
+                    "num_entries in shadow index exceeds declared index length");
+
     /* Read index entries */
     if (md_index->num_entries) {
         /* Allocate memory for index entries */
@@ -1590,8 +1597,9 @@ H5FD__vfd_swmr_index_deserialize(const H5FD_vfd_swmr_t *file, H5FD_vfd_swmr_md_i
     /* Checksum is already valid */
     UINT32DECODE(p, stored_chksum);
 
-    /* Sanity check */
-    assert((size_t)(p - image) <= md_header->index_length);
+    /* Verify decode did not run past the declared index length */
+    if ((size_t)(p - image) > md_header->index_length)
+        HGOTO_ERROR(H5E_VFL, H5E_BADVALUE, FAIL, "index decode overran declared index length");
 
 done:
     if (image != NULL)

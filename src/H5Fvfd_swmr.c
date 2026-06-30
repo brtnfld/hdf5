@@ -472,6 +472,8 @@ done:
     if (shared->vfd_swmr_log_on && closing) {
         H5_timer_stop(&(shared->vfd_swmr_log_start_time));
         fclose(shared->vfd_swmr_log_file_ptr);
+        shared->vfd_swmr_log_file_ptr = NULL;
+        shared->vfd_swmr_log_on       = false;
     }
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1026,7 +1028,7 @@ done:
         end_elapsed_time = current_time.elapsed;
         if (NULL != (log_msg = malloc(eot_pt_log_mesg_length * sizeof(char)))) {
             temp_time = (unsigned int)((end_elapsed_time - start_elapsed_time) * 1000);
-            sprintf(log_msg, "Writer time is %u milliseconds", temp_time);
+            snprintf(log_msg, eot_pt_log_mesg_length, "Writer time is %u milliseconds", temp_time);
             H5F_POST_VFD_SWMR_LOG_ENTRY(f, EOT_PROCESSING_TIME, log_msg);
             free(log_msg);
         }
@@ -2082,7 +2084,7 @@ H5F__post_vfd_swmr_log_entry(H5F_t *f, int entry_type_code, const char *log_info
      */
     if (H5_timer_get_times(f->shared->vfd_swmr_log_start_time, &current_time) < 0) {
         if (NULL != (gettime_error = malloc(log_err_mesg_length * sizeof(char)))) {
-            sprintf(gettime_error, "gettime_error");
+            snprintf(gettime_error, log_err_mesg_length, "gettime_error");
             fprintf(f->shared->vfd_swmr_log_file_ptr, "%-26s:  %s\n", H5Fvfd_swmr_log_tags[entry_type_code],
                     gettime_error);
             free(gettime_error);
@@ -2423,6 +2425,7 @@ H5F__generate_updater_file(H5F_t *f, uint32_t num_entries, uint16_t flags, uint8
     /* Close the updater file and rename the file */
     if (H5FD_close(ud_file) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "unable to close updater file");
+    ud_file = NULL; /* prevent double-close in done: */
     sz = snprintf(newname, H5F__MAX_VFD_SWMR_FILE_NAME_LEN, "%s.%" PRIu64 "",
                   shared->vfd_swmr_config.updater_file_path, shared->updater_seq_num);
     if (sz < 0)
@@ -2435,6 +2438,8 @@ H5F__generate_updater_file(H5F_t *f, uint32_t num_entries, uint16_t flags, uint8
     ++shared->updater_seq_num;
 
 done:
+    if (ud_file != NULL)
+        (void)H5FD_close(ud_file);
     if (updater.header_image_ptr)
         free(updater.header_image_ptr);
     if (updater.change_list_image_ptr)
