@@ -1999,7 +1999,7 @@ H5F_vfd_swmr_process_eot_queue(hbool_t entering_api)
 
     first_head = head = TAILQ_FIRST(&eot_queue_g);
 
-    do {
+    while (head != NULL) {
         H5F_t        *f      = head->vfd_swmr_file;
         H5F_shared_t *shared = f->shared;
 
@@ -2043,7 +2043,11 @@ H5F_vfd_swmr_process_eot_queue(hbool_t entering_api)
         else if (H5F_vfd_swmr_reader_end_of_tick(f, entering_api) < 0) {
             HGOTO_ERROR(H5E_FUNC, H5E_CANTSET, FAIL, "end of tick error for VFD SWMR reader");
         }
-    } while ((head = TAILQ_FIRST(&eot_queue_g)) != NULL && head != first_head);
+
+        head = TAILQ_FIRST(&eot_queue_g);
+        if (head == first_head)
+            break;
+    }
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

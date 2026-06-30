@@ -37,6 +37,10 @@
 /* Local Macros */
 /****************/
 
+/* Maximum number of config groups supported by H5CL_parse_config_group.
+ * Increase and recompile if more are needed. */
+#define H5CL_MAX_NUM_CONFIGS 8
+
 /******************/
 /* Local Typedefs */
 /******************/
@@ -430,9 +434,8 @@ H5CL_parse_config_group(const char *input_str_ptr, char *config_group_name_ptr, 
 {
     int i;
     int j;
-#define H5CL_MAX_NUM_CONFIGS 8
     H5CL_nv_pair_t  top_pair;
-    H5CL_nv_pair_t  configs_mv_pairs[H5CL_MAX_NUM_CONFIGS];
+    H5CL_nv_pair_t  configs_nv_pairs[H5CL_MAX_NUM_CONFIGS];
     H5CL_lex_vars_t lex_vars = {/* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
                                 /* input_str_ptr     = */ NULL,
                                 /* next_char_ptr     = */ NULL,
@@ -466,12 +469,12 @@ H5CL_parse_config_group(const char *input_str_ptr, char *config_group_name_ptr, 
     if (H5CL_init_nv_pair(&top_pair) < 0)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't initialize top_pair.");
 
-    /* initialize configs_mv_pairs[] */
+    /* initialize configs_nv_pairs[] */
     for (i = 0; i < num_configs; i++) {
 
-        configs_mv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
+        configs_nv_pairs[i].struct_tag = H5CL_NV_PAIR_STRUCT_TAG;
 
-        if (H5CL_init_nv_pair(&(configs_mv_pairs[i])) < 0)
+        if (H5CL_init_nv_pair(&(configs_nv_pairs[i])) < 0)
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't initialize a config nv pair.");
     }
 
@@ -488,7 +491,7 @@ H5CL_parse_config_group(const char *input_str_ptr, char *config_group_name_ptr, 
 
             assert(H5CL_NV_PAIR_STRUCT_TAG == configs[i].nv_pairs[j].struct_tag);
 
-            if (H5CL_init_nv_pair(&(configs[i].nv_pairs[j])) > 0)
+            if (H5CL_init_nv_pair(&(configs[i].nv_pairs[j])) < 0)
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't configure specific nv pair.");
         }
     }
@@ -524,31 +527,31 @@ H5CL_parse_config_group(const char *input_str_ptr, char *config_group_name_ptr, 
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't initialize lex_vars 2.");
 
     /* parse the name value pair list from the top level name value pair */
-    if (H5CL__parse_name_value_pair_list(configs_mv_pairs, num_configs, &lex_vars) < 0)
+    if (H5CL__parse_name_value_pair_list(configs_nv_pairs, num_configs, &lex_vars) < 0)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't parse configs name val pair list.");
 
     /* take down lex_vars in preparation for parsing the individual configs in the config group */
     if (H5CL__take_down_lex_vars(&lex_vars) < 0)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't take down lex_vars 2.");
 
-    /* must now iterate through configs_mv_pairs[] and configs[] to match entries in
-     * configs_mv_pairs with entries in configs[], and then parse the name value pair
+    /* must now iterate through configs_nv_pairs[] and configs[] to match entries in
+     * configs_nv_pairs with entries in configs[], and then parse the name value pair
      * lists into the appropriate entries in configs[].
      */
     for (i = 0; i < num_configs; i++) {
 
         /* Skip missing configurations */
-        if (configs_mv_pairs[i].val_type == H5CL_VAL_NONE) {
+        if (configs_nv_pairs[i].val_type == H5CL_VAL_NONE) {
             continue;
         }
 
-        /* throw an error if configs_mv_pairs[i] is not a list */
-        if (configs_mv_pairs[i].val_type != H5CL_VAL_LIST)
+        /* throw an error if configs_nv_pairs[i] is not a list */
+        if (configs_nv_pairs[i].val_type != H5CL_VAL_LIST)
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "value of a configuration is not a list.");
 
         j = 0;
 
-        while ((j < num_configs) && (0 != strcmp(configs_mv_pairs[i].name_ptr, configs[j].config_name))) {
+        while ((j < num_configs) && (0 != strcmp(configs_nv_pairs[i].name_ptr, configs[j].config_name))) {
 
             j++;
         }
@@ -559,14 +562,14 @@ H5CL_parse_config_group(const char *input_str_ptr, char *config_group_name_ptr, 
         if (configs[j].parsed)
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Duplicate config name.");
 
-        /* If we have gotten this far, we must now parse configs_mv_pairs[i].vlen_val_ptr into
+        /* If we have gotten this far, we must now parse configs_nv_pairs[i].vlen_val_ptr into
          * configs[j].nv_pairs.
          *
          * Start by setting up lex_vars.  Recall that we must set lex_vars.struct_tag back
          * to H5CL_LEX_VARS_STRUCT_TAG.
          */
         lex_vars.struct_tag = H5CL_LEX_VARS_STRUCT_TAG;
-        if (H5CL__init_lex_vars((char *)(configs_mv_pairs[i].vlen_val_ptr), &lex_vars) < 0)
+        if (H5CL__init_lex_vars((char *)(configs_nv_pairs[i].vlen_val_ptr), &lex_vars) < 0)
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't initialize lex_vars 3.");
 
         /* now parse the name value pair list into configs[j].nv_pairs */
@@ -594,8 +597,8 @@ done:
 
     for (i = 0; i < num_configs; i++) {
 
-        if ((configs_mv_pairs[i].struct_tag == H5CL_NV_PAIR_STRUCT_TAG) &&
-            (H5CL_take_down_nv_pair(&(configs_mv_pairs[i])) < 0)) {
+        if ((configs_nv_pairs[i].struct_tag == H5CL_NV_PAIR_STRUCT_TAG) &&
+            (H5CL_take_down_nv_pair(&(configs_nv_pairs[i])) < 0)) {
             HDONE_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't take down a config name value pair.");
         }
     }

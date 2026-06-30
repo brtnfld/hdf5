@@ -6589,16 +6589,20 @@ H5P__facc_vfd_swmr_config_dec(const void **_pp, void *_value)
     UINT32DECODE(*pp, config->md_pages_reserved);
     UINT32DECODE(*pp, config->pb_expansion_threshold);
 
-    strcpy(config->md_file_path, (const char *)(*pp));
+    memcpy(config->md_file_path, (const char *)(*pp), H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1);
+    config->md_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN] = '\0';
     *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
 
-    strcpy(config->md_file_name, (const char *)(*pp));
+    memcpy(config->md_file_name, (const char *)(*pp), H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1);
+    config->md_file_name[H5F__MAX_VFD_SWMR_FILE_NAME_LEN] = '\0';
     *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
 
-    strcpy(config->updater_file_path, (const char *)(*pp));
+    memcpy(config->updater_file_path, (const char *)(*pp), H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1);
+    config->updater_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN] = '\0';
     *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
 
-    strcpy(config->log_file_path, (const char *)(*pp));
+    memcpy(config->log_file_path, (const char *)(*pp), H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1);
+    config->log_file_path[H5F__MAX_VFD_SWMR_FILE_NAME_LEN] = '\0';
     *pp += H5F__MAX_VFD_SWMR_FILE_NAME_LEN + 1;
 
     FUNC_LEAVE_NOAPI(SUCCEED)

@@ -1166,7 +1166,7 @@ error:
         updater.file = NULL;
     }
 
-    if (-1 == hand->h5_fd) {
+    if (-1 != hand->h5_fd) {
         close(hand->h5_fd);
         hand->h5_fd = -1;
     }

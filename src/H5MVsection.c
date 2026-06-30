@@ -25,7 +25,7 @@
 /****************/
 
 #define H5F_FRIEND      /*suppress error about including H5Fpkg	  */
-#include "H5MVmodule.h" /* This source code file is part of the H5MF module */
+#include "H5MVmodule.h" /* This source code file is part of the H5MV module */
 
 /***********/
 /* Headers */

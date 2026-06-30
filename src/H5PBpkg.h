@@ -1681,7 +1681,7 @@
  *
  ****************************************************************************/
 
-#define H5PB__H5PB_ENTRY_T_MAGIC 0x02030405
+/* H5PB__H5PB_ENTRY_T_MAGIC already defined at line 41 */
 
 struct H5PB_entry_t {
 

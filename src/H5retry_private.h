@@ -30,7 +30,7 @@ typedef struct h5_retry_t {
 /* Default minimum/maximum retry intervals: 1/10s minimum, 1s maximum. */
 #define H5_RETRY_DEFAULT_MINIVAL (100ULL * 1000ULL * 1000ULL)
 #define H5_RETRY_DEFAULT_MAXIVAL (1000ULL * 1000ULL * 1000ULL)
-/* One hour: */
+/* One second: */
 #define H5_RETRY_ONE_SECOND (1000ULL * 1000ULL * 1000ULL)
 #define H5_RETRY_ONE_HOUR   (3600ULL * H5_RETRY_ONE_SECOND)
 

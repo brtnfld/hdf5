@@ -11,7 +11,7 @@
 
 /*
  * Purpose: This file contains declarations which define macros for the
- *          H5FDcl package.  Including this header means that the source file
+ *          H5CL package.  Including this header means that the source file
  *          is part of the H5CL package.
  */
 #ifndef H5CL_module_H

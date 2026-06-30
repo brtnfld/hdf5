@@ -78,7 +78,7 @@ H5_DLL herr_t               H5MV__sect_shrink(H5FS_section_info_t **_sect, void 
 H5_DLL herr_t               H5MV__free_md(H5F_shared_t *, haddr_t, hsize_t);
 
 /* Testing routines */
-#ifdef H5MF_TESTING
-#endif /* H5MF_TESTING */
+#ifdef H5MV_TESTING
+#endif /* H5MV_TESTING */
 
-#endif /* _H5MFpkg_H */
+#endif /* _H5MVpkg_H */

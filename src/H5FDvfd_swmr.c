@@ -1761,7 +1761,7 @@ H5FD_vfd_swmr_record_elapsed_ticks(H5FD_t *_file, uint64_t elapsed)
 
     H5FD_vfd_swmr_t *file = (H5FD_vfd_swmr_t *)_file;
 
-    uint64_t elapsed_idx = MIN(elapsed, file->api_elapsed_nbuckets);
+    uint64_t elapsed_idx = MIN(elapsed, file->api_elapsed_nbuckets - 1);
 
     file->api_elapsed_ticks[elapsed_idx]++;
 
