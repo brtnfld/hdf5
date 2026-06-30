@@ -988,8 +988,7 @@ decode_cl_top_fields(updater_t *updater, handler_t *hand)
      *----------------------------------------------
      */
     if (updater->change_list_len < (uint64_t)(UD_CL_TOP_LEN + 4)) {
-        fprintf(stderr, "change list length (%" PRIu64 ") too small to be valid\n",
-                updater->change_list_len);
+        fprintf(stderr, "change list length (%" PRIu64 ") too small to be valid\n", updater->change_list_len);
         goto error;
     }
 
@@ -1129,8 +1128,8 @@ static int
 copy_data(handler_t *hand, FILE *src_file, FILE *dst_file, uint32_t src_file_offset, uint32_t dst_file_offset,
           uint32_t data_len, uint32_t received_checksum)
 {
-    uint32_t verified_checksum;               /* calculated checksum for the data being copied */
-    void    *data_buf = malloc(data_len);     /* buffer for the data being copied              */
+    uint32_t verified_checksum;           /* calculated checksum for the data being copied */
+    void    *data_buf = malloc(data_len); /* buffer for the data being copied              */
 
     if (data_buf == NULL) {
         fprintf(stderr, "failed to allocate memory for data buffer (len=%" PRIu32 ")\n", data_len);
