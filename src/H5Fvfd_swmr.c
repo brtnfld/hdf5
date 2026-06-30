@@ -2426,8 +2426,8 @@ H5F__generate_updater_file(H5F_t *f, uint32_t num_entries, uint16_t flags, uint8
     if (H5FD_close(ud_file) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "unable to close updater file");
     ud_file = NULL; /* prevent double-close in done: */
-    sz = snprintf(newname, H5F__MAX_VFD_SWMR_FILE_NAME_LEN, "%s.%" PRIu64 "",
-                  shared->vfd_swmr_config.updater_file_path, shared->updater_seq_num);
+    sz      = snprintf(newname, H5F__MAX_VFD_SWMR_FILE_NAME_LEN, "%s.%" PRIu64 "",
+                       shared->vfd_swmr_config.updater_file_path, shared->updater_seq_num);
     if (sz < 0)
         HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "error processing snprintf format string");
     if (sz > H5F__MAX_VFD_SWMR_FILE_NAME_LEN)

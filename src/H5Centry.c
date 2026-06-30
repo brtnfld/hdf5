@@ -1335,7 +1335,7 @@ H5C__load_entry(H5F_t *f,
     entry->tag_info = NULL;
 
     /* initialize fields supporting VFD SWMR page index */
-    entry->page = (f->shared->cache->vfd_swmr_reader) ? (addr / f->shared->cache->page_size) : 0;
+    entry->page              = (f->shared->cache->vfd_swmr_reader) ? (addr / f->shared->cache->page_size) : 0;
     entry->refreshed_in_tick = 0;
     entry->pi_next           = NULL;
     entry->pi_prev           = NULL;
@@ -1995,10 +1995,10 @@ H5C__deserialize_prefetched_entry(H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t 
     H5C__RESET_CACHE_ENTRY_STATS(ds_entry_ptr);
 
     /* initialize fields supporting VFD SWMR page index */
-    ds_entry_ptr->page             = cache_ptr->vfd_swmr_reader ? (addr / cache_ptr->page_size) : 0;
+    ds_entry_ptr->page              = cache_ptr->vfd_swmr_reader ? (addr / cache_ptr->page_size) : 0;
     ds_entry_ptr->refreshed_in_tick = 0;
-    ds_entry_ptr->pi_next          = NULL;
-    ds_entry_ptr->pi_prev          = NULL;
+    ds_entry_ptr->pi_next           = NULL;
+    ds_entry_ptr->pi_prev           = NULL;
 
     /* Apply to to the newly deserialized entry */
     if (H5C__tag_entry(cache_ptr, ds_entry_ptr) < 0)
