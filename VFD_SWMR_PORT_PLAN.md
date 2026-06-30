@@ -55,25 +55,48 @@ the port is complete.
 ## Phase 1 — Reader-side: H5C `page_index` producer hooks (independent, do first)
 
 The consumer `H5C_evict_or_refresh_all_entries_in_page` (`src/H5C.c:643`, live at
-`H5Fvfd_swmr.c:1378`) reads `cache_ptr->page_index[]`, but nothing populates it.
+`H5Fvfd_swmr.c:1378`) reads `cache_ptr->page_index[]`, but **nothing populates it** — verified:
+no assignment to `page_index[]`, `pi_next`, `pi_prev`, or `entry->page` exists anywhere in
+`src/`. Good news from mapping the feature monolith → develop: **most of the scaffolding already
+landed in the merge**, and the producer is only *two small macro blocks + four init sites*, not
+the scattered rewrite the dead H5PB macros imply.
 
-1. **Confirm entry-struct fields exist** on develop's `H5C_cache_entry_t`: `page`, `pi_next`,
-   `pi_prev`, `refreshed_in_tick`. (Consumer already references them, so most are present —
-   verify and add any missing.)
-2. **Add `page_index` insert/remove macros** (`H5C__INSERT_IN_PAGE_INDEX` /
-   `H5C__DELETE_FROM_PAGE_INDEX`) in `H5Cpkg.h`, modeled on the existing hash-table index macros.
-3. **Wire hooks into `H5Centry.c`** at the lifecycle points (develop moved these out of the old
-   monolith):
-   - entry insert / `H5C__load_entry`: set `entry->page = addr / page_size`, link into index
-     (feature ref: old H5C.c:1803-1808).
-   - move/relocate: recompute `entry->page = new_addr / page_size`, re-link (ref: 2317).
-   - evict / `H5C__flush_single_entry` with destroy / remove: unlink from index.
-   - Gate every hook on `cache_ptr->vfd_swmr_reader` so the non-SWMR path is a no-op.
-4. **Fix the coupled `H5AC_set_vfd_swmr_reader` bug** (`H5AC.c:2607`): set the
-   `vfd_swmr_reader` flag unconditionally, not only when `page_size` changes (review Tenet-3/H5CL
-   reviewer C2 — otherwise the consumer's `assert(vfd_swmr_reader)` trips).
-5. **Test:** reader picks up writer changes given a *manually* populated shadow index (decouples
-   from Phase 2-4). Reader coherence is now provable in isolation.
+### Already present in develop (no action)
+
+- Entry-struct fields `page`, `refreshed_in_tick`, `pi_next`, `pi_prev` —
+  `src/H5Cprivate.h:1615-1619`.
+- `page_index[]` array — `src/H5Cpkg.h:2927`; hash macros `H5C__PI_HASH_FCN` /
+  `H5C__PAGE_HASH_TABLE_LEN` — `src/H5Cpkg.h:47-49`.
+
+### Old→new producer-site map (feature `05b54b7046` → develop)
+
+In the feature, the page-index linkage was **embedded inside** the cache's existing
+`H5C__INSERT_IN_INDEX` / `H5C__DELETE_FROM_INDEX` macros (guarded by `if (vfd_swmr_reader)`), not
+a separate macro. develop's versions of those macros have **no** such block. So the entire
+producer is:
+
+| Producer action | Feature location | Develop target | Action |
+| --- | --- | --- | --- |
+| Link into `page_index[k]` on insert | inside `H5C__INSERT_IN_INDEX`, feat `H5Cpkg.h:1365-1372` | `src/H5Cpkg.h:850` (no PI block) | **Add** `if (cache_ptr->vfd_swmr_reader){ k=PI_HASH(page); … }` at top of macro body |
+| Unlink from `page_index[k]` on delete | inside `H5C__DELETE_FROM_INDEX`, feat `H5Cpkg.h:1408-1418` | `src/H5Cpkg.h:882` | **Add** matching unlink block |
+| `page` + pi-NULL init on load | feat `H5C.c:1803-1808` | `H5C__load_entry`, `src/H5Centry.c` ~`1268`/`1297` | **Add** `entry->page = vfd?addr/page_size:0; refreshed_in_tick=0; pi_next=pi_prev=NULL;` before insertion |
+| same, on direct insert | feat `H5C.c:7944-7949` | `H5C_insert_entry`, `src/H5Centry.c` ~`2184`/`2230` | **Add** same init before `INSERT_IN_INDEX` |
+| same, on image/prefetched deserialize | feat ds_entry path | `src/H5Centry.c` ~`1923`/`1955` (`ds_entry_ptr`) | **Add** same init |
+| recompute `page` on move | feat `H5C.c:2317`, `9644` | `H5C_move_entry`: `DELETE_FROM_INDEX`@2724 → `addr=new_addr`@2732 → `INSERT_IN_INDEX`@2753 | **Add** `entry->page = new_addr/page_size` **between** 2732 and 2753 |
+
+**Ordering invariant:** `entry->page` must be valid *before* any `INSERT_IN_INDEX`, and must not
+change between an entry's `INSERT` and `DELETE` except across the move bracket above — otherwise
+the unlink hashes to the wrong bucket and corrupts the list. The four init sites set `page`
+before insertion; the move path is the only in-place change and is correctly bracketed.
+
+### Also in Phase 1
+
+- **Fix the coupled `H5AC_set_vfd_swmr_reader` bug** (`src/H5AC.c:2607`): set `vfd_swmr_reader`
+  unconditionally, not only when `page_size` changes — otherwise the consumer's
+  `assert(cache_ptr->vfd_swmr_reader)` trips and, in release, the producer block is never armed.
+- **Gate** every added block on `cache_ptr->vfd_swmr_reader` so the non-SWMR path is untouched.
+- **Test:** with a *manually* populated shadow index, confirm the reader evicts/refreshes the
+  right entries — proves reader coherence independent of Phases 2-5.
 
 ## Phase 2 — Writer-side state: extend develop's page buffer (additive)
 
