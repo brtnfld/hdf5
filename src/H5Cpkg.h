@@ -851,6 +851,14 @@
     do {                                                                                                     \
         int k;                                                                                               \
         H5C__PRE_HT_INSERT_SC(cache_ptr, entry_ptr, fail_val)                                                \
+        if ((cache_ptr)->vfd_swmr_reader) {                                                                  \
+            k = H5C__PI_HASH_FCN((entry_ptr)->page);                                                         \
+            if ((cache_ptr)->page_index[k] != NULL)                                                          \
+                (cache_ptr)->page_index[k]->pi_prev = (entry_ptr);                                           \
+            (entry_ptr)->pi_next       = (cache_ptr)->page_index[k];                                         \
+            (entry_ptr)->pi_prev       = NULL;                                                               \
+            (cache_ptr)->page_index[k] = (entry_ptr);                                                        \
+        }                                                                                                    \
         k = H5C__HASH_FCN((entry_ptr)->addr);                                                                \
         if ((cache_ptr)->index[k] != NULL) {                                                                 \
             (entry_ptr)->ht_next          = (cache_ptr)->index[k];                                           \
@@ -883,6 +891,17 @@
     do {                                                                                                     \
         int k;                                                                                               \
         H5C__PRE_HT_REMOVE_SC(cache_ptr, entry_ptr, fail_val)                                                \
+        if ((cache_ptr)->vfd_swmr_reader) {                                                                  \
+            k = H5C__PI_HASH_FCN((entry_ptr)->page);                                                         \
+            if ((entry_ptr)->pi_next)                                                                        \
+                (entry_ptr)->pi_next->pi_prev = (entry_ptr)->pi_prev;                                        \
+            if ((entry_ptr)->pi_prev)                                                                        \
+                (entry_ptr)->pi_prev->pi_next = (entry_ptr)->pi_next;                                        \
+            if ((cache_ptr)->page_index[k] == (entry_ptr))                                                   \
+                (cache_ptr)->page_index[k] = (entry_ptr)->pi_next;                                           \
+            (entry_ptr)->pi_next = NULL;                                                                     \
+            (entry_ptr)->pi_prev = NULL;                                                                     \
+        }                                                                                                    \
         k = H5C__HASH_FCN((entry_ptr)->addr);                                                                \
         if ((entry_ptr)->ht_next)                                                                            \
             (entry_ptr)->ht_next->ht_prev = (entry_ptr)->ht_prev;                                            \

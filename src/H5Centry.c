@@ -1334,6 +1334,12 @@ H5C__load_entry(H5F_t *f,
     entry->tl_prev  = NULL;
     entry->tag_info = NULL;
 
+    /* initialize fields supporting VFD SWMR page index */
+    entry->page = (f->shared->cache->vfd_swmr_reader) ? (addr / f->shared->cache->page_size) : 0;
+    entry->refreshed_in_tick = 0;
+    entry->pi_next           = NULL;
+    entry->pi_prev           = NULL;
+
     H5C__RESET_CACHE_ENTRY_STATS(entry);
 
     ret_value = thing;
@@ -1988,6 +1994,12 @@ H5C__deserialize_prefetched_entry(H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t 
 
     H5C__RESET_CACHE_ENTRY_STATS(ds_entry_ptr);
 
+    /* initialize fields supporting VFD SWMR page index */
+    ds_entry_ptr->page             = cache_ptr->vfd_swmr_reader ? (addr / cache_ptr->page_size) : 0;
+    ds_entry_ptr->refreshed_in_tick = 0;
+    ds_entry_ptr->pi_next          = NULL;
+    ds_entry_ptr->pi_prev          = NULL;
+
     /* Apply to to the newly deserialized entry */
     if (H5C__tag_entry(cache_ptr, ds_entry_ptr) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "Cannot tag metadata entry");
@@ -2266,6 +2278,12 @@ H5C_insert_entry(H5F_t *f, const H5C_class_t *type, haddr_t addr, void *thing, u
     entry_ptr->tl_next  = NULL;
     entry_ptr->tl_prev  = NULL;
     entry_ptr->tag_info = NULL;
+
+    /* initialize fields supporting VFD SWMR page index */
+    entry_ptr->page              = cache_ptr->vfd_swmr_reader ? (addr / cache_ptr->page_size) : 0;
+    entry_ptr->refreshed_in_tick = 0;
+    entry_ptr->pi_next           = NULL;
+    entry_ptr->pi_prev           = NULL;
 
     /* Apply tag to newly inserted entry */
     if (H5C__tag_entry(cache_ptr, entry_ptr) < 0)
@@ -2730,6 +2748,8 @@ H5C_move_entry(H5C_t *cache_ptr, const H5C_class_t *type, haddr_t old_addr, hadd
     }     /* end if */
 
     entry_ptr->addr = new_addr;
+    if (cache_ptr->vfd_swmr_reader)
+        entry_ptr->page = new_addr / cache_ptr->page_size;
 
     if (!entry_ptr->destroy_in_progress) {
         bool was_dirty; /* Whether the entry was previously dirty */
