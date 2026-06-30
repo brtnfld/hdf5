@@ -432,8 +432,8 @@ herr_t
 H5CL_parse_config_group(const char *input_str_ptr, char *config_group_name_ptr, int num_configs,
                         H5CL_config_spec configs[])
 {
-    int i;
-    int j;
+    int             i;
+    int             j;
     H5CL_nv_pair_t  top_pair;
     H5CL_nv_pair_t  configs_nv_pairs[H5CL_MAX_NUM_CONFIGS];
     H5CL_lex_vars_t lex_vars = {/* struct_tag        = */ H5CL_LEX_VARS_STRUCT_TAG,
