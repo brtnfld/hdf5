@@ -1574,8 +1574,7 @@ H5FD__vfd_swmr_index_deserialize(const H5FD_vfd_swmr_t *file, H5FD_vfd_swmr_md_i
      * num_entries comes from the shadow file and must be bounded to prevent
      * OOB reads and oversized allocations. */
     if (H5FD_MD_INDEX_SIZE(md_index->num_entries) > md_header->index_length)
-        HGOTO_ERROR(H5E_VFL, H5E_BADVALUE, FAIL,
-                    "num_entries in shadow index exceeds declared index length");
+        HGOTO_ERROR(H5E_VFL, H5E_BADVALUE, FAIL, "num_entries in shadow index exceeds declared index length");
 
     /* Read index entries */
     if (md_index->num_entries) {

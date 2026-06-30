@@ -701,8 +701,7 @@ decode_cl_top_fields(updater_t *updater, handler_t *hand)
      *----------------------------------------------
      */
     if (updater->change_list_len < (uint64_t)(UD_CL_TOP_LEN + 4)) {
-        fprintf(stderr, "change list length (%" PRIu64 ") too small to be valid\n",
-                updater->change_list_len);
+        fprintf(stderr, "change list length (%" PRIu64 ") too small to be valid\n", updater->change_list_len);
         goto error;
     }
 
@@ -850,8 +849,8 @@ static int
 copy_data(handler_t *hand, FILE *src_file, int dst_fd, off_t src_file_offset, off_t dst_file_offset,
           size_t data_len, uint32_t received_checksum)
 {
-    uint32_t verified_checksum;                /* calculated checksum for the data being copied */
-    void    *data_buf = malloc(data_len);      /* buffer for the data being copied              */
+    uint32_t verified_checksum;           /* calculated checksum for the data being copied */
+    void    *data_buf = malloc(data_len); /* buffer for the data being copied              */
 
     if (data_buf == NULL) {
         fprintf(stderr, "failed to allocate memory for data buffer (len=%zu)\n", data_len);
@@ -1441,8 +1440,8 @@ check_h5clear_path(handler_t *hand)
             return -1;
         }
         path_env = strdup(path_env_raw);
-        char *s        = path_env;
-        char *p        = NULL;
+        char *s  = path_env;
+        char *p  = NULL;
 
         /* Loop through PATH to find h5clear */
         do {
