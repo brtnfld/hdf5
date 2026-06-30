@@ -592,6 +592,10 @@ parse_command_line(int argc, char *argv[], handler_t *hand)
                 if (aux_optarg) {
                     fprintf(stdout, "Number of polls per tick:\t\t\t\t%s\n", aux_optarg);
                     hand->polls_per_tick = atoi(aux_optarg);
+                    if (hand->polls_per_tick <= 0) {
+                        fprintf(stderr, "polls_per_tick must be a positive integer\n");
+                        goto error;
+                    }
                 }
                 else
                     fprintf(stderr, "aux_optarg is null\n");
@@ -983,7 +987,17 @@ decode_cl_top_fields(updater_t *updater, handler_t *hand)
      * the checksum of the change list
      *----------------------------------------------
      */
+    if (updater->change_list_len < (uint64_t)(UD_CL_TOP_LEN + 4)) {
+        fprintf(stderr, "change list length (%" PRIu64 ") too small to be valid\n",
+                updater->change_list_len);
+        goto error;
+    }
+
     updater->cl_buf = (unsigned char *)malloc(updater->change_list_len);
+    if (updater->cl_buf == NULL) {
+        fprintf(stderr, "failed to allocate memory for change list buffer\n");
+        goto error;
+    }
 
     /* Seek the beginning of the change list in the updater file */
     if (fseek(updater->file, (long)updater->change_list_offset, SEEK_SET) != 0) {
@@ -1060,6 +1074,16 @@ decode_cl_top_fields(updater_t *updater, handler_t *hand)
     /* Get the number of change list entries */
     UINT32DECODE(ptr, updater->num_cl_entries);
 
+    /* Validate num_cl_entries against available buffer length */
+    {
+        uint64_t max_entries = (updater->change_list_len - UD_CL_TOP_LEN - 4) / CL_ENTRY_LEN;
+        if ((uint64_t)updater->num_cl_entries > max_entries) {
+            fprintf(stderr, "num_cl_entries (%" PRIu32 ") exceeds what fits in change list buffer\n",
+                    updater->num_cl_entries);
+            goto error;
+        }
+    }
+
     /* Output the log info */
     if (hand->output) {
         fprintf(hand->output, "change list signature=%s\n", updater->cl_signature);
@@ -1105,8 +1129,13 @@ static int
 copy_data(handler_t *hand, FILE *src_file, FILE *dst_file, uint32_t src_file_offset, uint32_t dst_file_offset,
           uint32_t data_len, uint32_t received_checksum)
 {
-    uint32_t verified_checksum;           /* calculated checksum for the data being copied */
-    void    *data_buf = malloc(data_len); /* buffer for the data being copied              */
+    uint32_t verified_checksum;               /* calculated checksum for the data being copied */
+    void    *data_buf = malloc(data_len);     /* buffer for the data being copied              */
+
+    if (data_buf == NULL) {
+        fprintf(stderr, "failed to allocate memory for data buffer (len=%" PRIu32 ")\n", data_len);
+        goto error;
+    }
 
     /* Seek and read in the data from the source file */
     if (fseek(src_file, src_file_offset, SEEK_SET) != 0) {
@@ -1180,6 +1209,10 @@ decode_and_copy_cl_entries(updater_t *updater, handler_t *hand)
 
     if (updater->num_cl_entries) {
         updater->change_list = (cl_entry_t *)malloc(sizeof(cl_entry_t) * updater->num_cl_entries);
+        if (updater->change_list == NULL) {
+            fprintf(stderr, "failed to allocate memory for change list entries\n");
+            goto error;
+        }
 
         ptr = updater->cl_buf + UD_CL_TOP_LEN;
 
@@ -1416,10 +1449,18 @@ get_md_file_chksums(handler_t *hand)
 
     hand->num_mdfile_checksums = ((unsigned int)file_size) / pair_size;
 
-    seq_nums = (uint64_t *)malloc(hand->num_mdfile_checksums * 64);
+    seq_nums = (uint64_t *)malloc(hand->num_mdfile_checksums * sizeof(uint64_t));
+    if (seq_nums == NULL) {
+        fprintf(stderr, "failed to allocate memory for sequence numbers\n");
+        goto error;
+    }
 
     /* This buffer is freed in release_resources() in the end of the program */
-    hand->md_file_checksums = (uint32_t *)malloc(hand->num_mdfile_checksums * 32);
+    hand->md_file_checksums = (uint32_t *)malloc(hand->num_mdfile_checksums * sizeof(uint32_t));
+    if (hand->md_file_checksums == NULL) {
+        fprintf(stderr, "failed to allocate memory for metadata file checksums\n");
+        goto error;
+    }
 
     file_buf = (unsigned char *)malloc((unsigned long)file_size);
 
@@ -1499,7 +1540,7 @@ check_updater(handler_t *hand)
 
     /* Let it loop until an updater file appears */
     for (i = 0;; i++) {
-        sprintf(updater_name, "%s.%d", hand->updater_path, i);
+        snprintf(updater_name, sizeof(updater_name), "%s.%d", hand->updater_path, i);
 
         updater_exists = -1;
 

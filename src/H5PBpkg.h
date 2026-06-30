@@ -416,6 +416,14 @@
         }                                                                                                    \
     } /* H5PB__TL_DLL_REMOVE() */
 
+/* The following stats and hash-table macros reference H5PB_t fields
+ * (magic, index_len, il_len, ht[], dwl_*, cur_tick, etc.) that belong to
+ * the feature/vfd_swmr hash-table page-buffer redesign and do not exist in
+ * mainline's skip-list H5PB_t.  They are preserved here for Phase 3-6 of the
+ * VFD SWMR port (see VFD_SWMR_PORT_PLAN.md) but must not be compiled until
+ * the corresponding H5PB_t fields are added. */
+#if 0
+
 /***********************************************************************
  *
  * Stats collection macros
@@ -1542,6 +1550,8 @@
                          (page_buf)->dwl_len, (page_buf)->dwl_size, (fail_val))                              \
                                                                                                              \
     } /* H5PB__REMOVE_FROM_DWLL */
+
+#endif /* 0 — dead macros pending VFD SWMR H5PB_t extension (Phase 3-6) */
 
 /****************************/
 /* Package Private Typedefs */

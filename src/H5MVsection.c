@@ -357,6 +357,12 @@ H5MV__sect_split(H5FS_section_info_t *sect, hsize_t frag_size)
 
     FUNC_ENTER_PACKAGE
 
+    /* Validate that frag_size is smaller than the section — hsize_t is unsigned so
+     * sect->size -= frag_size would wrap silently if frag_size >= sect->size. */
+    if (frag_size >= sect->size)
+        HGOTO_ERROR(H5E_RESOURCE, H5E_BADVALUE, NULL,
+                    "fragment size must be smaller than section size");
+
     /* Allocate space for new section */
     if (NULL == (ret_value = H5MV__sect_new(sect->addr, frag_size)))
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, NULL, "can't initialize free space section");
