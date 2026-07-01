@@ -78,20 +78,20 @@ open_skeleton(const char *filename, unsigned verbose)
     unsigned               u, v;          /* Local index variable */
     H5F_vfd_swmr_config_t *config = NULL; /* Configuration for VFD SWMR */
 
-    HDassert(filename);
+    assert(filename);
 
     if ((dapl = H5Pcreate(H5P_DATASET_ACCESS)) < 0) {
-        HDfprintf(stderr, "%s.%d: H5Pcreate failed", __func__, __LINE__);
+        fprintf(stderr, "%s.%d: H5Pcreate failed", __func__, __LINE__);
         goto error;
     }
 
     if (H5Pset_chunk_cache(dapl, H5D_CHUNK_CACHE_NSLOTS_DEFAULT, 0, H5D_CHUNK_CACHE_W0_DEFAULT) < 0) {
-        HDfprintf(stderr, "H5Pset_chunk_cache failed");
+        fprintf(stderr, "H5Pset_chunk_cache failed");
         goto error;
     }
 
     /* Allocate memory for the configuration structure */
-    if ((config = HDcalloc(1, sizeof(*config))) == NULL)
+    if ((config = calloc(1, sizeof(*config))) == NULL)
         goto error;
 
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
@@ -112,11 +112,11 @@ open_skeleton(const char *filename, unsigned verbose)
         goto error;
 
     if (config)
-        HDfree(config);
+        free(config);
 
     /* Emit informational message */
     if (verbose)
-        HDfprintf(stderr, "WRITER: Opening datasets\n");
+        fprintf(stderr, "WRITER: Opening datasets\n");
 
     /* Open the datasets */
     for (u = 0; u < NLEVELS; u++)
@@ -144,7 +144,7 @@ open_skeleton(const char *filename, unsigned verbose)
 
 error:
     if (config)
-        HDfree(config);
+        free(config);
 
     H5E_BEGIN_TRY
     {
@@ -197,10 +197,10 @@ addrem_records(hid_t fid, unsigned verbose, unsigned long nops, unsigned long fl
     unsigned long op_to_flush;                          /* # of operations before flush */
     unsigned long u, v;                                 /* Local index variables */
 
-    HDassert(fid > 0);
+    assert(fid > 0);
 
     /* Reset the buffer */
-    HDmemset(&buf, 0, sizeof(buf));
+    memset(&buf, 0, sizeof(buf));
 
     /* Create a dataspace for the record to add */
     if ((mem_sid = H5Screate_simple(2, count, NULL)) < 0)
@@ -220,7 +220,7 @@ addrem_records(hid_t fid, unsigned verbose, unsigned long nops, unsigned long fl
         symbol = choose_dataset(NULL, NULL, verbose);
 
         /* Decide whether to shrink or expand, and by how much */
-        count[1] = (hsize_t)HDrandom() % (MAX_SIZE_CHANGE * 2) + 1;
+        count[1] = (hsize_t)random() % (MAX_SIZE_CHANGE * 2) + 1;
 
         if (count[1] > MAX_SIZE_CHANGE) {
             /* Add records */
@@ -288,7 +288,7 @@ addrem_records(hid_t fid, unsigned verbose, unsigned long nops, unsigned long fl
 
     /* Emit informational message */
     if (verbose)
-        HDfprintf(stderr, "WRITER: Closing datasets\n");
+        fprintf(stderr, "WRITER: Closing datasets\n");
 
     /* Close the datasets */
     for (u = 0; u < NLEVELS; u++)
@@ -318,21 +318,21 @@ error:
 static void
 usage(void)
 {
-    HDprintf("\n");
-    HDprintf("Usage error!\n");
-    HDprintf("\n");
-    HDprintf("Usage: vfd_swmr_addrem_writer [-q] [-f <# of operations between flushing\n");
-    HDprintf("    file contents>] [-r <random seed>] <# of operations>\n");
-    HDprintf("\n");
-    HDprintf("<# of operations between flushing file contents> should be 0 (for\n");
-    HDprintf("no flushing) or between 1 and (<# of operations> - 1).\n");
-    HDprintf("\n");
-    HDprintf("<# of operations> must be specified.\n");
-    HDprintf("\n");
-    HDprintf("Defaults to verbose (no '-q' given), flushing every 1000 operations\n");
-    HDprintf("('-f 1000'), and will generate a random seed (no -r given).\n");
-    HDprintf("\n");
-    HDexit(1);
+    printf("\n");
+    printf("Usage error!\n");
+    printf("\n");
+    printf("Usage: vfd_swmr_addrem_writer [-q] [-f <# of operations between flushing\n");
+    printf("    file contents>] [-r <random seed>] <# of operations>\n");
+    printf("\n");
+    printf("<# of operations between flushing file contents> should be 0 (for\n");
+    printf("no flushing) or between 1 and (<# of operations> - 1).\n");
+    printf("\n");
+    printf("<# of operations> must be specified.\n");
+    printf("\n");
+    printf("Defaults to verbose (no '-q' given), flushing every 1000 operations\n");
+    printf("('-f 1000'), and will generate a random seed (no -r given).\n");
+    printf("\n");
+    exit(1);
 } /* usage() */
 
 int
@@ -360,7 +360,7 @@ main(int argc, const char *argv[])
                 switch (argv[u][1]) {
                     /* # of records to write between flushing file */
                     case 'f':
-                        flush_count = HDatol(argv[u + 1]);
+                        flush_count = atol(argv[u + 1]);
                         if (flush_count < 0)
                             usage();
                         u += 2;
@@ -375,7 +375,7 @@ main(int argc, const char *argv[])
                     /* Random # seed */
                     case 'r':
                         use_seed = 1;
-                        temp     = HDatoi(argv[u + 1]);
+                        temp     = atoi(argv[u + 1]);
                         if (temp < 0)
                             usage();
                         else
@@ -390,7 +390,7 @@ main(int argc, const char *argv[])
             }     /* end if */
             else {
                 /* Get the number of records to append */
-                nops = HDatol(argv[u]);
+                nops = atol(argv[u]);
                 if (nops <= 0)
                     usage();
 
@@ -405,24 +405,24 @@ main(int argc, const char *argv[])
 
     /* Emit informational message */
     if (verbose) {
-        HDfprintf(stderr, "WRITER: Parameters:\n");
-        HDfprintf(stderr, "\t# of operations between flushes = %ld\n", flush_count);
-        HDfprintf(stderr, "\t# of operations = %ld\n", nops);
+        fprintf(stderr, "WRITER: Parameters:\n");
+        fprintf(stderr, "\t# of operations between flushes = %ld\n", flush_count);
+        fprintf(stderr, "\t# of operations = %ld\n", nops);
     } /* end if */
 
     /* Set the random seed */
     if (0 == use_seed) {
         struct timeval t;
-        HDgettimeofday(&t, NULL);
+        gettimeofday(&t, NULL);
         random_seed = (unsigned)(t.tv_usec);
     } /* end if */
-    HDsrandom(random_seed);
+    srandom(random_seed);
     /* ALWAYS emit the random seed for possible debugging */
-    HDfprintf(stderr, "WRITER: Using writer random seed: %u\n", random_seed);
+    fprintf(stderr, "WRITER: Using writer random seed: %u\n", random_seed);
 
     /* Emit informational message */
     if (verbose)
-        HDfprintf(stderr, "WRITER: Generating symbol names\n");
+        fprintf(stderr, "WRITER: Generating symbol names\n");
 
     /* Generate dataset names */
     if (generate_symbols() < 0)
@@ -430,13 +430,13 @@ main(int argc, const char *argv[])
 
     /* Emit informational message */
     if (verbose) {
-        HDfprintf(stderr, "WRITER: Opening skeleton file: %s\n", VFD_SWMR_FILENAME);
+        fprintf(stderr, "WRITER: Opening skeleton file: %s\n", VFD_SWMR_FILENAME);
     }
 
     /* Open file skeleton */
     if ((fid = open_skeleton(VFD_SWMR_FILENAME, verbose)) < 0) {
-        HDfprintf(stderr, "WRITER: Error opening skeleton file!\n");
-        HDexit(1);
+        fprintf(stderr, "WRITER: Error opening skeleton file!\n");
+        exit(1);
     } /* end if */
 
     /* Send a message to indicate "H5Fopen" is complete--releasing the file lock */
@@ -444,22 +444,22 @@ main(int argc, const char *argv[])
 
     /* Emit informational message */
     if (verbose)
-        HDfprintf(stderr, "WRITER: Adding and removing records\n");
+        fprintf(stderr, "WRITER: Adding and removing records\n");
 
     /* Grow and shrink datasets */
     if (addrem_records(fid, verbose, (unsigned long)nops, (unsigned long)flush_count) < 0) {
-        HDfprintf(stderr, "WRITER: Error adding and removing records from datasets!\n");
-        HDexit(1);
+        fprintf(stderr, "WRITER: Error adding and removing records from datasets!\n");
+        exit(1);
     } /* end if */
 
     /* Emit informational message */
     if (verbose)
-        HDfprintf(stderr, "WRITER: Releasing symbols\n");
+        fprintf(stderr, "WRITER: Releasing symbols\n");
 
     /* Clean up the symbols */
     if (shutdown_symbols() < 0) {
-        HDfprintf(stderr, "WRITER: Error releasing symbols!\n");
-        HDexit(1);
+        fprintf(stderr, "WRITER: Error releasing symbols!\n");
+        exit(1);
     } /* end if */
 
     await_signal(fid);
@@ -468,12 +468,12 @@ main(int argc, const char *argv[])
 
     /* Emit informational message */
     if (verbose)
-        HDfprintf(stderr, "WRITER: Closing objects\n");
+        fprintf(stderr, "WRITER: Closing objects\n");
 
     /* Close objects opened */
     if (H5Fclose(fid) < 0) {
-        HDfprintf(stderr, "WRITER: Error closing file!\n");
-        HDexit(1);
+        fprintf(stderr, "WRITER: Error closing file!\n");
+        exit(1);
     } /* end if */
 
     return 0;
@@ -484,7 +484,7 @@ main(int argc, const char *argv[])
 int
 main(void)
 {
-    HDfprintf(stderr, "Non-POSIX platform. Skipping.\n");
+    fprintf(stderr, "Non-POSIX platform. Skipping.\n");
     return EXIT_SUCCESS;
 } /* end main() */
 

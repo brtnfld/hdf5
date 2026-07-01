@@ -52,6 +52,12 @@ elseif (UNIX)
     configure_file(${HDF5_TEST_SOURCE_DIR}/test_use_cases.sh.in ${HDF5_TEST_BINARY_DIR}/H5TEST/test_use_cases.sh @ONLY)
     configure_file(${HDF5_TEST_SOURCE_DIR}/test_swmr.sh.in ${HDF5_TEST_BINARY_DIR}/H5TEST/test_swmr.sh @ONLY)
     configure_file(${HDF5_TEST_SOURCE_DIR}/test_vds_swmr.sh.in ${HDF5_TEST_BINARY_DIR}/H5TEST/test_vds_swmr.sh @ONLY)
+    if (TARGET aux_process)
+      set (AUX_PROCESS "yes")
+    else ()
+      set (AUX_PROCESS "no")
+    endif ()
+    configure_file(${HDF5_TEST_SOURCE_DIR}/test_vfd_swmr.sh.in ${HDF5_TEST_BINARY_DIR}/H5TEST/test_vfd_swmr.sh @ONLY)
 
     ##############################################################################
     #  copy test programs to test dir
@@ -135,6 +141,15 @@ elseif (UNIX)
     )
     if ("H5SHELL-test_vds_swmr" MATCHES "${HDF5_DISABLE_TESTS_REGEX}")
       set_tests_properties (H5SHELL-test_vds_swmr PROPERTIES DISABLED true)
+    endif ()
+
+    add_test (H5SHELL-test_vfd_swmr ${SH_PROGRAM} ${HDF5_TEST_BINARY_DIR}/H5TEST/test_vfd_swmr.sh)
+    set_tests_properties (H5SHELL-test_vfd_swmr PROPERTIES
+            ENVIRONMENT "LD_LIBRARY_PATH=$ENV{LD_LIBRARY_PATH}:${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
+            WORKING_DIRECTORY ${HDF5_TEST_BINARY_DIR}/H5TEST
+    )
+    if ("H5SHELL-test_vfd_swmr" MATCHES "${HDF5_DISABLE_TESTS_REGEX}")
+      set_tests_properties (H5SHELL-test_vfd_swmr PROPERTIES DISABLED true)
     endif ()
   endif ()
 endif ()

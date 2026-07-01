@@ -1258,6 +1258,84 @@ extern char H5_lib_vers_info_g[];
 #define H5_PACKAGE_INIT(pkg_init, err)
 #endif /* H5_MY_PKG */
 
+/* ----------------------------------------------------------------------------
+ * VFD SWMR end-of-tick (EOT) queue
+ *
+ * Declared here (rather than in H5Fprivate.h, where the rest of the VFD SWMR
+ * API lives) because VFD_SWMR_ENTER/VFD_SWMR_LEAVE below are used inside
+ * FUNC_ENTER_API/FUNC_LEAVE_API, which every API function uses -- and
+ * H5private.h cannot include H5Fprivate.h (H5Fprivate.h includes this file).
+ * H5Fprivate.h relies on eot_queue_t/eot_queue_entry_t being visible here.
+ *
+ * Must precede the "#include H5CXprivate.h" below: that include transitively
+ * reaches back into H5Fprivate.h (via H5CXprivate.h -> H5ACprivate.h ->
+ * H5Cprivate.h -> H5Fprivate.h), which references these types.
+ * ----------------------------------------------------------------------------
+ */
+
+#include "H5queue.h" /* Queue macros (TAILQ etc.) -- needed for eot_queue_t */
+
+/* Opaque forward declaration -- avoids depending on H5Fprivate.h's H5F_t
+ * typedef; only a pointer to it is needed below.
+ */
+struct H5F_t;
+
+/*----------------------------------------------------------------------------
+ *  struct eot_queue_entry_t
+ *
+ *  This is the structure for an entry on the end-of-tick queue (EOT queue)
+ *  of files opened in either VFD SWMR write or VFD SWMR read mode.
+ *
+ *  vfd_swmr_file: Pointer to the H5F_t instance for the associated file.
+ *  vfd_swmr_writer: true if opened in VFD SWMR writer mode.
+ *  tick_num: Number of the current tick.
+ *  end_of_tick: Expiration time of the current tick.
+ *  link: Linkage for the EOT queue.
+ *----------------------------------------------------------------------------
+ */
+typedef struct eot_queue_entry {
+    hbool_t              vfd_swmr_writer;
+    uint64_t             tick_num;
+    struct timespec      end_of_tick;
+    struct H5F_t        *vfd_swmr_file;
+    TAILQ_ENTRY(eot_queue_entry) link;
+} eot_queue_entry_t;
+
+/* EOT queue head type */
+typedef TAILQ_HEAD(eot_queue, eot_queue_entry) eot_queue_t;
+
+H5_DLL extern eot_queue_t  eot_queue_g;
+H5_DLL extern unsigned int vfd_swmr_api_entries_g;
+H5_DLL herr_t H5F_vfd_swmr_process_eot_queue(hbool_t entering_api);
+
+/* Track re-entrancy: only the outermost API call processes the EOT queue.
+ * TBD assert that the API lock is held -- the API lock synchronizes access
+ * to `vfd_swmr_api_entries_g`.
+ */
+#define VFD_SWMR_ENTER(err)                                                                                  \
+    do {                                                                                                     \
+        if (vfd_swmr_api_entries_g++ > 0)                                                                    \
+            ; /* Do nothing: we are *re-*entering the API. */                                                \
+        else if (TAILQ_EMPTY(&eot_queue_g))                                                                  \
+            ; /* Nothing to do. */                                                                           \
+        else if (H5F_vfd_swmr_process_eot_queue(true) < 0) {                                                 \
+            HGOTO_ERROR(H5E_FUNC, H5E_CANTSET, err, "error processing EOT queue");                           \
+        }                                                                                                    \
+    } while (0)
+
+#define VFD_SWMR_LEAVE(err)                                                                                  \
+    do {                                                                                                     \
+        if (--vfd_swmr_api_entries_g > 0)                                                                    \
+            ; /* Do nothing: we are still in an API call. */                                                \
+        else if (err_occurred)                                                                               \
+            ; /* Do nothing: an error occurred. */                                                           \
+        else if (TAILQ_EMPTY(&eot_queue_g))                                                                  \
+            ; /* Nothing to do. */                                                                           \
+        else if (H5F_vfd_swmr_process_eot_queue(false) < 0) {                                                \
+            HDONE_ERROR(H5E_FUNC, H5E_CANTSET, err, "error processing EOT queue");                           \
+        }                                                                                                    \
+    } while (0)
+
 #include "H5CXprivate.h" /* API Contexts */
 
 /* clang-format off */
@@ -1405,13 +1483,33 @@ extern char H5_lib_vers_info_g[];
             H5_API_LOCK                                                                                      \
             H5_API_SETUP_INIT_LIBRARY(err);                                                                  \
             H5_API_SETUP_PUSH_CONTEXT(err);                                                                  \
+            VFD_SWMR_ENTER(err);                                                                             \
                                                                                                              \
             /* Clear thread error stack entering public functions */                                         \
             H5E_clear_stack();                                                                               \
             {
 
-/* VFD SWMR compat: alias for FUNC_ENTER_API (EOT processing removed in M3) */
-#define FUNC_ENTER_API_NO_EOT(err) FUNC_ENTER_API(err)
+/* Use this macro when VFD SWMR EOT processing must not run on entry --
+ * currently only H5Fvfd_swmr_end_tick(), whose whole purpose is to trigger
+ * EOT processing manually, so it must not also do so implicitly here.
+ */
+#define FUNC_ENTER_API_NO_EOT(err)                                                                           \
+    {                                                                                                        \
+        {                                                                                                    \
+            H5CX_node_t api_ctx        = {{0}, NULL};                                                        \
+            bool        api_ctx_pushed = false;                                                              \
+                                                                                                             \
+            H5_CHECK_FUNCTION_NAME(H5_IS_PUBLIC(__func__));                                                  \
+                                                                                                             \
+            H5_API_SETUP_PUBLIC_API_VARS                                                                     \
+            H5_API_SETUP_ERROR_HANDLING                                                                      \
+            H5_API_LOCK                                                                                      \
+            H5_API_SETUP_INIT_LIBRARY(err);                                                                  \
+            H5_API_SETUP_PUSH_CONTEXT(err);                                                                  \
+                                                                                                             \
+            /* Clear thread error stack entering public functions */                                         \
+            H5E_clear_stack();                                                                               \
+            {
 
 /*
  * Use this macro for public API functions that shouldn't clear the error stack
@@ -1430,6 +1528,7 @@ extern char H5_lib_vers_info_g[];
             H5_API_LOCK                                                                                      \
             H5_API_SETUP_INIT_LIBRARY(err);                                                                  \
             H5_API_SETUP_PUSH_CONTEXT(err);                                                                  \
+            VFD_SWMR_ENTER(err);                                                                             \
             {
 
 /*
@@ -1648,6 +1747,7 @@ extern char H5_lib_vers_info_g[];
 #define FUNC_LEAVE_API(ret_value)                                                                            \
     ;                                                                                                        \
     } /* end scope from end of FUNC_ENTER */                                                                 \
+    VFD_SWMR_LEAVE(ret_value);                                                                              \
     if (H5_LIKELY(api_ctx_pushed)) {                                                                         \
         (void)H5CX_pop(true);                                                                                \
         api_ctx_pushed = false;                                                                              \
@@ -1659,8 +1759,20 @@ extern char H5_lib_vers_info_g[];
     }                                                                                                        \
     } /* end scope from beginning of FUNC_ENTER */
 
-/* VFD SWMR compat: alias for FUNC_LEAVE_API (EOT processing removed in M3) */
-#define FUNC_LEAVE_API_NO_EOT(ret_value) FUNC_LEAVE_API(ret_value)
+/* Matches FUNC_ENTER_API_NO_EOT -- no VFD_SWMR_LEAVE here, see that macro. */
+#define FUNC_LEAVE_API_NO_EOT(ret_value)                                                                     \
+    ;                                                                                                        \
+    } /* end scope from end of FUNC_ENTER */                                                                 \
+    if (H5_LIKELY(api_ctx_pushed)) {                                                                         \
+        (void)H5CX_pop(true);                                                                                \
+        api_ctx_pushed = false;                                                                              \
+    }                                                                                                        \
+    if (H5_UNLIKELY(err_occurred))                                                                           \
+        (void)H5E_dump_api_stack();                                                                          \
+    H5_API_UNLOCK                                                                                            \
+    return (ret_value);                                                                                      \
+    }                                                                                                        \
+    } /* end scope from beginning of FUNC_ENTER */
 
 /* Use this macro to match the FUNC_ENTER_API_NOINIT macro */
 #define FUNC_LEAVE_API_NOINIT(ret_value)                                                                     \

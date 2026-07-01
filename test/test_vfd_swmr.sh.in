@@ -651,10 +651,17 @@ done
 #
 if [ ${do_zoo:-no} = yes ]; then
     rm -f ./shared_tick_num
+    # Remove any possible writer message file before launching writer
+    rm -f $WRITER_MESSAGE
     echo launch vfd_swmr_zoo_writer
     catch_out_err_and_rc vfd_swmr_zoo_writer \
         $testdir/vfd_swmr_zoo_writer -q &
     pid_writer=$!
+
+    # Wait for message from writer process before starting the reader:
+    # the writer and reader open the same file, and without this the
+    # reader can race the writer's H5Fcreate() and fail outright.
+    WAIT_MESSAGE $WRITER_MESSAGE
 
         # -l is the expected maximal number of ticks from the writer's finishing zoo creation or deletion
         # to the reader's finishing validation of zoo creation or deletion

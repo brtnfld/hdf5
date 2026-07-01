@@ -422,6 +422,14 @@ H5P_push_vfd_swmr_reader_vfd_on_fapl(hid_t fapl_id)
 
     FUNC_ENTER_NOAPI(FAIL)
 
+    /* Ensure the VFD SWMR reader VFD class is registered (assigns
+     * H5FD_VFD_SWMR_id_g) before it is used as a driver ID below.  Unlike
+     * sec2/core/etc., this VFD has no public H5Pset_fapl_*() entry point to
+     * trigger registration, so this internal push function must do it.
+     */
+    if (H5I_INVALID_HID == H5FD_vfd_swmr_init())
+        HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, FAIL, "unable to initialize vfd_swmr driver");
+
     /* sanity checks -- get ptr to plist in passing */
     if (NULL == (plist_ptr = H5P_object_verify(fapl_id, H5P_FILE_ACCESS, false)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list");
@@ -512,6 +520,7 @@ H5FD__swmr_reader_open(H5FD_vfd_swmr_t *file)
 
     if (file->api_elapsed_ticks == NULL)
         HGOTO_ERROR(H5E_VFL, H5E_CANTALLOC, FAIL, "could not allocate API elapsed ticks");
+
     if (!file->make_believe) {
         /* Retry on opening the metadata file */
         for (do_try         = H5_retry_init(&retry, H5FD_VFD_SWMR_MD_FILE_RETRY_MAX, H5_RETRY_DEFAULT_MINIVAL,

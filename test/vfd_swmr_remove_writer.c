@@ -80,10 +80,10 @@ open_skeleton(const char *filename, unsigned verbose, unsigned old H5_ATTR_UNUSE
     unsigned               u, v;          /* Local index variable */
     H5F_vfd_swmr_config_t *config = NULL; /* Configuration for VFD SWMR */
 
-    HDassert(filename);
+    assert(filename);
 
     /* Allocate memory for the configuration structure */
-    if ((config = (H5F_vfd_swmr_config_t *)HDcalloc(1, sizeof(H5F_vfd_swmr_config_t))) == NULL)
+    if ((config = (H5F_vfd_swmr_config_t *)calloc(1, sizeof(H5F_vfd_swmr_config_t))) == NULL)
         goto error;
 
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
@@ -105,11 +105,11 @@ open_skeleton(const char *filename, unsigned verbose, unsigned old H5_ATTR_UNUSE
         goto error;
 
     if (config)
-        HDfree(config);
+        free(config);
 
     /* Emit informational message */
     if (verbose)
-        HDfprintf(stderr, "WRITER: Opening datasets\n");
+        fprintf(stderr, "WRITER: Opening datasets\n");
 
     /* Open the datasets */
     for (u = 0; u < NLEVELS; u++)
@@ -132,7 +132,7 @@ open_skeleton(const char *filename, unsigned verbose, unsigned old H5_ATTR_UNUSE
 
 error:
     if (config)
-        HDfree(config);
+        free(config);
 
     H5E_BEGIN_TRY
     {
@@ -179,7 +179,7 @@ remove_records(hid_t fid, unsigned verbose, unsigned long nshrinks, unsigned lon
     hsize_t       dim[2] = {1, 0}; /* Dataspace dimensions */
     unsigned long u, v;            /* Local index variables */
 
-    HDassert(fid >= 0);
+    assert(fid >= 0);
 
     /* Remove records from random datasets, according to frequency distribution */
     shrink_to_flush = flush_count;
@@ -191,7 +191,7 @@ remove_records(hid_t fid, unsigned verbose, unsigned long nshrinks, unsigned lon
         symbol = choose_dataset(NULL, NULL, verbose);
 
         /* Shrink the dataset's dataspace */
-        remove_size = (hsize_t)HDrandom() % MAX_REMOVE_SIZE + 1;
+        remove_size = (hsize_t)random() % MAX_REMOVE_SIZE + 1;
         if (remove_size > symbol->nrecords)
             symbol->nrecords = 0;
         else
@@ -215,7 +215,7 @@ remove_records(hid_t fid, unsigned verbose, unsigned long nshrinks, unsigned lon
 
     /* Emit informational message */
     if (verbose)
-        HDfprintf(stderr, "WRITER: Closing datasets\n");
+        fprintf(stderr, "WRITER: Closing datasets\n");
 
     /* Close the datasets */
     for (u = 0; u < NLEVELS; u++)
@@ -240,19 +240,19 @@ error:
 static void
 usage(void)
 {
-    HDprintf("\n");
-    HDprintf("Usage error!\n");
-    HDprintf("\n");
-    HDprintf("Usage: swmr_remove_writer [-q] [-o] [-f <# of shrinks between flushing\n");
-    HDprintf("    file contents>] [-r <random seed>] <# of shrinks>\n");
-    HDprintf("\n");
-    HDprintf("<# of shrinks between flushing file contents> should be 0 (for no\n");
-    HDprintf("flushing) or between 1 and (<# of shrinks> - 1)\n");
-    HDprintf("\n");
-    HDprintf("Defaults to verbose (no '-q' given), latest format when opening file (no '-o' given),\n");
-    HDprintf("flushing every 1000 shrinks ('-f 1000'), and will generate a random seed (no -r given).\n");
-    HDprintf("\n");
-    HDexit(1);
+    printf("\n");
+    printf("Usage error!\n");
+    printf("\n");
+    printf("Usage: swmr_remove_writer [-q] [-o] [-f <# of shrinks between flushing\n");
+    printf("    file contents>] [-r <random seed>] <# of shrinks>\n");
+    printf("\n");
+    printf("<# of shrinks between flushing file contents> should be 0 (for no\n");
+    printf("flushing) or between 1 and (<# of shrinks> - 1)\n");
+    printf("\n");
+    printf("Defaults to verbose (no '-q' given), latest format when opening file (no '-o' given),\n");
+    printf("flushing every 1000 shrinks ('-f 1000'), and will generate a random seed (no -r given).\n");
+    printf("\n");
+    exit(1);
 } /* usage() */
 
 int
@@ -282,7 +282,7 @@ main(int argc, const char *argv[])
                 switch (argv[u][1]) {
                     /* # of records to write between flushing file */
                     case 'f':
-                        flush_count = HDatol(argv[u + 1]);
+                        flush_count = atol(argv[u + 1]);
                         if (flush_count < 0)
                             usage();
                         u += 2;
@@ -303,7 +303,7 @@ main(int argc, const char *argv[])
                     /* Random # seed */
                     case 'r':
                         use_seed    = 1;
-                        temp        = HDatoi(argv[u + 1]);
+                        temp        = atoi(argv[u + 1]);
                         random_seed = (unsigned)temp;
                         u += 2;
                         break;
@@ -321,7 +321,7 @@ main(int argc, const char *argv[])
             }     /* end if */
             else {
                 /* Get the number of records to append */
-                nshrinks = HDatol(argv[u]);
+                nshrinks = atol(argv[u]);
                 if (nshrinks <= 0)
                     usage();
 
@@ -336,24 +336,24 @@ main(int argc, const char *argv[])
 
     /* Emit informational message */
     if (verbose) {
-        HDfprintf(stderr, "WRITER: Parameters:\n");
-        HDfprintf(stderr, "\t# of shrinks between flushes = %ld\n", flush_count);
-        HDfprintf(stderr, "\t# of shrinks = %ld\n", nshrinks);
+        fprintf(stderr, "WRITER: Parameters:\n");
+        fprintf(stderr, "\t# of shrinks between flushes = %ld\n", flush_count);
+        fprintf(stderr, "\t# of shrinks = %ld\n", nshrinks);
     } /* end if */
 
     /* Set the random seed */
     if (0 == use_seed) {
         struct timeval t;
-        HDgettimeofday(&t, NULL);
+        gettimeofday(&t, NULL);
         random_seed = (unsigned)(t.tv_usec);
     } /* end if */
-    HDsrandom(random_seed);
+    srandom(random_seed);
     /* ALWAYS emit the random seed for possible debugging */
-    HDfprintf(stderr, "WRITER: Using writer random seed: %u\n", random_seed);
+    fprintf(stderr, "WRITER: Using writer random seed: %u\n", random_seed);
 
     /* Emit informational message */
     if (verbose)
-        HDfprintf(stderr, "WRITER: Generating symbol names\n");
+        fprintf(stderr, "WRITER: Generating symbol names\n");
 
     /* Generate dataset names */
     if (generate_symbols() < 0)
@@ -361,13 +361,13 @@ main(int argc, const char *argv[])
 
     /* Emit informational message */
     if (verbose) {
-        HDfprintf(stderr, "WRITER: Opening skeleton file: %s\n", VFD_SWMR_FILENAME);
+        fprintf(stderr, "WRITER: Opening skeleton file: %s\n", VFD_SWMR_FILENAME);
     }
 
     /* Open file skeleton */
     if ((fid = open_skeleton(VFD_SWMR_FILENAME, verbose, old)) < 0) {
-        HDfprintf(stderr, "WRITER: Error opening skeleton file!\n");
-        HDexit(1);
+        fprintf(stderr, "WRITER: Error opening skeleton file!\n");
+        exit(1);
     } /* end if */
 
     /* Send a message to indicate "H5Fopen" is complete--releasing the file lock */
@@ -375,22 +375,22 @@ main(int argc, const char *argv[])
 
     /* Emit informational message */
     if (verbose)
-        HDfprintf(stderr, "WRITER: Removing records\n");
+        fprintf(stderr, "WRITER: Removing records\n");
 
     /* Remove records from datasets */
     if (remove_records(fid, verbose, (unsigned long)nshrinks, (unsigned long)flush_count) < 0) {
-        HDfprintf(stderr, "WRITER: Error removing records from datasets!\n");
-        HDexit(1);
+        fprintf(stderr, "WRITER: Error removing records from datasets!\n");
+        exit(1);
     } /* end if */
 
     /* Emit informational message */
     if (verbose)
-        HDfprintf(stderr, "WRITER: Releasing symbols\n");
+        fprintf(stderr, "WRITER: Releasing symbols\n");
 
     /* Clean up the symbols */
     if (shutdown_symbols() < 0) {
-        HDfprintf(stderr, "WRITER: Error releasing symbols!\n");
-        HDexit(1);
+        fprintf(stderr, "WRITER: Error releasing symbols!\n");
+        exit(1);
     } /* end if */
 
     if (wait_for_signal) {
@@ -401,12 +401,12 @@ main(int argc, const char *argv[])
 
     /* Emit informational message */
     if (verbose)
-        HDfprintf(stderr, "WRITER: Closing objects\n");
+        fprintf(stderr, "WRITER: Closing objects\n");
 
     /* Close objects opened */
     if (H5Fclose(fid) < 0) {
-        HDfprintf(stderr, "WRITER: Error closing file!\n");
-        HDexit(1);
+        fprintf(stderr, "WRITER: Error closing file!\n");
+        exit(1);
     } /* end if */
 
     return 0;
@@ -417,7 +417,7 @@ main(int argc, const char *argv[])
 int
 main(void)
 {
-    HDfprintf(stderr, "Non-POSIX platform. Skipping.\n");
+    fprintf(stderr, "Non-POSIX platform. Skipping.\n");
     return EXIT_SUCCESS;
 } /* end main() */
 

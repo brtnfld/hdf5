@@ -962,12 +962,14 @@ H5F_vfd_swmr_writer_end_of_tick(H5F_t *f)
     if (H5FD_truncate(shared->lf, false) < 0)
 
         HGOTO_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "low level truncate failed");
+
     /* 3) If this is the first tick (i.e. tick == 1), create the
      *    in memory version of the metadata file index.
      */
     if ((shared->tick_num == 1) && (H5F__vfd_swmr_create_index(shared) < 0))
 
         HGOTO_ERROR(H5E_FILE, H5E_CANTALLOC, FAIL, "unable to allocate metadata file index");
+
     /* 4) Scan the page buffer tick list, and use it to update
      *    the metadata file index, adding or modifying entries as
      *    appropriate.
@@ -976,6 +978,7 @@ H5F_vfd_swmr_writer_end_of_tick(H5F_t *f)
                                     &idx_ent_not_in_tl_flushed) < 0)
 
         HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't update MD file index");
+
     /* 5) Scan the metadata file index for entries that can be
      *    removed -- specifically entries that have been written
      *    to the HDF5 file more than max_lag ticks ago, and haven't
@@ -984,6 +987,7 @@ H5F_vfd_swmr_writer_end_of_tick(H5F_t *f)
     if (H5F__clean_shadow_index(f, shared->mdf_idx_entries_used + idx_entries_added, shared->mdf_idx,
                                 &idx_entries_removed) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't clean shadow file index");
+
     /* 6) Update the metadata file.  Must do this before we
      *    release the tick list, as otherwise the page buffer
      *    entry images may not be available.
@@ -994,6 +998,7 @@ H5F_vfd_swmr_writer_end_of_tick(H5F_t *f)
     if (H5F_update_vfd_swmr_metadata_file(
             f, shared->mdf_idx_entries_used + idx_entries_added - idx_entries_removed, shared->mdf_idx) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't update MD file");
+
     /* at this point the metadata file index should be sorted -- update
      * shared->mdf_idx_entries_used.
      */
@@ -1005,9 +1010,11 @@ H5F_vfd_swmr_writer_end_of_tick(H5F_t *f)
     /* 7) Release the page buffer tick list. */
     if (H5PB_vfd_swmr__release_tick_list(shared) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't release tick list");
+
     /* 8) Release any delayed writes whose delay has expired */
     if (H5PB_vfd_swmr__release_delayed_writes(shared) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_SYSTEM, FAIL, "can't release delayed writes");
+
     /* 9) Increment the tick, and update the end of tick. */
 
     /* Update end_of_tick */
@@ -1020,6 +1027,7 @@ H5F_vfd_swmr_writer_end_of_tick(H5F_t *f)
     /* Re-insert the entry that corresponds to f onto the EOT queue */
     if (H5F_vfd_swmr_insert_entry_eot(f) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to insert entry into the EOT queue");
+
 done:
     /* Calculate the processing time and write the time info to the log file */
     if (shared->vfd_swmr_log_on == true) {

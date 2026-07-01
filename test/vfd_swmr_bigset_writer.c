@@ -80,6 +80,8 @@
 #define H5C_FRIEND /*suppress error about including H5Cpkg   */
 #define H5F_FRIEND /*suppress error about including H5Fpkg   */
 
+#include "H5private.h" /* Generic Functions -- must be included before other private headers, see H5Fsuper.c */
+
 #include "hdf5.h"
 
 #include "H5Cpkg.h"
@@ -111,7 +113,7 @@
 
 /* Calculate the time passed in seconds.
  * X is the beginning time; Y is the ending time.
- * Expects X, Y to be struct timespec from the function call HDclock_gettime.
+ * Expects X, Y to be struct timespec from the function call clock_gettime.
  */
 #define TIME_PASSED(X, Y)                                                                                    \
     ((double)(((uint64_t)Y.tv_sec - (uint64_t)X.tv_sec) * 1000000000LL +                                     \
@@ -202,7 +204,7 @@ static hsize_t three_dee_max_dims[RANK3];
 static void
 usage(const char *progname)
 {
-    HDfprintf(stderr,
+    fprintf(stderr,
               "usage: %s [-A] [-C] [-F] [-M] [-N] [-P] [-R] [-S] [-V] [-W] [-a steps] [-b] [-c cols]\n"
               "    [-d dims] [-e depth] [-f tick_len] [-g max_lag] [-j skip_chunk] [-k part_chunk]\n"
               "    [-l tick_num] [-n iterations] [-o page_buf_size] [-p fsp_size] [-r rows]\n"
@@ -225,7 +227,7 @@ usage(const char *progname)
               "-b:                   write data in big-endian byte order\n",
               progname);
     /* Split print function to avoid line too long warning */
-    HDfprintf(
+    fprintf(
         stderr,
         "-c cols:	       `cols` columns of the chunk\n"
         "-d 1|one|2|two|both:  select dataset expansion in one or\n"
@@ -254,7 +256,7 @@ usage(const char *progname)
         "                      IP address of the writer (reader only, requires -N)\n"
         "--md_dir <directory>: directory for reader to search for metadata file.\n"
         "\n");
-    HDexit(EXIT_FAILURE);
+    exit(EXIT_FAILURE);
 } /* usage() */
 
 static bool
@@ -262,12 +264,12 @@ make_quadrant_dataspace(state_t *s, quadrant_t *q)
 {
     if ((q->space = H5Screate_simple(NELMTS(s->chunk_dims), s->chunk_dims,
                                      s->expand_2d ? two_dee_max_dims : s->one_dee_max_dims)) < 0) {
-        HDfprintf(stderr, "H5Screate_simple failed\n");
+        fprintf(stderr, "H5Screate_simple failed\n");
         TEST_ERROR;
     }
 
     if (H5Sselect_hyperslab(q->space, H5S_SELECT_SET, q->start, q->stride, q->count, q->block) < 0) {
-        HDfprintf(stderr, "H5Sselect_hyperslab failed\n");
+        fprintf(stderr, "H5Sselect_hyperslab failed\n");
         TEST_ERROR;
     }
 
@@ -353,20 +355,20 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
     }
 
     if (H5_basename(argv[0], &tfile) < 0) {
-        HDfprintf(stderr, "H5_basename failed\n");
+        fprintf(stderr, "H5_basename failed\n");
         TEST_ERROR;
     }
 
     esnprintf(s->progname, sizeof(s->progname), "%s", tfile);
 
     if (tfile)
-        HDfree(tfile);
+        free(tfile);
 
     while ((opt = H5_get_option(argc, (const char *const *)argv, s_opts, l_opts)) != EOF) {
         switch (opt) {
             case -127:
-                if (HDstrlen(H5_optarg) >= PATH_MAX) {
-                    HDfprintf(stderr, "-md_dir argument %s too long\n", H5_optarg);
+                if (strlen(H5_optarg) >= PATH_MAX) {
+                    fprintf(stderr, "-md_dir argument %s too long\n", H5_optarg);
                     TEST_ERROR;
                 }
                 s->md_dir = H5_optarg;
@@ -406,19 +408,19 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
                 s->use_communication = false;
                 break;
             case 'd':
-                if (HDstrcmp(H5_optarg, "1") == 0 || HDstrcmp(H5_optarg, "one") == 0)
+                if (strcmp(H5_optarg, "1") == 0 || strcmp(H5_optarg, "one") == 0)
                     s->expand_2d = false;
-                else if (HDstrcmp(H5_optarg, "2") == 0 || HDstrcmp(H5_optarg, "two") == 0 ||
-                         HDstrcmp(H5_optarg, "both") == 0)
+                else if (strcmp(H5_optarg, "2") == 0 || strcmp(H5_optarg, "two") == 0 ||
+                         strcmp(H5_optarg, "both") == 0)
                     s->expand_2d = true;
                 else {
-                    HDfprintf(stderr, "bad -d argument %s\n", H5_optarg);
+                    fprintf(stderr, "bad -d argument %s\n", H5_optarg);
                     TEST_ERROR;
                 }
                 break;
             case 'i':
-                if (HDstrlen(H5_optarg) >= MAX_IP_ADDR_LEN) {
-                    HDfprintf(stderr, "-i,--ip_addr argument %s is too long\n", H5_optarg);
+                if (strlen(H5_optarg) >= MAX_IP_ADDR_LEN) {
+                    fprintf(stderr, "-i,--ip_addr argument %s is too long\n", H5_optarg);
                     TEST_ERROR;
                 }
                 sock->ip_address = H5_optarg;
@@ -441,22 +443,22 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
             case 'v':
             case 'w':
                 errno = 0;
-                tmp   = HDstrtoul(H5_optarg, &end, 0);
+                tmp   = strtoul(H5_optarg, &end, 0);
                 if (end == H5_optarg || *end != '\0') {
-                    HDfprintf(stderr, "couldn't parse -%c argument %s\n", opt, H5_optarg);
+                    fprintf(stderr, "couldn't parse -%c argument %s\n", opt, H5_optarg);
                     TEST_ERROR;
                 }
                 else if (errno != 0) {
-                    HDfprintf(stderr, "couldn't parse -%c argument %s\n", opt, H5_optarg);
+                    fprintf(stderr, "couldn't parse -%c argument %s\n", opt, H5_optarg);
                     TEST_ERROR;
                 }
                 else if (tmp > UINT_MAX) {
-                    HDfprintf(stderr, "-%c argument %lu too large", opt, tmp);
+                    fprintf(stderr, "-%c argument %lu too large", opt, tmp);
                     TEST_ERROR;
                 }
 
                 if ((opt == 'c' || opt == 'r') && tmp == 0) {
-                    HDfprintf(stderr, "-%c argument %lu must be >= 1", opt, tmp);
+                    fprintf(stderr, "-%c argument %lu must be >= 1", opt, tmp);
                     TEST_ERROR;
                 }
 
@@ -522,33 +524,33 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
     argv += H5_optind;
 
     if (argc > 0) {
-        HDfprintf(stderr, "unexpected command-line arguments\n");
+        fprintf(stderr, "unexpected command-line arguments\n");
         TEST_ERROR;
     }
 
 #ifdef H5_HAVE_AUX_PROCESS
     if (s->vds == vds_multi)
-        HDexit(EXIT_SUCCESS);
+        exit(EXIT_SUCCESS);
 #endif
 
     if (s->vds != vds_off && s->expand_2d) {
-        HDfprintf(stderr, "virtual datasets and 2D datasets are mutually exclusive\n");
+        fprintf(stderr, "virtual datasets and 2D datasets are mutually exclusive\n");
         TEST_ERROR;
     }
 
     if (s->test_3d) {
         if (s->depth < 1) {
-            HDfprintf(stderr, "The depth of 3D dataset can't be less than 1\n");
+            fprintf(stderr, "The depth of 3D dataset can't be less than 1\n");
             TEST_ERROR;
         }
 
         if (s->expand_2d) {
-            HDfprintf(stderr, "3D dataset test doesn't support 2D expansion\n");
+            fprintf(stderr, "3D dataset test doesn't support 2D expansion\n");
             TEST_ERROR;
         }
 
         if (s->vds != vds_off) {
-            HDfprintf(stderr, "3D dataset test doesn't support VDS\n");
+            fprintf(stderr, "3D dataset test doesn't support VDS\n");
             TEST_ERROR;
         }
     }
@@ -593,12 +595,12 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
         }
 
         if ((s->quadrant_dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0) {
-            HDfprintf(stderr, "H5Pcreate failed\n");
+            fprintf(stderr, "H5Pcreate failed\n");
             TEST_ERROR;
         }
 
         if (H5Pset_chunk(s->quadrant_dcpl, RANK2, half_chunk_dims) < 0) {
-            HDfprintf(stderr, "H5Pset_chunk failed\n");
+            fprintf(stderr, "H5Pset_chunk failed\n");
             TEST_ERROR;
         }
 
@@ -623,22 +625,22 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
                            .count  = {1, H5S_UNLIMITED}};
 
         if (!make_quadrant_dataspace(s, ul)) {
-            HDfprintf(stderr, "make_quadrant_dataspace failed\n");
+            fprintf(stderr, "make_quadrant_dataspace failed\n");
             TEST_ERROR;
         }
 
         if (!make_quadrant_dataspace(s, ur)) {
-            HDfprintf(stderr, "make_quadrant_dataspace failed\n");
+            fprintf(stderr, "make_quadrant_dataspace failed\n");
             TEST_ERROR;
         }
 
         if (!make_quadrant_dataspace(s, bl)) {
-            HDfprintf(stderr, "make_quadrant_dataspace failed\n");
+            fprintf(stderr, "make_quadrant_dataspace failed\n");
             TEST_ERROR;
         }
 
         if (!make_quadrant_dataspace(s, br)) {
-            HDfprintf(stderr, "make_quadrant_dataspace failed\n");
+            fprintf(stderr, "make_quadrant_dataspace failed\n");
             TEST_ERROR;
         }
 
@@ -648,50 +650,50 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
                             .count  = {1, H5S_UNLIMITED}};
 
         if ((src->space = H5Screate_simple(RANK2, half_chunk_dims, half_max_dims)) < 0) {
-            HDfprintf(stderr, "H5Screate_simple failed\n");
+            fprintf(stderr, "H5Screate_simple failed\n");
             TEST_ERROR;
         }
 
         if (H5Sselect_hyperslab(src->space, H5S_SELECT_SET, src->start, src->stride, src->count, src->block) <
             0) {
-            HDfprintf(stderr, "H5Sselect_hyperslab failed\n");
+            fprintf(stderr, "H5Sselect_hyperslab failed\n");
             TEST_ERROR;
         }
 
         if ((ul->src_space = H5Screate_simple(RANK2, half_chunk_dims, half_max_dims)) < 0) {
-            HDfprintf(stderr, "H5Screate_simple failed\n");
+            fprintf(stderr, "H5Screate_simple failed\n");
             TEST_ERROR;
         }
 
         if ((ur->src_space = H5Screate_simple(RANK2, half_chunk_dims, half_max_dims)) < 0) {
-            HDfprintf(stderr, "H5Screate_simple failed\n");
+            fprintf(stderr, "H5Screate_simple failed\n");
             TEST_ERROR;
         }
 
         if ((bl->src_space = H5Screate_simple(RANK2, half_chunk_dims, half_max_dims)) < 0) {
-            HDfprintf(stderr, "H5Screate_simple failed\n");
+            fprintf(stderr, "H5Screate_simple failed\n");
             TEST_ERROR;
         }
 
         if ((br->src_space = H5Screate_simple(RANK2, half_chunk_dims, half_max_dims)) < 0) {
-            HDfprintf(stderr, "H5Screate_simple failed\n");
+            fprintf(stderr, "H5Screate_simple failed\n");
             TEST_ERROR;
         }
     }
 
     /* space for attributes */
     if ((s->one_by_one_sid = H5Screate_simple(1, &dims, &dims)) < 0) {
-        HDfprintf(stderr, "H5Screate_simple failed\n");
+        fprintf(stderr, "H5Screate_simple failed\n");
         TEST_ERROR;
     }
 
-    if ((s->dataset = HDmalloc(sizeof(hid_t) * s->ndatasets)) == NULL) {
-        HDfprintf(stderr, "HDmalloc failed\n");
+    if ((s->dataset = malloc(sizeof(hid_t) * s->ndatasets)) == NULL) {
+        fprintf(stderr, "malloc failed\n");
         TEST_ERROR;
     }
 
-    if ((s->sources = HDmalloc(sizeof(*s->sources) * s->ndatasets)) == NULL) {
-        HDfprintf(stderr, "HDmalloc failed\n");
+    if ((s->sources = malloc(sizeof(*s->sources) * s->ndatasets)) == NULL) {
+        fprintf(stderr, "malloc failed\n");
         TEST_ERROR;
     }
 
@@ -707,7 +709,7 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
             dims3[0] = s->part_chunk;
 
         if ((s->memspace = H5Screate_simple(RANK3, dims3, NULL)) < 0) {
-            HDfprintf(stderr, "H5Screate_simple failed\n");
+            fprintf(stderr, "H5Screate_simple failed\n");
             TEST_ERROR;
         }
     }
@@ -728,19 +730,19 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
         }
 
         if ((s->memspace = H5Screate_simple(RANK2, dims2, NULL)) < 0) {
-            HDfprintf(stderr, "H5Screate_simple failed\n");
+            fprintf(stderr, "H5Screate_simple failed\n");
             TEST_ERROR;
         }
     }
 
     /* The default is zero, meaning no skip */
     if (s->skip_chunk == 1) {
-        HDfprintf(stderr, "can't skip every chunk\n");
+        fprintf(stderr, "can't skip every chunk\n");
         TEST_ERROR;
     }
 
     if (s->over_extend == 0) {
-        HDfprintf(stderr, "Extension of the dataset can't be zero\n");
+        fprintf(stderr, "Extension of the dataset can't be zero\n");
         TEST_ERROR;
     }
 
@@ -756,52 +758,52 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
         s->filename[3] = s->filename[0];
     }
 
-    personality = HDstrstr(s->progname, "vfd_swmr_bigset_");
+    personality = strstr(s->progname, "vfd_swmr_bigset_");
 
-    if (personality != NULL && HDstrcmp(personality, "vfd_swmr_bigset_writer") == 0)
+    if (personality != NULL && strcmp(personality, "vfd_swmr_bigset_writer") == 0)
         s->writer = true;
-    else if (personality != NULL && HDstrcmp(personality, "vfd_swmr_bigset_reader") == 0)
+    else if (personality != NULL && strcmp(personality, "vfd_swmr_bigset_reader") == 0)
         s->writer = false;
     else {
-        HDfprintf(stderr, "unknown personality, expected vfd_swmr_bigset_{reader,writer}\n");
+        fprintf(stderr, "unknown personality, expected vfd_swmr_bigset_{reader,writer}\n");
         TEST_ERROR;
     }
 
     if ((s->dapl = H5Pcreate(H5P_DATASET_ACCESS)) < 0) {
-        HDfprintf(stderr, "H5Pcreate failed\n");
+        fprintf(stderr, "H5Pcreate failed\n");
         TEST_ERROR;
     }
 
     if (s->chunk_cache_size) {
         if (H5Pget_chunk_cache(s->dapl, &rdcc_nslots, &rdcc_nbytes, &rdcc_w0) < 0) {
-            HDfprintf(stderr, "H5Pget_chunk_cache failed\n");
+            fprintf(stderr, "H5Pget_chunk_cache failed\n");
             TEST_ERROR;
         }
 
         if (H5Pset_chunk_cache(s->dapl, rdcc_nslots, s->chunk_cache_size, rdcc_w0) < 0) {
-            HDfprintf(stderr, "H5Pset_chunk_cache failed\n");
+            fprintf(stderr, "H5Pset_chunk_cache failed\n");
             TEST_ERROR;
         }
     }
 
     if (s->deflate_level > 9) {
-        HDfprintf(stderr, "deflation level must be between 0 and 9\n");
+        fprintf(stderr, "deflation level must be between 0 and 9\n");
         TEST_ERROR;
     }
 
     if (s->vds != vds_off && H5Pset_virtual_view(s->dapl, H5D_VDS_FIRST_MISSING) < 0) {
-        HDfprintf(stderr, "H5Pset_virtual_view failed\n");
+        fprintf(stderr, "H5Pset_virtual_view failed\n");
         TEST_ERROR;
     }
 
     if (s->use_legacy_swmr) {
         if (s->use_vfd_swmr) {
-            HDfprintf(stderr, "Can't use both VFD SWMR and Legacy SWMR\n");
+            fprintf(stderr, "Can't use both VFD SWMR and Legacy SWMR\n");
             TEST_ERROR;
         }
 
         if (s->use_communication) {
-            HDfprintf(stderr, "Can't use named pipe for the Legacy SWMR\n");
+            fprintf(stderr, "Can't use named pipe for the Legacy SWMR\n");
             TEST_ERROR;
         }
     }
@@ -827,13 +829,13 @@ error:
     H5E_END_TRY;
 
     if (tfile)
-        HDfree(tfile);
+        free(tfile);
 
     if (s->dataset)
-        HDfree(s->dataset);
+        free(s->dataset);
 
     if (s->sources)
-        HDfree(s->sources);
+        free(s->sources);
 
     return false;
 } /* state_init() */
@@ -845,7 +847,7 @@ state_destroy(state_t *s)
     struct timespec start_time, end_time;
 
     if (H5Pclose(s->dapl) < 0) {
-        HDfprintf(stderr, "H5Pclose failed\n");
+        fprintf(stderr, "H5Pclose failed\n");
         TEST_ERROR;
     }
 
@@ -855,29 +857,29 @@ state_destroy(state_t *s)
 
         if (H5Sclose(ul->src_space) < 0 || H5Sclose(ur->src_space) < 0 || H5Sclose(bl->src_space) < 0 ||
             H5Sclose(br->src_space) < 0) {
-            HDfprintf(stderr, "H5Sclose failed\n");
+            fprintf(stderr, "H5Sclose failed\n");
             TEST_ERROR;
         }
 
         if (H5Sclose(ul->space) < 0 || H5Sclose(ur->space) < 0 || H5Sclose(bl->space) < 0 ||
             H5Sclose(br->space) < 0) {
-            HDfprintf(stderr, "H5Sclose failed\n");
+            fprintf(stderr, "H5Sclose failed\n");
             TEST_ERROR;
         }
 
         if (H5Pclose(s->quadrant_dcpl) < 0) {
-            HDfprintf(stderr, "H5Pclose failed\n");
+            fprintf(stderr, "H5Pclose failed\n");
             TEST_ERROR;
         }
     }
 
     if (H5Sclose(s->one_by_one_sid) < 0) {
-        HDfprintf(stderr, "H5Sclose failed\n");
+        fprintf(stderr, "H5Sclose failed\n");
         TEST_ERROR;
     }
 
     if (H5Sclose(s->memspace) < 0) {
-        HDfprintf(stderr, "H5Sclose failed\n");
+        fprintf(stderr, "H5Sclose failed\n");
         TEST_ERROR;
     }
 
@@ -887,14 +889,14 @@ state_destroy(state_t *s)
 
         if (s->vds != vds_multi) {
             if (H5Fvfd_swmr_end_tick(s->file[0]) < 0) {
-                HDfprintf(stderr, "H5Fvfd_swmr_end_tick failed\n");
+                fprintf(stderr, "H5Fvfd_swmr_end_tick failed\n");
                 TEST_ERROR;
             }
         }
         else {
             for (j = 0; j < NELMTS(s->file); j++)
                 if (H5Fvfd_swmr_end_tick(s->file[j]) < 0) {
-                    HDfprintf(stderr, "H5Fvfd_swmr_end_tick failed\n");
+                    fprintf(stderr, "H5Fvfd_swmr_end_tick failed\n");
                     TEST_ERROR;
                 }
         }
@@ -902,8 +904,8 @@ state_destroy(state_t *s)
 
     /* For checking the time spent in file close.  It's for running the writer alone */
     if (s->do_perf) {
-        if (HDclock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
-            HDfprintf(stderr, "HDclock_gettime failed");
+        if (clock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
+            fprintf(stderr, "clock_gettime failed");
             TEST_ERROR;
         }
     }
@@ -917,27 +919,27 @@ state_destroy(state_t *s)
             continue;
 
         if (H5Fclose(fid) < 0) {
-            HDfprintf(stderr, "H5Fclose failed\n");
+            fprintf(stderr, "H5Fclose failed\n");
             TEST_ERROR;
         }
     }
 
     /* For checking the time spent in file close.  It's for running the writer alone */
     if (s->do_perf) {
-        if (HDclock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
-            HDfprintf(stderr, "HDclock_gettime failed");
+        if (clock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
+            fprintf(stderr, "clock_gettime failed");
             TEST_ERROR;
         }
 
-        HDfprintf(stdout, "File close time (for running the writer alone) = %lf seconds\n",
+        fprintf(stdout, "File close time (for running the writer alone) = %lf seconds\n",
                   TIME_PASSED(start_time, end_time));
     }
 
     if (s->dataset)
-        HDfree(s->dataset);
+        free(s->dataset);
 
     if (s->sources)
-        HDfree(s->sources);
+        free(s->sources);
 
     return true;
 
@@ -951,10 +953,10 @@ error:
     H5E_END_TRY;
 
     if (s->dataset)
-        HDfree(s->dataset);
+        free(s->dataset);
 
     if (s->sources)
-        HDfree(s->sources);
+        free(s->sources);
 
     return false;
 } /* state_destroy() */
@@ -966,16 +968,16 @@ reader_verify(socket_state_t *sock)
     sock->verify = 1;
     /* Receive the writer's notice s*/
     if (recv(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
-        HDfprintf(stderr, "recv() failed\n");
+        fprintf(stderr, "recv() failed\n");
         TEST_ERROR;
     }
 
 #ifdef DEBUG_RW_COMMS
-    HDfprintf(stderr, "[DEBUG-COMM] reader_verify(): READER received: notify = %d\n", (int)(sock->notify));
+    fprintf(stderr, "[DEBUG-COMM] reader_verify(): READER received: notify = %d\n", (int)(sock->notify));
 #endif /* DEBUG_RW_COMMS */
 
     if (sock->notify != sock->verify) {
-        HDfprintf(stderr, "expected %d but read %d\n", sock->verify, sock->notify);
+        fprintf(stderr, "expected %d but read %d\n", sock->verify, sock->notify);
         TEST_ERROR;
     }
 
@@ -995,19 +997,19 @@ notify_and_wait_for_reader(state_t *s, socket_state_t *sock)
     sock->verify         = 2;
 
     /* Get the time when finishing creation */
-    if (HDclock_gettime(CLOCK_MONOTONIC, &last) < 0) {
-        HDfprintf(stderr, "HDclock_gettime failed\n");
+    if (clock_gettime(CLOCK_MONOTONIC, &last) < 0) {
+        fprintf(stderr, "clock_gettime failed\n");
         TEST_ERROR;
     }
 
     /* Notify the reader of finishing creation by sending the timestamp */
     if (send(sock->comm_fd, &last, sizeof(last), 0) < 0) {
-        HDfprintf(stderr, "send() failed\n");
+        fprintf(stderr, "send() failed\n");
         TEST_ERROR;
     }
 
 #ifdef DEBUG_RW_COMMS
-    HDfprintf(stderr, "[DEBUG-COMM] notify_and_wait_for_reader(): writer sent: last = (%lld, %lld)\n",
+    fprintf(stderr, "[DEBUG-COMM] notify_and_wait_for_reader(): writer sent: last = (%lld, %lld)\n",
               (unsigned long long)(last.tv_sec), (unsigned long long)(last.tv_nsec));
 #endif /* DEBUG_RW_COMMS */
 
@@ -1025,16 +1027,16 @@ notify_and_wait_for_reader(state_t *s, socket_state_t *sock)
 
     /* Wait until the reader finishes validating creation */
     if (recv(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
-        HDfprintf(stderr, "recv() failed\n");
+        fprintf(stderr, "recv() failed\n");
         TEST_ERROR;
     }
 
 #ifdef DEBUG_RW_COMMS
-    HDfprintf(stderr, "[DEBUG-COMM] notify_and_wait_for_reader(): writer received: notify = %d\n", notify);
+    fprintf(stderr, "[DEBUG-COMM] notify_and_wait_for_reader(): writer received: notify = %d\n", notify);
 #endif /* DEBUG_RW_COMMS */
 
     if (sock->notify != sock->verify) {
-        HDfprintf(stderr, "expected %d but read %d\n", sock->verify, sock->notify);
+        fprintf(stderr, "expected %d but read %d\n", sock->verify, sock->notify);
         TEST_ERROR;
     }
 
@@ -1056,12 +1058,12 @@ reader_check_time_and_notify_writer(state_t *s, socket_state_t *sock)
 
     /* Receive the notice of the writer finishing creation (timestamp) */
     if (recv(sock->comm_fd, &last, sizeof(last), 0) < 0) {
-        HDfprintf(stderr, "recv() failed\n");
+        fprintf(stderr, "recv() failed\n");
         TEST_ERROR;
     }
 
 #ifdef DEBUG_RW_COMMS
-    HDfprintf(stderr,
+    fprintf(stderr,
               "[DEBUG-COMM] reader_check_time_and_notify_writer(): reader received: last = (%lld, %lld)\n",
               (unsigned long long)(last.tv_sec), (unsigned long long)(last.tv_nsec));
 #endif /* DEBUG_RW_COMMS */
@@ -1071,17 +1073,17 @@ reader_check_time_and_notify_writer(state_t *s, socket_state_t *sock)
      * the validation of dataset creation */
     if (below_speed_limit(&last, &(s->ival))) {
         AT();
-        HDfprintf(stderr, "Warning: dataset validation took too long to finish\n");
+        fprintf(stderr, "Warning: dataset validation took too long to finish\n");
     }
 
     /* Notify the writer that dataset validation is finished */
     if (send(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
-        HDfprintf(stderr, "send() failed\n");
+        fprintf(stderr, "send() failed\n");
         TEST_ERROR;
     }
 
 #ifdef DEBUG_RW_COMMS
-    HDfprintf(stderr, "[DEBUG-COMM] reader_check_time_and_notify_writer(): reader sent: notify = %d\n",
+    fprintf(stderr, "[DEBUG-COMM] reader_check_time_and_notify_writer(): reader sent: notify = %d\n",
               sock->notify);
 #endif /* DEBUG_RW_COMMS */
 
@@ -1095,11 +1097,11 @@ error:
 static int
 notify_reader(state_t *s, socket_state_t *sock, unsigned step)
 {
-    exchange_info_t *last = HDcalloc(1, sizeof(exchange_info_t));
+    exchange_info_t *last = calloc(1, sizeof(exchange_info_t));
 
     /* Get the time */
-    if (HDclock_gettime(CLOCK_MONOTONIC, &(last->time)) < 0) {
-        HDfprintf(stderr, "HDclock_gettime failed\n");
+    if (clock_gettime(CLOCK_MONOTONIC, &(last->time)) < 0) {
+        fprintf(stderr, "clock_gettime failed\n");
         TEST_ERROR;
     }
 
@@ -1107,20 +1109,20 @@ notify_reader(state_t *s, socket_state_t *sock, unsigned step)
 
     /* Notify the reader by sending the timestamp and the number of chunks written */
 #ifdef ADD_UNIQUE_STEP_FILE
-    s->fd_step_file = HDopen(s->step_file_name, O_CREAT | O_RDWR | O_TRUNC, 0666);
+    s->fd_step_file = open(s->step_file_name, O_CREAT | O_RDWR | O_TRUNC, 0666);
     if (s->fd_step_file < 0) {
-        HDfprintf(stderr, "HDopen step file failed\n");
+        fprintf(stderr, "open step file failed\n");
         TEST_ERROR;
     }
 
     /* Notify the reader by sending the timestamp and the number of chunks written */
-    if (HDwrite(s->fd_step_file, last, sizeof(exchange_info_t)) < 0) {
-        HDfprintf(stderr, "HDwrite failed");
+    if (write(s->fd_step_file, last, sizeof(exchange_info_t)) < 0) {
+        fprintf(stderr, "write failed");
         TEST_ERROR;
     }
 
-    if (HDclose(s->fd_step_file) < 0) {
-        HDfprintf(stderr, "HDclose step file failed\n");
+    if (close(s->fd_step_file) < 0) {
+        fprintf(stderr, "close step file failed\n");
         TEST_ERROR;
     }
     s->fd_step_file = -1;
@@ -1128,19 +1130,19 @@ notify_reader(state_t *s, socket_state_t *sock, unsigned step)
     (void)s; /* silence compiler warning about unused variable */
 
     if (send(sock->comm_fd, last, sizeof(exchange_info_t), 0) < 0) {
-        HDfprintf(stderr, "send() failed");
+        fprintf(stderr, "send() failed");
         TEST_ERROR;
     }
 #endif /* ADD_UNIQUE_STEP_FILE */
 
 #ifdef DEBUG_RW_COMMS
-    HDfprintf(stderr, "[DEBUG-COMM] notify_reader(): writer sent: last.step = %d, last.time = (%lld, %lld)\n",
+    fprintf(stderr, "[DEBUG-COMM] notify_reader(): writer sent: last.step = %d, last.time = (%lld, %lld)\n",
               (int)(last->step), (unsigned long long)(last->time.tv_sec),
               (unsigned long long)(last->time.tv_nsec));
 #endif /* DEBUG_RW_COMMS */
 
     if (last)
-        HDfree(last);
+        free(last);
 
     return 0;
 
@@ -1168,33 +1170,33 @@ md_ck_cb(char *md_file_path, uint64_t updater_seq_num)
 {
     FILE    *md_fp  = NULL;      /* Metadata file pointer */
     FILE    *chk_fp = NULL;      /* Checksum file pointer */
-    long     size   = 0;         /* File size returned from HDftell() */
+    long     size   = 0;         /* File size returned from ftell() */
     void    *buf    = NULL;      /* Buffer for holding the metadata file content */
     uint32_t chksum = 0;         /* The checksum generated for the metadata file */
     char     chk_name[1024 + 4]; /* Buffer for the checksum file name */
     size_t   ret;                /* Return value */
 
     /* Open the metadata file */
-    if ((md_fp = HDfopen(md_file_path, "r")) == NULL)
+    if ((md_fp = fopen(md_file_path, "r")) == NULL)
         FAIL_STACK_ERROR;
 
     /* Set file pointer at end of file.*/
-    if (HDfseek(md_fp, 0, SEEK_END) < 0)
+    if (fseek(md_fp, 0, SEEK_END) < 0)
         FAIL_STACK_ERROR;
 
     /* Get the current position of the file pointer.*/
-    if ((size = HDftell(md_fp)) < 0)
+    if ((size = ftell(md_fp)) < 0)
         FAIL_STACK_ERROR;
 
     if (size != 0) {
 
-        HDrewind(md_fp);
+        rewind(md_fp);
 
-        if ((buf = HDmalloc((size_t)size)) == NULL)
+        if ((buf = malloc((size_t)size)) == NULL)
             FAIL_STACK_ERROR;
 
         /* Read the metadata file to buf */
-        if ((ret = HDfread(buf, 1, (size_t)size, md_fp)) != (size_t)size)
+        if ((ret = fread(buf, 1, (size_t)size, md_fp)) != (size_t)size)
             FAIL_STACK_ERROR;
 
         /* Calculate checksum of the metadata file */
@@ -1202,7 +1204,7 @@ md_ck_cb(char *md_file_path, uint64_t updater_seq_num)
     }
 
     /* Close the metadata file */
-    if (md_fp && HDfclose(md_fp) < 0)
+    if (md_fp && fclose(md_fp) < 0)
         FAIL_STACK_ERROR;
 
     /*
@@ -1210,35 +1212,35 @@ md_ck_cb(char *md_file_path, uint64_t updater_seq_num)
      */
 
     /* Generate checksum file name: <md_file_path>.chk */
-    HDsprintf(chk_name, "%s.chk", md_file_path);
+    sprintf(chk_name, "%s.chk", md_file_path);
 
     /* Open checksum file for append */
-    if ((chk_fp = HDfopen(chk_name, "a")) == NULL)
+    if ((chk_fp = fopen(chk_name, "a")) == NULL)
         FAIL_STACK_ERROR;
 
     /* Write the updater sequence number to the checksum file */
-    if ((ret = HDfwrite(&updater_seq_num, sizeof(uint64_t), 1, chk_fp)) != 1)
+    if ((ret = fwrite(&updater_seq_num, sizeof(uint64_t), 1, chk_fp)) != 1)
         FAIL_STACK_ERROR;
 
     /* Write the checksum to the checksum file */
-    if ((ret = HDfwrite(&chksum, sizeof(uint32_t), 1, chk_fp)) != 1)
+    if ((ret = fwrite(&chksum, sizeof(uint32_t), 1, chk_fp)) != 1)
         FAIL_STACK_ERROR;
 
     /* Close the checksum file */
-    if (chk_fp && HDfclose(chk_fp) != 0)
+    if (chk_fp && fclose(chk_fp) != 0)
         FAIL_STACK_ERROR;
 
-    HDfree(buf);
+    free(buf);
 
     return 0;
 
 error:
-    HDfree(buf);
+    free(buf);
 
     if (md_fp)
-        HDfclose(md_fp);
+        fclose(md_fp);
     if (chk_fp)
-        HDfclose(chk_fp);
+        fclose(chk_fp);
 
     return -1;
 } /* md_ck_cb() */
@@ -1258,39 +1260,39 @@ create_extensible_dset(state_t *s, unsigned int which)
     esnprintf(dname, sizeof(dname), "/dataset-%d", which);
 
     if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0) {
-        HDfprintf(stderr, "H5Pcreate failed\n");
+        fprintf(stderr, "H5Pcreate failed\n");
         TEST_ERROR;
     }
 
     if (s->test_3d) {
         /* The chunk is L x M x N and grows along the first dimension */
         if (H5Pset_chunk(dcpl, RANK3, dims3) < 0) {
-            HDfprintf(stderr, "H5Pset_chunk for 3D dataset failed\n");
+            fprintf(stderr, "H5Pset_chunk for 3D dataset failed\n");
             TEST_ERROR;
         }
     }
     else {
         if (H5Pset_chunk(dcpl, RANK2, s->chunk_dims) < 0) {
-            HDfprintf(stderr, "H5Pset_chunk for 2D dataset failed\n");
+            fprintf(stderr, "H5Pset_chunk for 2D dataset failed\n");
             TEST_ERROR;
         }
     }
 
     /* Never write fill value when new chunks are allocated */
     if (H5Pset_fill_time(dcpl, H5D_FILL_TIME_NEVER) < 0) {
-        HDfprintf(stderr, "H5Pset_fill_time failed\n");
+        fprintf(stderr, "H5Pset_fill_time failed\n");
         TEST_ERROR;
     }
 
     /* Early space allocation */
     if (H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY) < 0) {
-        HDfprintf(stderr, "H5Pset_alloc_time failed\n");
+        fprintf(stderr, "H5Pset_alloc_time failed\n");
         TEST_ERROR;
     }
 
     /* GZIP compression */
     if (s->deflate_level && H5Pset_deflate(dcpl, s->deflate_level) < 0) {
-        HDfprintf(stderr, "H5Pset_deflate failed\n");
+        fprintf(stderr, "H5Pset_deflate failed\n");
         TEST_ERROR;
     }
 
@@ -1304,75 +1306,75 @@ create_extensible_dset(state_t *s, unsigned int which)
 
         if ((srcs->ul = H5Dcreate2(s->file[0], ul_dname, s->filetype, ul->src_space, H5P_DEFAULT,
                                    s->quadrant_dcpl, s->dapl)) < 0) {
-            HDfprintf(stderr, "H5Dcreate2 failed\n");
+            fprintf(stderr, "H5Dcreate2 failed\n");
             TEST_ERROR;
         }
 
         if ((srcs->ur = H5Dcreate2(s->file[1], ur_dname, s->filetype, ur->src_space, H5P_DEFAULT,
                                    s->quadrant_dcpl, s->dapl)) < 0) {
-            HDfprintf(stderr, "H5Dcreate2 failed\n");
+            fprintf(stderr, "H5Dcreate2 failed\n");
             TEST_ERROR;
         }
 
         if ((srcs->bl = H5Dcreate2(s->file[2], bl_dname, s->filetype, bl->src_space, H5P_DEFAULT,
                                    s->quadrant_dcpl, s->dapl)) < 0) {
-            HDfprintf(stderr, "H5Dcreate2 failed\n");
+            fprintf(stderr, "H5Dcreate2 failed\n");
             TEST_ERROR;
         }
 
         if ((srcs->br = H5Dcreate2(s->file[3], br_dname, s->filetype, br->src_space, H5P_DEFAULT,
                                    s->quadrant_dcpl, s->dapl)) < 0) {
-            HDfprintf(stderr, "H5Dcreate2 failed\n");
+            fprintf(stderr, "H5Dcreate2 failed\n");
             TEST_ERROR;
         }
 
         if (H5Pset_virtual(dcpl, ul->space, s->filename[0], ul_dname, src->space) < 0) {
-            HDfprintf(stderr, "H5Pset_virtual failed\n");
+            fprintf(stderr, "H5Pset_virtual failed\n");
             TEST_ERROR;
         }
 
         if (H5Pset_virtual(dcpl, ur->space, s->filename[1], ur_dname, src->space) < 0) {
-            HDfprintf(stderr, "H5Pset_virtual failed\n");
+            fprintf(stderr, "H5Pset_virtual failed\n");
             TEST_ERROR;
         }
 
         if (H5Pset_virtual(dcpl, bl->space, s->filename[2], bl_dname, src->space) < 0) {
-            HDfprintf(stderr, "H5Pset_virtual failed\n");
+            fprintf(stderr, "H5Pset_virtual failed\n");
             TEST_ERROR;
         }
 
         if (H5Pset_virtual(dcpl, br->space, s->filename[3], br_dname, src->space) < 0) {
-            HDfprintf(stderr, "H5Pset_virtual failed\n");
+            fprintf(stderr, "H5Pset_virtual failed\n");
             TEST_ERROR;
         }
     }
 
     if (s->test_3d) {
         if ((filespace = H5Screate_simple(RANK3, dims3, three_dee_max_dims)) < 0) {
-            HDfprintf(stderr, "H5Screate_simple 3D dataspace failed\n");
+            fprintf(stderr, "H5Screate_simple 3D dataspace failed\n");
             TEST_ERROR;
         }
     }
     else {
         if ((filespace = H5Screate_simple(RANK2, s->chunk_dims,
                                           s->expand_2d ? two_dee_max_dims : s->one_dee_max_dims)) < 0) {
-            HDfprintf(stderr, "H5Screate_simple 2D dataspace failed\n");
+            fprintf(stderr, "H5Screate_simple 2D dataspace failed\n");
             TEST_ERROR;
         }
     }
 
     if ((dset_id = H5Dcreate2(s->file[0], dname, s->filetype, filespace, H5P_DEFAULT, dcpl, s->dapl)) < 0) {
-        HDfprintf(stderr, "H5Dcreate2 failed\n");
+        fprintf(stderr, "H5Dcreate2 failed\n");
         TEST_ERROR;
     }
 
     if (H5Sclose(filespace) < 0) {
-        HDfprintf(stderr, "H5Sclose failed\n");
+        fprintf(stderr, "H5Sclose failed\n");
         TEST_ERROR;
     }
 
     if (H5Pclose(dcpl) < 0) {
-        HDfprintf(stderr, "H5Pclose failed\n");
+        fprintf(stderr, "H5Pclose failed\n");
         TEST_ERROR;
     }
 
@@ -1399,7 +1401,7 @@ close_extensible_dset(state_t *s, unsigned int which)
     hid_t dset_id = H5I_INVALID_HID;
 
     if (which >= s->ndatasets) {
-        HDfprintf(stderr, "index is out of range\n");
+        fprintf(stderr, "index is out of range\n");
         TEST_ERROR;
     }
 
@@ -1408,7 +1410,7 @@ close_extensible_dset(state_t *s, unsigned int which)
     dset_id = s->dataset[which];
 
     if (H5Dclose(dset_id) < 0) {
-        HDfprintf(stderr, "H5Dclose failed\n");
+        fprintf(stderr, "H5Dclose failed\n");
         TEST_ERROR;
     }
 
@@ -1419,7 +1421,7 @@ close_extensible_dset(state_t *s, unsigned int which)
 
         if (H5Dclose(srcs->ul) < 0 || H5Dclose(srcs->ur) < 0 || H5Dclose(srcs->bl) < 0 ||
             H5Dclose(srcs->br) < 0) {
-            HDfprintf(stderr, "H5Dclose failed\n");
+            fprintf(stderr, "H5Dclose failed\n");
             TEST_ERROR;
         }
     }
@@ -1468,62 +1470,62 @@ open_extensible_dset(state_t *s)
         }
 
         if (i == NUM_ATTEMPTS) {
-            HDfprintf(stderr, "chunk verification reached the maximal number of attempts\n");
+            fprintf(stderr, "chunk verification reached the maximal number of attempts\n");
             TEST_ERROR;
         }
 
         if ((dtype = H5Dget_type(dset_id)) < 0) {
-            HDfprintf(stderr, "H5Dget_type failed\n");
+            fprintf(stderr, "H5Dget_type failed\n");
             TEST_ERROR;
         }
 
         if (H5Tequal(dtype, s->filetype) <= 0) {
-            HDfprintf(stderr, "Unexpected data type\n");
+            fprintf(stderr, "Unexpected data type\n");
             TEST_ERROR;
         }
 
         if ((filespace = H5Dget_space(dset_id)) < 0) {
-            HDfprintf(stderr, "H5Dget_space failed\n");
+            fprintf(stderr, "H5Dget_space failed\n");
             TEST_ERROR;
         }
 
         if ((rank = H5Sget_simple_extent_ndims(filespace)) < 0) {
-            HDfprintf(stderr, "H5Sget_simple_extent_ndims failed\n");
+            fprintf(stderr, "H5Sget_simple_extent_ndims failed\n");
             TEST_ERROR;
         }
 
         if ((s->test_3d && rank != RANK3) || (!s->test_3d && rank != RANK2)) {
-            HDfprintf(stderr, "Unexpected data rank: %d\n", rank);
+            fprintf(stderr, "Unexpected data rank: %d\n", rank);
             TEST_ERROR;
         }
 
         if (s->test_3d) {
             if (H5Sget_simple_extent_dims(filespace, dims3, maxdims3) < 0) {
-                HDfprintf(stderr, "H5Sget_simple_extent_dims failed\n");
+                fprintf(stderr, "H5Sget_simple_extent_dims failed\n");
                 TEST_ERROR;
             }
         }
         else {
             if (H5Sget_simple_extent_dims(filespace, dims2, maxdims2) < 0) {
-                HDfprintf(stderr, "H5Sget_simple_extent_dims failed\n");
+                fprintf(stderr, "H5Sget_simple_extent_dims failed\n");
                 TEST_ERROR;
             }
         }
 
         if (H5Sclose(filespace) < 0) {
-            HDfprintf(stderr, "H5Sclose failed\n");
+            fprintf(stderr, "H5Sclose failed\n");
             TEST_ERROR;
         }
 
         if (H5Tclose(dtype) < 0) {
-            HDfprintf(stderr, "H5Tclose failed\n");
+            fprintf(stderr, "H5Tclose failed\n");
             TEST_ERROR;
         }
 
         if (s->test_3d) {
             if (maxdims3[0] != three_dee_max_dims[0] || maxdims3[1] != three_dee_max_dims[1] ||
                 maxdims3[2] != three_dee_max_dims[2]) {
-                HDfprintf(stderr,
+                fprintf(stderr,
                           "Unexpected maximum dimensions %" PRIuHSIZE " x %" PRIuHSIZE " x %" PRIuHSIZE,
                           maxdims3[0], maxdims3[1], maxdims3[2]);
                 TEST_ERROR;
@@ -1533,14 +1535,14 @@ open_extensible_dset(state_t *s)
             if (s->expand_2d) {
                 if (maxdims2[0] != two_dee_max_dims[0] || maxdims2[1] != two_dee_max_dims[1] ||
                     maxdims2[0] != maxdims2[1]) {
-                    HDfprintf(stderr, "Unexpected maximum dimensions %" PRIuHSIZE " x %" PRIuHSIZE,
+                    fprintf(stderr, "Unexpected maximum dimensions %" PRIuHSIZE " x %" PRIuHSIZE,
                               maxdims2[0], maxdims2[1]);
                     TEST_ERROR;
                 }
             }
             else if (maxdims2[0] != s->one_dee_max_dims[0] || maxdims2[1] != s->one_dee_max_dims[1] ||
                      dims2[0] != s->chunk_dims[0]) {
-                HDfprintf(stderr,
+                fprintf(stderr,
                           "Unexpected maximum dimensions %" PRIuHSIZE " x %" PRIuHSIZE
                           " or columns %" PRIuHSIZE,
                           maxdims2[0], maxdims2[1], dims2[1]);
@@ -1572,8 +1574,8 @@ create_dsets(state_t *s)
 
     /* For checking the time spent in dataset creation.  It's for running the writer alone */
     if (s->do_perf) {
-        if (HDclock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
-            HDfprintf(stderr, "HDclock_gettime failed");
+        if (clock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
+            fprintf(stderr, "clock_gettime failed");
             TEST_ERROR;
         }
     }
@@ -1583,18 +1585,18 @@ create_dsets(state_t *s)
      */
     for (which = 0; which < s->ndatasets; which++)
         if (!create_extensible_dset(s, which)) {
-            HDfprintf(stderr, "create_extensible_dset failed: number %u\n", which);
+            fprintf(stderr, "create_extensible_dset failed: number %u\n", which);
             TEST_ERROR;
         }
 
     /* For checking the time spent in dataset creation.  It's for running the writer alone */
     if (s->do_perf) {
-        if (HDclock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
-            HDfprintf(stderr, "HDclock_gettime failed");
+        if (clock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
+            fprintf(stderr, "clock_gettime failed");
             TEST_ERROR;
         }
 
-        HDfprintf(stdout, "Dataset creation time (for running the writer alone) = %lf seconds\n",
+        fprintf(stdout, "Dataset creation time (for running the writer alone) = %lf seconds\n",
                   TIME_PASSED(start_time, end_time));
     }
 
@@ -1614,7 +1616,7 @@ static bool
 matset(mat_t *mat, unsigned k, unsigned i, unsigned j, uint32_t v)
 {
     if (k >= mat->depth || i >= mat->rows || j >= mat->cols) {
-        HDfprintf(stderr, "index out of boundary\n");
+        fprintf(stderr, "index out of boundary\n");
         TEST_ERROR;
     }
 
@@ -1637,11 +1639,11 @@ newmat(state_t *s)
      */
     if (s->test_3d) {
         if (s->part_chunk) {
-            mat = HDmalloc(sizeof(*mat) + (s->part_chunk * s->rows * s->cols - 1) * sizeof(mat->elt[0]));
+            mat = malloc(sizeof(*mat) + (s->part_chunk * s->rows * s->cols - 1) * sizeof(mat->elt[0]));
             mat->depth = s->part_chunk;
         }
         else {
-            mat        = HDmalloc(sizeof(*mat) + (s->depth * s->rows * s->cols - 1) * sizeof(mat->elt[0]));
+            mat        = malloc(sizeof(*mat) + (s->depth * s->rows * s->cols - 1) * sizeof(mat->elt[0]));
             mat->depth = s->depth;
         }
 
@@ -1650,13 +1652,13 @@ newmat(state_t *s)
     }
     else {
         if (s->part_chunk && !s->expand_2d) {
-            mat        = HDmalloc(sizeof(*mat) + (s->rows * s->part_chunk - 1) * sizeof(mat->elt[0]));
+            mat        = malloc(sizeof(*mat) + (s->rows * s->part_chunk - 1) * sizeof(mat->elt[0]));
             mat->depth = 1;
             mat->rows  = s->rows;
             mat->cols  = s->part_chunk;
         }
         else {
-            mat        = HDmalloc(sizeof(*mat) + (s->rows * s->cols - 1) * sizeof(mat->elt[0]));
+            mat        = malloc(sizeof(*mat) + (s->rows * s->cols - 1) * sizeof(mat->elt[0]));
             mat->depth = 1;
             mat->rows  = s->rows;
             mat->cols  = s->cols;
@@ -1664,7 +1666,7 @@ newmat(state_t *s)
     }
 
     if (mat == NULL) {
-        HDfprintf(stderr, "HDmalloc failed\n");
+        fprintf(stderr, "malloc failed\n");
         TEST_ERROR;
     }
 
@@ -1724,7 +1726,7 @@ set_or_verify_matrix(mat_t *mat, unsigned int which, base_t base, bool do_set)
 
                 if (do_set) {
                     if (!matset(mat, depth, row, col, v)) {
-                        HDfprintf(stderr, "data initialization failed\n");
+                        fprintf(stderr, "data initialization failed\n");
                         ret = false;
                         break;
                     }
@@ -1792,7 +1794,7 @@ verify_chunk(state_t *s, hid_t filespace, mat_t *mat, unsigned which, base_t bas
     hid_t  dset_id;
 
     if (which >= s->ndatasets) {
-        HDfprintf(stderr, "the dataset order is bigger than the number of datasets");
+        fprintf(stderr, "the dataset order is bigger than the number of datasets");
         TEST_ERROR;
     }
 
@@ -1806,7 +1808,7 @@ verify_chunk(state_t *s, hid_t filespace, mat_t *mat, unsigned which, base_t bas
             count3[0] = s->part_chunk;
 
         if (H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset3, NULL, count3, NULL) < 0) {
-            HDfprintf(stderr, "H5Sselect_hyperslab failed\n");
+            fprintf(stderr, "H5Sselect_hyperslab failed\n");
             TEST_ERROR;
         }
     }
@@ -1828,7 +1830,7 @@ verify_chunk(state_t *s, hid_t filespace, mat_t *mat, unsigned which, base_t bas
         }
 
         if (H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset2, NULL, count2, NULL) < 0) {
-            HDfprintf(stderr, "H5Sselect_hyperslab failed\n");
+            fprintf(stderr, "H5Sselect_hyperslab failed\n");
             TEST_ERROR;
         }
     }
@@ -1867,14 +1869,14 @@ repeat_verify_chunk(state_t *s, hid_t filespace, mat_t *mat, unsigned which, bas
 
             /* Refresh the dataset and try it again */
             if (H5Drefresh(dset_id) < 0) {
-                HDfprintf(stderr, "H5Drefresh failed\n");
+                fprintf(stderr, "H5Drefresh failed\n");
                 TEST_ERROR;
             }
         }
     }
 
     if (i == NUM_ATTEMPTS) {
-        HDfprintf(stderr, "chunk verification reached the maximal number of attempts\n");
+        fprintf(stderr, "chunk verification reached the maximal number of attempts\n");
         TEST_ERROR;
     }
 
@@ -1892,7 +1894,7 @@ init_and_write_chunk(state_t *s, hid_t filespace, mat_t *mat, unsigned which, ba
     dset_id = s->dataset[which];
 
     if (!init_matrix(mat, which, base)) {
-        HDfprintf(stderr, "data initialization failed\n");
+        fprintf(stderr, "data initialization failed\n");
         TEST_ERROR;
     }
 
@@ -1906,7 +1908,7 @@ init_and_write_chunk(state_t *s, hid_t filespace, mat_t *mat, unsigned which, ba
 
         /* The chunk dimensions are L x M x N.  It grows along the first dimension */
         if (H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset3, NULL, count3, NULL) < 0) {
-            HDfprintf(stderr, "H5Sselect_hyperslab for 2D dataset failed\n");
+            fprintf(stderr, "H5Sselect_hyperslab for 2D dataset failed\n");
             TEST_ERROR;
         }
     }
@@ -1929,13 +1931,13 @@ init_and_write_chunk(state_t *s, hid_t filespace, mat_t *mat, unsigned which, ba
         }
 
         if (H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset2, NULL, count2, NULL) < 0) {
-            HDfprintf(stderr, "H5Sselect_hyperslab for 2D dataset failed\n");
+            fprintf(stderr, "H5Sselect_hyperslab for 2D dataset failed\n");
             TEST_ERROR;
         }
     }
 
     if (H5Dwrite(dset_id, H5T_NATIVE_UINT32, s->memspace, filespace, H5P_DEFAULT, mat->elt) < 0) {
-        HDfprintf(stderr, "H5Dwrite failed\n");
+        fprintf(stderr, "H5Dwrite failed\n");
         TEST_ERROR;
     }
 
@@ -1957,22 +1959,22 @@ verify_dset_attribute(hid_t dset_id, unsigned int which, unsigned int step)
     dbgf(1, "verifying attribute %s on dataset %u equals %u\n", name, which, step);
 
     if ((aid = H5Aopen(dset_id, name, H5P_DEFAULT)) < 0) {
-        HDfprintf(stderr, "H5Aopen failed\n");
+        fprintf(stderr, "H5Aopen failed\n");
         TEST_ERROR;
     }
 
     if (H5Aread(aid, H5T_NATIVE_UINT, &read_step) < 0) {
-        HDfprintf(stderr, "H5Aread failed\n");
+        fprintf(stderr, "H5Aread failed\n");
         TEST_ERROR;
     }
 
     if (H5Aclose(aid) < 0) {
-        HDfprintf(stderr, "H5Aclose failed\n");
+        fprintf(stderr, "H5Aclose failed\n");
         TEST_ERROR;
     }
 
     if (read_step != step) {
-        HDfprintf(stderr, "expected %u read %u\n", step, read_step);
+        fprintf(stderr, "expected %u read %u\n", step, read_step);
         TEST_ERROR;
     }
 
@@ -1999,7 +2001,7 @@ verify_extensible_dset(state_t *s, unsigned int which, mat_t *mat, unsigned fini
     hbool_t      do_try; /* more tries remain */
 
     if (which >= s->ndatasets) {
-        HDfprintf(stderr, "the dataset order is bigger than the number of datasets");
+        fprintf(stderr, "the dataset order is bigger than the number of datasets");
         TEST_ERROR;
     }
 
@@ -2010,18 +2012,18 @@ verify_extensible_dset(state_t *s, unsigned int which, mat_t *mat, unsigned fini
          do_try; do_try = H5_retry_next(&retry)) {
 
         if (H5Drefresh(dset_id) < 0) {
-            HDfprintf(stderr, "H5Drefresh failed\n");
+            fprintf(stderr, "H5Drefresh failed\n");
             TEST_ERROR;
         }
 
         if ((filespace = H5Dget_space(dset_id)) < 0) {
-            HDfprintf(stderr, "H5Dget_space failed\n");
+            fprintf(stderr, "H5Dget_space failed\n");
             TEST_ERROR;
         }
 
         if (s->test_3d) {
             if (H5Sget_simple_extent_dims(filespace, size3, NULL) < 0) {
-                HDfprintf(stderr, "H5Sget_simple_extent_dims failed\n");
+                fprintf(stderr, "H5Sget_simple_extent_dims failed\n");
                 TEST_ERROR;
             }
 
@@ -2033,7 +2035,7 @@ verify_extensible_dset(state_t *s, unsigned int which, mat_t *mat, unsigned fini
         }
         else {
             if (H5Sget_simple_extent_dims(filespace, size2, NULL) < 0) {
-                HDfprintf(stderr, "H5Sget_simple_extent_dims failed\n");
+                fprintf(stderr, "H5Sget_simple_extent_dims failed\n");
                 TEST_ERROR;
             }
 
@@ -2049,7 +2051,7 @@ verify_extensible_dset(state_t *s, unsigned int which, mat_t *mat, unsigned fini
             break;
     }
     if (!do_try) {
-        HDfprintf(stderr, "chunk verification reached the maximal number of attempts");
+        fprintf(stderr, "chunk verification reached the maximal number of attempts");
         TEST_ERROR;
     }
 
@@ -2109,7 +2111,7 @@ verify_extensible_dset(state_t *s, unsigned int which, mat_t *mat, unsigned fini
 
         if (s->test_3d || !s->expand_2d) {
             if (!repeat_verify_chunk(s, filespace, mat, which, last)) {
-                HDfprintf(stderr, "chunk verification failed\n");
+                fprintf(stderr, "chunk verification failed\n");
                 TEST_ERROR;
             }
         }
@@ -2119,7 +2121,7 @@ verify_extensible_dset(state_t *s, unsigned int which, mat_t *mat, unsigned fini
             base.depth = 0;
             for (base.row = 0; base.row <= last.row; base.row += s->chunk_dims[0]) {
                 if (!repeat_verify_chunk(s, filespace, mat, which, base)) {
-                    HDfprintf(stderr, "chunk verification failed\n");
+                    fprintf(stderr, "chunk verification failed\n");
                     TEST_ERROR;
                 }
             }
@@ -2130,7 +2132,7 @@ verify_extensible_dset(state_t *s, unsigned int which, mat_t *mat, unsigned fini
             base.row = last.row;
             for (base.col = 0; base.col < last.col; base.col += s->chunk_dims[1]) {
                 if (!repeat_verify_chunk(s, filespace, mat, which, base)) {
-                    HDfprintf(stderr, "chunk verification failed\n");
+                    fprintf(stderr, "chunk verification failed\n");
                     TEST_ERROR;
                 }
             }
@@ -2138,7 +2140,7 @@ verify_extensible_dset(state_t *s, unsigned int which, mat_t *mat, unsigned fini
 
         if (s->asteps != 0 && step % s->asteps == 0) {
             if (!verify_dset_attribute(dset_id, which, step)) {
-                HDfprintf(stderr, "verify_dset_attribute failed\n");
+                fprintf(stderr, "verify_dset_attribute failed\n");
                 TEST_ERROR;
             }
         }
@@ -2177,18 +2179,18 @@ verify_dsets(state_t *s, socket_state_t *sock, mat_t *mat)
          */
 #ifdef ADD_UNIQUE_STEP_FILE
         for (attempts = 0; attempts < NUM_ATTEMPTS; attempts++) {
-            s->fd_step_file = HDopen(s->step_file_name, O_RDONLY, 0666);
+            s->fd_step_file = open(s->step_file_name, O_RDONLY, 0666);
             if (s->fd_step_file >= 0) {
                 break; /* Successfully opened */
             }
             decisleep(1); /* Wait 0.1 seconds before retrying */
         }
-        if (HDread(s->fd_step_file, &last, sizeof(last)) < 0) {
-            HDfprintf(stderr, "HDread step file failed\n");
+        if (read(s->fd_step_file, &last, sizeof(last)) < 0) {
+            fprintf(stderr, "read step file failed\n");
             TEST_ERROR;
         }
-        if (HDclose(s->fd_step_file) < 0) {
-            HDfprintf(stderr, "HDclose step file failed\n");
+        if (close(s->fd_step_file) < 0) {
+            fprintf(stderr, "close step file failed\n");
             TEST_ERROR;
         }
         s->fd_step_file = -1;
@@ -2196,14 +2198,14 @@ verify_dsets(state_t *s, socket_state_t *sock, mat_t *mat)
         (void)attempts; /* silence compiler warning about unused variable */
 
         if (recv(sock->comm_fd, &last, sizeof(last), 0) < 0) {
-            HDfprintf(stderr, "recv() failed\n");
+            fprintf(stderr, "recv() failed\n");
             TEST_ERROR;
         }
 #endif /* ADD_UNIQUE_STEP_FILE */
 
 #ifdef DEBUG_RW_COMMS
         if (s->use_communication) {
-            HDfprintf(
+            fprintf(
                 stderr,
                 "[DEBUG-COMM] verify_dsets(): reader received: last.step = %d, last.time = (%lld, %lld)\n",
                 (int)(last.step), (unsigned long long)(last.time.tv_sec),
@@ -2216,7 +2218,7 @@ verify_dsets(state_t *s, socket_state_t *sock, mat_t *mat)
              * to the ones written in this round
              */
             if (!verify_extensible_dset(s, which, mat, finished_step, last.step)) {
-                HDfprintf(stderr, "verify_extensible_dset failed\n");
+                fprintf(stderr, "verify_extensible_dset failed\n");
                 TEST_ERROR;
             }
 
@@ -2229,15 +2231,15 @@ verify_dsets(state_t *s, socket_state_t *sock, mat_t *mat)
          * the validation of the chunks */
         if (s->use_communication && below_speed_limit(&(last.time), &(s->ival))) {
             AT();
-            HDfprintf(stderr, "Warning: verify_extensible_dset took too long to finish\n");
+            fprintf(stderr, "Warning: verify_extensible_dset took too long to finish\n");
         }
 
         /* For checking the time lapse between the writer's finishing writing a batch of chunks
          * within a tick and the reader's finishing verifying those chunks
          */
         if (s->use_communication && s->do_perf) {
-            if (HDclock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
-                HDfprintf(stderr, "HDclock_gettime failed");
+            if (clock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
+                fprintf(stderr, "clock_gettime failed");
                 TEST_ERROR;
             }
 
@@ -2256,7 +2258,7 @@ verify_dsets(state_t *s, socket_state_t *sock, mat_t *mat)
 
     /* Print out the performance information */
     if (s->use_communication && s->do_perf && counter)
-        HDfprintf(stdout, "Dataset verification: mean time = %lf, max time = %lf, min time = %lf\n",
+        fprintf(stdout, "Dataset verification: mean time = %lf, max time = %lf, min time = %lf\n",
                   total_time / (double)counter, max_time, min_time);
 
     return true;
@@ -2276,17 +2278,17 @@ add_dset_attribute(const state_t *s, hid_t ds, hid_t sid, unsigned int which, un
     dbgf(1, "setting attribute %s on dataset %u to %u\n", name, which, step);
 
     if ((aid = H5Acreate2(ds, name, s->filetype, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
-        HDfprintf(stderr, "H5Acreate2 failed\n");
+        fprintf(stderr, "H5Acreate2 failed\n");
         TEST_ERROR;
     }
 
     if (H5Awrite(aid, H5T_NATIVE_UINT, &step) < 0) {
-        HDfprintf(stderr, "H5Awrite failed\n");
+        fprintf(stderr, "H5Awrite failed\n");
         TEST_ERROR;
     }
 
     if (H5Aclose(aid) < 0) {
-        HDfprintf(stderr, "H5Aclose failed\n");
+        fprintf(stderr, "H5Aclose failed\n");
         TEST_ERROR;
     }
 
@@ -2315,7 +2317,7 @@ write_extensible_dset(state_t *s, unsigned int which, unsigned int step, mat_t *
     dbgf(1, "%s: which %u step %u\n", __func__, which, step);
 
     if (which >= s->ndatasets) {
-        HDfprintf(stderr, "index is out of range\n");
+        fprintf(stderr, "index is out of range\n");
         TEST_ERROR;
     }
 
@@ -2323,7 +2325,7 @@ write_extensible_dset(state_t *s, unsigned int which, unsigned int step, mat_t *
 
     if (s->asteps != 0 && step % s->asteps == 0) {
         if (!add_dset_attribute(s, dset_id, s->one_by_one_sid, which, step)) {
-            HDfprintf(stderr, "add_dset_attribute failed\n");
+            fprintf(stderr, "add_dset_attribute failed\n");
             TEST_ERROR;
         }
     }
@@ -2383,22 +2385,22 @@ write_extensible_dset(state_t *s, unsigned int which, unsigned int step, mat_t *
         sources_t *const srcs             = &s->sources[which];
 
         if (H5Dset_extent(srcs->ul, half_size) < 0) {
-            HDfprintf(stderr, "H5Dset_extent failed\n");
+            fprintf(stderr, "H5Dset_extent failed\n");
             TEST_ERROR;
         }
 
         if (H5Dset_extent(srcs->ur, half_size) < 0) {
-            HDfprintf(stderr, "H5Dset_extent failed\n");
+            fprintf(stderr, "H5Dset_extent failed\n");
             TEST_ERROR;
         }
 
         if (H5Dset_extent(srcs->bl, half_size) < 0) {
-            HDfprintf(stderr, "H5Dset_extent failed\n");
+            fprintf(stderr, "H5Dset_extent failed\n");
             TEST_ERROR;
         }
 
         if (H5Dset_extent(srcs->br, half_size) < 0) {
-            HDfprintf(stderr, "H5Dset_extent failed\n");
+            fprintf(stderr, "H5Dset_extent failed\n");
             TEST_ERROR;
         }
     }
@@ -2407,7 +2409,7 @@ write_extensible_dset(state_t *s, unsigned int which, unsigned int step, mat_t *
         if (step % s->over_extend == 0) {
             if (s->test_3d) {
                 if (size3[0] <= three_dee_max_dims[0] && H5Dset_extent(dset_id, size3) < 0) {
-                    HDfprintf(stderr, "H5Dset_extent for 3D dataset failed\n");
+                    fprintf(stderr, "H5Dset_extent for 3D dataset failed\n");
                     TEST_ERROR;
                 }
             }
@@ -2415,7 +2417,7 @@ write_extensible_dset(state_t *s, unsigned int which, unsigned int step, mat_t *
                 if ((s->expand_2d && size2[0] <= two_dee_max_dims[0] && size2[0] <= two_dee_max_dims[0]) ||
                     (!s->expand_2d && size2[1] <= two_dee_max_dims[1])) {
                     if (H5Dset_extent(dset_id, size2) < 0) {
-                        HDfprintf(stderr, "H5Dset_extent for 2D dataset failed\n");
+                        fprintf(stderr, "H5Dset_extent for 2D dataset failed\n");
                         TEST_ERROR;
                     }
                 }
@@ -2424,13 +2426,13 @@ write_extensible_dset(state_t *s, unsigned int which, unsigned int step, mat_t *
     }
 
     if ((filespace = H5Dget_space(dset_id)) < 0) {
-        HDfprintf(stderr, "H5Dget_space failed\n");
+        fprintf(stderr, "H5Dget_space failed\n");
         TEST_ERROR;
     }
 
     if (s->test_3d || !s->expand_2d) {
         if (!init_and_write_chunk(s, filespace, mat, which, last)) {
-            HDfprintf(stderr, "init_and_write_chunk failed\n");
+            fprintf(stderr, "init_and_write_chunk failed\n");
             TEST_ERROR;
         }
     }
@@ -2440,7 +2442,7 @@ write_extensible_dset(state_t *s, unsigned int which, unsigned int step, mat_t *
         for (base.row = 0; base.row <= last.row; base.row += s->chunk_dims[0]) {
             dbgf(1, "writing chunk %" PRIuHSIZE ", %" PRIuHSIZE "\n", base.row, base.col);
             if (!init_and_write_chunk(s, filespace, mat, which, base)) {
-                HDfprintf(stderr, "init_and_write_chunk failed\n");
+                fprintf(stderr, "init_and_write_chunk failed\n");
                 TEST_ERROR;
             }
         }
@@ -2449,14 +2451,14 @@ write_extensible_dset(state_t *s, unsigned int which, unsigned int step, mat_t *
         for (base.col = 0; base.col < last.col; base.col += s->chunk_dims[1]) {
             dbgf(1, "writing chunk %" PRIuHSIZE ", %" PRIuHSIZE "\n", base.row, base.col);
             if (!init_and_write_chunk(s, filespace, mat, which, base)) {
-                HDfprintf(stderr, "init_and_write_chunk failed\n");
+                fprintf(stderr, "init_and_write_chunk failed\n");
                 TEST_ERROR;
             }
         }
     }
 
     if (H5Sclose(filespace) < 0) {
-        HDfprintf(stderr, "H5Sclose failed\n");
+        fprintf(stderr, "H5Sclose failed\n");
         TEST_ERROR;
     }
 
@@ -2481,14 +2483,14 @@ write_dsets(state_t *s, socket_state_t *sock, mat_t *mat)
     struct timespec    start_time, end_time;
 
     if (NULL == (f = (H5F_t *)H5VL_object(s->file[0]))) {
-        HDfprintf(stderr, "H5VL_object failed\n");
+        fprintf(stderr, "H5VL_object failed\n");
         TEST_ERROR;
     }
 
     /* For checking the time spent in writing data.  It's for running the writer alone */
     if (s->do_perf) {
-        if (HDclock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
-            HDfprintf(stderr, "HDclock_gettime failed");
+        if (clock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
+            fprintf(stderr, "clock_gettime failed");
             TEST_ERROR;
         }
     }
@@ -2509,7 +2511,7 @@ write_dsets(state_t *s, socket_state_t *sock, mat_t *mat)
                 for (which = 0; which < s->ndatasets; which++) {
                     dbgf(2, "step %d which %d\n", step, which);
                     if (!write_extensible_dset(s, which, step, mat)) {
-                        HDfprintf(stderr, "write_extensible_dset failed\n");
+                        fprintf(stderr, "write_extensible_dset failed\n");
                         TEST_ERROR;
                     }
                 }
@@ -2522,7 +2524,7 @@ write_dsets(state_t *s, socket_state_t *sock, mat_t *mat)
         if (f->shared->tick_num > old_tick_num || step == (total_steps - 1)) {
             last_step = step + 1;
             if (s->use_communication && notify_reader(s, sock, last_step) < 0) {
-                HDfprintf(stderr, "notify_reader failed\n");
+                fprintf(stderr, "notify_reader failed\n");
                 TEST_ERROR;
             }
 
@@ -2535,8 +2537,8 @@ write_dsets(state_t *s, socket_state_t *sock, mat_t *mat)
         double throughput;
         double time_passed;
 
-        if (HDclock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
-            HDfprintf(stderr, "HDclock_gettime failed");
+        if (clock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
+            fprintf(stderr, "clock_gettime failed");
             TEST_ERROR;
         }
 
@@ -2552,7 +2554,7 @@ write_dsets(state_t *s, socket_state_t *sock, mat_t *mat)
                 ((double)(sizeof(unsigned int) * s->rows * s->cols * s->nsteps * s->ndatasets)) / time_passed;
 
         /* Print out the performance information */
-        HDfprintf(stdout,
+        fprintf(stdout,
                   "Dataset write time (for running the writer alone) = %lf seconds, write speed = %.2lf "
                   "bytes/second\n",
                   time_passed, throughput);
@@ -2573,34 +2575,34 @@ main(int argc, char **argv)
     socket_state_t        *sock   = NULL;
     H5F_vfd_swmr_config_t *config = NULL;
 
-    if (NULL == (sock = HDcalloc(1, sizeof(socket_state_t)))) {
+    if (NULL == (sock = calloc(1, sizeof(socket_state_t)))) {
         TEST_ERROR;
     }
-    if (NULL == (s = HDcalloc(1, sizeof(state_t)))) {
+    if (NULL == (s = calloc(1, sizeof(state_t)))) {
         TEST_ERROR;
     }
-    if (NULL == (config = HDcalloc(1, sizeof(H5F_vfd_swmr_config_t)))) {
+    if (NULL == (config = calloc(1, sizeof(H5F_vfd_swmr_config_t)))) {
         TEST_ERROR;
     }
 
     if (!socket_init(sock)) {
-        HDfprintf(stderr, "socket_init failed\n");
+        fprintf(stderr, "socket_init failed\n");
         TEST_ERROR;
     }
 
     if (!state_init(s, sock, argc, argv)) {
-        HDfprintf(stderr, "state_init failed\n");
+        fprintf(stderr, "state_init failed\n");
         TEST_ERROR;
     }
 
     if ((mat = newmat(s)) == NULL) {
-        HDfprintf(stderr, "could not allocate matrix\n");
+        fprintf(stderr, "could not allocate matrix\n");
         TEST_ERROR;
     }
 
     /* Set fs_strategy (file space strategy) and fs_page_size (file space page size) */
     if ((fcpl = vfd_swmr_create_fcpl(H5F_FSPACE_STRATEGY_PAGE, s->fsp_size)) < 0) {
-        HDfprintf(stderr, "vfd_swmr_create_fcpl failed\n");
+        fprintf(stderr, "vfd_swmr_create_fcpl failed\n");
         TEST_ERROR;
     }
 
@@ -2608,7 +2610,7 @@ main(int argc, char **argv)
         hid_t               fapl;
         H5AC_cache_config_t mdc_config;
 
-        HDmemset(config, 0, sizeof(H5F_vfd_swmr_config_t));
+        memset(config, 0, sizeof(H5F_vfd_swmr_config_t));
 
         if (s->vds != vds_multi && i > 0) {
             s->file[i] = s->file[0];
@@ -2646,7 +2648,7 @@ main(int argc, char **argv)
 
         /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */
         if ((fapl = vfd_swmr_create_fapl(true, s->use_vfd_swmr, true, s->page_buf_size, config)) < 0) {
-            HDfprintf(stderr, "vfd_swmr_create_fapl failed");
+            fprintf(stderr, "vfd_swmr_create_fapl failed");
             TEST_ERROR;
         }
 
@@ -2657,7 +2659,7 @@ main(int argc, char **argv)
             mdc_config.version = H5AC__CURR_CACHE_CONFIG_VERSION;
 
             if (H5Pget_mdc_config(fapl, &mdc_config) < 0) {
-                HDfprintf(stderr, "H5Pget_mdc_config failed");
+                fprintf(stderr, "H5Pget_mdc_config failed");
                 TEST_ERROR;
             }
 
@@ -2666,7 +2668,7 @@ main(int argc, char **argv)
             mdc_config.initial_size     = s->mdc_init_size * 1024 * 1024;
 
             if (H5Pset_mdc_config(fapl, &mdc_config) < 0) {
-                HDfprintf(stderr, "H5Pset_mdc_config failed");
+                fprintf(stderr, "H5Pset_mdc_config failed");
                 TEST_ERROR;
             }
         }
@@ -2688,25 +2690,25 @@ main(int argc, char **argv)
                                : H5Fopen(s->filename[i], H5F_ACC_RDONLY, fapl);
 
         if (s->file[i] == H5I_INVALID_HID) {
-            HDfprintf(stderr, s->writer ? "H5Fcreate failed" : "H5Fopen failed");
+            fprintf(stderr, s->writer ? "H5Fcreate failed" : "H5Fopen failed");
             TEST_ERROR;
         }
 
         /* Must be added between file creation/opening and socket connections */
         if (H5Fvfd_swmr_end_tick(s->file[i]) < 0) {
-            HDfprintf(stderr, "H5Fvfd_swmr_end_tick failed\n");
+            fprintf(stderr, "H5Fvfd_swmr_end_tick failed\n");
             TEST_ERROR;
         }
 
         if (H5Pclose(fapl) < 0) {
-            HDfprintf(stderr, "H5Pclose failed\n");
+            fprintf(stderr, "H5Pclose failed\n");
             TEST_ERROR;
         }
     }
 
     /* Establish a socket connection */
     if (s->use_communication && !socket_connect(sock, s->writer)) {
-        HDfprintf(stderr, "socket_connect() failed\n");
+        fprintf(stderr, "socket_connect() failed\n");
         TEST_ERROR;
     }
 
@@ -2714,19 +2716,19 @@ main(int argc, char **argv)
         /* Writer tells reader to start */
         sock->notify = 1;
         if (s->use_communication && send(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
-            HDfprintf(stderr, "send() failed\n");
+            fprintf(stderr, "send() failed\n");
             TEST_ERROR;
         }
 
 #ifdef DEBUG_RW_COMMS
         if (s->use_communication) {
-            HDfprintf(stderr, "[DEBUG-COMM] main()/writer: writer sent: notify = %d\n", (int)(sock->notify));
+            fprintf(stderr, "[DEBUG-COMM] main()/writer: writer sent: notify = %d\n", (int)(sock->notify));
         }
 #endif /* DEBUG_RW_COMMS */
 
         /* Creates multiple datasets */
         if (!create_dsets(s)) {
-            HDfprintf(stderr, "create_dsets failed");
+            fprintf(stderr, "create_dsets failed");
             TEST_ERROR;
         }
 
@@ -2734,14 +2736,14 @@ main(int argc, char **argv)
         if (s->use_vfd_swmr && s->use_communication) {
             if (s->vds != vds_multi) {
                 if (H5Fvfd_swmr_end_tick(s->file[0]) < 0) {
-                    HDfprintf(stderr, "H5Fvfd_swmr_end_tick failed\n");
+                    fprintf(stderr, "H5Fvfd_swmr_end_tick failed\n");
                     TEST_ERROR;
                 }
             }
             else {
                 for (unsigned long j = 0; j < NELMTS(s->file); j++)
                     if (H5Fvfd_swmr_end_tick(s->file[j]) < 0) {
-                        HDfprintf(stderr, "H5Fvfd_swmr_end_tick failed\n");
+                        fprintf(stderr, "H5Fvfd_swmr_end_tick failed\n");
                         TEST_ERROR;
                     }
             }
@@ -2750,27 +2752,27 @@ main(int argc, char **argv)
         /* Notify the reader of finishing dataset creation by sending the timestamp
          * and wait for the reader to finish validation before proceeding */
         if (s->use_communication && notify_and_wait_for_reader(s, sock) < 0) {
-            HDfprintf(stderr, "notify_and_wait_for_reader failed\n");
+            fprintf(stderr, "notify_and_wait_for_reader failed\n");
             TEST_ERROR;
         }
 
         /* Enable the Legacy SWMR writing mode if specified */
         if (s->use_legacy_swmr && H5Fstart_swmr_write(s->file[0]) < 0) {
-            HDfprintf(stderr, "failed to start the Legacy SWMR writing mode\n");
+            fprintf(stderr, "failed to start the Legacy SWMR writing mode\n");
             TEST_ERROR;
         }
 
         /* Start to write chunks.  The writer writes as many chunks as possible within a tick, then
          * notify the reader.  But it doesn't receive back the reader's notice. */
         if (!write_dsets(s, sock, mat)) {
-            HDfprintf(stderr, "write_dsets failed");
+            fprintf(stderr, "write_dsets failed");
             TEST_ERROR;
         }
     }
     else {
         /* Wait for the writer's notice before starting the validation of dataset creation */
         if (s->use_communication && reader_verify(sock) < 0) {
-            HDfprintf(stderr, "reader_verify failed\n");
+            fprintf(stderr, "reader_verify failed\n");
             TEST_ERROR;
         }
 
@@ -2778,7 +2780,7 @@ main(int argc, char **argv)
          * the writer during this step.
          */
         if (!open_extensible_dset(s)) {
-            HDfprintf(stderr, "open_extensible_dset failed\n");
+            fprintf(stderr, "open_extensible_dset failed\n");
             TEST_ERROR;
         }
 
@@ -2787,7 +2789,7 @@ main(int argc, char **argv)
          * This time period is from the writer finishing dataset creation to the reader finishing
          * the validation of dataset creation */
         if (s->use_communication && reader_check_time_and_notify_writer(s, sock) < 0) {
-            HDfprintf(stderr, "reader_check_time_and_notify_writer failed\n");
+            fprintf(stderr, "reader_check_time_and_notify_writer failed\n");
             TEST_ERROR;
         }
 
@@ -2795,30 +2797,30 @@ main(int argc, char **argv)
          * Both the reader and writer finish by themselves.
          */
         if (!verify_dsets(s, sock, mat)) {
-            HDfprintf(stderr, "verify_dsets failed\n");
+            fprintf(stderr, "verify_dsets failed\n");
             TEST_ERROR;
         }
     }
 
     for (unsigned which = 0; which < s->ndatasets; which++)
         if (!close_extensible_dset(s, which)) {
-            HDfprintf(stderr, "close_extensible_dset failed\n");
+            fprintf(stderr, "close_extensible_dset failed\n");
             TEST_ERROR;
         }
 
     if (H5Pclose(fcpl) < 0) {
-        HDfprintf(stderr, "H5Pclose failed\n");
+        fprintf(stderr, "H5Pclose failed\n");
         TEST_ERROR;
     }
 
     if (!state_destroy(s)) {
-        HDfprintf(stderr, "state_destroy failed\n");
+        fprintf(stderr, "state_destroy failed\n");
         TEST_ERROR;
     }
 
 #ifdef ADD_UNIQUE_STEP_FILE
     if (!s->writer && s->step_file_name) {
-        HDremove(s->step_file_name);
+        remove(s->step_file_name);
         s->step_file_name = NULL;
     }
 #endif /* ADD_UNIQUE_STEP_FILE */
@@ -2826,12 +2828,12 @@ main(int argc, char **argv)
     /* Close the sockets if they were opened. */
     if (sock != NULL) {
         socket_close(sock);
-        HDfree(sock);
+        free(sock);
     }
 
-    HDfree(mat);
-    HDfree(s);
-    HDfree(config);
+    free(mat);
+    free(s);
+    free(config);
 
     return EXIT_SUCCESS;
 
@@ -2847,7 +2849,7 @@ error:
 
 #ifdef ADD_UNIQUE_STEP_FILE
     if (!s->writer && s->step_file_name) {
-        HDremove(s->step_file_name);
+        remove(s->step_file_name);
         s->step_file_name = NULL;
     }
 #endif /* ADD_UNIQUE_STEP_FILE */
@@ -2855,12 +2857,12 @@ error:
     /* Close the sockets if they were opened. */
     if (sock != NULL) {
         socket_close(sock);
-        HDfree(sock);
+        free(sock);
     }
 
-    HDfree(mat);
-    HDfree(s);
-    HDfree(config);
+    free(mat);
+    free(s);
+    free(config);
 
     return EXIT_FAILURE;
 }
@@ -2870,7 +2872,7 @@ error:
 int
 main(void)
 {
-    HDfprintf(stderr, "Non-POSIX platform. Skipping.\n");
+    fprintf(stderr, "Non-POSIX platform. Skipping.\n");
     return EXIT_SUCCESS;
 }
 

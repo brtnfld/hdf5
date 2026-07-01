@@ -62,7 +62,28 @@ typedef struct H5PB_t {
     H5FL_fac_head_t *page_fac; /* Factory for allocating pages */
 
     /* VFD SWMR fields */
-    int64_t dwl_len; /* Number of entries on the delayed write list */
+    hbool_t  vfd_swmr;        /* TRUE if the file is opened with VFD SWMR */
+    hbool_t  vfd_swmr_writer; /* TRUE if this is the VFD SWMR writer */
+    uint64_t cur_tick;        /* Current tick as known to the page buffer */
+
+    /* Delayed write list: entries whose write to the HDF5 file must be
+     * delayed until they have appeared in the shadow index for max_lag
+     * ticks, to avoid "message from the future" bugs on readers.  Kept
+     * sorted so delay_write_until is non-increasing head -> tail.
+     */
+    int64_t              max_delay;    /* Maximum delay of any entry in a tick */
+    int64_t              dwl_len;      /* Number of entries on the delayed write list */
+    int64_t              dwl_size;     /* Total size of entries on the delayed write list */
+    struct H5PB_entry_t *dwl_head_ptr; /* Head pointer of the delayed write list */
+    struct H5PB_entry_t *dwl_tail_ptr; /* Tail pointer of the delayed write list */
+
+    /* Tick list: all entries modified in the current tick.  Drained at
+     * end of tick to update the shadow index (see H5PB_vfd_swmr__update_index).
+     */
+    int64_t              tl_len;      /* Number of entries on the tick list */
+    int64_t              tl_size;     /* Total size of entries on the tick list */
+    struct H5PB_entry_t *tl_head_ptr; /* Head pointer of the tick list */
+    struct H5PB_entry_t *tl_tail_ptr; /* Tail pointer of the tick list */
 
     /* Statistics */
     unsigned accesses[2];

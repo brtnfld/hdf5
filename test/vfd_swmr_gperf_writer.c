@@ -50,6 +50,8 @@
  */
 #define H5F_FRIEND /*suppress error about including H5Fpkg   */
 
+#include "H5private.h" /* Generic Functions -- must be included before other private headers, see H5Fsuper.c */
+
 #include "hdf5.h"
 
 #include "H5Fpkg.h"
@@ -100,7 +102,7 @@ typedef struct {
 static void
 usage(const char *progname)
 {
-    HDfprintf(
+    fprintf(
         stderr,
         "usage: ./%s -P -n 1000 -N 5 -q (create 1000 groups, each group has 5 attributes)\n"
         "usage: ./%s -P -L -n 100000 -q (create 100000 groups and generate log message to file 'log-test')\n"
@@ -185,7 +187,7 @@ usage(const char *progname)
         "-q:             silence printouts, few messages\n"
         "\n",
         progname, progname);
-    HDexit(EXIT_FAILURE);
+    exit(EXIT_FAILURE);
 }
 
 static bool
@@ -226,18 +228,18 @@ state_init(state_t *s, int argc, char **argv)
     s->pbs            = 4096;
     s->nglevels       = 0;
 
-    HDmemset(s->filename, 0, PATH_MAX);
-    HDmemset(s->progname, 0, PATH_MAX);
+    memset(s->filename, 0, PATH_MAX);
+    memset(s->progname, 0, PATH_MAX);
 
     if (H5_basename(argv[0], &tfile) < 0) {
-        HDprintf("H5_basename failed\n");
+        printf("H5_basename failed\n");
         TEST_ERROR;
     }
 
     esnprintf(s->progname, sizeof(s->progname), "%s", tfile);
 
     if (tfile) {
-        HDfree(tfile);
+        free(tfile);
         tfile = NULL;
     }
 
@@ -266,17 +268,17 @@ state_init(state_t *s, int argc, char **argv)
             case 'B':
             case 's':
                 errno = 0;
-                tmp   = HDstrtoul(optarg, &end, 0);
+                tmp   = strtoul(optarg, &end, 0);
                 if (end == optarg || *end != '\0') {
-                    HDprintf("couldn't parse `-%c` argument `%s`\n", ch, optarg);
+                    printf("couldn't parse `-%c` argument `%s`\n", ch, optarg);
                     TEST_ERROR;
                 }
                 else if (errno != 0) {
-                    HDprintf("couldn't parse `-%c` argument `%s`\n", ch, optarg);
+                    printf("couldn't parse `-%c` argument `%s`\n", ch, optarg);
                     TEST_ERROR;
                 }
                 else if (tmp > UINT_MAX) {
-                    HDprintf("`-%c` argument `%lu` too large\n", ch, tmp);
+                    printf("`-%c` argument `%lu` too large\n", ch, tmp);
                     TEST_ERROR;
                 }
 
@@ -304,52 +306,52 @@ state_init(state_t *s, int argc, char **argv)
                 s->vlstr_test = true;
                 break;
             case 'O':
-                if (HDstrcmp(optarg, "grp-creation") == 0)
+                if (strcmp(optarg, "grp-creation") == 0)
                     s->grp_op_pattern = 'c';
-                else if (HDstrcmp(optarg, "grp-deletion") == 0)
+                else if (strcmp(optarg, "grp-deletion") == 0)
                     s->grp_op_pattern = 'd';
-                else if (HDstrcmp(optarg, "grp-move") == 0)
+                else if (strcmp(optarg, "grp-move") == 0)
                     s->grp_op_pattern = 'm';
-                else if (HDstrcmp(optarg, "grp-ins-links") == 0)
+                else if (strcmp(optarg, "grp-ins-links") == 0)
                     s->grp_op_pattern = 'i';
-                else if (HDstrcmp(optarg, "grp-del-links") == 0)
+                else if (strcmp(optarg, "grp-del-links") == 0)
                     s->grp_op_pattern = 'D';
-                else if (HDstrcmp(optarg, "grp-compact-t-dense") == 0)
+                else if (strcmp(optarg, "grp-compact-t-dense") == 0)
                     s->grp_op_pattern = 't';
-                else if (HDstrcmp(optarg, "grp-dense-t-compact") == 0)
+                else if (strcmp(optarg, "grp-dense-t-compact") == 0)
                     s->grp_op_pattern = 'T';
                 else {
-                    HDprintf("Invalid -O argument \"%s\"", optarg);
+                    printf("Invalid -O argument \"%s\"", optarg);
                     TEST_ERROR;
                 }
                 break;
             case 'A':
-                if (HDstrcmp(optarg, "compact") == 0)
+                if (strcmp(optarg, "compact") == 0)
                     s->at_pattern = 'c';
-                else if (HDstrcmp(optarg, "dense") == 0)
+                else if (strcmp(optarg, "dense") == 0)
                     s->at_pattern = 'd';
-                else if (HDstrcmp(optarg, "compact-add-to-dense") == 0)
+                else if (strcmp(optarg, "compact-add-to-dense") == 0)
                     s->at_pattern = 't';
-                else if (HDstrcmp(optarg, "compact-del") == 0)
+                else if (strcmp(optarg, "compact-del") == 0)
                     s->at_pattern = 'C';
-                else if (HDstrcmp(optarg, "dense-del") == 0)
+                else if (strcmp(optarg, "dense-del") == 0)
                     s->at_pattern = 'D';
-                else if (HDstrcmp(optarg, "dense-del-to-compact") == 0)
+                else if (strcmp(optarg, "dense-del-to-compact") == 0)
                     s->at_pattern = 'T';
-                else if (HDstrcmp(optarg, "modify") == 0)
+                else if (strcmp(optarg, "modify") == 0)
                     s->at_pattern = 'M';
-                else if (HDstrcmp(optarg, "add-vstr") == 0)
+                else if (strcmp(optarg, "add-vstr") == 0)
                     s->at_pattern = 'v';
-                else if (HDstrcmp(optarg, "remove-vstr") == 0)
+                else if (strcmp(optarg, "remove-vstr") == 0)
                     s->at_pattern = 'r';
-                else if (HDstrcmp(optarg, "modify-vstr") == 0)
+                else if (strcmp(optarg, "modify-vstr") == 0)
                     s->at_pattern = 'm';
-                else if (HDstrcmp(optarg, "add-ohr-block") == 0)
+                else if (strcmp(optarg, "add-ohr-block") == 0)
                     s->at_pattern = 'a';
-                else if (HDstrcmp(optarg, "del-ohr-block") == 0)
+                else if (strcmp(optarg, "del-ohr-block") == 0)
                     s->at_pattern = 'R';
                 else {
-                    HDprintf("Invalid -A argument \"%s\"", optarg);
+                    printf("Invalid -A argument \"%s\"", optarg);
                     TEST_ERROR;
                 }
                 break;
@@ -372,24 +374,24 @@ state_init(state_t *s, int argc, char **argv)
 
     if (!s->grp_op_test) {
         if (s->asteps < 1 || s->asteps > s->nsteps) {
-            HDprintf("attribute interval is out of bounds\n");
+            printf("attribute interval is out of bounds\n");
             TEST_ERROR;
         }
     }
 
     if (s->grp_op_test && s->attr_test) {
-        HDprintf("Cannot test both group operation and attribute tests!\n");
-        HDprintf("Attribute tests are ignored.\n");
+        printf("Cannot test both group operation and attribute tests!\n");
+        printf("Attribute tests are ignored.\n");
     }
 
     if (argc > 0) {
-        HDprintf("unexpected command-line arguments\n");
+        printf("unexpected command-line arguments\n");
         TEST_ERROR;
     }
 
     /* space for attributes */
     if ((s->one_by_one_sid = H5Screate_simple(1, &dims, &dims)) < 0) {
-        HDprintf("H5Screate_simple failed\n");
+        printf("H5Screate_simple failed\n");
         TEST_ERROR;
     }
 
@@ -399,7 +401,7 @@ state_init(state_t *s, int argc, char **argv)
 
 error:
     if (tfile)
-        HDfree(tfile);
+        free(tfile);
     return false;
 }
 
@@ -430,19 +432,19 @@ check_ohr_num_chunk(hid_t g, bool one_chunk_ohr)
 
     /* Get the object information */
     if (H5Oget_native_info(g, &ninfo, H5O_NATIVE_INFO_HDR) < 0) {
-        HDprintf("H5Oget_native_info failed\n");
+        printf("H5Oget_native_info failed\n");
         TEST_ERROR;
     }
 
     if (true == one_chunk_ohr) {
         if (ninfo.hdr.nchunks != 1) {
-            HDprintf("Object header should have only one chunk,but it is not.\n");
+            printf("Object header should have only one chunk,but it is not.\n");
             TEST_ERROR;
         }
     }
     else {
         if (ninfo.hdr.nchunks <= 1) {
-            HDprintf("Object header should have more than one chunk,but it is not.\n");
+            printf("Object header should have more than one chunk,but it is not.\n");
             TEST_ERROR;
         }
     }
@@ -500,7 +502,7 @@ add_attr(state_t *s, hid_t oid, unsigned int which, unsigned num_attrs, const ch
 
     /* Need to obtain native datatype for H5Aread */
     if ((amtype = H5Tget_native_type(atype, H5T_DIR_ASCEND)) < 0) {
-        HDprintf("H5Tget_native_type failed\n");
+        printf("H5Tget_native_type failed\n");
         TEST_ERROR;
     }
 
@@ -508,9 +510,9 @@ add_attr(state_t *s, hid_t oid, unsigned int which, unsigned num_attrs, const ch
 
         /* Create attribute */
         /* Construct attribute name like attr-0-0 */
-        HDsprintf(attrname, aname_fmt, which, u);
+        sprintf(attrname, aname_fmt, which, u);
         if ((aid = H5Acreate2(oid, attrname, atype, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
-            HDprintf("H5Acreate2 failed\n");
+            printf("H5Acreate2 failed\n");
             TEST_ERROR;
         }
 
@@ -520,13 +522,13 @@ add_attr(state_t *s, hid_t oid, unsigned int which, unsigned num_attrs, const ch
 
         /* Write data into the attribute */
         if (H5Awrite(aid, amtype, &attr_value) < 0) {
-            HDprintf("H5Awrite failed\n");
+            printf("H5Awrite failed\n");
             TEST_ERROR;
         }
 
         /* Close attribute */
         if (H5Aclose(aid) < 0) {
-            HDprintf("H5Aclose failed\n");
+            printf("H5Aclose failed\n");
             TEST_ERROR;
         }
 
@@ -534,8 +536,8 @@ add_attr(state_t *s, hid_t oid, unsigned int which, unsigned num_attrs, const ch
          * we need to check if this test behaves as expected. */
         if (s->at_pattern == 'a' || s->at_pattern == 'R') {
             if (false == check_ohr_num_chunk(oid, false)) {
-                HDprintf("An object header continuation block should be created. \n");
-                HDprintf("But it is not.\n");
+                printf("An object header continuation block should be created. \n");
+                printf("But it is not.\n");
                 TEST_ERROR;
             }
         }
@@ -596,50 +598,50 @@ add_vlstr_attr(state_t *s, hid_t g, unsigned int which)
     hid_t sid      = s->one_by_one_sid;
 
     /* Allocate buffer for the VL string value */
-    astr_val = HDmalloc(VS_ATTR_NAME_LEN);
+    astr_val = malloc(VS_ATTR_NAME_LEN);
     if (astr_val == NULL) {
-        HDprintf("Allocate memory for VL string failed.\n");
+        printf("Allocate memory for VL string failed.\n");
         TEST_ERROR;
     }
 
     /* Assign the VL string value and the attribute name.. */
-    HDsprintf(astr_val, "%u", which);
+    sprintf(astr_val, "%u", which);
     esnprintf(name, sizeof(name), "attr-%u", which);
 
     dbgf(1, "setting attribute %s on group %u to %u\n", name, which, which);
 
     /* Create a datatype to refer to. */
     if ((atype = H5Tcopy(H5T_C_S1)) < 0) {
-        HDprintf("Cannot create variable length datatype.\n");
+        printf("Cannot create variable length datatype.\n");
         TEST_ERROR;
     }
 
     if (H5Tset_size(atype, H5T_VARIABLE) < 0) {
-        HDprintf("Cannot set variable length datatype.\n");
+        printf("Cannot set variable length datatype.\n");
         TEST_ERROR;
     }
 
     /* Generate the VL string attribute.*/
     if ((aid = H5Acreate2(g, name, atype, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
-        HDprintf("H5Acreate2 failed.\n");
+        printf("H5Acreate2 failed.\n");
         TEST_ERROR;
     }
 
     if (H5Awrite(aid, atype, &astr_val) < 0) {
-        HDprintf("H5Awrite failed.\n");
+        printf("H5Awrite failed.\n");
         TEST_ERROR;
     }
 
     if (H5Tclose(atype) < 0) {
-        HDprintf("H5Tclose() failed\n");
+        printf("H5Tclose() failed\n");
         TEST_ERROR;
     }
     if (H5Aclose(aid) < 0) {
-        HDprintf("H5Aclose() failed\n");
+        printf("H5Aclose() failed\n");
         TEST_ERROR;
     }
 
-    HDfree(astr_val);
+    free(astr_val);
 
     return true;
 
@@ -652,7 +654,7 @@ error:
     H5E_END_TRY;
 
     if (astr_val)
-        HDfree(astr_val);
+        free(astr_val);
 
     return false;
 }
@@ -795,15 +797,15 @@ del_one_attr(state_t *s, hid_t obj_id, bool is_dense, bool is_vl_or_ohrc, unsign
 
     /* Construct the attribute name */
     if (is_dense == true)
-        HDsprintf(attrname, aname_format_d, which, 0);
+        sprintf(attrname, aname_format_d, which, 0);
     else if (is_vl_or_ohrc == true)
-        HDsprintf(attrname, aname_format_vl, which, 0);
+        sprintf(attrname, aname_format_vl, which, 0);
     else
-        HDsprintf(attrname, aname_format, which, 0);
+        sprintf(attrname, aname_format, which, 0);
 
     /* Delete the attribute */
     if (H5Adelete(obj_id, attrname) < 0) {
-        HDprintf("H5Adelete() failed\n");
+        printf("H5Adelete() failed\n");
         TEST_ERROR;
     }
 
@@ -811,7 +813,7 @@ del_one_attr(state_t *s, hid_t obj_id, bool is_dense, bool is_vl_or_ohrc, unsign
      * we need to check if this test behaves as expected. */
     if (s->at_pattern == 'R') {
         if (false == check_ohr_num_chunk(obj_id, true)) {
-            HDprintf("The object header chunk should not continue. \n");
+            printf("The object header chunk should not continue. \n");
             TEST_ERROR;
         }
     }
@@ -897,14 +899,14 @@ modify_attr(state_t *s, hid_t g, const char *aname_fmt, unsigned int which)
     hid_t        amtype = H5I_INVALID_HID;
     unsigned int modify_value;
 
-    HDsprintf(attrname, aname_fmt, which, 0);
+    sprintf(attrname, aname_fmt, which, 0);
     if ((aid = H5Aopen(g, attrname, H5P_DEFAULT)) < 0) {
-        HDprintf("H5Aopen failed\n");
+        printf("H5Aopen failed\n");
         TEST_ERROR;
     }
 
     if ((amtype = H5Tget_native_type(s->filetype, H5T_DIR_ASCEND)) < 0) {
-        HDprintf("H5Tget_native_type failed\n");
+        printf("H5Tget_native_type failed\n");
         TEST_ERROR;
     }
 
@@ -912,15 +914,15 @@ modify_attr(state_t *s, hid_t g, const char *aname_fmt, unsigned int which)
     modify_value = which + 10000;
 
     if (H5Awrite(aid, amtype, &modify_value) < 0) {
-        HDprintf("H5Awrite failed\n");
+        printf("H5Awrite failed\n");
         TEST_ERROR;
     }
     if (H5Tclose(amtype) < 0) {
-        HDprintf("H5Tclose failed\n");
+        printf("H5Tclose failed\n");
         TEST_ERROR;
     }
     if (H5Aclose(aid) < 0) {
-        HDprintf("H5Aclose failed\n");
+        printf("H5Aclose failed\n");
         TEST_ERROR;
     }
 
@@ -965,53 +967,53 @@ modify_vlstr_attr(hid_t g, unsigned int which)
     char  name[VS_ATTR_NAME_LEN];
     char *astr_val = NULL;
 
-    astr_val = HDmalloc(VS_ATTR_NAME_LEN);
+    astr_val = malloc(VS_ATTR_NAME_LEN);
     if (astr_val == NULL) {
-        HDprintf("Allocate memory for VL string failed.\n");
+        printf("Allocate memory for VL string failed.\n");
         TEST_ERROR;
     }
 
     /* Change the VL string value and create the attribute name. */
-    HDsprintf(astr_val, "%u%c", which, 'A');
+    sprintf(astr_val, "%u%c", which, 'A');
     esnprintf(name, sizeof(name), "attr-%u", which);
 
     dbgf(1, "setting attribute %s on group %u to %u\n", name, which, which);
 
     /* Create a datatype to refer to. */
     if ((atype = H5Tcopy(H5T_C_S1)) < 0) {
-        HDprintf("Cannot create variable length datatype.\n");
+        printf("Cannot create variable length datatype.\n");
         TEST_ERROR;
     }
 
     if (H5Tset_size(atype, H5T_VARIABLE) < 0) {
-        HDprintf("Cannot set variable length datatype.\n");
+        printf("Cannot set variable length datatype.\n");
         TEST_ERROR;
     }
 
     /* Open this attribute. */
     if ((aid = H5Aopen(g, name, H5P_DEFAULT)) < 0) {
-        HDprintf("H5Aopen failed.\n");
+        printf("H5Aopen failed.\n");
         TEST_ERROR;
     }
 
     dbgf(1, "The modified VL string value  is  %s \n", astr_val);
 
     if (H5Awrite(aid, atype, &astr_val) < 0) {
-        HDprintf("H5Awrite failed.\n");
+        printf("H5Awrite failed.\n");
         TEST_ERROR;
     }
 
     if (H5Tclose(atype) < 0) {
-        HDprintf("H5Tclose() failed\n");
+        printf("H5Tclose() failed\n");
         TEST_ERROR;
     }
 
     if (H5Aclose(aid) < 0) {
-        HDprintf("H5Aclose() failed\n");
+        printf("H5Aclose() failed\n");
         TEST_ERROR;
     }
 
-    HDfree(astr_val);
+    free(astr_val);
 
     return true;
 
@@ -1024,7 +1026,7 @@ error:
     H5E_END_TRY;
 
     if (astr_val)
-        HDfree(astr_val);
+        free(astr_val);
 
     return false;
 }
@@ -1116,7 +1118,7 @@ add_attrs_compact(state_t *s, hid_t g, hid_t gcpl, unsigned int which)
          * storage and the minimal number of attributes to be stored in
          * dense storage. */
         if (H5Pget_attr_phase_change(gcpl, &max_compact, &min_dense) < 0) {
-            HDprintf("H5Pget_attr_phase_change() failed\n");
+            printf("H5Pget_attr_phase_change() failed\n");
             TEST_ERROR;
         }
     }
@@ -1170,7 +1172,7 @@ add_attrs_compact_dense(state_t *s, hid_t g, hid_t gcpl, unsigned int which)
     bool        ret_value    = false;
 
     if (H5Pget_attr_phase_change(gcpl, &max_compact, &min_dense) < 0) {
-        HDprintf("H5Pget_attr_phase_change failed\n");
+        printf("H5Pget_attr_phase_change failed\n");
         TEST_ERROR;
     }
 
@@ -1232,24 +1234,24 @@ del_attrs_compact_dense_compact(hid_t obj_id, hid_t gcpl, unsigned int which)
      * storage and the minimal number of attributes to be stored in
      * dense storage. */
     if (H5Pget_attr_phase_change(gcpl, &max_compact, &min_dense) < 0) {
-        HDprintf("H5Pget_attr_phase_change failed\n");
+        printf("H5Pget_attr_phase_change failed\n");
         TEST_ERROR;
     }
     u = max_compact + 1;
 
     /* Delete a number of attributes so that the attribute storage just becomes dense.*/
     for (u--; u >= (min_dense - 1); u--) {
-        sz = HDsnprintf(attrname, VS_ATTR_NAME_LEN - 1, aname_format, which, max_compact - u);
+        sz = snprintf(attrname, VS_ATTR_NAME_LEN - 1, aname_format, which, max_compact - u);
         if (sz < 0) {
-            HDprintf("snprintf format error\n");
+            printf("snprintf format error\n");
             TEST_ERROR;
         }
         if (sz > VS_ATTR_NAME_LEN - 1) {
-            HDprintf("snprintf truncated string\n");
+            printf("snprintf truncated string\n");
             TEST_ERROR;
         }
         if (H5Adelete(obj_id, attrname) < 0) {
-            HDprintf("H5Adelete failed\n");
+            printf("H5Adelete failed\n");
             TEST_ERROR;
         }
     }
@@ -1262,17 +1264,17 @@ del_attrs_compact_dense_compact(hid_t obj_id, hid_t gcpl, unsigned int which)
      * The attribute name to be deleted is attr-max_compact+which-0
      */
 
-    sz = HDsnprintf(attrname, VS_ATTR_NAME_LEN - 1, adname_format, max_compact + which, 0);
+    sz = snprintf(attrname, VS_ATTR_NAME_LEN - 1, adname_format, max_compact + which, 0);
     if (sz < 0) {
-        HDprintf("snprintf format error\n");
+        printf("snprintf format error\n");
         TEST_ERROR;
     }
     if (sz > VS_ATTR_NAME_LEN - 1) {
-        HDprintf("snprintf truncated string\n");
+        printf("snprintf truncated string\n");
         TEST_ERROR;
     }
     if (H5Adelete(obj_id, attrname) < 0) {
-        HDprintf("H5Adelete failed\n");
+        printf("H5Adelete failed\n");
         TEST_ERROR;
     }
 
@@ -1368,7 +1370,7 @@ add_del_attrs_compact_dense(state_t *s, hid_t g, hid_t gcpl, unsigned int which)
     unsigned min_dense   = 0;
 
     if (H5Pget_attr_phase_change(gcpl, &max_compact, &min_dense) < 0) {
-        HDprintf("H5Pget_attr_phase_change failed\n");
+        printf("H5Pget_attr_phase_change failed\n");
         TEST_ERROR;
     }
 
@@ -1614,7 +1616,7 @@ write_group(state_t *s, unsigned int which)
     double          temp_time;
 
     if (which >= s->nsteps) {
-        HDprintf("Number of created groups is out of bounds\n");
+        printf("Number of created groups is out of bounds\n");
         TEST_ERROR;
     }
 
@@ -1625,14 +1627,14 @@ write_group(state_t *s, unsigned int which)
     else {
         gcpl = H5Pcreate(H5P_GROUP_CREATE);
         if (gcpl < 0) {
-            HDprintf("H5Pcreate failed\n");
+            printf("H5Pcreate failed\n");
             TEST_ERROR;
         }
 
         /* If we test the dense storage, change the attribute phase. */
         if (s->at_pattern == 'd') {
             if (H5Pset_attr_phase_change(gcpl, 0, 0) < 0) {
-                HDprintf("H5Pset_attr_phase_change failed for the dense storage.\n");
+                printf("H5Pset_attr_phase_change failed for the dense storage.\n");
                 TEST_ERROR;
             }
         }
@@ -1640,24 +1642,24 @@ write_group(state_t *s, unsigned int which)
 
     if (s->gperf) {
 
-        if (HDclock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
+        if (clock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
 
-            HDfprintf(stderr, "HDclock_gettime failed");
+            fprintf(stderr, "clock_gettime failed");
 
             TEST_ERROR;
         }
     }
 
     if ((g = H5Gcreate2(s->file, name, H5P_DEFAULT, gcpl, H5P_DEFAULT)) < 0) {
-        HDprintf("H5Gcreate2 failed\n");
+        printf("H5Gcreate2 failed\n");
         TEST_ERROR;
     }
 
     if (s->gperf) {
 
-        if (HDclock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
+        if (clock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
 
-            HDfprintf(stderr, "HDclock_gettime failed");
+            fprintf(stderr, "clock_gettime failed");
 
             TEST_ERROR;
         }
@@ -1674,27 +1676,27 @@ write_group(state_t *s, unsigned int which)
     if (s->at_pattern == 'a' || s->at_pattern == 'R') {
         if ((dummy_d = H5Dcreate2(g, "Dataset", H5T_NATIVE_INT, s->one_by_one_sid, H5P_DEFAULT, H5P_DEFAULT,
                                   H5P_DEFAULT)) < 0) {
-            HDprintf("H5Dcreate2 failed\n");
+            printf("H5Dcreate2 failed\n");
             TEST_ERROR;
         }
     }
     /* We only need to check the first group */
     if (which == 0) {
         if (H5Gget_info(g, &group_info) < 0) {
-            HDprintf("H5Gget_info failed\n");
+            printf("H5Gget_info failed\n");
             TEST_ERROR;
         }
 
         if (s->old_style_grp) {
             if (group_info.storage_type != H5G_STORAGE_TYPE_SYMBOL_TABLE) {
-                HDprintf("Old-styled group test: but the group is not in old-style. \n");
+                printf("Old-styled group test: but the group is not in old-style. \n");
                 TEST_ERROR;
             }
             dbgf(2, "Writer: group is created with the old-style.\n");
         }
         else {
             if (group_info.storage_type == H5G_STORAGE_TYPE_SYMBOL_TABLE) {
-                HDprintf("The created group should NOT be in old-style . \n");
+                printf("The created group should NOT be in old-style . \n");
                 TEST_ERROR;
             }
             dbgf(2, "Writer: group is created with the new-style.\n");
@@ -1705,8 +1707,8 @@ write_group(state_t *s, unsigned int which)
      * we need to check if this test behaves as expected. */
     if (s->at_pattern == 'a' || s->at_pattern == 'R') {
         if (false == check_ohr_num_chunk(g, true)) {
-            HDprintf("An object header continuation block should NOT be created. \n");
-            HDprintf("But it is created.\n");
+            printf("An object header continuation block should NOT be created. \n");
+            printf("But it is created.\n");
             TEST_ERROR;
         }
     }
@@ -1717,18 +1719,18 @@ write_group(state_t *s, unsigned int which)
 
     if (s->at_pattern == 'a' || s->at_pattern == 'R') {
         if (H5Dclose(dummy_d) < 0) {
-            HDprintf("H5Dclose failed\n");
+            printf("H5Dclose failed\n");
             TEST_ERROR;
         }
     }
 
     if (H5Gclose(g) < 0) {
-        HDprintf("H5Gclose failed\n");
+        printf("H5Gclose failed\n");
         TEST_ERROR;
     }
 
     if (!s->old_style_grp && H5Pclose(gcpl) < 0) {
-        HDprintf("H5Pclose failed\n");
+        printf("H5Pclose failed\n");
         TEST_ERROR;
     }
 
@@ -1783,49 +1785,49 @@ create_group_id(state_t *s, unsigned int which, bool dense_to_compact)
     H5G_info_t group_info;
 
     if (which >= s->nsteps) {
-        HDprintf("Number of created groups is out of bounds\n");
+        printf("Number of created groups is out of bounds\n");
         TEST_ERROR;
     }
 
     gcpl = H5Pcreate(H5P_GROUP_CREATE);
     if (gcpl < 0) {
-        HDprintf("H5Pcreate failed\n");
+        printf("H5Pcreate failed\n");
         TEST_ERROR;
     }
 
     if (dense_to_compact) {
         if (H5Pset_link_phase_change(gcpl, 2, 2) < 0) {
-            HDprintf("H5Pset_link_phase_change failed for dense to compact.\n");
+            printf("H5Pset_link_phase_change failed for dense to compact.\n");
             TEST_ERROR;
         }
     }
     else {
         if (H5Pset_link_phase_change(gcpl, 1, 1) < 0) {
-            HDprintf("H5Pset_attr_phase_change failed for compact to dense.\n");
+            printf("H5Pset_attr_phase_change failed for compact to dense.\n");
             TEST_ERROR;
         }
     }
 
     esnprintf(name, sizeof(name), "/group-%u", which);
     if ((g = H5Gcreate2(s->file, name, H5P_DEFAULT, gcpl, H5P_DEFAULT)) < 0) {
-        HDprintf("H5Gcreate2 failed\n");
+        printf("H5Gcreate2 failed\n");
         TEST_ERROR;
     }
 
     if (H5Gget_info(g, &group_info) < 0) {
-        HDprintf("H5Gget_info failed\n");
+        printf("H5Gget_info failed\n");
         TEST_ERROR;
     }
 
     /* The storage type should always be compact when a group is created. */
     if (group_info.storage_type != H5G_STORAGE_TYPE_COMPACT) {
-        HDprintf("New-style group link storage test:. \n");
-        HDprintf("    still be compact after group creation. \n");
+        printf("New-style group link storage test:. \n");
+        printf("    still be compact after group creation. \n");
         TEST_ERROR;
     }
 
     if (H5Pclose(gcpl) < 0) {
-        HDprintf("H5Pclose failed\n");
+        printf("H5Pclose failed\n");
         TEST_ERROR;
     }
 
@@ -1862,7 +1864,7 @@ close_group_id(hid_t g)
 {
 
     if (H5Gclose(g) < 0) {
-        HDprintf("H5Gclose failed\n");
+        printf("H5Gclose failed\n");
         TEST_ERROR;
     }
 
@@ -1901,38 +1903,38 @@ create_group(state_t *s, unsigned int which)
     H5G_info_t group_info;
 
     if (which >= s->nsteps) {
-        HDprintf("Number of created groups is out of bounds\n");
+        printf("Number of created groups is out of bounds\n");
         TEST_ERROR;
     }
 
     esnprintf(name, sizeof(name), "/group-%u", which);
     if ((g = H5Gcreate2(s->file, name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
-        HDprintf("H5Gcreate2 failed\n");
+        printf("H5Gcreate2 failed\n");
         TEST_ERROR;
     }
 
     if (H5Gget_info(g, &group_info) < 0) {
-        HDprintf("H5Gget_info failed\n");
+        printf("H5Gget_info failed\n");
         TEST_ERROR;
     }
 
     if (s->old_style_grp) {
         if (group_info.storage_type != H5G_STORAGE_TYPE_SYMBOL_TABLE) {
-            HDprintf("Old-styled group test: but the group is not in old-style. \n");
+            printf("Old-styled group test: but the group is not in old-style. \n");
             TEST_ERROR;
         }
         dbgf(2, "Writer: group is created with the old-style.\n");
     }
     else {
         if (group_info.storage_type == H5G_STORAGE_TYPE_SYMBOL_TABLE) {
-            HDprintf("The created group should NOT be in old-style . \n");
+            printf("The created group should NOT be in old-style . \n");
             TEST_ERROR;
         }
         dbgf(2, "Writer: group is created with the new-style.\n");
     }
 
     if (H5Gclose(g) < 0) {
-        HDprintf("H5Gclose failed\n");
+        printf("H5Gclose failed\n");
         TEST_ERROR;
     }
 
@@ -1988,38 +1990,38 @@ delete_one_link(state_t *s, hid_t obj_id, const char *name, short link_storage, 
     H5G_info_t group_info;
 
     if (which >= s->nsteps) {
-        HDprintf("Number of created groups is out of bounds\n");
+        printf("Number of created groups is out of bounds\n");
         TEST_ERROR;
     }
 
     if (H5Ldelete(obj_id, name, H5P_DEFAULT) < 0) {
-        HDprintf("H5Ldelete failed\n");
+        printf("H5Ldelete failed\n");
         TEST_ERROR;
     }
 
     if (link_storage > 0) {
 
         if (s->old_style_grp) {
-            HDprintf("Old style group doesn't support the indexed storage.\n");
+            printf("Old style group doesn't support the indexed storage.\n");
             TEST_ERROR;
         }
 
         if (H5Gget_info(obj_id, &group_info) < 0) {
-            HDprintf("H5Gget_info failed\n");
+            printf("H5Gget_info failed\n");
             TEST_ERROR;
         }
 
         if (link_storage == 1) {
 
             if (group_info.storage_type != H5G_STORAGE_TYPE_COMPACT) {
-                HDprintf("The group link storage should be compact. \n");
+                printf("The group link storage should be compact. \n");
                 TEST_ERROR;
             }
         }
         else {
 
             if (group_info.storage_type != H5G_STORAGE_TYPE_DENSE) {
-                HDprintf("The group link storage should be dense. \n");
+                printf("The group link storage should be dense. \n");
                 TEST_ERROR;
             }
         }
@@ -2101,12 +2103,12 @@ move_one_group(state_t *s, hid_t obj_id, const char *name, const char *newname, 
 {
 
     if (which >= s->nsteps) {
-        HDprintf("Number of created groups is out of bounds\n");
+        printf("Number of created groups is out of bounds\n");
         TEST_ERROR;
     }
 
     if (H5Lmove(obj_id, name, obj_id, newname, H5P_DEFAULT, H5P_DEFAULT) < 0) {
-        HDprintf("H5Ldelete failed\n");
+        printf("H5Ldelete failed\n");
         TEST_ERROR;
     }
 
@@ -2198,7 +2200,7 @@ insert_one_link(state_t *s, hid_t obj_id, const char *name, const char *newname,
     H5G_info_t group_info;
 
     if (which >= s->nsteps) {
-        HDprintf("Number of created groups is out of bounds\n");
+        printf("Number of created groups is out of bounds\n");
         TEST_ERROR;
     }
 
@@ -2208,13 +2210,13 @@ insert_one_link(state_t *s, hid_t obj_id, const char *name, const char *newname,
     if (is_hard) {
         if (link_storage > 0) {
             if (H5Lcreate_hard(s->file, name, obj_id, newname, H5P_DEFAULT, H5P_DEFAULT) < 0) {
-                HDprintf("H5Lcreate_hard failed\n");
+                printf("H5Lcreate_hard failed\n");
                 TEST_ERROR;
             }
         }
         else {
             if (H5Lcreate_hard(obj_id, name, obj_id, newname, H5P_DEFAULT, H5P_DEFAULT) < 0) {
-                HDprintf("H5Lcreate_hard failed\n");
+                printf("H5Lcreate_hard failed\n");
                 TEST_ERROR;
             }
         }
@@ -2222,13 +2224,13 @@ insert_one_link(state_t *s, hid_t obj_id, const char *name, const char *newname,
     else {
         if (link_storage > 0) {
             if (H5Lcreate_soft("/", obj_id, newname, H5P_DEFAULT, H5P_DEFAULT) < 0) {
-                HDprintf("H5Lcreate_soft failed\n");
+                printf("H5Lcreate_soft failed\n");
                 TEST_ERROR;
             }
         }
         else {
             if (H5Lcreate_soft(name, obj_id, newname, H5P_DEFAULT, H5P_DEFAULT) < 0) {
-                HDprintf("H5Lcreate_soft failed.\n");
+                printf("H5Lcreate_soft failed.\n");
                 TEST_ERROR;
             }
         }
@@ -2237,24 +2239,24 @@ insert_one_link(state_t *s, hid_t obj_id, const char *name, const char *newname,
     if (link_storage > 0) {
 
         if (s->old_style_grp) {
-            HDprintf("Old style group doesn't support dense or compact storage.\n");
+            printf("Old style group doesn't support dense or compact storage.\n");
             TEST_ERROR;
         }
 
         if (H5Gget_info(obj_id, &group_info) < 0) {
-            HDprintf("H5Gget_info failed\n");
+            printf("H5Gget_info failed\n");
             TEST_ERROR;
         }
 
         if (link_storage == 1) {
             if (group_info.storage_type != H5G_STORAGE_TYPE_COMPACT) {
-                HDprintf("The group link storage should be compact. \n");
+                printf("The group link storage should be compact. \n");
                 TEST_ERROR;
             }
         }
         else {
             if (group_info.storage_type != H5G_STORAGE_TYPE_DENSE) {
-                HDprintf("The group link storage should be dense. \n");
+                printf("The group link storage should be dense. \n");
                 TEST_ERROR;
             }
         }
@@ -2378,7 +2380,7 @@ transit_storage_compact_to_dense(state_t *s, unsigned int which)
 
     hid_t g = create_group_id(s, which, false);
     if (g < 0) {
-        HDprintf("create_group_id failed\n");
+        printf("create_group_id failed\n");
         TEST_ERROR;
     }
 
@@ -2386,19 +2388,19 @@ transit_storage_compact_to_dense(state_t *s, unsigned int which)
     esnprintf(name, sizeof(name), "/group-%u", which);
     esnprintf(hd_name, sizeof(hd_name), "hd-group-%u", which);
     if (insert_one_link(s, g, name, hd_name, true, 1, which) == false) {
-        HDprintf("insert_one_link for compact storage failed\n");
+        printf("insert_one_link for compact storage failed\n");
         TEST_ERROR;
     }
 
     /* Then insert a soft link, the storage becomes dense. */
     esnprintf(st_name, sizeof(st_name), "st-group-%u", which);
     if (insert_one_link(s, g, name, st_name, false, 2, which) == false) {
-        HDprintf("insert_one_link for dense storage failed\n");
+        printf("insert_one_link for dense storage failed\n");
         TEST_ERROR;
     }
 
     if (close_group_id(g) == false) {
-        HDprintf("insert_one_link for dense storage failed\n");
+        printf("insert_one_link for dense storage failed\n");
         TEST_ERROR;
     }
 
@@ -2445,7 +2447,7 @@ transit_storage_dense_to_compact(state_t *s, unsigned int which)
 
     hid_t g = create_group_id(s, which, true);
     if (g < 0) {
-        HDprintf("create_group_id failed\n");
+        printf("create_group_id failed\n");
         TEST_ERROR;
     }
 
@@ -2453,38 +2455,38 @@ transit_storage_dense_to_compact(state_t *s, unsigned int which)
     esnprintf(name, sizeof(name), "/group-%u", which);
     esnprintf(hd_name, sizeof(hd_name), "hd-group-%u", which);
     if (insert_one_link(s, g, name, hd_name, true, 1, which) == false) {
-        HDprintf("insert_one_link for compact storage failed\n");
+        printf("insert_one_link for compact storage failed\n");
         TEST_ERROR;
     }
 
     /* Insert a link, storage is still compact. */
     esnprintf(st_name, sizeof(st_name), "st-group-%u", which);
     if (insert_one_link(s, g, name, st_name, false, 1, which) == false) {
-        HDprintf("insert_one_link for compact storage failed\n");
+        printf("insert_one_link for compact storage failed\n");
         TEST_ERROR;
     }
 
     /* Insert a link, storage becomes dense. */
     esnprintf(st2_name, sizeof(st2_name), "st2-group-%u", which);
     if (insert_one_link(s, g, name, st2_name, false, 2, which) == false) {
-        HDprintf("insert_one_link for dense storage failed\n");
+        printf("insert_one_link for dense storage failed\n");
         TEST_ERROR;
     }
 
     /* Delete a link, storage is still dense */
     if (delete_one_link(s, g, st_name, 2, which) == false) {
-        HDprintf("delete_one_link for dense storage failed\n");
+        printf("delete_one_link for dense storage failed\n");
         TEST_ERROR;
     }
 
     /* Delete another link, storage becomes compact */
     if (delete_one_link(s, g, st2_name, 1, which) == false) {
-        HDprintf("delete_one_link for compact storage failed\n");
+        printf("delete_one_link for compact storage failed\n");
         TEST_ERROR;
     }
 
     if (close_group_id(g) == false) {
-        HDprintf("insert_one_link for dense storage failed\n");
+        printf("insert_one_link for dense storage failed\n");
         TEST_ERROR;
     }
 
@@ -2629,7 +2631,7 @@ static unsigned int
 obtain_tree_level_elems(unsigned int total_ele, unsigned int level)
 {
 
-    HDassert(level <= total_ele);
+    assert(level <= total_ele);
 
     /* if every element is under the root, just return the total number of elements. */
     if (level == 0)
@@ -2690,7 +2692,7 @@ gen_tree_struct(state_t *s, unsigned int level, unsigned ne_per_level, hid_t pgr
 
             /* For each i a group is created.
                Use grp_counter to generate the group name.
-            HDprintf("id: %u,level: %u, index: %u\n",id,level,i);
+            printf("id: %u,level: %u, index: %u\n",id,level,i);
             */
             esnprintf(name, sizeof(name), "group-%u", grp_counter);
             if (grp_counter == s->nsteps)
@@ -2699,22 +2701,22 @@ gen_tree_struct(state_t *s, unsigned int level, unsigned ne_per_level, hid_t pgr
             dbgf(2, "writer in nested group: step %d\n", grp_counter);
             if (s->gperf) {
 
-                if (HDclock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
-                    HDfprintf(stderr, "HDclock_gettime failed");
+                if (clock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
+                    fprintf(stderr, "clock_gettime failed");
                     TEST_ERROR;
                 }
             }
 
             if ((grp_id = H5Gcreate2(pgrp_id, name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
-                HDprintf("H5Gcreate2 failed\n");
+                printf("H5Gcreate2 failed\n");
                 TEST_ERROR;
             }
 
             if (s->gperf) {
 
-                if (HDclock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
+                if (clock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
 
-                    HDfprintf(stderr, "HDclock_gettime failed");
+                    fprintf(stderr, "clock_gettime failed");
 
                     TEST_ERROR;
                 }
@@ -2730,20 +2732,20 @@ gen_tree_struct(state_t *s, unsigned int level, unsigned ne_per_level, hid_t pgr
             /* Just check the first group information. */
             if (grp_counter == 0) {
                 if (H5Gget_info(grp_id, &group_info) < 0) {
-                    HDprintf("H5Gget_info failed\n");
+                    printf("H5Gget_info failed\n");
                     TEST_ERROR;
                 }
 
                 if (s->old_style_grp) {
                     if (group_info.storage_type != H5G_STORAGE_TYPE_SYMBOL_TABLE) {
-                        HDprintf("Old-styled group test: but the group is not in old-style. \n");
+                        printf("Old-styled group test: but the group is not in old-style. \n");
                         TEST_ERROR;
                     }
                     dbgf(2, "Writer: group is created with the old-style.\n");
                 }
                 else {
                     if (group_info.storage_type == H5G_STORAGE_TYPE_SYMBOL_TABLE) {
-                        HDprintf("The created group should NOT be in old-style . \n");
+                        printf("The created group should NOT be in old-style . \n");
                         TEST_ERROR;
                     }
                     dbgf(2, "Writer: group is created with the new-style.\n");
@@ -2755,7 +2757,7 @@ gen_tree_struct(state_t *s, unsigned int level, unsigned ne_per_level, hid_t pgr
                 result = add_default_group_attr(s, grp_id, grp_counter);
 
             if (result == false) {
-                HDprintf("Cannot create group attributes. \n");
+                printf("Cannot create group attributes. \n");
                 TEST_ERROR;
             }
             grp_counter++;
@@ -2763,13 +2765,13 @@ gen_tree_struct(state_t *s, unsigned int level, unsigned ne_per_level, hid_t pgr
             /* Generate groups in the next level */
             result = gen_tree_struct(s, level - 1, ne_per_level, grp_id);
             if (result == false) {
-                HDprintf("Cannot create nested groups. \n");
+                printf("Cannot create nested groups. \n");
                 TEST_ERROR;
             }
 
             /*  close the group ID. No problem. */
             if (H5Gclose(grp_id) < 0) {
-                HDprintf("H5Gclose failed. \n");
+                printf("H5Gclose failed. \n");
                 TEST_ERROR;
             }
         }
@@ -2801,33 +2803,33 @@ main(int argc, char **argv)
     struct timespec        start_time, end_time;
     unsigned int           num_elems_per_level = 0;
 
-    if (NULL == (s = HDcalloc(1, sizeof(state_t)))) {
-        HDprintf("memory allocation failed");
+    if (NULL == (s = calloc(1, sizeof(state_t)))) {
+        printf("memory allocation failed");
         TEST_ERROR;
     }
-    if (NULL == (config = HDcalloc(1, sizeof(H5F_vfd_swmr_config_t)))) {
-        HDprintf("memory allocation failed");
+    if (NULL == (config = calloc(1, sizeof(H5F_vfd_swmr_config_t)))) {
+        printf("memory allocation failed");
         TEST_ERROR;
     }
 
     if (!state_init(s, argc, argv)) {
-        HDprintf("state_init failed\n");
+        printf("state_init failed\n");
         TEST_ERROR;
     }
 
-    personality = HDstrstr(s->progname, "vfd_swmr_gperf_");
+    personality = strstr(s->progname, "vfd_swmr_gperf_");
 
-    if (personality != NULL && HDstrcmp(personality, "vfd_swmr_gperf_writer") == 0)
+    if (personality != NULL && strcmp(personality, "vfd_swmr_gperf_writer") == 0)
         writer = true;
-    else if (personality != NULL && HDstrcmp(personality, "vfd_swmr_gperf_reader") == 0)
+    else if (personality != NULL && strcmp(personality, "vfd_swmr_gperf_reader") == 0)
         writer = false;
     else {
-        HDprintf("unknown personality, expected vfd_swmr_gperf_{reader,writer}\n");
+        printf("unknown personality, expected vfd_swmr_gperf_{reader,writer}\n");
         TEST_ERROR;
     }
 
     if (writer == false) {
-        HDprintf("Reader is skipped for the performance tests.\n");
+        printf("Reader is skipped for the performance tests.\n");
         return EXIT_SUCCESS;
     }
 
@@ -2847,27 +2849,27 @@ main(int argc, char **argv)
      * should be used as the second parameter of H5Pset_libver_bound().
      * Also pass the use_vfd_swmr, only_meta_page, page buffer size, config to vfd_swmr_create_fapl().*/
     if ((fapl = vfd_swmr_create_fapl(!s->old_style_grp, s->use_vfd_swmr, true, s->pbs, config)) < 0) {
-        HDprintf("vfd_swmr_create_fapl failed\n");
+        printf("vfd_swmr_create_fapl failed\n");
         TEST_ERROR;
     }
 
     /* Set fs_strategy (file space strategy) and fs_page_size (file space page size) */
     if ((fcpl = vfd_swmr_create_fcpl(H5F_FSPACE_STRATEGY_PAGE, s->ps)) < 0) {
-        HDprintf("vfd_swmr_create_fcpl() failed");
+        printf("vfd_swmr_create_fcpl() failed");
         TEST_ERROR;
     }
 
     if (s->nglevels > 0) {
         if (s->grp_op_pattern != ' ' || s->at_pattern != ' ') {
-            HDprintf("For nested group creation test, only the default option is supported.\n");
-            HDprintf("Please re-run the tests with the appropriate option.\n");
+            printf("For nested group creation test, only the default option is supported.\n");
+            printf("Please re-run the tests with the appropriate option.\n");
             TEST_ERROR;
         }
     }
 
     if (s->gperf) {
-        if (HDclock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
-            HDfprintf(stderr, "HDclock_gettime failed");
+        if (clock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
+            fprintf(stderr, "clock_gettime failed");
             TEST_ERROR;
         }
     }
@@ -2875,8 +2877,8 @@ main(int argc, char **argv)
     s->file = H5Fcreate(s->filename, H5F_ACC_TRUNC, fcpl, fapl);
 
     if (s->gperf) {
-        if (HDclock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
-            HDfprintf(stderr, "HDclock_gettime failed");
+        if (clock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
+            fprintf(stderr, "clock_gettime failed");
             TEST_ERROR;
         }
 
@@ -2884,7 +2886,7 @@ main(int argc, char **argv)
     }
 
     if (s->file < 0) {
-        HDprintf("H5Fcreate failed\n");
+        printf("H5Fcreate failed\n");
         TEST_ERROR;
     }
 
@@ -2894,8 +2896,8 @@ main(int argc, char **argv)
         num_elems_per_level = obtain_tree_level_elems(s->nsteps, s->nglevels);
 
     if (s->gperf) {
-        if (HDclock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
-            HDfprintf(stderr, "HDclock_gettime failed");
+        if (clock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
+            fprintf(stderr, "clock_gettime failed");
             TEST_ERROR;
         }
     }
@@ -2905,7 +2907,7 @@ main(int argc, char **argv)
         /* for the recursive call, the groups under the root is treated as one level */
         wg_ret = gen_tree_struct(s, s->nglevels + 1, num_elems_per_level, s->file);
         if (wg_ret == false) {
-            HDprintf("write nested group failed at group counter  %u\n", grp_counter);
+            printf("write nested group failed at group counter  %u\n", grp_counter);
             TEST_ERROR;
         }
     }
@@ -2914,15 +2916,15 @@ main(int argc, char **argv)
             dbgf(2, "writer: step %d\n", step);
             wg_ret = group_operations(s, step);
             if (wg_ret == false) {
-                HDprintf("write_group failed at step %d\n", step);
+                printf("write_group failed at step %d\n", step);
                 TEST_ERROR;
             }
         }
     }
 
     if (s->gperf) {
-        if (HDclock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
-            HDfprintf(stderr, "HDclock_gettime failed");
+        if (clock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
+            fprintf(stderr, "clock_gettime failed");
             TEST_ERROR;
         }
 
@@ -2932,35 +2934,35 @@ main(int argc, char **argv)
     }
 
     if (H5Pclose(fapl) < 0) {
-        HDprintf("H5Pclose failed\n");
+        printf("H5Pclose failed\n");
         TEST_ERROR;
     }
 
     if (H5Pclose(fcpl) < 0) {
-        HDprintf("H5Pclose failed\n");
+        printf("H5Pclose failed\n");
         TEST_ERROR;
     }
 
     if (H5Sclose(s->one_by_one_sid) < 0) {
-        HDprintf("H5Sclose failed\n");
+        printf("H5Sclose failed\n");
         TEST_ERROR;
     }
 
     if (s->gperf) {
-        if (HDclock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
-            HDfprintf(stderr, "HDclock_gettime failed");
+        if (clock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
+            fprintf(stderr, "clock_gettime failed");
             TEST_ERROR;
         }
     }
 
     if (H5Fclose(s->file) < 0) {
-        HDprintf("H5Fclose failed\n");
+        printf("H5Fclose failed\n");
         TEST_ERROR;
     }
 
     if (s->gperf) {
-        if (HDclock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
-            HDfprintf(stderr, "HDclock_gettime failed");
+        if (clock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
+            fprintf(stderr, "clock_gettime failed");
             TEST_ERROR;
         }
 
@@ -2971,53 +2973,53 @@ main(int argc, char **argv)
     if (s->gperf) {
 
         if (verbosity != 0) {
-            HDfprintf(stdout, "\nPerformance Test Configuration: ");
+            fprintf(stdout, "\nPerformance Test Configuration: ");
             if (s->use_vfd_swmr)
-                HDfprintf(stdout, " Using VFD SWMR \n");
+                fprintf(stdout, " Using VFD SWMR \n");
             else
-                HDfprintf(stdout, " Not using VFD SWMR \n");
+                fprintf(stdout, " Not using VFD SWMR \n");
 
             if (s->old_style_grp)
-                HDfprintf(stdout, " Groups: Created via the earliest file format(old-style) \n");
+                fprintf(stdout, " Groups: Created via the earliest file format(old-style) \n");
             else
-                HDfprintf(stdout, " Groups: Created via the latest file format(new-style) \n");
+                fprintf(stdout, " Groups: Created via the latest file format(new-style) \n");
 
-            HDfprintf(stdout, "\n");
+            fprintf(stdout, "\n");
 
-            HDfprintf(stdout, "The length of a tick              = %u\n", s->tick_len);
-            HDfprintf(stdout, "The maximum expected lag(in ticks)= %u\n", s->max_lag);
-            HDfprintf(stdout, "The page size(in bytes)           = %u\n", s->ps);
-            HDfprintf(stdout, "The page buffer size(in bytes)    = %u\n", s->pbs);
-            HDfprintf(stdout, "\n");
-            HDfprintf(stdout, "Number of groups                  = %u\n", s->nsteps);
-            HDfprintf(stdout, "Group Nested levels               = %u\n", s->nglevels);
-            HDfprintf(stdout, "Number of attributes              = %u\n", s->num_attrs);
-            HDfprintf(stdout, "Number of element per attribute   = 1\n");
+            fprintf(stdout, "The length of a tick              = %u\n", s->tick_len);
+            fprintf(stdout, "The maximum expected lag(in ticks)= %u\n", s->max_lag);
+            fprintf(stdout, "The page size(in bytes)           = %u\n", s->ps);
+            fprintf(stdout, "The page buffer size(in bytes)    = %u\n", s->pbs);
+            fprintf(stdout, "\n");
+            fprintf(stdout, "Number of groups                  = %u\n", s->nsteps);
+            fprintf(stdout, "Group Nested levels               = %u\n", s->nglevels);
+            fprintf(stdout, "Number of attributes              = %u\n", s->num_attrs);
+            fprintf(stdout, "Number of element per attribute   = 1\n");
             if (s->vlstr_test)
-                HDfprintf(stdout, "Attribute datatype is variable length string. \n");
+                fprintf(stdout, "Attribute datatype is variable length string. \n");
             else if (s->filetype == H5T_STD_U32BE)
-                HDfprintf(stdout, "Attribute datatype is big-endian unsigned 32-bit integer.\n");
+                fprintf(stdout, "Attribute datatype is big-endian unsigned 32-bit integer.\n");
             else
-                HDfprintf(stdout, "Attribute datatype is native unsigned 32-bit integer.\n");
+                fprintf(stdout, "Attribute datatype is native unsigned 32-bit integer.\n");
 
-            HDfprintf(stdout, "\n");
-            HDfprintf(stdout,
+            fprintf(stdout, "\n");
+            fprintf(stdout,
                       "(If the nested level is 0, all the groups are created directly under the root.)\n\n");
-            HDfprintf(stdout, "group creation maximum time                       =%lf\n", s->max_gc_time);
-            HDfprintf(stdout, "group creation minimum time                       =%lf\n", s->min_gc_time);
+            fprintf(stdout, "group creation maximum time                       =%lf\n", s->max_gc_time);
+            fprintf(stdout, "group creation minimum time                       =%lf\n", s->min_gc_time);
         }
 
-        HDfprintf(stdout, "group creation total time                           = %lf\n", s->total_gc_time);
-        HDfprintf(stdout, "group creation mean time(per group)                 = %lf\n", s->mean_gc_time);
-        HDfprintf(stdout, "group creation and attributes generation total time = %lf\n", s->total_time);
-        HDfprintf(stdout, "group creation and attributes generation mean time(per group) = %lf\n",
+        fprintf(stdout, "group creation total time                           = %lf\n", s->total_gc_time);
+        fprintf(stdout, "group creation mean time(per group)                 = %lf\n", s->mean_gc_time);
+        fprintf(stdout, "group creation and attributes generation total time = %lf\n", s->total_time);
+        fprintf(stdout, "group creation and attributes generation mean time(per group) = %lf\n",
                   s->mean_time);
-        HDfprintf(stdout, "H5Fcreate time = %lf\n", s->fo_total_time);
-        HDfprintf(stdout, "H5Fclose time  = %lf\n", s->fc_total_time);
+        fprintf(stdout, "H5Fcreate time = %lf\n", s->fo_total_time);
+        fprintf(stdout, "H5Fclose time  = %lf\n", s->fc_total_time);
     }
 
-    HDfree(config);
-    HDfree(s);
+    free(config);
+    free(s);
 
     return EXIT_SUCCESS;
 
@@ -3031,8 +3033,8 @@ error:
     }
     H5E_END_TRY;
 
-    HDfree(config);
-    HDfree(s);
+    free(config);
+    free(s);
 
     return EXIT_FAILURE;
 }
@@ -3042,7 +3044,7 @@ error:
 int
 main(void)
 {
-    HDfprintf(stderr, "Non-POSIX platform. Skipping.\n");
+    fprintf(stderr, "Non-POSIX platform. Skipping.\n");
     return EXIT_SUCCESS;
 } /* end main() */
 

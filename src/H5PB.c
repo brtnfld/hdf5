@@ -125,6 +125,8 @@ typedef struct {
 static herr_t H5PB__insert_entry(H5PB_t *page_buf, H5PB_entry_t *page_entry);
 static htri_t H5PB__make_space(H5F_shared_t *f_sh, H5PB_t *page_buf, H5FD_mem_t inserted_type);
 static herr_t H5PB__write_entry(H5F_shared_t *f_sh, H5PB_entry_t *page_entry);
+static herr_t H5PB__vfd_swmr_track_write(H5F_shared_t *f_sh, H5PB_t *page_buf, H5PB_entry_t *entry_ptr,
+                                         H5FD_mem_t type);
 
 /*********************/
 /* Package Variables */
@@ -307,6 +309,17 @@ H5PB_create(H5F_shared_t *f_sh, size_t size, unsigned page_buf_min_meta_perc, un
     page_buf->min_meta_perc = page_buf_min_meta_perc;
     page_buf->min_raw_perc  = page_buf_min_raw_perc;
 
+    /* Derive VFD SWMR status directly from the (already-ingested) FAPL
+     * config rather than from shared->vfd_swmr/vfd_swmr_writer: the page
+     * buffer is created before H5F_vfd_swmr_init() runs (which is what
+     * actually sets those two fields), so they aren't set yet at this
+     * point in the open sequence.
+     */
+    if (H5F_SHARED_VFD_SWMR_CONFIG(f_sh)) {
+        page_buf->vfd_swmr        = true;
+        page_buf->vfd_swmr_writer = (H5F_SHARED_INTENT(f_sh) & H5F_ACC_RDWR) ? true : false;
+    }
+
     /* Calculate the minimum page count for metadata and raw data
      * based on the fractions provided
      */
@@ -424,9 +437,17 @@ H5PB__dest_cb(void *item, void H5_ATTR_UNUSED *key, void *_op_data)
     assert(op_data);
     assert(op_data->page_buf);
 
-    /* Remove entry from LRU list */
+    /* Remove entry from LRU list.  Under VFD SWMR, an entry awaiting a
+     * delayed write was already pulled off the LRU by
+     * H5PB__vfd_swmr_track_write() -- its next/prev pointers are threaded
+     * onto the delayed-write list instead, so running it through
+     * H5PB__REMOVE_LRU() here would corrupt that list.  We are about to
+     * tear down the whole page buffer anyway, so it is safe to simply skip
+     * the (already-done) LRU unlink for such entries.
+     */
     if (op_data->actual_slist) {
-        H5PB__REMOVE_LRU(op_data->page_buf, page_entry)
+        if (0 == page_entry->delay_write_until)
+            H5PB__REMOVE_LRU(op_data->page_buf, page_entry)
         page_entry->page_buf_ptr = H5FL_FAC_FREE(op_data->page_buf->page_fac, page_entry->page_buf_ptr);
     } /* end if */
 
@@ -530,6 +551,7 @@ H5PB_add_new_page(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t page_addr)
         page_entry->addr     = page_addr;
         page_entry->type     = (H5F_mem_page_t)type;
         page_entry->is_dirty = false;
+        page_entry->size     = page_buf->page_size;
 
         /* Insert entry in skip list */
         if (H5SL_insert(page_buf->mf_slist_ptr, page_entry, &(page_entry->addr)) < 0)
@@ -581,8 +603,12 @@ H5PB_update_entry(H5PB_t *page_buf, haddr_t addr, size_t size, const void *buf)
         offset = addr - page_addr;
         H5MM_memcpy((uint8_t *)page_entry->page_buf_ptr + offset, buf, size);
 
-        /* move to top of LRU list */
-        H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
+        /* move to top of LRU list, unless VFD SWMR write tracking has
+         * already pulled this entry off the LRU for the duration of the
+         * current tick (see H5PB__vfd_swmr_track_write())
+         */
+        if (!page_entry->modified_this_tick)
+            H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
     } /* end if */
 
     FUNC_LEAVE_NOAPI(SUCCEED)
@@ -786,8 +812,13 @@ H5PB_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, void *
                         H5MM_memcpy(buf, (uint8_t *)page_entry->page_buf_ptr + offset,
                                     page_buf->page_size - (size_t)offset);
 
-                        /* move to top of LRU list */
-                        H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
+                        /* move to top of LRU list, unless VFD SWMR write
+                         * tracking has already pulled this entry off the
+                         * LRU for the duration of the current tick (see
+                         * H5PB__vfd_swmr_track_write())
+                         */
+                        if (!page_entry->modified_this_tick)
+                            H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
                     } /* end if */
                     /* special handling for the last page if it is not a full page access */
                     else if (num_touched_pages > 1 && i == num_touched_pages - 1 &&
@@ -798,8 +829,12 @@ H5PB_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, void *
                         H5MM_memcpy((uint8_t *)buf + offset, page_entry->page_buf_ptr,
                                     (size_t)((addr + size) - last_page_addr));
 
-                        /* move to top of LRU list */
-                        H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
+                        /* move to top of LRU list, unless VFD SWMR write
+                         * tracking has already pulled this entry off the
+                         * LRU for the duration of the current tick
+                         */
+                        if (!page_entry->modified_this_tick)
+                            H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
                     } /* end else-if */
                     /* copy the entire fully accessed pages */
                     else {
@@ -846,8 +881,12 @@ H5PB_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, void *
                 H5MM_memcpy((uint8_t *)buf + buf_offset, (uint8_t *)page_entry->page_buf_ptr + offset,
                             access_size);
 
-                /* Update LRU */
-                H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
+                /* Update LRU, unless VFD SWMR write tracking has already
+                 * pulled this entry off the LRU for the duration of the
+                 * current tick (see H5PB__vfd_swmr_track_write())
+                 */
+                if (!page_entry->modified_this_tick)
+                    H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
 
                 /* Update statistics */
                 if (type == H5FD_MEM_DRAW)
@@ -927,6 +966,7 @@ H5PB_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, void *
                 page_entry->addr         = search_addr;
                 page_entry->type         = (H5F_mem_page_t)type;
                 page_entry->is_dirty     = false;
+                page_entry->size         = page_buf->page_size;
 
                 /* Insert page into PB */
                 if (H5PB__insert_entry(page_buf, page_entry) < 0)
@@ -944,6 +984,80 @@ H5PB_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, void *
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PB_read() */
+
+/*-------------------------------------------------------------------------
+ * Function:    H5PB__vfd_swmr_track_write
+ *
+ * Purpose:     Called whenever a metadata page-buffer entry is marked
+ *              dirty, when this is the VFD SWMR writer.  Raw data is
+ *              excluded: VFD SWMR only tracks metadata pages, since only
+ *              metadata is published through the shadow file index.
+ *
+ *              1) Force the page buffer to retain the entry until the end
+ *                 of the tick: add it to the tick list if not already
+ *                 present.  H5PB_vfd_swmr__update_index() walks this list
+ *                 at end-of-tick to update the shadow index.
+ *
+ *              2) If the entry has pre-existing on-disk content (loaded
+ *                 from disk, or previously published) and isn't already
+ *                 on the delayed write list, ask whether the write must
+ *                 be delayed to avoid a "message from the future" bug on
+ *                 a lagging VFD SWMR reader.  If so, move the entry from
+ *                 the LRU (not eligible for eviction while delayed) onto
+ *                 the delayed write list.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5PB__vfd_swmr_track_write(H5F_shared_t *f_sh, H5PB_t *page_buf, H5PB_entry_t *entry_ptr, H5FD_mem_t type)
+{
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    assert(f_sh);
+    assert(page_buf);
+    assert(entry_ptr);
+
+    if (!page_buf->vfd_swmr_writer || type == H5FD_MEM_DRAW)
+        HGOTO_DONE(SUCCEED);
+
+    if (!entry_ptr->modified_this_tick) {
+        entry_ptr->modified_this_tick = true;
+        H5PB__INSERT_IN_TL(page_buf, entry_ptr, FAIL)
+
+        /* An entry on the tick list must survive, with a valid image, until
+         * H5PB_vfd_swmr__update_index() reads it at the end of the tick.
+         * Pull it off the LRU so H5PB__make_space() cannot evict (and free)
+         * it out from under the tick list in the meantime; it is returned
+         * to the LRU in H5PB_vfd_swmr__release_tick_list(), unless it is
+         * also on the delayed write list, in which case
+         * H5PB_vfd_swmr__release_delayed_writes() returns it later.
+         */
+        H5PB__REMOVE_LRU(page_buf, entry_ptr)
+    }
+
+    if (entry_ptr->loaded && entry_ptr->delay_write_until == 0) {
+        uint64_t page = entry_ptr->addr / page_buf->page_size;
+
+        if (H5F_vfd_swmr_writer_delay_write(f_sh, page, &entry_ptr->delay_write_until) < 0)
+            HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "get delayed write request failed");
+
+        if (entry_ptr->delay_write_until > 0) {
+            /* Already off the LRU: either just pulled off above (first
+             * write to this entry in the current tick), or pulled off by
+             * an earlier write in this same tick and not yet returned
+             * (release happens only at end of tick).
+             */
+            H5PB__INSERT_IN_DWL(page_buf, entry_ptr, FAIL)
+        }
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5PB__vfd_swmr_track_write() */
 
 /*-------------------------------------------------------------------------
  * Function:    H5PB_write
@@ -1154,9 +1268,18 @@ H5PB_write(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, const
                 H5MM_memcpy((uint8_t *)page_entry->page_buf_ptr + offset, (const uint8_t *)buf + buf_offset,
                             access_size);
 
-                /* Mark page dirty and push to top of LRU */
+                /* Mark page dirty and push to top of LRU, unless VFD SWMR
+                 * write tracking already pulled this entry off the LRU
+                 * earlier in the current tick (see
+                 * H5PB__vfd_swmr_track_write(), called just below) -- in
+                 * that case it stays off the LRU until the tick ends.
+                 */
                 page_entry->is_dirty = true;
-                H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
+                if (!page_entry->modified_this_tick)
+                    H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
+
+                if (H5PB__vfd_swmr_track_write(f_sh, page_buf, page_entry, type) < 0)
+                    HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "VFD SWMR write tracking failed");
 
                 /* Update statistics */
                 if (type == H5FD_MEM_DRAW || type == H5FD_MEM_GHEAP)
@@ -1237,6 +1360,14 @@ H5PB_write(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, const
                     page_entry->page_buf_ptr = new_page_buf;
                     page_entry->addr         = search_addr;
                     page_entry->type         = (H5F_mem_page_t)type;
+                    /* The in-memory image is always a full page (the factory
+                     * allocator above hands out page_buf->page_size chunks,
+                     * zero-padded past whatever is actually read from disk
+                     * below), and that is what gets published to the VFD SWMR
+                     * shadow file, so record the full page size here rather
+                     * than the EOA-clipped read size computed below.
+                     */
+                    page_entry->size = page_buf->page_size;
 
                     /* Retrieve the 'eoa' for the file */
                     if (HADDR_UNDEF == (eoa = H5F_shared_get_eoa(f_sh, type)))
@@ -1259,6 +1390,15 @@ H5PB_write(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, const
                     if (search_addr + page_size > eoa)
                         page_size = (size_t)(eoa - search_addr);
 
+                    /* Pre-existing on-disk content: a VFD SWMR writer must
+                     * consider delaying overwrites of this page (see
+                     * H5PB__vfd_swmr_track_write() below).  A page entirely
+                     * beyond the old EOF has no prior version any reader
+                     * could be depending on, so it is always safe to write
+                     * immediately.
+                     */
+                    page_entry->loaded = (search_addr < eof);
+
                     if (search_addr < eof) {
                         if (H5FD_read(file, type, search_addr, page_size, new_page_buf) < 0)
                             HGOTO_ERROR(H5E_PAGEBUF, H5E_READERROR, FAIL, "driver read request failed");
@@ -1280,6 +1420,9 @@ H5PB_write(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, const
                 /* Insert page into PB, evicting other pages as necessary */
                 if (H5PB__insert_entry(page_buf, page_entry) < 0)
                     HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTSET, FAIL, "error inserting new page in page buffer");
+
+                if (H5PB__vfd_swmr_track_write(f_sh, page_buf, page_entry, type) < 0)
+                    HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "VFD SWMR write tracking failed");
             } /* end else */
         }     /* end for */
     }         /* end else */
@@ -1432,6 +1575,15 @@ H5PB__make_space(H5F_shared_t *f_sh, H5PB_t *page_buf, H5FD_mem_t inserted_type)
     /* Get oldest entry */
     page_entry = page_buf->LRU_tail_ptr;
 
+    /* Under VFD SWMR, entries awaiting a delayed write are pulled off the
+     * LRU (see H5PB__vfd_swmr_track_write()) even though they still count
+     * against the page buffer's size limits.  If every resident page is
+     * currently delayed, the LRU can be empty even though the page buffer
+     * is "full", and there is nothing here that can be evicted.
+     */
+    if (NULL == page_entry)
+        HGOTO_DONE(false);
+
     if (H5FD_MEM_DRAW == inserted_type) {
         /* If threshould is 100% metadata and page buffer is full of
            metadata, then we can't make space for raw data */
@@ -1562,33 +1714,318 @@ done:
  *-------------------------------------------------------------------------
  */
 
+/*-------------------------------------------------------------------------
+ * Function:    H5PB_vfd_swmr__release_delayed_writes
+ *
+ * Purpose:     After the tick list has been released, and before the
+ *              beginning of the next tick, scan the delayed write list
+ *              and release those entries whose delays have expired,
+ *              returning them to the replacement policy.
+ *
+ *              Since the delayed write list is sorted in decreasing
+ *              delay_write_until order, scan starts at the tail and
+ *              continues while expired entries remain.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ *-------------------------------------------------------------------------
+ */
 herr_t
-H5PB_vfd_swmr__release_delayed_writes(H5F_shared_t H5_ATTR_UNUSED *f_sh)
+H5PB_vfd_swmr__release_delayed_writes(H5F_shared_t *shared)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOERR
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    H5PB_t       *page_buf  = NULL;
+    H5PB_entry_t *entry_ptr = NULL;
+    herr_t        ret_value = SUCCEED;
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    assert(shared);
+    assert(shared->vfd_swmr);
+    assert(shared->vfd_swmr_writer);
+
+    page_buf = shared->page_buf;
+    assert(page_buf);
+    assert(page_buf->vfd_swmr_writer);
+
+    while (page_buf->dwl_tail_ptr && page_buf->dwl_tail_ptr->delay_write_until <= shared->tick_num) {
+
+        entry_ptr = page_buf->dwl_tail_ptr;
+
+        assert(entry_ptr->is_dirty);
+        assert(!entry_ptr->is_mpmde); /* multi-page metadata entries: not yet supported */
+
+        entry_ptr->delay_write_until = 0;
+
+        H5PB__REMOVE_FROM_DWL(page_buf, entry_ptr, FAIL)
+
+        /* return the entry to the replacement policy */
+        H5PB__INSERT_LRU(page_buf, entry_ptr)
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* H5PB_vfd_swmr__release_delayed_writes() */
 
+/*-------------------------------------------------------------------------
+ * Function:    H5PB_vfd_swmr__release_tick_list
+ *
+ * Purpose:     After the metadata file has been updated, and before the
+ *              beginning of the next tick, release the tick list.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ *-------------------------------------------------------------------------
+ */
 herr_t
-H5PB_vfd_swmr__release_tick_list(H5F_shared_t H5_ATTR_UNUSED *f_sh)
+H5PB_vfd_swmr__release_tick_list(H5F_shared_t *shared)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOERR
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    H5PB_t       *page_buf  = NULL;
+    H5PB_entry_t *entry_ptr = NULL;
+    herr_t        ret_value = SUCCEED;
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    assert(shared);
+    assert(shared->vfd_swmr);
+    assert(shared->vfd_swmr_writer);
+
+    page_buf = shared->page_buf;
+    assert(page_buf);
+    assert(page_buf->vfd_swmr_writer);
+
+    /* remove all entries from the tick list */
+    while (page_buf->tl_head_ptr) {
+
+        entry_ptr = page_buf->tl_head_ptr;
+
+        H5PB__REMOVE_FROM_TL(page_buf, entry_ptr, FAIL)
+
+        entry_ptr->modified_this_tick = false;
+
+        /* Multi-page metadata entries aren't yet supported by the
+         * skip-list page buffer.
+         */
+        assert(!entry_ptr->is_mpmde);
+
+        /* H5PB__vfd_swmr_track_write() pulled this entry off the LRU for
+         * the duration of the tick (see comment there).  Return it now,
+         * unless it is instead on the delayed write list, in which case
+         * H5PB_vfd_swmr__release_delayed_writes() will return it once its
+         * delay has expired.
+         */
+        if (0 == entry_ptr->delay_write_until)
+            H5PB__INSERT_LRU(page_buf, entry_ptr)
+    }
+
+    assert(page_buf->tl_head_ptr == NULL);
+    assert(page_buf->tl_tail_ptr == NULL);
+    assert(page_buf->tl_len == 0);
+    assert(page_buf->tl_size == 0);
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* H5PB_vfd_swmr__release_tick_list() */
 
+/*-------------------------------------------------------------------------
+ * Function:    H5PB_vfd_swmr__set_tick
+ *
+ * Purpose:     At the beginning of each tick, synchronize the page
+ *              buffer's copy of the current tick with that of the file
+ *              to which the page buffer belongs.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ *-------------------------------------------------------------------------
+ */
 herr_t
-H5PB_vfd_swmr__set_tick(H5F_shared_t H5_ATTR_UNUSED *f_sh)
+H5PB_vfd_swmr__set_tick(H5F_shared_t *shared)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOERR
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    H5PB_t *page_buf  = NULL;
+    herr_t  ret_value = SUCCEED;
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    assert(shared);
+    assert(shared->vfd_swmr);
+    assert(shared->vfd_swmr_writer);
+
+    page_buf = shared->page_buf;
+    assert(page_buf);
+    assert(page_buf->vfd_swmr_writer);
+
+    /* the tick must always increase by 1 -- verify this */
+    if (shared->tick_num != page_buf->cur_tick + 1)
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL,
+                    "shared->tick_num (%" PRIu64 ") != (%" PRIu64 ") page_buf->cur_tick + 1 ?!?!",
+                    shared->tick_num, page_buf->cur_tick);
+
+    page_buf->cur_tick = shared->tick_num;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* H5PB_vfd_swmr__set_tick() */
 
+/*-------------------------------------------------------------------------
+ * Function:    H5PB_vfd_swmr__update_index
+ *
+ * Purpose:     In the VFD SWMR writer, all metadata writes to the page
+ *              buffer during a tick are buffered in the page buffer's
+ *              tick list.  The metadata cache is flushed to the page
+ *              buffer at the end of the tick so that all metadata
+ *              changes during the tick are reflected there.
+ *
+ *              Once this is done, the internal representation of the
+ *              metadata file index must be updated from the tick list so
+ *              that the metadata file can be updated, and the tick list
+ *              can be emptied and prepared to buffer metadata changes in
+ *              the next tick.  Specifically:
+ *
+ *              1) Scan the tick list.  For each entry, test whether it
+ *                 appears in the index.  If it does, update the index
+ *                 entry (image pointer, tick of last change, dirty
+ *                 state).  If it doesn't, allocate a new index entry.
+ *
+ *              2) Scan the index for entries that don't appear in the
+ *                 tick list.  For each such entry, if it's dirty and
+ *                 either doesn't appear in the page buffer, or is clean
+ *                 there, mark it clean and flushed this tick.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ *-------------------------------------------------------------------------
+ */
 herr_t
-H5PB_vfd_swmr__update_index(H5F_t H5_ATTR_UNUSED *f, uint32_t H5_ATTR_UNUSED *idx_ent_added_ptr,
-                            uint32_t H5_ATTR_UNUSED *idx_ent_modified_ptr,
-                            uint32_t H5_ATTR_UNUSED *idx_ent_not_in_tl_ptr,
-                            uint32_t H5_ATTR_UNUSED *idx_ent_not_in_tl_flushed_ptr)
+H5PB_vfd_swmr__update_index(H5F_t *f, uint32_t *idx_ent_added_ptr, uint32_t *idx_ent_modified_ptr,
+                            uint32_t *idx_ent_not_in_tl_ptr, uint32_t *idx_ent_not_in_tl_flushed_ptr)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOERR
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    H5F_shared_t *const        shared   = f->shared;
+    const uint64_t             tick_num = shared->tick_num;
+    uint32_t                   i;
+    uint32_t                   idx_ent_added             = 0;
+    uint32_t                   idx_ent_modified          = 0;
+    uint32_t                   idx_ent_not_in_tl         = 0;
+    uint32_t                   idx_ent_not_in_tl_flushed = 0;
+    H5PB_t                    *page_buf                  = NULL;
+    H5PB_entry_t              *entry;
+    H5FD_vfd_swmr_idx_entry_t *ie_ptr    = NULL;
+    H5FD_vfd_swmr_idx_entry_t *idx       = NULL;
+    herr_t                     ret_value = SUCCEED;
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    assert(shared->vfd_swmr);
+    assert(shared->vfd_swmr_writer);
+
+    idx = shared->mdf_idx;
+    assert(idx);
+
+    page_buf = shared->page_buf;
+    assert(page_buf);
+    assert(page_buf->vfd_swmr_writer);
+
+    assert(idx_ent_added_ptr);
+    assert(idx_ent_modified_ptr);
+    assert(idx_ent_not_in_tl_ptr);
+    assert(idx_ent_not_in_tl_flushed_ptr);
+
+    /* scan the tick list and insert or update metadata file index entries
+     * as appropriate.
+     */
+    for (entry = page_buf->tl_head_ptr; entry != NULL; entry = entry->tl_next) {
+        uint64_t target_page = entry->addr / page_buf->page_size;
+
+        assert(entry->magic == H5PB__H5PB_ENTRY_T_MAGIC);
+
+        /* see if the shadow index already contains an entry for *entry. */
+        ie_ptr =
+            H5FD_vfd_swmr_pageno_to_mdf_idx_entry(idx, shared->mdf_idx_entries_used, target_page, false);
+
+        if (ie_ptr == NULL) { /* alloc new entry in the metadata file index */
+            uint32_t new_index_entry_index;
+
+            new_index_entry_index = shared->mdf_idx_entries_used + idx_ent_added++;
+
+            if (new_index_entry_index >= shared->mdf_idx_len &&
+                (idx = H5F_vfd_swmr_enlarge_shadow_index(f)) == NULL)
+                HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTALLOC, FAIL, "max mdf index len exceeded");
+
+            ie_ptr = idx + new_index_entry_index;
+
+            /* partial initialization of new entry -- rest done below */
+            ie_ptr->hdf5_page_offset    = target_page;
+            ie_ptr->md_file_page_offset = 0; /* undefined at this point */
+            ie_ptr->checksum            = 0; /* undefined at this point */
+            ie_ptr->delayed_flush       = entry->delay_write_until;
+            ie_ptr->moved_to_lower_file = false;
+            ie_ptr->garbage             = false;
+            ie_ptr->length              = (uint32_t)entry->size;
+        }
+        else {
+            /* If entry->size changed, discard the too-small (too-big?)
+             * shadow region and set the shadow-file page number to 0
+             * so that H5F_update_vfd_swmr_metadata_file() will
+             * allocate a new one.
+             */
+            if (ie_ptr->length != (uint32_t)entry->size) {
+                if (H5F_shadow_image_defer_free(shared, ie_ptr) < 0)
+                    HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTFREE, FAIL, "can't defer-free shadow image");
+
+                ie_ptr->md_file_page_offset = 0;
+                ie_ptr->length              = (uint32_t)entry->size;
+            }
+
+            idx_ent_modified++;
+        }
+
+        /* image_ptr is a legacy alias never populated by the skip-list page
+         * buffer (see the "M3 compat" comment on H5PB_entry_t); the real
+         * in-memory page image lives in page_buf_ptr.
+         */
+        ie_ptr->entry_ptr           = entry->page_buf_ptr;
+        ie_ptr->tick_of_last_change = tick_num;
+        assert(entry->is_dirty);
+        ie_ptr->clean              = false;
+        ie_ptr->tick_of_last_flush = 0;
+    }
+
+    /* scan the metadata file index for entries that don't appear in the
+     * tick list.  If the index entry is dirty, and either doesn't appear
+     * in the page buffer, or is clean in the page buffer, mark the index
+     * entry clean and as having been flushed in the current tick.
+     */
+    for (i = 0; i < shared->mdf_idx_entries_used; i++) {
+        haddr_t page_addr;
+
+        assert(i == 0 || idx[i - 1].hdf5_page_offset < idx[i].hdf5_page_offset);
+
+        ie_ptr = idx + i;
+
+        if (ie_ptr->tick_of_last_change == tick_num)
+            continue;
+
+        idx_ent_not_in_tl++;
+
+        if (ie_ptr->clean)
+            continue;
+
+        page_addr = (haddr_t)(ie_ptr->hdf5_page_offset * page_buf->page_size);
+        entry     = (H5PB_entry_t *)H5SL_search(page_buf->slist_ptr, &page_addr);
+
+        if (entry == NULL || !entry->is_dirty) {
+            idx_ent_not_in_tl_flushed++;
+            ie_ptr->clean              = true;
+            ie_ptr->tick_of_last_flush = tick_num;
+        }
+    }
+
+    assert(idx_ent_modified + idx_ent_not_in_tl == shared->mdf_idx_entries_used);
+    assert(idx_ent_modified + idx_ent_not_in_tl + idx_ent_added <= shared->mdf_idx_len);
+
+    *idx_ent_added_ptr             = idx_ent_added;
+    *idx_ent_modified_ptr          = idx_ent_modified;
+    *idx_ent_not_in_tl_ptr         = idx_ent_not_in_tl;
+    *idx_ent_not_in_tl_flushed_ptr = idx_ent_not_in_tl_flushed;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* H5PB_vfd_swmr__update_index() */

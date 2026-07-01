@@ -310,6 +310,11 @@ typedef struct H5F_t H5F_t;
 /* For VFD SWMR testing only: private property to generate checksum for metadata file via callback */
 #define H5F_ACS_GENERATE_MD_CK_CB_NAME "generate md ck callback"
 
+/* Check for file configured with VFD SWMR (config version is set once the FAPL
+ * config has been ingested into shared->vfd_swmr_config during file open). */
+#define H5F_SHARED_VFD_SWMR_CONFIG(S) ((S)->vfd_swmr_config.version >= H5F__CURR_VFD_SWMR_CONFIG_VERSION)
+#define H5F_VFD_SWMR_CONFIG(F)        H5F_SHARED_VFD_SWMR_CONFIG((F)->shared)
+
 /* ======================== File Mount properties ====================*/
 #define H5F_MNT_SYM_LOCAL_NAME "local" /* Whether absolute symlinks local to file. */
 
@@ -581,31 +586,15 @@ struct H5FD_vfd_swmr_idx_entry_t;
 /*
  */
 
-/*----------------------------------------------------------------------------
- *
- *  struct eot_queue_entry_t
- *
- *  This is the structure for an entry on the end-of-tick queue (EOT queue)
- *  of files opened in either VFD SWMR write or VFD SWMR read mode.
- *
- *  vfd_swmr_file: Pointer to the H5F_t instance for the associated file.
- *  vfd_swmr_writer: true if opened in VFD SWMR writer mode.
- *  tick_num: Number of the current tick.
- *  end_of_tick: Expiration time of the current tick.
- *  link: Linkage for the EOT queue.
- *
- *----------------------------------------------------------------------------
+/* struct eot_queue_entry_t / eot_queue_t are defined in H5private.h (not
+ * here) because VFD_SWMR_ENTER/VFD_SWMR_LEAVE need them inside
+ * FUNC_ENTER_API/FUNC_LEAVE_API, and H5private.h cannot include this file.
+ * Defining the same TAILQ_HEAD(eot_queue, ...) struct tag in both headers
+ * would be a "redefinition of struct eot_queue" error in any file that
+ * includes both (nearly all of them) -- so it must exist in exactly one
+ * place.  This file includes H5private.h (transitively, via H5FDprivate.h)
+ * before this point, so both types are already visible here.
  */
-typedef struct eot_queue_entry {
-    hbool_t         vfd_swmr_writer;
-    uint64_t        tick_num;
-    struct timespec end_of_tick;
-    H5F_t          *vfd_swmr_file;
-    TAILQ_ENTRY(eot_queue_entry) link;
-} eot_queue_entry_t;
-
-/* EOT queue head type */
-typedef TAILQ_HEAD(eot_queue, eot_queue_entry) eot_queue_t;
 
 /*----------------------------------------------------------------------------
  *

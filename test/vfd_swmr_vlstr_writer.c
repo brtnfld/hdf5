@@ -13,6 +13,8 @@
 #define H5C_FRIEND /*suppress error about including H5Cpkg   */
 #define H5F_FRIEND /*suppress error about including H5Fpkg   */
 
+#include "H5private.h" /* Generic Functions -- must be included before other private headers, see H5Fsuper.c */
+
 #include "hdf5.h"
 
 #include "H5Cpkg.h"
@@ -76,15 +78,15 @@ print_cache_hits(H5C_t H5_ATTR_UNUSED *cache)
 static void
 usage(const char *progname)
 {
-    HDfprintf(stderr, "usage: %s [-W] [-V]\n", progname);
-    HDfprintf(stderr, "\n  -W: do not wait for SIGINT or SIGUSR1\n");
-    HDfprintf(stderr, "\n  -S: do not use VFD SWMR\n");
-    HDfprintf(stderr, "  -f: use fixed-length string\n");
-    HDfprintf(stderr, "      (default: variable-length string)\n");
-    HDfprintf(stderr, "  -n: number of test steps to perform\n");
-    HDfprintf(stderr, "  -q: be quiet: few/no progress messages\n");
-    HDfprintf(stderr, "  -t (oob|null): select out-of-bounds or NULL test\n");
-    HDexit(EXIT_FAILURE);
+    fprintf(stderr, "usage: %s [-W] [-V]\n", progname);
+    fprintf(stderr, "\n  -W: do not wait for SIGINT or SIGUSR1\n");
+    fprintf(stderr, "\n  -S: do not use VFD SWMR\n");
+    fprintf(stderr, "  -f: use fixed-length string\n");
+    fprintf(stderr, "      (default: variable-length string)\n");
+    fprintf(stderr, "  -n: number of test steps to perform\n");
+    fprintf(stderr, "  -q: be quiet: few/no progress messages\n");
+    fprintf(stderr, "  -t (oob|null): select out-of-bounds or NULL test\n");
+    exit(EXIT_FAILURE);
 }
 
 int
@@ -113,9 +115,9 @@ main(int argc, char **argv)
     const char            *s_opts       = "SWfn:qt:";
     struct h5_long_options l_opts[]     = {{NULL, 0, '\0'}};
 
-    HDassert(H5T_C_S1 != H5I_INVALID_HID);
+    assert(H5T_C_S1 != H5I_INVALID_HID);
 
-    if (NULL == (config = HDcalloc(1, sizeof(H5F_vfd_swmr_config_t))))
+    if (NULL == (config = calloc(1, sizeof(H5F_vfd_swmr_config_t))))
         PUTS_ERROR("unable to allocate memory");
 
     while ((opt = H5_get_option(argc, (const char *const *)argv, s_opts, l_opts)) != EOF) {
@@ -131,19 +133,19 @@ main(int argc, char **argv)
                 break;
             case 'n':
                 errno = 0;
-                tmp   = HDstrtoul(H5_optarg, &end, 0);
+                tmp   = strtoul(H5_optarg, &end, 0);
                 if (end == H5_optarg || *end != '\0') {
-                    HDfprintf(stderr, "couldn't parse `-n` argument `%s`", H5_optarg);
+                    fprintf(stderr, "couldn't parse `-n` argument `%s`", H5_optarg);
                     AT();
                     goto error;
                 }
                 else if (errno != 0) {
-                    HDfprintf(stderr, "couldn't parse `-n` argument `%s`", H5_optarg);
+                    fprintf(stderr, "couldn't parse `-n` argument `%s`", H5_optarg);
                     AT();
                     goto error;
                 }
                 else if (tmp > INT_MAX) {
-                    HDfprintf(stderr, "`-n` argument `%lu` too large", tmp);
+                    fprintf(stderr, "`-n` argument `%lu` too large", tmp);
                     AT();
                     goto error;
                 }
@@ -153,9 +155,9 @@ main(int argc, char **argv)
                 verbosity = 1;
                 break;
             case 't':
-                if (HDstrcmp(H5_optarg, "oob") == 0)
+                if (strcmp(H5_optarg, "oob") == 0)
                     sel = TEST_OOB;
-                else if (HDstrcmp(H5_optarg, "null") == 0)
+                else if (strcmp(H5_optarg, "null") == 0)
                     sel = TEST_NULL;
                 else
                     usage(argv[0]);
@@ -227,21 +229,21 @@ main(int argc, char **argv)
         dbgf(2, "iteration %d which %d step %d seq %d\n", i, which, step, seq);
         switch (step) {
             case CREATE:
-                (void)HDsnprintf(name[which], sizeof(name[which]), "dset-%d", which);
-                (void)HDsnprintf(content[which], sizeof(content[which]), "content %d seq %d short", which,
+                (void)snprintf(name[which], sizeof(name[which]), "dset-%d", which);
+                (void)snprintf(content[which], sizeof(content[which]), "content %d seq %d short", which,
                                  seq);
                 dset[which] = create_vl_dset(fid, type, space, name[which]);
                 if (write_vl_dset(dset[which], type, space, content[which]) < 0)
                     PUTS_ERROR("failed to write to VL dataset");
                 break;
             case LENGTHEN:
-                (void)HDsnprintf(content[which], sizeof(content[which]),
+                (void)snprintf(content[which], sizeof(content[which]),
                                  "content %d seq %d long long long long long long long long", which, seq);
                 if (write_vl_dset(dset[which], type, space, content[which]) < 0)
                     PUTS_ERROR("failed to write to VL dataset");
                 break;
             case SHORTEN:
-                (void)HDsnprintf(content[which], sizeof(content[which]),
+                (void)snprintf(content[which], sizeof(content[which]),
                                  "content %d seq %d medium medium medium", which, seq);
                 if (write_vl_dset(dset[which], type, space, content[which]) < 0)
                     PUTS_ERROR("failed to write to VL dataset");
@@ -257,7 +259,7 @@ main(int argc, char **argv)
         }
 
         if (caught_out_of_bounds) {
-            HDfprintf(stderr, "caught out of bounds\n");
+            fprintf(stderr, "caught out of bounds\n");
             break;
         }
 
@@ -280,7 +282,7 @@ main(int argc, char **argv)
     if (H5Fclose(fid) < 0)
         STACK_ERROR;
 
-    HDfree(config);
+    free(config);
 
     return EXIT_SUCCESS;
 
@@ -296,7 +298,7 @@ error:
     }
     H5E_END_TRY;
 
-    HDfree(config);
+    free(config);
 
     return EXIT_FAILURE;
 }
@@ -306,7 +308,7 @@ error:
 int
 main(void)
 {
-    HDfprintf(stderr, "Non-POSIX platform. Skipping.\n");
+    fprintf(stderr, "Non-POSIX platform. Skipping.\n");
     return EXIT_SUCCESS;
 }
 

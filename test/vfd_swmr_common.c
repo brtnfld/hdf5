@@ -317,10 +317,10 @@ await_signal(hid_t fid)
 #else
     for (;;) {
         /* Linux and other systems */
-        const int rc = HDsigtimedwait(&sleepset, NULL, &tick);
+        const int rc = sigtimedwait(&sleepset, NULL, &tick);
 
         if (rc != -1) {
-            fprintf(stderr, "Received %s, wrapping things up.\n", HDstrsignal(rc));
+            fprintf(stderr, "Received %s, wrapping things up.\n", strsignal(rc));
             break;
         }
         else if (rc == -1 && errno == EAGAIN) {
