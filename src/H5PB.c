@@ -127,6 +127,8 @@ static htri_t H5PB__make_space(H5F_shared_t *f_sh, H5PB_t *page_buf, H5FD_mem_t 
 static herr_t H5PB__write_entry(H5F_shared_t *f_sh, H5PB_entry_t *page_entry);
 static herr_t H5PB__vfd_swmr_track_write(H5F_shared_t *f_sh, H5PB_t *page_buf, H5PB_entry_t *entry_ptr,
                                          H5FD_mem_t type);
+static herr_t H5PB__write_mpmde(H5F_shared_t *f_sh, H5PB_t *page_buf, H5FD_mem_t type, haddr_t addr,
+                                size_t size, const void *buf);
 
 /*********************/
 /* Package Variables */
@@ -443,12 +445,20 @@ H5PB__dest_cb(void *item, void H5_ATTR_UNUSED *key, void *_op_data)
      * onto the delayed-write list instead, so running it through
      * H5PB__REMOVE_LRU() here would corrupt that list.  We are about to
      * tear down the whole page buffer anyway, so it is safe to simply skip
-     * the (already-done) LRU unlink for such entries.
+     * the (already-done) LRU unlink for such entries.  Multi-page metadata
+     * entries were never inserted into the LRU in the first place (see
+     * H5PB__write_mpmde()), so they must be skipped here too, and their
+     * image must be freed with H5MM_xfree() rather than the page buffer's
+     * fixed-size factory allocator, since it was never allocated from it.
      */
     if (op_data->actual_slist) {
-        if (0 == page_entry->delay_write_until)
-            H5PB__REMOVE_LRU(op_data->page_buf, page_entry)
-        page_entry->page_buf_ptr = H5FL_FAC_FREE(op_data->page_buf->page_fac, page_entry->page_buf_ptr);
+        if (page_entry->is_mpmde)
+            page_entry->page_buf_ptr = H5MM_xfree(page_entry->page_buf_ptr);
+        else {
+            if (0 == page_entry->delay_write_until)
+                H5PB__REMOVE_LRU(op_data->page_buf, page_entry)
+            page_entry->page_buf_ptr = H5FL_FAC_FREE(op_data->page_buf->page_fac, page_entry->page_buf_ptr);
+        }
     } /* end if */
 
     /* Free page entry */
@@ -650,14 +660,25 @@ H5PB_remove_entry(const H5F_shared_t *f_sh, haddr_t addr)
         if (NULL == H5SL_remove(page_buf->slist_ptr, &(page_entry->addr)))
             HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "Page Entry is not in skip list");
 
-        /* Remove from LRU list */
-        H5PB__REMOVE_LRU(page_buf, page_entry)
-        assert(H5SL_count(page_buf->slist_ptr) == page_buf->LRU_list_len);
+        /* Remove from LRU list.  Multi-page metadata entries are never on
+         * the LRU (see H5PB__write_mpmde()), so skip the unlink and the
+         * count check for those, and free their image with H5MM_xfree()
+         * rather than the page buffer's fixed-size factory allocator,
+         * since it was never allocated from it.
+         */
+        if (page_entry->is_mpmde) {
+            page_buf->mpmde_count--;
+            page_entry->page_buf_ptr = H5MM_xfree(page_entry->page_buf_ptr);
+        }
+        else {
+            H5PB__REMOVE_LRU(page_buf, page_entry)
+            assert(H5SL_count(page_buf->slist_ptr) == page_buf->LRU_list_len);
 
-        page_buf->meta_count--;
+            page_buf->meta_count--;
 
-        page_entry->page_buf_ptr = H5FL_FAC_FREE(page_buf->page_fac, page_entry->page_buf_ptr);
-        page_entry               = H5FL_FREE(H5PB_entry_t, page_entry);
+            page_entry->page_buf_ptr = H5FL_FAC_FREE(page_buf->page_fac, page_entry->page_buf_ptr);
+        }
+        page_entry = H5FL_FREE(H5PB_entry_t, page_entry);
     } /* end if */
 
 done:
@@ -932,13 +953,17 @@ H5PB_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, void *
                 /* Read page through the VFD layer, but make sure we don't read past the EOA. */
 
                 /* Retrieve the 'eoa' for the file */
-                if (HADDR_UNDEF == (eoa = H5F_shared_get_eoa(f_sh, type)))
+                if (HADDR_UNDEF == (eoa = H5F_shared_get_eoa(f_sh, type))) {
+                    new_page_buf = H5FL_FAC_FREE(page_buf->page_fac, new_page_buf);
                     HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTGET, FAIL, "driver get_eoa request failed");
+                }
 
                 /* If the entire page falls outside the EOA, then fail */
-                if (search_addr > eoa)
+                if (search_addr > eoa) {
+                    new_page_buf = H5FL_FAC_FREE(page_buf->page_fac, new_page_buf);
                     HGOTO_ERROR(H5E_PAGEBUF, H5E_BADVALUE, FAIL,
                                 "reading an entire page that is outside the file EOA");
+                }
 
                 /* Adjust the read size to not go beyond the EOA */
                 if (search_addr + page_size > eoa)
@@ -1035,8 +1060,13 @@ H5PB__vfd_swmr_track_write(H5F_shared_t *f_sh, H5PB_t *page_buf, H5PB_entry_t *e
          * to the LRU in H5PB_vfd_swmr__release_tick_list(), unless it is
          * also on the delayed write list, in which case
          * H5PB_vfd_swmr__release_delayed_writes() returns it later.
+         *
+         * Multi-page metadata entries are never inserted into the LRU in
+         * the first place (see H5PB__write_mpmde()), so there is nothing
+         * to pull off here.
          */
-        H5PB__REMOVE_LRU(page_buf, entry_ptr)
+        if (!entry_ptr->is_mpmde)
+            H5PB__REMOVE_LRU(page_buf, entry_ptr)
     }
 
     if (entry_ptr->loaded && entry_ptr->delay_write_until == 0) {
@@ -1058,6 +1088,130 @@ H5PB__vfd_swmr_track_write(H5F_shared_t *f_sh, H5PB_t *page_buf, H5PB_entry_t *e
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PB__vfd_swmr_track_write() */
+
+/*-------------------------------------------------------------------------
+ * Function:    H5PB__write_mpmde
+ *
+ * Purpose:     Write a multi-page metadata entry (MPMDE) -- a VFD SWMR
+ *              metadata write of size >= page_buf->page_size.  Such
+ *              writes must never fall through to the plain metadata
+ *              accumulator bypass (H5F__accum_write()), since only
+ *              H5PB__vfd_swmr_track_write() publishes a write to the VFD
+ *              SWMR shadow index, and readers can only ever see writes
+ *              that reach that index.
+ *
+ *              An mpmde entry is indexed in the same skip list as regular,
+ *              one-page entries (keyed by the same page-aligned address),
+ *              but is never inserted into the LRU replacement policy: it
+ *              is pinned by tick-list membership for as long as it exists,
+ *              and the page buffer is allowed to exceed max_size for it,
+ *              matching the reference implementation's rationale that VFD
+ *              SWMR ignores page buffer size limits for tracked metadata.
+ *              Its image is allocated with H5MM_malloc()/H5MM_xfree(),
+ *              not the page buffer's fixed-size (one page) factory
+ *              allocator, since its size is variable and larger than one
+ *              page.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5PB__write_mpmde(H5F_shared_t *f_sh, H5PB_t *page_buf, H5FD_mem_t type, haddr_t addr, size_t size,
+                  const void *buf)
+{
+    H5PB_entry_t *entry_ptr = NULL;
+    haddr_t       page_addr;
+    void         *new_image = NULL;
+    herr_t        ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    assert(f_sh);
+    assert(page_buf);
+    assert(page_buf->vfd_swmr_writer);
+    assert(type != H5FD_MEM_DRAW);
+    assert(size >= page_buf->page_size);
+
+    page_addr = (addr / page_buf->page_size) * page_buf->page_size;
+
+    /* VFD SWMR metadata publishing requires the shadow-file image to start
+     * at the beginning of the entry, so mpmde writes must be page-aligned.
+     */
+    assert(addr == page_addr);
+
+    entry_ptr = (H5PB_entry_t *)H5SL_search(page_buf->slist_ptr, (void *)(&page_addr));
+
+    if (entry_ptr == NULL) {
+        /* No existing entry -- create a brand new mpmde entry.  Don't
+         * bother trying to make space for it first: VFD SWMR ignores page
+         * buffer size limits for tracked metadata (see H5PB_write()'s own
+         * "let it exceed max_size" exception for the same reason).
+         */
+        if (NULL == (new_image = H5MM_malloc(size)))
+            HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTALLOC, FAIL, "memory allocation failed for mpmde entry");
+
+        if (NULL == (entry_ptr = H5FL_CALLOC(H5PB_entry_t))) {
+            H5MM_xfree(new_image);
+            HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTALLOC, FAIL, "memory allocation failed");
+        }
+
+        entry_ptr->page_buf_ptr = new_image;
+        entry_ptr->addr         = page_addr;
+        entry_ptr->type         = (H5F_mem_page_t)type;
+        entry_ptr->size         = size;
+        entry_ptr->is_mpmde     = true;
+        entry_ptr->is_dirty     = false;
+        entry_ptr->loaded       = false;
+
+        /* Index only -- never the LRU.  mpmde entries are pinned by tick
+         * list membership, never eviction candidates.
+         */
+        if (H5SL_insert(page_buf->slist_ptr, entry_ptr, &(entry_ptr->addr)) < 0) {
+            H5MM_xfree(new_image);
+            entry_ptr = H5FL_FREE(H5PB_entry_t, entry_ptr);
+            HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTINSERT, FAIL, "can't insert mpmde entry in skip list");
+        }
+
+        page_buf->mpmde_count++;
+    }
+    else if (entry_ptr->size < size) {
+        /* An existing entry -- either a regular one-page entry, or a
+         * smaller mpmde entry -- must grow to accommodate this write.
+         */
+        if (NULL == (new_image = H5MM_malloc(size)))
+            HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTALLOC, FAIL, "memory allocation failed for mpmde entry");
+
+        if (entry_ptr->is_mpmde)
+            H5MM_xfree(entry_ptr->page_buf_ptr);
+        else {
+            /* Transitioning from a regular, factory-allocated entry to an
+             * mpmde: free with the allocator that created it, and remove
+             * it from the LRU if it is still there (it may already be off
+             * the LRU if a write earlier in the current tick pulled it via
+             * H5PB__vfd_swmr_track_write()).
+             */
+            H5FL_FAC_FREE(page_buf->page_fac, entry_ptr->page_buf_ptr);
+            if (!entry_ptr->modified_this_tick)
+                H5PB__REMOVE_LRU(page_buf, entry_ptr)
+            page_buf->meta_count--;
+            page_buf->mpmde_count++;
+            entry_ptr->is_mpmde = true;
+        }
+
+        entry_ptr->page_buf_ptr = new_image;
+        entry_ptr->size         = size;
+    }
+
+    H5MM_memcpy(entry_ptr->page_buf_ptr, buf, size);
+    entry_ptr->is_dirty = true;
+
+    if (H5PB__vfd_swmr_track_write(f_sh, page_buf, entry_ptr, type) < 0)
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "VFD SWMR write tracking failed");
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5PB__write_mpmde() */
 
 /*-------------------------------------------------------------------------
  * Function:    H5PB_write
@@ -1108,6 +1262,20 @@ H5PB_write(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, const
 #endif
     } /* end if */
 #endif
+
+    /* A VFD SWMR metadata write of a page or more (a multi-page metadata
+     * entry, or "mpmde") must never fall through to the generic bypass
+     * below: that bypass writes straight through H5F__accum_write(),
+     * which never calls H5PB__vfd_swmr_track_write(), so the write would
+     * never be published to the VFD SWMR shadow index and would be
+     * invisible to readers.  Intercept it here instead.
+     */
+    if (page_buf != NULL && page_buf->vfd_swmr_writer && type != H5FD_MEM_DRAW &&
+        size >= page_buf->page_size) {
+        if (H5PB__write_mpmde(f_sh, page_buf, type, addr, size, buf) < 0)
+            HGOTO_ERROR(H5E_PAGEBUF, H5E_WRITEERROR, FAIL, "VFD SWMR mpmde write failed");
+        HGOTO_DONE(SUCCEED);
+    }
 
     /* If page buffering is disabled, or the I/O size is larger than that of a
      * single page, or if this is a parallel raw data access, bypass page
@@ -1301,9 +1469,24 @@ H5PB_write(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, const
                         HGOTO_ERROR(H5E_PAGEBUF, H5E_NOSPACE, FAIL, "make space in Page buffer Failed");
 
                     /* If make_space returns 0, then we can't use the page
-                     * buffer for this I/O and we need to bypass
+                     * buffer for this I/O and we need to bypass.
+                     *
+                     * Exception: under VFD SWMR, a metadata write must never
+                     * be diverted to a direct, untracked VFD write, since
+                     * H5PB__vfd_swmr_track_write() below is what makes the
+                     * write visible to readers at all -- a page written this
+                     * way would never be published to the shadow index.
+                     * make_space() legitimately finds nothing evictable here
+                     * only when every resident page is protected because it
+                     * is on the current tick list (see
+                     * H5PB__vfd_swmr_track_write()); that is exactly the
+                     * scenario where staying within max_size isn't possible
+                     * without breaking correctness, so let the page buffer
+                     * temporarily exceed max_size instead of bypassing.  It
+                     * shrinks back down once the tick ends and those entries
+                     * are returned to the LRU.
                      */
-                    if (0 == can_make_space) {
+                    if (0 == can_make_space && !(page_buf->vfd_swmr_writer && type != H5FD_MEM_DRAW)) {
                         assert(0 == i);
 
                         /* Write to VFD and return */
@@ -1370,21 +1553,30 @@ H5PB_write(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, const
                     page_entry->size = page_buf->page_size;
 
                     /* Retrieve the 'eoa' for the file */
-                    if (HADDR_UNDEF == (eoa = H5F_shared_get_eoa(f_sh, type)))
+                    if (HADDR_UNDEF == (eoa = H5F_shared_get_eoa(f_sh, type))) {
+                        page_entry->page_buf_ptr = H5FL_FAC_FREE(page_buf->page_fac, new_page_buf);
+                        page_entry               = H5FL_FREE(H5PB_entry_t, page_entry);
                         HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTGET, FAIL, "driver get_eoa request failed");
+                    }
 
                     /* If the entire page falls outside the EOA, then fail */
-                    if (search_addr > eoa)
+                    if (search_addr > eoa) {
+                        page_entry->page_buf_ptr = H5FL_FAC_FREE(page_buf->page_fac, new_page_buf);
+                        page_entry               = H5FL_FREE(H5PB_entry_t, page_entry);
                         HGOTO_ERROR(H5E_PAGEBUF, H5E_BADVALUE, FAIL,
                                     "writing to a page that is outside the file EOA");
+                    }
 
                     /* Retrieve the 'eof' for the file - The MPI-VFD EOF
                      * returned will most likely be HADDR_UNDEF, so skip
                      * that check.
                      */
                     if (!H5F_SHARED_HAS_FEATURE(f_sh, H5FD_FEAT_HAS_MPI))
-                        if (HADDR_UNDEF == (eof = H5FD_get_eof(f_sh->lf, H5FD_MEM_DEFAULT)))
+                        if (HADDR_UNDEF == (eof = H5FD_get_eof(f_sh->lf, H5FD_MEM_DEFAULT))) {
+                            page_entry->page_buf_ptr = H5FL_FAC_FREE(page_buf->page_fac, new_page_buf);
+                            page_entry               = H5FL_FREE(H5PB_entry_t, page_entry);
                             HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTGET, FAIL, "driver get_eof request failed");
+                        }
 
                     /* Adjust the read size to not go beyond the EOA */
                     if (search_addr + page_size > eoa)
@@ -1686,7 +1878,12 @@ H5PB__write_entry(H5F_shared_t *f_sh, H5PB_entry_t *page_entry)
      */
     if (page_entry->addr <= eoa) {
         H5FD_t *file; /* File driver I/O info */
-        size_t  page_size = f_sh->page_buf->page_size;
+        /* Use the entry's own size, not page_buf->page_size: a multi-page
+         * metadata entry (is_mpmde) can be larger than one page, and
+         * writing only page_buf->page_size bytes for it would silently
+         * truncate the write.
+         */
+        size_t page_size = page_entry->size;
 
         /* Adjust the page length if it exceeds the EOA */
         if ((page_entry->addr + page_size) > eoa)
@@ -1752,14 +1949,17 @@ H5PB_vfd_swmr__release_delayed_writes(H5F_shared_t *shared)
         entry_ptr = page_buf->dwl_tail_ptr;
 
         assert(entry_ptr->is_dirty);
-        assert(!entry_ptr->is_mpmde); /* multi-page metadata entries: not yet supported */
 
         entry_ptr->delay_write_until = 0;
 
         H5PB__REMOVE_FROM_DWL(page_buf, entry_ptr, FAIL)
 
-        /* return the entry to the replacement policy */
-        H5PB__INSERT_LRU(page_buf, entry_ptr)
+        /* return the entry to the replacement policy, unless it is a
+         * multi-page metadata entry -- those are never on the LRU (see
+         * H5PB__write_mpmde())
+         */
+        if (!entry_ptr->is_mpmde)
+            H5PB__INSERT_LRU(page_buf, entry_ptr)
     }
 
 done:
@@ -1802,18 +2002,15 @@ H5PB_vfd_swmr__release_tick_list(H5F_shared_t *shared)
 
         entry_ptr->modified_this_tick = false;
 
-        /* Multi-page metadata entries aren't yet supported by the
-         * skip-list page buffer.
-         */
-        assert(!entry_ptr->is_mpmde);
-
         /* H5PB__vfd_swmr_track_write() pulled this entry off the LRU for
          * the duration of the tick (see comment there).  Return it now,
          * unless it is instead on the delayed write list, in which case
          * H5PB_vfd_swmr__release_delayed_writes() will return it once its
-         * delay has expired.
+         * delay has expired.  Multi-page metadata entries are never
+         * returned to the LRU -- they were never on it in the first place
+         * (see H5PB__write_mpmde()).
          */
-        if (0 == entry_ptr->delay_write_until)
+        if (0 == entry_ptr->delay_write_until && !entry_ptr->is_mpmde)
             H5PB__INSERT_LRU(page_buf, entry_ptr)
     }
 

@@ -51,6 +51,9 @@ typedef struct H5PB_t {
     unsigned raw_count;      /* Number of entries for raw data */
     unsigned min_meta_count; /* Minimum # of entries for metadata */
     unsigned min_raw_count;  /* Minimum # of entries for raw data */
+    unsigned mpmde_count;    /* Number of multi-page metadata entries (VFD SWMR).  Never on
+                              * the LRU and never counted in meta_count, since they aren't
+                              * exactly one page in size. */
 
     H5SL_t *slist_ptr;    /* Skip list with all the active page entries */
     H5SL_t *mf_slist_ptr; /* Skip list containing newly allocated page entries inserted from the MF layer */

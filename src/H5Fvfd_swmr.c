@@ -1399,11 +1399,19 @@ H5F_vfd_swmr_reader_end_of_tick(H5F_t *f, hbool_t entering_api)
          * Start the next tick.
          */
         shared->tick_num = tmp_tick_num;
+    }
 
-        /* Update end_of_tick */
-        if (H5F__vfd_swmr_update_end_of_tick_and_tick_num(shared, false) < 0) {
-            HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to update end of tick");
-        }
+    /* Update end_of_tick unconditionally, whether or not the tick actually
+     * advanced this call.  If this is skipped when nothing changed,
+     * shared->end_of_tick is left stuck in the past, so the time-based gate
+     * in H5F_vfd_swmr_process_eot_queue() (now >= head->end_of_tick) is
+     * satisfied on every subsequent API call instead of roughly once per
+     * tick_len -- turning every reader-side API call into a real disk read
+     * of the shadow-file header, millions of times a second in a tight
+     * caller loop, instead of the intended once-per-tick cadence.
+     */
+    if (H5F__vfd_swmr_update_end_of_tick_and_tick_num(shared, false) < 0) {
+        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to update end of tick");
     }
 
 reader_update_eot:

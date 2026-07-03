@@ -49,6 +49,15 @@ document, since #1 and #2 below made Phase 3's publish path silently inert (writ
 data to the shadow file) the entire time it existed, despite compiling and passing the regression
 suite cleanly.
 
+**A further session found 3 more real bugs** (stale reader `end_of_tick` causing a busy-poll, a
+genuine page-buffer memory leak, and an untracked-write bypass), **then implemented multi-page
+metadata entry (MPMDE) support** on the skip-list page buffer — previously flagged as out of
+scope, now required because the reference implementation's ~6-second convergence depends on it.
+The MPMDE write path is implemented and confirmed (via tracing) to correctly publish the
+large writes it was built for, but `zoo` still doesn't converge: there is a **separate, deeper,
+not-yet-root-caused bug** where the reader never sees even the writer's very first, trivial write
+(adding a link to the root group). See "Bugs found and MPMDE support added in this session" below.
+
 ---
 
 ## Phase 0 — Lifecycle integration (Done)
@@ -347,19 +356,166 @@ writer's own patience budget in `notify_and_wait_for_reader()`
 (`test/vfd_swmr_zoo_writer.c`) is only `(max_lag + 1) * tick_len = 8 * 0.4s ≈ 3.2 seconds`
 (`max_lag=7`, `TICK_LEN=4` tenths-of-a-second, both `#define`d in that file) before it gives up and
 fails with `recv failed`. The reference commit (`05b54b7046`) has the **identical** bounded wait
-and the **identical** zero-backoff `while (!validate_zoo(...)) ;` retry loop on the reader side —
-so this isn't a port regression in either the writer's patience or the reader's polling strategy.
-It's either a pre-existing timing fragility in the original test, or this sandboxed environment
-being measurably slower per-tick than whatever the test was tuned against. **Not yet root-caused
-further** — the next step would be to profile where real wall-clock time is going per tick (disk
-I/O for the shadow file? scheduling overhead?) or simply try a build with `max_lag`/`tick_len`
-bumped up for this one test to see if it goes fully green.
+and the **identical** zero-backoff `while (!validate_zoo(...)) ;` retry loop on the reader side, so
+the timing budget itself isn't a port regression.
+
+**Update — this *is* a real port-side performance regression, confirmed empirically.** Built the
+original `lifeboat/feature/vfd_swmr` branch (commit `05b54b7046`) from scratch with its native
+autotools build (`autogen.sh` + `configure --disable-fortran --disable-cxx --disable-parallel
+--disable-tools --disable-hl`, `clang`) in this exact sandboxed environment, then ran its own
+`vfd_swmr_zoo_writer`/`vfd_swmr_zoo_reader` pair directly (same launch pattern: writer, wait for
+`VFD_SWMR_WRITER_MESSAGE`, then reader). **It passed — writer and reader both exit 0 — in ~6
+seconds, reproduced twice.** (The reader does log `"validate_zoo took too long to finish"` — a
+soft, non-fatal diagnostic gated on a separate, shorter `msgival` threshold, not the pass/fail
+gate — so the original test author already anticipated *some* slowness, just nowhere near enough
+to blow the writer's ~3.2s patience budget.)
+
+This rules out "this sandboxed environment is just slow" as the explanation — the exact same
+environment runs the original hash-table-based implementation to completion well within budget.
+Something in this port (most likely candidate: the skip-list page buffer under Strategy B, or
+something in the reader-side refresh path exercised per-tick) does measurably more work, or
+slower work, per tick than the original. Given the page counts involved are tiny (single digits),
+a skip-list-vs-hash-table algorithmic difference alone (O(log n) vs O(1) on n≈10) shouldn't
+account for a 5-10x+ slowdown — so the more likely culprit is some redundant or unnecessarily
+expensive operation introduced somewhere in the port, not the search-structure choice itself.
+**Not yet root-caused further than this** — next step would be timing instrumentation around each
+of the 9 writer-side EOT steps and the reader-side refresh path, on both branches, to find exactly
+where the extra latency is spent.
 
 *(Aside, in case you hit the same wall: `pkill -f <pattern>` matches against the full command
 line, including the invoking shell's own command text — `pkill -9 -f vfd_swmr_zoo` will kill the
 shell running that exact command, not just the target processes. Use `pkill -x <comm-name>`
 (exact match against the truncated process name, e.g. `vfd_swmr_zoo_wr`) instead when writing
 scripts that target these binaries.)*
+
+---
+
+## Bugs found and MPMDE support added in this session
+
+This session picked up the "timing-budget mismatch" theory above and, on closer inspection, found
+it was incomplete: the reference (`05b54b7046`) converges in ~6s specifically because it has full
+MPMDE support, which this port never had. Before implementing that, tracing the zoo run turned up
+3 more real, independent bugs — all found by direct empirical measurement (RSS monitoring, call
+counting, valgrind massif), not speculation.
+
+### 3 bugs fixed before MPMDE work started
+
+1. **Stale reader `end_of_tick` caused a busy-poll, not a "message from the future."**
+   `H5F_vfd_swmr_reader_end_of_tick()` (`src/H5Fvfd_swmr.c`) only called
+   `H5F__vfd_swmr_update_end_of_tick_and_tick_num()` *inside* the `if (tmp_tick_num !=
+   shared->tick_num)` block — i.e., only on ticks where the tick number actually changed. When it
+   didn't change, `shared->end_of_tick` was left stuck in the past, so the time-based gate in
+   `H5F_vfd_swmr_process_eot_queue()` (`now >= head->end_of_tick`) was satisfied on *every*
+   subsequent API call instead of roughly once per `tick_len` — turning every reader-side API call
+   into a real disk read of the shadow-file header. Confirmed this bug is **also present in the
+   reference branch** (not a port regression), but fixed here anyway since it's real. **Fix:**
+   moved the `update_end_of_tick_and_tick_num()` call outside/after the `if` block so it runs
+   unconditionally every call.
+2. **Genuine memory leak: two EOA-check error paths in `H5PB_read()`/`H5PB_write()` leaked the
+   just-allocated page buffer.** Both functions call `H5FL_FAC_MALLOC`/`CALLOC` for a new page
+   image *before* checking whether the target address is within the file's EOA. On the "outside
+   EOA" `HGOTO_ERROR` paths, the freshly allocated buffer was never freed before jumping to
+   `done:`. Verified via valgrind massif (`--tool=massif --pages-as-heap=yes`, leak gone after
+   fix) and direct RSS monitoring (flat across runs up to 647 seconds after the fix; before the
+   fix, RSS grew from 251MB to 39GB in 15 seconds under the zoo test's tight retry loop — this,
+   not a race, was the actual cause of processes dying to the kernel OOM killer during earlier
+   debugging). **Fix:** added the missing `H5FL_FAC_FREE` calls on both error paths in both
+   functions.
+3. **Untracked-write bypass silently dropped metadata writes from VFD-SWMR publication.** In
+   `H5PB_write()`'s "not found, make space" branch, when `H5PB__make_space()` returns "can't make
+   space" (every resident page protected by the current tick — expected with a deliberately tiny,
+   1-page page buffer), the original code unconditionally fell back to a direct, untracked
+   `H5FD_write()` — bypassing `H5PB__vfd_swmr_track_write()` entirely, so the write was never
+   published to the shadow index. Confirmed via call-tracing `H5PB__vfd_swmr_track_write()`:
+   tracked pages went from `{0}` only to `{0,1,2,...}` after the fix. **Fix:** for VFD-SWMR
+   metadata, let the page buffer temporarily exceed `max_size` instead of bypassing (it shrinks
+   back down once the tick ends); the bypass is still taken for raw data and for a non-VFD-SWMR
+   page buffer.
+
+### MPMDE (multi-page metadata entry) support added
+
+Root cause of the *actual* remaining zoo blocker at the time: two of the zoo test's object
+selectors (a dense new-style group — v2 B-tree + fractal heap — and an old-style group with 300
+links — v1 B-tree + local heap) write metadata larger than one page (`page_size=4096` in the zoo
+test's own FAPL config). `H5PB_write()`'s top-level bypass (`size >= page_buf->page_size`) routed
+every such write straight to `H5F__accum_write()`, which never calls
+`H5PB__vfd_swmr_track_write()` — so these writes were never published to the shadow index at all,
+confirmed via tracing exact addr/size pairs (`LHEAP` 5632 bytes, `OHDR` 16656 bytes twice).
+
+Implemented on the skip-list page buffer, modeled on the reference's `H5PB__write_meta()` (hash
+table) but adapted — see `src/H5PB.c`:
+- **New field** `mpmde_count` on `H5PB_t` (`src/H5PBprivate.h`) — mpmde entries must not be
+  counted in `meta_count`, since `H5PB__make_space()`'s eviction-threshold math assumes every
+  counted metadata entry is exactly one page.
+- **New static function `H5PB__write_mpmde()`** — intercepted in `H5PB_write()` before the
+  generic bypass, whenever `page_buf->vfd_swmr_writer && type != H5FD_MEM_DRAW && size >=
+  page_buf->page_size`. Creates (or grows) an entry with a variable-sized `H5MM_malloc`/
+  `H5MM_xfree` image (not the page buffer's fixed-size, one-page factory allocator), inserted into
+  the skip list **but never into the LRU** — matching the reference's rule that mpmde entries are
+  pinned by tick-list membership only, never eviction candidates, and matching the reference's
+  explicit rationale ("VFD SWMR ignores the limits on page buffer size for tracked metadata") by
+  skipping `H5PB__make_space()` entirely for these writes.
+- **Every place that assumed "every entry was inserted into the LRU at creation"** needed a
+  `is_mpmde` guard, since mpmde entries never are:
+  `H5PB__vfd_swmr_track_write()`, `H5PB_vfd_swmr__release_tick_list()`,
+  `H5PB_vfd_swmr__release_delayed_writes()` (the `assert(!entry_ptr->is_mpmde)` "not yet
+  supported" guards in the latter two are now gone — this is the feature they were guarding
+  against), `H5PB__dest_cb()` (file teardown) and `H5PB_remove_entry()` (both also needed
+  `H5MM_xfree` instead of `H5FL_FAC_FREE` for the image, since it was never allocated from the
+  page factory).
+- **`H5PB__write_entry()`** (the actual `H5FD_write()` call for flush/eviction) hardcoded
+  `page_size = f_sh->page_buf->page_size`; changed to `page_entry->size`, otherwise a flush of a
+  resident mpmde entry would silently truncate it to one page on disk.
+- No changes needed to `H5PB_vfd_swmr__update_index()` (already generic on `entry->size`, not a
+  hardcoded page size — this part was already correct, just never fed a real mpmde entry), the
+  reader-side VFD redirect in `src/H5FDvfd_swmr.c` (already generic on `entry->length`), or
+  `H5PB_read()` (bypassing the page buffer for a large *read* only affects caching, not
+  correctness — unlike bypassing a *write*, which is what broke publication).
+
+**Verified via tracing that this is correctly exercised**: with `H5PB_PERF_TRACE=1` (now removed;
+see below), the writer's `track_write` fires for all three previously-dropped addresses (`LHEAP`
+at 40960/5632 bytes, `OHDR` at 8519680 and 8540160/16656 bytes each), and the writer's own local
+`tend_zoo` validation — which exercises the same read-back path the writer itself would use —
+sails through every selector (reaching `i=13`, the natural end of the selector list) instead of
+getting stuck around `i=1`–`2` as before. This is real progress and a real, independent fix, not
+speculative.
+
+### The actual remaining blocker: reader never sees the root group's own updates
+
+Despite the above, the zoo writer+reader pair still does not converge. With `-e` (print error
+stacks) on the reader, the failure is a clean, non-corrupt "not found":
+
+```
+#009: H5Gloc.c line 381 in H5G__loc_find_cb(): object 'A' doesn't exist
+```
+
+`"A"` is the very first, trivial thing the writer creates — an empty new-style group linked
+directly under the root group (selector 0, `test/genall5.c`'s `ns_grp_0`/`vrfy_ns_grp_0`). This
+fails continuously (millions of retries sampled over 15+ seconds) even long after the writer has
+finished creating *everything* and is idling in its own end-of-tick loop waiting for the reader.
+This is **not** an mpmde issue: adding a link to the root group is a small, single-page write that
+goes through the completely unmodified pre-existing write path (`H5PB__write_mpmde()` only
+activates for writes `>= page_buf->page_size`). It is also not the busy-poll from bug #1 above
+(confirmed fixed — reader-side `READER_EOT` tracing shows tick numbers advancing normally, roughly
+one every 0.4s, throughout the run) and not a synchronization/handshake issue (the reader only
+starts validating after receiving the writer's socket notification that creation finished, and
+that handshake completes almost immediately in every observed run).
+
+This is a genuine, separate, **not-yet-root-caused** bug: something about how updates to the root
+group's own link table/object header get republished to a VFD-SWMR reader isn't working, even
+though bugs #1–#5 above (from the earlier zoo debugging pass) already fixed the general
+publish/refresh/re-decode path for *other* metadata. Whatever is different about the root group
+specifically (its object header is created once at file-creation time, before VFD SWMR's tick
+machinery is fully engaged; or its metadata cache entry may be treated specially, e.g. pinned or
+excluded from the same per-tick refresh scan other entries go through) hasn't been investigated
+yet. This is the actual next thing to chase — see "Next steps" below.
+
+*(All `getenv("H5PB_PERF_TRACE")`-gated instrumentation added in this session's investigation —
+across `src/H5Fvfd_swmr.c`, `src/H5PB.c`, `test/genall5.c`, `test/vfd_swmr_zoo_writer.c` — has
+been removed after use. Re-add similar tracing if you pick up the root-group investigation; the
+pattern used was: cap output with `if (call_count <= N || call_count % M == 0)` to avoid the disk
+quota exhaustion that a truly unthrottled per-call trace causes under this test's zero-backoff
+retry loop.)*
 
 ---
 
@@ -405,22 +561,23 @@ only ever worked under a build system that no longer exists.
   (mirroring the pattern already used by `expand`/`shrink`/`sparse`), placed *after* the writer's
   first manual tick (not right after `H5Fcreate`, which still races the flush). The writer and
   reader now correctly reach the socket handshake and `create_zoo`/`validate_zoo` every run.
-- **The real remaining blocker is the timing-budget mismatch described above, not a race or a
-  logic bug.** Five real Phase 3 bugs were found and fixed getting to this point (see that
-  section for full detail); the underlying publish/refresh path was verified correct via gdb. The
-  writer simply gives up (`~3.2s` patience) before the reader's zero-backoff retry loop converges
-  (observed to take 10s of seconds). This also means: **do not assume the other 11 untested
-  scenarios will pass once run** — some may hit the same timing mismatch (any scenario with a
-  writer+reader pair and a similarly bounded wait), and some may surface further Phase-3 bugs the
-  `zoo` scenario didn't happen to exercise (e.g. multi-page or larger writes).
+- **The real remaining blocker, as of this session, is a not-yet-root-caused bug where the reader
+  never sees the writer's updates to the root group** — see "The actual remaining blocker: reader
+  never sees the root group's own updates" above. This supersedes the earlier "timing-budget
+  mismatch" theory: it isn't that convergence is merely slow, it's that (in every run observed so
+  far) it doesn't happen at all within the timeframes tested, for a reason unrelated to timing
+  budgets, mpmde, or any of bugs #1–#5/the 3 bugs fixed this session. This also means: **do not
+  assume the other 11 untested scenarios will pass once run** — most create objects under the
+  root group too, so they likely hit the same blocker.
 - **The `H5SHELL-test_vfd_swmr` ctest entry currently runs the entire default scenario set with no
   per-scenario opt-out.** As long as any one scenario fails, the whole entry reports failed. If
   you want to merge this branch (or just this test wiring) before all scenarios are proven out,
   either mark the ctest entry `DISABLED` (precedent exists elsewhere in this test suite) or pass a
   restricted scenario argument (e.g. just `generator`) until more are verified.
-- **Multi-page metadata entries (`is_mpmde`) are not supported** — asserted-never in Phase 3's
-  release functions. This is a separate, larger feature not implemented anywhere in develop's
-  page buffer; out of scope for this port.
+- **Multi-page metadata entries (`is_mpmde`) are now supported** (see "Bugs found and MPMDE
+  support added in this session" above) — implemented and confirmed via tracing to correctly
+  publish the large writes it targets. This alone was not sufficient to make `zoo` converge; see
+  the root-group blocker above.
 
 ---
 
@@ -457,20 +614,25 @@ unrelated to anything real.
 
 ## Next steps (in rough priority order)
 
-1. **Root-cause the timing-budget mismatch** (see "The remaining zoo failure is a timing-budget
-   mismatch, not a bug" above). Two independent angles, either is a reasonable next move:
-   - Profile where real wall-clock time goes per tick during `zoo` (shadow-file I/O? metadata
-     cache work per tick? scheduling overhead in this environment specifically?).
-   - Just try bumping `max_lag`/`TICK_LEN` for the `zoo` test (`test/vfd_swmr_zoo_writer.c`) to see
-     if it goes fully green with more patience — cheap to test, doesn't require understanding the
-     root cause first, but doesn't tell you *why* either.
-2. **Run the other 11 default scenarios** and fix whatever surfaces. Expect some to hit the same
-   timing mismatch (any writer+reader pair with a similarly bounded wait) and some to surface
-   further Phase-3 bugs the `zoo` scenario didn't happen to exercise.
-3. **Decide on `H5SHELL-test_vfd_swmr`'s CI posture** if this needs to merge before all scenarios
+1. **Root-cause why the reader never sees the writer's updates to the root group** (see "The
+   actual remaining blocker" above) — this is now the single thing blocking `zoo` (and likely most
+   of the other 11 scenarios) from converging at all. Suggested starting points: compare how the
+   root group's object header/metadata cache entry is created and tracked (`H5G_mkroot` et al.)
+   against an ordinary group created later — is it going through the same page-buffer tracking and
+   tick-list path as everything else, or is it created before VFD SWMR's tick machinery is fully
+   engaged (i.e. before `shared->vfd_swmr_writer`/`shared->page_buf->vfd_swmr_writer` is set), so
+   its creation is never tracked at all? Also worth checking whether the root group's cache entry
+   is "pinned" (a real H5C concept) in a way that excludes it from the per-tick
+   `H5C_evict_or_refresh_all_entries_in_page()` scan on the reader side.
+2. Once the root-group blocker is fixed, **re-verify `zoo` convergence time** against the
+   reference's ~6-second baseline — the mpmde work and the 3 bugs fixed this session were verified
+   individually via tracing, but full writer+reader convergence has not yet been observed even
+   once.
+3. **Run the other 11 default scenarios** and fix whatever surfaces, once `zoo` itself converges.
+4. **Decide on `H5SHELL-test_vfd_swmr`'s CI posture** if this needs to merge before all scenarios
    pass (see "Known limitations" above for the options).
-4. Consider whether any of the 4 "Pre-existing develop bugs" or 5 "Phase 3 bugs" above are worth
-   splitting into standalone `develop` PRs, independent of this port.
+5. Consider whether any of the 4 "Pre-existing develop bugs", 5 "Phase 3 bugs", or 3 bugs fixed
+   this session are worth splitting into standalone `develop` PRs, independent of this port.
 
 ---
 
@@ -486,6 +648,11 @@ unrelated to anything real.
 | TL/DWL wrapper macros | `src/H5PBpkg.h`, right before the fenced `#if 0` block | Phase 3 |
 | `H5PB__vfd_swmr_track_write`, the four `H5PB_vfd_swmr__*` functions | `src/H5PB.c` | Phase 3 |
 | `page_entry->size` init (3 sites), `image_ptr`→`page_buf_ptr` fix, `H5PB__make_space` NULL guard, `H5PB__dest_cb` DWL-unlink fix, tick-list LRU protection | `src/H5PB.c` | zoo debugging pass bugs #1–#5 |
+| Stale `end_of_tick` fix | `src/H5Fvfd_swmr.c`, `H5F_vfd_swmr_reader_end_of_tick()` | This session, bug #1 |
+| EOA-check leak fix (2 sites) | `src/H5PB.c`, `H5PB_read()`/`H5PB_write()` | This session, bug #2 |
+| Untracked-write bypass fix | `src/H5PB.c`, `H5PB_write()`'s "not found, make space" branch | This session, bug #3 |
+| `mpmde_count` field | `src/H5PBprivate.h`, `H5PB_t` | This session, MPMDE support |
+| `H5PB__write_mpmde()`, intercept in `H5PB_write()`, `is_mpmde` guards in track_write/release_tick_list/release_delayed_writes/dest_cb/remove_entry, `H5PB__write_entry()` size fix | `src/H5PB.c` | This session, MPMDE support |
 | `H5C__INSERT_IN_INDEX`/`DELETE_FROM_INDEX` (page_index) | `src/H5Cpkg.h` | Phase 1 (pre-existing) |
 | `H5F_vfd_swmr_reader_end_of_tick` | `src/H5Fvfd_swmr.c` | Phase 2 (pre-existing) |
 | VFD SWMR test executables + shell driver wiring | `test/CMakeLists.txt`, `test/ShellTests.cmake`, `utils/test/CMakeLists.txt` | New this session |
