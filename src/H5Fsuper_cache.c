@@ -62,6 +62,7 @@ static void  *H5F__cache_superblock_deserialize(const void *image, size_t len, v
 static herr_t H5F__cache_superblock_image_len(const void *thing, size_t *image_len);
 static herr_t H5F__cache_superblock_serialize(const H5F_t *f, void *image, size_t len, void *thing);
 static herr_t H5F__cache_superblock_free_icr(void *thing);
+static herr_t H5F__cache_superblock_refresh(H5F_t *f, void *thing, const void *image, size_t *len_ptr);
 
 static herr_t H5F__cache_drvrinfo_get_initial_load_size(void *udata, size_t *image_len);
 static herr_t H5F__cache_drvrinfo_get_final_load_size(const void *image_ptr, size_t image_len, void *udata,
@@ -97,6 +98,7 @@ const H5AC_class_t H5AC_SUPERBLOCK[1] = {{
     NULL,                                        /* 'notify' callback */
     H5F__cache_superblock_free_icr,              /* 'free_icr' callback */
     NULL,                                        /* 'fsf_size' callback */
+    H5F__cache_superblock_refresh,               /* VFD SWMR 'refresh' callback */
 }};
 
 /* H5F driver info block inherits cache-like properties from H5AC */
@@ -799,6 +801,159 @@ H5F__cache_superblock_free_icr(void *_thing)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5F__cache_superblock_free_icr() */
+
+/*-------------------------------------------------------------------------
+ * Function:    H5F__cache_superblock_refresh
+ *
+ * Purpose:     VFD SWMR reader callback: examine a freshly re-read
+ *              superblock image and update the file's EOA (end of
+ *              allocated space) from the image's stored EOF field.
+ *
+ *              This is only invoked for a VFD SWMR reader (the only role
+ *              for which the superblock's H5C cache entry is pinned and
+ *              refreshed in place rather than evicted -- see
+ *              H5C_evict_or_refresh_all_entries_in_page()). Without it, a
+ *              VFD SWMR reader's own EOA tracking (which the underlying
+ *              VFD's read dispatch enforces even for otherwise-valid,
+ *              shadow-index-published reads -- see H5FD_read()) never
+ *              advances as the writer grows the file, silently clamping
+ *              reads of newly-added pages down to zero bytes.
+ *
+ *              Superblock content is otherwise immutable once the file
+ *              is created (this function does not need to re-validate
+ *              every field the way the initial deserialize does), so this
+ *              only decodes far enough to reach the stored EOF/base
+ *              address fields. VFD SWMR requires a version 2+ superblock
+ *              (paged aggregation); the pre-2 layout is handled too, for
+ *              robustness, but should not be reachable via VFD SWMR.
+ *
+ * Return:      SUCCEED/FAIL
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5F__cache_superblock_refresh(H5F_t *f, void *_thing, const void *_image, size_t *len_ptr)
+{
+    H5F_super_t   *sblock = (H5F_super_t *)_thing;
+    const uint8_t *image  = (const uint8_t *)_image;
+    const uint8_t *end    = image + *len_ptr - 1;
+    size_t         expected_image_len;
+    unsigned       super_vers;
+    uint8_t        sizeof_addr;
+    uint8_t        sizeof_size;
+    haddr_t        base_addr;
+    haddr_t        stored_eof;
+    herr_t         ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    assert(f);
+    assert(sblock);
+    assert(sblock->cache_info.type == H5AC_SUPERBLOCK);
+    assert(image);
+    assert(len_ptr);
+    assert(*len_ptr >= H5F_SUPERBLOCK_FIXED_SIZE + 6);
+
+    /* Skip the signature */
+    if (H5_IS_BUFFER_OVERFLOW(image, H5F_SIGNATURE_LEN, end))
+        HGOTO_ERROR(H5E_FILE, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+    image += H5F_SIGNATURE_LEN;
+
+    /* Superblock version */
+    if (H5_IS_BUFFER_OVERFLOW(image, 1, end))
+        HGOTO_ERROR(H5E_FILE, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+    super_vers = *image++;
+    if (sblock->super_vers != super_vers)
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "unexpected superblock version");
+
+    /* Size of addresses/offsets -- position depends on version, same as
+     * H5F__superblock_prefix_decode().
+     */
+    if (super_vers < HDF5_SUPERBLOCK_VERSION_2) {
+        if (H5_IS_BUFFER_OVERFLOW(image, 6, end))
+            HGOTO_ERROR(H5E_FILE, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+        sizeof_addr = image[4];
+        sizeof_size = image[5];
+    }
+    else {
+        if (H5_IS_BUFFER_OVERFLOW(image, 2, end))
+            HGOTO_ERROR(H5E_FILE, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+        sizeof_addr = image[0];
+        sizeof_size = image[1];
+    }
+    if (sblock->sizeof_addr != sizeof_addr)
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "unexpected sizeof_addr");
+    if (sblock->sizeof_size != sizeof_size)
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "unexpected sizeof_size");
+
+    /* Speculative-load protocol: if this image isn't the full expected
+     * size yet, ask for the correct size and return without decoding
+     * further.
+     */
+    expected_image_len =
+        H5F_SUPERBLOCK_FIXED_SIZE + (size_t)H5F_SUPERBLOCK_VARLEN_SIZE(super_vers, sizeof_addr, sizeof_size);
+    if (expected_image_len != *len_ptr) {
+        *len_ptr = expected_image_len;
+        HGOTO_DONE(SUCCEED);
+    }
+
+    if (super_vers < HDF5_SUPERBLOCK_VERSION_2) {
+        /* Not reachable via VFD SWMR (which requires a v2+ superblock for
+         * paged aggregation), but handled for robustness: skip past the
+         * fixed-size fields preceding the addresses, matching
+         * H5F__cache_superblock_deserialize()'s v0/v1 branch.
+         */
+        unsigned chunk_btree_k;
+
+        if (H5_IS_BUFFER_OVERFLOW(image, 7, end))
+            HGOTO_ERROR(H5E_FILE, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+        image += 7; /* freespace_version, objectdir_version, reserved, sharedheader_version,
+                     * sizeof_addr (already decoded), sizeof_size (already decoded), reserved */
+
+        if (H5_IS_BUFFER_OVERFLOW(image, 2 + 2 + 4, end))
+            HGOTO_ERROR(H5E_FILE, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+        image += 2; /* sym_leaf_k */
+        image += 2; /* snode_btree_k */
+        image += 4; /* status_flags */
+
+        if (super_vers > HDF5_SUPERBLOCK_VERSION_DEF) {
+            if (H5_IS_BUFFER_OVERFLOW(image, 2, end))
+                HGOTO_ERROR(H5E_FILE, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+            UINT16DECODE(image, chunk_btree_k);
+            if (super_vers == HDF5_SUPERBLOCK_VERSION_1) {
+                if (H5_IS_BUFFER_OVERFLOW(image, 2, end))
+                    HGOTO_ERROR(H5E_FILE, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+                image += 2; /* reserved */
+            }
+        }
+    }
+    else {
+        /* Skip sizeof_addr, sizeof_size (already decoded above), status_flags */
+        if (H5_IS_BUFFER_OVERFLOW(image, 3, end))
+            HGOTO_ERROR(H5E_FILE, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+        image += 3;
+    }
+
+    /* Base address, then (for v2+) superblock extension address, then
+     * stored EOF -- same order/fields as H5F__cache_superblock_deserialize().
+     */
+    if (H5_IS_BUFFER_OVERFLOW(image, (size_t)sizeof_addr * 3, end))
+        HGOTO_ERROR(H5E_FILE, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+    H5F_addr_decode(f, (const uint8_t **)&image, &base_addr /*out*/);
+    image += sizeof_addr; /* superblock extension address -- not needed here */
+    H5F_addr_decode(f, (const uint8_t **)&image, &stored_eof /*out*/);
+
+    if (base_addr != sblock->base_addr)
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "unexpected base_addr");
+
+    /* Update the EOA to match the writer's current stored EOF -- the
+     * actual fix this callback exists for.
+     */
+    if (H5F__set_eoa(f, H5FD_MEM_DEFAULT, stored_eof - base_addr) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to update EOA");
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5F__cache_superblock_refresh() */
 
 /*-------------------------------------------------------------------------
  * Function:    H5F__cache_drvrinfo_get_initial_load_size

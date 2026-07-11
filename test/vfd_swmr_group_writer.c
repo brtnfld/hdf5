@@ -156,8 +156,22 @@ state_init(state_t *s, int argc, char **argv)
     const char            *s_opts   = "SGa:bc:i:n:Nqu:t:m:B:s:A:O:";
     struct h5_long_options l_opts[] = {{"ip_addr", require_arg, 'i'}, {NULL, 0, '\0'}};
 
-    s->file              = H5I_INVALID_HID;
-    s->one_by_one_sid    = H5I_INVALID_HID;
+    s->file           = H5I_INVALID_HID;
+    s->one_by_one_sid = H5I_INVALID_HID;
+
+    /* Force full library initialization before the first use of an
+     * H5T_NATIVE_* macro below.  Without this, the very first evaluation
+     * of H5T_NATIVE_UINT32 in this process can observe an unpopulated
+     * H5T_NATIVE_UINT32_g (reads back as H5I_INVALID_HID), which later
+     * makes H5Tget_native_type() fail with "not a data type" in
+     * add_attr().  H5open() is always safe to call even if the library
+     * is already open.
+     */
+    if (H5open() < 0) {
+        printf("H5open failed\n");
+        TEST_ERROR;
+    }
+
     s->filetype          = H5T_NATIVE_UINT32;
     s->asteps            = 10;
     s->csteps            = 10;
@@ -3802,7 +3816,7 @@ verify_group_vlstr_attr(state_t *s, hid_t g, unsigned int which, hbool_t vrfy_mo
     char  name[VS_ATTR_NAME_LEN];
 
     char *astr_val_exp;
-    char *astr_val;
+    char *astr_val = NULL;
 
     /* The reader receives a message from the writer.Then sleep
      * for a few ticks or stop the test if the received message
@@ -4171,7 +4185,7 @@ verify_group_vlstr_attr(state_t *s, hid_t g, unsigned int which, hbool_t vrfy_mo
     char  name[VS_ATTR_NAME_LEN];
 
     char *astr_val_exp;
-    char *astr_val;
+    char *astr_val = NULL;
 
     /* The reader receives a message from the writer.Then sleep
      * for a few ticks or stop the test if the received message

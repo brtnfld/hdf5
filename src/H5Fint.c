@@ -1307,6 +1307,17 @@ H5F__new(H5F_shared_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5F
          */
         f->shared->vfd_swmr_md_fd = -1;
 
+        /* H5FL_CALLOC's zero-init leaves tqh_last == NULL, but an empty
+         * tail queue requires tqh_last == &shadow_defrees.tqh_first (see
+         * TAILQ_HEAD_INITIALIZER() in H5queue.h) -- TAILQ_INSERT_HEAD()
+         * happens to repair this on the first insert, but
+         * H5F_update_vfd_swmr_metadata_file()'s reclaim scan calls
+         * TAILQ_LAST()/TAILQ_FOREACH_REVERSE_SAFE() as soon as
+         * tick_num > max_lag, which can be well before any entry is ever
+         * deferred, dereferencing the bad NULL and crashing.
+         */
+        TAILQ_INIT(&f->shared->shadow_defrees);
+
         /* When opening file with SWMR access, the # of read attempts is H5F_SWMR_METADATA_READ_ATTEMPTS if
          * not set */
         /* When opening file without SWMR access, the # of read attempts is always H5F_METADATA_READ_ATTEMPTS
@@ -2336,7 +2347,14 @@ H5F_open(bool try, H5F_t **_file, const char *name, unsigned flags, hid_t fcpl_i
             } /* version 3 superblock */
 
             file->shared->sblock->status_flags |= H5F_SUPER_WRITE_ACCESS;
-            if (H5F_INTENT(file) & H5F_ACC_SWMR_WRITE)
+            /* A VFD SWMR writer doesn't set the legacy H5F_ACC_SWMR_WRITE
+             * flag either, but still needs H5F_SUPER_SWMR_WRITE_ACCESS set
+             * so that a VFD SWMR reader's own consistency check above (and
+             * a future writer's "already open" check) see WRITE_ACCESS and
+             * SWMR_WRITE_ACCESS agreeing, rather than looking like a
+             * non-SWMR writer left the file in an inconsistent state.
+             */
+            if (H5F_INTENT(file) & H5F_ACC_SWMR_WRITE || H5F_USE_VFD_SWMR(file))
                 file->shared->sblock->status_flags |= H5F_SUPER_SWMR_WRITE_ACCESS;
 
             /* Flush the superblock & superblock extension */
@@ -2356,7 +2374,15 @@ H5F_open(bool try, H5F_t **_file, const char *name, unsigned flags, hid_t fcpl_i
         else { /* H5F_ACC_RDONLY: check consistency of status_flags */
             /* Skip check of status_flags for file with < superblock version 3 */
             if (file->shared->sblock->super_vers >= HDF5_SUPERBLOCK_VERSION_3) {
-                if (H5F_INTENT(file) & H5F_ACC_SWMR_READ) {
+                /* A VFD SWMR reader doesn't set the legacy H5F_ACC_SWMR_READ
+                 * flag (VFD-SWMR-ness is conveyed by the FAPL config, not an
+                 * access-mode bit), so it must be routed into the lenient
+                 * "SWMR consistency" branch below explicitly, or it always
+                 * falls into the strict branch and fails here every time a
+                 * VFD SWMR writer holds the file open -- which is the
+                 * expected, normal case.
+                 */
+                if (H5F_INTENT(file) & H5F_ACC_SWMR_READ || H5F_USE_VFD_SWMR(file)) {
                     if ((file->shared->sblock->status_flags & H5F_SUPER_WRITE_ACCESS &&
                          !(file->shared->sblock->status_flags & H5F_SUPER_SWMR_WRITE_ACCESS)) ||
                         (!(file->shared->sblock->status_flags & H5F_SUPER_WRITE_ACCESS) &&

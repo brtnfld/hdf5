@@ -615,9 +615,14 @@ H5PB_update_entry(H5PB_t *page_buf, haddr_t addr, size_t size, const void *buf)
 
         /* move to top of LRU list, unless VFD SWMR write tracking has
          * already pulled this entry off the LRU for the duration of the
-         * current tick (see H5PB__vfd_swmr_track_write())
+         * current tick (see H5PB__vfd_swmr_track_write()), or the entry is
+         * a multi-page metadata entry (never on the LRU at all -- see
+         * H5PB__write_mpmde()), or it is still sitting on the delayed
+         * write list from an earlier tick (delay_write_until != 0): the
+         * delayed write list reuses this same next/prev pair, so touching
+         * the LRU for such an entry would corrupt both lists.
          */
-        if (!page_entry->modified_this_tick)
+        if (!page_entry->is_mpmde && !page_entry->modified_this_tick && page_entry->delay_write_until == 0)
             H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
     } /* end if */
 
@@ -656,23 +661,52 @@ H5PB_remove_entry(const H5F_shared_t *f_sh, haddr_t addr)
 
     /* If found, remove the entry from the PB cache */
     if (page_entry) {
+        bool was_off_lru;
+
         assert(page_entry->type != H5F_MEM_PAGE_DRAW);
         if (NULL == H5SL_remove(page_buf->slist_ptr, &(page_entry->addr)))
             HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "Page Entry is not in skip list");
+
+        /* This entry may still be threaded onto the current tick's tick
+         * list and/or the delayed write list (its next/prev and tl_next/
+         * tl_prev fields are live list pointers, not just bookkeeping) --
+         * e.g. the free-space manager can call H5PB_remove_entry() on a
+         * page the writer only just dirtied earlier in this same tick.
+         * Freeing it while still linked would leave those lists pointing
+         * at freed (and potentially reused) memory, corrupting them --
+         * this previously caused H5PB_vfd_swmr__update_index()'s tick-list
+         * walk to loop over stale/cyclic entries and grow the shadow
+         * index without bound.  Unlink from every list it's actually on
+         * before freeing.
+         */
+        was_off_lru = page_entry->modified_this_tick || page_entry->delay_write_until != 0;
+
+        if (page_entry->modified_this_tick) {
+            H5PB__REMOVE_FROM_TL(page_buf, page_entry, FAIL)
+            page_entry->modified_this_tick = false;
+        }
+        if (page_entry->delay_write_until != 0) {
+            page_entry->delay_write_until = 0;
+            H5PB__REMOVE_FROM_DWL(page_buf, page_entry, FAIL)
+        }
 
         /* Remove from LRU list.  Multi-page metadata entries are never on
          * the LRU (see H5PB__write_mpmde()), so skip the unlink and the
          * count check for those, and free their image with H5MM_xfree()
          * rather than the page buffer's fixed-size factory allocator,
-         * since it was never allocated from it.
+         * since it was never allocated from it.  An entry that was on the
+         * tick list or delayed write list (handled above) was already off
+         * the LRU too, so skip it there as well.
          */
         if (page_entry->is_mpmde) {
             page_buf->mpmde_count--;
             page_entry->page_buf_ptr = H5MM_xfree(page_entry->page_buf_ptr);
         }
         else {
-            H5PB__REMOVE_LRU(page_buf, page_entry)
-            assert(H5SL_count(page_buf->slist_ptr) == page_buf->LRU_list_len);
+            if (!was_off_lru) {
+                H5PB__REMOVE_LRU(page_buf, page_entry)
+                assert(H5SL_count(page_buf->slist_ptr) == page_buf->LRU_list_len);
+            }
 
             page_buf->meta_count--;
 
@@ -836,9 +870,15 @@ H5PB_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, void *
                         /* move to top of LRU list, unless VFD SWMR write
                          * tracking has already pulled this entry off the
                          * LRU for the duration of the current tick (see
-                         * H5PB__vfd_swmr_track_write())
+                         * H5PB__vfd_swmr_track_write()), it is a
+                         * multi-page metadata entry (never on the LRU --
+                         * see H5PB__write_mpmde()), or it is still on the
+                         * delayed write list from an earlier tick (shares
+                         * the same next/prev pair, so touching the LRU
+                         * for it here would corrupt both lists).
                          */
-                        if (!page_entry->modified_this_tick)
+                        if (!page_entry->is_mpmde && !page_entry->modified_this_tick &&
+                            page_entry->delay_write_until == 0)
                             H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
                     } /* end if */
                     /* special handling for the last page if it is not a full page access */
@@ -850,11 +890,11 @@ H5PB_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, void *
                         H5MM_memcpy((uint8_t *)buf + offset, page_entry->page_buf_ptr,
                                     (size_t)((addr + size) - last_page_addr));
 
-                        /* move to top of LRU list, unless VFD SWMR write
-                         * tracking has already pulled this entry off the
-                         * LRU for the duration of the current tick
+                        /* move to top of LRU list -- see the guard comment
+                         * above for why all three conditions are needed.
                          */
-                        if (!page_entry->modified_this_tick)
+                        if (!page_entry->is_mpmde && !page_entry->modified_this_tick &&
+                            page_entry->delay_write_until == 0)
                             H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
                     } /* end else-if */
                     /* copy the entire fully accessed pages */
@@ -910,9 +950,15 @@ H5PB_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, void *
 
                 /* Update LRU, unless VFD SWMR write tracking has already
                  * pulled this entry off the LRU for the duration of the
-                 * current tick (see H5PB__vfd_swmr_track_write())
+                 * current tick (see H5PB__vfd_swmr_track_write()), it is
+                 * a multi-page metadata entry (never on the LRU -- see
+                 * H5PB__write_mpmde()), or it is still on the delayed
+                 * write list from an earlier tick (shares the same
+                 * next/prev pair, so touching the LRU for it here would
+                 * corrupt both lists).
                  */
-                if (!page_entry->modified_this_tick)
+                if (!page_entry->is_mpmde && !page_entry->modified_this_tick &&
+                    page_entry->delay_write_until == 0)
                     H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
 
                 /* Update statistics */
@@ -956,24 +1002,42 @@ H5PB_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, void *
                     HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTALLOC, FAIL,
                                 "memory allocation failed for page buffer entry");
 
-                /* Read page through the VFD layer, but make sure we don't read past the EOA. */
+                /* Read page through the VFD layer, but make sure we don't read past the EOA.
+                 *
+                 * Exception: a VFD SWMR reader's own view of the file's EOA
+                 * can legitimately lag behind the writer's -- that's the
+                 * whole point of VFD SWMR, where the writer keeps growing
+                 * the file while readers work from whatever they last
+                 * observed.  (Legacy SWMR's H5F_ACC_SWMR_READ flag has the
+                 * same exemption built into H5FD_read()'s own EOA check, but
+                 * VFD SWMR doesn't require that flag at all -- VFD-SWMR-ness
+                 * is conveyed by the FAPL config, not an access-mode bit --
+                 * so check the page buffer's own vfd_swmr/vfd_swmr_writer
+                 * state instead.)  Without this, a page already validly
+                 * published in the VFD SWMR shadow index (checked deeper
+                 * inside the VFD's own read, which is the real authority on
+                 * validity for such reads) could have its read size clamped
+                 * down to 0 by a stale EOA, silently handing back an
+                 * uninitialized buffer.
+                 */
+                if (!(page_buf->vfd_swmr && !page_buf->vfd_swmr_writer)) {
+                    /* Retrieve the 'eoa' for the file */
+                    if (HADDR_UNDEF == (eoa = H5F_shared_get_eoa(f_sh, type))) {
+                        new_page_buf = H5FL_FAC_FREE(page_buf->page_fac, new_page_buf);
+                        HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTGET, FAIL, "driver get_eoa request failed");
+                    }
 
-                /* Retrieve the 'eoa' for the file */
-                if (HADDR_UNDEF == (eoa = H5F_shared_get_eoa(f_sh, type))) {
-                    new_page_buf = H5FL_FAC_FREE(page_buf->page_fac, new_page_buf);
-                    HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTGET, FAIL, "driver get_eoa request failed");
+                    /* If the entire page falls outside the EOA, then fail */
+                    if (search_addr > eoa) {
+                        new_page_buf = H5FL_FAC_FREE(page_buf->page_fac, new_page_buf);
+                        HGOTO_ERROR(H5E_PAGEBUF, H5E_BADVALUE, FAIL,
+                                    "reading an entire page that is outside the file EOA");
+                    }
+
+                    /* Adjust the read size to not go beyond the EOA */
+                    if (search_addr + page_size > eoa)
+                        page_size = (size_t)(eoa - search_addr);
                 }
-
-                /* If the entire page falls outside the EOA, then fail */
-                if (search_addr > eoa) {
-                    new_page_buf = H5FL_FAC_FREE(page_buf->page_fac, new_page_buf);
-                    HGOTO_ERROR(H5E_PAGEBUF, H5E_BADVALUE, FAIL,
-                                "reading an entire page that is outside the file EOA");
-                }
-
-                /* Adjust the read size to not go beyond the EOA */
-                if (search_addr + page_size > eoa)
-                    page_size = (size_t)(eoa - search_addr);
 
                 /* Read page from VFD */
                 if (H5FD_read(file, type, search_addr, page_size, new_page_buf) < 0)
@@ -1070,8 +1134,16 @@ H5PB__vfd_swmr_track_write(H5F_shared_t *f_sh, H5PB_t *page_buf, H5PB_entry_t *e
          * Multi-page metadata entries are never inserted into the LRU in
          * the first place (see H5PB__write_mpmde()), so there is nothing
          * to pull off here.
+         *
+         * An entry can also already be off the LRU because a *previous*
+         * tick's write to it is still delayed (delay_write_until != 0):
+         * the delayed write list reuses this same next/prev pair (there is
+         * no separate dwl_next/dwl_prev), so calling H5PB__REMOVE_LRU() on
+         * such an entry would corrupt both lists by unlinking it using
+         * pointers that are actually its delayed-write-list neighbors, not
+         * its LRU neighbors.
          */
-        if (!entry_ptr->is_mpmde)
+        if (!entry_ptr->is_mpmde && entry_ptr->delay_write_until == 0)
             H5PB__REMOVE_LRU(page_buf, entry_ptr)
     }
 
@@ -1198,7 +1270,13 @@ H5PB__write_mpmde(H5F_shared_t *f_sh, H5PB_t *page_buf, H5FD_mem_t type, haddr_t
              * H5PB__vfd_swmr_track_write()).
              */
             H5FL_FAC_FREE(page_buf->page_fac, entry_ptr->page_buf_ptr);
-            if (!entry_ptr->modified_this_tick)
+            /* It may also already be off the LRU because a delayed write
+             * from an earlier tick hasn't been released yet
+             * (delay_write_until != 0) -- the delayed write list reuses
+             * this same next/prev pair, so removing it from the LRU again
+             * here would corrupt both lists.
+             */
+            if (!entry_ptr->modified_this_tick && entry_ptr->delay_write_until == 0)
                 H5PB__REMOVE_LRU(page_buf, entry_ptr)
             page_buf->meta_count--;
             page_buf->mpmde_count++;
@@ -1447,9 +1525,15 @@ H5PB_write(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, const
                  * earlier in the current tick (see
                  * H5PB__vfd_swmr_track_write(), called just below) -- in
                  * that case it stays off the LRU until the tick ends.
+                 * Also skip it for a multi-page metadata entry (never on
+                 * the LRU -- see H5PB__write_mpmde()) or one still on the
+                 * delayed write list from an earlier tick (shares the
+                 * same next/prev pair, so touching the LRU here would
+                 * corrupt both lists).
                  */
                 page_entry->is_dirty = true;
-                if (!page_entry->modified_this_tick)
+                if (!page_entry->is_mpmde && !page_entry->modified_this_tick &&
+                    page_entry->delay_write_until == 0)
                     H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
 
                 if (H5PB__vfd_swmr_track_write(f_sh, page_buf, page_entry, type) < 0)
