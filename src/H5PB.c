@@ -894,9 +894,15 @@ H5PB_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, void *
                 offset     = (0 == i ? addr - page_entry->addr : 0);
                 buf_offset = (0 == i ? 0 : size - access_size);
 
-                /* Account for reads that would overflow a page */
-                if (offset + access_size > page_buf->page_size)
-                    access_size = page_buf->page_size - offset;
+                /* Account for reads that would overflow the entry.  Use the
+                 * entry's own size, not page_buf->page_size: a multi-page
+                 * metadata entry (is_mpmde) can be larger than one page, and
+                 * clamping to page_buf->page_size here would silently
+                 * truncate (or, for offset > page_size, underflow) reads
+                 * that land past the first page of such an entry.
+                 */
+                if (offset + access_size > page_entry->size)
+                    access_size = page_entry->size - offset;
 
                 /* copy the requested data from the page into the input buffer */
                 H5MM_memcpy((uint8_t *)buf + buf_offset, (uint8_t *)page_entry->page_buf_ptr + offset,
