@@ -519,14 +519,56 @@ these explain the slowness):
   every observed run.
 
 Given all of the above check out individually, the slowness is most likely a matter of *degree*
-somewhere in this same pipeline (e.g., ticks happening less frequently than the nominal 0.4s once
-a reader is actually paired and exercising the full refresh path, or the per-tick refresh/decode
-work being more expensive than in the reference's hash-table-based implementation) rather than a
-single missing piece. This matches — and restores — the *original*, pre-this-session
-"timing-budget mismatch" theory documented further above, which this session's initial 15-second
-sampling had prematurely appeared to supersede. **Not yet root-caused further than this** — the
-next step is the direct tick-by-tick timing comparison against the reference that was always the
-suggested next step (see "Next steps" below), not a search for a discrete correctness bug.
+somewhere in this same pipeline rather than a single missing piece. This matches — and restores —
+the *original*, pre-this-session "timing-budget mismatch" theory documented further above, which
+this session's initial 15-second sampling had prematurely appeared to supersede.
+
+**Follow-up: a direct tick-by-tick timing comparison against the built reference
+(`05b54b7046`) found the mechanism precisely, even though it did not point at a discrete
+correctness bug in either branch's C code.**
+
+Built the reference via autotools in the same environment (see "How to build and test" below for
+the worktree/build commands) and instrumented both branches' `H5F_vfd_swmr_writer_end_of_tick()`
+(all 9 steps) and `H5F_vfd_swmr_reader_end_of_tick()` (per-tick "real work" duration) with the same
+`clock_gettime(CLOCK_MONOTONIC, ...)`-based markers, gated on `getenv("H5PB_TIMEIT")` (since
+removed from both trees after use). Findings:
+
+- **The writer's own per-tick step timing is essentially identical** between port and reference —
+  sub-millisecond for every one of the 9 steps, same shape (steps 2 and 6 grow slightly as the
+  tick list accumulates more entries), confirmed via a standalone (`-N`, no reader) writer run on
+  both branches.
+- **The reader's own per-tick "real work" (the time spent inside the `tmp_tick_num !=
+  shared->tick_num` branch of `H5F_vfd_swmr_reader_end_of_tick()`) is also tiny and comparable on
+  both branches** (sub-millisecond to low tens of milliseconds, scaling with `nchanges`), and tick
+  cadence on both branches is a rock-solid ~0.4s (`tick_len`) per tick when the writer is actually
+  ticking.
+- **The actual mechanism**: `notify_and_wait_for_reader()` (`test/vfd_swmr_zoo_writer.c`, both
+  branches, essentially identical code) gives the reader a **fixed**, non-adaptive window after
+  `create_zoo()` finishes — exactly `max_lag + 1` (8, given `max_lag=7`) writer-driven API calls,
+  one every `tick_len` (~3.2s total) — and then calls a plain, **untimed** `recv()` to wait for the
+  reader's completion signal. Once that loop ends, the writer makes **no further API calls and
+  therefore produces no further ticks** until the reader's ack arrives. Direct measurement
+  confirmed this on the port: in a run that later timed out, the writer completed exactly 12
+  end-of-tick cycles total (matching `create_zoo`'s few ticks plus the 8-tick wait loop) and then
+  went completely silent — zero further ticks — for the rest of the (30-second) run, while the
+  reader's own tick trace stopped in lockstep at the same point. This is a **hard deadline, not a
+  patience heuristic that gives the reader "more time if it's close"**: if reader validation
+  hasn't fully succeeded by the time the fixed window elapses, nothing further will ever be
+  published, and both processes hang until an external timeout kills them.
+- This fully explains the run-to-run variance observed earlier: whether the whole scenario
+  succeeds is a race between the reader's retry loop reaching full success (`i` reaching 13, the
+  natural end) and this fixed ~3.2-second-plus-a-few-ticks deadline. The reference wins that race
+  reliably; the port sometimes does, sometimes doesn't, because — even though the *traced*
+  per-tick mechanics are equally fast on both branches — the port's reader retry loop apparently
+  needs more wall-clock time (more successful attempts, or slower individual attempts) to fully
+  validate each selector than the reference's does, for reasons **outside** everything traced so
+  far (write publish, shadow-index allocation, change detection, eviction, tick cadence, per-tick
+  work duration — all confirmed equally fast). The remaining gap is most likely in the actual
+  metadata decode/re-load cost inside a single `H5Gopen2`-triggered attempt, or in per-API-call
+  overhead on entry that isn't tied to an actual tick change (not yet measured) — something a
+  CPU-level profile (e.g. `perf record` during the reader's busy retry loop, port vs. reference)
+  would locate directly, rather than more `clock_gettime` bracketing of the same already-fast
+  steps. See "Next steps" below.
 
 *(All `getenv("H5PB_PERF_TRACE")`-gated instrumentation added in this session's investigation —
 across `src/H5Fvfd_swmr.c`, `src/H5PB.c`, `test/genall5.c`, `test/vfd_swmr_zoo_writer.c` — has
@@ -628,23 +670,46 @@ timeout 90 bash test_vfd_swmr.sh zoo
 stray writer/reader processes first (`ps aux | grep vfd_swmr`), or you'll get stale-file races
 unrelated to anything real.
 
+### Building the reference implementation for comparison
+
+`lifeboat/feature/vfd_swmr` (commit `05b54b7046`) is the documented reference this port is based
+on, and converges the zoo scenario reliably in ~6 seconds. Useful for direct A/B comparisons (both
+timing and behavioral) against this port. It's a `git remote` in this repo already
+(`lifeboat`); build it via autotools into a separate worktree, since it predates the CMake port
+and `develop` has since dropped autotools entirely:
+
+```bash
+git fetch lifeboat feature/vfd_swmr --depth=1
+git worktree add /path/to/lifeboat-worktree 05b54b7046   # detached HEAD at the reference commit
+
+cd /path/to/lifeboat-worktree
+./autogen.sh
+mkdir /path/to/lifeboat-build && cd /path/to/lifeboat-build
+/path/to/lifeboat-worktree/configure \
+  --disable-fortran --disable-cxx --disable-parallel --disable-tools --disable-hl CC=clang
+make -j"$(nproc)"
+
+# zoo writer/reader binaries land at test/vfd_swmr_zoo_writer and test/vfd_swmr_zoo_reader;
+# LD_LIBRARY_PATH needs src/.libs for the shared lib.
+```
+
 ---
 
 ## Next steps (in rough priority order)
 
-1. **Time the writer's and reader's per-tick work directly against the reference, tick by tick**
-   (this was always the suggested first step, before this session's detour into confirming it via
-   mpmde and root-group tracing instead — see "The actual remaining blocker" above for everything
-   already ruled out). A built copy of `lifeboat/feature/vfd_swmr` (`05b54b7046`) is available for
-   this comparison. Concretely: instrument each of the 9 writer-side EOT steps
-   (`H5F_vfd_swmr_writer_end_of_tick()`) and the reader's diff/evict/refresh path
-   (`H5F_vfd_swmr_reader_end_of_tick()`) with per-step timestamps on both branches, and compare —
-   the goal is to find which specific step(s) take measurably longer here than in the reference,
-   since the write/detect/evict mechanisms have all already been confirmed *individually* correct
-   this session, just not fast enough end-to-end. Also worth checking: does the writer's actual
-   tick cadence (not just its own local processing time) slow down once a reader is paired and
-   actively exercising the refresh path, versus running standalone (a standalone writer alone
-   completes the whole zoo creation in well under the reference's ~6s budget)?
+1. **CPU-profile the reader's busy retry loop (port vs. reference) to find why each validation
+   attempt needs more wall-clock time on the port.** The tick-by-tick timing comparison (see "The
+   actual remaining blocker" above) already ruled out every traced mechanism — writer per-step
+   timing, reader per-tick work duration, and tick cadence are all essentially identical between
+   port and reference. The gap must be in something *not* captured by end-of-tick bracketing:
+   most likely the actual metadata decode/re-load cost inside a single `H5Gopen2`-triggered
+   attempt (e.g. `H5O_load`, symbol table / link message decoding), or per-API-call overhead on
+   *every* entry to the library (not just real tick changes) that the current instrumentation
+   doesn't measure. Use `perf record`/`perf report` (or equivalent) on the reader process during
+   its retry loop on both branches (a built copy of `lifeboat/feature/vfd_swmr` at `05b54b7046` is
+   available for this comparison — see "How to build and test" below) and compare hot paths
+   directly, rather than adding more `clock_gettime` brackets around code already shown to be
+   fast.
 2. Once the slowness is root-caused and addressed, **re-verify `zoo` convergence time** against the
    reference's ~6-second baseline over several repeated runs (given the run-to-run variance
    observed this session — one 30s run succeeded in full, an otherwise-identical repeat only made
