@@ -568,14 +568,66 @@ removed from both trees after use). Findings:
   overhead on entry that isn't tied to an actual tick change (not yet measured) — something a
   CPU-level profile (e.g. `perf record` during the reader's busy retry loop, port vs. reference)
   would locate directly, rather than more `clock_gettime` bracketing of the same already-fast
-  steps. See "Next steps" below.
+  steps.
 
-*(All `getenv("H5PB_PERF_TRACE")`-gated instrumentation added in this session's investigation —
-across `src/H5Fvfd_swmr.c`, `src/H5PB.c`, `test/genall5.c`, `test/vfd_swmr_zoo_writer.c` — has
-been removed after use. Re-add similar tracing if you pick up the root-group investigation; the
-pattern used was: cap output with `if (call_count <= N || call_count % M == 0)` to avoid the disk
-quota exhaustion that a truly unthrottled per-call trace causes under this test's zero-backoff
-retry loop.)*
+**Follow-up 2: CPU-profiled the reader's retry loop with `perf record --call-graph dwarf` (port
+vs. reference) and found a real, reproducible metadata corruption bug — not just a slowdown.**
+
+The profile itself first pointed at a red herring worth recording: `__printf_buffer` /
+`__memmove_avx512_unaligned_erms` dominate the port's reader profile (23%+ combined), traced to
+`H5E_printf_stack` being called deep inside `H5PB_read()` on a speculative lookaside read that
+legitimately misses and is internally caught (never surfaces in the final error stack, which is
+always the same clean 10-frame "object 'X' doesn't exist" chain). The reference shows the *same*
+pattern, just proportionally tiny (~4%) because it needs far fewer retries overall. **This is a
+symptom/amplifier of needing more retries, not the cause of needing more retries** — it explains
+why each retry is expensive, not why more retries are needed.
+
+Directly instrumenting the retry loop itself (a restart counter plus "highest selector index ever
+reached" counter, gated on `getenv`, since removed) showed the real picture: selector 0 (the
+trivial empty root-level group) succeeds fast and reliably (confirmed over 5 repeated runs,
+consistently in well under a second). But **selector 2 (the dense new-style group, 300 links, v2
+B-tree + fractal heap — the case this session's MPMDE work was built for) never succeeds at all**
+within a bounded window as long as it was tested: one run showed the retry loop restarting from
+`i=0` over **26 million times in 17 seconds** without `i` ever exceeding 2 even once. This is not
+"eventually converges, just slowly" — it is a hard, reproducible block.
+
+Dumping the actual HDF5 error stack for the specific failing call (`H5Lexists()` returning a real
+error, not "not found," while checking an individual link inside a dense group whose own metadata
+— storage type, link count — had *already* been validated correctly) traced the failure to:
+
+```
+H5Lexists → H5G_traverse → H5G__dense_lookup → H5B2_find → H5G__dense_btree2_name_compare
+  → H5HF_op → H5HF__man_dblock_locate → H5HF__man_iblock_protect (fractal heap indirect block)
+  → H5AC_protect → H5C_protect → H5C__load_entry:
+    "incorrect metadata checksum after all read attempts"
+```
+
+This is the critical detail: `H5C__load_entry()` has a **built-in retry loop** specifically
+designed to tolerate transient torn reads inherent to SWMR (hence "after all read attempts" in the
+message) — and it still fails checksum validation every single time, across millions of overall
+retries. A mechanism built to smooth over *transient* races failing consistently, forever, means
+this isn't a race being lost sometimes — it's a **persistent, reproducible corruption** in how the
+fractal heap's indirect block is published or read back for a dense group large enough to need
+MPMDE. (Not a VFD-SWMR-transport-level checksum issue either — `H5FD__vfd_swmr_read()`'s own
+shadow-file checksum check, lower in the stack, was directly traced and never fires here; this is
+HDF5's own internal per-block checksum, verified after the VFD SWMR layer has already handed back
+its bytes.)
+
+This reframes the whole investigation: the "slow, high-variance convergence" symptom was a
+downstream consequence of this one selector never succeeding, not a general performance gap across
+all selectors. Fixing *this* is likely the actual remaining blocker for `zoo` — not a broad
+performance-tuning exercise. See "Next steps" below for where to pick this up (likely: whether the
+fractal heap indirect block itself is being correctly handled as an MPMDE entry — its size, given
+300 links, plausibly exceeds one page too — or whether there's a more specific bug in how
+multiple, related large structures for the same dense group interact under the skip-list page
+buffer).
+
+*(All `getenv("H5PB_PERF_TRACE")`/`H5PB_TIMEIT`/`H5PB_RATECHECK`-gated instrumentation added in
+this session's investigation — across `src/H5C.c`, `src/H5Fvfd_swmr.c`, `src/H5FDvfd_swmr.c`,
+`src/H5PB.c`, `test/genall5.c`, `test/vfd_swmr_zoo_writer.c` — has been removed after use. Re-add
+similar tracing if you pick this up; the pattern used was: cap output with `if (call_count <= N ||
+call_count % M == 0)`, or gate on a restart/success condition, to avoid the disk quota exhaustion
+that a truly unthrottled per-call trace causes under this test's zero-backoff retry loop.)*
 
 ---
 
@@ -621,14 +673,16 @@ only ever worked under a build system that no longer exists.
   (mirroring the pattern already used by `expand`/`shrink`/`sparse`), placed *after* the writer's
   first manual tick (not right after `H5Fcreate`, which still races the flush). The writer and
   reader now correctly reach the socket handshake and `create_zoo`/`validate_zoo` every run.
-- **The real remaining blocker, as of this session, is that convergence is real but too slow and
-  too variable** — see "The actual remaining blocker: convergence is real, but too slow and too
-  variable" above. This *confirms and restores* the original, pre-this-session "timing-budget
-  mismatch" theory (an initial 15-second sampling window in this session had briefly suggested a
-  harder "never converges" bug; a 30-second window disproved that — the reader does reach and
-  pass `i=0`, `i=1`, sometimes further, just slower and less reliably than the reference's ~6s).
-  This also means: **do not assume the other 11 untested scenarios will pass once run** — expect
-  them to hit the same slowness, to varying degrees depending on how much metadata each creates.
+- **The real remaining blocker, as of this session, is a reproducible metadata corruption bug in
+  reading back the dense group's fractal heap indirect block** (selector 2's `H5C__load_entry`
+  failing its own internal checksum "after all read attempts," confirmed over 26+ million retries
+  with zero successes) — see "Follow-up 2" in the section above for the full trace. This
+  supersedes the "just slow" framing from earlier in this same session: selector 0 (empty group)
+  succeeds fast and reliably every time tested; the earlier-observed slow/variable overall
+  convergence was this one selector never succeeding, not a broad performance gap. This also
+  means: **do not assume the other 11 untested scenarios will pass** — any scenario exercising a
+  dense group or similarly large fractal-heap-backed structure likely hits the same bug; smaller
+  scenarios may be unaffected.
 - **The `H5SHELL-test_vfd_swmr` ctest entry currently runs the entire default scenario set with no
   per-scenario opt-out.** As long as any one scenario fails, the whole entry reports failed. If
   you want to merge this branch (or just this test wiring) before all scenarios are proven out,
@@ -697,25 +751,30 @@ make -j"$(nproc)"
 
 ## Next steps (in rough priority order)
 
-1. **CPU-profile the reader's busy retry loop (port vs. reference) to find why each validation
-   attempt needs more wall-clock time on the port.** The tick-by-tick timing comparison (see "The
-   actual remaining blocker" above) already ruled out every traced mechanism — writer per-step
-   timing, reader per-tick work duration, and tick cadence are all essentially identical between
-   port and reference. The gap must be in something *not* captured by end-of-tick bracketing:
-   most likely the actual metadata decode/re-load cost inside a single `H5Gopen2`-triggered
-   attempt (e.g. `H5O_load`, symbol table / link message decoding), or per-API-call overhead on
-   *every* entry to the library (not just real tick changes) that the current instrumentation
-   doesn't measure. Use `perf record`/`perf report` (or equivalent) on the reader process during
-   its retry loop on both branches (a built copy of `lifeboat/feature/vfd_swmr` at `05b54b7046` is
-   available for this comparison — see "How to build and test" below) and compare hot paths
-   directly, rather than adding more `clock_gettime` brackets around code already shown to be
-   fast.
-2. Once the slowness is root-caused and addressed, **re-verify `zoo` convergence time** against the
-   reference's ~6-second baseline over several repeated runs (given the run-to-run variance
-   observed this session — one 30s run succeeded in full, an otherwise-identical repeat only made
-   it to `i=2`) — a single successful run is not enough to call this fixed.
+1. **Root-cause the fractal heap indirect block checksum failure** (see "Follow-up 2" above —
+   `H5C__load_entry(): incorrect metadata checksum after all read attempts`, reproducible on every
+   attempt to validate selector 2, the dense group). Suggested starting points:
+   - Check whether the fractal heap's indirect block for a 300-link dense group is itself larger
+     than one page (`page_buf->page_size`, 4096 in the zoo test) — if so, it needs the same MPMDE
+     treatment this session added for the group's own object header, and may be falling through a
+     gap (e.g. hitting the ordinary, page-limited read/write path instead of
+     `H5PB__write_mpmde()`/the generic bypass, if its `H5FD_mem_t` type or call path differs from
+     what was traced for the OHDR writes).
+   - If it's *not* an MPMDE-sized entry, compare exactly what bytes the writer publishes for this
+     indirect block against what the reader reads back (e.g. dump both sides' images and diff, or
+     add a targeted trace at `H5F_update_vfd_swmr_metadata_file()`'s checksum computation and
+     `H5FD__vfd_swmr_read()`'s verification) to find where the content actually diverges — since
+     `H5C__load_entry`'s own retry loop already rules out a merely-transient torn read.
+   - Worth checking whether other structures related to the same dense group (fractal heap direct
+     blocks, v2 B-tree nodes — all seen as separate, smaller, page-sized writes in this session's
+     tracing) interact with the indirect block's page(s) in a way that could corrupt it (e.g. an
+     eviction or overwrite ordering issue specific to having multiple related entries active in
+     the tick list at once).
+2. Once fixed, **re-verify `zoo` convergence against the reference's ~6-second baseline over
+   several repeated runs** — a single successful run is not enough, given this session's evidence
+   that even selector 0 alone succeeds reliably while selector 2 can fail arbitrarily many times.
 3. **Run the other 11 default scenarios** and fix whatever surfaces, once `zoo` itself converges
-   reliably.
+   reliably — expect scenarios with large/dense structures to be most likely to hit a similar bug.
 4. **Decide on `H5SHELL-test_vfd_swmr`'s CI posture** if this needs to merge before all scenarios
    pass (see "Known limitations" above for the options).
 5. Consider whether any of the 4 "Pre-existing develop bugs", 5 "Phase 3 bugs", or 3 bugs fixed
