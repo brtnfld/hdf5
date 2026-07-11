@@ -616,18 +616,50 @@ its bytes.)
 This reframes the whole investigation: the "slow, high-variance convergence" symptom was a
 downstream consequence of this one selector never succeeding, not a general performance gap across
 all selectors. Fixing *this* is likely the actual remaining blocker for `zoo` — not a broad
-performance-tuning exercise. See "Next steps" below for where to pick this up (likely: whether the
-fractal heap indirect block itself is being correctly handled as an MPMDE entry — its size, given
-300 links, plausibly exceeds one page too — or whether there's a more specific bug in how
-multiple, related large structures for the same dense group interact under the skip-list page
-buffer).
+performance-tuning exercise.
+
+**Follow-up 3: the "is it an unhandled MPMDE case" hypothesis was checked directly and ruled
+out — one real bug was found and fixed along the way, but it does not explain this failure.**
+
+Traced every distinct address the reader's `H5PB_read()` requests with `type == H5FD_MEM_OHDR`
+during a run that hits the failure (`H5FD_MEM_FHEAP_IBLOCK` is a `#define` alias for
+`H5FD_MEM_OHDR` in `src/H5FDdevelop.h` — fractal heap indirect blocks are tracked as this type,
+same as ordinary object headers). The failing indirect block is read at a *fixed, unvarying*
+`addr=7712, size=149` on every attempt — nowhere close to `page_buf->page_size` (4096). **This
+structure is not, and was never going to be, an MPMDE entry** — the earlier "Follow-up 2"
+writeup's speculation to the contrary was wrong.
+
+Along the way, reading `H5C__load_entry()`'s speculative-size retry logic (the "grow the read"
+step used when a metadata type's real size isn't known until its prefix is decoded) surfaced a
+real, independent bug: `H5PB_read()`'s "found" branch (an already-cached entry, hit via
+`H5SL_search`) clamped `access_size` to `page_buf->page_size` unconditionally instead of the
+entry's own `page_entry->size`. For a multi-page metadata (MPMDE) entry this would silently
+truncate — or, for an offset past the first page, underflow via unsigned wraparound — any read
+landing past the first page. **Fixed** in `src/H5PB.c` (`page_entry->size` used in the clamp
+instead of `page_buf->page_size`), verified via regression suite (2726/2727, no new regressions),
+and kept as a real, standalone correctness fix. But it does not touch this failure: `addr=7712`'s
+entry, at 149 bytes, is a completely ordinary, single-page (in fact far-under-one-page) entry,
+never routed through the MPMDE path at all, so this clamp was never in its way.
+
+**The actual bug is still open.** The most promising remaining lead: `addr=7712` falls in HDF5
+page 1 (byte range 4096–8191, given `page_buf->page_size=4096`), and earlier tracing in this same
+session (see "Follow-up 2") showed *multiple, unrelated* v2 B-tree node writes landing in that
+exact same page — `addr=4096, 4608, 5120, 5632, 6144, 6656, 7168` (all `type=2`/`H5FD_MEM_BTREE`),
+immediately followed by the indirect block write at `7712`. Several distinct metadata structures
+sharing one page-buffer entry is a real, plausible way for one write to corrupt another under a
+page-buffer design that tracks one shared image per page rather than per-structure — worth
+checking directly (e.g., whether writes to different byte ranges within the same shared entry
+correctly preserve each other's content across ticks, especially if the entry gets evicted and
+reloaded between them) before assuming this is MPMDE-related at all. This has not yet been
+confirmed, only identified as the next thing to check.
 
 *(All `getenv("H5PB_PERF_TRACE")`/`H5PB_TIMEIT`/`H5PB_RATECHECK`-gated instrumentation added in
 this session's investigation — across `src/H5C.c`, `src/H5Fvfd_swmr.c`, `src/H5FDvfd_swmr.c`,
 `src/H5PB.c`, `test/genall5.c`, `test/vfd_swmr_zoo_writer.c` — has been removed after use. Re-add
 similar tracing if you pick this up; the pattern used was: cap output with `if (call_count <= N ||
-call_count % M == 0)`, or gate on a restart/success condition, to avoid the disk quota exhaustion
-that a truly unthrottled per-call trace causes under this test's zero-backoff retry loop.)*
+call_count % M == 0)`, or gate on a restart/success condition, or dedupe on "value changed since
+last print," to avoid the disk quota exhaustion that a truly unthrottled per-call trace causes
+under this test's zero-backoff retry loop.)*
 
 ---
 
@@ -751,25 +783,25 @@ make -j"$(nproc)"
 
 ## Next steps (in rough priority order)
 
-1. **Root-cause the fractal heap indirect block checksum failure** (see "Follow-up 2" above —
-   `H5C__load_entry(): incorrect metadata checksum after all read attempts`, reproducible on every
-   attempt to validate selector 2, the dense group). Suggested starting points:
-   - Check whether the fractal heap's indirect block for a 300-link dense group is itself larger
-     than one page (`page_buf->page_size`, 4096 in the zoo test) — if so, it needs the same MPMDE
-     treatment this session added for the group's own object header, and may be falling through a
-     gap (e.g. hitting the ordinary, page-limited read/write path instead of
-     `H5PB__write_mpmde()`/the generic bypass, if its `H5FD_mem_t` type or call path differs from
-     what was traced for the OHDR writes).
-   - If it's *not* an MPMDE-sized entry, compare exactly what bytes the writer publishes for this
-     indirect block against what the reader reads back (e.g. dump both sides' images and diff, or
-     add a targeted trace at `H5F_update_vfd_swmr_metadata_file()`'s checksum computation and
-     `H5FD__vfd_swmr_read()`'s verification) to find where the content actually diverges — since
-     `H5C__load_entry`'s own retry loop already rules out a merely-transient torn read.
-   - Worth checking whether other structures related to the same dense group (fractal heap direct
-     blocks, v2 B-tree nodes — all seen as separate, smaller, page-sized writes in this session's
-     tracing) interact with the indirect block's page(s) in a way that could corrupt it (e.g. an
-     eviction or overwrite ordering issue specific to having multiple related entries active in
-     the tick list at once).
+1. **Root-cause the fractal heap indirect block checksum failure** (see "Follow-up 2"/"Follow-up
+   3" above — `H5C__load_entry(): incorrect metadata checksum after all read attempts`,
+   reproducible on every attempt to validate selector 2, the dense group). **Already ruled out:**
+   the failing entry (`addr=7712, size=149`) is confirmed *not* MPMDE-sized — this is not a gap in
+   the MPMDE work. Suggested starting points, in order:
+   - **Multiple structures sharing one page-buffer page**: `addr=7712` falls in HDF5 page 1
+     (4096–8191), which earlier tracing also showed receiving several distinct v2 B-tree node
+     writes (`4096, 4608, 5120, 5632, 6144, 6656, 7168`) immediately before it. Check whether
+     writes to different byte ranges within the same shared page-buffer entry correctly preserve
+     each other's content — particularly across tick boundaries, or if the entry is ever evicted
+     and reloaded between writes to different structures within it.
+   - **Compare exact bytes published vs. read back**: dump both sides' images and diff (or add a
+     targeted trace at `H5F_update_vfd_swmr_metadata_file()`'s checksum computation and
+     `H5FD__vfd_swmr_read()`'s verification) to find precisely where the content diverges — since
+     `H5C__load_entry`'s own retry loop already rules out a merely-transient torn read; this is a
+     genuine, reproducible mismatch happening the same way every time.
+   - `H5FD_MEM_FHEAP_IBLOCK` is a `#define` alias for `H5FD_MEM_OHDR` (`src/H5FDdevelop.h`) — worth
+     keeping in mind that any trace filtering on "type == OHDR" catches both ordinary object
+     headers and fractal heap indirect blocks; disambiguate by address/size if needed.
 2. Once fixed, **re-verify `zoo` convergence against the reference's ~6-second baseline over
    several repeated runs** — a single successful run is not enough, given this session's evidence
    that even selector 0 alone succeeds reliably while selector 2 can fail arbitrarily many times.
