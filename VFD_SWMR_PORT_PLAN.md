@@ -54,9 +54,10 @@ genuine page-buffer memory leak, and an untracked-write bypass), **then implemen
 metadata entry (MPMDE) support** on the skip-list page buffer — previously flagged as out of
 scope, now required because the reference implementation's ~6-second convergence depends on it.
 The MPMDE write path is implemented and confirmed (via tracing) to correctly publish the
-large writes it was built for, but `zoo` still doesn't converge: there is a **separate, deeper,
-not-yet-root-caused bug** where the reader never sees even the writer's very first, trivial write
-(adding a link to the root group). See "Bugs found and MPMDE support added in this session" below.
+large writes it was built for, but `zoo` still doesn't converge reliably: convergence *does*
+happen (confirmed over longer, 30-second test windows) but is much slower and more variable than
+the reference's ~6 seconds, confirming and restoring the original "timing-budget mismatch" theory
+rather than a hard correctness bug. See "Bugs found and MPMDE support added in this session" below.
 
 ---
 
@@ -480,35 +481,52 @@ sails through every selector (reaching `i=13`, the natural end of the selector l
 getting stuck around `i=1`–`2` as before. This is real progress and a real, independent fix, not
 speculative.
 
-### The actual remaining blocker: reader never sees the root group's own updates
+### The actual remaining blocker: convergence is real, but too slow and too variable
 
-Despite the above, the zoo writer+reader pair still does not converge. With `-e` (print error
-stacks) on the reader, the failure is a clean, non-corrupt "not found":
+Initial testing in this session (15-second samples) showed the reader failing to see even "A" —
+the very first, trivial thing the writer creates (an empty new-style group linked directly under
+the root group; selector 0, `test/genall5.c`'s `ns_grp_0`/`vrfy_ns_grp_0`) — every single time,
+with the `-e` error stack showing a clean, non-corrupt `H5G__loc_find_cb(): object 'A' doesn't
+exist`. That evidence briefly (see the superseded write-up in git history) supported a theory that
+the reader could *never* see root-group updates at all, independent of mpmde. **Longer testing
+disproved that theory**: given a 30-second window, "A" (`i=0`) reliably does become visible, and
+in one run the whole zoo scenario (both selector 0 and selector 1, `i=1`) succeeded, with both
+writer and reader exiting 0. A second, otherwise-identical 30-second run made it only to `i=2`
+before timing out. So this is not a permanent "never" bug — it's a **real, substantial
+performance/reliability gap**: this port takes anywhere from ~15 to 30+ seconds (with high
+run-to-run variance) for even the *first* few selectors to become visible, while the reference
+(`05b54b7046`) reliably converges on the *entire* scenario in ~6 seconds.
 
-```
-#009: H5Gloc.c line 381 in H5G__loc_find_cb(): object 'A' doesn't exist
-```
+Things ruled out by direct tracing this session (each confirmed working correctly, so none of
+these explain the slowness):
+- **Write-side publication**: root-adjacent addresses (superblock, root group's own small object
+  header, etc., all within HDF5 page 0) get written and tracked by `H5PB__vfd_swmr_track_write()`
+  repeatedly throughout a run, with `page_buf->vfd_swmr_writer` true the whole time.
+- **Shadow-index re-allocation**: `H5F_update_vfd_swmr_metadata_file()` always allocates a fresh
+  `md_file_page_offset` for every entry touched in a tick (never reuses the old location in place),
+  so the reader's location-based diff can't miss an in-place update.
+- **Reader-side change detection**: the reader's page-diff loop in
+  `H5F_vfd_swmr_reader_end_of_tick()` correctly flags HDF5 page 0 as changed on essentially every
+  tick that touches it.
+- **Reader-side eviction**: the page-0 entries reaching `H5C_evict_or_refresh_all_entries_in_page()`
+  (including the root group's own object header) are all `is_pinned=0` — they take the plain evict
+  path (`H5C__flush_single_entry` with invalidate), not the trickier pinned/refresh path, so they
+  should be cleanly reloaded on next access.
+- **The reader-side busy-poll from bug #1 above**: confirmed fixed — tick numbers advance roughly
+  once every `tick_len` (0.4s) throughout, not on every call.
+- **Socket handshake/synchronization**: the reader only starts validating after the writer's
+  socket notification that creation finished, and that handshake completes almost immediately in
+  every observed run.
 
-`"A"` is the very first, trivial thing the writer creates — an empty new-style group linked
-directly under the root group (selector 0, `test/genall5.c`'s `ns_grp_0`/`vrfy_ns_grp_0`). This
-fails continuously (millions of retries sampled over 15+ seconds) even long after the writer has
-finished creating *everything* and is idling in its own end-of-tick loop waiting for the reader.
-This is **not** an mpmde issue: adding a link to the root group is a small, single-page write that
-goes through the completely unmodified pre-existing write path (`H5PB__write_mpmde()` only
-activates for writes `>= page_buf->page_size`). It is also not the busy-poll from bug #1 above
-(confirmed fixed — reader-side `READER_EOT` tracing shows tick numbers advancing normally, roughly
-one every 0.4s, throughout the run) and not a synchronization/handshake issue (the reader only
-starts validating after receiving the writer's socket notification that creation finished, and
-that handshake completes almost immediately in every observed run).
-
-This is a genuine, separate, **not-yet-root-caused** bug: something about how updates to the root
-group's own link table/object header get republished to a VFD-SWMR reader isn't working, even
-though bugs #1–#5 above (from the earlier zoo debugging pass) already fixed the general
-publish/refresh/re-decode path for *other* metadata. Whatever is different about the root group
-specifically (its object header is created once at file-creation time, before VFD SWMR's tick
-machinery is fully engaged; or its metadata cache entry may be treated specially, e.g. pinned or
-excluded from the same per-tick refresh scan other entries go through) hasn't been investigated
-yet. This is the actual next thing to chase — see "Next steps" below.
+Given all of the above check out individually, the slowness is most likely a matter of *degree*
+somewhere in this same pipeline (e.g., ticks happening less frequently than the nominal 0.4s once
+a reader is actually paired and exercising the full refresh path, or the per-tick refresh/decode
+work being more expensive than in the reference's hash-table-based implementation) rather than a
+single missing piece. This matches — and restores — the *original*, pre-this-session
+"timing-budget mismatch" theory documented further above, which this session's initial 15-second
+sampling had prematurely appeared to supersede. **Not yet root-caused further than this** — the
+next step is the direct tick-by-tick timing comparison against the reference that was always the
+suggested next step (see "Next steps" below), not a search for a discrete correctness bug.
 
 *(All `getenv("H5PB_PERF_TRACE")`-gated instrumentation added in this session's investigation —
 across `src/H5Fvfd_swmr.c`, `src/H5PB.c`, `test/genall5.c`, `test/vfd_swmr_zoo_writer.c` — has
@@ -561,14 +579,14 @@ only ever worked under a build system that no longer exists.
   (mirroring the pattern already used by `expand`/`shrink`/`sparse`), placed *after* the writer's
   first manual tick (not right after `H5Fcreate`, which still races the flush). The writer and
   reader now correctly reach the socket handshake and `create_zoo`/`validate_zoo` every run.
-- **The real remaining blocker, as of this session, is a not-yet-root-caused bug where the reader
-  never sees the writer's updates to the root group** — see "The actual remaining blocker: reader
-  never sees the root group's own updates" above. This supersedes the earlier "timing-budget
-  mismatch" theory: it isn't that convergence is merely slow, it's that (in every run observed so
-  far) it doesn't happen at all within the timeframes tested, for a reason unrelated to timing
-  budgets, mpmde, or any of bugs #1–#5/the 3 bugs fixed this session. This also means: **do not
-  assume the other 11 untested scenarios will pass once run** — most create objects under the
-  root group too, so they likely hit the same blocker.
+- **The real remaining blocker, as of this session, is that convergence is real but too slow and
+  too variable** — see "The actual remaining blocker: convergence is real, but too slow and too
+  variable" above. This *confirms and restores* the original, pre-this-session "timing-budget
+  mismatch" theory (an initial 15-second sampling window in this session had briefly suggested a
+  harder "never converges" bug; a 30-second window disproved that — the reader does reach and
+  pass `i=0`, `i=1`, sometimes further, just slower and less reliably than the reference's ~6s).
+  This also means: **do not assume the other 11 untested scenarios will pass once run** — expect
+  them to hit the same slowness, to varying degrees depending on how much metadata each creates.
 - **The `H5SHELL-test_vfd_swmr` ctest entry currently runs the entire default scenario set with no
   per-scenario opt-out.** As long as any one scenario fails, the whole entry reports failed. If
   you want to merge this branch (or just this test wiring) before all scenarios are proven out,
@@ -614,21 +632,25 @@ unrelated to anything real.
 
 ## Next steps (in rough priority order)
 
-1. **Root-cause why the reader never sees the writer's updates to the root group** (see "The
-   actual remaining blocker" above) — this is now the single thing blocking `zoo` (and likely most
-   of the other 11 scenarios) from converging at all. Suggested starting points: compare how the
-   root group's object header/metadata cache entry is created and tracked (`H5G_mkroot` et al.)
-   against an ordinary group created later — is it going through the same page-buffer tracking and
-   tick-list path as everything else, or is it created before VFD SWMR's tick machinery is fully
-   engaged (i.e. before `shared->vfd_swmr_writer`/`shared->page_buf->vfd_swmr_writer` is set), so
-   its creation is never tracked at all? Also worth checking whether the root group's cache entry
-   is "pinned" (a real H5C concept) in a way that excludes it from the per-tick
-   `H5C_evict_or_refresh_all_entries_in_page()` scan on the reader side.
-2. Once the root-group blocker is fixed, **re-verify `zoo` convergence time** against the
-   reference's ~6-second baseline — the mpmde work and the 3 bugs fixed this session were verified
-   individually via tracing, but full writer+reader convergence has not yet been observed even
-   once.
-3. **Run the other 11 default scenarios** and fix whatever surfaces, once `zoo` itself converges.
+1. **Time the writer's and reader's per-tick work directly against the reference, tick by tick**
+   (this was always the suggested first step, before this session's detour into confirming it via
+   mpmde and root-group tracing instead — see "The actual remaining blocker" above for everything
+   already ruled out). A built copy of `lifeboat/feature/vfd_swmr` (`05b54b7046`) is available for
+   this comparison. Concretely: instrument each of the 9 writer-side EOT steps
+   (`H5F_vfd_swmr_writer_end_of_tick()`) and the reader's diff/evict/refresh path
+   (`H5F_vfd_swmr_reader_end_of_tick()`) with per-step timestamps on both branches, and compare —
+   the goal is to find which specific step(s) take measurably longer here than in the reference,
+   since the write/detect/evict mechanisms have all already been confirmed *individually* correct
+   this session, just not fast enough end-to-end. Also worth checking: does the writer's actual
+   tick cadence (not just its own local processing time) slow down once a reader is paired and
+   actively exercising the refresh path, versus running standalone (a standalone writer alone
+   completes the whole zoo creation in well under the reference's ~6s budget)?
+2. Once the slowness is root-caused and addressed, **re-verify `zoo` convergence time** against the
+   reference's ~6-second baseline over several repeated runs (given the run-to-run variance
+   observed this session — one 30s run succeeded in full, an otherwise-identical repeat only made
+   it to `i=2`) — a single successful run is not enough to call this fixed.
+3. **Run the other 11 default scenarios** and fix whatever surfaces, once `zoo` itself converges
+   reliably.
 4. **Decide on `H5SHELL-test_vfd_swmr`'s CI posture** if this needs to merge before all scenarios
    pass (see "Known limitations" above for the options).
 5. Consider whether any of the 4 "Pre-existing develop bugs", 5 "Phase 3 bugs", or 3 bugs fixed
