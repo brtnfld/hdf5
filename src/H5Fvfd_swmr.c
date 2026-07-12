@@ -447,6 +447,18 @@ H5F_vfd_swmr_close_or_flush(H5F_t *f, hbool_t closing)
 
         assert(TAILQ_EMPTY(&shared->shadow_defrees));
 
+        /* Free the shadow index arrays -- H5F__vfd_swmr_create_index() and
+         * H5F_vfd_swmr_enlarge_shadow_index() allocate and grow these with
+         * H5MM_calloc()/H5MM_realloc(), but nothing previously freed them
+         * at writer close. The leak is small for a file with only a few
+         * tracked pages, but scales with the number of datasets/ticks and
+         * is large enough for larger files (confirmed via valgrind: 2.3MB
+         * for a many-dataset VDS test) to exhaust the library's free-list
+         * package during H5_term_library()'s shutdown loop.
+         */
+        shared->mdf_idx     = H5MM_xfree(shared->mdf_idx);
+        shared->old_mdf_idx = H5MM_xfree(shared->old_mdf_idx);
+
         if (shared->vfd_swmr_config.generate_updater_files) {
             if (H5F__generate_updater_file(f, 0, FINAL_UPDATE_FLAG, md_hdr_image, H5FD_MD_HEADER_SIZE,
                                            md_idx_image, shared->writer_index_offset,

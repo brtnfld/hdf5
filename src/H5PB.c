@@ -748,7 +748,11 @@ H5PB_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, void *
 
     /* Sanity checks */
     assert(f_sh);
-    assert(type != H5FD_MEM_GHEAP);
+    /* Note: unlike a non-VFD-SWMR file, H5FD_MEM_GHEAP can genuinely reach
+     * here for a VFD SWMR file -- H5F_shared_block_read()/H5F_block_read()
+     * only remap it to H5FD_MEM_DRAW when VFD SWMR is not in use, so that
+     * global heap objects remain tracked as metadata under VFD SWMR.
+     */
 
     /* Get pointer to page buffer info for this file */
     page_buf = f_sh->page_buf;
@@ -768,6 +772,21 @@ H5PB_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, void *
 #endif
     } /* end if */
 #endif
+
+    /* Under VFD SWMR, raw data -- which includes global heap objects,
+     * remapped from H5FD_MEM_GHEAP to H5FD_MEM_DRAW by H5F_block_read()
+     * -- is never published through the tick/shadow-index mechanism; only
+     * metadata is tracked and refreshed that way. This page buffer's own
+     * cached copy of a raw/global-heap page is therefore never invalidated
+     * by the VFD SWMR tick machinery, so a stale cached read here could
+     * outlive a writer's later update to the same page. Bypass the page
+     * buffer for raw data on any VFD SWMR file so every read goes straight
+     * to the real file (or, for a reader, through the VFD SWMR read
+     * redirect, which itself falls through to the real file for any page
+     * -- such as this one -- that was never published to the shadow index).
+     */
+    if (page_buf != NULL && page_buf->vfd_swmr && H5FD_MEM_DRAW == type)
+        bypass_pb = true;
 
     /* If page buffering is disabled, or the I/O size is larger than that of a
      * single page, or if this is a parallel raw data access, bypass page
@@ -1257,6 +1276,8 @@ H5PB__write_mpmde(H5F_shared_t *f_sh, H5PB_t *page_buf, H5FD_mem_t type, haddr_t
         /* An existing entry -- either a regular one-page entry, or a
          * smaller mpmde entry -- must grow to accommodate this write.
          */
+        size_t old_size = entry_ptr->size;
+
         if (NULL == (new_image = H5MM_malloc(size)))
             HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTALLOC, FAIL, "memory allocation failed for mpmde entry");
 
@@ -1285,6 +1306,20 @@ H5PB__write_mpmde(H5F_shared_t *f_sh, H5PB_t *page_buf, H5FD_mem_t type, haddr_t
 
         entry_ptr->page_buf_ptr = new_image;
         entry_ptr->size         = size;
+
+        /* If this entry is already on the tick list (tracked by an earlier
+         * write this same tick), the tick list's cumulative tl_size was
+         * computed using its old, smaller size at insertion time and is now
+         * stale -- adjust it by the growth delta, or
+         * H5PB_vfd_swmr__release_tick_list()'s sanity check on this same
+         * list will fail the next time this entry is removed (confirmed via
+         * tracing: a growing mpmde entry left tl_size short by exactly the
+         * delta). If it is not yet on the tick list, the
+         * H5PB__vfd_swmr_track_write() call below inserts it fresh with the
+         * correct (already-grown) size, so no adjustment is needed then.
+         */
+        if (entry_ptr->modified_this_tick)
+            page_buf->tl_size += (int64_t)(size - old_size);
     }
 
     H5MM_memcpy(entry_ptr->page_buf_ptr, buf, size);
@@ -1360,6 +1395,22 @@ H5PB_write(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, const
             HGOTO_ERROR(H5E_PAGEBUF, H5E_WRITEERROR, FAIL, "VFD SWMR mpmde write failed");
         HGOTO_DONE(SUCCEED);
     }
+
+    /* Under VFD SWMR, raw data -- which includes global heap objects,
+     * remapped from H5FD_MEM_GHEAP to H5FD_MEM_DRAW by H5F_block_write()
+     * -- is never published through the tick/shadow-index mechanism; only
+     * metadata is tracked that way (see H5PB__vfd_swmr_track_write()'s own
+     * exclusion of H5FD_MEM_DRAW). A reader can only see raw data changes
+     * consistently if the writer commits them straight through to the real
+     * file immediately, with nothing lingering dirty in this (in-process,
+     * per-writer) page buffer -- otherwise a small raw/global-heap write
+     * can sit cached here, invisible to a separate reader process reading
+     * the real file directly, until this page buffer happens to evict it.
+     * Bypass the page buffer for raw data on any VFD SWMR file to
+     * guarantee immediate visibility.
+     */
+    if (page_buf != NULL && page_buf->vfd_swmr && H5FD_MEM_DRAW == type)
+        bypass_pb = true;
 
     /* If page buffering is disabled, or the I/O size is larger than that of a
      * single page, or if this is a parallel raw data access, bypass page

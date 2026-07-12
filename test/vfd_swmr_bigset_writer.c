@@ -305,6 +305,18 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
         {"help", no_arg, 'h'},
         {NULL, 0, '\0'}};
 
+    /* Force full library initialization before the first use of an
+     * H5T_NATIVE_* macro below.  Without this, the very first evaluation
+     * of H5T_NATIVE_UINT32 in this process can observe an unpopulated
+     * H5T_NATIVE_UINT32_g (reads back as H5I_INVALID_HID), which later
+     * makes H5Dcreate2() fail with "not a datatype ID".  H5open() is
+     * always safe to call even if the library is already open.
+     */
+    if (H5open() < 0) {
+        fprintf(stderr, "H5open failed\n");
+        TEST_ERROR;
+    }
+
     s->memspace          = H5I_INVALID_HID;
     s->dapl              = H5I_INVALID_HID;
     s->filetype          = H5T_NATIVE_UINT32;
@@ -1092,6 +1104,37 @@ reader_check_time_and_notify_writer(state_t *s, socket_state_t *sock)
 error:
     return -1;
 } /* reader_check_time_and_notify_writer() */
+
+#define VFD_SWMR_READER_DONE_MESSAGE "VFD_SWMR_READER_DONE_MESSAGE"
+
+static int
+wait_for_reader_done(state_t *s)
+{
+    unsigned i;
+
+    for (i = 0; i < s->max_lag + 1 && HDaccess(VFD_SWMR_READER_DONE_MESSAGE, F_OK) != 0; i++) {
+        decisleep(s->tick_len);
+
+        H5E_BEGIN_TRY
+        {
+            H5Aexists(s->file[0], "nonexistent");
+        }
+        H5E_END_TRY;
+    }
+
+    while (HDaccess(VFD_SWMR_READER_DONE_MESSAGE, F_OK) != 0)
+        decisleep(s->tick_len);
+
+    if (remove(VFD_SWMR_READER_DONE_MESSAGE) < 0) {
+        fprintf(stderr, "remove(VFD_SWMR_READER_DONE_MESSAGE) failed\n");
+        TEST_ERROR;
+    }
+
+    return 0;
+
+error:
+    return -1;
+} /* wait_for_reader_done() */
 
 /* Notify the reader by sending the timestamp and the number of chunks written */
 static int
@@ -2706,6 +2749,17 @@ main(int argc, char **argv)
         }
     }
 
+    /* Signal that the file(s) have been created: unlike the socket
+     * handshake below (which both sides only reach after this same file-
+     * open loop has already run for each of them), a reader has nothing
+     * to synchronize on before its own H5Fopen() above, and will lose the
+     * race and fail outright if the writer hasn't created the file yet.
+     */
+    if (s->writer) {
+        remove(VFD_SWMR_READER_DONE_MESSAGE);
+        h5_send_message(VFD_SWMR_WRITER_MESSAGE, NULL, NULL);
+    }
+
     /* Establish a socket connection */
     if (s->use_communication && !socket_connect(sock, s->writer)) {
         fprintf(stderr, "socket_connect() failed\n");
@@ -2800,6 +2854,9 @@ main(int argc, char **argv)
             fprintf(stderr, "verify_dsets failed\n");
             TEST_ERROR;
         }
+
+        if (s->use_communication)
+            h5_send_message(VFD_SWMR_READER_DONE_MESSAGE, NULL, NULL);
     }
 
     for (unsigned which = 0; which < s->ndatasets; which++)
@@ -2810,6 +2867,22 @@ main(int argc, char **argv)
 
     if (H5Pclose(fcpl) < 0) {
         fprintf(stderr, "H5Pclose failed\n");
+        TEST_ERROR;
+    }
+
+    /* Don't close (and unlink the shadow file) until the reader has finished
+     * verifying. Deliberately placed *after* the dataset-closing loop above
+     * (not right after write_dsets()): closing every dataset here generates
+     * exactly the same natural tick advancement this test has always
+     * produced at this point, which repeat_verify_chunk() on the reader
+     * side depends on to see fully-published data. Waiting any earlier
+     * creates a real circular dependency -- the reader can't finish without
+     * those ticks, and the writer can't reach them until the reader's done --
+     * confirmed directly via tick_num tracing: both sides freeze
+     * indefinitely, neither advancing, until the reader's own retry budget
+     * gives up. */
+    if (s->writer && s->use_communication && wait_for_reader_done(s) < 0) {
+        fprintf(stderr, "wait_for_reader_done failed\n");
         TEST_ERROR;
     }
 

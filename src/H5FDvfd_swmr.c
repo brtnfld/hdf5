@@ -1002,9 +1002,23 @@ H5FD__vfd_swmr_read(H5FD_t *_file, H5FD_mem_t type, hid_t H5_ATTR_UNUSED dxpl_id
     num_entries  = file->md_index.num_entries;
     fs_page_size = file->md_header.fs_page_size;
 
-    if (!fs_page_size) {
-        assert(!num_entries);
-        assert(file->make_believe);
+    /* Raw data is never published to the shadow index -- only metadata is
+     * (see H5PB__vfd_swmr_track_write()'s own exclusion of H5FD_MEM_DRAW).
+     * A raw-data page can, on disk, share a page-aligned address range with
+     * an unrelated metadata structure (e.g. a v1 B-tree node for a group's
+     * link index) that *is* published: the shadow index then holds a
+     * snapshot of that whole page taken when the metadata was last
+     * published, which freezes whatever raw bytes happened to be co-located
+     * on the page at that moment. A raw-data read must never be redirected
+     * through that stale snapshot -- it must always go straight to the real
+     * file, which the writer keeps immediately up to date for raw data (see
+     * the VFD-SWMR raw-data page-buffer bypass in H5PB_write()). Skip the
+     * index lookup entirely for raw data so it can never win a false match
+     * against a metadata page it happens to share.
+     */
+    if (!fs_page_size || H5FD_MEM_DRAW == type) {
+        assert(fs_page_size || !num_entries);
+        assert(fs_page_size || file->make_believe);
         entry = NULL;
     }
     else {

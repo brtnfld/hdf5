@@ -2275,11 +2275,24 @@ H5F_open(bool try, H5F_t **_file, const char *name, unsigned flags, hid_t fcpl_i
 
             if (H5F_vfd_swmr_init(file, file_create) < 0)
                 HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "file open fail with initialization for VFD SWMR");
-        }
 
-        /* Insert the entry that corresponds to this file onto the EOT queue */
-        if (H5F_vfd_swmr_insert_entry_eot(file) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to insert entry into the EOT queue");
+            /* Insert the entry that corresponds to this file onto the EOT
+             * queue.  Gated on nrefs == 1, matching H5F_vfd_swmr_init()
+             * above: a later H5F_open() that merely increments nrefs on an
+             * already-open shared file (e.g. a VDS opening its own source
+             * dataset via the external file cache) must not insert a second
+             * entry, since H5F__dest() only ever removes one entry, when
+             * the shared struct is *actually* destroyed at nrefs == 0. An
+             * unpaired extra insert previously leaked an eot_queue_entry_t
+             * per such re-open, confirmed via valgrind (VDS test: ~200
+             * entries, 11.2KB) and by inspecting eot_queue_g directly with
+             * gdb at H5_term_library() time -- non-empty even after every
+             * file in the test was closed, explaining the persistent
+             * "infinite loop closing library" warning for VDS-using tests.
+             */
+            if (H5F_vfd_swmr_insert_entry_eot(file) < 0)
+                HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to insert entry into the EOT queue");
+        }
     }
 
     /*
