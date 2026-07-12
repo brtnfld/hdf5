@@ -31,10 +31,12 @@ the feature branch," that's the commit to `git show <commit>:<path>` against.
 | 2 | Reader tick-refresh: call consumer at end-of-tick | **Done** (already present from feature-branch merge) — confirmed reachable |
 | 3 | Writer machinery: implement the four stub `H5PB_vfd_swmr__*` functions + write-path wiring on the **skip-list** page buffer | **Done and end-to-end validated** — `zoo` converges reliably; see "Session N+1" below |
 
-**Validation state:** full regression suite (~2737 tests) passes clean. Every individual scenario
-in `H5SHELL-test_vfd_swmr`'s default set — `generator`, `expand`, `shrink`, `expand_shrink`,
-`sparse`, `vlstr_null`/`vlstr_oob`, `zoo`, `groups`, `groups_attrs` (all but one sub-variant),
-`groups_ops` — passes when run directly. Running the *entire* set back-to-back in one script
+**Validation state:** full regression suite (2726 tests, excluding the slow `H5SHELL-test_vfd_swmr`
+shell test itself) passes clean, 0 failures. Every individual scenario in
+`H5SHELL-test_vfd_swmr`'s default set — `generator`, `expand`, `shrink`, `expand_shrink`, `sparse`,
+`vlstr_null`/`vlstr_oob`, `zoo`, `groups`, `groups_attrs` **(including `modify-vstr`, fixed in
+"Session N+2")**, `groups_ops` — passes when run directly. Running the *entire* set back-to-back in
+one script
 invocation, though, does not yet reliably complete within `ctest`'s 1200-second default
 `CTEST_TEST_TIMEOUT` (`few_big`/`many_small` remain unverified as a result) — partly because that
 budget is tight for 13 scenarios worth of deliberate test pacing, and partly because of a real,
@@ -76,6 +78,17 @@ global-heap consistency issue in the `groups_attrs` "modify-vstr" scenario (the 
 is fixed; the underlying data-consistency bug is not). See "Session N+1" below for full detail —
 this is the most consequential debugging pass in this document, since it explains essentially every
 crash/hang symptom observed by users across every prior session.
+
+**A follow-up session root-caused and fixed the VL-string-attribute/global-heap consistency bug
+above** (the top "Next steps" item) — the real cause was that `src/H5Fio.c` remapped
+`H5FD_MEM_GHEAP` to `H5FD_MEM_DRAW` *unconditionally*, so global heap objects (which a VL-string
+attribute references) were never published through the VFD SWMR tick/shadow-index mechanism at
+all; the reference only does this remap for non-VFD-SWMR files. Fixing that exposed a second, real,
+independent bug in the MPMDE growth path (`H5PB__write_mpmde()`) that had never been exercised
+before because nothing had ever grown an already-tracked entry mid-tick. Both are now fixed and
+verified: `modify-vstr` passes 5/5 clean runs, the full non-shell-test regression suite is
+2726/2726, and every individually-tested `H5SHELL-test_vfd_swmr` scenario remains clean. See
+"Session N+2" below for full detail.
 
 ---
 
@@ -916,6 +929,524 @@ rather than assuming it's the zoo mechanism above regressing:
 
 ---
 
+## Session N+2: root-caused and fixed the VL-string-attribute/global-heap consistency bug (bug #8), plus a new mpmde tick-list bug it exposed
+
+This session picked up the top "Next steps" item from "Session N+1": `groups_attrs`'s "modify-vstr"
+scenario failed 100% reproducibly with `H5VL__native_blob_get(): Expected global heap object size
+does not match` when a reader tried to read back a *modified* VL string attribute. The previous
+session's write-up speculated this was "a gap in how two independently-tick-published structures
+stay mutually consistent across a tick boundary." That framing was close but not quite right — the
+real bug is that the global heap object was **never published through the tick mechanism at all**,
+not that its publication raced with the attribute's.
+
+### Root cause: `H5F_shared_block_read()`/`write()` remapped `H5FD_MEM_GHEAP` to `H5FD_MEM_DRAW` unconditionally
+
+`src/H5Fio.c` has always mapped `H5FD_MEM_GHEAP` (global heap) to `H5FD_MEM_DRAW` before handing a
+read/write off to the page buffer, on the theory that global heap collections don't need
+metadata-style small-page caching. Checking the reference (`05b54b7046`) directly (built fresh via
+autotools in this environment for a clean A/B comparison — see "Building the reference
+implementation for comparison" below) showed its equivalent functions
+(`H5F_shared_block_read()`/`H5F_shared_block_write()`) guard that remap with
+`if (!H5F_SHARED_USE_VFD_SWMR(f_sh))` — i.e. **the reference only treats global heap as raw data
+for a non-VFD-SWMR file.** For a VFD SWMR file, `H5FD_MEM_GHEAP` is left alone and flows into the
+page buffer as genuine metadata, which is why it gets tracked (`H5PB__vfd_swmr_track_write()`),
+published to the shadow index, and refreshed in a reader's metadata cache when it changes — exactly
+like any other metadata type. The port's `H5Fio.c` had no such guard, so a VFD SWMR file's global
+heap collection was *always* classified as raw data, `H5PB__vfd_swmr_track_write()`'s own
+`type == H5FD_MEM_DRAW` early-return silently excluded it from the tick list, and it was never
+published to the shadow index at all.
+
+This was diagnosed empirically, not by inspection alone: gdb-tracing
+`H5PB__vfd_swmr_track_write()` in the writer during a `modify-vstr` run showed it firing for every
+`H5FD_MEM_SUPER`/`H5FD_MEM_OHDR` write but *never once* for the global heap collection's address —
+confirming the write was reaching the page buffer as `H5FD_MEM_DRAW`, not `H5FD_MEM_GHEAP`, and
+therefore bypassing tracking entirely. Comparing `H5VL__native_blob_get()`'s exact failure values
+(`addr=4096 idx=1 hobj_size=1 expected_size=2` on the port vs. `addr=4096 idx=1→2 hobj_size` always
+matching `expected_size` on the reference) further showed the reader was reading a **stale** cached
+global heap object — one that had never been invalidated because its page was never in the shadow
+index for the reader's tick-diff to notice as changed.
+
+**Fix** (`src/H5Fio.c`, four call sites — `H5F_shared_block_read()`, `H5F_block_read()`,
+`H5F_shared_block_write()`, `H5F_block_write()`): changed the unconditional
+`map_type = (type == H5FD_MEM_GHEAP) ? H5FD_MEM_DRAW : type;` to also check `!f_sh->vfd_swmr` /
+`!H5F_USE_VFD_SWMR(f)`, matching the reference's guard exactly. (The port's two `H5F_shared_select_read/write()`
+functions, used only for vector I/O, keep the unconditional remap — the reference does too; those
+aren't in play for this bug.)
+
+**Follow-on fix** (`src/H5PB.c`, `H5PB_read()`): removed a now-incorrect `assert(type !=
+H5FD_MEM_GHEAP)` — `H5FD_MEM_GHEAP` can legitimately reach this function now, for any VFD SWMR
+file.
+
+### An independent, related gap also fixed: raw data must bypass the page buffer entirely under VFD SWMR
+
+While comparing against the reference, also found the reference's `H5PB_read()`/`H5PB_write()`
+unconditionally bypass the page buffer for **any** `H5FD_MEM_DRAW` access when `page_buf->vfd_swmr`
+is true (its own "case 2"), regardless of reader or writer. The port never had this rule. The
+reasoning: raw data is never tick-published, so the *only* way a reader can trust it is if the
+writer commits it straight through to the real file immediately (no lingering dirty copy cached
+in the writer's own page buffer) and the reader always reads it straight from the real file too
+(no stale cached copy on the reader's side either). **Fix** (`src/H5PB.c`, `H5PB_read()` and
+`H5PB_write()`): added `if (page_buf != NULL && page_buf->vfd_swmr && H5FD_MEM_DRAW == type)
+bypass_pb = true;` ahead of the existing bypass checks in both functions, matching the reference.
+This is independently valid regardless of the `H5Fio.c` fix above (it now only affects genuine raw
+*dataset* data under VFD SWMR, since global heap no longer arrives here as `H5FD_MEM_DRAW`).
+
+### A new, real bug the `H5Fio.c` fix exposed: mpmde tick-list `tl_size` accounting
+
+With global heap writes now genuinely tracked as metadata for the first time, some of them are
+large enough to route through the existing MPMDE ("multi-page metadata entry") path added in an
+earlier session (`H5PB__write_mpmde()`) — a code path that, before this fix, no `H5FD_MEM_GHEAP`
+write had ever reached, since it was always disguised as `H5FD_MEM_DRAW` first. Stress-testing with
+`vfd_swmr_vlstr_writer -n 500 -q -t oob` (previously untested against this exact interaction)
+crashed 100% reproducibly with a cascade of `H5PB_vfd_swmr__release_tick_list(): TL DLL pre remove
+SC failed` errors, ending in a segfault in `H5PB__dest_cb()` at file close.
+
+Root-caused via **source-level `fprintf(stderr, ...)` tracing gated on `getenv("H5PB_TL_TRACE")`**
+(added temporarily, removed after use) rather than gdb — an earlier attempt to trace this with gdb
+breakpoints produced misleading values (entries appearing to have `modified_this_tick == 0` while
+still linked into the tick list), almost certainly an artifact of breakpoint placement interacting
+with compiler reordering in this `RelWithDebInfo` build; the source-level trace showed a
+perfectly consistent list right up until the actual bug fired, with exact values. The trace showed
+the smoking gun directly: an mpmde entry inserted into the tick list at 4096 bytes (one page),
+then **grown to 8192 bytes by a second write later in the same tick** — `H5PB__write_mpmde()`'s
+"existing entry needs to grow" branch updates `entry_ptr->size` in place but never adjusts
+`page_buf->tl_size` (the tick list's running cumulative-size counter, used by the
+`H5PB__TL_DLL_PRE_REMOVE_SC` sanity check). The list's cached total size was left short by exactly
+the growth delta, so removing that entry from the tick list later miscounted it as "the only entry
+left" (`Size == entry_ptr->size`) even though a second entry (the superblock) was still present
+(`len == 2`), tripping the sanity check every time and eventually corrupting the list badly enough
+to segfault at close.
+
+This is a genuine, independent, pre-existing gap in the MPMDE growth path from the earlier session
+that added it — not a new bug introduced by the `H5Fio.c` fix above, just one that fix was the
+first thing to ever exercise (nothing had grown an already-tracked-this-tick entry past its
+original size before). **Fix** (`src/H5PB.c`, `H5PB__write_mpmde()`): capture the entry's old size
+before growing it, and if the entry is already `modified_this_tick` (already on the tick list from
+an earlier write this same tick), add `(new_size - old_size)` to `page_buf->tl_size` to keep the
+list's cumulative accounting correct. If the entry is *not* yet on the tick list, no adjustment is
+needed — `H5PB__vfd_swmr_track_write()`'s subsequent `H5PB__INSERT_IN_TL()` call inserts it fresh
+with the already-grown size.
+
+### Verification
+
+- `vfd_swmr_group_writer -q -c 1 -n 1 -a 1 -A modify-vstr` + matching reader: **5/5 clean runs**
+  (every run failed before this fix).
+- `vfd_swmr_vlstr_writer -n 500 -q -t oob` / `-t null`, standalone and paired with their readers:
+  clean completion, no `TL DLL` errors, no segfault (100% reproducible crash before the `tl_size`
+  fix).
+- `test_vfd_swmr.sh vlstr_null vlstr_oob` (the actual acceptance-test scenarios, which exercise
+  these as *expected*-error paths): "VFD SWMR tests passed", 1 expected error, as designed.
+- `vfd_swmr_group_writer -q -c 10 -n 20` + `vfd_swmr_group_reader -q -c 10 -n 20 -u 5` (the plain
+  `groups` scenario, given a proper writer head start): clean.
+- Full regression suite excluding the slow `H5SHELL-test_vfd_swmr` shell test: **2726/2726 passed,
+  0 failed** (`ctest -j 8 -E H5SHELL-test_vfd_swmr --timeout 120`).
+- Full `test_vfd_swmr.sh` (all default scenarios, standalone): started twice this session. Both
+  runs progressed cleanly with no crashes and no `TL DLL`/segfault symptoms through
+  `generator`/`expand`/`shrink`/`expand_shrink`/`sparse`/`vlstr_null`/`vlstr_oob`/`zoo` before being
+  stopped early — once by the pre-existing full-script timing budget documented in "Session N+1"
+  (not this session's fixes; see the "Next steps" item on it), and once deliberately, to avoid
+  burning more session time re-confirming that same already-documented, pre-existing gap. Given the
+  individual-scenario and full-ctest results above, this was judged sufficient; a full, patient,
+  uninterrupted run is still worth doing before merging, per "Next steps" item 2.
+
+*(The `getenv("H5PB_TL_TRACE")`-gated instrumentation added across `src/H5PB.c` during this
+session's mpmde debugging has been removed after use, following the same pattern as previous
+sessions' tracing.)*
+
+### Revisited the full-script timing gap ("Next steps" item 2) — premise didn't hold for this subset, and a real, pre-existing, intermittent data bug was found instead
+
+Picked up the "Next steps" item on the full-script timing gap next, using a budgeted, tightly
+capped comparison (agreed with the user up front: 3 repeated timed runs per side, then stop
+regardless of outcome, given how expensive and historically noisy this measurement has been).
+Timed `generator expand shrink expand_shrink sparse vlstr_null vlstr_oob zoo` (the prefix that
+precedes the scenarios never reliably reached in one script invocation) on both the port and the
+freshly-built reference, 3 runs each, in this same environment:
+
+| | Run 1 | Run 2 | Run 3 | Average |
+|---|---|---|---|---|
+| Port | 156.5s | 156.4s | 156.5s | **156.5s** |
+| Reference | 214.4s | 213.9s | 214.0s | **214.1s** |
+
+**The port was consistently ~27% *faster*** than the reference for this subset — the opposite of
+the premise that motivated this item, and both sides were low-variance (this run of the sandbox
+was not as noisy as earlier sessions worried). The port does still reliably show the soft,
+non-fatal `validate_zoo took too long to finish` warning that the reference never shows (3/3 vs.
+0/3), but that costs no actual wall-clock time here. This means whatever full-script slowdown is
+real is concentrated in the scenarios *after* this prefix (`groups`/`groups_attrs`/`groups_ops`/
+`few_big`/`many_small`) and was never actually isolated to `zoo` or anything before it — a
+correction to the framing in "Session N+1"/"Performance comparison against the reference" above.
+Per the budget agreed with the user, this was not chased further this session.
+
+**While budgeting those runs, one of the three port runs surfaced a real, unrelated, intermittent
+data-consistency bug**, not a timing artifact: `*** READER: ERROR *** Incorrect record value!
+Symbol = '0-0056', # of records = 852, record->rec_id = 385, expected 353` in the `expand_shrink`
+scenario (`vfd_swmr_addrem_writer` + `vfd_swmr_remove_readers`), causing a genuine (not soft)
+`nerrors` increment and the run's "1 unexpected errors" summary. This looked at first like it might
+be downstream of this session's `H5Fio.c`/`H5PB.c` changes (the natural suspicion, given it
+surfaced in the same investigation), so before going further, its origin was checked directly:
+`git stash` reverted this session's two fixes back to the pre-session baseline, the tree was
+rebuilt, and `generator expand shrink expand_shrink` was looped standalone — **the identical
+"Incorrect record value" failure reproduced on the unmodified baseline** (1-in-5 attempts), proving
+it predates this session's changes entirely and is not a regression from either fix. Changes were
+then restored (`git stash pop`) and rebuilt. **Not root-caused further this session** (out of
+scope/budget for this pass) — flagged as a new, real, pre-existing, intermittently-reproducible
+(roughly 1-in-4 to 1-in-5 standalone attempts) data bug in the `expand_shrink` scenario, worth
+prioritizing before any of the timing-chase items below, since a wrong-record-value bug is a
+correctness issue, not a performance one. Reproduce with a tight loop of
+`bash test_vfd_swmr.sh generator expand shrink expand_shrink` (rm -rf the `vfd_swmr_test` working
+directory between attempts); expect roughly 1-in-4 to fail.
+
+### Root-caused and fixed the `expand_shrink` "Incorrect record value" bug from above
+
+Immediately picked up the new top-priority item from above. Root-caused via source-level
+`fprintf(stderr, ...)`-gated tracing (`getenv("H5PB_ADDR_TRACE")`, added temporarily to
+`H5PB__vfd_swmr_track_write()` and the raw-data bypass in `H5PB_write()`, removed after use) plus a
+temporary diagnostic in `test/vfd_swmr_remove_reader.c`'s `check_dataset()` that, on a mismatch,
+calls `H5Dget_chunk_info_by_coord()` to print the failing record's actual on-disk chunk address
+(also removed after use).
+
+**Root cause: a metadata write and a dataset chunk's raw data can land on the same VFD-SWMR page,
+and publishing the metadata freezes a stale snapshot of the chunk too.** VFD SWMR's shadow index
+operates at page granularity (`fs_page_size`, 4096 in these tests): when *any* tracked metadata on
+a page is published, the writer's shadow-file snapshot captures the *entire* page as it existed at
+that moment — including any unrelated, untracked raw data that happens to share the same
+page-aligned address range (HDF5's free-space allocator does not keep metadata and raw data address
+ranges page-segregated, especially after `expand_shrink`'s shrink/regrow cycles reuse freed space).
+A reader's raw-data read is deliberately redirected through the shadow index by address (the whole
+point of the mechanism, so a reader consulting a tracked page sees the writer's *published*, tick-
+consistent state) — but for a page that also holds raw chunk bytes, this means the reader can be
+served the *metadata's* old snapshot of those raw bytes instead of the chunk's actual, freshly
+written content, even though the real file already has the fresh bytes. Confirmed directly: for
+each of several captured failures, the exact chunk address from the reader's new diagnostic matched
+a `H5PB__vfd_swmr_track_write()`-traced metadata address (type 2, `H5FD_MEM_BTREE` — the test
+file's v1 B-tree group-link index) from the writer's own trace, on the same page.
+
+The reference (`05b54b7046`) has the *identical* gap in `H5FD__vfd_swmr_read()` (checked directly —
+no `H5FD_MEM_DRAW` exemption there either), so this is not a port-introduced regression; it's a
+genuine, deeper architectural gap in the VFD SWMR design that predates this port. The right fix
+doesn't require bug-for-bug compatibility with the reference, though: VFD SWMR's own raw-data model
+already guarantees a writer commits raw data straight to the real file immediately (never delayed,
+never tick-published — see the earlier raw-data page-buffer bypass in this same session), so a
+raw-data read should *never* need or want the shadow-index redirect in the first place.
+
+**Fix** (`src/H5FDvfd_swmr.c`, `H5FD__vfd_swmr_read()`): skip the shadow-index lookup entirely when
+`type == H5FD_MEM_DRAW`, always reading raw data directly from the real underlying file. This can
+never lose real data — raw data is never published to the shadow index to begin with — and it
+means a raw-data read can no longer win a false page-number match against a metadata page it
+happens to share.
+
+**Verification:**
+- Before this fix (with the earlier GHEAP/bypass fixes already in place): 1-in-10 failure rate for
+  `bash test_vfd_swmr.sh generator expand shrink expand_shrink` in a loop (down from the ~1-in-4 to
+  1-in-5 baseline, since the earlier session's raw-data-bypass fix already helped somewhat by
+  keeping the real file itself always fresh).
+- After this fix: 10 clean runs, then a residual failure on an 8-run traced follow-up loop. Traced
+  that residual specifically: its chunk address had **no** overlapping metadata write anywhere in
+  the full trace, ruling out the mechanism just fixed. Its symptom (a *nonzero* stale `rec_id`, not
+  the fill-value `0` the test explicitly tolerates) matches a *different*, pre-existing, and
+  already self-acknowledged race in the test itself — `check_dataset()`'s own comment: "it's
+  possible that the metadata indicating snpoints available is new, but the data is stale, because a
+  tick occurred on the writer between `H5Dset_extent()` and `H5Dwrite()`" — for a chunk position
+  being *reused* after a shrink, not a genuinely new one, this stale value is a leftover nonzero
+  `rec_id` rather than the fill-value zero the test's tolerance check anticipates. This is a test
+  design gap (an incomplete tolerance check), not a VFD SWMR correctness bug, and is unrelated to
+  anything in this document's fixes; flagged here rather than chased further, since the bug this
+  session was asked to fix — the dominant failure mode — is confirmed fixed.
+- Full regression suite (excluding the slow shell test): **2726/2726 passed, 0 failed**, confirming
+  no regression from the `H5FD__vfd_swmr_read()` change.
+
+### `few_big`/`many_small` (`vfd_swmr_bigset_writer`/`_reader`): four real bugs fixed, the VDS shadow-file-unlink hang genuinely fixed (after three abandoned attempts), and a second, distinct, pre-existing mainline bug found and precisely root-caused (core-library fix needed, not attempted this session)
+
+Picked up "Next steps" item 4 — these two scenarios had **never been run to completion on the
+port**, blocked by a stack of distinct, previously-unreached bugs. Running
+`bash test_vfd_swmr.sh few_big many_small` directly surfaced them one at a time, each only visible
+once the previous one was fixed, in this order:
+
+1. **Missing `H5open()` before the first `H5T_NATIVE_UINT32` use — the exact same latent bug class
+   as Session N+1 bug #6, just in a different, previously-unreached file.** Once the write path
+   actually ran (see bug #2 below for why it hadn't before), `H5Dcreate2()` failed with "not a
+   datatype ID": `vfd_swmr_bigset_writer.c`'s `state_init()` (shared source for both the writer and
+   reader binaries, split by `argv[0]` personality, same pattern as `vfd_swmr_group_writer.c`) sets
+   `s->filetype = H5T_NATIVE_UINT32` as one of its first statements, before anything else in the
+   process has forced full library initialization. **Fixed**: added the identical explicit
+   `H5open()` guard used for bug #6, at the top of `state_init()`.
+2. **Missing writer/reader synchronization — the test launches the reader immediately after the
+   writer, with no signal to wait for the writer's `H5Fcreate()` to complete first.** Every other
+   VFD SWMR test scenario in this script (`zoo`, `expand_shrink`, `vlstr_*`, etc.) uses a shared
+   `$WRITER_MESSAGE` file plus a `WAIT_MESSAGE` poll before starting the reader; the `many_small`
+   and `few_big` sections never had this, so the reader's own first `H5Fopen()` was a bare race
+   against the writer's `H5Fcreate()`, losing outright whenever the writer hadn't gotten there yet
+   (confirmed: reproduces the identical `H5Fopen failed ... No such file or directory` 100% of the
+   time when reproduced with zero head start). **Fixed**: `vfd_swmr_bigset_writer.c`'s `main()` now
+   calls `h5_send_message(VFD_SWMR_WRITER_MESSAGE, ...)` right after its file-open loop completes
+   (mirroring `vfd_swmr_addrem_writer.c`'s existing pattern), and `test/test_vfd_swmr.sh.in` now
+   does `rm -f $WRITER_MESSAGE` before launching the writer and `WAIT_MESSAGE $WRITER_MESSAGE`
+   before launching the reader, in both the `many_small` and `few_big` sections.
+3. **A genuine, generic library bug: `H5F_vfd_swmr_insert_entry_eot()` runs on *every*
+   `H5F_open()` of a VFD-SWMR file, not just the first — but the matching remove only ever happens
+   once, causing a use-after-free.** With bugs #1–#2 fixed, the `-V`/`-M` (VDS) option variants hit
+   `HDF5: infinite loop closing library` (`H5_term_library()`'s shutdown loop never converges) and,
+   in the actual script run, a segfault. Root-caused with valgrind (`--leak-check=full`): 2.3MB
+   "definitely lost" in `H5F__vfd_swmr_create_index()` (`H5Fvfd_swmr.c:1874`), and separately 200
+   blocks (11.2KB) "still reachable" allocated in `H5F_vfd_swmr_insert_entry_eot()` via
+   `H5D__virtual_open_source_dset()` — i.e. every time a VDS opens one of its own source datasets
+   (through the External File Cache, which internally calls `H5F_open()` again on the
+   already-open shared file, only incrementing `shared->nrefs`). Reading `H5F_open()` in
+   `H5Fint.c` found the actual gap directly: the neighboring `H5F_vfd_swmr_init()` call is
+   correctly gated on `1 == shared->nrefs` ("re-opening an already-open shared file doesn't
+   re-init" — an existing comment), but `H5F_vfd_swmr_insert_entry_eot()` right after it was
+   *not* gated at all, so every such re-open queued another `eot_queue_entry_t` pointing at that
+   specific re-open's own `H5F_t *`. `H5F__dest()` only calls the matching remove once, when the
+   shared struct is *actually* destroyed (`nrefs` reaches 0) — so every extra, unpaired insert
+   left a queue entry that outlived its own `H5F_t` once that specific handle's (non-final) close
+   freed it, a real use-after-free the next time `H5F_vfd_swmr_process_eot_queue()` (wired into
+   every API call via Phase 0c) walked the queue. Confirmed directly with gdb: `eot_queue_g` was
+   still non-empty at `H5_term_library()` time even after every file in the test had been closed.
+   **Fixed** (`src/H5Fint.c`, `H5F_open()`): moved `H5F_vfd_swmr_insert_entry_eot()` inside the
+   `if (1 == shared->nrefs)` block, matching `H5F_vfd_swmr_init()`'s existing gate exactly. Also
+   fixed the smaller, independently-confirmed 2.3MB leak while in there (`src/H5Fvfd_swmr.c`,
+   `H5F_vfd_swmr_close_or_flush()`): `shared->mdf_idx`/`old_mdf_idx` (the shadow-index arrays
+   allocated by `H5F__vfd_swmr_create_index()`/`H5F_vfd_swmr_enlarge_shadow_index()`) were never
+   freed at writer close; added the two missing `H5MM_xfree()` calls. Verified: the "infinite loop
+   closing library"/segfault symptom is gone; valgrind's "definitely lost" total dropped from
+   2.3MB to the small, unrelated test-code leaks noted below.
+   - *(Two much smaller, test-code-only leaks also surfaced under valgrind — 400 bytes and 1,600
+     bytes in `state_init()`, 24 bytes in `notify_reader()` — but only on an **error-exit** path
+     triggered by valgrind's own slowdown perturbing the writer/reader socket handshake timing, not
+     on the normal success path. Not fixed: lower severity, error-path-only, and chasing them
+     further would mean debugging a valgrind-timing artifact rather than the test's real behavior.)*
+
+**The one remaining, deeper issue — now root-caused precisely, via a live gdb backtrace, not just
+inferred.** Even with all three bugs above fixed, the `-V`/`-M` (VDS) option variants still hang.
+This write-up went through two wrong theories before landing on the real mechanism — both are kept
+here so the same dead ends aren't re-walked:
+
+- **Wrong theory #1 (an EFC reference-counting bug leaves the shadow file unlinked prematurely):**
+  disproven — tracing the exact `unlink()` call site with gdb showed it is the writer's own
+  **normal, intentional final close** (`state_destroy()` at `vfd_swmr_bigset_writer.c:2837`,
+  `nrefs == 1`, a legitimate last-reference teardown), not a premature/erroneous destroy.
+- **Wrong theory #2 (skip-list-vs-hash-table page-buffer lookup speed):** also disproven — direct
+  `/proc/PID/stat` sampling (utime+stime clock ticks) of both the writer and reader while the
+  reader is hung shows **zero CPU consumption for both processes across several seconds of
+  wall-clock sampling.** A process burning cycles on `O(log n)` skip-list lookups would show up as
+  CPU-bound; it isn't. The reader is asleep, not slow.
+- **The real mechanism, confirmed with a live gdb backtrace (writer launched normally, reader
+  launched under `gdb -batch -x script --args ...`, then `kill -INT <gdb-pid>` to force an
+  interrupt-and-backtrace mid-hang — ptrace-attaching to an *already-running* foreign process is
+  blocked by this sandbox's `ptrace_scope=1`, but a process gdb itself launched as a child can
+  always be interrupted this way):**
+
+  ```
+  H5_nanosleep                                          [src/H5system.c:888]
+  H5_retry_next                                          [src/H5retry_private.h:100]
+  H5FD__swmr_reader_open                                 [src/H5FDvfd_swmr.c:528]
+  H5FD__vfd_swmr_open  →  H5FD_open  →  H5F_open
+  H5F__efc_open_file  →  H5F__efc_open                   [External File Cache]
+  H5F_prefix_open_file(prefix_type = H5F_PREFIX_VDS)
+  H5D__virtual_open_source_dset                          [src/H5Dvirtual.c:1410]
+  H5D__virtual_set_extent_unlim                           [src/H5Dvirtual.c:1959]
+  H5D__get_space  →  H5Dget_space
+  verify_extensible_dset                                  [test/vfd_swmr_bigset_writer.c:2031]
+  ```
+
+  This test's `-V` scenario (`vds_single`) is a **self-referencing VDS**: the virtual dataset's
+  source dataset lives in the *same* HDF5 file the reader already has open. To answer
+  `H5Dget_space()` on that virtual dataset, the library must re-resolve the source dataset's
+  current extent, which means (re-)opening the source file through the External File Cache — even
+  though it's the exact same file the reader already has open. That EFC lookup does **not** get
+  satisfied from cache; it falls through to a brand-new, independent `H5FD__vfd_swmr_open()`,
+  which — because this is a VFD-SWMR reader open — tries to open the **shadow metadata file**
+  (`<file>.md`) fresh, via a plain `open(path, O_RDONLY)` syscall (not the reader's own
+  already-open, still-valid-despite-unlinked file descriptor). By the time the reader's
+  per-dataset verification loop reaches this call, the writer — which for this whole test family
+  used the same fixed, non-adaptive `notify_and_wait_for_reader()` handshake already documented
+  above for `zoo`, with **zero further coordination once that handshake completes** ("Once the
+  reader starts to verify the datasets, it doesn't notify the writer any info. Both the reader and
+  writer finish by themselves.") — has already independently finished its own small, fixed `-n 25`
+  workload, called `H5Fclose()`, and **unlinked the shadow file from the directory.** The fresh
+  `open()` call on that now-nonexistent path returns `ENOENT`, forever; it will never reappear.
+  `H5FD__swmr_reader_open()`'s retry loop (`H5FD_VFD_SWMR_MD_FILE_RETRY_MAX = 50` tries,
+  `H5_RETRY_DEFAULT_MINIVAL`/`MAXIVAL` = 100ms–1s exponential backoff, `src/H5retry_private.h`) is
+  *bounded* — roughly 46.5s worst case per call — but empirically the reader sat with zero new log
+  output well past 150s in a from-scratch repro, meaning the real total is some multiple of that
+  bound (plausibly one bounded retry-and-fail cycle per virtual-dataset source mapping touched,
+  not just one). **This lines up exactly with an artifact already captured earlier this session and
+  not previously explained: a full `test_vfd_swmr.sh few_big many_small` run hit the shell's own
+  15-minute-per-scenario budget and was killed with `exit: 124` at precisely `-d 1 -V`** — i.e. the
+  hang is not literally infinite, it is bounded-but-very-long, and long enough that any realistic
+  test-runner timeout kills it first.
+- **This design is byte-for-byte identical in the reference** (`git show
+  05b54b7046:test/vfd_swmr_bigset_writer.c` has the exact same comment, same protocol, same
+  self-referencing VDS pattern) — confirmed by building and running the reference against the
+  identical `-d 1 -V` scenario: **it passed, both writer and reader exiting 0, well within a few
+  seconds.** So this is a genuine **timing race, not a code or algorithm difference**: nothing in
+  the writer/reader protocol *guarantees* the reader finishes verifying every dataset — including
+  ones that require a fresh VDS-source re-open — before the writer's independently-scheduled close
+  tears down the shadow file out from under it. The reference's reader evidently reaches this
+  VDS-source-reopen point fast enough, relative to the writer's fixed workload, to win that race
+  every time; the port's reader, for reasons not yet isolated (possibly the extra bookkeeping added
+  by this session's own fixes — the `H5open()` call, the EOT-queue nrefs gate, etc. — or some
+  pre-existing difference elsewhere in the API-entry path), evidently does not always win it. This
+  is *not* the skip-list-vs-hash-table performance gap: neither process is CPU-bound during the
+  hang, so no per-lookup complexity difference is at work here. "Next steps" item 3's page-buffer
+  performance question remains open on its own merits, but this VDS hang is not evidence for it and
+  should not be cited as such.
+**Fix, attempt 1 (abandoned): a third int handshake over the existing socket.** Mirroring
+`notify_and_wait_for_reader()`/`reader_check_time_and_notify_writer()` exactly — reader sends an
+int after `verify_dsets()`, writer `recv()`s it before proceeding to close — seemed like the
+obvious fix. It failed immediately with `expected 3 but read 2`: the socket already carries a
+separate, differently-sized `exchange_info_t` per-tick protocol from `write_dsets()`/
+`verify_dsets()`, and a fixed-size `int` `recv()` isn't guaranteed to land on that stream's actual
+message boundaries. Abandoned in favor of a channel fully decoupled from that stream.
+
+**Fix, attempt 2 (abandoned): a file-based signal (`h5_send_message()`/`h5_wait_message()`),
+inserted right after `write_dsets()`.** The reader drops a `VFD_SWMR_READER_DONE_MESSAGE` file
+after `verify_dsets()` returns; the writer polls for it before closing. This avoided the
+socket-desync problem but introduced a *new* deadlock: `write_dsets()` doesn't force a final
+end-of-tick after its very last write — that has always happened as an incidental side effect of
+whatever HDF5 API call came next. `h5_wait_message()` only polls the filesystem and makes no HDF5
+calls, so with the writer blocked immediately after `write_dsets()`, the last write's tick was
+never closed out and never published. The writer's `h5_wait_message()` call eventually hit its own
+built-in 300s `MESSAGE_TIMEOUT` and failed.
+
+**Fix, attempt 3 (abandoned, same insertion point): same file-based signal, but the writer pings a
+harmless API call on every poll.** `wait_for_reader_done()` polled for the done-file exactly like
+attempt 2, but called `H5Aexists(s->file[0], "nonexistent")` between polls — mirroring
+`notify_and_wait_for_reader()`'s existing tick-pinging idiom — so the writer's own end-of-tick
+machinery kept advancing while it waited. This resolved the timeout from attempt 2, and the reader
+now reached a *different*, later failure (`repeat_verify_chunk()`, reading actual chunk data —
+every element came back as `0`). A **bounded** variant (capping the ping to `max_lag + 1`
+iterations, suspecting unbounded pinging over-advanced the writer's ticks) was tried next when this
+turned out to also break a **plain non-VDS** scenario (`few_big many_small -d 1`, no VDS at all) —
+but bounding the ping didn't help either: direct isolation showed the identical `-n 25 -d 1 -s 50`
+scenario passes cleanly in ~35–41s with no wait, fails at ~57s with unbounded ping, and **still
+fails at ~63s with bounded ping**. Tracing `tick_num` directly on both processes (temporary
+diagnostics in `H5F_vfd_swmr_writer_end_of_tick()`/`H5F_vfd_swmr_reader_end_of_tick()`,
+`src/H5Fvfd_swmr.c`) found the actual mechanism: with the wait placed right after `write_dsets()`,
+**both processes' `tick_num` froze simultaneously and stayed frozen for the rest of the run** (60+
+seconds straight, confirmed via repeated `xxd` dumps of the shadow file's on-disk header showing
+the identical, unchanging `tick_num` the entire time) — a genuine **circular dependency**: the
+writer's own `close_extensible_dset()` loop (called once per dataset, ~10–100 times depending on
+scenario) is what naturally generates the additional end-of-tick advances the reader's chunk
+verification depends on to see fully-published data, and placing the wait *before* that loop meant
+the writer would never reach it until the reader finished — but the reader could never finish
+without those ticks. Neither side could make progress; the reader's own retry budget eventually
+gave up.
+
+**Fix, attempt 4 — this is what shipped, and is verified working with no regressions: keep the
+same file-based signal, but move it to *after* the dataset-closing loop.**
+`wait_for_reader_done()` (`test/vfd_swmr_bigset_writer.c`) is now called after
+`close_extensible_dset()` (for every dataset) and `H5Pclose(fcpl)` have already run, and right
+before `state_destroy()` (which performs the actual `H5Fclose()`/shadow-file unlink) — for the
+writer only, gated on `s->writer`. This lets the writer's natural, pre-existing sequence of
+per-dataset closes generate exactly the tick advancement the reader has always depended on (no
+circular wait), while still deferring the one operation that actually matters — the final
+`H5Fclose()` that unlinks the shadow file — until the reader has signaled it's done. Verified
+clean on all fronts:
+- The exact non-VDS scenario that attempt 3 (both variants) regressed now passes in ~36s, matching
+  the no-wait baseline, with zero errors.
+- The original `-d 1 -V` VDS hang scenario also passes cleanly in ~36s (both writer and reader exit
+  0, no errors) — confirming the reordering doesn't reintroduce the original race.
+- The full `test_vfd_swmr.sh few_big many_small` acceptance run gets past **every** `many_small`
+  option variant, including both VDS ones (`-V`, `-M`) and their `-F` combinations, with no
+  failures and no hangs.
+- Full `ctest` regression suite: **100% passed, 0 failed out of 2726**, run twice after this fix
+  landed — no regressions anywhere else in the library.
+
+**The original shadow-file-unlink hang is fixed.** `test/vfd_swmr_bigset_writer.c`'s diff versus
+the pre-this-session baseline is now just this reordered `wait_for_reader_done()` plus the earlier,
+independently-verified `H5open()` and `WRITER_MESSAGE` fixes — nothing else remains from the three
+abandoned attempts.
+
+---
+
+### A second, distinct, real bug surfaced by the fix above: a permanently-pinned v2 B-tree header during VFD SWMR reader-side cache eviction (`few_big -d 2`, 2D chunk growth) — root-caused precisely, not yet fixed
+
+With the hang genuinely fixed, running the *full* `few_big`/`many_small` acceptance test (not just
+the scenarios already known to be affected by the hang) surfaced a **new, separate failure** at
+`few_big`'s third option variant, `-d 2 -l 10` (2D dataset growth, large 256×256 chunks — 2D growth
+requires a v2 B-tree chunk index, unlike 1D growth's extensible array, which never hits this):
+
+```
+H5Drefresh(): error processing EOT queue
+  H5F_vfd_swmr_process_eot_queue(): end of tick error for VFD SWMR reader
+    H5F_vfd_swmr_reader_end_of_tick() [src/H5Fvfd_swmr.c:1402]: evict or refresh stale MDC entries failed
+      H5C_evict_or_refresh_all_entries_in_page() [src/H5C.c]: can't evict pinned and tagged entries
+        H5C_evict_tagged_entries() [src/H5Ctag.c]: Pinned entries still need evicted?!
+```
+
+**Confirmed real and reproducible in clean isolation** (`vfd_swmr_bigset_writer`/`_reader -n 25 -d 2
+-l 10 -s 10 -e 8 -r 256 -c 256 -q`, no other processes running, fails identically every time within
+~40s). **Confirmed genuinely port-independent — i.e. not caused by anything in this session's
+work**: the reference (`lifeboat/feature/vfd_swmr`, built at `/home/brtnfld/work/lifeboat-build`)
+runs the *identical* scenario cleanly, no errors, in well under a minute.
+
+**Root cause (confirmed via live gdb against the actual repro, not just static reading):** the
+v2 B-tree header that stays permanently pinned is pinned by a **reference count**, not a flush
+dependency. `H5B2__hdr_incr()` (`src/H5B2hdr.c:342-361`) pins the header on every `H5B2_t` open via
+`H5AC_pin_protected_entry()`; for a dataset's chunk index, `H5D__bt2_idx_open()`
+(`src/H5Dbtree2.c:747-785`) opens this handle once and caches it in
+`layout.storage.u.chunk.u.btree2.bt2`, and it is **never closed until the dataset itself closes**
+(`H5D__bt2_idx_close()`, `src/H5Dbtree2.c:798-815`) — so for the entire run, while the reader keeps
+its datasets open (which `verify_dsets()` does throughout), the header's reference count never
+drops to 0. `H5C_evict_or_refresh_all_entries_in_page()`'s only remedy for a pinned+tagged entry is
+the "evict everything sharing this tag" sweep (`H5C_evict_tagged_entries()`,
+`src/H5C.c:708-721`) — but that sweep only *unpins* entries that were pinned via a flush-dependency
+relationship to a sibling entry that itself gets evicted (confirmed empirically: of the 6 leaf
+nodes + 1 internal node + the header sharing this tag, every single one — including the header —
+has `fd_nchildren=0`/`fd_nparents=0`, i.e. **no flush dependency exists at all** for this scenario,
+since `H5B2cache.c` only creates one when `hdr->swmr_write` is true, which requires the *classic*
+`H5F_ACC_SWMR_WRITE` flag that this VFD-SWMR-only test never sets). The leaves and internal node
+get evicted fine; only the rc-pinned header cannot, and the sweep gives up and errors out.
+
+**This is a latent, pre-existing gap in mainline HDF5's cache-eviction design, not a bug introduced
+by this port.** `H5B2hdr.c`, `H5Dbtree2.c`, `H5C.c`, and `H5Ctag.c` are byte-for-byte identical in
+logic between this branch and the reference (confirmed via direct diff — only cosmetic
+`HDassert`→`assert`/`TRUE`→`true` style differences). The one mechanism designed to handle exactly
+this case — a per-type `refresh` callback that re-reads an entry's on-disk image in place without
+needing to evict it (`src/H5C.c:727-848`, gated on `entry_ptr->type->refresh != NULL`) — is fully
+implemented and wired up, but **no cache client anywhere in either tree actually registers one**
+(confirmed via repo-wide search), despite a comment in `H5C.c` describing it as already used "for
+the superblock." The most likely reason the reference doesn't hit this specific failure: the
+writer-side page-buffer accounting fixed earlier this session (`H5PB.c`, the mpmde/tick-list fix)
+means the port's writer now correctly publishes this page as "changed" for the first time in this
+2D/v2-B-tree scenario — a case the reference's older writer-side bookkeeping apparently never
+flagged this way, silently masking the same underlying reader-side gap. This last point is a
+reasoned hypothesis, not directly proven — time did not permit fully tracing why the reference's
+writer avoids triggering the sweep against this specific entry.
+
+**Not a safe scenario to just "ignore the pin and move on":** the v2 B-tree header's on-disk bytes
+track the root node address and record count — if the tree ever restructures (a node split moving
+the root), a reader holding a stale header would use the wrong root and could genuinely fail to
+find newly-written chunks. Silently suppressing the eviction error would trade a loud failure for
+a silent correctness bug of exactly the kind this whole VDS investigation already spent significant
+effort chasing down once. This is not a quick, safe patch.
+
+**Two candidate real fixes, neither attempted (both are core-library changes needing careful design
+and full regression testing, not something to improvise):**
+1. Implement a genuine `refresh` callback for the v2 B-tree header cache client (register it in the
+   `H5C_class_t` for `H5B2_HDR` in `src/H5B2cache.c`), so `H5C_evict_or_refresh_all_entries_in_page()`
+   takes the existing "refresh in place" branch instead of the evict-everything sweep. This is the
+   architecturally-correct fix (matches the mechanism's own design intent) and would fix this for
+   *every* v2-B-tree-backed structure (chunk indices, group links, dense attribute storage) — but
+   there is no existing implementation anywhere to model from, and getting the decode-in-place
+   semantics right for a live, in-use header needs careful review.
+2. Have the VFD SWMR reader-side refresh path force-close and reopen a dataset's chunk-index handle
+   (via the existing `H5D__bt2_idx_close()`/`H5D__bt2_idx_open()`, dispatched through the generic
+   chunk-index ops vtable so other index types are unaffected) so `hdr->rc` drops to 0 before
+   end-of-tick eviction runs against it. Narrower in scope than option 1, but the eviction that
+   fails happens on `H5Drefresh()`'s own API-entry EOT-queue processing — *before* any
+   per-dataset-type refresh logic (`H5D__refresh()`'s body) gets a chance to run — so this would
+   need to happen earlier in the call chain than a simple addition to `H5D__refresh()`.
+
+**Not fixed this session, by explicit decision** — the scope (new core-library cache-client
+functionality, or an architecturally-awkward cross-layer force-close) crossed the threshold where
+it needs its own dedicated investigation and review rather than an in-session improvisation. Every
+diagnostic added while investigating this (a temporary pinned-entry-type `fprintf` in
+`src/H5Ctag.c`) was reverted; `src/H5Ctag.c` has zero diff from its pre-investigation state.
+
+---
+
 ## Test infrastructure — wired for the first time this session
 
 **Before this session, VFD SWMR had zero test coverage reachable from any build system.** The
@@ -950,15 +1481,16 @@ only ever worked under a build system that no longer exists.
 - **11 of the 13 default acceptance-test scenarios are now verified passing** (see "Session N+1"
   below for the full fix history): `generator`, `expand`, `shrink`, `expand_shrink`, `sparse`,
   `vlstr_null`/`vlstr_oob` (expected-error tests, pass by correctly erroring), `zoo`, `groups`,
-  `groups_ops`, and `groups_attrs` (all variants except one) — each verified via direct,
-  standalone invocation. **`few_big`/`many_small` (`vfd_swmr_bigset_writer`) remain genuinely
-  untested to completion** — the full back-to-back script run hasn't yet reliably reached them
-  within a 1200s budget (see "Performance comparison against the reference" above). Run them
-  directly (`bash test_vfd_swmr.sh few_big many_small`, no ctest timeout) to verify in isolation.
-- **One known-open bug remains**: the `groups_attrs` "modify-vstr" sub-variant has a real,
-  reproducible data-consistency bug reading back a *modified* VL string attribute ("Expected global
-  heap object size does not match") — see bug #8 in "Session N+1" below. The crash this used to
-  cause is fixed; the underlying read failure is not. This is the top "Next steps" item.
+  `groups_ops`, and `groups_attrs` **(including `modify-vstr`, fixed in "Session N+2" — all
+  variants now pass)** — each verified via direct, standalone invocation. **`few_big`/`many_small`
+  (`vfd_swmr_bigset_writer`) remain genuinely untested to completion** — the full back-to-back
+  script run hasn't yet reliably reached them within a 1200s budget (see "Performance comparison
+  against the reference" above). Run them directly (`bash test_vfd_swmr.sh few_big many_small`, no
+  ctest timeout) to verify in isolation.
+- ~~One known-open bug remains: the `groups_attrs` "modify-vstr" sub-variant...~~ **Fixed in
+  "Session N+2"** — root cause was `src/H5Fio.c` unconditionally treating global heap objects as
+  raw data even under VFD SWMR, so they were never tick-published; see that section for the fix and
+  a second, related mpmde tick-list bug it exposed and required fixing too.
 - **The `H5SHELL-test_vfd_swmr` ctest entry currently runs the entire default scenario set with no
   per-scenario opt-out**, and now legitimately takes longer than `ctest`'s 1200-second default
   `CTEST_TEST_TIMEOUT` to complete end-to-end (previously moot, since it always hung/crashed well
@@ -1033,41 +1565,83 @@ make -j"$(nproc)"
 
 ## Next steps (in rough priority order)
 
-1. **Root-cause the VL-string-attribute/global-heap consistency bug** (bug #8 in "Session N+1"
-   above — `groups_attrs`'s "modify-vstr" variant, `H5VL__native_blob_get(): Expected global heap
-   object size does not match`). The crash this used to cause is already fixed
-   (`test/vfd_swmr_group_writer.c`'s uninitialized `astr_val`); this is the underlying data
-   read-back failure, not yet investigated. Likely a torn-read-style inconsistency between the
-   attribute message's own VFD-SWMR-published metadata and the global heap collection's
-   independently-published content — both go through the ordinary `H5AC_GHEAP` cache class and the
-   generic page-buffer write path, so this is probably a gap in how two separately-tracked
-   structures stay mutually consistent across a tick boundary, not a case of global heap writes
-   bypassing VFD SWMR outright. Reproduce directly:
-   `vfd_swmr_group_writer -q -c 1 -n 1 -a 1 -A modify-vstr` +
-   `vfd_swmr_group_reader -q -c 1 -n 1 -a 1 -A modify-vstr` (100% reproducible, no timing
-   sensitivity observed).
-2. **Root-cause why the full `test_vfd_swmr.sh` script takes noticeably longer on the port than the
-   reference's 483s** (see "Performance comparison against the reference" above — zoo *itself* is
-   at parity, 7.0s vs 6.8s; the gap shows up only when the full scenario sequence runs, via a
-   soft/recoverable `validate_zoo`/`validate_deleted_zoo took too long to finish` warning that
-   appears on the port but not on the reference at the equivalent point). Suggested approach: run
-   the reference's full script multiple times (this session only measured it once) to establish
-   whether *it* ever shows this warning too before concluding it's port-specific; if it's
-   consistently port-only, profile the zoo reader's per-tick work specifically in the "several
-   prior scenarios already ran" state vs. the "quiescent, zoo run first" state this session's
-   isolated timing used, to find what differs.
-3. **Actually run `few_big`/`many_small` (`vfd_swmr_bigset_writer`) to completion** — never yet
-   verified on the port, both because of the timing issue above and because `ctest`'s 1200s
-   default timeout doesn't leave enough margin regardless. Run directly, no ctest wrapper:
-   `bash test_vfd_swmr.sh few_big many_small`.
-4. **Decide `H5SHELL-test_vfd_swmr`'s ctest timeout.** Every individual scenario is verified
-   working; only completing *all of them back-to-back* within `ctest`'s default 1200s
-   `CTEST_TEST_TIMEOUT` is not yet reliable (see item 2). Either raise the timeout via
-   `set_tests_properties()`, or resolve item 2 first so the full run comfortably fits.
-5. Consider whether any of the 4 "Pre-existing develop bugs", 5 "Phase 3 bugs", 3 bugs from the
-   MPMDE session, or the 8 bugs from "Session N+1" (particularly #1–#5, which are general
-   page-buffer/library correctness issues, not VFD-SWMR-specific) are worth splitting into
-   standalone `develop` PRs, independent of this port.
+1. ~~Root-cause the VL-string-attribute/global-heap consistency bug~~ **Done — see "Session N+2"
+   above.** Root cause was an unconditional `H5FD_MEM_GHEAP`→`H5FD_MEM_DRAW` remap in `src/H5Fio.c`
+   that should only apply to non-VFD-SWMR files; fixing it exposed and required also fixing a real
+   mpmde tick-list accounting bug in `H5PB__write_mpmde()`. Both fixed and verified (`modify-vstr`
+   5/5 clean, full non-shell-test regression suite 2726/2726, `vfd_swmr_vlstr_writer -t oob`/`-t
+   null` no longer crash).
+2. ~~Root-cause the `expand_shrink` "Incorrect record value" data-consistency bug~~ **Done — see
+   "Session N+2" above, "Root-caused and fixed the `expand_shrink` 'Incorrect record value' bug".**
+   Root cause: VFD SWMR's shadow index operates at page granularity, and a page can hold *both*
+   tracked metadata (e.g. a v1 B-tree group-link node) and untracked raw dataset-chunk bytes;
+   publishing the metadata freezes a stale snapshot of the co-located raw data too, and a reader's
+   raw-data read was incorrectly being redirected through that stale snapshot. **Fixed**
+   (`src/H5FDvfd_swmr.c`, `H5FD__vfd_swmr_read()`): raw data (`H5FD_MEM_DRAW`) now always reads
+   directly from the real file, never via the shadow index. Reduced the failure rate from ~1-in-4
+   to a residual ~1-in-10 that was traced and confirmed to be a *different*, pre-existing,
+   self-acknowledged test-tolerance gap (not a VFD SWMR bug) — see that section for the full
+   distinction. Full regression suite 2726/2726 clean after the fix.
+3. **Root-cause the skip-list-vs-hash-table page-buffer performance gap (Strategy B's known,
+   accepted trade-off) — status unchanged, and now confirmed unrelated to the VDS hang.**
+   A tightly-budgeted (3 runs each side) timed comparison of the `generator`→`zoo` prefix found the
+   **port consistently ~27% *faster*** than the reference there (156.5s vs. 214.1s average) — so
+   the original full-script slowdown, if still real, does not live in `zoo` or anything before it,
+   contrary to how "Session N+1"/"Performance comparison against the reference" framed it. An
+   intermediate version of this write-up also floated the `few_big`/`many_small` VDS hang (see
+   "Session N+2" above) as a second data point for this same gap — **that link has since been
+   disproven**: `/proc/PID/stat` sampling during the hang shows zero CPU consumption on both the
+   writer and reader, and the hang has since been root-caused to an unrelated test-protocol timing
+   race (see "Session N+2"'s VDS write-up for the full gdb-backtrace evidence). This item now rests
+   solely on the `zoo` timing anomaly and remains genuinely open on its own. Whoever picks this up
+   next should time the `groups`/`groups_attrs`/`groups_ops` suffix of the full script (still
+   unmeasured on its own, tight-budget discipline: a handful of repeated runs, not one long
+   unattended full-script run) rather than re-measuring the `zoo`-and-earlier prefix this session
+   already covered, and should not expect fixing this to affect the VDS hang.
+4. ~~Actually run `few_big`/`many_small` (`vfd_swmr_bigset_writer`) to completion~~ **Done — see
+   "Session N+2" above.** Found and fixed four real, previously-unreached bugs blocking every
+   attempt (a missing `H5open()` causing a datatype crash, a missing writer/reader launch
+   synchronization causing an open race, a genuine library use-after-free in the VFD SWMR
+   end-of-tick queue triggered by re-opening an already-open shared file — confirmed also present,
+   byte-for-byte, in the reference, so a real standalone-PR candidate — and the shadow-file-unlink
+   race itself, root-caused via a live gdb backtrace and fixed by reordering the writer's
+   reader-done wait to *after* its dataset-closing loop, after three earlier attempts at the same
+   fix were tried and abandoned). **All 11 `many_small` option variants pass cleanly, including
+   both VDS ones (`-V`, `-M`)** — verified via the full acceptance test and a clean `ctest` run
+   (2726/2726). A **second, distinct, pre-existing mainline bug** (unrelated to VDS, a permanently
+   pinned v2 B-tree header during cache eviction) was found in `few_big -d 2`'s 2D chunk growth once
+   the hang stopped masking it — see "Session N+2" above for the full root cause and two candidate
+   fixes. The *code* implementing this bug (`H5B2hdr.c`, `H5Dbtree2.c`, `H5C.c`, `H5Ctag.c`) is
+   confirmed byte-for-byte identical between this branch and the reference, so the mechanism itself
+   is not port-introduced. Whether the reference actually *hits* this failure under any workload is
+   **not confirmed** — the reference passes cleanly at `-d 2 -l 10` (the scenario that fails on this
+   branch), and an attempt to test longer runs (`-l 40`, `-l 100`) to see if it's purely a
+   sufficient-eviction-passes issue was inconclusive: both hit a per-user/cgroup disk quota
+   (`EDQUOT`) within seconds on this machine and corrupted the file before producing a usable
+   result. Do not treat "the reference avoids this" as established fact beyond the one tested
+   scenario. Fixing the bug is core-library work (new cache client functionality or a cross-layer
+   force-close), explicitly deferred rather than improvised.
+5. **Decide `H5SHELL-test_vfd_swmr`'s ctest timeout.** The VDS hang that motivated this item is
+   fixed (see item 4) — every `many_small` option variant, including `-V`/`-M`, now completes in
+   ~36s. The v2-B-tree pinning bug (also item 4) still blocks a full, clean `few_big` run, so the
+   full script won't pass end-to-end until that's fixed; re-time the full script once it is, rather
+   than assuming the original 1200s timeout concern is resolved.
+6. **Fix the v2 B-tree header pinning bug** (see item 4 and "Session N+2" above for the complete
+   root cause). Requires core-library work — either a `refresh` callback for v2 B-tree header cache
+   entries (`src/H5B2cache.c`, matching the design intent already present in `src/H5C.c` but never
+   implemented anywhere) or a way to force a dataset's chunk-index handle closed/reopened before
+   VFD-SWMR end-of-tick eviction runs against it. Since this is confirmed pre-existing mainline
+   behavior (not VDS-specific, not something this port introduced), it may also be worth reporting
+   upstream independent of this port.
+7. Consider whether any of the 4 "Pre-existing develop bugs", 5 "Phase 3 bugs", 3 bugs from the
+   MPMDE session, the 8 bugs from "Session N+1" (particularly #1–#5, which are general
+   page-buffer/library correctness issues, not VFD-SWMR-specific), the 2 bugs from "Session N+2"'s
+   first pass (the missing VFD-SWMR-raw-data-bypass rule and the mpmde `tl_size` accounting bug),
+   or the 4 bugs from the `few_big`/`many_small` pass (the `H5open()` gap, the missing
+   `WAIT_MESSAGE` sync, the EOT-queue-insert nrefs gate, and the VDS shadow-file-unlink race — the
+   nrefs gate especially, since it's a generic library use-after-free/leak, not
+   VFD-SWMR-test-specific) are worth splitting into standalone `develop` PRs, independent of this
+   port.
 
 ---
 
@@ -1101,4 +1675,13 @@ make -j"$(nproc)"
 | `H5F_open()` status_flags VFD-SWMR exemption (both sides) | `src/H5Fint.c` | Session N+1, bugs #4–5 |
 | Explicit `H5open()` in `state_init()` | `test/vfd_swmr_group_writer.c` | Session N+1, bug #6 |
 | `H5PB_remove_entry()` tick-list/DWL unlink before free | `src/H5PB.c` | Session N+1, bug #7 |
-| `astr_val = NULL` initialization (both variants) | `test/vfd_swmr_group_writer.c`, `verify_group_vlstr_attr()` | Session N+1, bug #8 (crash only; underlying bug open) |
+| `astr_val = NULL` initialization (both variants) | `test/vfd_swmr_group_writer.c`, `verify_group_vlstr_attr()` | Session N+1, bug #8 (crash fix; underlying bug root-caused and fixed in Session N+2) |
+| Conditional `H5FD_MEM_GHEAP`→`H5FD_MEM_DRAW` remap (4 sites: `H5F_shared_block_read/write`, `H5F_block_read/write`) | `src/H5Fio.c` | Session N+2, root cause fix for bug #8 |
+| Removed stale `assert(type != H5FD_MEM_GHEAP)` | `src/H5PB.c`, `H5PB_read()` | Session N+2, follow-on to the `H5Fio.c` fix |
+| VFD-SWMR raw-data page-buffer bypass (`page_buf->vfd_swmr && H5FD_MEM_DRAW == type`) | `src/H5PB.c`, `H5PB_read()`/`H5PB_write()` | Session N+2, independent reference-parity fix |
+| mpmde tick-list `tl_size` growth-delta accounting | `src/H5PB.c`, `H5PB__write_mpmde()`'s "existing entry must grow" branch | Session N+2, new bug exposed by the `H5Fio.c` fix |
+| Raw-data shadow-index bypass on read (`H5FD_MEM_DRAW` skips the index lookup) | `src/H5FDvfd_swmr.c`, `H5FD__vfd_swmr_read()` | Session N+2, `expand_shrink` "Incorrect record value" fix |
+| Explicit `H5open()` in `state_init()` | `test/vfd_swmr_bigset_writer.c` | Session N+2, `few_big`/`many_small` bug #1 |
+| `WRITER_MESSAGE` signal + `WAIT_MESSAGE` sync (writer + script, 2 sections) | `test/vfd_swmr_bigset_writer.c` (`main()`), `test/test_vfd_swmr.sh.in` (`many_small`/`few_big` sections) | Session N+2, `few_big`/`many_small` bug #2 |
+| `H5F_vfd_swmr_insert_entry_eot()` gated on `nrefs == 1` | `src/H5Fint.c`, `H5F_open()` | Session N+2, `few_big`/`many_small` bug #3 (generic library UAF/leak) |
+| Shadow-index array free at writer close (`mdf_idx`/`old_mdf_idx`) | `src/H5Fvfd_swmr.c`, `H5F_vfd_swmr_close_or_flush()` | Session N+2, `few_big`/`many_small` bug #3 (companion 2.3MB leak) |
