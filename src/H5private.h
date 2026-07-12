@@ -1294,10 +1294,10 @@ struct H5F_t;
  *----------------------------------------------------------------------------
  */
 typedef struct eot_queue_entry {
-    hbool_t              vfd_swmr_writer;
-    uint64_t             tick_num;
-    struct timespec      end_of_tick;
-    struct H5F_t        *vfd_swmr_file;
+    hbool_t         vfd_swmr_writer;
+    uint64_t        tick_num;
+    struct timespec end_of_tick;
+    struct H5F_t   *vfd_swmr_file;
     TAILQ_ENTRY(eot_queue_entry) link;
 } eot_queue_entry_t;
 
@@ -1306,7 +1306,7 @@ typedef TAILQ_HEAD(eot_queue, eot_queue_entry) eot_queue_t;
 
 H5_DLL extern eot_queue_t  eot_queue_g;
 H5_DLL extern unsigned int vfd_swmr_api_entries_g;
-H5_DLL herr_t H5F_vfd_swmr_process_eot_queue(hbool_t entering_api);
+H5_DLL herr_t              H5F_vfd_swmr_process_eot_queue(hbool_t entering_api);
 
 /* Track re-entrancy: only the outermost API call processes the EOT queue.
  * TBD assert that the API lock is held -- the API lock synchronizes access
@@ -1326,7 +1326,7 @@ H5_DLL herr_t H5F_vfd_swmr_process_eot_queue(hbool_t entering_api);
 #define VFD_SWMR_LEAVE(err)                                                                                  \
     do {                                                                                                     \
         if (--vfd_swmr_api_entries_g > 0)                                                                    \
-            ; /* Do nothing: we are still in an API call. */                                                \
+            ; /* Do nothing: we are still in an API call. */                                                 \
         else if (err_occurred)                                                                               \
             ; /* Do nothing: an error occurred. */                                                           \
         else if (TAILQ_EMPTY(&eot_queue_g))                                                                  \

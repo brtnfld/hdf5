@@ -109,9 +109,9 @@ check_dataset(hid_t fid, hid_t dapl, unsigned verbose, const char *sym_name, sym
     /* Emit informational message */
     if (verbose) {
         fprintf(stderr,
-                  "READER: Symbol = '%s'"
-                  ", # of records = %" PRIdHSIZE "\n",
-                  sym_name, snpoints);
+                "READER: Symbol = '%s'"
+                ", # of records = %" PRIdHSIZE "\n",
+                sym_name, snpoints);
     }
 
     /* Check if there are records for symbol */
@@ -144,9 +144,9 @@ check_dataset(hid_t fid, hid_t dapl, unsigned verbose, const char *sym_name, sym
             fprintf(stderr, "*** READER: ERROR ***\n");
             fprintf(stderr, "Incorrect record value!\n");
             fprintf(stderr,
-                      "Symbol = '%s', # of records = %" PRIdHSIZE ", record->rec_id = %" PRIx64
-                      ", expected %" PRIxHSIZE "\n",
-                      sym_name, snpoints, record->rec_id, start[1]);
+                    "Symbol = '%s', # of records = %" PRIdHSIZE ", record->rec_id = %" PRIx64
+                    ", expected %" PRIxHSIZE "\n",
+                    sym_name, snpoints, record->rec_id, start[1]);
             return -1;
         } /* end if */
     }     /* end if */

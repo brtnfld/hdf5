@@ -92,11 +92,11 @@ usage(const char *progname)
     fprintf(stderr, "  -e: print error stacks\n");
 #ifdef H5_USE_SOCKETS
     fprintf(stderr,
-              "  -i --ip_addr ip_address: IP address that the reader can use to connect to the writer\n");
+            "  -i --ip_addr ip_address: IP address that the reader can use to connect to the writer\n");
 #endif
     fprintf(stderr, "  -l tick_num: expected maximal number of ticks from \n");
     fprintf(stderr,
-              "     the writer's finishing zoo creation or deletion to the reader's finishing validation\n");
+            "     the writer's finishing zoo creation or deletion to the reader's finishing validation\n");
     fprintf(stderr, "  -N: do not use communication between reader and writer\n");
     fprintf(stderr, "  -q: be quiet: few/no progress messages\n");
     fprintf(stderr, "  -v: be verbose: most progress messages\n");

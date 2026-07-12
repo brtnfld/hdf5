@@ -200,24 +200,24 @@ static void
 usage(const char *progname)
 {
     fprintf(stderr,
-              "usage: %s [-S] [-c cols] [-r rows] [-t tick_len] [-m max_lag] \n"
-              "    [-B page_buffer_size] [-s page_size] [-u reader wait interval] [-q silent output] \n"
-              "\n"
-              "-S:	               do not use VFD SWMR\n"
-              "-c cols:	       `cols` columns for the dataset\n"
-              "                      The default value is 512.\n"
-              "-r rows:	       `rows` rows for the dataset\n"
-              "                      The default value is 256.\n"
-              "-t tick_len:    length of a tick in tenths of a second.\n"
-              "-m max_lag:     maximum expected lag(in ticks) between writer and readers\n"
-              "-B pbs:         page buffer size in bytes:\n"
-              "                The default value is 4K(4096).\n"
-              "-s ps:          page size used by page aggregation, page buffer and \n"
-              "                the metadata file. The default value is 4K(4096).\n"
-              "-u 0.1s:        interval in tenth of seconds to check if a dataset is ready for the reader.\n"
-              "-q:             silence printouts, few messages\n"
-              "\n",
-              progname);
+            "usage: %s [-S] [-c cols] [-r rows] [-t tick_len] [-m max_lag] \n"
+            "    [-B page_buffer_size] [-s page_size] [-u reader wait interval] [-q silent output] \n"
+            "\n"
+            "-S:	               do not use VFD SWMR\n"
+            "-c cols:	       `cols` columns for the dataset\n"
+            "                      The default value is 512.\n"
+            "-r rows:	       `rows` rows for the dataset\n"
+            "                      The default value is 256.\n"
+            "-t tick_len:    length of a tick in tenths of a second.\n"
+            "-m max_lag:     maximum expected lag(in ticks) between writer and readers\n"
+            "-B pbs:         page buffer size in bytes:\n"
+            "                The default value is 4K(4096).\n"
+            "-s ps:          page size used by page aggregation, page buffer and \n"
+            "                the metadata file. The default value is 4K(4096).\n"
+            "-u 0.1s:        interval in tenth of seconds to check if a dataset is ready for the reader.\n"
+            "-q:             silence printouts, few messages\n"
+            "\n",
+            progname);
     exit(EXIT_FAILURE);
 }
 

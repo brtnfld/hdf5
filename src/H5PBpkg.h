@@ -76,7 +76,7 @@
         (((len) == 1) &&                                                                                     \
          (!(((head_ptr) == (entry_ptr)) && ((tail_ptr) == (entry_ptr)) && ((entry_ptr)->next == NULL) &&     \
             ((entry_ptr)->prev == NULL) && ((Size) == (int64_t)((entry_ptr)->size)))))) {                    \
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, (fv), "DLL pre remove SC failed");                               \
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, (fv), "DLL pre remove SC failed");                              \
     }
 
 #define H5PB__DLL_SC(head_ptr, tail_ptr, len, Size, fv)                                                      \
@@ -86,7 +86,7 @@
          (((head_ptr) != (tail_ptr)) || ((head_ptr) == NULL) || ((head_ptr)->size != (size_t)(Size)))) ||    \
         (((len) >= 1) && (((head_ptr) == NULL) || ((head_ptr)->prev != NULL) || ((tail_ptr) == NULL) ||      \
                           ((tail_ptr)->next != NULL)))) {                                                    \
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, (fv), "DLL sanity check failed");                                \
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, (fv), "DLL sanity check failed");                               \
     }
 
 #define H5PB__DLL_PRE_INSERT_SC(entry_ptr, head_ptr, tail_ptr, len, Size, fv)                                \
@@ -96,8 +96,8 @@
          (((head_ptr) != (tail_ptr)) || ((head_ptr) == NULL) || ((head_ptr)->size != (size_t)(Size)))) ||    \
         (((len) >= 1) && (((head_ptr) == NULL) || ((head_ptr)->prev != NULL) || ((tail_ptr) == NULL) ||      \
                           ((tail_ptr)->next != NULL)))) {                                                    \
-        assert(false);                                                                                     \
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, (fv), "DLL pre insert SC failed");                               \
+        assert(false);                                                                                       \
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, (fv), "DLL pre insert SC failed");                              \
     }
 
 #else /* H5PB__DO_SANITY_CHECKS */
@@ -142,7 +142,7 @@
 
 #define H5PB__DLL_INSERT_BEFORE(entry_ptr, suc_ptr, head_ptr, tail_ptr, len, Size, fail_val)                 \
     {                                                                                                        \
-        assert(((suc_ptr) == NULL) || ((suc_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC));                     \
+        assert(((suc_ptr) == NULL) || ((suc_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC));                       \
                                                                                                              \
         if (suc_ptr == NULL)                                                                                 \
             /* list empty or no successor -- append */                                                       \
@@ -155,8 +155,8 @@
         else /* successor in body of list -- insert before it */                                             \
         {                                                                                                    \
             H5PB__DLL_PRE_INSERT_SC(entry_ptr, head_ptr, tail_ptr, len, Size, fail_val)                      \
-            assert(suc_ptr->prev->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                      \
-            assert(suc_ptr->prev->next == suc_ptr);                                                        \
+            assert(suc_ptr->prev->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                        \
+            assert(suc_ptr->prev->next == suc_ptr);                                                          \
             entry_ptr->prev       = suc_ptr->prev;                                                           \
             entry_ptr->prev->next = entry_ptr;                                                               \
             entry_ptr->next       = suc_ptr;                                                                 \
@@ -202,7 +202,7 @@
         (((len) == 1) &&                                                                                     \
          (!(((hd_ptr) == (entry_ptr)) && ((tail_ptr) == (entry_ptr)) && ((entry_ptr)->il_next == NULL) &&    \
             ((entry_ptr)->il_prev == NULL) && ((Size) == (int64_t)((entry_ptr)->size)))))) {                 \
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, (fv), "il DLL pre remove SC failed");                            \
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, (fv), "il DLL pre remove SC failed");                           \
     }
 
 #define H5PB__IL_DLL_PRE_INSERT_SC(entry_ptr, hd_ptr, tail_ptr, len, Size, fv)                               \
@@ -212,7 +212,7 @@
                           ((int64_t)((hd_ptr)->size) != (Size)))) ||                                         \
         (((len) >= 1) && (((hd_ptr) == NULL) || ((hd_ptr)->il_prev != NULL) || ((tail_ptr) == NULL) ||       \
                           ((tail_ptr)->il_next != NULL)))) {                                                 \
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, (fv), "IL DLL pre insert SC failed");                            \
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, (fv), "IL DLL pre insert SC failed");                           \
     }
 
 #define H5PB__IL_DLL_SC(head_ptr, tail_ptr, len, Size, fv)                                                   \
@@ -221,7 +221,7 @@
          (((head_ptr) != (tail_ptr)) || ((head_ptr) == NULL) || ((int64_t)((head_ptr)->size) != (Size)))) || \
         (((len) >= 1) && (((head_ptr) == NULL) || ((head_ptr)->il_prev != NULL) || ((tail_ptr) == NULL) ||   \
                           ((tail_ptr)->il_next != NULL)))) {                                                 \
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, (fv), "IL DLL sanity check failed");                             \
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, (fv), "IL DLL sanity check failed");                            \
     }
 
 #else /* H5PB__DO_SANITY_CHECKS */
@@ -267,7 +267,7 @@
 
 #define H5PB__IL_DLL_INSERT_BEFORE(entry_ptr, suc_ptr, head_ptr, tail_ptr, len, Size, fail_val)              \
     {                                                                                                        \
-        assert(((suc_ptr) == NULL) || ((suc_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC));                     \
+        assert(((suc_ptr) == NULL) || ((suc_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC));                       \
                                                                                                              \
         if (suc_ptr == NULL)                                                                                 \
             /* list empty or no successor -- append */                                                       \
@@ -280,8 +280,8 @@
         else /* successor in body of list -- insert before it */                                             \
         {                                                                                                    \
             H5PB__IL_DLL_PRE_INSERT_SC(entry_ptr, head_ptr, tail_ptr, len, Size, fail_val)                   \
-            assert(suc_ptr->il_prev->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                   \
-            assert(suc_ptr->il_prev->il_next == suc_ptr);                                                  \
+            assert(suc_ptr->il_prev->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                     \
+            assert(suc_ptr->il_prev->il_next == suc_ptr);                                                    \
             entry_ptr->il_prev          = suc_ptr->il_prev;                                                  \
             entry_ptr->il_prev->il_next = entry_ptr;                                                         \
             entry_ptr->il_next          = suc_ptr;                                                           \
@@ -328,7 +328,7 @@
         (((len) == 1) &&                                                                                     \
          (!(((hd_ptr) == (entry_ptr)) && ((tail_ptr) == (entry_ptr)) && ((entry_ptr)->tl_next == NULL) &&    \
             ((entry_ptr)->tl_prev == NULL) && ((Size) == (int64_t)((entry_ptr)->size)))))) {                 \
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, (fv), "TL DLL pre remove SC failed");                            \
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, (fv), "TL DLL pre remove SC failed");                           \
     }
 
 #define H5PB__TL_DLL_SC(head_ptr, tail_ptr, len, Size, fv)                                                   \
@@ -338,7 +338,7 @@
                           ((head_ptr)->size != (Size)))) ||                                                  \
         (((len) >= 1) && (((head_ptr) == NULL) || ((head_ptr)->tl_prev != NULL) || ((tail_ptr) == NULL) ||   \
                           ((tail_ptr)->tl_next != NULL)))) {                                                 \
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, (fv), "TL DLL sanity check failed");                             \
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, (fv), "TL DLL sanity check failed");                            \
     }
 
 #define H5PB__TL_DLL_PRE_INSERT_SC(entry_ptr, hd_ptr, tail_ptr, len, Size, fv)                               \
@@ -348,7 +348,7 @@
                           ((int64_t)((hd_ptr)->size) != (Size)))) ||                                         \
         (((len) >= 1) && (((hd_ptr) == NULL) || ((hd_ptr)->tl_prev != NULL) || ((tail_ptr) == NULL) ||       \
                           ((tail_ptr)->tl_next != NULL)))) {                                                 \
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, (fv), "TL DLL pre insert SC failed");                            \
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, (fv), "TL DLL pre insert SC failed");                           \
     }
 
 #else /* H5PB__DO_SANITY_CHECKS */
@@ -458,7 +458,7 @@
         assert((entry_ptr)->modified_this_tick);                                                             \
         assert((entry_ptr)->size >= page_buf->page_size);                                                    \
                                                                                                              \
-        /* remove the entry from the tick list. */                                                          \
+        /* remove the entry from the tick list. */                                                           \
         H5PB__TL_DLL_REMOVE((entry_ptr), (page_buf)->tl_head_ptr, (page_buf)->tl_tail_ptr,                   \
                             (page_buf)->tl_len, (page_buf)->tl_size, (fail_val))                             \
     } /* H5PB__REMOVE_FROM_TL */
@@ -548,7 +548,7 @@
         assert((entry_ptr)->size >= page_buf->page_size);                                                    \
         assert((entry_ptr)->delay_write_until == 0);                                                         \
                                                                                                              \
-        /* remove the entry from the delayed write list. */                                                 \
+        /* remove the entry from the delayed write list. */                                                  \
         H5PB__DLL_REMOVE((entry_ptr), (page_buf)->dwl_head_ptr, (page_buf)->dwl_tail_ptr,                    \
                          (page_buf)->dwl_len, (page_buf)->dwl_size, (fail_val))                              \
     } /* H5PB__REMOVE_FROM_DWL */

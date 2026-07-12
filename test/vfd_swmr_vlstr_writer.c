@@ -230,21 +230,20 @@ main(int argc, char **argv)
         switch (step) {
             case CREATE:
                 (void)snprintf(name[which], sizeof(name[which]), "dset-%d", which);
-                (void)snprintf(content[which], sizeof(content[which]), "content %d seq %d short", which,
-                                 seq);
+                (void)snprintf(content[which], sizeof(content[which]), "content %d seq %d short", which, seq);
                 dset[which] = create_vl_dset(fid, type, space, name[which]);
                 if (write_vl_dset(dset[which], type, space, content[which]) < 0)
                     PUTS_ERROR("failed to write to VL dataset");
                 break;
             case LENGTHEN:
                 (void)snprintf(content[which], sizeof(content[which]),
-                                 "content %d seq %d long long long long long long long long", which, seq);
+                               "content %d seq %d long long long long long long long long", which, seq);
                 if (write_vl_dset(dset[which], type, space, content[which]) < 0)
                     PUTS_ERROR("failed to write to VL dataset");
                 break;
             case SHORTEN:
                 (void)snprintf(content[which], sizeof(content[which]),
-                                 "content %d seq %d medium medium medium", which, seq);
+                               "content %d seq %d medium medium medium", which, seq);
                 if (write_vl_dset(dset[which], type, space, content[which]) < 0)
                     PUTS_ERROR("failed to write to VL dataset");
                 break;

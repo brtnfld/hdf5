@@ -167,13 +167,13 @@ static void
 usage(const char *progname)
 {
     fprintf(stderr,
-              "usage: %s \n"
-              "           [-s] [-i] [-f] [-e] [-r]\n"
-              "           [-m rows] [-n cols]\n"
-              "           [-g gwrites] [-p pwrites] [-t twrites] [-l lwrites]\n"
-              "           [-x xincrs] [-y decrs]\n"
-              "           [-u nticks] [-c csteps] [-U] [-S] [-N] [-q] [-b] [-o]\n",
-              progname);
+            "usage: %s \n"
+            "           [-s] [-i] [-f] [-e] [-r]\n"
+            "           [-m rows] [-n cols]\n"
+            "           [-g gwrites] [-p pwrites] [-t twrites] [-l lwrites]\n"
+            "           [-x xincrs] [-y decrs]\n"
+            "           [-u nticks] [-c csteps] [-U] [-S] [-N] [-q] [-b] [-o]\n",
+            progname);
 
     fprintf(
         stderr,

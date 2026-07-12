@@ -151,29 +151,29 @@ static void
 usage(const char *progname)
 {
     fprintf(stderr,
-              "usage: %s [-S] [-G] [-n number_of_groups] \n"
-              "    [-N] [-d] [-q] [-T w_sleep_len] [-t tick_len] [-m max_lag][-B pbs] [-s ps]\n"
-              "    [-i, --ip_addr ip_address]\n"
-              "\n"
-              "-S:             do not use VFD SWMR\n"
-              "-G:             old-style type of group\n"
-              "-n ngroups:     the number of groups\n"
-              "-N:             do not use named pipes, \n"
-              "                mainly for running the writer and reader separately\n"
-              "-t tick_len:    length of a tick in tenths of a second.\n"
-              "-m max_lag:     maximum expected lag(in ticks) between writer and readers\n"
-              "-B pbs:         page buffer size in bytes:\n"
-              "                The default value is 4K(4096).\n"
-              "-s ps:          page size used by page aggregation, page buffer and \n"
-              "                the metadata file. The default value is 4K(4096).\n"
-              "-T w_sleep_len: Before closing the file, the sleep length in tenths of a second \n"
-              "                on the writer side. The default is 112 tenths of a second \n"
-              "                That is 4*max_lag*tick_len if tick_len is 4 and max_lag is 7. \n"
-              "-d del_grp:     true: delete 1000 groups after creating >1000 groups. \n"
-              "-i ip_address:  IP address of the writer (reader only) \n"
-              "-q:             silence printouts, few messages\n"
-              "\n",
-              progname);
+            "usage: %s [-S] [-G] [-n number_of_groups] \n"
+            "    [-N] [-d] [-q] [-T w_sleep_len] [-t tick_len] [-m max_lag][-B pbs] [-s ps]\n"
+            "    [-i, --ip_addr ip_address]\n"
+            "\n"
+            "-S:             do not use VFD SWMR\n"
+            "-G:             old-style type of group\n"
+            "-n ngroups:     the number of groups\n"
+            "-N:             do not use named pipes, \n"
+            "                mainly for running the writer and reader separately\n"
+            "-t tick_len:    length of a tick in tenths of a second.\n"
+            "-m max_lag:     maximum expected lag(in ticks) between writer and readers\n"
+            "-B pbs:         page buffer size in bytes:\n"
+            "                The default value is 4K(4096).\n"
+            "-s ps:          page size used by page aggregation, page buffer and \n"
+            "                the metadata file. The default value is 4K(4096).\n"
+            "-T w_sleep_len: Before closing the file, the sleep length in tenths of a second \n"
+            "                on the writer side. The default is 112 tenths of a second \n"
+            "                That is 4*max_lag*tick_len if tick_len is 4 and max_lag is 7. \n"
+            "-d del_grp:     true: delete 1000 groups after creating >1000 groups. \n"
+            "-i ip_address:  IP address of the writer (reader only) \n"
+            "-q:             silence printouts, few messages\n"
+            "\n",
+            progname);
     exit(EXIT_FAILURE);
 }
 

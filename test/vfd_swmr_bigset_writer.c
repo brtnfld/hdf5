@@ -205,27 +205,27 @@ static void
 usage(const char *progname)
 {
     fprintf(stderr,
-              "usage: %s [-A] [-C] [-F] [-M] [-N] [-P] [-R] [-S] [-V] [-W] [-a steps] [-b] [-c cols]\n"
-              "    [-d dims] [-e depth] [-f tick_len] [-g max_lag] [-j skip_chunk] [-k part_chunk]\n"
-              "    [-l tick_num] [-n iterations] [-o page_buf_size] [-p fsp_size] [-r rows]\n"
-              "    [-s datasets] [-t] [-u over_extend] [-v chunk_cache_size] [-w deflate_level]\n"
-              "    [-i -ip_addr <IP address>] [--md_dir <directory>]\n"
-              "\n"
-              "-A:                   use the auxiliary process to update the metadata file\n"
-              "-C:                   cross-over chunk read during chunk verification\n"
-              "-F:                   fixed maximal dimension for the chunked datasets\n"
-              "-M:                   use virtual datasets and many source\n"
-              "                      files\n"
-              "-N:                   do not use interprocess communication between reader and writer\n"
-              "-P:                   do the performance measurement\n"
-              "-R:                   flush raw data\n"
-              "-S:                   do not use VFD SWMR\n"
-              "-T:                   use legacy SWMR (-S and -N must also be specified)\n"
-              "-V:                   use virtual datasets and a single\n"
-              "                      source file\n"
-              "-a steps:	       `steps` between adding attributes\n"
-              "-b:                   write data in big-endian byte order\n",
-              progname);
+            "usage: %s [-A] [-C] [-F] [-M] [-N] [-P] [-R] [-S] [-V] [-W] [-a steps] [-b] [-c cols]\n"
+            "    [-d dims] [-e depth] [-f tick_len] [-g max_lag] [-j skip_chunk] [-k part_chunk]\n"
+            "    [-l tick_num] [-n iterations] [-o page_buf_size] [-p fsp_size] [-r rows]\n"
+            "    [-s datasets] [-t] [-u over_extend] [-v chunk_cache_size] [-w deflate_level]\n"
+            "    [-i -ip_addr <IP address>] [--md_dir <directory>]\n"
+            "\n"
+            "-A:                   use the auxiliary process to update the metadata file\n"
+            "-C:                   cross-over chunk read during chunk verification\n"
+            "-F:                   fixed maximal dimension for the chunked datasets\n"
+            "-M:                   use virtual datasets and many source\n"
+            "                      files\n"
+            "-N:                   do not use interprocess communication between reader and writer\n"
+            "-P:                   do the performance measurement\n"
+            "-R:                   flush raw data\n"
+            "-S:                   do not use VFD SWMR\n"
+            "-T:                   use legacy SWMR (-S and -N must also be specified)\n"
+            "-V:                   use virtual datasets and a single\n"
+            "                      source file\n"
+            "-a steps:	       `steps` between adding attributes\n"
+            "-b:                   write data in big-endian byte order\n",
+            progname);
     /* Split print function to avoid line too long warning */
     fprintf(
         stderr,
@@ -944,7 +944,7 @@ state_destroy(state_t *s)
         }
 
         fprintf(stdout, "File close time (for running the writer alone) = %lf seconds\n",
-                  TIME_PASSED(start_time, end_time));
+                TIME_PASSED(start_time, end_time));
     }
 
     if (s->dataset)
@@ -1022,7 +1022,7 @@ notify_and_wait_for_reader(state_t *s, socket_state_t *sock)
 
 #ifdef DEBUG_RW_COMMS
     fprintf(stderr, "[DEBUG-COMM] notify_and_wait_for_reader(): writer sent: last = (%lld, %lld)\n",
-              (unsigned long long)(last.tv_sec), (unsigned long long)(last.tv_nsec));
+            (unsigned long long)(last.tv_sec), (unsigned long long)(last.tv_nsec));
 #endif /* DEBUG_RW_COMMS */
 
     /* During the wait, writer makes repeated HDF5 API calls so as to trigger
@@ -1076,8 +1076,8 @@ reader_check_time_and_notify_writer(state_t *s, socket_state_t *sock)
 
 #ifdef DEBUG_RW_COMMS
     fprintf(stderr,
-              "[DEBUG-COMM] reader_check_time_and_notify_writer(): reader received: last = (%lld, %lld)\n",
-              (unsigned long long)(last.tv_sec), (unsigned long long)(last.tv_nsec));
+            "[DEBUG-COMM] reader_check_time_and_notify_writer(): reader received: last = (%lld, %lld)\n",
+            (unsigned long long)(last.tv_sec), (unsigned long long)(last.tv_nsec));
 #endif /* DEBUG_RW_COMMS */
 
     /* If the dataset validation takes longer than the expected time, issue a warning.
@@ -1096,7 +1096,7 @@ reader_check_time_and_notify_writer(state_t *s, socket_state_t *sock)
 
 #ifdef DEBUG_RW_COMMS
     fprintf(stderr, "[DEBUG-COMM] reader_check_time_and_notify_writer(): reader sent: notify = %d\n",
-              sock->notify);
+            sock->notify);
 #endif /* DEBUG_RW_COMMS */
 
     return 0;
@@ -1180,8 +1180,8 @@ notify_reader(state_t *s, socket_state_t *sock, unsigned step)
 
 #ifdef DEBUG_RW_COMMS
     fprintf(stderr, "[DEBUG-COMM] notify_reader(): writer sent: last.step = %d, last.time = (%lld, %lld)\n",
-              (int)(last->step), (unsigned long long)(last->time.tv_sec),
-              (unsigned long long)(last->time.tv_nsec));
+            (int)(last->step), (unsigned long long)(last->time.tv_sec),
+            (unsigned long long)(last->time.tv_nsec));
 #endif /* DEBUG_RW_COMMS */
 
     if (last)
@@ -1568,9 +1568,8 @@ open_extensible_dset(state_t *s)
         if (s->test_3d) {
             if (maxdims3[0] != three_dee_max_dims[0] || maxdims3[1] != three_dee_max_dims[1] ||
                 maxdims3[2] != three_dee_max_dims[2]) {
-                fprintf(stderr,
-                          "Unexpected maximum dimensions %" PRIuHSIZE " x %" PRIuHSIZE " x %" PRIuHSIZE,
-                          maxdims3[0], maxdims3[1], maxdims3[2]);
+                fprintf(stderr, "Unexpected maximum dimensions %" PRIuHSIZE " x %" PRIuHSIZE " x %" PRIuHSIZE,
+                        maxdims3[0], maxdims3[1], maxdims3[2]);
                 TEST_ERROR;
             }
         }
@@ -1578,17 +1577,17 @@ open_extensible_dset(state_t *s)
             if (s->expand_2d) {
                 if (maxdims2[0] != two_dee_max_dims[0] || maxdims2[1] != two_dee_max_dims[1] ||
                     maxdims2[0] != maxdims2[1]) {
-                    fprintf(stderr, "Unexpected maximum dimensions %" PRIuHSIZE " x %" PRIuHSIZE,
-                              maxdims2[0], maxdims2[1]);
+                    fprintf(stderr, "Unexpected maximum dimensions %" PRIuHSIZE " x %" PRIuHSIZE, maxdims2[0],
+                            maxdims2[1]);
                     TEST_ERROR;
                 }
             }
             else if (maxdims2[0] != s->one_dee_max_dims[0] || maxdims2[1] != s->one_dee_max_dims[1] ||
                      dims2[0] != s->chunk_dims[0]) {
                 fprintf(stderr,
-                          "Unexpected maximum dimensions %" PRIuHSIZE " x %" PRIuHSIZE
-                          " or columns %" PRIuHSIZE,
-                          maxdims2[0], maxdims2[1], dims2[1]);
+                        "Unexpected maximum dimensions %" PRIuHSIZE " x %" PRIuHSIZE
+                        " or columns %" PRIuHSIZE,
+                        maxdims2[0], maxdims2[1], dims2[1]);
             }
         }
 
@@ -1640,7 +1639,7 @@ create_dsets(state_t *s)
         }
 
         fprintf(stdout, "Dataset creation time (for running the writer alone) = %lf seconds\n",
-                  TIME_PASSED(start_time, end_time));
+                TIME_PASSED(start_time, end_time));
     }
 
     return true;
@@ -1682,7 +1681,7 @@ newmat(state_t *s)
      */
     if (s->test_3d) {
         if (s->part_chunk) {
-            mat = malloc(sizeof(*mat) + (s->part_chunk * s->rows * s->cols - 1) * sizeof(mat->elt[0]));
+            mat        = malloc(sizeof(*mat) + (s->part_chunk * s->rows * s->cols - 1) * sizeof(mat->elt[0]));
             mat->depth = s->part_chunk;
         }
         else {
@@ -2302,7 +2301,7 @@ verify_dsets(state_t *s, socket_state_t *sock, mat_t *mat)
     /* Print out the performance information */
     if (s->use_communication && s->do_perf && counter)
         fprintf(stdout, "Dataset verification: mean time = %lf, max time = %lf, min time = %lf\n",
-                  total_time / (double)counter, max_time, min_time);
+                total_time / (double)counter, max_time, min_time);
 
     return true;
 
@@ -2598,9 +2597,9 @@ write_dsets(state_t *s, socket_state_t *sock, mat_t *mat)
 
         /* Print out the performance information */
         fprintf(stdout,
-                  "Dataset write time (for running the writer alone) = %lf seconds, write speed = %.2lf "
-                  "bytes/second\n",
-                  time_passed, throughput);
+                "Dataset write time (for running the writer alone) = %lf seconds, write speed = %.2lf "
+                "bytes/second\n",
+                time_passed, throughput);
     }
 
     return true;

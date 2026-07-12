@@ -3004,7 +3004,7 @@ main(int argc, char **argv)
 
             fprintf(stdout, "\n");
             fprintf(stdout,
-                      "(If the nested level is 0, all the groups are created directly under the root.)\n\n");
+                    "(If the nested level is 0, all the groups are created directly under the root.)\n\n");
             fprintf(stdout, "group creation maximum time                       =%lf\n", s->max_gc_time);
             fprintf(stdout, "group creation minimum time                       =%lf\n", s->min_gc_time);
         }
@@ -3013,7 +3013,7 @@ main(int argc, char **argv)
         fprintf(stdout, "group creation mean time(per group)                 = %lf\n", s->mean_gc_time);
         fprintf(stdout, "group creation and attributes generation total time = %lf\n", s->total_time);
         fprintf(stdout, "group creation and attributes generation mean time(per group) = %lf\n",
-                  s->mean_time);
+                s->mean_time);
         fprintf(stdout, "H5Fcreate time = %lf\n", s->fo_total_time);
         fprintf(stdout, "H5Fclose time  = %lf\n", s->fc_total_time);
     }

@@ -19,24 +19,24 @@
 /***********/
 /* Headers */
 /***********/
-#include "H5private.h"   /* Generic Functions                        */
-#include "H5Aprivate.h"  /* Attributes                               */
-#include "H5ACprivate.h" /* Metadata cache                           */
-#include "H5CXprivate.h" /* API Contexts                             */
-#include "H5Dprivate.h"  /* Datasets                                 */
-#include "H5Eprivate.h"  /* Error handling                           */
-#include "H5Fpkg.h"      /* File access                              */
-#include "H5FDprivate.h" /* File drivers                             */
+#include "H5private.h"    /* Generic Functions                        */
+#include "H5Aprivate.h"   /* Attributes                               */
+#include "H5ACprivate.h"  /* Metadata cache                           */
+#include "H5CXprivate.h"  /* API Contexts                             */
+#include "H5Dprivate.h"   /* Datasets                                 */
+#include "H5Eprivate.h"   /* Error handling                           */
+#include "H5Fpkg.h"       /* File access                              */
+#include "H5FDprivate.h"  /* File drivers                             */
 #include "H5FDvfd_swmr.h" /* VFD SWMR file driver                    */
-#include "H5FLprivate.h" /* Free Lists                               */
-#include "H5Gprivate.h"  /* Groups                                   */
-#include "H5Iprivate.h"  /* IDs                                      */
-#include "H5MFprivate.h" /* File memory management                   */
-#include "H5MMprivate.h" /* Memory management                        */
-#include "H5Pprivate.h"  /* Property lists                           */
-#include "H5SMprivate.h" /* Shared Object Header Messages            */
-#include "H5Tprivate.h"  /* Datatypes                                */
-#include "H5VLprivate.h" /* Virtual Object Layer                     */
+#include "H5FLprivate.h"  /* Free Lists                               */
+#include "H5Gprivate.h"   /* Groups                                   */
+#include "H5Iprivate.h"   /* IDs                                      */
+#include "H5MFprivate.h"  /* File memory management                   */
+#include "H5MMprivate.h"  /* Memory management                        */
+#include "H5Pprivate.h"   /* Property lists                           */
+#include "H5SMprivate.h"  /* Shared Object Header Messages            */
+#include "H5Tprivate.h"   /* Datatypes                                */
+#include "H5VLprivate.h"  /* Virtual Object Layer                     */
 
 #include "H5VLnative_private.h" /* Native VOL connector                     */
 
@@ -1874,29 +1874,29 @@ done:
 herr_t
 H5F_open(bool try, H5F_t **_file, const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id)
 {
-    H5F_t             *file   = NULL; /*the success return value      */
-    H5F_shared_t      *shared = NULL; /*shared part of `file'         */
-    H5FD_t            *lf     = NULL; /*file driver part of `shared'  */
-    unsigned           tent_flags;    /*tentative flags               */
-    H5FD_class_t      *drvr;          /*file driver class info        */
-    H5P_genplist_t    *a_plist;       /*file access property list     */
-    H5F_close_degree_t fc_degree;     /*file close degree             */
-    size_t             page_buf_size;
-    unsigned           page_buf_min_meta_perc = 0;
-    unsigned           page_buf_min_raw_perc  = 0;
-    bool               set_flag               = false;  /*set the status_flags in the superblock */
-    bool               clear                  = false;  /*clear the status_flags         */
-    bool               evict_on_close;                  /* evict on close value from plist  */
-    bool               use_file_locking      = true;    /* Using file locks? */
-    bool               ignore_disabled_locks = false;   /* Ignore disabled file locks? */
-    bool               ci_load               = false;   /* whether MDC ci load requested */
-    bool               ci_write              = false;   /* whether MDC CI write requested */
-    bool               file_create           = false;   /* TRUE iff this call created the file (fresh superblock) */
-    H5F_vfd_swmr_config_t vfd_swmr_config;               /* VFD SWMR config from the FAPL, if any */
-    bool               vfd_swmr                 = false; /* TRUE iff opening file with VFD SWMR */
-    bool               vfd_swmr_writer          = false; /* TRUE iff opening as the VFD SWMR writer */
-    bool               pop_vfd_swmr_reader_vfd  = false; /* set when the reader VFD was pushed below */
-    herr_t             ret_value             = SUCCEED; /* Return value */
+    H5F_t                *file   = NULL; /*the success return value      */
+    H5F_shared_t         *shared = NULL; /*shared part of `file'         */
+    H5FD_t               *lf     = NULL; /*file driver part of `shared'  */
+    unsigned              tent_flags;    /*tentative flags               */
+    H5FD_class_t         *drvr;          /*file driver class info        */
+    H5P_genplist_t       *a_plist;       /*file access property list     */
+    H5F_close_degree_t    fc_degree;     /*file close degree             */
+    size_t                page_buf_size;
+    unsigned              page_buf_min_meta_perc = 0;
+    unsigned              page_buf_min_raw_perc  = 0;
+    bool                  set_flag               = false; /*set the status_flags in the superblock */
+    bool                  clear                  = false; /*clear the status_flags         */
+    bool                  evict_on_close;                 /* evict on close value from plist  */
+    bool                  use_file_locking      = true;   /* Using file locks? */
+    bool                  ignore_disabled_locks = false;  /* Ignore disabled file locks? */
+    bool                  ci_load               = false;  /* whether MDC ci load requested */
+    bool                  ci_write              = false;  /* whether MDC CI write requested */
+    bool                  file_create = false; /* TRUE iff this call created the file (fresh superblock) */
+    H5F_vfd_swmr_config_t vfd_swmr_config;     /* VFD SWMR config from the FAPL, if any */
+    bool                  vfd_swmr                = false;   /* TRUE iff opening file with VFD SWMR */
+    bool                  vfd_swmr_writer         = false;   /* TRUE iff opening as the VFD SWMR writer */
+    bool                  pop_vfd_swmr_reader_vfd = false;   /* set when the reader VFD was pushed below */
+    herr_t                ret_value               = SUCCEED; /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 

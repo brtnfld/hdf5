@@ -118,8 +118,7 @@ check_dataset(hid_t fid, hbool_t verbose, FILE *verbose_file, const char *sym_na
 
     /* Emit informational message */
     if (verbose)
-        fprintf(verbose_file, "READER: Symbol = '%s', # of records = %lld\n", sym_name,
-                  (long long)snpoints);
+        fprintf(verbose_file, "READER: Symbol = '%s', # of records = %lld\n", sym_name, (long long)snpoints);
 
     /* Check if there are records for symbol */
     if (snpoints > 0) {
@@ -149,12 +148,12 @@ check_dataset(hid_t fid, hbool_t verbose, FILE *verbose_file, const char *sym_na
                 fprintf(verbose_file, "*** READER ERROR ***\n");
                 fprintf(verbose_file, "Incorrect record value!\n");
                 fprintf(verbose_file,
-                          "Time = %jd.%06jd, Symbol = '%s'"
-                          ", # of records = %" PRIdHSIZE ", record->rec_id = %" PRIu64 "\n",
-                          (intmax_t)tv.tv_sec, (intmax_t)tv.tv_usec, sym_name, snpoints, record->rec_id);
+                        "Time = %jd.%06jd, Symbol = '%s'"
+                        ", # of records = %" PRIdHSIZE ", record->rec_id = %" PRIu64 "\n",
+                        (intmax_t)tv.tv_sec, (intmax_t)tv.tv_usec, sym_name, snpoints, record->rec_id);
             } /* end if */
             fprintf(stderr, "%s.%d: record value %" PRIu64 " != %" PRIuHSIZE "\n", __func__, __LINE__,
-                      record->rec_id, start[1]);
+                    record->rec_id, start[1]);
             goto error;
         } /* end if */
     }     /* end if */

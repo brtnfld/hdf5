@@ -2275,8 +2275,7 @@ H5PB_vfd_swmr__update_index(H5F_t *f, uint32_t *idx_ent_added_ptr, uint32_t *idx
         assert(entry->magic == H5PB__H5PB_ENTRY_T_MAGIC);
 
         /* see if the shadow index already contains an entry for *entry. */
-        ie_ptr =
-            H5FD_vfd_swmr_pageno_to_mdf_idx_entry(idx, shared->mdf_idx_entries_used, target_page, false);
+        ie_ptr = H5FD_vfd_swmr_pageno_to_mdf_idx_entry(idx, shared->mdf_idx_entries_used, target_page, false);
 
         if (ie_ptr == NULL) { /* alloc new entry in the metadata file index */
             uint32_t new_index_entry_index;
