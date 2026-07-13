@@ -1360,7 +1360,7 @@ abandoned attempts.
 
 ---
 
-### A second, distinct, real bug surfaced by the fix above: a permanently-pinned v2 B-tree header during VFD SWMR reader-side cache eviction (`few_big -d 2`, 2D chunk growth) — root-caused precisely, not yet fixed
+### A second, distinct, real bug surfaced by the fix above: a permanently-pinned v2 B-tree header during VFD SWMR reader-side cache eviction (`few_big -d 2`, 2D chunk growth) — root-caused precisely, then FIXED (this section describes the original diagnosis; the fix follows below in "The fix, implemented and verified")
 
 With the hang genuinely fixed, running the *full* `few_big`/`many_small` acceptance test (not just
 the scenarios already known to be affected by the hang) surfaced a **new, separate failure** at
@@ -1404,46 +1404,111 @@ by this port.** `H5B2hdr.c`, `H5Dbtree2.c`, `H5C.c`, and `H5Ctag.c` are byte-for
 logic between this branch and the reference (confirmed via direct diff — only cosmetic
 `HDassert`→`assert`/`TRUE`→`true` style differences). The one mechanism designed to handle exactly
 this case — a per-type `refresh` callback that re-reads an entry's on-disk image in place without
-needing to evict it (`src/H5C.c:727-848`, gated on `entry_ptr->type->refresh != NULL`) — is fully
-implemented and wired up, but **no cache client anywhere in either tree actually registers one**
-(confirmed via repo-wide search), despite a comment in `H5C.c` describing it as already used "for
-the superblock." The most likely reason the reference doesn't hit this specific failure: the
-writer-side page-buffer accounting fixed earlier this session (`H5PB.c`, the mpmde/tick-list fix)
-means the port's writer now correctly publishes this page as "changed" for the first time in this
-2D/v2-B-tree scenario — a case the reference's older writer-side bookkeeping apparently never
-flagged this way, silently masking the same underlying reader-side gap. This last point is a
-reasoned hypothesis, not directly proven — time did not permit fully tracing why the reference's
-writer avoids triggering the sweep against this specific entry.
+needing to evict it (`src/H5C.c`, gated on `entry_ptr->type->refresh != NULL`) — was fully
+implemented and wired up, but until this session **no cache client except the superblock actually
+registered one**. (Whether the reference implementation ever hits this same failure under some
+workload was never established: it passes cleanly at `-d 2 -l 10`, and an attempt to test longer
+reference runs was inconclusive due to a disk-quota limit on the test machine. The only firmly
+established fact is that the mechanism's *code* is identical between the two trees, so the
+mechanism is not port-introduced. An earlier version of this document asserted a specific reason
+the reference "avoids" the failure; that was an unproven hypothesis and has been removed.)
 
 **Not a safe scenario to just "ignore the pin and move on":** the v2 B-tree header's on-disk bytes
-track the root node address and record count — if the tree ever restructures (a node split moving
-the root), a reader holding a stale header would use the wrong root and could genuinely fail to
-find newly-written chunks. Silently suppressing the eviction error would trade a loud failure for
-a silent correctness bug of exactly the kind this whole VDS investigation already spent significant
-effort chasing down once. This is not a quick, safe patch.
+track the root node address, depth, and record count — if the tree restructures (a node split
+moving the root, or a merge reducing depth), a reader holding a stale header would use the wrong
+root/depth and could genuinely fail to find newly-written chunks, or index its depth-derived node
+tables out of bounds. Silently suppressing the eviction error would trade a loud failure for a
+silent correctness bug of exactly the kind this whole VDS investigation already spent significant
+effort chasing down once.
 
-**Two candidate real fixes, neither attempted (both are core-library changes needing careful design
-and full regression testing, not something to improvise):**
-1. Implement a genuine `refresh` callback for the v2 B-tree header cache client (register it in the
-   `H5C_class_t` for `H5B2_HDR` in `src/H5B2cache.c`), so `H5C_evict_or_refresh_all_entries_in_page()`
-   takes the existing "refresh in place" branch instead of the evict-everything sweep. This is the
-   architecturally-correct fix (matches the mechanism's own design intent) and would fix this for
-   *every* v2-B-tree-backed structure (chunk indices, group links, dense attribute storage) — but
-   there is no existing implementation anywhere to model from, and getting the decode-in-place
-   semantics right for a live, in-use header needs careful review.
-2. Have the VFD SWMR reader-side refresh path force-close and reopen a dataset's chunk-index handle
-   (via the existing `H5D__bt2_idx_close()`/`H5D__bt2_idx_open()`, dispatched through the generic
-   chunk-index ops vtable so other index types are unaffected) so `hdr->rc` drops to 0 before
-   end-of-tick eviction runs against it. Narrower in scope than option 1, but the eviction that
-   fails happens on `H5Drefresh()`'s own API-entry EOT-queue processing — *before* any
-   per-dataset-type refresh logic (`H5D__refresh()`'s body) gets a chance to run — so this would
-   need to happen earlier in the call chain than a simple addition to `H5D__refresh()`.
+### The fix, implemented and verified
 
-**Not fixed this session, by explicit decision** — the scope (new core-library cache-client
-functionality, or an architecturally-awkward cross-layer force-close) crossed the threshold where
-it needs its own dedicated investigation and review rather than an in-session improvisation. Every
-diagnostic added while investigating this (a temporary pinned-entry-type `fprintf` in
-`src/H5Ctag.c`) was reverted; `src/H5Ctag.c` has zero diff from its pre-investigation state.
+The architecturally-correct fix was chosen and implemented: **give the v2 B-tree header cache
+class its own `refresh` callback**, following the single existing precedent (the superblock's
+`H5F__cache_superblock_refresh()` added earlier this session). This fixes the problem at the
+cache-class level, so it covers *every* v2-B-tree-backed structure (chunk indices, dense group
+links, dense attribute storage, shared message indexes), not just this one dataset scenario.
+
+It turned into three coordinated changes:
+
+**1. The refresh callback itself (`src/H5B2cache.c`, `src/H5B2hdr.c`, `src/H5B2pkg.h`).**
+`H5B2__cache_hdr_refresh()` decodes a freshly re-read header image in place into the live, pinned
+`H5B2_hdr_t` — asserting/erroring on the fields that can never legitimately change post-creation
+(node_size, rrec_size, split/merge percent, class id — same defensive posture
+`H5B2__cache_hdr_deserialize()` takes, since these bytes come from a less-trusted shadow file), and
+always updating the two that do change as the writer inserts records: the root node pointer and the
+tree depth. It is registered in `H5AC_BT2_HDR[1]`'s previously-`NULL` `refresh` slot.
+   - The tricky part is depth: `hdr->node_info[]`/`hdr->nat_off[]` are **depth-derived tables not
+     stored on disk**, built once by `H5B2__hdr_init()`. If the writer's tree deepened between
+     reader ticks (a root split), a refresh that only bumped `hdr->depth` without growing
+     `node_info[]` would let later traversals index out of bounds. So the shared build/teardown
+     logic was extracted from `H5B2__hdr_init()`/`H5B2__hdr_free()` into reusable helpers
+     (`H5B2__hdr_compute_node_info()` / `H5B2__hdr_free_node_info()`), and a new
+     `H5B2__hdr_extend_node_info()` grows `node_info[]` on a depth increase.
+   - **Grow-only, never free-and-rebuild.** An initial version that freed the old tables and
+     rebuilt them from scratch failed immediately the first time a real depth change was exercised,
+     with `"factory still has objects allocated"` — because each `node_info[u]` level owns free-list
+     factories (`nat_rec_fac`/`node_ptr_fac`) that can still have live allocations backing
+     leaf/internal node cache entries resident in the reader's cache. Since a level's `node_info`
+     value depends only on the (invariant) node_size/rrec_size and the level index, existing levels
+     never need recomputing — only new ones appended. `H5B2__hdr_extend_node_info()` therefore
+     `H5FL_SEQ_REALLOC`s the array and only initializes the newly-added levels.
+
+**2. A new `node_info_depth_alloc` high-water-mark field (`src/H5B2pkg.h`, and maintained in
+`src/H5B2hdr.c`, `src/H5B2int.c`, `src/H5B2.c`).** On the *reader*, when the writer's tree
+logically shrinks (depth decreases), the reader cannot safely free the now-higher `node_info[]`
+levels' factories — cache entries may still reference them — so `node_info[]` keeps a high-water
+number of allocated levels that can exceed the current `depth`. `H5B2__hdr_free_node_info()`
+therefore frees based on `node_info_depth_alloc`, not `depth`.
+   - **This field must be maintained everywhere depth changes, or it silently breaks normal
+     non-SWMR B-trees.** The first version only set it in the refresh path, which caused a
+     **double-free / heap corruption regression in four unrelated, non-SWMR tests** (`page_buffer`,
+     `unlink`, `swmr`, `del_many_dense_attrs`): the normal write path already frees each top level's
+     factories *as it retracts the tree* (`H5B2.c`, the two `depth_decreased` sites) and relies on
+     the free loop tracking the current `depth`; a stale high-water mark made teardown re-free the
+     already-freed top levels (whose pointers retraction leaves dangling). Fix: maintain
+     `node_info_depth_alloc` in lockstep at `H5B2__split_root()` (grows it) and both retraction
+     sites (shrink it), so for the writer it always equals `depth`, and only the reader-refresh path
+     ever lets it exceed `depth`. The two mechanisms never run on the same header (writers never
+     refresh, readers never split/retract).
+
+**3. Teaching the tagged-eviction sweep to honor a refresh callback too (`src/H5C.c`,
+`src/H5Ctag.c`, `src/H5AC.c`, `src/H5Cprivate.h`, `src/H5Cpkg.h`).** Registering the callback in
+step 1 was necessary but *not sufficient*: `H5C_evict_or_refresh_all_entries_in_page()`'s top-level
+dispatch only takes the refresh branch when the *stale entry it lands on directly* is the
+refresh-capable one. But the pinned header shares a tag with its leaf/internal nodes, so the
+"evict everything with this tag" sledgehammer (`H5C_evict_tagged_entries()`) can still be entered
+via one of *those* (which have no refresh callback) and then hit the pinned header inside its
+per-entry callback — reproducing the exact same `"Pinned entries still need evicted?!"` failure a
+few ticks later. Fixed by extracting the refresh-in-place logic into a reusable `H5C__refresh_entry()`
+and having `H5C__evict_tagged_entries_cb()` call it for a pinned entry that has a refresh callback,
+instead of flagging it unevictable. `H5C_evict_tagged_entries()` gained two parameters
+(`do_refresh`, `tick`); the VFD-SWMR end-of-tick caller passes `true`, while the general-purpose
+`H5AC_evict_tagged_metadata()` caller passes `false` (a genuinely pinned entry there is still a
+real error).
+
+**Verification:**
+- **Direct repro:** `vfd_swmr_bigset_writer`/`_reader -d 2 -l 10` (the previously 100%-failing
+  scenario) now passes **10/10 consecutive runs** at the real node size. The depth-change rebuild
+  path was specifically exercised and confirmed correct by temporarily shrinking
+  `H5D_BT2_NODE_SIZE` (reverted afterward) to force a root split during the run.
+- **Full ctest:** 100%, 0 failures across all 2804 tests (the entire suite minus the one slow
+  `test_vfd_swmr` shell script, which is timed separately). This specifically confirms the four
+  regressions above are fixed and that editing the core B-tree write paths (`split_root`,
+  retraction) introduced no new failures.
+- **Valgrind:** `--leak-check=full --show-leak-kinds=all` on the `-d 2` reader (with the shrunk
+  node size to exercise the grow path) reports **0 errors, 0 leaks** — no leak or double-free in
+  the extend/free/realloc logic, which runs once per stale tick.
+- Diagnostics added while developing (temporary `fprintf`s in `H5Ctag.c`/`H5B2cache.c` and the
+  `H5D_BT2_NODE_SIZE` shrink) were all removed/reverted.
+
+**Bonus leak fixed along the way (separate, pre-existing, not B-tree-related).** The valgrind pass
+also surfaced a 4.6 MB leak in the VFD-SWMR **reader** shadow-index arrays (`mdf_idx`/`old_mdf_idx`,
+allocated by `H5F__vfd_swmr_create_index()`): the writer-close path frees them (added earlier this
+session in `H5F_vfd_swmr_close_or_flush()`), but that path is writer-only, and nothing freed the
+reader's copies. Confirmed present even at `-d 1` (extensible array, no v2 B-tree at all), i.e.
+entirely independent of the B-tree fix. Completed the earlier fix by freeing both arrays in the
+reader+writer-common close block in `src/H5Fint.c`; valgrind is now fully clean for both.
 
 ---
 
@@ -1619,20 +1684,45 @@ make -j"$(nproc)"
    sufficient-eviction-passes issue was inconclusive: both hit a per-user/cgroup disk quota
    (`EDQUOT`) within seconds on this machine and corrupted the file before producing a usable
    result. Do not treat "the reference avoids this" as established fact beyond the one tested
-   scenario. Fixing the bug is core-library work (new cache client functionality or a cross-layer
-   force-close), explicitly deferred rather than improvised.
-5. **Decide `H5SHELL-test_vfd_swmr`'s ctest timeout.** The VDS hang that motivated this item is
-   fixed (see item 4) — every `many_small` option variant, including `-V`/`-M`, now completes in
-   ~36s. The v2-B-tree pinning bug (also item 4) still blocks a full, clean `few_big` run, so the
-   full script won't pass end-to-end until that's fixed; re-time the full script once it is, rather
-   than assuming the original 1200s timeout concern is resolved.
-6. **Fix the v2 B-tree header pinning bug** (see item 4 and "Session N+2" above for the complete
-   root cause). Requires core-library work — either a `refresh` callback for v2 B-tree header cache
-   entries (`src/H5B2cache.c`, matching the design intent already present in `src/H5C.c` but never
-   implemented anywhere) or a way to force a dataset's chunk-index handle closed/reopened before
-   VFD-SWMR end-of-tick eviction runs against it. Since this is confirmed pre-existing mainline
-   behavior (not VDS-specific, not something this port introduced), it may also be worth reporting
-   upstream independent of this port.
+   scenario. **UPDATE: this bug is now FIXED** — see "The fix, implemented and verified" under
+   "Session N+2" above and item 6 below. The chosen approach was the core-library `refresh`
+   callback (candidate 1), not the force-close (candidate 2).
+5. ~~**Decide `H5SHELL-test_vfd_swmr`'s ctest timeout.**~~ **RESOLVED — the "timeout" was never a
+   performance problem.** Investigated after the `H5SHELL-test_vfd_swmr` ctest run appeared to hit
+   the 1200s default timeout. Three distinct things were conflated; none was a real slowdown:
+   - **The 1200s "timeout" was a *hang* from an incomplete intermediate state of the B-tree fix,
+     not slow execution.** It was observed on a build that had the refresh callback and the
+     `node_info_depth_alloc` field but *not yet* the tagged-eviction interaction fix or the
+     `node_info_depth_alloc` regression fix — that combination could hang the full-script context.
+     With the *complete* fix (item 6 below), the script runs to completion, no hang.
+   - **Most VFD SWMR test binaries were never built in the build dir** — only 4 of ~28
+     (`vfd_swmr`, `vfd_swmr_bigset_writer`/`_reader`, `vfd_swmr_check_compat_vfd`). Every other
+     section (`generator`, `expand`/`shrink`, `sparse`, `vlstr`, `zoo`, `groups*`) was
+     fast-failing on `"No such file or directory"`, which both failed the script and masked the
+     real timing. They are all wired CMake targets — they just needed building
+     (`cmake --build . --target vfd_swmr_generator vfd_swmr_writer …`). Once built, the full
+     script **passes, 0 failures**, in **~427s** at express=1 (n=25) — already comfortably under
+     ctest's 1200s default *and* under the reference's ~500s, while doing *more* work than the
+     reference (see next point).
+   - **`test/ShellTests.cmake` didn't forward `HDF5TestExpress`** to `H5SHELL-test_vfd_swmr` (nor
+     to `test_swmr`/`test_vds_swmr`), so the script fell back to its default of 1 (n=25) instead of
+     honoring the build's configured `HDF_TEST_EXPRESS` (=3, n=10) — i.e. it ran a *heavier* load
+     than configured. The reference/autotools harness passes the level through. **Fixed:** added
+     `HDF5TestExpress=${HDF_TEST_EXPRESS}` to the test's `ENVIRONMENT` property, plus a
+     `TIMEOUT ${CTEST_VERY_LONG_TIMEOUT}` (3× default) to match the other legitimately-long tests
+     (`H5TESTXPR-btree2`, `H5TEST-big`, `H5TEST-cache`) — not to paper over slowness (there is
+     none), but because at `HDF_TEST_EXPRESS=0` (exhaustive, n=100) a genuine full run would exceed
+     the 1200s default the same way those tests do. At the configured express=3 the test is fast.
+6. ~~**Fix the v2 B-tree header pinning bug**~~ **DONE — see "The fix, implemented and verified"
+   under item 4 above.** Implemented the architecturally-correct fix (a `refresh` callback for the
+   v2 B-tree header cache class), plus the two coordinated changes it required (maintaining the new
+   `node_info_depth_alloc` high-water mark at all depth-mutation sites to avoid a double-free
+   regression in normal non-SWMR B-trees, and teaching `H5C_evict_tagged_entries()`'s sweep to
+   honor a refresh callback so the shared-tag path is covered too). Verified via 10/10 direct
+   repro runs, full ctest (2804/2804 excluding the separately-timed shell test), and a clean
+   valgrind pass. Since the underlying mechanism is confirmed byte-identical to mainline, this
+   `refresh`-callback fix (and the reader shadow-index leak fix found alongside it) is a strong
+   candidate to report upstream independent of this port.
 7. Consider whether any of the 4 "Pre-existing develop bugs", 5 "Phase 3 bugs", 3 bugs from the
    MPMDE session, the 8 bugs from "Session N+1" (particularly #1–#5, which are general
    page-buffer/library correctness issues, not VFD-SWMR-specific), the 2 bugs from "Session N+2"'s
