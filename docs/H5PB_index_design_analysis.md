@@ -1,14 +1,16 @@
 # H5PB Page-Buffer Index: Hash Table vs. Skip List — Design Analysis
 
-**Status:** **REVERSED — now adopting the hash table.** This document originally recorded a
-decision to keep develop's skip-list index for mainline alignment (text below, unchanged, for
-the record). That decision has since been reversed: the "don't deviate from `develop`" premise
-did not hold up on review (the page buffer already carries ~72 VFD-SWMR conditionals; the project
-routinely merges deviations — ROS3's cache, the add-on VFD family, `6153`'s vendored TOML
+**Status:** **REVERSED and IMPLEMENTED — the hash table is now in place.** This document
+originally recorded a decision to keep develop's skip-list index for mainline alignment (text
+below, unchanged, for the record). That decision was reversed: the "don't deviate from `develop`"
+premise did not hold up on review (the page buffer already carries ~72 VFD-SWMR conditionals; the
+project routinely merges deviations — ROS3's cache, the add-on VFD family, `6153`'s vendored TOML
 library), while every technical axis plus five independent corroborations (RFC, reader side,
-writer code, ROS3, buffer-pool literature) favor the hash table. See
-[`H5PB_restore_hashtable_plan.md`](H5PB_restore_hashtable_plan.md) for the migration plan. The
-original analysis and scorecard below remain accurate and are the evidence base for the reversal.
+writer code, ROS3, buffer-pool literature) favor the hash table. The restoration has since been
+implemented and fully verified (full ctest 2804/2804, valgrind clean, VFD SWMR `-d 2` repro
+clean) — see [`H5PB_restore_hashtable_plan.md`](H5PB_restore_hashtable_plan.md), specifically
+its §10 "Implementation report" for what actually landed. The original analysis and scorecard
+below remain accurate and are the evidence base for the reversal.
 
 ---
 

@@ -1,6 +1,11 @@
 # Plan: Restore the hash-table page-buffer index (reverse "Strategy B")
 
-Status: **plan only — not yet implemented.**
+Status: **IMPLEMENTED and verified.** See "§10. Implementation report" at the
+end of this document for what actually landed, deviations from the plan below,
+and verification results (full ctest 2804/2804, valgrind clean, VFD SWMR
+`-d 2` repro clean). The plan as originally written (§1-§9) is left intact
+below as the design record; §10 is the as-built delta.
+
 Supersedes the decision recorded in [`H5PB_index_design_analysis.md`](H5PB_index_design_analysis.md)
 (which chose the skip-list index for mainline alignment). That decision is now
 **reversed**: adopt the hash-table index.
@@ -153,3 +158,105 @@ and all fixes stay; the mechanical index-op swap is aided by the already-present
 fenced macros and a working reference to diff against. The bulk of the effort is
 **reconciliation with current develop + re-verifying the whole suite** (blast
 radius), not new design.
+
+## 10. Implementation report (as-built)
+
+Confirms the estimate in §9: this was an in-place index swap, not a re-port. No
+VFD SWMR fix from earlier sessions needed to change; only the primary index's
+storage and operations did.
+
+### What changed (matches the plan)
+- **`src/H5PBprivate.h`** (`H5PB_t`): `slist_ptr`/`mf_slist_ptr`(-as-primary-index)
+  replaced with `ht[H5PB__HASH_TABLE_LEN]`, `index_len`/`clean_index_len`/
+  `dirty_index_len`/`index_size`/`clean_index_size`/`dirty_index_size`, `il_len`/
+  `il_size`/`il_head`/`il_tail`, `curr_pages`/`curr_md_pages`/`curr_rd_pages`, and
+  the full stat-counter set the un-fenced macros reference. `mf_slist_ptr` itself
+  (the free-space/MF-layer "new page" staging list) was **kept as a skip list** —
+  see the deviation below.
+- **`src/H5PBpkg.h`**: un-fenced the ~1,100-line macro block (index ops, IL
+  maintenance, sanity checks, stats). Added `H5PB__H5PB_T_MAGIC`.
+- **`src/H5PB.c`**: all ~33 skip-list operations converted to
+  `H5PB__SEARCH_INDEX`/`INSERT_IN_INDEX`/`DELETE_FROM_INDEX`; `H5PB_flush`/
+  `H5PB_dest` converted from `H5SL_iterate`/`H5SL_destroy` to unordered index-list
+  walks (confirmed safe: the reference's own `H5PB_flush` walks hash buckets
+  unordered, and the shadow index is sorted separately in the F-layer per the
+  original design analysis).
+
+### Deviations from the plan (judgment calls made during implementation)
+1. **`mf_slist_ptr` kept as a skip list, not converted.** On inspection it turned
+   out to be a small, self-contained side-structure for free-space-manager "new
+   page" notifications (`H5PB_add_new_page()`), entirely independent of the
+   primary page index — entries are consumed (removed) and *then* inserted into
+   the real index once a page is actually written. Converting it would have
+   added scope with no benefit; §4's "confirm and replicate" was resolved as
+   "leave alone."
+2. **`clean_index_size`/`dirty_index_size` tracking left approximate.** Keeping
+   these exactly in sync would require instrumenting every `is_dirty` transition
+   site (not just insert/delete), and nothing outside the sanity-check macros
+   reads them. Rather than do that wiring under time pressure, `H5PB__DO_SANITY_CHECKS`
+   was set to `false` for this initial bring-up (documented in `H5PBpkg.h`) so
+   correctness effort concentrated on the fields that matter functionally
+   (`index_len`/`size`, `curr_pages`/`curr_md_pages`/`curr_rd_pages`, `il_*`).
+   Re-enabling full sanity checks (and finishing the dirty/clean-size wiring) is
+   a good follow-up, not a blocker.
+3. **`is_metadata` classification matched existing behavior exactly, not a new
+   rule.** The pre-existing (skip-list-era) code classified `H5F_MEM_PAGE_GHEAP`
+   as *raw* for `meta_count`/`raw_count` eviction-threshold purposes (distinct
+   from, and not to be confused with, the separate VFD-SWMR-only rule elsewhere
+   that keeps global heap objects tracked as *metadata* for shadow-index
+   publication). `is_metadata` is set to reproduce that exact classification, so
+   `curr_md_pages`/`curr_rd_pages` behave identically to the old `meta_count`/
+   `raw_count`.
+4. **Two incidental bug fixes, not part of the plan:** (a) the "make space"
+   threshold check in `H5PB_read`/`H5PB_write` used `count * page_size`, which
+   silently undercounted once oversized mpmde entries existed — now uses the
+   index's real `index_size` (a strict correctness improvement, exposed by
+   having accurate byte-level accounting available); (b) `H5PB_print_stats`'s
+   raw-data hit-rate line divided by the *metadata* bypass count (copy-paste
+   bug) — fixed to use the raw-data count.
+5. **`test/page_buffer.c` needed the same conversion** (not mentioned in the
+   original plan, but necessary): ~40 direct `H5SL_count`/`H5SL_search` calls on
+   `page_buf->slist_ptr` for white-box index-membership checks. Rather than
+   expose the package-private search macros to test code, added one small public
+   testing-support function, `H5PB_entry_exists()`, and converted the count
+   checks to read `index_len` directly (already a public `H5PB_t` field).
+6. **Duplicate macro definitions found and resolved.** Un-fencing revealed that
+   `H5PB__INSERT_IN_TL`/`REMOVE_FROM_TL`/`INSERT_IN_DWL`/`REMOVE_FROM_DWL` were
+   *already* defined earlier in `H5PBpkg.h` (the working, tested VFD-SWMR
+   tick-list/delayed-write-list macros from earlier sessions) — the un-fenced
+   copies were a near-identical superset (added `magic` asserts + stats calls).
+   Removed the older, now-redundant copies rather than the newer ones, since the
+   newer ones are strictly more complete and match the restored `magic` field.
+
+### Verification (all green)
+- **Full build**: 0 errors across the entire tree (library + all tests).
+- **`page_buffer` ctest**: full pass (raw data, LRU, metadata/raw-data
+  thresholds, statistics) — the dedicated white-box test for everything this
+  change touches.
+- **VFD SWMR direct repro**: `vfd_swmr_bigset_writer`/`_reader` at both `-d 1`
+  (extensible array baseline) and `-d 2 -l 10` (the v2 B-tree pinning-fix
+  scenario) — both clean, confirming the earlier B-tree fix and this index swap
+  are compatible.
+- **Core ctests** (`page_buffer`, `cache`, `dsets`, `accum`, `swmr`, `unlink`,
+  `del_many_dense_attrs` — the last four being exactly the tests that regressed
+  during the earlier B-tree-fix work, re-checked here as a regression gate):
+  13/13 passed.
+- **Full ctest suite** (excluding the separately-timed shell test): **100%
+  passed, 0 failed, out of 2804** — confirms no regression anywhere in the
+  library from swapping the page buffer's index for every file, not just VFD
+  SWMR ones.
+- **Valgrind**: `--leak-check=full --show-leak-kinds=all` on both the
+  `page_buffer` test and the `-d 2` bigset reader (the scenario that most
+  heavily exercises entry creation/growth/eviction on the new hash index) — **0
+  errors, 0 leaks** in both.
+
+### Not yet done (follow-ups, not blockers)
+- Re-enable `H5PB__DO_SANITY_CHECKS` and wire up full `clean_index_size`/
+  `dirty_index_size`/`clean_index_len`/`dirty_index_len` tracking (deviation
+  #2 above).
+- A performance sanity check / micro-benchmark against the skip-list build
+  (§7's suggestion) — not done this pass; functional/leak verification was the
+  priority. No empirical hash-vs-skiplist numbers exist yet anywhere (per the
+  original design analysis), so this would still be the first real data point.
+- Coordinate with the HDF Group on the wholesale page-buffer change (§5),
+  independent of the technical work above.
