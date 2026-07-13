@@ -1663,6 +1663,17 @@ make -j"$(nproc)"
    unmeasured on its own, tight-budget discipline: a handful of repeated runs, not one long
    unattended full-script run) rather than re-measuring the `zoo`-and-earlier prefix this session
    already covered, and should not expect fixing this to affect the VDS hang.
+   **UPDATE — a large part of the "groups-suffix timing anomaly" was a *hang*, now fixed.** When
+   run as isolated per-scenario ctest tests, `groups` was found hanging 27+ minutes (writer stuck
+   in `accept()`, reader gone) — the socket startup-race described in "Session N+2"'s socket note,
+   fixed by the client `connect()` retry in `test/vfd_swmr_common.c`. That flaky hang is the most
+   likely source of the full-script's occasional wild timing outliers on the groups suffix (a hang
+   that only unblocks at a `MESSAGE_TIMEOUT`/ctest timeout inflates the total dramatically). After
+   the fix, `groups`/`groups_attrs`/`groups_ops` all pass reliably in seconds. Whether a residual
+   *steady-state* speed difference remains is still unmeasured, but the dramatic outlier is gone.
+   All 13 default per-scenario tests (`generator` … `many_small`, including `zoo`) are confirmed
+   passing individually at express=3 — so `zoo` itself passes cleanly (~6s), resolving the narrower
+   "does zoo pass" question.
 4. ~~Actually run `few_big`/`many_small` (`vfd_swmr_bigset_writer`) to completion~~ **Done — see
    "Session N+2" above.** Found and fixed four real, previously-unreached bugs blocking every
    attempt (a missing `H5open()` causing a datatype crash, a missing writer/reader launch
