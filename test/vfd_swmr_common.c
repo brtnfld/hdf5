@@ -22,6 +22,12 @@
 #include "vfd_swmr_common.h"
 #include "swmr_common.h"
 
+/* For poll() on the listen socket (POSIX); this test's socket code is
+ * POSIX-only, matching the guarded socket headers in vfd_swmr_common.h. */
+#ifdef H5_HAVE_SYS_SOCKET_H
+#include <poll.h>
+#endif
+
 /* Only need the pthread solution if sigtimedwait(2) isn't available.
  * There's currently no Windows solution, so ignore that for now.
  */
@@ -578,6 +584,33 @@ socket_connect(socket_state_t *sock, bool server)
         if (listen(sock->listen_fd, 1) < 0) {
             fprintf(stderr, "error listening to server socket\n");
             goto error;
+        }
+
+        /* Wait for a client connection with a timeout, then accept it. A bare
+         * blocking accept() has no timeout, so a writer whose reader died (or
+         * never connected) would block here forever -- the mechanism behind an
+         * observed multi-hour hang. The reader-side retries (the H5Fopen retry
+         * in the test's reader path and the connect() retry below) make a
+         * connection arrive reliably within seconds; this timeout is a backstop
+         * that converts any residual failure-to-connect into a prompt,
+         * diagnosable error instead of an unbounded hang. */
+        {
+            struct pollfd pfd;
+            int           poll_ret;
+            const int     accept_timeout_ms = 120000; /* 2 minutes */
+
+            pfd.fd     = sock->listen_fd;
+            pfd.events = POLLIN;
+
+            poll_ret = poll(&pfd, 1, accept_timeout_ms);
+            if (poll_ret == 0) {
+                fprintf(stderr, "timed out waiting for client connection\n");
+                goto error;
+            }
+            else if (poll_ret < 0) {
+                fprintf(stderr, "error polling listen socket\n");
+                goto error;
+            }
         }
 
         /* Accept a connection */

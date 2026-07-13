@@ -368,7 +368,6 @@ H5B2__cache_hdr_refresh(H5F_t H5_ATTR_UNUSED *f, void *_thing, const void *_imag
     uint8_t         split_percent;
     uint8_t         merge_percent;
     H5B2_node_ptr_t new_root;
-    uint32_t        stored_chksum;
     herr_t          ret_value = SUCCEED;
 
     FUNC_ENTER_PACKAGE
@@ -435,10 +434,11 @@ H5B2__cache_hdr_refresh(H5F_t H5_ATTR_UNUSED *f, void *_thing, const void *_imag
     UINT16DECODE(image, new_root.node_nrec);
     H5F_DECODE_LENGTH(hdr->f, image, new_root.all_nrec);
 
-    /* Metadata checksum -- already verified upstream by verify_chksum */
+    /* Metadata checksum -- already verified upstream by verify_chksum, so
+     * just skip past it (advance the image pointer for the sanity check). */
     if (H5_IS_BUFFER_OVERFLOW(image, 4, end))
         HGOTO_ERROR(H5E_BTREE, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
-    UINT32DECODE(image, stored_chksum);
+    image += 4;
 
     /* Sanity check */
     assert((size_t)(image - (const uint8_t *)_image) == hdr->hdr_size);
