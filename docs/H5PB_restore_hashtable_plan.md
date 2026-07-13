@@ -254,9 +254,57 @@ storage and operations did.
 - Re-enable `H5PB__DO_SANITY_CHECKS` and wire up full `clean_index_size`/
   `dirty_index_size`/`clean_index_len`/`dirty_index_len` tracking (deviation
   #2 above).
-- A performance sanity check / micro-benchmark against the skip-list build
-  (§7's suggestion) — not done this pass; functional/leak verification was the
-  priority. No empirical hash-vs-skiplist numbers exist yet anywhere (per the
-  original design analysis), so this would still be the first real data point.
 - Coordinate with the HDF Group on the wholesale page-buffer change (§5),
   independent of the technical work above.
+
+### §11. First empirical performance data point (hash vs. skip-list)
+
+No empirical hash-vs-skip-list benchmark existed anywhere in the repo or its
+history before this (per the original design analysis) — the entire prior
+justification, on both sides of this decision, was design-time reasoning.
+This is the first real measurement.
+
+**Method:** built the hash-table commit (`baa3456dd8`) and its immediate
+parent (`c188269f8ea`, the last skip-list commit) in separate trees (a git
+worktree for the skip-list side), identical `RelWithDebInfo` CMake config.
+Timed `vfd_swmr_bigset_writer`/`_reader` pairs end-to-end (wall clock,
+process launch to both exiting) on the `-d 2` (v2 B-tree, mpmde-heavy)
+scenario at two scales:
+
+| Scale | Params | Hash-table | Skip-list |
+|---|---|---|---|
+| Proven/realistic (matches the validated ctest scenario) | `-n 25 -l 10 -s 10 -r 256 -c 256` | 6s, 6s, 5s | 6s, 5s, 6s |
+| 2x workload | `-n 40 -l 10 -s 20 -r 256 -c 256` | 8s, 9s | 8s, 8s |
+
+**Result: no measurable difference at either scale.** Both indexes perform
+identically within measurement noise (±1s on 5-9s runs).
+
+**This is not a surprising or discouraging result — it's exactly what the
+existing literature review in `H5PB_index_design_analysis.md` predicted.**
+That analysis already noted: *"At [bounded N of hundreds-thousands] the O(1)
+vs O(log n) gap is largely irrelevant (log₂N ≈ 8-12 comparisons); performance
+is dominated by cache behavior and per-lookup constant factors, not
+comparison count."* The workloads tested here almost certainly keep the
+page buffer's resident entry count in the hundreds, not the thousands+ where
+a hash table's O(1) should start to pull ahead of a skip list's O(log n) --
+and end-to-end wall-clock time for these scenarios is dominated by actual
+disk I/O and VFD-SWMR tick/shadow-file-write overhead, not in-memory index
+lookup cost, further diluting any difference that does exist.
+
+**What this measurement does and doesn't establish:**
+- It does **not** contradict the decision to restore the hash table -- that
+  decision rested on RFC fidelity, matching the reader side and the writer
+  code's own assumptions, and the universal buffer-pool-design precedent
+  (§1), not on a performance claim for *this specific* workload scale.
+- It **does** mean the performance argument specifically should not be
+  oversold as already-proven at realistic VFD SWMR scales -- if a
+  performance difference exists, it would show up at a much larger resident
+  working set (many thousands of concurrently-buffered pages) than these
+  tests exercise, and/or in a microbenchmark that isolates index-lookup time
+  from I/O, rather than an end-to-end writer/reader wall-clock test.
+- A real large-N microbenchmark (e.g. a synthetic harness inserting/
+  searching/removing tens of thousands of entries directly against
+  `H5PB__INSERT_IN_INDEX`/`SEARCH_INDEX`/`DELETE_FROM_INDEX` vs. the old
+  `H5SL_*` calls, with I/O removed from the loop entirely) is the natural
+  next step if the performance question needs a firmer answer -- not
+  attempted here.
