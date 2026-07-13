@@ -82,7 +82,7 @@
         assert(page_ptr);                                                                                    \
         /* insert the entry at the head of the list. */                                                      \
         H5PB__PREPEND((page_ptr), (page_buf)->LRU_head_ptr, (page_buf)->LRU_tail_ptr,                        \
-                      (page_buf)->LRU_list_len)                                                              \
+                      (page_buf)->LRU_len)                                                              \
     }
 
 #define H5PB__REMOVE_LRU(page_buf, page_ptr)                                                                 \
@@ -91,7 +91,7 @@
         assert(page_ptr);                                                                                    \
         /* remove the entry from the list. */                                                                \
         H5PB__REMOVE((page_ptr), (page_buf)->LRU_head_ptr, (page_buf)->LRU_tail_ptr,                         \
-                     (page_buf)->LRU_list_len)                                                               \
+                     (page_buf)->LRU_len)                                                               \
     }
 
 #define H5PB__MOVE_TO_TOP_LRU(page_buf, page_ptr)                                                            \
@@ -100,20 +100,14 @@
         assert(page_ptr);                                                                                    \
         /* Remove entry and insert at the head of the list. */                                               \
         H5PB__REMOVE((page_ptr), (page_buf)->LRU_head_ptr, (page_buf)->LRU_tail_ptr,                         \
-                     (page_buf)->LRU_list_len)                                                               \
+                     (page_buf)->LRU_len)                                                               \
         H5PB__PREPEND((page_ptr), (page_buf)->LRU_head_ptr, (page_buf)->LRU_tail_ptr,                        \
-                      (page_buf)->LRU_list_len)                                                              \
+                      (page_buf)->LRU_len)                                                              \
     }
 
 /******************/
 /* Local Typedefs */
 /******************/
-
-/* Iteration context for destroying page buffer */
-typedef struct {
-    H5PB_t *page_buf;
-    bool    actual_slist;
-} H5PB_ud1_t;
 
 /********************/
 /* Package Typedefs */
@@ -210,16 +204,19 @@ H5PB_get_stats(const H5PB_t *page_buf, unsigned accesses[2], unsigned hits[2], u
     /* Sanity checks */
     assert(page_buf);
 
-    accesses[0]  = page_buf->accesses[0];
-    accesses[1]  = page_buf->accesses[1];
-    hits[0]      = page_buf->hits[0];
-    hits[1]      = page_buf->hits[1];
-    misses[0]    = page_buf->misses[0];
-    misses[1]    = page_buf->misses[1];
-    evictions[0] = page_buf->evictions[0];
-    evictions[1] = page_buf->evictions[1];
-    bypasses[0]  = page_buf->bypasses[0];
-    bypasses[1]  = page_buf->bypasses[1];
+    /* Public API reports only the metadata/raw-data categories (indices 0/1);
+     * the third internal category (H5PB__STATS_MPMDE) is VFD-SWMR-internal
+     * bookkeeping and isn't exposed here. */
+    accesses[0]  = (unsigned)page_buf->accesses[H5PB__STATS_MD];
+    accesses[1]  = (unsigned)page_buf->accesses[H5PB__STATS_RD];
+    hits[0]      = (unsigned)page_buf->hits[H5PB__STATS_MD];
+    hits[1]      = (unsigned)page_buf->hits[H5PB__STATS_RD];
+    misses[0]    = (unsigned)page_buf->misses[H5PB__STATS_MD];
+    misses[1]    = (unsigned)page_buf->misses[H5PB__STATS_RD];
+    evictions[0] = (unsigned)page_buf->evictions[H5PB__STATS_MD];
+    evictions[1] = (unsigned)page_buf->evictions[H5PB__STATS_RD];
+    bypasses[0]  = (unsigned)page_buf->bypasses[H5PB__STATS_MD];
+    bypasses[1]  = (unsigned)page_buf->bypasses[H5PB__STATS_RD];
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5PB_get_stats */
@@ -246,23 +243,27 @@ H5PB_print_stats(const H5PB_t *page_buf)
     printf("PAGE BUFFER STATISTICS:\n");
 
     printf("******* METADATA\n");
-    printf("\t Total Accesses: %u\n", page_buf->accesses[0]);
-    printf("\t Hits: %u\n", page_buf->hits[0]);
-    printf("\t Misses: %u\n", page_buf->misses[0]);
-    printf("\t Evictions: %u\n", page_buf->evictions[0]);
-    printf("\t Bypasses: %u\n", page_buf->bypasses[0]);
+    printf("\t Total Accesses: %" PRId64 "\n", page_buf->accesses[H5PB__STATS_MD]);
+    printf("\t Hits: %" PRId64 "\n", page_buf->hits[H5PB__STATS_MD]);
+    printf("\t Misses: %" PRId64 "\n", page_buf->misses[H5PB__STATS_MD]);
+    printf("\t Evictions: %" PRId64 "\n", page_buf->evictions[H5PB__STATS_MD]);
+    printf("\t Bypasses: %" PRId64 "\n", page_buf->bypasses[H5PB__STATS_MD]);
     printf("\t Hit Rate = %f%%\n",
-           ((double)page_buf->hits[0] / (page_buf->accesses[0] - page_buf->bypasses[0])) * 100);
+           ((double)page_buf->hits[H5PB__STATS_MD] /
+            (double)(page_buf->accesses[H5PB__STATS_MD] - page_buf->bypasses[H5PB__STATS_MD])) *
+               100);
     printf("*****************\n\n");
 
     printf("******* RAWDATA\n");
-    printf("\t Total Accesses: %u\n", page_buf->accesses[1]);
-    printf("\t Hits: %u\n", page_buf->hits[1]);
-    printf("\t Misses: %u\n", page_buf->misses[1]);
-    printf("\t Evictions: %u\n", page_buf->evictions[1]);
-    printf("\t Bypasses: %u\n", page_buf->bypasses[1]);
+    printf("\t Total Accesses: %" PRId64 "\n", page_buf->accesses[H5PB__STATS_RD]);
+    printf("\t Hits: %" PRId64 "\n", page_buf->hits[H5PB__STATS_RD]);
+    printf("\t Misses: %" PRId64 "\n", page_buf->misses[H5PB__STATS_RD]);
+    printf("\t Evictions: %" PRId64 "\n", page_buf->evictions[H5PB__STATS_RD]);
+    printf("\t Bypasses: %" PRId64 "\n", page_buf->bypasses[H5PB__STATS_RD]);
     printf("\t Hit Rate = %f%%\n",
-           ((double)page_buf->hits[1] / (page_buf->accesses[1] - page_buf->bypasses[0])) * 100);
+           ((double)page_buf->hits[H5PB__STATS_RD] /
+            (double)(page_buf->accesses[H5PB__STATS_RD] - page_buf->bypasses[H5PB__STATS_RD])) *
+               100);
     printf("*****************\n\n");
 
     FUNC_LEAVE_NOAPI(SUCCEED)
@@ -306,6 +307,10 @@ H5PB_create(H5F_shared_t *f_sh, size_t size, unsigned page_buf_min_meta_perc, un
     if (NULL == (page_buf = H5FL_CALLOC(H5PB_t)))
         HGOTO_ERROR(H5E_PAGEBUF, H5E_NOSPACE, FAIL, "memory allocation failed");
 
+    /* H5FL_CALLOC zeroes the struct, so the hash table (ht[]), the index
+     * list, and all index/stat counters start correctly at NULL/0. */
+    page_buf->magic = H5PB__H5PB_T_MAGIC;
+
     page_buf->max_size = size;
     H5_CHECKED_ASSIGN(page_buf->page_size, size_t, f_sh->fs_page_size, hsize_t);
     page_buf->min_meta_perc = page_buf_min_meta_perc;
@@ -328,8 +333,8 @@ H5PB_create(H5F_shared_t *f_sh, size_t size, unsigned page_buf_min_meta_perc, un
     page_buf->min_meta_count = (unsigned)((size * page_buf_min_meta_perc) / (f_sh->fs_page_size * 100));
     page_buf->min_raw_count  = (unsigned)((size * page_buf_min_raw_perc) / (f_sh->fs_page_size * 100));
 
-    if (NULL == (page_buf->slist_ptr = H5SL_create(H5SL_TYPE_HADDR, NULL)))
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTCREATE, FAIL, "can't create skip list");
+    /* The primary index (page_buf->ht[]) needs no explicit creation step --
+     * it is the zeroed array from H5FL_CALLOC above. */
     if (NULL == (page_buf->mf_slist_ptr = H5SL_create(H5SL_TYPE_HADDR, NULL)))
         HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTCREATE, FAIL, "can't create skip list");
 
@@ -341,8 +346,6 @@ H5PB_create(H5F_shared_t *f_sh, size_t size, unsigned page_buf_min_meta_perc, un
 done:
     if (ret_value < 0) {
         if (page_buf != NULL) {
-            if (page_buf->slist_ptr != NULL)
-                H5SL_close(page_buf->slist_ptr);
             if (page_buf->mf_slist_ptr != NULL)
                 H5SL_close(page_buf->mf_slist_ptr);
             if (page_buf->page_fac != NULL)
@@ -355,20 +358,22 @@ done:
 } /* H5PB_create */
 
 /*-------------------------------------------------------------------------
- * Function:    H5PB__flush_cb
+ * Function:    H5PB__flush_entry_if_dirty
  *
- * Purpose:     Callback to flush PB skiplist entries.
+ * Purpose:     Flush a single page-buffer index entry if it's dirty.
+ *              H5PB__write_entry() only writes to disk and clears is_dirty;
+ *              it never removes the entry from the index or mutates
+ *              il_next/il_prev, so it's safe to call this while walking the
+ *              index list forward.
  *
  * Return:      Non-negative on success/Negative on failure
  *
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5PB__flush_cb(void *item, void H5_ATTR_UNUSED *key, void *_op_data)
+H5PB__flush_entry_if_dirty(H5F_shared_t *f_sh, H5PB_entry_t *page_entry)
 {
-    H5PB_entry_t *page_entry = (H5PB_entry_t *)item; /* Pointer to page entry node */
-    H5F_shared_t *f_sh       = (H5F_shared_t *)_op_data;
-    herr_t        ret_value  = SUCCEED; /* Return value */
+    herr_t ret_value = SUCCEED; /* Return value */
 
     FUNC_ENTER_PACKAGE
 
@@ -383,7 +388,7 @@ H5PB__flush_cb(void *item, void H5_ATTR_UNUSED *key, void *_op_data)
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5PB__flush_cb() */
+} /* H5PB__flush_entry_if_dirty() */
 
 /*-------------------------------------------------------------------------
  * Function:    H5PB_flush
@@ -404,13 +409,26 @@ H5PB_flush(H5F_shared_t *f_sh)
     /* Sanity check */
     assert(f_sh);
 
-    /* Flush all the entries in the PB skiplist, if we have write access on the file */
+    /* Flush all the entries in the page buffer index, if we have write access
+     * on the file. Order doesn't matter here (see H5PB_t's index comment in
+     * H5PBprivate.h), so a plain forward walk of the index list suffices. */
     if (f_sh->page_buf && (H5F_ACC_RDWR & H5F_SHARED_INTENT(f_sh))) {
-        H5PB_t *page_buf = f_sh->page_buf;
+        H5PB_t       *page_buf = f_sh->page_buf;
+        H5PB_entry_t *entry_ptr;
+        H5PB_entry_t *next_ptr;
 
-        /* Iterate over all entries in page buffer skip list */
-        if (H5SL_iterate(page_buf->slist_ptr, H5PB__flush_cb, f_sh))
-            HGOTO_ERROR(H5E_PAGEBUF, H5E_BADITER, FAIL, "can't flush page buffer skip list");
+        entry_ptr = page_buf->il_head;
+        while (entry_ptr != NULL) {
+            /* Save the next pointer before flushing: flushing doesn't
+             * mutate the index list, but do this defensively in case that
+             * ever changes. */
+            next_ptr = entry_ptr->il_next;
+
+            if (H5PB__flush_entry_if_dirty(f_sh, entry_ptr) < 0)
+                HGOTO_ERROR(H5E_PAGEBUF, H5E_WRITEERROR, FAIL, "can't flush page buffer entry");
+
+            entry_ptr = next_ptr;
+        }
     } /* end if */
 
 done:
@@ -420,24 +438,52 @@ done:
 /*-------------------------------------------------------------------------
  * Function:    H5PB__dest_cb
  *
- * Purpose:     Callback to free PB skiplist entries.
+ * Purpose:     Callback to free an mf_slist_ptr entry (the free-space/MF
+ *              layer's small, separate "new page" staging list -- see the
+ *              comment on H5PB_t::mf_slist_ptr in H5PBprivate.h). These
+ *              entries were never inserted into the main index or the LRU,
+ *              and never had a page image allocated (H5PB_add_new_page()
+ *              only sets addr/type/is_dirty/size), so freeing one is just
+ *              releasing the H5PB_entry_t itself.
  *
  * Return:      Non-negative on success/Negative on failure
  *
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5PB__dest_cb(void *item, void H5_ATTR_UNUSED *key, void *_op_data)
+H5PB__dest_cb(void *item, void H5_ATTR_UNUSED *key, void H5_ATTR_UNUSED *_op_data)
 {
     H5PB_entry_t *page_entry = (H5PB_entry_t *)item; /* Pointer to page entry node */
-    H5PB_ud1_t   *op_data    = (H5PB_ud1_t *)_op_data;
 
     FUNC_ENTER_PACKAGE_NOERR
 
-    /* Sanity checking */
     assert(page_entry);
-    assert(op_data);
-    assert(op_data->page_buf);
+
+    /* Free page entry */
+    page_entry = H5FL_FREE(H5PB_entry_t, page_entry);
+
+    FUNC_LEAVE_NOAPI(SUCCEED)
+} /* H5PB__dest_cb() */
+
+/*-------------------------------------------------------------------------
+ * Function:    H5PB__dest_one_index_entry
+ *
+ * Purpose:     Free the resources owned by one entry in the *main* page
+ *              buffer index (as opposed to mf_slist_ptr; see
+ *              H5PB__dest_cb()) as part of tearing down the whole page
+ *              buffer. Does not unlink the entry from the index/hash table
+ *              itself -- H5PB_dest() clears those in bulk once every entry
+ *              has been freed this way.
+ *
+ * Return:      void
+ *
+ *-------------------------------------------------------------------------
+ */
+static void
+H5PB__dest_one_index_entry(H5PB_t *page_buf, H5PB_entry_t *page_entry)
+{
+    assert(page_buf);
+    assert(page_entry);
 
     /* Remove entry from LRU list.  Under VFD SWMR, an entry awaiting a
      * delayed write was already pulled off the LRU by
@@ -451,21 +497,17 @@ H5PB__dest_cb(void *item, void H5_ATTR_UNUSED *key, void *_op_data)
      * image must be freed with H5MM_xfree() rather than the page buffer's
      * fixed-size factory allocator, since it was never allocated from it.
      */
-    if (op_data->actual_slist) {
-        if (page_entry->is_mpmde)
-            page_entry->page_buf_ptr = H5MM_xfree(page_entry->page_buf_ptr);
-        else {
-            if (0 == page_entry->delay_write_until)
-                H5PB__REMOVE_LRU(op_data->page_buf, page_entry)
-            page_entry->page_buf_ptr = H5FL_FAC_FREE(op_data->page_buf->page_fac, page_entry->page_buf_ptr);
-        }
-    } /* end if */
+    if (page_entry->is_mpmde)
+        page_entry->page_buf_ptr = H5MM_xfree(page_entry->page_buf_ptr);
+    else {
+        if (0 == page_entry->delay_write_until)
+            H5PB__REMOVE_LRU(page_buf, page_entry)
+        page_entry->page_buf_ptr = H5FL_FAC_FREE(page_buf->page_fac, page_entry->page_buf_ptr);
+    }
 
     /* Free page entry */
     page_entry = H5FL_FREE(H5PB_entry_t, page_entry);
-
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* H5PB__dest_cb() */
+} /* H5PB__dest_one_index_entry() */
 
 /*-------------------------------------------------------------------------
  * Function:    H5PB_dest
@@ -488,23 +530,27 @@ H5PB_dest(H5F_shared_t *f_sh)
 
     /* flush and destroy the page buffer, if it exists */
     if (f_sh->page_buf) {
-        H5PB_t    *page_buf = f_sh->page_buf;
-        H5PB_ud1_t op_data; /* Iteration context */
+        H5PB_t       *page_buf = f_sh->page_buf;
+        H5PB_entry_t *entry_ptr;
+        H5PB_entry_t *next_ptr;
 
         if (H5PB_flush(f_sh) < 0)
             HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTFLUSH, FAIL, "can't flush page buffer");
 
-        /* Set up context info */
-        op_data.page_buf = page_buf;
+        /* Free every entry in the main index. Order doesn't matter (see
+         * H5PB_t's index comment in H5PBprivate.h); walk the index list and
+         * free as we go, saving the next pointer first since we're freeing
+         * the current entry. The index/hash table itself needs no per-entry
+         * unlinking since the whole page_buf is about to be freed. */
+        entry_ptr = page_buf->il_head;
+        while (entry_ptr != NULL) {
+            next_ptr = entry_ptr->il_next;
+            H5PB__dest_one_index_entry(page_buf, entry_ptr);
+            entry_ptr = next_ptr;
+        }
 
-        /* Destroy the skip list containing all the entries in the PB */
-        op_data.actual_slist = true;
-        if (H5SL_destroy(page_buf->slist_ptr, H5PB__dest_cb, &op_data))
-            HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTCLOSEOBJ, FAIL, "can't destroy page buffer skip list");
-
-        /* Destroy the skip list containing the new entries */
-        op_data.actual_slist = false;
-        if (H5SL_destroy(page_buf->mf_slist_ptr, H5PB__dest_cb, &op_data))
+        /* Destroy the skip list containing the new (MF-layer) entries */
+        if (H5SL_destroy(page_buf->mf_slist_ptr, H5PB__dest_cb, NULL))
             HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTCLOSEOBJ, FAIL, "can't destroy page buffer skip list");
 
         /* Destroy the page factory */
@@ -605,7 +651,7 @@ H5PB_update_entry(H5PB_t *page_buf, haddr_t addr, size_t size, const void *buf)
     page_addr = (addr / page_buf->page_size) * page_buf->page_size;
 
     /* search for the page and update if found */
-    page_entry = (H5PB_entry_t *)H5SL_search(page_buf->slist_ptr, (void *)(&page_addr));
+    H5PB__SEARCH_INDEX(page_buf, (page_addr / page_buf->page_size), page_entry, FAIL);
     if (page_entry) {
         haddr_t offset;
 
@@ -656,16 +702,15 @@ H5PB_remove_entry(const H5F_shared_t *f_sh, haddr_t addr)
     page_buf = f_sh->page_buf;
     assert(page_buf);
 
-    /* Search for address in the skip list */
-    page_entry = (H5PB_entry_t *)H5SL_search(page_buf->slist_ptr, (void *)(&addr));
+    /* Search for address in the index */
+    H5PB__SEARCH_INDEX(page_buf, (addr / page_buf->page_size), page_entry, FAIL);
 
     /* If found, remove the entry from the PB cache */
     if (page_entry) {
         bool was_off_lru;
 
         assert(page_entry->type != H5F_MEM_PAGE_DRAW);
-        if (NULL == H5SL_remove(page_buf->slist_ptr, &(page_entry->addr)))
-            HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "Page Entry is not in skip list");
+        H5PB__DELETE_FROM_INDEX(page_buf, page_entry, FAIL);
 
         /* This entry may still be threaded onto the current tick's tick
          * list and/or the delayed write list (its next/prev and tl_next/
@@ -698,17 +743,16 @@ H5PB_remove_entry(const H5F_shared_t *f_sh, haddr_t addr)
          * tick list or delayed write list (handled above) was already off
          * the LRU too, so skip it there as well.
          */
+        /* H5PB__DELETE_FROM_INDEX() above already decremented mpmde_count or
+         * curr_md_pages/curr_pages as appropriate for this entry. */
         if (page_entry->is_mpmde) {
-            page_buf->mpmde_count--;
             page_entry->page_buf_ptr = H5MM_xfree(page_entry->page_buf_ptr);
         }
         else {
             if (!was_off_lru) {
                 H5PB__REMOVE_LRU(page_buf, page_entry)
-                assert(H5SL_count(page_buf->slist_ptr) == page_buf->LRU_list_len);
+                assert(page_buf->curr_pages == page_buf->LRU_len);
             }
-
-            page_buf->meta_count--;
 
             page_entry->page_buf_ptr = H5FL_FAC_FREE(page_buf->page_fac, page_entry->page_buf_ptr);
         }
@@ -849,27 +893,22 @@ H5PB_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, void *
     /* Copy raw data from dirty pages into the read buffer if the read
        request spans pages in the page buffer*/
     if (H5FD_MEM_DRAW == type && size >= page_buf->page_size) {
-        H5SL_node_t *node;
-
         /* For each touched page in the page buffer, check if it
          * exists in the page Buffer and is dirty. If it does, we
          * update the buffer with what's in the page so we get the up
          * to date data into the buffer after the big read from the file.
+         * (One index lookup per touched page -- the skip-list version of
+         * this loop chained through consecutive nodes in address order as
+         * an optimization; the hash-table index has no equivalent notion
+         * of "next in order", so each page is looked up independently.)
          */
-        node = H5SL_find(page_buf->slist_ptr, (void *)(&first_page_addr));
         for (i = 0; i < num_touched_pages; i++) {
             search_addr = i * page_buf->page_size + first_page_addr;
 
-            /* if we still haven't located a starting page, search again */
-            if (!node && i != 0)
-                node = H5SL_find(page_buf->slist_ptr, (void *)(&search_addr));
+            H5PB__SEARCH_INDEX(page_buf, (search_addr / page_buf->page_size), page_entry, FAIL);
 
             /* if the current page is in the Page Buffer, do the updates */
-            if (node) {
-                page_entry = (H5PB_entry_t *)H5SL_item(node);
-
-                assert(page_entry);
-
+            if (page_entry) {
                 /* If the current page address falls out of the access
                    block, then there are no more pages to go over */
                 if (page_entry->addr >= addr + size)
@@ -924,7 +963,6 @@ H5PB_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, void *
                                     page_buf->page_size);
                     } /* end else */
                 }     /* end if */
-                node = H5SL_next(node);
             } /* end if */
         }     /* end for */
     }         /* end if */
@@ -945,8 +983,8 @@ H5PB_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, void *
                 access_size = (0 == i ? (size_t)((first_page_addr + page_buf->page_size) - addr)
                                       : (size - access_size));
 
-            /* Lookup the page in the skip list */
-            page_entry = (H5PB_entry_t *)H5SL_search(page_buf->slist_ptr, (void *)(&search_addr));
+            /* Lookup the page in the index */
+            H5PB__SEARCH_INDEX(page_buf, (search_addr / page_buf->page_size), page_entry, FAIL);
 
             /* if found */
             if (page_entry) {
@@ -992,8 +1030,11 @@ H5PB_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, void *
                 size_t  page_size    = page_buf->page_size;
                 haddr_t eoa;
 
-                /* make space for new entry */
-                if ((H5SL_count(page_buf->slist_ptr) * page_buf->page_size) >= page_buf->max_size) {
+                /* make space for new entry. Use the index's actual total
+                 * byte size, not count*page_size: a multi-page metadata
+                 * entry (mpmde) can be larger than one page, which
+                 * count*page_size would silently ignore. */
+                if ((size_t)page_buf->index_size >= page_buf->max_size) {
                     htri_t can_make_space;
 
                     /* check if we can make space in page buffer */
@@ -1237,7 +1278,7 @@ H5PB__write_mpmde(H5F_shared_t *f_sh, H5PB_t *page_buf, H5FD_mem_t type, haddr_t
      */
     assert(addr == page_addr);
 
-    entry_ptr = (H5PB_entry_t *)H5SL_search(page_buf->slist_ptr, (void *)(&page_addr));
+    H5PB__SEARCH_INDEX(page_buf, (page_addr / page_buf->page_size), entry_ptr, FAIL);
 
     if (entry_ptr == NULL) {
         /* No existing entry -- create a brand new mpmde entry.  Don't
@@ -1255,8 +1296,10 @@ H5PB__write_mpmde(H5F_shared_t *f_sh, H5PB_t *page_buf, H5FD_mem_t type, haddr_t
 
         entry_ptr->page_buf_ptr = new_image;
         entry_ptr->addr         = page_addr;
+        entry_ptr->page         = page_addr / page_buf->page_size;
         entry_ptr->type         = (H5F_mem_page_t)type;
         entry_ptr->size         = size;
+        entry_ptr->is_metadata  = true;
         entry_ptr->is_mpmde     = true;
         entry_ptr->is_dirty     = false;
         entry_ptr->loaded       = false;
@@ -1264,13 +1307,7 @@ H5PB__write_mpmde(H5F_shared_t *f_sh, H5PB_t *page_buf, H5FD_mem_t type, haddr_t
         /* Index only -- never the LRU.  mpmde entries are pinned by tick
          * list membership, never eviction candidates.
          */
-        if (H5SL_insert(page_buf->slist_ptr, entry_ptr, &(entry_ptr->addr)) < 0) {
-            H5MM_xfree(new_image);
-            entry_ptr = H5FL_FREE(H5PB_entry_t, entry_ptr);
-            HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTINSERT, FAIL, "can't insert mpmde entry in skip list");
-        }
-
-        page_buf->mpmde_count++;
+        H5PB__INSERT_IN_INDEX(page_buf, entry_ptr, FAIL);
     }
     else if (entry_ptr->size < size) {
         /* An existing entry -- either a regular one-page entry, or a
@@ -1280,6 +1317,14 @@ H5PB__write_mpmde(H5F_shared_t *f_sh, H5PB_t *page_buf, H5FD_mem_t type, haddr_t
 
         if (NULL == (new_image = H5MM_malloc(size)))
             HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTALLOC, FAIL, "memory allocation failed for mpmde entry");
+
+        /* The index's byte-size accounting (index_size et al, maintained by
+         * H5PB__INSERT_IN_INDEX/DELETE_FROM_INDEX) is keyed on entry->size,
+         * which is about to change -- remove the entry from the index at
+         * its old size and reinsert at the new size below, rather than
+         * mutating size on an entry the index still thinks is the old size.
+         */
+        H5PB__DELETE_FROM_INDEX(page_buf, entry_ptr, FAIL);
 
         if (entry_ptr->is_mpmde)
             H5MM_xfree(entry_ptr->page_buf_ptr);
@@ -1299,13 +1344,13 @@ H5PB__write_mpmde(H5F_shared_t *f_sh, H5PB_t *page_buf, H5FD_mem_t type, haddr_t
              */
             if (!entry_ptr->modified_this_tick && entry_ptr->delay_write_until == 0)
                 H5PB__REMOVE_LRU(page_buf, entry_ptr)
-            page_buf->meta_count--;
-            page_buf->mpmde_count++;
             entry_ptr->is_mpmde = true;
         }
 
         entry_ptr->page_buf_ptr = new_image;
         entry_ptr->size         = size;
+
+        H5PB__INSERT_IN_INDEX(page_buf, entry_ptr, FAIL);
 
         /* If this entry is already on the tick list (tracked by an earlier
          * write this same tick), the tick list's cumulative tl_size was
@@ -1488,8 +1533,8 @@ H5PB_write(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, const
 
             /* Special handling for the first page if it is not a full page update */
             if (i == 0 && first_page_addr != addr) {
-                /* Lookup the page in the skip list */
-                page_entry = (H5PB_entry_t *)H5SL_search(page_buf->slist_ptr, (void *)(&search_addr));
+                /* Lookup the page in the index */
+                H5PB__SEARCH_INDEX(page_buf, (search_addr / page_buf->page_size), page_entry, FAIL);
                 if (page_entry) {
                     offset = addr - first_page_addr;
                     assert(page_buf->page_size > offset);
@@ -1508,8 +1553,8 @@ H5PB_write(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, const
                      (search_addr + page_buf->page_size) != (addr + size)) {
                 assert(search_addr + page_buf->page_size > addr + size);
 
-                /* Lookup the page in the skip list */
-                page_entry = (H5PB_entry_t *)H5SL_search(page_buf->slist_ptr, (void *)(&search_addr));
+                /* Lookup the page in the index */
+                H5PB__SEARCH_INDEX(page_buf, (search_addr / page_buf->page_size), page_entry, FAIL);
                 if (page_entry) {
                     offset = (num_touched_pages - 2) * page_buf->page_size +
                              (page_buf->page_size - (addr - first_page_addr));
@@ -1525,16 +1570,12 @@ H5PB_write(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, const
             }     /* end else-if */
             /* Discard all fully written pages from the page buffer */
             else {
-                page_entry = (H5PB_entry_t *)H5SL_remove(page_buf->slist_ptr, (void *)(&search_addr));
+                H5PB__SEARCH_INDEX(page_buf, (search_addr / page_buf->page_size), page_entry, FAIL);
                 if (page_entry) {
+                    H5PB__DELETE_FROM_INDEX(page_buf, page_entry, FAIL);
+
                     /* Remove from LRU list */
                     H5PB__REMOVE_LRU(page_buf, page_entry)
-
-                    /* Decrement page count of appropriate type */
-                    if (H5F_MEM_PAGE_DRAW == page_entry->type || H5F_MEM_PAGE_GHEAP == page_entry->type)
-                        page_buf->raw_count--;
-                    else
-                        page_buf->meta_count--;
 
                     /* Free page info */
                     page_entry->page_buf_ptr = H5FL_FAC_FREE(page_buf->page_fac, page_entry->page_buf_ptr);
@@ -1559,8 +1600,8 @@ H5PB_write(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, const
                 access_size =
                     (0 == i ? (size_t)(first_page_addr + page_buf->page_size - addr) : (size - access_size));
 
-            /* Lookup the page in the skip list */
-            page_entry = (H5PB_entry_t *)H5SL_search(page_buf->slist_ptr, (void *)(&search_addr));
+            /* Lookup the page in the index */
+            H5PB__SEARCH_INDEX(page_buf, (search_addr / page_buf->page_size), page_entry, FAIL);
 
             /* If found */
             if (page_entry) {
@@ -1601,8 +1642,10 @@ H5PB_write(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, const
                 void  *new_page_buf;
                 size_t page_size = page_buf->page_size;
 
-                /* Make space for new entry */
-                if ((H5SL_count(page_buf->slist_ptr) * page_buf->page_size) >= page_buf->max_size) {
+                /* Make space for new entry. Use the index's actual total
+                 * byte size, not count*page_size (see the identical note in
+                 * H5PB_read()). */
+                if ((size_t)page_buf->index_size >= page_buf->max_size) {
                     htri_t can_make_space;
 
                     /* Check if we can make space in page buffer */
@@ -1832,6 +1875,30 @@ H5PB_enabled(H5F_shared_t *f_sh, H5FD_mem_t type, bool *enabled)
 } /* end H5PB_enabled() */
 
 /*-------------------------------------------------------------------------
+ * Function:    H5PB_entry_exists()
+ *
+ * Purpose:     Testing support: report whether a page at the given
+ *              (page-aligned) address is currently resident in the index.
+ *              Exists so tests can verify index membership without
+ *              including the package-private header for the search macros.
+ *
+ * Return:      true if present, false otherwise
+ *
+ *-------------------------------------------------------------------------
+ */
+bool
+H5PB_entry_exists(H5PB_t *page_buf, haddr_t addr)
+{
+    H5PB_entry_t *entry_ptr;
+
+    assert(page_buf);
+
+    H5PB__SEARCH_INDEX(page_buf, (addr / page_buf->page_size), entry_ptr, NULL);
+
+    return entry_ptr != NULL;
+} /* end H5PB_entry_exists() */
+
+/*-------------------------------------------------------------------------
  * Function:    H5PB__insert_entry()
  *
  * Purpose:     This function was created without documentation.
@@ -1858,16 +1925,19 @@ H5PB__insert_entry(H5PB_t *page_buf, H5PB_entry_t *page_entry)
 
     FUNC_ENTER_PACKAGE
 
-    /* Insert entry in skip list */
-    if (H5SL_insert(page_buf->slist_ptr, page_entry, &(page_entry->addr)) < 0)
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTINSERT, FAIL, "can't insert entry in skip list");
-    assert(H5SL_count(page_buf->slist_ptr) * page_buf->page_size <= page_buf->max_size);
+    /* Set the index key and metadata/raw classification. This classifies
+     * H5F_MEM_PAGE_GHEAP as raw (matches the page-count classification this
+     * function has always used for meta_count/raw_count -- distinct from,
+     * and not to be confused with, the separate VFD-SWMR-only rule
+     * elsewhere that keeps global heap objects tracked as *metadata* for
+     * shadow-index publication purposes).
+     */
+    page_entry->page        = page_entry->addr / page_buf->page_size;
+    page_entry->is_metadata = !(H5F_MEM_PAGE_DRAW == page_entry->type || H5F_MEM_PAGE_GHEAP == page_entry->type);
 
-    /* Increment appropriate page count */
-    if (H5F_MEM_PAGE_DRAW == page_entry->type || H5F_MEM_PAGE_GHEAP == page_entry->type)
-        page_buf->raw_count++;
-    else
-        page_buf->meta_count++;
+    /* Insert entry in the index */
+    H5PB__INSERT_IN_INDEX(page_buf, page_entry, FAIL);
+    assert((size_t)page_buf->index_size <= page_buf->max_size);
 
     /* Insert entry in LRU */
     H5PB__INSERT_LRU(page_buf, page_entry)
@@ -1920,15 +1990,15 @@ H5PB__make_space(H5F_shared_t *f_sh, H5PB_t *page_buf, H5FD_mem_t inserted_type)
     if (H5FD_MEM_DRAW == inserted_type) {
         /* If threshould is 100% metadata and page buffer is full of
            metadata, then we can't make space for raw data */
-        if (0 == page_buf->raw_count && page_buf->min_meta_count == page_buf->meta_count) {
-            assert(page_buf->meta_count * page_buf->page_size == page_buf->max_size);
+        if (0 == page_buf->curr_rd_pages && (int64_t)page_buf->min_meta_count == page_buf->curr_md_pages) {
+            assert((size_t)page_buf->curr_md_pages * page_buf->page_size == page_buf->max_size);
             HGOTO_DONE(false);
         } /* end if */
 
         /* check the metadata threshold before evicting metadata items */
         while (1) {
             if (page_entry->prev && H5F_MEM_PAGE_META == page_entry->type &&
-                page_buf->min_meta_count >= page_buf->meta_count)
+                (int64_t)page_buf->min_meta_count >= page_buf->curr_md_pages)
                 page_entry = page_entry->prev;
             else
                 break;
@@ -1937,8 +2007,8 @@ H5PB__make_space(H5F_shared_t *f_sh, H5PB_t *page_buf, H5FD_mem_t inserted_type)
     else {
         /* If threshould is 100% raw data and page buffer is full of
            raw data, then we can't make space for meta data */
-        if (0 == page_buf->meta_count && page_buf->min_raw_count == page_buf->raw_count) {
-            assert(page_buf->raw_count * page_buf->page_size == page_buf->max_size);
+        if (0 == page_buf->curr_md_pages && (int64_t)page_buf->min_raw_count == page_buf->curr_rd_pages) {
+            assert((size_t)page_buf->curr_rd_pages * page_buf->page_size == page_buf->max_size);
             HGOTO_DONE(false);
         } /* end if */
 
@@ -1946,26 +2016,21 @@ H5PB__make_space(H5F_shared_t *f_sh, H5PB_t *page_buf, H5FD_mem_t inserted_type)
         while (1) {
             if (page_entry->prev &&
                 (H5F_MEM_PAGE_DRAW == page_entry->type || H5F_MEM_PAGE_GHEAP == page_entry->type) &&
-                page_buf->min_raw_count >= page_buf->raw_count)
+                (int64_t)page_buf->min_raw_count >= page_buf->curr_rd_pages)
                 page_entry = page_entry->prev;
             else
                 break;
         } /* end while */
     }     /* end else */
 
-    /* Remove from page index */
-    if (NULL == H5SL_remove(page_buf->slist_ptr, &(page_entry->addr)))
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_BADVALUE, FAIL, "Tail Page Entry is not in skip list");
+    /* Remove from page index. H5PB__DELETE_FROM_INDEX() maintains
+     * curr_md_pages/curr_rd_pages based on page_entry->is_metadata, so no
+     * separate manual decrement is needed after this. */
+    H5PB__DELETE_FROM_INDEX(page_buf, page_entry, FAIL);
 
     /* Remove entry from LRU list */
     H5PB__REMOVE_LRU(page_buf, page_entry)
-    assert(H5SL_count(page_buf->slist_ptr) == page_buf->LRU_list_len);
-
-    /* Decrement appropriate page type counter */
-    if (H5F_MEM_PAGE_DRAW == page_entry->type || H5F_MEM_PAGE_GHEAP == page_entry->type)
-        page_buf->raw_count--;
-    else
-        page_buf->meta_count--;
+    assert(page_buf->curr_pages == page_buf->LRU_len);
 
     /* Flush page if dirty */
     if (page_entry->is_dirty)
@@ -2331,8 +2396,6 @@ H5PB_vfd_swmr__update_index(H5F_t *f, uint32_t *idx_ent_added_ptr, uint32_t *idx
      * entry clean and as having been flushed in the current tick.
      */
     for (i = 0; i < shared->mdf_idx_entries_used; i++) {
-        haddr_t page_addr;
-
         assert(i == 0 || idx[i - 1].hdf5_page_offset < idx[i].hdf5_page_offset);
 
         ie_ptr = idx + i;
@@ -2345,8 +2408,7 @@ H5PB_vfd_swmr__update_index(H5F_t *f, uint32_t *idx_ent_added_ptr, uint32_t *idx
         if (ie_ptr->clean)
             continue;
 
-        page_addr = (haddr_t)(ie_ptr->hdf5_page_offset * page_buf->page_size);
-        entry     = (H5PB_entry_t *)H5SL_search(page_buf->slist_ptr, &page_addr);
+        H5PB__SEARCH_INDEX(page_buf, ie_ptr->hdf5_page_offset, entry, FAIL);
 
         if (entry == NULL || !entry->is_dirty) {
             idx_ent_not_in_tl_flushed++;
