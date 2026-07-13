@@ -690,7 +690,7 @@ main(int argc, char **argv)
             fprintf(stderr, "Reader: Cannot initialize file property lists for file %s\n", s->filename[1]);
             TEST_ERROR;
         }
-        s->file[1] = H5Fopen(s->filename[1], H5F_ACC_RDONLY, s->fapl);
+        s->file[1] = vfd_swmr_reader_fopen(s->filename[1], s->fapl);
         if (s->file[1] < 0) {
             fprintf(stderr, "H5Fopen failed for the file %s\n", s->filename[1]);
             TEST_ERROR;
@@ -728,7 +728,7 @@ main(int argc, char **argv)
             TEST_ERROR;
         }
 
-        s->file[0] = H5Fopen(s->filename[0], H5F_ACC_RDONLY, s->fapl);
+        s->file[0] = vfd_swmr_reader_fopen(s->filename[0], s->fapl);
         if (s->file[0] < 0) {
             fprintf(stderr, "H5Fopen failed for the file %s\n", s->filename[0]);
             TEST_ERROR;

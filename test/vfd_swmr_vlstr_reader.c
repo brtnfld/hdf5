@@ -140,7 +140,10 @@ main(int argc, char **argv)
     if ((fapl = vfd_swmr_create_fapl(true, use_vfd_swmr, sel == TEST_OOB, 4096, config)) < 0)
         STACK_ERROR;
 
-    if ((fid = H5Fopen("vfd_swmr_vlstr.h5", H5F_ACC_RDONLY, fapl)) < 0)
+    /* Retry until the writer's file appears (the vlstr scenario launches
+     * writer and reader with no WRITER_MESSAGE gating) -- see
+     * vfd_swmr_reader_fopen(). */
+    if ((fid = vfd_swmr_reader_fopen("vfd_swmr_vlstr.h5", fapl)) < 0)
         STACK_ERROR;
 
     /* Create the VL string datatype and a scalar dataspace */

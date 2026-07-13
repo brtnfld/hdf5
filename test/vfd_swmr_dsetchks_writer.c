@@ -2318,7 +2318,7 @@ main(int argc, char **argv)
         }
     }
     else {
-        if ((s->file = H5Fopen(s->filename, H5F_ACC_RDONLY, fapl)) < 0) {
+        if ((s->file = vfd_swmr_reader_fopen(s->filename, fapl)) < 0) {
             printf("H5Fopen failed\n");
             TEST_ERROR;
         }

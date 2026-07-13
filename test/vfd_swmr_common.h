@@ -114,6 +114,7 @@ H5TEST_DLL void    socket_close(socket_state_t *sock);
 
 H5TEST_DLL bool below_speed_limit(struct timespec *, const struct timespec *);
 H5TEST_DLL void decisleep(uint32_t tenths);
+H5TEST_DLL hid_t vfd_swmr_reader_fopen(const char *filename, hid_t fapl);
 
 H5TEST_DLL estack_state_t estack_get_state(void);
 H5TEST_DLL estack_state_t disable_estack(void);

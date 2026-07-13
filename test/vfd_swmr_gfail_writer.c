@@ -877,7 +877,7 @@ main(int argc, char **argv)
     if (writer)
         s->file = H5Fcreate(s->filename, H5F_ACC_TRUNC, fcpl, fapl);
     else
-        s->file = H5Fopen(s->filename, H5F_ACC_RDONLY, fapl);
+        s->file = vfd_swmr_reader_fopen(s->filename, fapl);
 
     if (s->file < 0) {
         printf("H5Fcreate/open failed\n");
@@ -1086,7 +1086,7 @@ main(int argc, char **argv)
     if (writer)
         s->file = H5Fcreate(s->filename, H5F_ACC_TRUNC, fcpl, fapl);
     else
-        s->file = H5Fopen(s->filename, H5F_ACC_RDONLY, fapl);
+        s->file = vfd_swmr_reader_fopen(s->filename, fapl);
 
     if (s->file < 0) {
         printf("H5Fcreate/open failed\n");

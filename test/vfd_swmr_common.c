@@ -105,6 +105,40 @@ decisleep(uint32_t tenths)
     H5_nanosleep(nsec);
 }
 
+/* Open a VFD SWMR file as a reader, retrying until it appears.
+ *
+ * The writer and reader test processes are launched concurrently with no
+ * ordering guarantee (several scenarios have no WRITER_MESSAGE gating), so
+ * the reader can reach the open before the writer has created the file.
+ * Failing immediately would leave the writer blocked in the socket
+ * handshake's accept() forever, waiting for a reader that died at open --
+ * an observed multi-hour hang. Retrying tolerates the startup race
+ * generically for every reader that uses it. Returns the open file id, or
+ * H5I_INVALID_HID once the (~30s) retry budget is exhausted.
+ */
+hid_t
+vfd_swmr_reader_fopen(const char *filename, hid_t fapl)
+{
+    hid_t          fid = H5I_INVALID_HID;
+    unsigned       ntries;
+    const unsigned max_ntries = 300; /* ~30s at 0.1s each */
+
+    for (ntries = 0; ntries < max_ntries; ntries++) {
+        H5E_BEGIN_TRY
+        {
+            fid = H5Fopen(filename, H5F_ACC_RDONLY, fapl);
+        }
+        H5E_END_TRY;
+
+        if (fid >= 0)
+            break;
+
+        decisleep(1); /* 0.1s */
+    }
+
+    return fid;
+}
+
 /* Like vsnprintf(3), but abort the program with an error message on
  * `stderr` if the buffer is too small or some other error occurs.
  */

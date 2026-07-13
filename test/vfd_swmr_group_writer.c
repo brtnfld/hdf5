@@ -8349,31 +8349,12 @@ main(int argc, char **argv)
 
     if (writer)
         s->file = H5Fcreate(s->filename, H5F_ACC_TRUNC, fcpl, fapl);
-    else {
-        /* The writer and reader are launched concurrently with no ordering
-         * guarantee (these scenarios have no WRITER_MESSAGE gating), so the
-         * reader can reach this open before the writer has created the file.
-         * Retry the open until the file appears rather than failing
-         * immediately: a reader that died here would leave the writer blocked
-         * forever waiting for it in the handshake below -- the root cause of
-         * an observed multi-hour hang in the os_groups_* scenarios.
-         */
-        unsigned       open_ntries;
-        const unsigned max_open_ntries = 300; /* ~30s at 0.1s each */
-
-        for (open_ntries = 0; open_ntries < max_open_ntries; open_ntries++) {
-            H5E_BEGIN_TRY
-            {
-                s->file = H5Fopen(s->filename, H5F_ACC_RDONLY, fapl);
-            }
-            H5E_END_TRY;
-
-            if (s->file >= 0)
-                break;
-
-            decisleep(1); /* 0.1s */
-        }
-    }
+    else
+        /* Retry the open until the writer's file appears -- see
+         * vfd_swmr_reader_fopen() for why (these scenarios have no
+         * WRITER_MESSAGE gating, so the reader can race ahead of the
+         * writer's H5Fcreate). */
+        s->file = vfd_swmr_reader_fopen(s->filename, fapl);
 
     if (s->file < 0) {
         printf("H5Fcreate/open failed\n");
@@ -8586,31 +8567,12 @@ main(int argc, char **argv)
 
     if (writer)
         s->file = H5Fcreate(s->filename, H5F_ACC_TRUNC, fcpl, fapl);
-    else {
-        /* The writer and reader are launched concurrently with no ordering
-         * guarantee (these scenarios have no WRITER_MESSAGE gating), so the
-         * reader can reach this open before the writer has created the file.
-         * Retry the open until the file appears rather than failing
-         * immediately: a reader that died here would leave the writer blocked
-         * forever waiting for it in the handshake below -- the root cause of
-         * an observed multi-hour hang in the os_groups_* scenarios.
-         */
-        unsigned       open_ntries;
-        const unsigned max_open_ntries = 300; /* ~30s at 0.1s each */
-
-        for (open_ntries = 0; open_ntries < max_open_ntries; open_ntries++) {
-            H5E_BEGIN_TRY
-            {
-                s->file = H5Fopen(s->filename, H5F_ACC_RDONLY, fapl);
-            }
-            H5E_END_TRY;
-
-            if (s->file >= 0)
-                break;
-
-            decisleep(1); /* 0.1s */
-        }
-    }
+    else
+        /* Retry the open until the writer's file appears -- see
+         * vfd_swmr_reader_fopen() for why (these scenarios have no
+         * WRITER_MESSAGE gating, so the reader can race ahead of the
+         * writer's H5Fcreate). */
+        s->file = vfd_swmr_reader_fopen(s->filename, fapl);
 
     if (s->file < 0) {
         printf("H5Fcreate/open failed\n");
