@@ -61,18 +61,18 @@ typedef struct {
                                        * were encountered and not
                                        * evicted.
                                        */
-    bool     do_refresh; /* VFD SWMR reader only: if a pinned entry has its
-                          * own 'refresh' callback, refresh it in place
-                          * instead of treating it as unrecoverable. Only
-                          * H5C_evict_or_refresh_all_entries_in_page()'s
-                          * caller sets this; H5AC_evict_tagged_metadata()'s
-                          * general-purpose evict-by-tag caller does not,
-                          * since a genuinely pinned entry in that context
-                          * is still a real error, not something a refresh
-                          * can paper over.
-                          */
-    uint64_t tick;       /* Current VFD SWMR tick, passed through to
-                          * H5C__refresh_entry() when do_refresh is set. */
+    bool do_refresh;                  /* VFD SWMR reader only: if a pinned entry has its
+                                       * own 'refresh' callback, refresh it in place
+                                       * instead of treating it as unrecoverable. Only
+                                       * H5C_evict_or_refresh_all_entries_in_page()'s
+                                       * caller sets this; H5AC_evict_tagged_metadata()'s
+                                       * general-purpose evict-by-tag caller does not,
+                                       * since a genuinely pinned entry in that context
+                                       * is still a real error, not something a refresh
+                                       * can paper over.
+                                       */
+    uint64_t tick;                    /* Current VFD SWMR tick, passed through to
+                                       * H5C__refresh_entry() when do_refresh is set. */
 } H5C_tag_iter_evict_ctx_t;
 
 /* Typedef for tagged entry iterator callback context - expunge tag type metadata */

@@ -293,8 +293,7 @@ H5B2__hdr_extend_node_info(H5B2_hdr_t *hdr, uint16_t new_depth)
 
     /* Grow the array, preserving existing entries (and their factories)
      * untouched. */
-    if (NULL == (new_node_info = H5FL_SEQ_REALLOC(H5B2_node_info_t, hdr->node_info,
-                                                   (size_t)(new_depth + 1))))
+    if (NULL == (new_node_info = H5FL_SEQ_REALLOC(H5B2_node_info_t, hdr->node_info, (size_t)(new_depth + 1))))
         HGOTO_ERROR(H5E_BTREE, H5E_NOSPACE, FAIL, "memory allocation failed");
     hdr->node_info = new_node_info;
 
@@ -304,8 +303,7 @@ H5B2__hdr_extend_node_info(H5B2_hdr_t *hdr, uint16_t new_depth)
      * H5B2__hdr_free_node_info() must not find garbage nat_rec_fac/
      * node_ptr_fac pointers in the not-yet-reached entries beyond the
      * failure point. */
-    memset(&hdr->node_info[hdr->depth + 1], 0,
-           (size_t)(new_depth - hdr->depth) * sizeof(H5B2_node_info_t));
+    memset(&hdr->node_info[hdr->depth + 1], 0, (size_t)(new_depth - hdr->depth) * sizeof(H5B2_node_info_t));
 
     /* This function may leave hdr->node_info partially filled on failure;
      * set the high-water mark to the full target now (not after the loop
@@ -330,8 +328,8 @@ H5B2__hdr_extend_node_info(H5B2_hdr_t *hdr, uint16_t new_depth)
         u_max_nrec_size = H5VM_limit_enc_size((uint64_t)hdr->node_info[u].cum_max_nrec);
         H5_CHECKED_ASSIGN(hdr->node_info[u].cum_max_nrec_size, uint8_t, u_max_nrec_size, unsigned);
 
-        if (NULL == (hdr->node_info[u].nat_rec_fac =
-                         H5FL_fac_init(hdr->cls->nrec_size * hdr->node_info[u].max_nrec)))
+        if (NULL ==
+            (hdr->node_info[u].nat_rec_fac = H5FL_fac_init(hdr->cls->nrec_size * hdr->node_info[u].max_nrec)))
             HGOTO_ERROR(H5E_BTREE, H5E_CANTINIT, FAIL, "can't create node native key block factory");
         if (NULL == (hdr->node_info[u].node_ptr_fac =
                          H5FL_fac_init(sizeof(H5B2_node_ptr_t) * (hdr->node_info[u].max_nrec + 1))))

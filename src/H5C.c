@@ -667,11 +667,11 @@ done:
 herr_t
 H5C__refresh_entry(H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_ptr, uint64_t tick)
 {
-    size_t   image_len;
-    size_t   original_image_len;
-    void    *image_ptr     = NULL;
-    void    *new_image_ptr = NULL;
-    herr_t   ret_value     = SUCCEED;
+    size_t image_len;
+    size_t original_image_len;
+    void  *image_ptr     = NULL;
+    void  *new_image_ptr = NULL;
+    herr_t ret_value     = SUCCEED;
 
     FUNC_ENTER_PACKAGE
 
@@ -778,7 +778,7 @@ H5C__refresh_entry(H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_ptr, uin
         entry_ptr->image_ptr = H5MM_xfree(entry_ptr->image_ptr);
     }
     entry_ptr->image_ptr = image_ptr;
-    image_ptr             = NULL;
+    image_ptr            = NULL;
 
 done:
     if (image_ptr)

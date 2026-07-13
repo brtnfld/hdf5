@@ -358,18 +358,18 @@ done:
 static herr_t
 H5B2__cache_hdr_refresh(H5F_t H5_ATTR_UNUSED *f, void *_thing, const void *_image, size_t *len_ptr)
 {
-    H5B2_hdr_t          *hdr   = (H5B2_hdr_t *)_thing;
-    const uint8_t       *image = (const uint8_t *)_image;
-    const uint8_t        *end  = image + *len_ptr - 1;
-    H5B2_subid_t          id;
-    uint32_t              node_size;
-    uint16_t              rrec_size;
-    uint16_t              new_depth;
-    uint8_t               split_percent;
-    uint8_t               merge_percent;
-    H5B2_node_ptr_t        new_root;
-    uint32_t              stored_chksum;
-    herr_t                ret_value = SUCCEED;
+    H5B2_hdr_t     *hdr   = (H5B2_hdr_t *)_thing;
+    const uint8_t  *image = (const uint8_t *)_image;
+    const uint8_t  *end   = image + *len_ptr - 1;
+    H5B2_subid_t    id;
+    uint32_t        node_size;
+    uint16_t        rrec_size;
+    uint16_t        new_depth;
+    uint8_t         split_percent;
+    uint8_t         merge_percent;
+    H5B2_node_ptr_t new_root;
+    uint32_t        stored_chksum;
+    herr_t          ret_value = SUCCEED;
 
     FUNC_ENTER_PACKAGE
 
