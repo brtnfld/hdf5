@@ -54,9 +54,9 @@ struct H5PB_entry_t;
 
 /* Typedef for the main structure for the page buffer */
 typedef struct H5PB_t {
-    uint32_t magic;     /* H5PB__H5PB_T_MAGIC; sanity-check field */
-    size_t   max_size;  /* The total page buffer size */
-    size_t   page_size; /* Size of a single page */
+    uint32_t magic;          /* H5PB__H5PB_T_MAGIC; sanity-check field */
+    size_t   max_size;       /* The total page buffer size */
+    size_t   page_size;      /* Size of a single page */
     unsigned min_meta_perc;  /* Minimum ratio of metadata entries required before evicting meta entries */
     unsigned min_raw_perc;   /* Minimum ratio of raw data entries required before evicting raw entries */
     unsigned min_meta_count; /* Minimum # of entries for metadata */
@@ -70,14 +70,14 @@ typedef struct H5PB_t {
      * the F-layer, and flush walks the index unordered (matches the
      * reference implementation this was restored from). */
     struct H5PB_entry_t *(ht[H5PB__HASH_TABLE_LEN]);
-    int64_t index_len;        /* Number of entries in the index (curr_pages + mpmde_count) */
-    int64_t clean_index_len;  /* Number of clean entries in the index */
-    int64_t dirty_index_len;  /* Number of dirty entries in the index */
-    int64_t index_size;       /* Total size (bytes) of entries in the index */
-    int64_t clean_index_size; /* Total size of clean entries in the index */
-    int64_t dirty_index_size; /* Total size of dirty entries in the index */
-    int64_t il_len;           /* Number of entries on the index list; must equal index_len */
-    int64_t il_size;          /* Total size of entries on the index list; must equal index_size */
+    int64_t              index_len;        /* Number of entries in the index (curr_pages + mpmde_count) */
+    int64_t              clean_index_len;  /* Number of clean entries in the index */
+    int64_t              dirty_index_len;  /* Number of dirty entries in the index */
+    int64_t              index_size;       /* Total size (bytes) of entries in the index */
+    int64_t              clean_index_size; /* Total size of clean entries in the index */
+    int64_t              dirty_index_size; /* Total size of dirty entries in the index */
+    int64_t              il_len;           /* Number of entries on the index list; must equal index_len */
+    int64_t              il_size; /* Total size of entries on the index list; must equal index_size */
     struct H5PB_entry_t *il_head; /* Head pointer of the index list */
     struct H5PB_entry_t *il_tail; /* Tail pointer of the index list */
 

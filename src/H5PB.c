@@ -81,8 +81,7 @@
         assert(page_buf);                                                                                    \
         assert(page_ptr);                                                                                    \
         /* insert the entry at the head of the list. */                                                      \
-        H5PB__PREPEND((page_ptr), (page_buf)->LRU_head_ptr, (page_buf)->LRU_tail_ptr,                        \
-                      (page_buf)->LRU_len)                                                              \
+        H5PB__PREPEND((page_ptr), (page_buf)->LRU_head_ptr, (page_buf)->LRU_tail_ptr, (page_buf)->LRU_len)   \
     }
 
 #define H5PB__REMOVE_LRU(page_buf, page_ptr)                                                                 \
@@ -90,8 +89,7 @@
         assert(page_buf);                                                                                    \
         assert(page_ptr);                                                                                    \
         /* remove the entry from the list. */                                                                \
-        H5PB__REMOVE((page_ptr), (page_buf)->LRU_head_ptr, (page_buf)->LRU_tail_ptr,                         \
-                     (page_buf)->LRU_len)                                                               \
+        H5PB__REMOVE((page_ptr), (page_buf)->LRU_head_ptr, (page_buf)->LRU_tail_ptr, (page_buf)->LRU_len)    \
     }
 
 #define H5PB__MOVE_TO_TOP_LRU(page_buf, page_ptr)                                                            \
@@ -99,10 +97,8 @@
         assert(page_buf);                                                                                    \
         assert(page_ptr);                                                                                    \
         /* Remove entry and insert at the head of the list. */                                               \
-        H5PB__REMOVE((page_ptr), (page_buf)->LRU_head_ptr, (page_buf)->LRU_tail_ptr,                         \
-                     (page_buf)->LRU_len)                                                               \
-        H5PB__PREPEND((page_ptr), (page_buf)->LRU_head_ptr, (page_buf)->LRU_tail_ptr,                        \
-                      (page_buf)->LRU_len)                                                              \
+        H5PB__REMOVE((page_ptr), (page_buf)->LRU_head_ptr, (page_buf)->LRU_tail_ptr, (page_buf)->LRU_len)    \
+        H5PB__PREPEND((page_ptr), (page_buf)->LRU_head_ptr, (page_buf)->LRU_tail_ptr, (page_buf)->LRU_len)   \
     }
 
 /******************/
@@ -963,9 +959,9 @@ H5PB_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, void *
                                     page_buf->page_size);
                     } /* end else */
                 }     /* end if */
-            } /* end if */
-        }     /* end for */
-    }         /* end if */
+            }         /* end if */
+        }             /* end for */
+    }                 /* end if */
     else {
         /* A raw data access could span 1 or 2 PB entries at this point so
            we need to handle that */
@@ -1932,8 +1928,9 @@ H5PB__insert_entry(H5PB_t *page_buf, H5PB_entry_t *page_entry)
      * elsewhere that keeps global heap objects tracked as *metadata* for
      * shadow-index publication purposes).
      */
-    page_entry->page        = page_entry->addr / page_buf->page_size;
-    page_entry->is_metadata = !(H5F_MEM_PAGE_DRAW == page_entry->type || H5F_MEM_PAGE_GHEAP == page_entry->type);
+    page_entry->page = page_entry->addr / page_buf->page_size;
+    page_entry->is_metadata =
+        !(H5F_MEM_PAGE_DRAW == page_entry->type || H5F_MEM_PAGE_GHEAP == page_entry->type);
 
     /* Insert entry in the index */
     H5PB__INSERT_IN_INDEX(page_buf, page_entry, FAIL);

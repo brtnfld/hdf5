@@ -449,8 +449,8 @@
     {                                                                                                        \
         int ii;                                                                                              \
                                                                                                              \
-        assert(page_buf);                                                                                  \
-        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                   \
+        assert(page_buf);                                                                                    \
+        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                     \
                                                                                                              \
         if (is_metadata) {                                                                                   \
             if (is_mpmde) {                                                                                  \
@@ -494,7 +494,7 @@
 #define H5PB__UPDATE_STATS_FOR_HT_DELETION(page_buf) (page_buf)->total_ht_deletions++;
 
 #define H5PB__UPDATE_STATS_FOR_HT_SEARCH(page_buf, success, depth)                                           \
-    assert(depth >= 0);                                                                                    \
+    assert(depth >= 0);                                                                                      \
     if (success) {                                                                                           \
         (page_buf)->successful_ht_searches++;                                                                \
         (page_buf)->total_successful_ht_search_depth += (int64_t)depth;                                      \
@@ -516,13 +516,13 @@
 
 #define H5PB__UPDATE_STATS_FOR_LRU_TL_SKIP(page_buf)                                                         \
     {                                                                                                        \
-        assert(page_buf->vfd_swmr_writer);                                                                 \
+        assert(page_buf->vfd_swmr_writer);                                                                   \
         ((page_buf)->lru_tl_skips)++;                                                                        \
     }
 
 #define H5PB__UPDATE_TL_SIZE_STATS(page_buf)                                                                 \
     {                                                                                                        \
-        assert((page_buf)->vfd_swmr_writer);                                                               \
+        assert((page_buf)->vfd_swmr_writer);                                                                 \
         if ((page_buf)->tl_len > (page_buf)->max_tl_len)                                                     \
             (page_buf)->max_tl_len = (page_buf)->tl_len;                                                     \
         if ((page_buf)->tl_size > (page_buf)->max_tl_size)                                                   \
@@ -531,7 +531,7 @@
 
 #define H5PB__UPDATE_DWL_SIZE_STATS(page_buf)                                                                \
     {                                                                                                        \
-        assert((page_buf)->vfd_swmr_writer);                                                               \
+        assert((page_buf)->vfd_swmr_writer);                                                                 \
         if ((page_buf)->dwl_len > (page_buf)->max_dwl_len)                                                   \
             (page_buf)->max_dwl_len = (page_buf)->dwl_len;                                                   \
         if ((page_buf)->dwl_size > (page_buf)->max_dwl_size)                                                 \
@@ -540,7 +540,7 @@
 
 #define H5PB__UPDATE_DWL_DELAYED_WRITES(page_buf, insertion_depth, delay)                                    \
     {                                                                                                        \
-        assert((page_buf)->vfd_swmr_writer);                                                               \
+        assert((page_buf)->vfd_swmr_writer);                                                                 \
         (page_buf)->delayed_writes++;                                                                        \
         (page_buf)->total_delay += (int64_t)(delay);                                                         \
         (page_buf)->total_dwl_ins_depth += (insertion_depth);                                                \
@@ -550,8 +550,8 @@
     {                                                                                                        \
         int _i;                                                                                              \
                                                                                                              \
-        assert(page_buf);                                                                                  \
-        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                   \
+        assert(page_buf);                                                                                    \
+        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                     \
                                                                                                              \
         if (H5FD_MEM_DRAW == (type)) {                                                                       \
             _i = H5PB__STATS_RD;                                                                             \
@@ -569,8 +569,8 @@
     {                                                                                                        \
         int ii;                                                                                              \
                                                                                                              \
-        assert(page_buf);                                                                                  \
-        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                   \
+        assert(page_buf);                                                                                    \
+        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                     \
                                                                                                              \
         if (H5FD_MEM_DRAW == (type)) {                                                                       \
             ii = H5PB__STATS_RD;                                                                             \
@@ -588,10 +588,10 @@
     {                                                                                                        \
         int i;                                                                                               \
                                                                                                              \
-        assert(page_buf);                                                                                  \
-        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                   \
-        assert(entry_ptr);                                                                                 \
-        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                            \
+        assert(page_buf);                                                                                    \
+        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                     \
+        assert(entry_ptr);                                                                                   \
+        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                              \
                                                                                                              \
         if ((entry_ptr)->is_metadata) {                                                                      \
             if ((entry_ptr)->is_mpmde) {                                                                     \
@@ -611,10 +611,10 @@
     {                                                                                                        \
         int i;                                                                                               \
                                                                                                              \
-        assert(page_buf);                                                                                  \
-        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                   \
-        assert(entry_ptr);                                                                                 \
-        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                            \
+        assert(page_buf);                                                                                    \
+        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                     \
+        assert(entry_ptr);                                                                                   \
+        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                              \
                                                                                                              \
         if ((entry_ptr)->is_metadata) {                                                                      \
             if ((entry_ptr)->is_mpmde) {                                                                     \
@@ -634,10 +634,10 @@
     {                                                                                                        \
         int i;                                                                                               \
                                                                                                              \
-        assert(page_buf);                                                                                  \
-        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                   \
-        assert(entry_ptr);                                                                                 \
-        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                            \
+        assert(page_buf);                                                                                    \
+        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                     \
+        assert(entry_ptr);                                                                                   \
+        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                              \
                                                                                                              \
         if ((entry_ptr)->is_metadata) {                                                                      \
             if ((entry_ptr)->is_mpmde) {                                                                     \
@@ -657,10 +657,10 @@
     {                                                                                                        \
         int i;                                                                                               \
                                                                                                              \
-        assert(page_buf);                                                                                  \
-        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                   \
-        assert(entry_ptr);                                                                                 \
-        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                            \
+        assert(page_buf);                                                                                    \
+        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                     \
+        assert(entry_ptr);                                                                                   \
+        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                              \
                                                                                                              \
         if ((entry_ptr)->is_metadata) {                                                                      \
             if ((entry_ptr)->is_mpmde) {                                                                     \
@@ -680,10 +680,10 @@
     {                                                                                                        \
         int i;                                                                                               \
                                                                                                              \
-        assert(page_buf);                                                                                  \
-        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                   \
-        assert(entry_ptr);                                                                                 \
-        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                            \
+        assert(page_buf);                                                                                    \
+        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                     \
+        assert(entry_ptr);                                                                                   \
+        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                              \
                                                                                                              \
         if ((entry_ptr)->is_metadata) {                                                                      \
             if ((entry_ptr)->is_mpmde) {                                                                     \
@@ -701,15 +701,15 @@
 
 #define H5PB__UPDATE_STATS_FOR_READ_SPLIT(page_buf)                                                          \
     {                                                                                                        \
-        assert(page_buf);                                                                                  \
-        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                   \
+        assert(page_buf);                                                                                    \
+        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                     \
         (page_buf->md_read_splits)++;                                                                        \
     } /* H5PB__UPDATE_STATS_FOR_READ_SPLIT */
 
 #define H5PB__UPDATE_STATS_FOR_WRITE_SPLIT(page_buf)                                                         \
     {                                                                                                        \
-        assert(page_buf);                                                                                  \
-        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                   \
+        assert(page_buf);                                                                                    \
+        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                     \
         (page_buf->md_write_splits)++;                                                                       \
     } /* H5PB__UPDATE_STATS_FOR_READ_SPLIT */
 
@@ -1020,7 +1020,7 @@
                 if ((entry_ptr) != ((page_buf)->ht)[k]) {                                                    \
                     if ((entry_ptr)->ht_next)                                                                \
                         (entry_ptr)->ht_next->ht_prev = (entry_ptr)->ht_prev;                                \
-                    assert((entry_ptr)->ht_prev != NULL);                                                  \
+                    assert((entry_ptr)->ht_prev != NULL);                                                    \
                     (entry_ptr)->ht_prev->ht_next = (entry_ptr)->ht_next;                                    \
                     ((page_buf)->ht)[k]->ht_prev  = (entry_ptr);                                             \
                     (entry_ptr)->ht_next          = ((page_buf)->ht)[k];                                     \
@@ -1111,12 +1111,12 @@
 
 #define H5PB__UPDATE_RP_FOR_EVICTION(page_buf, entry_ptr, fail_val)                                          \
     {                                                                                                        \
-        assert((page_buf));                                                                                \
-        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                   \
-        assert((entry_ptr));                                                                               \
-        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                            \
-        assert(!((entry_ptr)->is_dirty));                                                                  \
-        assert((entry_ptr)->size >= page_buf->page_size);                                                  \
+        assert((page_buf));                                                                                  \
+        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                     \
+        assert((entry_ptr));                                                                                 \
+        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                              \
+        assert(!((entry_ptr)->is_dirty));                                                                    \
+        assert((entry_ptr)->size >= page_buf->page_size);                                                    \
                                                                                                              \
         /* modified LRU specific code */                                                                     \
                                                                                                              \
@@ -1158,12 +1158,12 @@
 
 #define H5PB__UPDATE_RP_FOR_REMOVE(page_buf, entry_ptr, fail_val)                                            \
     {                                                                                                        \
-        assert((page_buf));                                                                                \
-        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                   \
-        assert((entry_ptr));                                                                               \
-        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                            \
-        assert(!((entry_ptr)->is_mpmde));                                                                  \
-        assert((entry_ptr)->size == page_buf->page_size);                                                  \
+        assert((page_buf));                                                                                  \
+        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                     \
+        assert((entry_ptr));                                                                                 \
+        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                              \
+        assert(!((entry_ptr)->is_mpmde));                                                                    \
+        assert((entry_ptr)->size == page_buf->page_size);                                                    \
                                                                                                              \
         /* modified LRU specific code */                                                                     \
                                                                                                              \
@@ -1201,11 +1201,11 @@
 
 #define H5PB__UPDATE_RP_FOR_ACCESS(page_buf, entry_ptr, fail_val)                                            \
     {                                                                                                        \
-        assert((page_buf));                                                                                \
-        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                   \
-        assert((entry_ptr));                                                                               \
-        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                            \
-        assert((entry_ptr)->size >= page_buf->page_size);                                                  \
+        assert((page_buf));                                                                                  \
+        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                     \
+        assert((entry_ptr));                                                                                 \
+        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                              \
+        assert((entry_ptr)->size >= page_buf->page_size);                                                    \
                                                                                                              \
         /* modified LRU specific code */                                                                     \
                                                                                                              \
@@ -1279,11 +1279,11 @@
 
 #define H5PB__UPDATE_RP_FOR_INSERT_APPEND(page_buf, entry_ptr, fail_val)                                     \
     {                                                                                                        \
-        assert((page_buf));                                                                                \
-        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                   \
-        assert((entry_ptr));                                                                               \
-        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                            \
-        assert((entry_ptr)->size == page_buf->page_size);                                                  \
+        assert((page_buf));                                                                                  \
+        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                     \
+        assert((entry_ptr));                                                                                 \
+        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                              \
+        assert((entry_ptr)->size == page_buf->page_size);                                                    \
                                                                                                              \
         /* modified LRU specific code */                                                                     \
                                                                                                              \
@@ -1322,11 +1322,11 @@
 
 #define H5PB__UPDATE_RP_FOR_INSERTION(page_buf, entry_ptr, fail_val)                                         \
     {                                                                                                        \
-        assert((page_buf));                                                                                \
-        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                   \
-        assert((entry_ptr));                                                                               \
-        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                            \
-        assert((entry_ptr)->size >= page_buf->page_size);                                                  \
+        assert((page_buf));                                                                                  \
+        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                     \
+        assert((entry_ptr));                                                                                 \
+        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                              \
+        assert((entry_ptr)->size >= page_buf->page_size);                                                    \
                                                                                                              \
         /* modified LRU specific code */                                                                     \
                                                                                                              \
@@ -1384,13 +1384,13 @@
 
 #define H5PB__INSERT_IN_TL(page_buf, entry_ptr, fail_val)                                                    \
     {                                                                                                        \
-        assert((page_buf));                                                                                \
-        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                   \
-        assert((page_buf)->vfd_swmr_writer);                                                               \
-        assert((entry_ptr));                                                                               \
-        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                            \
-        assert((entry_ptr)->modified_this_tick);                                                           \
-        assert((entry_ptr)->size >= page_buf->page_size);                                                  \
+        assert((page_buf));                                                                                  \
+        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                     \
+        assert((page_buf)->vfd_swmr_writer);                                                                 \
+        assert((entry_ptr));                                                                                 \
+        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                              \
+        assert((entry_ptr)->modified_this_tick);                                                             \
+        assert((entry_ptr)->size >= page_buf->page_size);                                                    \
                                                                                                              \
         /* insert the entry at the head of the tick list. */                                                 \
                                                                                                              \
@@ -1420,13 +1420,13 @@
 
 #define H5PB__REMOVE_FROM_TL(page_buf, entry_ptr, fail_val)                                                  \
     {                                                                                                        \
-        assert((page_buf));                                                                                \
-        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                   \
-        assert((page_buf)->vfd_swmr_writer);                                                               \
-        assert((entry_ptr));                                                                               \
-        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                            \
-        assert((entry_ptr)->modified_this_tick);                                                           \
-        assert((entry_ptr)->size >= page_buf->page_size);                                                  \
+        assert((page_buf));                                                                                  \
+        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                     \
+        assert((page_buf)->vfd_swmr_writer);                                                                 \
+        assert((entry_ptr));                                                                                 \
+        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                              \
+        assert((entry_ptr)->modified_this_tick);                                                             \
+        assert((entry_ptr)->size >= page_buf->page_size);                                                    \
                                                                                                              \
         /* remove the entry from the tick list. */                                                           \
                                                                                                              \
@@ -1495,13 +1495,13 @@
         uint64_t      delay;                                                                                 \
         H5PB_entry_t *suc_ptr;                                                                               \
                                                                                                              \
-        assert((page_buf));                                                                                \
-        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                   \
-        assert((page_buf)->vfd_swmr_writer);                                                               \
-        assert((entry_ptr));                                                                               \
-        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                            \
-        assert((entry_ptr)->size >= page_buf->page_size);                                                  \
-        assert((entry_ptr)->delay_write_until > (page_buf)->cur_tick);                                     \
+        assert((page_buf));                                                                                  \
+        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                     \
+        assert((page_buf)->vfd_swmr_writer);                                                                 \
+        assert((entry_ptr));                                                                                 \
+        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                              \
+        assert((entry_ptr)->size >= page_buf->page_size);                                                    \
+        assert((entry_ptr)->delay_write_until > (page_buf)->cur_tick);                                       \
                                                                                                              \
         delay   = (entry_ptr)->delay_write_until - (page_buf)->cur_tick;                                     \
         suc_ptr = page_buf->dwl_head_ptr;                                                                    \
@@ -1542,13 +1542,13 @@
 
 #define H5PB__REMOVE_FROM_DWL(page_buf, entry_ptr, fail_val)                                                 \
     {                                                                                                        \
-        assert((page_buf));                                                                                \
-        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                   \
-        assert((page_buf)->vfd_swmr_writer);                                                               \
-        assert((entry_ptr));                                                                               \
-        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                            \
-        assert((entry_ptr)->size >= page_buf->page_size);                                                  \
-        assert((entry_ptr)->delay_write_until == 0);                                                       \
+        assert((page_buf));                                                                                  \
+        assert((page_buf)->magic == H5PB__H5PB_T_MAGIC);                                                     \
+        assert((page_buf)->vfd_swmr_writer);                                                                 \
+        assert((entry_ptr));                                                                                 \
+        assert((entry_ptr)->magic == H5PB__H5PB_ENTRY_T_MAGIC);                                              \
+        assert((entry_ptr)->size >= page_buf->page_size);                                                    \
+        assert((entry_ptr)->delay_write_until == 0);                                                         \
                                                                                                              \
         /* remove the entry from the delayed write list. */                                                  \
                                                                                                              \
