@@ -1752,6 +1752,18 @@ make -j"$(nproc)"
    nrefs gate especially, since it's a generic library use-after-free/leak, not
    VFD-SWMR-test-specific) are worth splitting into standalone `develop` PRs, independent of this
    port.
+8. **TODO: open a standalone PR for the v2 B-tree header refresh fix (+ the reader shadow-index
+   leak fix found alongside it).** This is the highest-value PR candidate — a real, verified
+   core-library fix whose buggy mechanism is byte-identical to mainline, so it stands on its own
+   independent of the rest of this port. Commits on `feature/vfd-swmr-port`:
+   `b606844abae` (fix) and `bdb592efbc5` (docs); the fix touches `src/H5B2cache.c`,
+   `src/H5B2hdr.c`, `src/H5B2pkg.h`, `src/H5B2int.c`, `src/H5B2.c`, `src/H5C.c`, `src/H5Cpkg.h`,
+   `src/H5Cprivate.h`, `src/H5Ctag.c`, `src/H5AC.c`, `src/H5Fint.c`.
+   **Target still to be decided:** `origin/develop` *does* already contain the VFD SWMR machinery
+   the fix depends on (`H5Fvfd_swmr.c`, the `H5C` refresh-callback path), so the fix can go either
+   to this repo's `develop` or to the upstream branch it derives from — confirm which base is
+   wanted before opening. Cherry-pick the two commits onto a fresh branch off the chosen base,
+   confirm it builds + the `few_big -d 2` repro passes there, then open the PR.
 
 ---
 
