@@ -190,6 +190,15 @@ need to touch this code.
 
 ## Phase 3 — Writer machinery on the skip-list page buffer (implementation done)
 
+**SUPERSEDED (index choice only):** the "Strategy B" skip-list decision described in this
+section was later reversed — the primary index was restored to a hash table (see
+`docs/H5PB_index_design_analysis.md` and `docs/H5PB_restore_hashtable_plan.md`,
+commit `baa3456dd8`). The writer machinery this Phase built (the four functions below, the
+tick list, the delayed-write list) is unaffected and unchanged by that later reversal — it was,
+and remains, index-independent. This section is left as-is below as the historical record of
+why and how that machinery was first wired up; treat every mention of "skip-list" / "no hash
+table added" in it as describing the state at the time, not the current state.
+
 ### Design recap
 The four writer functions in `src/H5PB.c` — `H5PB_vfd_swmr__update_index`,
 `__release_tick_list`, `__release_delayed_writes`, `__set_tick` — were no-op stubs. Without them,
@@ -1800,7 +1809,8 @@ make -j"$(nproc)"
 | `VFD_SWMR_ENTER`/`LEAVE`, `eot_queue_t` relocation | `src/H5private.h` | Phase 0c |
 | `H5FD_vfd_swmr_init()` registration fix | `src/H5FDvfd_swmr.c` | Bug #2 fix |
 | `H5PB_t`/`H5PB_entry_t` VFD SWMR fields | `src/H5PBprivate.h`, `src/H5PBpkg.h` (struct) | Phase 3 |
-| TL/DWL wrapper macros | `src/H5PBpkg.h`, right before the fenced `#if 0` block | Phase 3 |
+| TL/DWL wrapper macros | `src/H5PBpkg.h` | Phase 3; the `#if 0` fence around the hash-table macros mentioned here in Phase 3's original write-up is gone as of commit `baa3456dd8` (macros un-fenced, now the live index) |
+| Hash-table page-buffer index (`ht[]`, `index_len`/`il_*`, `curr_pages`/`curr_md_pages`/`curr_rd_pages`) | `src/H5PBprivate.h` (`H5PB_t`), `src/H5PBpkg.h` (macros), `src/H5PB.c` (index ops) | Restored in place of the skip-list index; see `docs/H5PB_restore_hashtable_plan.md` |
 | `H5PB__vfd_swmr_track_write`, the four `H5PB_vfd_swmr__*` functions | `src/H5PB.c` | Phase 3 |
 | `page_entry->size` init (3 sites), `image_ptr`→`page_buf_ptr` fix, `H5PB__make_space` NULL guard, `H5PB__dest_cb` DWL-unlink fix, tick-list LRU protection | `src/H5PB.c` | zoo debugging pass bugs #1–#5 |
 | Stale `end_of_tick` fix | `src/H5Fvfd_swmr.c`, `H5F_vfd_swmr_reader_end_of_tick()` | This session, bug #1 |
