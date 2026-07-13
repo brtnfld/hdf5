@@ -1721,18 +1721,31 @@ make -j"$(nproc)"
      fixed socket port (`DEFAULT_PORT` = 42424 in `vfd_swmr_common.c`) and share the working dir /
      message filenames, so they must never run concurrently.
 
-   **Caution for future stress testing (a rabbit hole worth not re-entering):** these socket-based
-   tests use a *fixed* port with no writer/reader startup handshake, so they are fragile to being
-   run **manually in rapid succession** — a `timeout`-killed manual run **orphans** the backgrounded
-   `writer`/`reader` children (the shell parent dies, the `&` children don't), and an orphan holding
-   port 42424 makes every subsequent run fail with `"error binding server socket"`. During this
-   session that exact artifact produced a **false positive** — a manual `groups` run appeared to
-   fail, and a same-machine reference run "confirmed" it, but **both were contaminated by one
-   orphaned `vfd_swmr_group_writer` of ours holding the port**. Run through `ctest` (which tears down
-   process groups cleanly) `groups` passes in ~20s, as does every scenario. Lesson: for manual
-   repro of these tests, verify `ss -tan | grep :42424` is clear and `pkill -9 -f vfd_swmr` between
-   runs; prefer driving them via `ctest` so teardown is handled. No real groups bug exists in either
-   tree.
+   **Two distinct socket issues surfaced here — one a real bug (now fixed), one a
+   test-hygiene artifact:**
+
+   (a) **Real, fixed: a startup-race hang in the writer/reader socket handshake
+   (`test/vfd_swmr_common.c`, `socket_connect()`).** The writer (server) does
+   `listen()`+`accept()` with no timeout; the reader (client) did a *single* `connect()` with no
+   retry. Since the shell script launches writer and reader with no ordering guarantee, a reader
+   that reached `connect()` before the writer reached `listen()` got `ECONNREFUSED`, died, and left
+   the writer blocked **forever** in `accept()` (observed: a `groups` scenario writer hung 27+ min
+   until the ctest timeout, reader gone, socket stuck in `LISTEN`). The bigset scenarios dodged this
+   because the earlier `WAIT_MESSAGE $WRITER_MESSAGE` launch-gating makes the reader wait for the
+   writer; `groups` (and the other non-bigset socket scenarios) had no such gate. **Fixed
+   generically** by making the client retry `connect()` (fresh socket each attempt, 0.1s apart, up
+   to ~30s) so it tolerates the writer not being up yet — verified 4/4 clean `groups` pairs after
+   the fix, and `few_big -d 2` still clean (the change is additive, only engaging when a connect
+   fails).
+
+   (b) **Artifact, not a bug: fixed-port contention from manual rapid reruns.** A `timeout`-killed
+   *manual* run orphans the backgrounded `&` children (shell parent dies, children don't); an orphan
+   holding port 42424 then makes later runs fail with `"error binding server socket"`. During this
+   session that briefly produced a **false positive** — a manual `groups` run appeared to fail and a
+   same-machine reference run "confirmed" it, but both were contaminated by one orphaned
+   `vfd_swmr_group_writer` of ours. Lesson for manual repro: verify `ss -tan | grep :42424` is clear
+   and `pkill -9 -f vfd_swmr` between runs; prefer driving via `ctest` (clean process-group
+   teardown). This is separate from (a) and needs no code change.
 6. ~~**Fix the v2 B-tree header pinning bug**~~ **DONE — see "The fix, implemented and verified"
    under item 4 above.** Implemented the architecturally-correct fix (a `refresh` callback for the
    v2 B-tree header cache class), plus the two coordinated changes it required (maintaining the new
