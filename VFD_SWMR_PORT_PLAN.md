@@ -1713,6 +1713,26 @@ make -j"$(nproc)"
      (`H5TESTXPR-btree2`, `H5TEST-big`, `H5TEST-cache`) — not to paper over slowness (there is
      none), but because at `HDF_TEST_EXPRESS=0` (exhaustive, n=100) a genuine full run would exceed
      the 1200s default the same way those tests do. At the configured express=3 the test is fast.
+   - **Follow-up: the scenarios are now individual ctest tests.** `test_vfd_swmr.sh` accepts a
+     scenario name (`few_big`, `groups`, `zoo`, …), so `test/ShellTests.cmake` now registers each as
+     its own `H5SHELL-test_vfd_swmr-<scenario>` ctest test (13 always-available + exhaustive-only
+     ones gated on `HDF_TEST_EXPRESS=0`), replacing the single monolithic test, for granular CI
+     reporting. They share a `RESOURCE_LOCK vfd_swmr_h5test_dir` because several communicate over a
+     fixed socket port (`DEFAULT_PORT` = 42424 in `vfd_swmr_common.c`) and share the working dir /
+     message filenames, so they must never run concurrently.
+
+   **Caution for future stress testing (a rabbit hole worth not re-entering):** these socket-based
+   tests use a *fixed* port with no writer/reader startup handshake, so they are fragile to being
+   run **manually in rapid succession** — a `timeout`-killed manual run **orphans** the backgrounded
+   `writer`/`reader` children (the shell parent dies, the `&` children don't), and an orphan holding
+   port 42424 makes every subsequent run fail with `"error binding server socket"`. During this
+   session that exact artifact produced a **false positive** — a manual `groups` run appeared to
+   fail, and a same-machine reference run "confirmed" it, but **both were contaminated by one
+   orphaned `vfd_swmr_group_writer` of ours holding the port**. Run through `ctest` (which tears down
+   process groups cleanly) `groups` passes in ~20s, as does every scenario. Lesson: for manual
+   repro of these tests, verify `ss -tan | grep :42424` is clear and `pkill -9 -f vfd_swmr` between
+   runs; prefer driving them via `ctest` so teardown is handled. No real groups bug exists in either
+   tree.
 6. ~~**Fix the v2 B-tree header pinning bug**~~ **DONE — see "The fix, implemented and verified"
    under item 4 above.** Implemented the architecturally-correct fix (a `refresh` callback for the
    v2 B-tree header cache class), plus the two coordinated changes it required (maintaining the new
