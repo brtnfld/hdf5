@@ -923,6 +923,11 @@ H5B2_remove(H5B2_t *bt2, void *udata, H5B2_remove_t op, void *op_data)
 
             assert((uint16_t)(hdr->depth - depth_decreased) < hdr->depth);
             hdr->depth = (uint16_t)(hdr->depth - depth_decreased);
+
+            /* The factories just freed above were the highest allocated
+             * level, so lower the high-water mark in step with depth (see
+             * the field's comment in H5B2pkg.h). */
+            hdr->node_info_depth_alloc = hdr->depth;
         } /* end for */
     }     /* end if */
     else {
@@ -1001,6 +1006,11 @@ H5B2_remove_by_idx(H5B2_t *bt2, H5_iter_order_t order, hsize_t idx, H5B2_remove_
 
             assert((uint16_t)(hdr->depth - depth_decreased) < hdr->depth);
             hdr->depth = (uint16_t)(hdr->depth - depth_decreased);
+
+            /* The factories just freed above were the highest allocated
+             * level, so lower the high-water mark in step with depth (see
+             * the field's comment in H5B2pkg.h). */
+            hdr->node_info_depth_alloc = hdr->depth;
         } /* end for */
     }     /* end if */
     else {

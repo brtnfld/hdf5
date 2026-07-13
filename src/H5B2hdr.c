@@ -83,16 +83,24 @@ H5FL_SEQ_DEFINE_STATIC(size_t);
 H5FL_SEQ_DEFINE(H5B2_node_info_t);
 
 /*-------------------------------------------------------------------------
- * Function:	H5B2__hdr_init
+ * Function:	H5B2__hdr_compute_node_info
  *
- * Purpose:	Allocate & initialize B-tree header info
+ * Purpose:	Build hdr->node_info[]/hdr->nat_off[]/hdr->max_nrec_size from
+ *              hdr->depth/node_size/rrec_size/split_percent/merge_percent/cls,
+ *              which must already be set on hdr. Extracted from
+ *              H5B2__hdr_init() so the VFD SWMR 'refresh' callback
+ *              (H5B2__cache_hdr_refresh(), src/H5B2cache.c) can rebuild these
+ *              depth-derived tables in place when a reader picks up a
+ *              writer's tree-depth change, without re-running the rest of
+ *              H5B2__hdr_init()'s one-time setup (page buffer, callback
+ *              context, etc).
  *
  * Return:	Non-negative on success/Negative on failure
  *
  *-------------------------------------------------------------------------
  */
 herr_t
-H5B2__hdr_init(H5B2_hdr_t *hdr, const H5B2_create_t *cparam, void *ctx_udata, uint16_t depth)
+H5B2__hdr_compute_node_info(H5B2_hdr_t *hdr)
 {
     size_t   sz_max_nrec;         /* Temporary variable for range checking */
     unsigned u_max_nrec_size;     /* Temporary variable for range checking */
@@ -105,32 +113,15 @@ H5B2__hdr_init(H5B2_hdr_t *hdr, const H5B2_create_t *cparam, void *ctx_udata, ui
      * Check arguments.
      */
     assert(hdr);
-    assert(cparam);
-    assert(cparam->cls);
-    assert((cparam->cls->crt_context && cparam->cls->dst_context) ||
-           (NULL == cparam->cls->crt_context && NULL == cparam->cls->dst_context));
-    assert(cparam->node_size > 0);
-    assert(cparam->rrec_size > 0);
-    assert(cparam->merge_percent > 0 && cparam->merge_percent <= 100);
-    assert(cparam->split_percent > 0 && cparam->split_percent <= 100);
-    assert(cparam->merge_percent < (cparam->split_percent / 2));
 
-    /* Assign dynamic information */
-    hdr->depth = depth;
-
-    /* Assign user's information */
-    hdr->split_percent = cparam->split_percent;
-    hdr->merge_percent = cparam->merge_percent;
-    hdr->node_size     = cparam->node_size;
-    hdr->rrec_size     = cparam->rrec_size;
-
-    /* Assign common type information */
-    hdr->cls = cparam->cls;
-
-    /* Allocate "page" for node I/O */
-    if (NULL == (hdr->page = H5FL_BLK_MALLOC(node_page, hdr->node_size)))
-        HGOTO_ERROR(H5E_BTREE, H5E_NOSPACE, FAIL, "memory allocation failed");
-    memset(hdr->page, 0, hdr->node_size);
+    /* Set the allocated-levels high-water mark to the target depth up
+     * front (matching hdr->depth, already set by the caller), not after
+     * the loop below succeeds -- so that if this function fails partway
+     * through, H5B2__hdr_free_node_info()'s cleanup walks the same bound
+     * this function intended to build, exactly as it always has (this
+     * mirrors hdr->depth itself already being set to its final value
+     * before this function is ever called). */
+    hdr->node_info_depth_alloc = hdr->depth;
 
     /* Allocate array of node info structs */
     if (NULL == (hdr->node_info = H5FL_SEQ_MALLOC(H5B2_node_info_t, (size_t)(hdr->depth + 1))))
@@ -165,8 +156,8 @@ H5B2__hdr_init(H5B2_hdr_t *hdr, const H5B2_create_t *cparam, void *ctx_udata, ui
     assert(hdr->max_nrec_size <= H5B2_SIZEOF_RECORDS_PER_NODE);
 
     /* Initialize internal node info */
-    if (depth > 0) {
-        for (u = 1; u < (unsigned)(depth + 1); u++) {
+    if (hdr->depth > 0) {
+        for (u = 1; u < (unsigned)(hdr->depth + 1); u++) {
             sz_max_nrec = H5B2_NUM_INT_REC(hdr, u);
             H5_CHECKED_ASSIGN(hdr->node_info[u].max_nrec, unsigned, sz_max_nrec, size_t);
             assert(hdr->node_info[u].max_nrec <= hdr->node_info[u - 1].max_nrec);
@@ -189,6 +180,219 @@ H5B2__hdr_init(H5B2_hdr_t *hdr, const H5B2_create_t *cparam, void *ctx_udata, ui
                             "can't create internal 'branch' node node pointer block factory");
         } /* end for */
     }     /* end if */
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5B2__hdr_compute_node_info() */
+
+/*-------------------------------------------------------------------------
+ * Function:	H5B2__hdr_free_node_info
+ *
+ * Purpose:	Free hdr->node_info[]/hdr->nat_off[] (including each node
+ *              info entry's free-list factories) and set both pointers back
+ *              to NULL. Extracted from H5B2__hdr_free() for the same reason
+ *              as H5B2__hdr_compute_node_info() above -- reused by the VFD
+ *              SWMR 'refresh' callback to tear down the OLD depth-derived
+ *              tables after successfully building new ones for a changed
+ *              depth.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5B2__hdr_free_node_info(H5B2_hdr_t *hdr)
+{
+    herr_t ret_value = SUCCEED; /* Return value */
+
+    FUNC_ENTER_PACKAGE
+
+    /*
+     * Check arguments.
+     */
+    assert(hdr);
+
+    /* Free the array of offsets into the native key block */
+    if (hdr->nat_off)
+        hdr->nat_off = H5FL_SEQ_FREE(size_t, hdr->nat_off);
+
+    /* Release the node info */
+    if (hdr->node_info) {
+        unsigned u; /* Local index variable */
+
+        /* Destroy free list factories. Iterate up to node_info_depth_alloc,
+         * not depth: depth tracks the tree's current logical depth (which
+         * H5B2__cache_hdr_refresh() may have set lower than what was ever
+         * actually allocated), while node_info_depth_alloc is the
+         * monotonically-nondecreasing high-water mark of how many levels'
+         * factories genuinely exist and need releasing. */
+        for (u = 0; u < (unsigned)(hdr->node_info_depth_alloc + 1); u++) {
+            if (hdr->node_info[u].nat_rec_fac)
+                if (H5FL_fac_term(hdr->node_info[u].nat_rec_fac) < 0)
+                    HGOTO_ERROR(H5E_BTREE, H5E_CANTRELEASE, FAIL,
+                                "can't destroy node's native record block factory");
+            if (hdr->node_info[u].node_ptr_fac)
+                if (H5FL_fac_term(hdr->node_info[u].node_ptr_fac) < 0)
+                    HGOTO_ERROR(H5E_BTREE, H5E_CANTRELEASE, FAIL,
+                                "can't destroy node's node pointer block factory");
+        } /* end for */
+
+        /* Free the array of node info structs */
+        hdr->node_info = H5FL_SEQ_FREE(H5B2_node_info_t, hdr->node_info);
+    } /* end if */
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5B2__hdr_free_node_info() */
+
+/*-------------------------------------------------------------------------
+ * Function:	H5B2__hdr_extend_node_info
+ *
+ * Purpose:	Grow hdr->node_info[] to cover a larger depth than it
+ *              currently does, WITHOUT touching any existing entry
+ *              (0..hdr->depth). Used by the VFD SWMR 'refresh' callback
+ *              (H5B2__cache_hdr_refresh(), src/H5B2cache.c) when a reader
+ *              picks up a writer's tree-depth increase.
+ *
+ *              This is deliberately NOT "free the old table and rebuild
+ *              from scratch": each node_info[u] entry owns free-list
+ *              factories (nat_rec_fac/node_ptr_fac) that may still have
+ *              live allocations outstanding -- backing memory for
+ *              leaf/internal node cache entries at that level that are
+ *              still resident in the reader's cache (confirmed the hard
+ *              way: an earlier free-then-rebuild version of this failed
+ *              with "factory still has objects allocated" the first time
+ *              a real depth change was exercised, since existing node
+ *              entries at unchanged levels were still live when their
+ *              factories got torn down). Since node_info[u]'s value for
+ *              any existing level u depends only on u, node_size, and
+ *              rrec_size -- all invariant once the header is created --
+ *              existing entries never need to be recomputed, only new
+ *              ones appended. hdr->nat_off[] is independent of depth
+ *              entirely (always sized to the leaf level's max_nrec, which
+ *              never changes), so it is never touched here either.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5B2__hdr_extend_node_info(H5B2_hdr_t *hdr, uint16_t new_depth)
+{
+    H5B2_node_info_t *new_node_info;
+    size_t            sz_max_nrec;
+    unsigned          u_max_nrec_size;
+    unsigned          u;
+    herr_t            ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    assert(hdr);
+    assert(new_depth > hdr->depth);
+    assert(hdr->node_info);
+
+    /* Grow the array, preserving existing entries (and their factories)
+     * untouched. */
+    if (NULL == (new_node_info = H5FL_SEQ_REALLOC(H5B2_node_info_t, hdr->node_info,
+                                                   (size_t)(new_depth + 1))))
+        HGOTO_ERROR(H5E_BTREE, H5E_NOSPACE, FAIL, "memory allocation failed");
+    hdr->node_info = new_node_info;
+
+    /* Zero the newly-added entries before populating them (not just for the
+     * fields this function fills in): H5FL_SEQ_REALLOC does not zero new
+     * memory, so if H5FL_fac_init() fails partway through the loop below,
+     * H5B2__hdr_free_node_info() must not find garbage nat_rec_fac/
+     * node_ptr_fac pointers in the not-yet-reached entries beyond the
+     * failure point. */
+    memset(&hdr->node_info[hdr->depth + 1], 0,
+           (size_t)(new_depth - hdr->depth) * sizeof(H5B2_node_info_t));
+
+    /* This function may leave hdr->node_info partially filled on failure;
+     * set the high-water mark to the full target now (not after the loop
+     * succeeds) so H5B2__hdr_free_node_info()'s cleanup -- whether invoked
+     * from this function's own error path or much later at real header
+     * teardown -- always walks the entries actually zeroed/allocated
+     * above, not a stale, too-small bound. */
+    hdr->node_info_depth_alloc = new_depth;
+
+    /* Compute only the newly-added levels */
+    for (u = (unsigned)(hdr->depth + 1); u < (unsigned)(new_depth + 1); u++) {
+        sz_max_nrec = H5B2_NUM_INT_REC(hdr, u);
+        H5_CHECKED_ASSIGN(hdr->node_info[u].max_nrec, unsigned, sz_max_nrec, size_t);
+        assert(hdr->node_info[u].max_nrec <= hdr->node_info[u - 1].max_nrec);
+
+        hdr->node_info[u].split_nrec = (hdr->node_info[u].max_nrec * hdr->split_percent) / 100;
+        hdr->node_info[u].merge_nrec = (hdr->node_info[u].max_nrec * hdr->merge_percent) / 100;
+
+        hdr->node_info[u].cum_max_nrec =
+            ((hdr->node_info[u].max_nrec + 1) * hdr->node_info[u - 1].cum_max_nrec) +
+            hdr->node_info[u].max_nrec;
+        u_max_nrec_size = H5VM_limit_enc_size((uint64_t)hdr->node_info[u].cum_max_nrec);
+        H5_CHECKED_ASSIGN(hdr->node_info[u].cum_max_nrec_size, uint8_t, u_max_nrec_size, unsigned);
+
+        if (NULL == (hdr->node_info[u].nat_rec_fac =
+                         H5FL_fac_init(hdr->cls->nrec_size * hdr->node_info[u].max_nrec)))
+            HGOTO_ERROR(H5E_BTREE, H5E_CANTINIT, FAIL, "can't create node native key block factory");
+        if (NULL == (hdr->node_info[u].node_ptr_fac =
+                         H5FL_fac_init(sizeof(H5B2_node_ptr_t) * (hdr->node_info[u].max_nrec + 1))))
+            HGOTO_ERROR(H5E_BTREE, H5E_CANTINIT, FAIL,
+                        "can't create internal 'branch' node node pointer block factory");
+    } /* end for */
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5B2__hdr_extend_node_info() */
+
+/*-------------------------------------------------------------------------
+ * Function:	H5B2__hdr_init
+ *
+ * Purpose:	Allocate & initialize B-tree header info
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5B2__hdr_init(H5B2_hdr_t *hdr, const H5B2_create_t *cparam, void *ctx_udata, uint16_t depth)
+{
+    herr_t ret_value = SUCCEED; /* Return value */
+
+    FUNC_ENTER_PACKAGE
+
+    /*
+     * Check arguments.
+     */
+    assert(hdr);
+    assert(cparam);
+    assert(cparam->cls);
+    assert((cparam->cls->crt_context && cparam->cls->dst_context) ||
+           (NULL == cparam->cls->crt_context && NULL == cparam->cls->dst_context));
+    assert(cparam->node_size > 0);
+    assert(cparam->rrec_size > 0);
+    assert(cparam->merge_percent > 0 && cparam->merge_percent <= 100);
+    assert(cparam->split_percent > 0 && cparam->split_percent <= 100);
+    assert(cparam->merge_percent < (cparam->split_percent / 2));
+
+    /* Assign dynamic information */
+    hdr->depth = depth;
+
+    /* Assign user's information */
+    hdr->split_percent = cparam->split_percent;
+    hdr->merge_percent = cparam->merge_percent;
+    hdr->node_size     = cparam->node_size;
+    hdr->rrec_size     = cparam->rrec_size;
+
+    /* Assign common type information */
+    hdr->cls = cparam->cls;
+
+    /* Allocate "page" for node I/O */
+    if (NULL == (hdr->page = H5FL_BLK_MALLOC(node_page, hdr->node_size)))
+        HGOTO_ERROR(H5E_BTREE, H5E_NOSPACE, FAIL, "memory allocation failed");
+    memset(hdr->page, 0, hdr->node_size);
+
+    /* Build node_info[]/nat_off[]/max_nrec_size from depth/node_size/rrec_size */
+    if (H5B2__hdr_compute_node_info(hdr) < 0)
+        HGOTO_ERROR(H5E_BTREE, H5E_CANTINIT, FAIL, "can't compute v2 B-tree node info");
 
     /* Determine if we are doing SWMR writes.  Only enable for data chunks for now. */
     hdr->swmr_write = (H5F_INTENT(hdr->f) & H5F_ACC_SWMR_WRITE) > 0 &&
@@ -586,29 +790,9 @@ H5B2__hdr_free(H5B2_hdr_t *hdr)
     if (hdr->page)
         hdr->page = H5FL_BLK_FREE(node_page, hdr->page);
 
-    /* Free the array of offsets into the native key block */
-    if (hdr->nat_off)
-        hdr->nat_off = H5FL_SEQ_FREE(size_t, hdr->nat_off);
-
-    /* Release the node info */
-    if (hdr->node_info) {
-        unsigned u; /* Local index variable */
-
-        /* Destroy free list factories */
-        for (u = 0; u < (unsigned)(hdr->depth + 1); u++) {
-            if (hdr->node_info[u].nat_rec_fac)
-                if (H5FL_fac_term(hdr->node_info[u].nat_rec_fac) < 0)
-                    HGOTO_ERROR(H5E_BTREE, H5E_CANTRELEASE, FAIL,
-                                "can't destroy node's native record block factory");
-            if (hdr->node_info[u].node_ptr_fac)
-                if (H5FL_fac_term(hdr->node_info[u].node_ptr_fac) < 0)
-                    HGOTO_ERROR(H5E_BTREE, H5E_CANTRELEASE, FAIL,
-                                "can't destroy node's node pointer block factory");
-        } /* end for */
-
-        /* Free the array of node info structs */
-        hdr->node_info = H5FL_SEQ_FREE(H5B2_node_info_t, hdr->node_info);
-    } /* end if */
+    /* Free node_info[]/nat_off[] (and each node info entry's free-list factories) */
+    if (H5B2__hdr_free_node_info(hdr) < 0)
+        HGOTO_ERROR(H5E_BTREE, H5E_CANTRELEASE, FAIL, "can't free v2 B-tree node info");
 
     /* Release the min & max record info, if set */
     if (hdr->min_native_rec)

@@ -1654,6 +1654,18 @@ H5F__dest(H5F_t *f, bool flush, bool free_on_failure)
         if (f->shared->vfd_swmr) {
             if (H5F_vfd_swmr_remove_entry_eot(f) < 0)
                 HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "unable to remove entry from EOT queue");
+
+            /* Free the shadow index arrays. For the writer these were
+             * already freed (and NULLed) in H5F_vfd_swmr_close_or_flush()
+             * above; H5MM_xfree() on NULL is a no-op. But a VFD SWMR *reader*
+             * never runs that writer-only path, yet H5F_vfd_swmr_reader_end_of_tick()
+             * allocates the very same arrays via H5F__vfd_swmr_create_index()/
+             * H5F_vfd_swmr_enlarge_shadow_index() -- so without this, every
+             * reader leaks its shadow index at close (confirmed via valgrind:
+             * 4.6MB for a many-tick reader, independent of chunk-index type).
+             */
+            f->shared->mdf_idx     = (H5FD_vfd_swmr_idx_entry_t *)H5MM_xfree(f->shared->mdf_idx);
+            f->shared->old_mdf_idx = (H5FD_vfd_swmr_idx_entry_t *)H5MM_xfree(f->shared->old_mdf_idx);
         }
 
         /* Clean up the cached VOL connector ID & info */

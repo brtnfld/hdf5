@@ -639,15 +639,159 @@ done:
  *-------------------------------------------------------------------------
  */
 
+/*-------------------------------------------------------------------------
+ * Function:    H5C__refresh_entry
+ *
+ * Purpose:     VFD SWMR reader helper: re-read a pinned entry's on-disk
+ *              image and call its type's 'refresh' callback to decode the
+ *              image into the existing entry in place (as opposed to
+ *              evicting it).
+ *
+ *              Extracted from H5C_evict_or_refresh_all_entries_in_page()
+ *              (the only site that needs this when a pinned, refresh-
+ *              capable entry's own page goes stale) so that
+ *              H5C_evict_tagged_entries() (src/H5Ctag.c) can also use it:
+ *              that function's tagged-eviction sledgehammer can encounter
+ *              the SAME pinned, refresh-capable entry as a side effect of
+ *              evicting some other entry sharing its tag (one lacking a
+ *              refresh callback), and today has no way to leave a
+ *              refreshable entry refreshed-and-pinned rather than failing
+ *              outright with "Pinned entries still need evicted?!".
+ *
+ *              Caller must have already confirmed entry_ptr->type->refresh
+ *              is non-NULL.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5C__refresh_entry(H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_ptr, uint64_t tick)
+{
+    size_t   image_len;
+    size_t   original_image_len;
+    void    *image_ptr     = NULL;
+    void    *new_image_ptr = NULL;
+    herr_t   ret_value     = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    assert(f);
+    assert(cache_ptr);
+    assert(entry_ptr);
+    assert(entry_ptr->is_pinned);
+    assert(entry_ptr->type->refresh);
+
+    /* 1) Get the on disk size of the entry.  Since the
+     *    the entry is already loaded, we can use the
+     *    size listed in the entry.
+     *
+     *    This will almost always be correct, but we
+     *    allow a second try as it is possible that the
+     *    version of the entry may change on the writer.
+     */
+    image_len          = entry_ptr->size;
+    original_image_len = image_len;
+
+    /* 2) Allocate and read the buffer.
+     *
+     *    Note that this will be satisfied from the metadata
+     *    file via the VFD SWMR reade VFD.
+     *
+     *    For this reason, we don't need to check for reads
+     *    past the EOA.  Torn reads and checksums are also
+     *    not an issue, since pages in the metadata file
+     *    are checksummed and re-tried if necessary in the
+     *    VFD SWMR reader VFD.
+     */
+    if (NULL == (image_ptr = (uint8_t *)H5MM_malloc(image_len + H5C_IMAGE_EXTRA_SPACE)))
+
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "memory allocation failed for image buffer");
+
+#if H5C_DO_MEMORY_SANITY_CHECKS
+    memcpy(image_ptr + image_len, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
+#endif /* H5C_DO_MEMORY_SANITY_CHECKS */
+
+    H5C__SET_PB_READ_HINTS(cache_ptr, entry_ptr->type, true)
+
+    if (H5F_block_read(f, entry_ptr->type->mem_type, entry_ptr->addr, image_len, image_ptr) < 0) {
+
+        H5C__RESET_PB_READ_HINTS(cache_ptr)
+        HGOTO_ERROR(H5E_CACHE, H5E_READERROR, FAIL, "Can't read image (1)");
+    }
+    H5C__RESET_PB_READ_HINTS(cache_ptr)
+
+    /* 3) Call the refresh callback.  If it doesn't
+     *    request a different image size, goto 6)
+     */
+    if (entry_ptr->type->refresh(f, (void *)entry_ptr, image_ptr, &image_len) < 0)
+
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTLOAD, FAIL, "Can't refresh entry (1)");
+    if (image_len != original_image_len) {
+
+        /* 4) If image_len has changed, re-allocate and re-read
+         *    the image.
+         *
+         *    Note: Generate a log entry in this case
+         */
+
+        if (NULL == (new_image_ptr = H5MM_realloc(image_ptr, image_len + H5C_IMAGE_EXTRA_SPACE)))
+
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "re-alloc of image buffer failed.");
+        image_ptr = new_image_ptr;
+
+#if H5C_DO_MEMORY_SANITY_CHECKS
+        memcpy(image_ptr + image_len, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
+#endif /* H5C_DO_MEMORY_SANITY_CHECKS */
+
+        H5C__SET_PB_READ_HINTS(cache_ptr, entry_ptr->type, true)
+
+        if (H5F_block_read(f, entry_ptr->type->mem_type, entry_ptr->addr, image_len, image_ptr) < 0) {
+
+            H5C__RESET_PB_READ_HINTS(cache_ptr)
+
+            HGOTO_ERROR(H5E_CACHE, H5E_READERROR, FAIL, "Can't read image (2)");
+        }
+        H5C__RESET_PB_READ_HINTS(cache_ptr)
+
+        /* 5) Call the refresh callback again.  Requesting
+         *    a different buffer size again is an error.
+         */
+        original_image_len = image_len;
+        if (entry_ptr->type->refresh(f, (void *)entry_ptr, image_ptr, &image_len) < 0)
+
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTLOAD, FAIL, "Can't refresh entry (2)");
+        if (image_len != original_image_len)
+
+            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "2nd refresh call changed image_len.");
+    }
+
+    /* 6) Mark the entry as having been looked at this
+     *    this tick to accooadate later sanity chackes.
+     */
+    entry_ptr->refreshed_in_tick = tick;
+
+    /* 7) Free the old image if it exists, and replace
+     *    it with the new image.
+     */
+    if (entry_ptr->image_ptr) {
+
+        entry_ptr->image_ptr = H5MM_xfree(entry_ptr->image_ptr);
+    }
+    entry_ptr->image_ptr = image_ptr;
+    image_ptr             = NULL;
+
+done:
+    if (image_ptr)
+        H5MM_xfree(image_ptr);
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5C__refresh_entry() */
+
 herr_t
 H5C_evict_or_refresh_all_entries_in_page(H5F_t *f, uint64_t page, uint32_t length, uint64_t tick)
 {
     int                i;
-    size_t             image_len;
-    size_t             original_image_len;
-    void              *image_ptr     = NULL;
-    void              *new_image_ptr = NULL;
-    unsigned           flush_flags   = (H5C__FLUSH_INVALIDATE_FLAG | H5C__FLUSH_CLEAR_ONLY_FLAG);
+    unsigned           flush_flags = (H5C__FLUSH_INVALIDATE_FLAG | H5C__FLUSH_CLEAR_ONLY_FLAG);
     haddr_t            tag;
     H5C_t             *cache_ptr = NULL;
     H5C_cache_entry_t *entry_ptr;
@@ -714,8 +858,15 @@ H5C_evict_or_refresh_all_entries_in_page(H5F_t *f, uint64_t page, uint32_t lengt
                     /* passing true for the match_global parameter.  Look
                      * into this and verify that it is the right thing to
                      * do.
+                     *
+                     * Pass true/tick so that if this tag's sweep encounters
+                     * some OTHER pinned entry that does have a refresh
+                     * callback (e.g. a v2 B-tree header sharing this tag
+                     * with a leaf/internal node that has none), that entry
+                     * gets refreshed in place instead of failing the whole
+                     * sweep -- see H5C__evict_tagged_entries_cb().
                      */
-                    if (H5C_evict_tagged_entries(f, tag, true) < 0)
+                    if (H5C_evict_tagged_entries(f, tag, true, true, tick) < 0)
 
                         HGOTO_ERROR(H5E_CACHE, H5E_CANTEXPUNGE, FAIL,
                                     "can't evict pinned and tagged entries");
@@ -727,123 +878,14 @@ H5C_evict_or_refresh_all_entries_in_page(H5F_t *f, uint64_t page, uint32_t lengt
                 else if (entry_ptr->type->refresh) {
 
                     /* If there is a refresh callback, use it to minimize
-                     * overhead.
-                     *
-                     * At present, the only refresh call is for the
-                     * superblock.  This is essential, as the superblock
-                     * is manually pinned for as long as the file is open,
-                     * and thus cannot be evicted.
-                     *
-                     * there may be other examples of this, but for the
-                     * prototype, we seem to be able to avoid them.
+                     * overhead, instead of evicting the entry.
                      */
+                    if (H5C__refresh_entry(f, cache_ptr, entry_ptr, tick) < 0)
+                        HGOTO_ERROR(H5E_CACHE, H5E_CANTLOAD, FAIL, "Can't refresh entry");
 
-                    /* 1) Get the on disk size of the entry.  Since the
-                     *    the entry is already loaded, we can use the
-                     *    size listed in the entry.
-                     *
-                     *    This will almost always be correct, but we
-                     *    allow a second try as it is possible that the
-                     *    version of the entry may change on the writer.
-                     */
-                    image_len          = entry_ptr->size;
-                    original_image_len = image_len;
-
-                    /* 2) Allocate and read the buffer.
-                     *
-                     *    Note that this will be satisfied from the metadata
-                     *    file via the VFD SWMR reade VFD.
-                     *
-                     *    For this reason, we don't need to check for reads
-                     *    past the EOA.  Torn reads and checksums are also
-                     *    not an issue, since pages in the metadata file
-                     *    are checksummed and re-tried if necessary in the
-                     *    VFD SWMR reader VFD.
-                     */
-                    if (NULL == (image_ptr = (uint8_t *)H5MM_malloc(image_len + H5C_IMAGE_EXTRA_SPACE)))
-
-                        HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL,
-                                    "memory allocation failed for image buffer");
-
-#if H5C_DO_MEMORY_SANITY_CHECKS
-                    memcpy(image_ptr + image_len, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
-#endif /* H5C_DO_MEMORY_SANITY_CHECKS */
-
-                    H5C__SET_PB_READ_HINTS(cache_ptr, entry_ptr->type, true)
-
-                    if (H5F_block_read(f, entry_ptr->type->mem_type, entry_ptr->addr, image_len, image_ptr) <
-                        0) {
-
-                        H5C__RESET_PB_READ_HINTS(cache_ptr)
-                        HGOTO_ERROR(H5E_CACHE, H5E_READERROR, FAIL, "Can't read image (1)");
-                    }
-                    H5C__RESET_PB_READ_HINTS(cache_ptr)
-
-                    /* 3) Call the refresh callback.  If it doesn't
-                     *    request a different image size, goto 6)
-                     */
-                    if (entry_ptr->type->refresh(f, (void *)entry_ptr, image_ptr, &image_len) < 0)
-
-                        HGOTO_ERROR(H5E_CACHE, H5E_CANTLOAD, FAIL, "Can't refresh entry (1)");
-                    if (image_len != original_image_len) {
-
-                        /* 4) If image_len has changed, re-allocate and re-read
-                         *    the image.
-                         *
-                         *    Note: Generate a log entry in this case
-                         */
-
-                        if (NULL ==
-                            (new_image_ptr = H5MM_realloc(image_ptr, image_len + H5C_IMAGE_EXTRA_SPACE)))
-
-                            HGOTO_ERROR(H5E_CACHE, H5E_CANTALLOC, FAIL, "re-alloc of image buffer failed.");
-                        image_ptr = new_image_ptr;
-
-#if H5C_DO_MEMORY_SANITY_CHECKS
-                        memcpy(image_ptr + image_len, H5C_IMAGE_SANITY_VALUE, H5C_IMAGE_EXTRA_SPACE);
-#endif /* H5C_DO_MEMORY_SANITY_CHECKS */
-
-                        H5C__SET_PB_READ_HINTS(cache_ptr, entry_ptr->type, true)
-
-                        if (H5F_block_read(f, entry_ptr->type->mem_type, entry_ptr->addr, image_len,
-                                           image_ptr) < 0) {
-
-                            H5C__RESET_PB_READ_HINTS(cache_ptr)
-
-                            HGOTO_ERROR(H5E_CACHE, H5E_READERROR, FAIL, "Can't read image (2)");
-                        }
-                        H5C__RESET_PB_READ_HINTS(cache_ptr)
-
-                        /* 5) Call the refresh callback again.  Requesting
-                         *    a different buffer size again is an error.
-                         */
-                        original_image_len = image_len;
-                        if (entry_ptr->type->refresh(f, (void *)entry_ptr, image_ptr, &image_len) < 0)
-
-                            HGOTO_ERROR(H5E_CACHE, H5E_CANTLOAD, FAIL, "Can't refresh entry (2)");
-                        if (image_len != original_image_len)
-
-                            HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "2nd refresh call changed image_len.");
-                    }
-
-                    /* 6) Mark the entry as having been looked at this
-                     *    this tick to accooadate later sanity chackes.
-                     */
-                    entry_ptr->refreshed_in_tick = tick;
-
-                    /* 7) Free the old image if it exists, and replace
-                     *    it with the new image.
-                     */
-                    if (entry_ptr->image_ptr) {
-
-                        entry_ptr->image_ptr = H5MM_xfree(entry_ptr->image_ptr);
-                    }
-                    entry_ptr->image_ptr = image_ptr;
-
-                    /* 8) Since *entry_ptr has been refreshed and not
-                     *    evicted, we can leave entry_ptr defined, and
-                     *    and continue the scan of the bucket from
-                     *    that point.
+                    /* *entry_ptr has been refreshed and not evicted, so we
+                     * can leave entry_ptr defined, and continue the scan of
+                     * the bucket from that point.
                      */
                 }
                 else {

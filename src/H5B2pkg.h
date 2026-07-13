@@ -152,6 +152,17 @@ typedef struct H5B2_hdr_t {
     /* Dynamic information (stored) */
     uint16_t depth; /* B-tree's overall depth                     */
 
+    /* VFD SWMR reader-refresh bookkeeping (not stored): the number of
+     * levels currently allocated in node_info[] (always >= depth). Grows
+     * monotonically via H5B2__hdr_extend_node_info() as a VFD SWMR reader
+     * picks up a writer's depth increases; unlike 'depth' itself (which
+     * tracks the tree's current logical depth and could in principle also
+     * decrease), this never shrinks, so H5B2__hdr_free_node_info() always
+     * knows the true extent of allocated node_info[]/factory entries to
+     * release, even if 'depth' ends up smaller than it was at some earlier
+     * point in the header's lifetime. */
+    uint16_t node_info_depth_alloc;
+
     /* Derived information from user's information (not stored) */
     uint8_t max_nrec_size; /* Size to store max. # of records in any node (in bytes) */
 
@@ -339,6 +350,9 @@ H5_DLL herr_t H5B2__merge3(H5B2_hdr_t *hdr, uint16_t depth, H5B2_node_ptr_t *cur
 H5_DLL H5B2_hdr_t *H5B2__hdr_alloc(H5F_t *f);
 H5_DLL haddr_t     H5B2__hdr_create(H5F_t *f, const H5B2_create_t *cparam, void *ctx_udata);
 H5_DLL herr_t H5B2__hdr_init(H5B2_hdr_t *hdr, const H5B2_create_t *cparam, void *ctx_udata, uint16_t depth);
+H5_DLL herr_t H5B2__hdr_compute_node_info(H5B2_hdr_t *hdr);
+H5_DLL herr_t H5B2__hdr_free_node_info(H5B2_hdr_t *hdr);
+H5_DLL herr_t H5B2__hdr_extend_node_info(H5B2_hdr_t *hdr, uint16_t new_depth);
 H5_DLL herr_t H5B2__hdr_incr(H5B2_hdr_t *hdr);
 H5_DLL herr_t H5B2__hdr_decr(H5B2_hdr_t *hdr);
 H5_DLL herr_t H5B2__hdr_fuse_incr(H5B2_hdr_t *hdr);

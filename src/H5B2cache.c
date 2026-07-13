@@ -65,6 +65,7 @@ static herr_t H5B2__cache_hdr_image_len(const void *thing, size_t *image_len);
 static herr_t H5B2__cache_hdr_serialize(const H5F_t *f, void *image, size_t len, void *thing);
 static herr_t H5B2__cache_hdr_notify(H5AC_notify_action_t action, void *thing);
 static herr_t H5B2__cache_hdr_free_icr(void *thing);
+static herr_t H5B2__cache_hdr_refresh(H5F_t *f, void *thing, const void *image, size_t *len_ptr);
 
 static herr_t H5B2__cache_int_get_initial_load_size(void *udata, size_t *image_len);
 static htri_t H5B2__cache_int_verify_chksum(const void *image_ptr, size_t len, void *udata);
@@ -102,7 +103,7 @@ const H5AC_class_t H5AC_BT2_HDR[1] = {{
     H5B2__cache_hdr_notify,                /* 'notify' callback */
     H5B2__cache_hdr_free_icr,              /* 'free_icr' callback */
     NULL,                                  /* 'fsf_size' callback */
-    NULL,                                  /* VFD SWMR 'refresh' callback */
+    H5B2__cache_hdr_refresh,               /* VFD SWMR 'refresh' callback */
 }};
 
 /* H5B2 inherits cache-like properties from H5AC */
@@ -307,6 +308,170 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5B2__cache_hdr_deserialize() */
+
+/*-------------------------------------------------------------------------
+ * Function:    H5B2__cache_hdr_refresh
+ *
+ * Purpose:     VFD SWMR reader callback: examine a freshly re-read v2
+ *              B-tree header image and update the live, pinned in-memory
+ *              header in place, instead of evicting it.
+ *
+ *              A v2 B-tree header used as a dataset's chunk index (2D+
+ *              chunk growth) is opened once and kept open -- and reference-
+ *              count-pinned via H5B2__hdr_incr() -- for the dataset's
+ *              entire lifetime (H5D__bt2_idx_open()/H5D__bt2_idx_close(),
+ *              src/H5Dbtree2.c). Without this callback,
+ *              H5C_evict_or_refresh_all_entries_in_page() has no way to
+ *              bring a stale, rc-pinned header up to date: its fallback,
+ *              H5C_evict_tagged_entries() (src/H5Ctag.c), can only unpin
+ *              entries pinned via a flush-dependency relationship, not a
+ *              plain reference-count pin, so it fails outright with
+ *              "Pinned entries still need evicted?!".
+ *
+ *              Most of the header's on-disk image never legitimately
+ *              changes post-creation (node_size, rrec_size, split/merge
+ *              percent, B-tree class) -- those are checked defensively
+ *              against the live header, since this decodes freshly
+ *              re-read bytes from a (possibly corrupted) shadow file, the
+ *              same posture H5B2__cache_hdr_deserialize() itself takes.
+ *              The two fields that DO legitimately change as the writer
+ *              inserts records are depth and the root node pointer.
+ *
+ *              A depth change is the tricky case: hdr->node_info[]/
+ *              hdr->nat_off[] are NOT part of the on-disk image -- they're
+ *              derived, sized to (old) depth, tables built once by
+ *              H5B2__hdr_init(). If depth grows (a root split) and this
+ *              callback only updated hdr->depth without rebuilding those
+ *              tables, later traversals would index them out of bounds --
+ *              worse than today's loud, safe error. So: build the new
+ *              tables first (via H5B2__hdr_compute_node_info(), the same
+ *              logic H5B2__hdr_init() itself uses), and only after that
+ *              succeeds, free the old ones (via H5B2__hdr_free_node_info())
+ *              -- never the reverse order, so a failure partway through
+ *              leaves the live header exactly as it was before the failed
+ *              refresh (a loud, safe HGOTO_ERROR) rather than a torn-down,
+ *              half-rebuilt header still in active use by a pinned entry.
+ *
+ * Return:      SUCCEED/FAIL
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5B2__cache_hdr_refresh(H5F_t H5_ATTR_UNUSED *f, void *_thing, const void *_image, size_t *len_ptr)
+{
+    H5B2_hdr_t          *hdr   = (H5B2_hdr_t *)_thing;
+    const uint8_t       *image = (const uint8_t *)_image;
+    const uint8_t        *end  = image + *len_ptr - 1;
+    H5B2_subid_t          id;
+    uint32_t              node_size;
+    uint16_t              rrec_size;
+    uint16_t              new_depth;
+    uint8_t               split_percent;
+    uint8_t               merge_percent;
+    H5B2_node_ptr_t        new_root;
+    uint32_t              stored_chksum;
+    herr_t                ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    assert(hdr);
+    assert(hdr->cache_info.type == H5AC_BT2_HDR);
+    assert(image);
+    assert(len_ptr);
+    assert(*len_ptr == hdr->hdr_size);
+
+    /* Magic number */
+    if (H5_IS_BUFFER_OVERFLOW(image, H5_SIZEOF_MAGIC, end))
+        HGOTO_ERROR(H5E_BTREE, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+    if (memcmp(image, H5B2_HDR_MAGIC, (size_t)H5_SIZEOF_MAGIC) != 0)
+        HGOTO_ERROR(H5E_BTREE, H5E_BADVALUE, FAIL, "wrong B-tree header signature");
+    image += H5_SIZEOF_MAGIC;
+
+    /* Version */
+    if (H5_IS_BUFFER_OVERFLOW(image, 1, end))
+        HGOTO_ERROR(H5E_BTREE, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+    if (*image++ != H5B2_HDR_VERSION)
+        HGOTO_ERROR(H5E_BTREE, H5E_BADRANGE, FAIL, "wrong B-tree header version");
+
+    /* B-tree class -- must never change post-creation */
+    if (H5_IS_BUFFER_OVERFLOW(image, 1, end))
+        HGOTO_ERROR(H5E_BTREE, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+    id = (H5B2_subid_t)*image++;
+    if (id != hdr->cls->id)
+        HGOTO_ERROR(H5E_BTREE, H5E_BADTYPE, FAIL, "v2 B-tree class changed underneath refresh");
+
+    /* Node size (in bytes) -- must never change post-creation */
+    if (H5_IS_BUFFER_OVERFLOW(image, 4, end))
+        HGOTO_ERROR(H5E_BTREE, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+    UINT32DECODE(image, node_size);
+    if (node_size != hdr->node_size)
+        HGOTO_ERROR(H5E_BTREE, H5E_BADVALUE, FAIL, "v2 B-tree node size changed underneath refresh");
+
+    /* Raw key size (in bytes) -- must never change post-creation */
+    if (H5_IS_BUFFER_OVERFLOW(image, 2, end))
+        HGOTO_ERROR(H5E_BTREE, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+    UINT16DECODE(image, rrec_size);
+    if (rrec_size != hdr->rrec_size)
+        HGOTO_ERROR(H5E_BTREE, H5E_BADVALUE, FAIL, "v2 B-tree raw record size changed underneath refresh");
+
+    /* Depth of tree -- legitimately changes as the writer splits/merges the root */
+    if (H5_IS_BUFFER_OVERFLOW(image, 2, end))
+        HGOTO_ERROR(H5E_BTREE, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+    UINT16DECODE(image, new_depth);
+
+    /* Split & merge %s -- must never change post-creation */
+    if (H5_IS_BUFFER_OVERFLOW(image, 2, end))
+        HGOTO_ERROR(H5E_BTREE, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+    split_percent = *image++;
+    merge_percent = *image++;
+    if (split_percent != hdr->split_percent)
+        HGOTO_ERROR(H5E_BTREE, H5E_BADVALUE, FAIL, "v2 B-tree split percent changed underneath refresh");
+    if (merge_percent != hdr->merge_percent)
+        HGOTO_ERROR(H5E_BTREE, H5E_BADVALUE, FAIL, "v2 B-tree merge percent changed underneath refresh");
+
+    /* Root node pointer -- legitimately changes on every insert/remove */
+    if (H5_IS_BUFFER_OVERFLOW(image, (size_t)hdr->sizeof_addr + 2 + hdr->sizeof_size, end))
+        HGOTO_ERROR(H5E_BTREE, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+    H5F_addr_decode(hdr->f, (const uint8_t **)&image, &new_root.addr);
+    UINT16DECODE(image, new_root.node_nrec);
+    H5F_DECODE_LENGTH(hdr->f, image, new_root.all_nrec);
+
+    /* Metadata checksum -- already verified upstream by verify_chksum */
+    if (H5_IS_BUFFER_OVERFLOW(image, 4, end))
+        HGOTO_ERROR(H5E_BTREE, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+    UINT32DECODE(image, stored_chksum);
+
+    /* Sanity check */
+    assert((size_t)(image - (const uint8_t *)_image) == hdr->hdr_size);
+
+    /* If the tree grew deeper, extend the depth-derived node_info[] table
+     * to cover the new levels (nat_off[] never depends on depth, so it's
+     * never touched here -- see H5B2__hdr_extend_node_info()'s header
+     * comment for why this must be grow-only, never free-and-rebuild:
+     * existing levels' free-list factories can have live allocations from
+     * leaf/internal node cache entries still resident in the reader's
+     * cache).
+     *
+     * If the tree instead got shallower (depth decreased -- not expected
+     * for the append-only growth this VFD SWMR reader path is exercised
+     * with today, but not assumed impossible either), node_info[] is
+     * already large enough from an earlier, deeper state; nothing needs
+     * reallocating; hdr->depth just tracks the smaller current value.
+     * The already-allocated higher levels' factories remain harmlessly in
+     * place (tracked by node_info_depth_alloc, not depth) until the header
+     * itself is finally closed.
+     */
+    if (new_depth > hdr->depth) {
+        if (H5B2__hdr_extend_node_info(hdr, new_depth) < 0)
+            HGOTO_ERROR(H5E_BTREE, H5E_CANTINIT, FAIL, "can't extend v2 B-tree node info on refresh");
+    }
+    hdr->depth = new_depth;
+
+    /* Always pick up the writer's current root */
+    hdr->root = new_root;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5B2__cache_hdr_refresh() */
 
 /*-------------------------------------------------------------------------
  * Function:    H5B2__cache_hdr_image_len

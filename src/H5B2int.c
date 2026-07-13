@@ -368,6 +368,11 @@ H5B2__split_root(H5B2_hdr_t *hdr)
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTINIT, FAIL,
                     "can't create internal 'branch' node node pointer block factory");
 
+    /* Track the highest allocated node_info[] level (see the field's comment
+     * in H5B2pkg.h). This normal write path keeps it equal to hdr->depth;
+     * only the VFD SWMR reader-refresh path lets it exceed depth. */
+    hdr->node_info_depth_alloc = hdr->depth;
+
     /* Keep old root node pointer info */
     old_root_ptr = hdr->root;
 

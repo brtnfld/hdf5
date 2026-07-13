@@ -145,8 +145,12 @@ elseif (UNIX)
 
     add_test (H5SHELL-test_vfd_swmr ${SH_PROGRAM} ${HDF5_TEST_BINARY_DIR}/H5TEST/test_vfd_swmr.sh)
     set_tests_properties (H5SHELL-test_vfd_swmr PROPERTIES
-            ENVIRONMENT "LD_LIBRARY_PATH=$ENV{LD_LIBRARY_PATH}:${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
+            # Forward the configured test-express level so the script honors it
+            # (it otherwise defaults to 1 = a heavier run than a HDF_TEST_EXPRESS=3
+            # build intends). Matches how the reference/autotools harness runs it.
+            ENVIRONMENT "LD_LIBRARY_PATH=$ENV{LD_LIBRARY_PATH}:${CMAKE_RUNTIME_OUTPUT_DIRECTORY};HDF5TestExpress=${HDF_TEST_EXPRESS}"
             WORKING_DIRECTORY ${HDF5_TEST_BINARY_DIR}/H5TEST
+            TIMEOUT ${CTEST_VERY_LONG_TIMEOUT}
     )
     if ("H5SHELL-test_vfd_swmr" MATCHES "${HDF5_DISABLE_TESTS_REGEX}")
       set_tests_properties (H5SHELL-test_vfd_swmr PROPERTIES DISABLED true)
