@@ -1,6 +1,18 @@
 # H5PB Page-Buffer Index: Hash Table vs. Skip List — Design Analysis
 
-**Status:** **DECIDED (skip-list).** This port is destined for HDF5 `develop`, so mainline
+**Status:** **REVERSED — now adopting the hash table.** This document originally recorded a
+decision to keep develop's skip-list index for mainline alignment (text below, unchanged, for
+the record). That decision has since been reversed: the "don't deviate from `develop`" premise
+did not hold up on review (the page buffer already carries ~72 VFD-SWMR conditionals; the project
+routinely merges deviations — ROS3's cache, the add-on VFD family, `6153`'s vendored TOML
+library), while every technical axis plus five independent corroborations (RFC, reader side,
+writer code, ROS3, buffer-pool literature) favor the hash table. See
+[`H5PB_restore_hashtable_plan.md`](H5PB_restore_hashtable_plan.md) for the migration plan. The
+original analysis and scorecard below remain accurate and are the evidence base for the reversal.
+
+---
+
+**Original status (superseded):** **DECIDED (skip-list).** This port is destined for HDF5 `develop`, so mainline
 alignment is the priority: keep develop's skip-list index and implement the VFD SWMR writer
 machinery (tick list + delayed-write list + the four stub functions) on top of it. Do **not**
 restore the hash-table page buffer. The hash table remains a documented, measure-first future
