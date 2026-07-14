@@ -19,23 +19,24 @@
 /***********/
 /* Headers */
 /***********/
-#include "H5private.h"   /* Generic Functions                        */
-#include "H5Aprivate.h"  /* Attributes                               */
-#include "H5ACprivate.h" /* Metadata cache                           */
-#include "H5CXprivate.h" /* API Contexts                             */
-#include "H5Dprivate.h"  /* Datasets                                 */
-#include "H5Eprivate.h"  /* Error handling                           */
-#include "H5Fpkg.h"      /* File access                              */
-#include "H5FDprivate.h" /* File drivers                             */
-#include "H5FLprivate.h" /* Free Lists                               */
-#include "H5Gprivate.h"  /* Groups                                   */
-#include "H5Iprivate.h"  /* IDs                                      */
-#include "H5MFprivate.h" /* File memory management                   */
-#include "H5MMprivate.h" /* Memory management                        */
-#include "H5Pprivate.h"  /* Property lists                           */
-#include "H5SMprivate.h" /* Shared Object Header Messages            */
-#include "H5Tprivate.h"  /* Datatypes                                */
-#include "H5VLprivate.h" /* Virtual Object Layer                     */
+#include "H5private.h"    /* Generic Functions                        */
+#include "H5Aprivate.h"   /* Attributes                               */
+#include "H5ACprivate.h"  /* Metadata cache                           */
+#include "H5CXprivate.h"  /* API Contexts                             */
+#include "H5Dprivate.h"   /* Datasets                                 */
+#include "H5Eprivate.h"   /* Error handling                           */
+#include "H5Fpkg.h"       /* File access                              */
+#include "H5FDprivate.h"  /* File drivers                             */
+#include "H5FDvfd_swmr.h" /* VFD SWMR file driver                    */
+#include "H5FLprivate.h"  /* Free Lists                               */
+#include "H5Gprivate.h"   /* Groups                                   */
+#include "H5Iprivate.h"   /* IDs                                      */
+#include "H5MFprivate.h"  /* File memory management                   */
+#include "H5MMprivate.h"  /* Memory management                        */
+#include "H5Pprivate.h"   /* Property lists                           */
+#include "H5SMprivate.h"  /* Shared Object Header Messages            */
+#include "H5Tprivate.h"   /* Datatypes                                */
+#include "H5VLprivate.h"  /* Virtual Object Layer                     */
 
 #include "H5VLnative_private.h" /* Native VOL connector                     */
 
@@ -1292,6 +1293,31 @@ H5F__new(H5F_shared_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5F
         if (H5P_get(plist, H5F_ACS_METADATA_READ_ATTEMPTS_NAME, &f->shared->read_attempts) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get the # of read attempts");
 
+        /* Copy the VFD SWMR configuration from the FAPL into the shared file
+         * structure so that H5F_VFD_SWMR_CONFIG() can detect it and
+         * H5F_vfd_swmr_init() can consume it later during open.
+         */
+        if (H5P_get(plist, H5F_ACS_VFD_SWMR_CONFIG_NAME, &f->shared->vfd_swmr_config) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get VFD SWMR config info");
+
+        /* -1 is the "no metadata file open" sentinel; 0 is a valid fd, so
+         * this must be set explicitly and cannot rely on H5FL_CALLOC's
+         * zero-init.  Checked at close time (H5F__dest) regardless of
+         * whether this file uses VFD SWMR at all.
+         */
+        f->shared->vfd_swmr_md_fd = -1;
+
+        /* H5FL_CALLOC's zero-init leaves tqh_last == NULL, but an empty
+         * tail queue requires tqh_last == &shadow_defrees.tqh_first (see
+         * TAILQ_HEAD_INITIALIZER() in H5queue.h) -- TAILQ_INSERT_HEAD()
+         * happens to repair this on the first insert, but
+         * H5F_update_vfd_swmr_metadata_file()'s reclaim scan calls
+         * TAILQ_LAST()/TAILQ_FOREACH_REVERSE_SAFE() as soon as
+         * tick_num > max_lag, which can be well before any entry is ever
+         * deferred, dereferencing the bad NULL and crashing.
+         */
+        TAILQ_INIT(&f->shared->shadow_defrees);
+
         /* When opening file with SWMR access, the # of read attempts is H5F_SWMR_METADATA_READ_ATTEMPTS if
          * not set */
         /* When opening file without SWMR access, the # of read attempts is always H5F_METADATA_READ_ATTEMPTS
@@ -1566,6 +1592,15 @@ H5F__dest(H5F_t *f, bool flush, bool free_on_failure)
             /* Push error, but keep going*/
             HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "problems closing file");
 
+        /* If this is a VFD SWMR writer, prep for flush or close.  Must run
+         * before the page buffer is torn down below, since it flushes any
+         * remaining tick-list/delayed-write entries through the page buffer.
+         */
+        if (f->shared->vfd_swmr && f->shared->vfd_swmr_writer &&
+            H5F_vfd_swmr_writer_prep_for_flush_or_close(f) < 0)
+            /* Push error, but keep going*/
+            HDONE_ERROR(H5E_IO, H5E_CANTFLUSH, FAIL, "vfd swmr prep for flush or close failed");
+
         /* Shutdown the page buffer cache */
         if (H5PB_dest(f->shared) < 0)
             /* Push error, but keep going*/
@@ -1606,6 +1641,32 @@ H5F__dest(H5F_t *f, bool flush, bool free_on_failure)
         if (H5I_dec_ref(f->shared->fcpl_id) < 0)
             /* Push error, but keep going*/
             HDONE_ERROR(H5E_FILE, H5E_CANTDEC, FAIL, "can't close property list");
+
+        /* VFD SWMR: closing down.  The writer finalizes/closes the metadata
+         * (shadow) file; both the writer and reader remove their entry from
+         * the end-of-tick (EOT) queue.
+         */
+        if ((H5F_ACC_RDWR & H5F_INTENT(f)) && f->shared->vfd_swmr_md_fd >= 0) {
+            if (H5F_vfd_swmr_close_or_flush(f, true) < 0)
+                HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "unable to close the metadata file");
+        }
+
+        if (f->shared->vfd_swmr) {
+            if (H5F_vfd_swmr_remove_entry_eot(f) < 0)
+                HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "unable to remove entry from EOT queue");
+
+            /* Free the shadow index arrays. For the writer these were
+             * already freed (and NULLed) in H5F_vfd_swmr_close_or_flush()
+             * above; H5MM_xfree() on NULL is a no-op. But a VFD SWMR *reader*
+             * never runs that writer-only path, yet H5F_vfd_swmr_reader_end_of_tick()
+             * allocates the very same arrays via H5F__vfd_swmr_create_index()/
+             * H5F_vfd_swmr_enlarge_shadow_index() -- so without this, every
+             * reader leaks its shadow index at close (confirmed via valgrind:
+             * 4.6MB for a many-tick reader, independent of chunk-index type).
+             */
+            f->shared->mdf_idx     = (H5FD_vfd_swmr_idx_entry_t *)H5MM_xfree(f->shared->mdf_idx);
+            f->shared->old_mdf_idx = (H5FD_vfd_swmr_idx_entry_t *)H5MM_xfree(f->shared->old_mdf_idx);
+        }
 
         /* Clean up the cached VOL connector ID & info */
         if (f->shared->vol_info)
@@ -1825,29 +1886,87 @@ done:
 herr_t
 H5F_open(bool try, H5F_t **_file, const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id)
 {
-    H5F_t             *file   = NULL; /*the success return value      */
-    H5F_shared_t      *shared = NULL; /*shared part of `file'         */
-    H5FD_t            *lf     = NULL; /*file driver part of `shared'  */
-    unsigned           tent_flags;    /*tentative flags               */
-    H5FD_class_t      *drvr;          /*file driver class info        */
-    H5P_genplist_t    *a_plist;       /*file access property list     */
-    H5F_close_degree_t fc_degree;     /*file close degree             */
-    size_t             page_buf_size;
-    unsigned           page_buf_min_meta_perc = 0;
-    unsigned           page_buf_min_raw_perc  = 0;
-    bool               set_flag               = false;  /*set the status_flags in the superblock */
-    bool               clear                  = false;  /*clear the status_flags         */
-    bool               evict_on_close;                  /* evict on close value from plist  */
-    bool               use_file_locking      = true;    /* Using file locks? */
-    bool               ignore_disabled_locks = false;   /* Ignore disabled file locks? */
-    bool               ci_load               = false;   /* whether MDC ci load requested */
-    bool               ci_write              = false;   /* whether MDC CI write requested */
-    herr_t             ret_value             = SUCCEED; /* Return value */
+    H5F_t                *file   = NULL; /*the success return value      */
+    H5F_shared_t         *shared = NULL; /*shared part of `file'         */
+    H5FD_t               *lf     = NULL; /*file driver part of `shared'  */
+    unsigned              tent_flags;    /*tentative flags               */
+    H5FD_class_t         *drvr;          /*file driver class info        */
+    H5P_genplist_t       *a_plist;       /*file access property list     */
+    H5F_close_degree_t    fc_degree;     /*file close degree             */
+    size_t                page_buf_size;
+    unsigned              page_buf_min_meta_perc = 0;
+    unsigned              page_buf_min_raw_perc  = 0;
+    bool                  set_flag               = false; /*set the status_flags in the superblock */
+    bool                  clear                  = false; /*clear the status_flags         */
+    bool                  evict_on_close;                 /* evict on close value from plist  */
+    bool                  use_file_locking      = true;   /* Using file locks? */
+    bool                  ignore_disabled_locks = false;  /* Ignore disabled file locks? */
+    bool                  ci_load               = false;  /* whether MDC ci load requested */
+    bool                  ci_write              = false;  /* whether MDC CI write requested */
+    bool                  file_create = false; /* TRUE iff this call created the file (fresh superblock) */
+    H5F_vfd_swmr_config_t vfd_swmr_config;     /* VFD SWMR config from the FAPL, if any */
+    bool                  vfd_swmr                = false;   /* TRUE iff opening file with VFD SWMR */
+    bool                  vfd_swmr_writer         = false;   /* TRUE iff opening as the VFD SWMR writer */
+    bool                  pop_vfd_swmr_reader_vfd = false;   /* set when the reader VFD was pushed below */
+    herr_t                ret_value               = SUCCEED; /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Reset 'out' parameter */
     *_file = NULL;
+
+    /* Get the file access property list, for future queries */
+    if (NULL == (a_plist = (H5P_genplist_t *)H5I_object(fapl_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not file access property list");
+
+    /* Check if we are using file locking */
+    if (H5F__check_if_using_file_locks(a_plist, &use_file_locking, &ignore_disabled_locks) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "unable to get file locking flags");
+
+    /* Check for a VFD SWMR configuration on the FAPL.  This must happen
+     * before H5FD_get_class() below: when opening as a VFD SWMR reader we
+     * push the read-only VFD SWMR VFD onto the FAPL's driver stack, which
+     * changes what H5FD_get_class() reports for 'drvr' (used just below to
+     * decide on a tentative open) and what H5FD_open() actually opens.
+     */
+    if (H5P_get(a_plist, H5F_ACS_VFD_SWMR_CONFIG_NAME, &vfd_swmr_config) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get VFD SWMR config info");
+
+    if (vfd_swmr_config.version) {
+        /* Legacy SWMR and VFD SWMR are incompatible. */
+        if ((flags & H5F_ACC_SWMR_WRITE) || (flags & H5F_ACC_SWMR_READ))
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL, "Legacy and VFD SWMR are incompatible");
+
+        /* Verify that file access flags are consistent with the VFD SWMR
+         * configuration's writer/reader role. */
+        if ((flags & H5F_ACC_RDWR) && !vfd_swmr_config.writer)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "file access is writer but VFD SWMR config is reader");
+        if (((flags & H5F_ACC_RDWR) == 0) && vfd_swmr_config.writer)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "file access is reader but VFD SWMR config is writer");
+
+        if (((flags & H5F_ACC_RDWR) == 0) && !vfd_swmr_config.writer) {
+            vfd_swmr = true;
+
+            /* Opening as a VFD SWMR reader: push the read-only VFD SWMR VFD
+             * onto the FAPL's driver stack.  Popped again at 'done' below.
+             */
+            if (H5P_push_vfd_swmr_reader_vfd_on_fapl(fapl_id) < 0)
+                HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't push VFD SWMR reader VFD on FAPL");
+            pop_vfd_swmr_reader_vfd = true;
+        }
+        else {
+            assert((flags & H5F_ACC_RDWR) && vfd_swmr_config.writer);
+            vfd_swmr        = true;
+            vfd_swmr_writer = true;
+        }
+    }
+
+    /* Turn off file locking unconditionally when opening as a VFD SWMR
+     * reader: the writer already holds the file open read-write, so a
+     * normal HDF5 file lock taken by the reader would conflict with it.
+     */
+    if (vfd_swmr && !vfd_swmr_writer)
+        use_file_locking = false;
 
     /*
      * If the driver has a 'cmp' method then the driver is capable of
@@ -1859,14 +1978,6 @@ H5F_open(bool try, H5F_t **_file, const char *name, unsigned flags, hid_t fcpl_i
      */
     if (NULL == (drvr = H5FD_get_class(fapl_id)))
         HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "unable to retrieve VFL class");
-
-    /* Get the file access property list, for future queries */
-    if (NULL == (a_plist = (H5P_genplist_t *)H5I_object(fapl_id)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not file access property list");
-
-    /* Check if we are using file locking */
-    if (H5F__check_if_using_file_locks(a_plist, &use_file_locking, &ignore_disabled_locks) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "unable to get file locking flags");
 
     /*
      * Opening a file is a two step process. First we try to open the
@@ -2094,6 +2205,7 @@ H5F_open(bool try, H5F_t **_file, const char *name, unsigned flags, hid_t fcpl_i
          * We've just opened a fresh new file (or truncated one). We need
          * to create & write the superblock.
          */
+        file_create = true;
 
         /* Create the page buffer before initializing the superblock */
         if (page_buf_size)
@@ -2132,14 +2244,68 @@ H5F_open(bool try, H5F_t **_file, const char *name, unsigned flags, hid_t fcpl_i
             page_buf_size = shared->fs_page_size;
 
         /* Create the page buffer *after* reading the superblock */
-        if (page_buf_size)
+        if (page_buf_size) {
             if (H5PB_create(shared, page_buf_size, page_buf_min_meta_perc, page_buf_min_raw_perc) < 0)
                 HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to create page buffer");
+        }
 
         /* Open the root group */
         if (H5G_mkroot(file, false) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL, "unable to read root group");
     } /* end if */
+
+    /* VFD SWMR: perform writer/reader initialization and register this file
+     * on the end-of-tick (EOT) queue.  Must happen after the page buffer,
+     * superblock, and root group are established above, since
+     * H5F_vfd_swmr_init() allocates space in the file for the metadata file
+     * index (writer case).  shared->nrefs == 1 gates the one-time
+     * initialization so re-opening an already-open shared file doesn't
+     * re-init.
+     */
+    if (H5F_VFD_SWMR_CONFIG(file)) {
+        /* Set up the VFD SWMR log file, if one was configured */
+        if (strlen(shared->vfd_swmr_config.log_file_path) > 0)
+            shared->vfd_swmr_log_on = true;
+        if (shared->vfd_swmr_log_on) {
+            if ((shared->vfd_swmr_log_file_ptr = fopen(shared->vfd_swmr_config.log_file_path, "w")) == NULL)
+                HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL, "unable to create the log file");
+            if (H5_timer_init(&(shared->vfd_swmr_log_start_time)) < 0)
+                HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't initialize HDF5 timer");
+            if (H5_timer_start(&(shared->vfd_swmr_log_start_time)) < 0)
+                HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't obtain the time from the HDF5 timer");
+        }
+
+        /* Initialization for VFD SWMR writer and reader (once per shared file) */
+        if (1 == shared->nrefs) {
+            H5F_generate_md_ck_cb_t cb_info; /* VFD SWMR testing: metadata file checksum callback */
+
+            /* Private property for VFD SWMR testing: generate checksum for metadata file */
+            if (H5P_get(a_plist, H5F_ACS_GENERATE_MD_CK_CB_NAME, &cb_info) < 0)
+                HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get generate_md_ck_cb info");
+            if (cb_info.func)
+                shared->generate_md_ck_cb = cb_info.func;
+
+            if (H5F_vfd_swmr_init(file, file_create) < 0)
+                HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "file open fail with initialization for VFD SWMR");
+
+            /* Insert the entry that corresponds to this file onto the EOT
+             * queue.  Gated on nrefs == 1, matching H5F_vfd_swmr_init()
+             * above: a later H5F_open() that merely increments nrefs on an
+             * already-open shared file (e.g. a VDS opening its own source
+             * dataset via the external file cache) must not insert a second
+             * entry, since H5F__dest() only ever removes one entry, when
+             * the shared struct is *actually* destroyed at nrefs == 0. An
+             * unpaired extra insert previously leaked an eot_queue_entry_t
+             * per such re-open, confirmed via valgrind (VDS test: ~200
+             * entries, 11.2KB) and by inspecting eot_queue_g directly with
+             * gdb at H5_term_library() time -- non-empty even after every
+             * file in the test was closed, explaining the persistent
+             * "infinite loop closing library" warning for VDS-using tests.
+             */
+            if (H5F_vfd_swmr_insert_entry_eot(file) < 0)
+                HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "unable to insert entry into the EOT queue");
+        }
+    }
 
     /*
      * Decide the file close degree.  If it's the first time to open the
@@ -2206,7 +2372,14 @@ H5F_open(bool try, H5F_t **_file, const char *name, unsigned flags, hid_t fcpl_i
             } /* version 3 superblock */
 
             file->shared->sblock->status_flags |= H5F_SUPER_WRITE_ACCESS;
-            if (H5F_INTENT(file) & H5F_ACC_SWMR_WRITE)
+            /* A VFD SWMR writer doesn't set the legacy H5F_ACC_SWMR_WRITE
+             * flag either, but still needs H5F_SUPER_SWMR_WRITE_ACCESS set
+             * so that a VFD SWMR reader's own consistency check above (and
+             * a future writer's "already open" check) see WRITE_ACCESS and
+             * SWMR_WRITE_ACCESS agreeing, rather than looking like a
+             * non-SWMR writer left the file in an inconsistent state.
+             */
+            if (H5F_INTENT(file) & H5F_ACC_SWMR_WRITE || H5F_USE_VFD_SWMR(file))
                 file->shared->sblock->status_flags |= H5F_SUPER_SWMR_WRITE_ACCESS;
 
             /* Flush the superblock & superblock extension */
@@ -2226,7 +2399,15 @@ H5F_open(bool try, H5F_t **_file, const char *name, unsigned flags, hid_t fcpl_i
         else { /* H5F_ACC_RDONLY: check consistency of status_flags */
             /* Skip check of status_flags for file with < superblock version 3 */
             if (file->shared->sblock->super_vers >= HDF5_SUPERBLOCK_VERSION_3) {
-                if (H5F_INTENT(file) & H5F_ACC_SWMR_READ) {
+                /* A VFD SWMR reader doesn't set the legacy H5F_ACC_SWMR_READ
+                 * flag (VFD-SWMR-ness is conveyed by the FAPL config, not an
+                 * access-mode bit), so it must be routed into the lenient
+                 * "SWMR consistency" branch below explicitly, or it always
+                 * falls into the strict branch and fails here every time a
+                 * VFD SWMR writer holds the file open -- which is the
+                 * expected, normal case.
+                 */
+                if (H5F_INTENT(file) & H5F_ACC_SWMR_READ || H5F_USE_VFD_SWMR(file)) {
                     if ((file->shared->sblock->status_flags & H5F_SUPER_WRITE_ACCESS &&
                          !(file->shared->sblock->status_flags & H5F_SUPER_SWMR_WRITE_ACCESS)) ||
                         (!(file->shared->sblock->status_flags & H5F_SUPER_WRITE_ACCESS) &&
@@ -2247,6 +2428,9 @@ H5F_open(bool try, H5F_t **_file, const char *name, unsigned flags, hid_t fcpl_i
     *_file = file;
 
 done:
+    if (pop_vfd_swmr_reader_vfd && H5P_pop_vfd_swmr_reader_vfd_off_fapl(fapl_id) < 0)
+        HDONE_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't pop VFD SWMR reader VFD off FAPL");
+
     if (ret_value < 0 && file)
         if (H5F__dest(file, false, true) < 0)
             HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "problems closing file");

@@ -35,7 +35,7 @@
  *               then call H5Literate to iterate through all the groups. The callback function just checks if
  *               the group name's prefix is valid.
  *               An #if 0 #endif block can help the user easily tune to check the iterated group names.
- *            4) HDclock_gettime is used to check the total time of H5Literate call.
+ *            4) clock_gettime is used to check the total time of H5Literate call.
  *            5) Close the HDF5 file.
  *
  *          The number of groups, the tick length, the max lag, the page buffer size, the page size and the
@@ -49,8 +49,8 @@
  *          The parameter numbers that can reproduce the issues are tested at jelly.
  * To duplicate the issues at other machines, the number of groups to be created should be different.
  *
- * Issue 1: HDassert(oent->length == nent->length) error.
- * Need to UNCOMMENT out the HDassert(oent->length == nent->length) at ../src/H5Fvfd_swmr.c.
+ * Issue 1: assert(oent->length == nent->length) error.
+ * Need to UNCOMMENT out the assert(oent->length == nent->length) at ../src/H5Fvfd_swmr.c.
  * May also modify the group number a bit to see the assertion error.
  *
  * GROUP_n=340000
@@ -104,6 +104,8 @@
 
 #define H5F_FRIEND /*suppress error about including H5Fpkg   */
 
+#include "H5private.h" /* Generic Functions -- must be included before other private headers, see H5Fsuper.c */
+
 #include "hdf5.h"
 
 #include "H5Fpkg.h"
@@ -148,31 +150,31 @@ herr_t op_func(hid_t loc_id, const char *name, const H5L_info_t *info, void *ope
 static void
 usage(const char *progname)
 {
-    HDfprintf(stderr,
-              "usage: %s [-S] [-G] [-n number_of_groups] \n"
-              "    [-N] [-d] [-q] [-T w_sleep_len] [-t tick_len] [-m max_lag][-B pbs] [-s ps]\n"
-              "    [-i, --ip_addr ip_address]\n"
-              "\n"
-              "-S:             do not use VFD SWMR\n"
-              "-G:             old-style type of group\n"
-              "-n ngroups:     the number of groups\n"
-              "-N:             do not use named pipes, \n"
-              "                mainly for running the writer and reader separately\n"
-              "-t tick_len:    length of a tick in tenths of a second.\n"
-              "-m max_lag:     maximum expected lag(in ticks) between writer and readers\n"
-              "-B pbs:         page buffer size in bytes:\n"
-              "                The default value is 4K(4096).\n"
-              "-s ps:          page size used by page aggregation, page buffer and \n"
-              "                the metadata file. The default value is 4K(4096).\n"
-              "-T w_sleep_len: Before closing the file, the sleep length in tenths of a second \n"
-              "                on the writer side. The default is 112 tenths of a second \n"
-              "                That is 4*max_lag*tick_len if tick_len is 4 and max_lag is 7. \n"
-              "-d del_grp:     true: delete 1000 groups after creating >1000 groups. \n"
-              "-i ip_address:  IP address of the writer (reader only) \n"
-              "-q:             silence printouts, few messages\n"
-              "\n",
-              progname);
-    HDexit(EXIT_FAILURE);
+    fprintf(stderr,
+            "usage: %s [-S] [-G] [-n number_of_groups] \n"
+            "    [-N] [-d] [-q] [-T w_sleep_len] [-t tick_len] [-m max_lag][-B pbs] [-s ps]\n"
+            "    [-i, --ip_addr ip_address]\n"
+            "\n"
+            "-S:             do not use VFD SWMR\n"
+            "-G:             old-style type of group\n"
+            "-n ngroups:     the number of groups\n"
+            "-N:             do not use named pipes, \n"
+            "                mainly for running the writer and reader separately\n"
+            "-t tick_len:    length of a tick in tenths of a second.\n"
+            "-m max_lag:     maximum expected lag(in ticks) between writer and readers\n"
+            "-B pbs:         page buffer size in bytes:\n"
+            "                The default value is 4K(4096).\n"
+            "-s ps:          page size used by page aggregation, page buffer and \n"
+            "                the metadata file. The default value is 4K(4096).\n"
+            "-T w_sleep_len: Before closing the file, the sleep length in tenths of a second \n"
+            "                on the writer side. The default is 112 tenths of a second \n"
+            "                That is 4*max_lag*tick_len if tick_len is 4 and max_lag is 7. \n"
+            "-d del_grp:     true: delete 1000 groups after creating >1000 groups. \n"
+            "-i ip_address:  IP address of the writer (reader only) \n"
+            "-q:             silence printouts, few messages\n"
+            "\n",
+            progname);
+    exit(EXIT_FAILURE);
 }
 
 #ifdef H5_USE_SOCKETS
@@ -199,18 +201,18 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
     s->pbs               = 4096;
     s->del_grp           = false;
 
-    HDmemset(s->filename, 0, PATH_MAX);
-    HDmemset(s->progname, 0, PATH_MAX);
+    memset(s->filename, 0, PATH_MAX);
+    memset(s->progname, 0, PATH_MAX);
 
     if (H5_basename(argv[0], &tfile) < 0) {
-        HDprintf("H5_basename failed\n");
+        printf("H5_basename failed\n");
         TEST_ERROR;
     }
 
     esnprintf(s->progname, sizeof(s->progname), "%s", tfile);
 
     if (tfile) {
-        HDfree(tfile);
+        free(tfile);
         tfile = NULL;
     }
 
@@ -236,17 +238,17 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
             case 's':
 
                 errno = 0;
-                tmp   = HDstrtoul(optarg, &end, 0);
+                tmp   = strtoul(optarg, &end, 0);
                 if (end == optarg || *end != '\0') {
-                    HDprintf("couldn't parse `-%c` argument `%s`\n", ch, optarg);
+                    printf("couldn't parse `-%c` argument `%s`\n", ch, optarg);
                     TEST_ERROR;
                 }
                 else if (errno != 0) {
-                    HDprintf("couldn't parse `-%c` argument `%s`\n", ch, optarg);
+                    printf("couldn't parse `-%c` argument `%s`\n", ch, optarg);
                     TEST_ERROR;
                 }
                 else if (tmp > UINT_MAX) {
-                    HDprintf("`-%c` argument `%lu` too large\n", ch, tmp);
+                    printf("`-%c` argument `%lu` too large\n", ch, tmp);
                     TEST_ERROR;
                 }
 
@@ -264,8 +266,8 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
                     s->ps = (unsigned)tmp;
                 break;
             case 'i':
-                if (HDstrlen(optarg) >= MAX_IP_ADDR_LEN) {
-                    HDfprintf(stderr, "-i argument %s is too long\n", optarg);
+                if (strlen(optarg) >= MAX_IP_ADDR_LEN) {
+                    fprintf(stderr, "-i argument %s is too long\n", optarg);
                     TEST_ERROR;
                 }
                 sock->ip_address = optarg;
@@ -283,13 +285,13 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
     argv += optind;
 
     if (argc > 0) {
-        HDprintf("unexpected command-line arguments\n");
+        printf("unexpected command-line arguments\n");
         TEST_ERROR;
     }
 
     /* space for attributes */
     if ((s->one_by_one_sid = H5Screate_simple(1, &dims, &dims)) < 0) {
-        HDprintf("H5Screate_simple failed\n");
+        printf("H5Screate_simple failed\n");
         TEST_ERROR;
     }
 
@@ -298,7 +300,7 @@ state_init(state_t *s, socket_state_t *sock, int argc, char **argv)
     return true;
 
 error:
-    HDfree(tfile);
+    free(tfile);
 
     return false;
 } /* state_init() */
@@ -322,7 +324,7 @@ sock_wr_send_receive(state_t *s, socket_state_t *sock)
     /* Bump up the value of notify to notice the reader to start to read */
     sock->notify++;
     if (send(sock->comm_fd, &(sock->notify), sizeof(int), 0) < 0) {
-        HDprintf("send failed\n");
+        printf("send failed\n");
         TEST_ERROR;
     }
 
@@ -337,17 +339,17 @@ sock_wr_send_receive(state_t *s, socket_state_t *sock)
      * going to the next step */
     (sock->verify)++;
     if (recv(sock->comm_fd, &(sock->notify), sizeof(int), 0) < 0) {
-        HDprintf("recv failed\n");
+        printf("recv failed\n");
         TEST_ERROR;
     }
 
     if (sock->notify == -1) {
-        HDprintf("reader failed to verify group or attribute operation.\n");
+        printf("reader failed to verify group or attribute operation.\n");
         TEST_ERROR;
     }
 
     if (sock->notify != sock->verify) {
-        HDprintf("received message %d, expecting %d\n", sock->notify, sock->verify);
+        printf("received message %d, expecting %d\n", sock->notify, sock->verify);
         TEST_ERROR;
     }
 
@@ -379,17 +381,17 @@ sock_rd_receive(socket_state_t *sock)
 
     /* Receive the notify that the writer bumped up the value */
     if (recv(sock->comm_fd, &(sock->notify), sizeof(int), 0) < 0) {
-        HDprintf("recv failed\n");
+        printf("recv failed\n");
         TEST_ERROR;
     }
 
     if (sock->notify == -1) {
-        HDprintf("writer failed to create group or carry out an attribute operation.\n");
+        printf("writer failed to create group or carry out an attribute operation.\n");
         TEST_ERROR;
     }
 
     if (sock->notify != sock->verify) {
-        HDprintf("received message %d, expecting %d\n", sock->notify, sock->verify);
+        printf("received message %d, expecting %d\n", sock->notify, sock->verify);
         TEST_ERROR;
     }
 
@@ -413,7 +415,7 @@ sock_rd_send(socket_state_t *sock)
     if (send(sock->comm_fd, &(sock->notify), sizeof(int), 0) < 0) {
         H5_FAILED();
         AT();
-        HDprintf("send failed\n");
+        printf("send failed\n");
         return false;
     }
     else
@@ -438,7 +440,7 @@ sock_send_error(socket_state_t *sock)
     if (send(sock->comm_fd, &(sock->notify), sizeof(int), 0) < 0) {
         H5_FAILED();
         AT();
-        HDprintf("send failed\n");
+        printf("send failed\n");
         return false;
     }
     else
@@ -472,18 +474,18 @@ state_init(state_t *s, int argc, char **argv)
     s->np_notify         = 0;
     s->np_verify         = 0;
 
-    HDmemset(s->filename, 0, PATH_MAX);
-    HDmemset(s->progname, 0, PATH_MAX);
+    memset(s->filename, 0, PATH_MAX);
+    memset(s->progname, 0, PATH_MAX);
 
     if (H5_basename(argv[0], &tfile) < 0) {
-        HDprintf("H5_basename failed\n");
+        printf("H5_basename failed\n");
         TEST_ERROR;
     }
 
     esnprintf(s->progname, sizeof(s->progname), "%s", tfile);
 
     if (tfile) {
-        HDfree(tfile);
+        free(tfile);
         tfile = NULL;
     }
 
@@ -509,17 +511,17 @@ state_init(state_t *s, int argc, char **argv)
             case 's':
 
                 errno = 0;
-                tmp   = HDstrtoul(optarg, &end, 0);
+                tmp   = strtoul(optarg, &end, 0);
                 if (end == optarg || *end != '\0') {
-                    HDprintf("couldn't parse `-%c` argument `%s`\n", ch, optarg);
+                    printf("couldn't parse `-%c` argument `%s`\n", ch, optarg);
                     TEST_ERROR;
                 }
                 else if (errno != 0) {
-                    HDprintf("couldn't parse `-%c` argument `%s`\n", ch, optarg);
+                    printf("couldn't parse `-%c` argument `%s`\n", ch, optarg);
                     TEST_ERROR;
                 }
                 else if (tmp > UINT_MAX) {
-                    HDprintf("`-%c` argument `%lu` too large\n", ch, tmp);
+                    printf("`-%c` argument `%lu` too large\n", ch, tmp);
                     TEST_ERROR;
                 }
 
@@ -549,13 +551,13 @@ state_init(state_t *s, int argc, char **argv)
     argv += optind;
 
     if (argc > 0) {
-        HDprintf("unexpected command-line arguments\n");
+        printf("unexpected command-line arguments\n");
         TEST_ERROR;
     }
 
     /* space for attributes */
     if ((s->one_by_one_sid = H5Screate_simple(1, &dims, &dims)) < 0) {
-        HDprintf("H5Screate_simple failed\n");
+        printf("H5Screate_simple failed\n");
         TEST_ERROR;
     }
 
@@ -564,7 +566,7 @@ state_init(state_t *s, int argc, char **argv)
     return true;
 
 error:
-    HDfree(tfile);
+    free(tfile);
 
     return false;
 }
@@ -586,8 +588,8 @@ np_wr_send_receive(state_t *s)
 
     /* Bump up the value of notify to notice the reader to start to read */
     s->np_notify++;
-    if (HDwrite(s->np_fd_w_to_r, &(s->np_notify), sizeof(int)) < 0) {
-        HDprintf("HDwrite failed\n");
+    if (write(s->np_fd_w_to_r, &(s->np_notify), sizeof(int)) < 0) {
+        printf("write failed\n");
         TEST_ERROR;
     }
 
@@ -601,18 +603,18 @@ np_wr_send_receive(state_t *s)
     /* Receive the same value from the reader and verify it before
      * going to the next step */
     (s->np_verify)++;
-    if (HDread(s->np_fd_r_to_w, &(s->np_notify), sizeof(int)) < 0) {
-        HDprintf("HDread failed\n");
+    if (read(s->np_fd_r_to_w, &(s->np_notify), sizeof(int)) < 0) {
+        printf("read failed\n");
         TEST_ERROR;
     }
 
     if (s->np_notify == -1) {
-        HDprintf("reader failed to verify group or attribute operation.\n");
+        printf("reader failed to verify group or attribute operation.\n");
         TEST_ERROR;
     }
 
     if (s->np_notify != s->np_verify) {
-        HDprintf("received message %d, expecting %d\n", s->np_notify, s->np_verify);
+        printf("received message %d, expecting %d\n", s->np_notify, s->np_verify);
         TEST_ERROR;
     }
 
@@ -643,18 +645,18 @@ np_rd_receive(state_t *s)
     s->np_verify++;
 
     /* Receive the notify that the writer bumped up the value */
-    if (HDread(s->np_fd_w_to_r, &(s->np_notify), sizeof(int)) < 0) {
-        HDprintf("HDread failed\n");
+    if (read(s->np_fd_w_to_r, &(s->np_notify), sizeof(int)) < 0) {
+        printf("read failed\n");
         TEST_ERROR;
     }
 
     if (s->np_notify == -1) {
-        HDprintf("writer failed to create group or carry out an attribute operation.\n");
+        printf("writer failed to create group or carry out an attribute operation.\n");
         TEST_ERROR;
     }
 
     if (s->np_notify != s->np_verify) {
-        HDprintf("received message %d, expecting %d\n", s->np_notify, s->np_verify);
+        printf("received message %d, expecting %d\n", s->np_notify, s->np_verify);
         TEST_ERROR;
     }
 
@@ -675,10 +677,10 @@ static bool
 np_rd_send(state_t *s)
 {
 
-    if (HDwrite(s->np_fd_r_to_w, &(s->np_notify), sizeof(int)) < 0) {
+    if (write(s->np_fd_r_to_w, &(s->np_notify), sizeof(int)) < 0) {
         H5_FAILED();
         AT();
-        HDprintf("HDwrite failed\n");
+        printf("write failed\n");
         return false;
     }
     else
@@ -702,10 +704,10 @@ np_send_error(state_t *s, bool writer)
 
     s->np_notify = -1;
 
-    if (HDwrite(fd, &(s->np_notify), sizeof(int)) < 0) {
+    if (write(fd, &(s->np_notify), sizeof(int)) < 0) {
         H5_FAILED();
         AT();
-        HDprintf("HDwrite failed\n");
+        printf("write failed\n");
         return false;
     }
     else
@@ -742,12 +744,12 @@ create_group(state_t *s, unsigned int which)
     esnprintf(name, sizeof(name), "/group-%u", which);
 
     if ((g = H5Gcreate2(s->file, name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
-        HDprintf("H5Gcreate2 failed\n");
+        printf("H5Gcreate2 failed\n");
         TEST_ERROR;
     }
 
     if (H5Gclose(g) < 0) {
-        HDprintf("H5Gclose failed\n");
+        printf("H5Gclose failed\n");
         TEST_ERROR;
     }
 
@@ -791,7 +793,7 @@ delete_group(state_t *s, unsigned int which)
     esnprintf(name, sizeof(name), "/group-%u", which);
 
     if (H5Ldelete(s->file, name, H5P_DEFAULT) < 0) {
-        HDprintf("H5Ldelete failed\n");
+        printf("H5Ldelete failed\n");
         TEST_ERROR;
     }
 
@@ -819,34 +821,34 @@ main(int argc, char **argv)
     struct timespec start_time, end_time;
     double          temp_time;
 
-    if (NULL == (sock = HDcalloc(1, sizeof(socket_state_t)))) {
+    if (NULL == (sock = calloc(1, sizeof(socket_state_t)))) {
         TEST_ERROR;
     }
-    if (NULL == (s = HDcalloc(1, sizeof(state_t)))) {
+    if (NULL == (s = calloc(1, sizeof(state_t)))) {
         TEST_ERROR;
     }
-    if (NULL == (config = HDcalloc(1, sizeof(H5F_vfd_swmr_config_t)))) {
+    if (NULL == (config = calloc(1, sizeof(H5F_vfd_swmr_config_t)))) {
         TEST_ERROR;
     }
 
     if (!socket_init(sock)) {
-        HDprintf("socket_init failed\n");
+        printf("socket_init failed\n");
         TEST_ERROR;
     }
 
     if (!state_init(s, sock, argc, argv)) {
-        HDprintf("state_init failed\n");
+        printf("state_init failed\n");
         TEST_ERROR;
     }
 
-    personality = HDstrstr(s->progname, "vfd_swmr_gfail_");
+    personality = strstr(s->progname, "vfd_swmr_gfail_");
 
-    if (personality != NULL && HDstrcmp(personality, "vfd_swmr_gfail_writer") == 0)
+    if (personality != NULL && strcmp(personality, "vfd_swmr_gfail_writer") == 0)
         writer = true;
-    else if (personality != NULL && HDstrcmp(personality, "vfd_swmr_gfail_reader") == 0)
+    else if (personality != NULL && strcmp(personality, "vfd_swmr_gfail_reader") == 0)
         writer = false;
     else {
-        HDprintf("unknown personality, expected vfd_swmr_gfail_{reader,writer}\n");
+        printf("unknown personality, expected vfd_swmr_gfail_{reader,writer}\n");
         TEST_ERROR;
     }
 
@@ -862,35 +864,35 @@ main(int argc, char **argv)
      * should be used as the second parameter of H5Pset_libver_bound().
      * Also pass the use_vfd_swmr, only_meta_page, page_buf_size, config to vfd_swmr_create_fapl().*/
     if ((fapl = vfd_swmr_create_fapl(!s->old_style_grp, s->use_vfd_swmr, true, s->pbs, config)) < 0) {
-        HDprintf("vfd_swmr_create_fapl failed\n");
+        printf("vfd_swmr_create_fapl failed\n");
         TEST_ERROR;
     }
 
     /* Set fs_strategy (file space strategy) and fs_page_size (file space page size) */
     if ((fcpl = vfd_swmr_create_fcpl(H5F_FSPACE_STRATEGY_PAGE, s->ps)) < 0) {
-        HDprintf("vfd_swmr_create_fcpl() failed");
+        printf("vfd_swmr_create_fcpl() failed");
         TEST_ERROR;
     }
 
     if (writer)
         s->file = H5Fcreate(s->filename, H5F_ACC_TRUNC, fcpl, fapl);
     else
-        s->file = H5Fopen(s->filename, H5F_ACC_RDONLY, fapl);
+        s->file = vfd_swmr_reader_fopen(s->filename, fapl);
 
     if (s->file < 0) {
-        HDprintf("H5Fcreate/open failed\n");
+        printf("H5Fcreate/open failed\n");
         TEST_ERROR;
     }
 
     /* Must be added between file creation/opening and socket connections */
     if (H5Fvfd_swmr_end_tick(s->file) < 0) {
-        HDprintf("H5Fvfd_swmr_end_tick failed\n");
+        printf("H5Fvfd_swmr_end_tick failed\n");
         TEST_ERROR;
     }
 
     /* Establish socket connection */
     if (s->use_communication && !socket_connect(sock, writer)) {
-        HDprintf("socket_connect failed\n");
+        printf("socket_connect failed\n");
         TEST_ERROR;
     }
 
@@ -902,25 +904,25 @@ main(int argc, char **argv)
             wg_ret = create_group(s, step);
             if (wg_ret == false) {
                 if (s->use_communication && !sock_send_error(sock))
-                    HDprintf("Error message send failed\n");
-                HDprintf("create groups failed\n");
+                    printf("Error message send failed\n");
+                printf("create groups failed\n");
                 TEST_ERROR;
             }
         }
         if (s->use_communication && sock_wr_send_receive(s, sock) == false) {
-            HDprintf("writer: write group - verification failed.\n");
+            printf("writer: write group - verification failed.\n");
             TEST_ERROR;
         }
 
         /* Delete 1000 groups if the del_grp option is true.  */
         if (s->del_grp && s->nsteps > 1000) {
-            HDprintf("Deleting groups. \n");
+            printf("Deleting groups. \n");
             for (step = s->nsteps - 1; step >= (s->nsteps - 1000); step--) {
                 dbgf(2, "writer: deleting step %d\n", step);
 
                 wg_ret = delete_group(s, step);
                 if (wg_ret == false) {
-                    HDprintf("delete group_operations failed\n");
+                    printf("delete group_operations failed\n");
                     TEST_ERROR;
                 }
             }
@@ -949,51 +951,51 @@ main(int argc, char **argv)
             dbgf(2, "reader sends the message.\n ");
         }
 
-        if (HDclock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
-            HDfprintf(stderr, "HDclock_gettime failed");
+        if (clock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
+            fprintf(stderr, "clock_gettime failed");
             TEST_ERROR;
         }
 
-        HDprintf("Reader: call back function: check group names.\n");
+        printf("Reader: call back function: check group names.\n");
         if (H5Literate(s->file, H5_INDEX_NAME, H5_ITER_NATIVE, NULL, op_func, NULL) < 0) {
-            HDprintf("H5Literate failed \n");
+            printf("H5Literate failed \n");
             TEST_ERROR;
         }
-        if (HDclock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
-            HDfprintf(stderr, "HDclock_gettime failed");
+        if (clock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
+            fprintf(stderr, "clock_gettime failed");
             TEST_ERROR;
         }
         temp_time = TIME_PASSED(start_time, end_time);
-        HDfprintf(stdout, "H5Literate: temp time                           = %lf\n", temp_time);
+        fprintf(stdout, "H5Literate: temp time                           = %lf\n", temp_time);
     }
 
     if (H5Pclose(fapl) < 0) {
-        HDprintf("H5Pclose failed\n");
+        printf("H5Pclose failed\n");
         TEST_ERROR;
     }
 
     if (H5Pclose(fcpl) < 0) {
-        HDprintf("H5Pclose failed\n");
+        printf("H5Pclose failed\n");
         TEST_ERROR;
     }
 
     if (H5Sclose(s->one_by_one_sid) < 0) {
-        HDprintf("H5Sclose failed\n");
+        printf("H5Sclose failed\n");
         TEST_ERROR;
     }
 
     if (H5Fclose(s->file) < 0) {
-        HDprintf("H5Fclose failed\n");
+        printf("H5Fclose failed\n");
         TEST_ERROR;
     }
 
     /* Close socket connection if it was opened */
     if (sock != NULL) {
         socket_close(sock);
-        HDfree(sock);
+        free(sock);
     }
-    HDfree(s);
-    HDfree(config);
+    free(s);
+    free(config);
 
     return EXIT_SUCCESS;
 
@@ -1010,11 +1012,11 @@ error:
     /* Close socket connection if it was opened */
     if (sock != NULL) {
         socket_close(sock);
-        HDfree(sock);
+        free(sock);
     }
 
-    HDfree(s);
-    HDfree(config);
+    free(s);
+    free(config);
 
     return EXIT_FAILURE;
 }
@@ -1038,24 +1040,24 @@ main(int argc, char **argv)
     struct timespec start_time, end_time;
     double          temp_time;
 
-    if (NULL == (s = HDcalloc(1, sizeof(state_t))))
+    if (NULL == (s = calloc(1, sizeof(state_t))))
         TEST_ERROR;
-    if (NULL == (config = HDcalloc(1, sizeof(H5F_vfd_swmr_config_t))))
+    if (NULL == (config = calloc(1, sizeof(H5F_vfd_swmr_config_t))))
         TEST_ERROR;
 
     if (!state_init(s, argc, argv)) {
-        HDprintf("state_init failed\n");
+        printf("state_init failed\n");
         TEST_ERROR;
     }
 
-    personality = HDstrstr(s->progname, "vfd_swmr_gfail_");
+    personality = strstr(s->progname, "vfd_swmr_gfail_");
 
-    if (personality != NULL && HDstrcmp(personality, "vfd_swmr_gfail_writer") == 0)
+    if (personality != NULL && strcmp(personality, "vfd_swmr_gfail_writer") == 0)
         writer = true;
-    else if (personality != NULL && HDstrcmp(personality, "vfd_swmr_gfail_reader") == 0)
+    else if (personality != NULL && strcmp(personality, "vfd_swmr_gfail_reader") == 0)
         writer = false;
     else {
-        HDprintf("unknown personality, expected vfd_swmr_gfail_{reader,writer}\n");
+        printf("unknown personality, expected vfd_swmr_gfail_{reader,writer}\n");
         TEST_ERROR;
     }
 
@@ -1071,23 +1073,23 @@ main(int argc, char **argv)
      * should be used as the second parameter of H5Pset_libver_bound().
      * Also pass the use_vfd_swmr, only_meta_page, page_buf_size, config to vfd_swmr_create_fapl().*/
     if ((fapl = vfd_swmr_create_fapl(!s->old_style_grp, s->use_vfd_swmr, true, s->pbs, config)) < 0) {
-        HDprintf("vfd_swmr_create_fapl failed\n");
+        printf("vfd_swmr_create_fapl failed\n");
         TEST_ERROR;
     }
 
     /* Set fs_strategy (file space strategy) and fs_page_size (file space page size) */
     if ((fcpl = vfd_swmr_create_fcpl(H5F_FSPACE_STRATEGY_PAGE, s->ps)) < 0) {
-        HDprintf("vfd_swmr_create_fcpl() failed");
+        printf("vfd_swmr_create_fcpl() failed");
         TEST_ERROR;
     }
 
     if (writer)
         s->file = H5Fcreate(s->filename, H5F_ACC_TRUNC, fcpl, fapl);
     else
-        s->file = H5Fopen(s->filename, H5F_ACC_RDONLY, fapl);
+        s->file = vfd_swmr_reader_fopen(s->filename, fapl);
 
     if (s->file < 0) {
-        HDprintf("H5Fcreate/open failed\n");
+        printf("H5Fcreate/open failed\n");
         TEST_ERROR;
     }
 
@@ -1097,25 +1099,25 @@ main(int argc, char **argv)
      * The other one is for the reader to signal the writer.  */
     if (s->use_communication && writer) {
         /* Writer creates two named pipes(FIFO) */
-        if (HDmkfifo(fifo_writer_to_reader, 0600) < 0) {
-            HDprintf("HDmkfifo failed\n");
+        if (mkfifo(fifo_writer_to_reader, 0600) < 0) {
+            printf("mkfifo failed\n");
             TEST_ERROR;
         }
 
-        if (HDmkfifo(fifo_reader_to_writer, 0600) < 0) {
-            HDprintf("HDmkfifo failed\n");
+        if (mkfifo(fifo_reader_to_writer, 0600) < 0) {
+            printf("mkfifo failed\n");
             TEST_ERROR;
         }
     }
 
     /* Both the writer and reader open the pipes */
-    if (s->use_communication && (fd_writer_to_reader = HDopen(fifo_writer_to_reader, O_RDWR)) < 0) {
-        HDprintf("HDopen failed\n");
+    if (s->use_communication && (fd_writer_to_reader = open(fifo_writer_to_reader, O_RDWR)) < 0) {
+        printf("open failed\n");
         TEST_ERROR;
     }
 
-    if (s->use_communication && (fd_reader_to_writer = HDopen(fifo_reader_to_writer, O_RDWR)) < 0) {
-        HDprintf("HDopen failed\n");
+    if (s->use_communication && (fd_reader_to_writer = open(fifo_reader_to_writer, O_RDWR)) < 0) {
+        printf("open failed\n");
         TEST_ERROR;
     }
 
@@ -1135,25 +1137,25 @@ main(int argc, char **argv)
             wg_ret = create_group(s, step);
             if (wg_ret == false) {
                 if (s->use_communication && !np_send_error(s, true))
-                    HDprintf("Error message send failed\n");
-                HDprintf("create groups failed\n");
+                    printf("Error message send failed\n");
+                printf("create groups failed\n");
                 TEST_ERROR;
             }
         }
         if (s->use_communication && np_wr_send_receive(s) == false) {
-            HDprintf("writer: write group - verification failed.\n");
+            printf("writer: write group - verification failed.\n");
             TEST_ERROR;
         }
 
         /* Delete 1000 groups if the del_grp option is true.  */
         if (s->del_grp && s->nsteps > 1000) {
-            HDprintf("Deleting groups. \n");
+            printf("Deleting groups. \n");
             for (step = s->nsteps - 1; step >= (s->nsteps - 1000); step--) {
                 dbgf(2, "writer: deleting step %d\n", step);
 
                 wg_ret = delete_group(s, step);
                 if (wg_ret == false) {
-                    HDprintf("delete group_operations failed\n");
+                    printf("delete group_operations failed\n");
                     TEST_ERROR;
                 }
             }
@@ -1182,70 +1184,70 @@ main(int argc, char **argv)
             dbgf(2, "reader sends the message.\n ");
         }
 
-        if (HDclock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
-            HDfprintf(stderr, "HDclock_gettime failed");
+        if (clock_gettime(CLOCK_MONOTONIC, &start_time) == -1) {
+            fprintf(stderr, "clock_gettime failed");
             TEST_ERROR;
         }
 
-        HDprintf("Reader: call back function: check group names.\n");
+        printf("Reader: call back function: check group names.\n");
         if (H5Literate(s->file, H5_INDEX_NAME, H5_ITER_NATIVE, NULL, op_func, NULL) < 0) {
-            HDprintf("H5Literate failed \n");
+            printf("H5Literate failed \n");
             TEST_ERROR;
         }
-        if (HDclock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
-            HDfprintf(stderr, "HDclock_gettime failed");
+        if (clock_gettime(CLOCK_MONOTONIC, &end_time) == -1) {
+            fprintf(stderr, "clock_gettime failed");
             TEST_ERROR;
         }
         temp_time = TIME_PASSED(start_time, end_time);
-        HDfprintf(stdout, "H5Literate: temp time                           = %lf\n", temp_time);
+        fprintf(stdout, "H5Literate: temp time                           = %lf\n", temp_time);
     }
 
     if (H5Pclose(fapl) < 0) {
-        HDprintf("H5Pclose failed\n");
+        printf("H5Pclose failed\n");
         TEST_ERROR;
     }
 
     if (H5Pclose(fcpl) < 0) {
-        HDprintf("H5Pclose failed\n");
+        printf("H5Pclose failed\n");
         TEST_ERROR;
     }
 
     if (H5Sclose(s->one_by_one_sid) < 0) {
-        HDprintf("H5Sclose failed\n");
+        printf("H5Sclose failed\n");
         TEST_ERROR;
     }
 
     if (H5Fclose(s->file) < 0) {
-        HDprintf("H5Fclose failed\n");
+        printf("H5Fclose failed\n");
         TEST_ERROR;
     }
 
     /* Both the writer and reader close the named pipes */
-    if (s->use_communication && HDclose(fd_writer_to_reader) < 0) {
-        HDprintf("HDclose failed\n");
+    if (s->use_communication && close(fd_writer_to_reader) < 0) {
+        printf("close failed\n");
         TEST_ERROR;
     }
 
-    if (s->use_communication && HDclose(fd_reader_to_writer) < 0) {
-        HDprintf("HDclose failed\n");
+    if (s->use_communication && close(fd_reader_to_writer) < 0) {
+        printf("close failed\n");
         TEST_ERROR;
     }
 
     /* Reader finishes last and deletes the named pipes */
     if (s->use_communication && !writer) {
-        if (HDremove(fifo_writer_to_reader) != 0) {
-            HDprintf("HDremove failed\n");
+        if (remove(fifo_writer_to_reader) != 0) {
+            printf("remove failed\n");
             TEST_ERROR;
         }
 
-        if (HDremove(fifo_reader_to_writer) != 0) {
-            HDprintf("HDremove failed\n");
+        if (remove(fifo_reader_to_writer) != 0) {
+            printf("remove failed\n");
             TEST_ERROR;
         }
     }
 
-    HDfree(s);
-    HDfree(config);
+    free(s);
+    free(config);
 
     return EXIT_SUCCESS;
 
@@ -1260,18 +1262,18 @@ error:
     H5E_END_TRY;
 
     if (s->use_communication && fd_writer_to_reader >= 0)
-        HDclose(fd_writer_to_reader);
+        close(fd_writer_to_reader);
 
     if (s->use_communication && fd_reader_to_writer >= 0)
-        HDclose(fd_reader_to_writer);
+        close(fd_reader_to_writer);
 
     if (s->use_communication && !writer) {
-        HDremove(fifo_writer_to_reader);
-        HDremove(fifo_reader_to_writer);
+        remove(fifo_writer_to_reader);
+        remove(fifo_reader_to_writer);
     }
 
-    HDfree(s);
-    HDfree(config);
+    free(s);
+    free(config);
 
     return EXIT_FAILURE;
 }
@@ -1291,8 +1293,8 @@ op_func(hid_t loc_id, const char *name, const H5L_info_t *info, void *operator_d
     (void)info;
     (void)operator_data;
 
-    if (HDstrncmp(name, "group", (size_t)5) != 0) {
-        HDprintf("Iteration failed:  group name is %s\n", name);
+    if (strncmp(name, "group", (size_t)5) != 0) {
+        printf("Iteration failed:  group name is %s\n", name);
         return -1;
     }
     else {
@@ -1305,7 +1307,7 @@ op_func(hid_t loc_id, const char *name, const H5L_info_t *info, void *operator_d
 int
 main(void)
 {
-    HDfprintf(stderr, "Non-POSIX platform. Skipping.\n");
+    fprintf(stderr, "Non-POSIX platform. Skipping.\n");
     return EXIT_SUCCESS;
 } /* end main() */
 

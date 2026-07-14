@@ -61,6 +61,18 @@ typedef struct {
                                        * were encountered and not
                                        * evicted.
                                        */
+    bool do_refresh;                  /* VFD SWMR reader only: if a pinned entry has its
+                                       * own 'refresh' callback, refresh it in place
+                                       * instead of treating it as unrecoverable. Only
+                                       * H5C_evict_or_refresh_all_entries_in_page()'s
+                                       * caller sets this; H5AC_evict_tagged_metadata()'s
+                                       * general-purpose evict-by-tag caller does not,
+                                       * since a genuinely pinned entry in that context
+                                       * is still a real error, not something a refresh
+                                       * can paper over.
+                                       */
+    uint64_t tick;                    /* Current VFD SWMR tick, passed through to
+                                       * H5C__refresh_entry() when do_refresh is set. */
 } H5C_tag_iter_evict_ctx_t;
 
 /* Typedef for tagged entry iterator callback context - expunge tag type metadata */
@@ -423,11 +435,27 @@ H5C__evict_tagged_entries_cb(H5C_cache_entry_t *entry, void *_ctx)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, H5_ITER_ERROR, "Cannot evict protected entry");
     else if (entry->is_dirty)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, H5_ITER_ERROR, "Cannot evict dirty entry");
-    else if (entry->is_pinned)
-        /* Can't evict at this time, but let's note that we hit a pinned
-            entry and we'll loop back around again (as evicting other
-            entries will hopefully unpin this entry) */
-        ctx->pinned_entries_need_evicted = true;
+    else if (entry->is_pinned) {
+        /* This sweep is evicting every entry sharing a tag because SOME
+         * entry under that tag needed it (see H5C_evict_tagged_entries()'s
+         * caller in H5C.c) -- but this pinned entry may be a different one
+         * that has its own VFD SWMR 'refresh' callback (e.g. a v2 B-tree
+         * header sharing a tag with a leaf/internal node that has none).
+         * If so, honor it here instead of always treating a pinned entry
+         * as unrecoverable: refresh it in place and leave it pinned, same
+         * as H5C_evict_or_refresh_all_entries_in_page() does when that
+         * entry's own page goes stale directly.
+         */
+        if (ctx->do_refresh && entry->type->refresh) {
+            if (H5C__refresh_entry(ctx->f, entry->cache_ptr, entry, ctx->tick) < 0)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTLOAD, H5_ITER_ERROR, "Can't refresh pinned tagged entry");
+        }
+        else
+            /* Can't evict at this time, but let's note that we hit a pinned
+                entry and we'll loop back around again (as evicting other
+                entries will hopefully unpin this entry) */
+            ctx->pinned_entries_need_evicted = true;
+    }
     else if (!entry->prefetched_dirty) {
         /* Evict the Entry */
         if (H5C__flush_single_entry(ctx->f, entry,
@@ -453,7 +481,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5C_evict_tagged_entries(H5F_t *f, haddr_t tag, bool match_global)
+H5C_evict_tagged_entries(H5F_t *f, haddr_t tag, bool match_global, bool do_refresh, uint64_t tick)
 {
     H5C_t                   *cache;               /* Pointer to cache structure */
     H5C_tag_iter_evict_ctx_t ctx;                 /* Context for iterator callback */
@@ -469,7 +497,9 @@ H5C_evict_tagged_entries(H5F_t *f, haddr_t tag, bool match_global)
     assert(cache != NULL);
 
     /* Construct context for iterator callbacks */
-    ctx.f = f;
+    ctx.f          = f;
+    ctx.do_refresh = do_refresh;
+    ctx.tick       = tick;
 
     /* Start evicting entries */
     do {

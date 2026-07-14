@@ -3177,6 +3177,7 @@ H5_DLL herr_t H5C__flash_increase_cache_size(H5C_t *cache_ptr, size_t old_entry_
 H5_DLL herr_t H5C__flush_invalidate_cache(H5F_t *f, unsigned flags);
 H5_DLL herr_t H5C__flush_ring(H5F_t *f, H5C_ring_t ring, unsigned flags);
 H5_DLL herr_t H5C__flush_single_entry(H5F_t *f, H5C_cache_entry_t *entry_ptr, unsigned flags);
+H5_DLL herr_t H5C__refresh_entry(H5F_t *f, H5C_t *cache_ptr, H5C_cache_entry_t *entry_ptr, uint64_t tick);
 H5_DLL herr_t H5C__generate_cache_image(H5F_t *f, H5C_t *cache_ptr);
 H5_DLL herr_t H5C__load_cache_image(H5F_t *f);
 H5_DLL herr_t H5C__make_space_in_cache(H5F_t *f, size_t space_needed, bool write_permitted);

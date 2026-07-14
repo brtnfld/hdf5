@@ -83,10 +83,10 @@ check_dataset(hid_t fid, hid_t dapl, unsigned verbose, const char *sym_name, sym
     hssize_t snpoints;                             /* Number of elements in dataset */
     hsize_t  start[2] = {0, 0}, count[2] = {1, 1}; /* Hyperslab selection values */
 
-    HDassert(fid >= 0);
-    HDassert(sym_name);
-    HDassert(record);
-    HDassert(rec_sid >= 0);
+    assert(fid >= 0);
+    assert(sym_name);
+    assert(record);
+    assert(rec_sid >= 0);
 
     /* Open dataset for symbol */
     if ((dsid = H5Dopen2(fid, sym_name, dapl)) < 0)
@@ -108,17 +108,17 @@ check_dataset(hid_t fid, hid_t dapl, unsigned verbose, const char *sym_name, sym
 
     /* Emit informational message */
     if (verbose) {
-        HDfprintf(stderr,
-                  "READER: Symbol = '%s'"
-                  ", # of records = %" PRIdHSIZE "\n",
-                  sym_name, snpoints);
+        fprintf(stderr,
+                "READER: Symbol = '%s'"
+                ", # of records = %" PRIdHSIZE "\n",
+                sym_name, snpoints);
     }
 
     /* Check if there are records for symbol */
     if (snpoints > 0) {
         /* Choose a random record in the dataset, choosing the last record half
          * the time */
-        start[1] = (hsize_t)(HDrandom() % (snpoints * 2));
+        start[1] = (hsize_t)(random() % (snpoints * 2));
         if (start[1] > (hsize_t)(snpoints - 1))
             start[1] = (hsize_t)(snpoints - 1);
         if (H5Sselect_hyperslab(file_sid, H5S_SELECT_SET, start, NULL, count, NULL) < 0)
@@ -141,12 +141,12 @@ check_dataset(hid_t fid, hid_t dapl, unsigned verbose, const char *sym_name, sym
          * chunk may be deleted before the object header has the updated
          * dimensions */
         if (record->rec_id != start[1] && record->rec_id != 0) {
-            HDfprintf(stderr, "*** READER: ERROR ***\n");
-            HDfprintf(stderr, "Incorrect record value!\n");
-            HDfprintf(stderr,
-                      "Symbol = '%s', # of records = %" PRIdHSIZE ", record->rec_id = %" PRIx64
-                      ", expected %" PRIxHSIZE "\n",
-                      sym_name, snpoints, record->rec_id, start[1]);
+            fprintf(stderr, "*** READER: ERROR ***\n");
+            fprintf(stderr, "Incorrect record value!\n");
+            fprintf(stderr,
+                    "Symbol = '%s', # of records = %" PRIdHSIZE ", record->rec_id = %" PRIx64
+                    ", expected %" PRIxHSIZE "\n",
+                    sym_name, snpoints, record->rec_id, start[1]);
             return -1;
         } /* end if */
     }     /* end if */
@@ -223,32 +223,32 @@ read_records(const char *filename, unsigned verbose, unsigned long nseconds, uns
     unsigned               v;                          /* Local index variable */
     H5F_vfd_swmr_config_t *config = NULL;              /* Configuration for VFD SWMR */
 
-    HDassert(filename);
-    HDassert(nseconds != 0);
-    HDassert(poll_time != 0);
+    assert(filename);
+    assert(nseconds != 0);
+    assert(poll_time != 0);
 
     /* Reset the record */
     /* (record's 'info' field might need to change for each record written, also) */
-    HDmemset(&record, 0, sizeof(record));
+    memset(&record, 0, sizeof(record));
 
     if ((dapl = H5Pcreate(H5P_DATASET_ACCESS)) < 0) {
-        HDfprintf(stderr, "%s.%d: H5Pcreate failed", __func__, __LINE__);
+        fprintf(stderr, "%s.%d: H5Pcreate failed", __func__, __LINE__);
         goto error;
     }
 
     if (H5Pset_chunk_cache(dapl, H5D_CHUNK_CACHE_NSLOTS_DEFAULT, 0, H5D_CHUNK_CACHE_W0_DEFAULT) < 0) {
-        HDfprintf(stderr, "H5Pset_chunk_cache failed");
+        fprintf(stderr, "H5Pset_chunk_cache failed");
         goto error;
     }
 
     /* Emit informational message */
     if (verbose)
-        HDfprintf(stderr, "READER: Choosing datasets\n");
+        fprintf(stderr, "READER: Choosing datasets\n");
 
     /* Allocate space for 'common' datasets, if any */
     if (ncommon > 0) {
         /* Allocate array to hold pointers to symbols for common datasets */
-        if (NULL == (sym_com = (symbol_info_t **)HDmalloc(sizeof(symbol_info_t *) * ncommon)))
+        if (NULL == (sym_com = (symbol_info_t **)malloc(sizeof(symbol_info_t *) * ncommon)))
             goto error;
 
         /* Open the common datasets */
@@ -257,19 +257,19 @@ read_records(const char *filename, unsigned verbose, unsigned long nseconds, uns
 
             /* Determine the offset of the symbol, within level 0 symbols */
             /* (level 0 symbols are the most common symbols) */
-            offset     = (unsigned)HDrandom() % symbol_count[0];
+            offset     = (unsigned)random() % symbol_count[0];
             sym_com[v] = &symbol_info[0][offset];
 
             /* Emit informational message */
             if (verbose)
-                HDfprintf(stderr, "READER: Common symbol #%u = '%s'\n", v, symbol_info[0][offset].name);
+                fprintf(stderr, "READER: Common symbol #%u = '%s'\n", v, symbol_info[0][offset].name);
         } /* end for */
     }     /* end if */
 
     /* Allocate space for 'random' datasets, if any */
     if (nrandom > 0) {
         /* Allocate array to hold pointers to symbols for random datasets */
-        if (NULL == (sym_rand = (symbol_info_t **)HDmalloc(sizeof(symbol_info_t *) * nrandom)))
+        if (NULL == (sym_rand = (symbol_info_t **)malloc(sizeof(symbol_info_t *) * nrandom)))
             goto error;
 
         /* Determine the random datasets */
@@ -283,7 +283,7 @@ read_records(const char *filename, unsigned verbose, unsigned long nseconds, uns
 
             /* Emit informational message */
             if (verbose)
-                HDfprintf(stderr, "READER: Random symbol #%u = '%s'\n", v, sym->name);
+                fprintf(stderr, "READER: Random symbol #%u = '%s'\n", v, sym->name);
         } /* end for */
     }     /* end if */
 
@@ -293,14 +293,14 @@ read_records(const char *filename, unsigned verbose, unsigned long nseconds, uns
 
     /* Emit informational message */
     if (verbose)
-        HDfprintf(stderr, "READER: Reading records\n");
+        fprintf(stderr, "READER: Reading records\n");
 
     /* Get the starting time */
-    start_time = HDtime(NULL);
+    start_time = time(NULL);
     curr_time  = start_time;
 
     /* Allocate memory for the configuration structure */
-    if ((config = HDcalloc(1, sizeof(*config))) == NULL)
+    if ((config = calloc(1, sizeof(*config))) == NULL)
         goto error;
 
     /* config, tick_len, max_lag, presume_posix_semantics, writer,
@@ -310,7 +310,7 @@ read_records(const char *filename, unsigned verbose, unsigned long nseconds, uns
 
     /* use_latest_format, use_vfd_swmr, only_meta_page, page_buf_size, config */
     if ((fapl = vfd_swmr_create_fapl(false, true, false, 4096, config)) < 0) {
-        HDfprintf(stderr, "%s.%d: vfd_swmr_create_fapl failed\n", __func__, __LINE__);
+        fprintf(stderr, "%s.%d: vfd_swmr_create_fapl failed\n", __func__, __LINE__);
         goto error;
     }
 
@@ -319,7 +319,7 @@ read_records(const char *filename, unsigned verbose, unsigned long nseconds, uns
 
         /* Emit informational message */
         if (verbose)
-            HDfprintf(stderr, "READER: Opening file: %s\n", filename);
+            fprintf(stderr, "READER: Opening file: %s\n", filename);
 
         /* Open the file */
         /* Remove H5E_BEGIN_TRY/END_TRY if you want to see the error stack */
@@ -329,7 +329,7 @@ read_records(const char *filename, unsigned verbose, unsigned long nseconds, uns
         }
         H5E_END_TRY;
         if (fid < 0) {
-            HDfprintf(stderr, "READER: Error in opening the file: %s\n", filename);
+            fprintf(stderr, "READER: Error in opening the file: %s\n", filename);
             goto error;
         }
 
@@ -337,14 +337,14 @@ read_records(const char *filename, unsigned verbose, unsigned long nseconds, uns
         if (ncommon > 0) {
             /* Emit informational message */
             if (verbose)
-                HDfprintf(stderr, "READER: Checking common symbols\n");
+                fprintf(stderr, "READER: Checking common symbols\n");
 
             /* Iterate over common datasets */
             for (v = 0; v < ncommon; v++) {
                 /* Check common dataset */
                 if (check_dataset(fid, dapl, verbose, sym_com[v]->name, &record, mem_sid) < 0)
                     goto error;
-                HDmemset(&record, 0, sizeof(record));
+                memset(&record, 0, sizeof(record));
             } /* end for */
         }     /* end if */
 
@@ -352,30 +352,30 @@ read_records(const char *filename, unsigned verbose, unsigned long nseconds, uns
         if (nrandom > 0) {
             /* Emit informational message */
             if (verbose)
-                HDfprintf(stderr, "READER: Checking random symbols\n");
+                fprintf(stderr, "READER: Checking random symbols\n");
 
             /* Iterate over random datasets */
             for (v = 0; v < nrandom; v++) {
                 /* Check random dataset */
                 if (check_dataset(fid, dapl, verbose, sym_rand[v]->name, &record, mem_sid) < 0)
                     goto error;
-                HDmemset(&record, 0, sizeof(record));
+                memset(&record, 0, sizeof(record));
             } /* end for */
         }     /* end if */
 
         /* Emit informational message */
         if (verbose)
-            HDfprintf(stderr, "READER: Closing file\n");
+            fprintf(stderr, "READER: Closing file\n");
 
         /* Close the file */
         if (H5Fclose(fid) < 0)
             goto error;
 
         /* Sleep for the appropriate # of seconds */
-        HDsleep(poll_time);
+        sleep(poll_time);
 
         /* Retrieve the current time */
-        curr_time = HDtime(NULL);
+        curr_time = time(NULL);
     } /* end while */
 
     /* Close the fapl */
@@ -383,7 +383,7 @@ read_records(const char *filename, unsigned verbose, unsigned long nseconds, uns
         goto error;
 
     if (config)
-        HDfree(config);
+        free(config);
 
     /* Close the memory dataspace */
     if (H5Sclose(mem_sid) < 0)
@@ -391,31 +391,31 @@ read_records(const char *filename, unsigned verbose, unsigned long nseconds, uns
 
     /* Emit informational message */
     if (verbose)
-        HDfprintf(stderr, "READER: Closing datasets\n");
+        fprintf(stderr, "READER: Closing datasets\n");
 
     /* Close 'random' datasets, if any */
     if (nrandom > 0) {
         /* Release array holding dataset ID's for random datasets */
-        HDfree(sym_rand);
+        free(sym_rand);
     } /* end if */
 
     /* Close 'common' datasets, if any */
     if (ncommon > 0) {
         /* Release array holding dataset ID's for common datasets */
-        HDfree(sym_com);
+        free(sym_com);
     } /* end if */
 
     return 0;
 
 error:
     if (config)
-        HDfree(config);
+        free(config);
 
     if (sym_rand)
-        HDfree(sym_rand);
+        free(sym_rand);
 
     if (sym_com)
-        HDfree(sym_com);
+        free(sym_com);
 
     H5E_BEGIN_TRY
     {
@@ -433,18 +433,18 @@ error:
 static void
 usage(void)
 {
-    HDprintf("\n");
-    HDprintf("Usage error!\n");
-    HDprintf("\n");
-    HDprintf("Usage: vfd_swmr_remove_reader [-q] [-s <# of seconds to sleep between\n");
-    HDprintf("    polling>] [-h <# of common symbols to poll>] [-l <# of random symbols\n");
-    HDprintf("    to poll>] [-r <random seed>] <# of seconds to test>\n");
-    HDprintf("\n");
-    HDprintf("Defaults to verbose (no '-q' given), 1 second between polling ('-s 1'),\n");
-    HDprintf("5 common symbols to poll ('-h 5'), 10 random symbols to poll ('-l 10'),\n");
-    HDprintf("and will generate a random seed (no -r given).\n");
-    HDprintf("\n");
-    HDexit(1);
+    printf("\n");
+    printf("Usage error!\n");
+    printf("\n");
+    printf("Usage: vfd_swmr_remove_reader [-q] [-s <# of seconds to sleep between\n");
+    printf("    polling>] [-h <# of common symbols to poll>] [-l <# of random symbols\n");
+    printf("    to poll>] [-r <random seed>] <# of seconds to test>\n");
+    printf("\n");
+    printf("Defaults to verbose (no '-q' given), 1 second between polling ('-s 1'),\n");
+    printf("5 common symbols to poll ('-h 5'), 10 random symbols to poll ('-l 10'),\n");
+    printf("and will generate a random seed (no -r given).\n");
+    printf("\n");
+    exit(1);
 }
 
 int
@@ -470,7 +470,7 @@ main(int argc, const char *argv[])
                 switch (argv[u][1]) {
                     /* # of common symbols to poll */
                     case 'h':
-                        ncommon = HDatoi(argv[u + 1]);
+                        ncommon = atoi(argv[u + 1]);
                         if (ncommon < 0)
                             usage();
                         u += 2;
@@ -478,7 +478,7 @@ main(int argc, const char *argv[])
 
                     /* # of random symbols to poll */
                     case 'l':
-                        nrandom = HDatoi(argv[u + 1]);
+                        nrandom = atoi(argv[u + 1]);
                         if (nrandom < 0)
                             usage();
                         u += 2;
@@ -493,7 +493,7 @@ main(int argc, const char *argv[])
                     /* Random # seed */
                     case 'r':
                         use_seed = 1;
-                        temp     = HDatoi(argv[u + 1]);
+                        temp     = atoi(argv[u + 1]);
                         if (temp < 0)
                             usage();
                         else
@@ -503,7 +503,7 @@ main(int argc, const char *argv[])
 
                     /* # of seconds between polling */
                     case 's':
-                        poll_time = HDatoi(argv[u + 1]);
+                        poll_time = atoi(argv[u + 1]);
                         if (poll_time < 0)
                             usage();
                         u += 2;
@@ -516,7 +516,7 @@ main(int argc, const char *argv[])
             }     /* end if */
             else {
                 /* Get the number of records to append */
-                nseconds = HDatol(argv[u]);
+                nseconds = atol(argv[u]);
                 if (nseconds <= 0)
                     usage();
 
@@ -531,31 +531,31 @@ main(int argc, const char *argv[])
 
     /* Emit informational message */
     if (verbose) {
-        HDfprintf(stderr, "READER: Parameters:\n");
-        HDfprintf(stderr, "\t# of seconds between polling = %d\n", poll_time);
-        HDfprintf(stderr, "\t# of common symbols to poll = %d\n", ncommon);
-        HDfprintf(stderr, "\t# of random symbols to poll = %d\n", nrandom);
-        HDfprintf(stderr, "\t# of seconds to test = %ld\n", nseconds);
+        fprintf(stderr, "READER: Parameters:\n");
+        fprintf(stderr, "\t# of seconds between polling = %d\n", poll_time);
+        fprintf(stderr, "\t# of common symbols to poll = %d\n", ncommon);
+        fprintf(stderr, "\t# of random symbols to poll = %d\n", nrandom);
+        fprintf(stderr, "\t# of seconds to test = %ld\n", nseconds);
     } /* end if */
 
     /* Set the random seed */
     if (0 == use_seed) {
         struct timeval t;
-        HDgettimeofday(&t, NULL);
+        gettimeofday(&t, NULL);
         random_seed = (unsigned)(t.tv_usec);
     } /* end if */
-    HDsrandom(random_seed);
+    srandom(random_seed);
     /* ALWAYS emit the random seed for possible debugging */
-    HDfprintf(stderr, "READER: Using reader random seed: %u\n", random_seed);
+    fprintf(stderr, "READER: Using reader random seed: %u\n", random_seed);
 
     /* Emit informational message */
     if (verbose)
-        HDfprintf(stderr, "READER: Generating symbol names\n");
+        fprintf(stderr, "READER: Generating symbol names\n");
 
     /* Generate dataset names */
     if (generate_symbols() < 0) {
-        HDfprintf(stderr, "READER: Error generating symbol names!\n");
-        HDexit(1);
+        fprintf(stderr, "READER: Error generating symbol names!\n");
+        exit(1);
     } /* end if */
 
     /* Create datatype for creating datasets */
@@ -565,28 +565,28 @@ main(int argc, const char *argv[])
     /* Reading records from datasets */
     if (read_records(VFD_SWMR_FILENAME, verbose, (unsigned long)nseconds, (unsigned)poll_time,
                      (unsigned)ncommon, (unsigned)nrandom) < 0) {
-        HDfprintf(stderr, "READER: Error reading records from datasets!\n");
-        HDexit(1);
+        fprintf(stderr, "READER: Error reading records from datasets!\n");
+        exit(1);
     } /* end if */
 
     /* Emit informational message */
     if (verbose)
-        HDfprintf(stderr, "READER: Releasing symbols\n");
+        fprintf(stderr, "READER: Releasing symbols\n");
 
     /* Clean up the symbols */
     if (shutdown_symbols() < 0) {
-        HDfprintf(stderr, "READER: Error releasing symbols!\n");
-        HDexit(1);
+        fprintf(stderr, "READER: Error releasing symbols!\n");
+        exit(1);
     } /* end if */
 
     /* Emit informational message */
     if (verbose)
-        HDfprintf(stderr, "READER: Closing objects\n");
+        fprintf(stderr, "READER: Closing objects\n");
 
     /* Close objects created */
     if (H5Tclose(symbol_tid) < 0) {
-        HDfprintf(stderr, "READER: Error closing symbol datatype!\n");
-        HDexit(1);
+        fprintf(stderr, "READER: Error closing symbol datatype!\n");
+        exit(1);
     } /* end if */
 
     return 0;
@@ -597,7 +597,7 @@ main(int argc, const char *argv[])
 int
 main(void)
 {
-    HDfprintf(stderr, "Non-POSIX platform. Skipping.\n");
+    fprintf(stderr, "Non-POSIX platform. Skipping.\n");
     return EXIT_SUCCESS;
 } /* end main() */
 

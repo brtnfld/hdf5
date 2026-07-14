@@ -651,10 +651,17 @@ done
 #
 if [ ${do_zoo:-no} = yes ]; then
     rm -f ./shared_tick_num
+    # Remove any possible writer message file before launching writer
+    rm -f $WRITER_MESSAGE
     echo launch vfd_swmr_zoo_writer
     catch_out_err_and_rc vfd_swmr_zoo_writer \
         $testdir/vfd_swmr_zoo_writer -q &
     pid_writer=$!
+
+    # Wait for message from writer process before starting the reader:
+    # the writer and reader open the same file, and without this the
+    # reader can race the writer's H5Fcreate() and fail outright.
+    WAIT_MESSAGE $WRITER_MESSAGE
 
         # -l is the expected maximal number of ticks from the writer's finishing zoo creation or deletion
         # to the reader's finishing validation of zoo creation or deletion
@@ -1126,10 +1133,18 @@ for options in "-d 1" "-d 1 -F" "-d 2 -l 16" "-d 2 -F -l 16" "-d 1 -t" "-d 1 -t 
         pid_aux_proc=$!
     fi
 
+    # Remove any possible writer message file before launching writer
+    rm -f $WRITER_MESSAGE
+
     echo launch vfd_swmr_bigset_writer many small, options $options
     catch_out_err_and_rc vfd_swmr_bigset_writer \
         $testdir/vfd_swmr_bigset_writer -n $BIGSET_n $options -s $BIGSET_many_s -e 1 -r 16 -c 16 -q &
     pid_writer=$!
+
+    # Wait for message from writer process before starting the reader:
+    # the reader's own first H5Fopen() has no other way to avoid racing
+    # the writer's file creation.
+    WAIT_MESSAGE $WRITER_MESSAGE
 
     catch_out_err_and_rc vfd_swmr_bigset_reader \
         $testdir/vfd_swmr_bigset_reader -n $BIGSET_n $options -s $BIGSET_many_s -e 1 -r 16 -c 16 -q &
@@ -1195,6 +1210,9 @@ for options in "-d 1" "-d 1 -F" "-d 2 -l 10" "-d 2 -F -l 10" "-d 1 -t -l 10" "-d
 
     rm vfd_swmr_bigset*.h5 2> /dev/null
 
+    # Remove any possible writer message file before launching writer
+    rm -f $WRITER_MESSAGE
+
     echo launch vfd_swmr_bigset_writer few big, options $options ......may take some time......
 
     # Launch the auxiliary process for testing NFS if the --enable-aux-process option is enabled for configuration.
@@ -1212,6 +1230,11 @@ for options in "-d 1" "-d 1 -F" "-d 2 -l 10" "-d 2 -F -l 10" "-d 1 -t -l 10" "-d
     catch_out_err_and_rc vfd_swmr_bigset_writer \
         $testdir/vfd_swmr_bigset_writer -n $BIGSET_n $options -s $BIGSET_few_s -e 8 -r 256 -c 256 -q &
     pid_writer=$!
+
+    # Wait for message from writer process before starting the reader:
+    # the reader's own first H5Fopen() has no other way to avoid racing
+    # the writer's file creation.
+    WAIT_MESSAGE $WRITER_MESSAGE
 
     catch_out_err_and_rc vfd_swmr_bigset_reader \
         $testdir/vfd_swmr_bigset_reader -n $BIGSET_n $options -s $BIGSET_few_s -e 8 -r 256 -c 256 -q &

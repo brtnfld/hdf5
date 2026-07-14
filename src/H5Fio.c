@@ -90,8 +90,14 @@ H5F_shared_block_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t 
     if (H5_addr_le(f_sh->tmp_addr, (addr + size)))
         HGOTO_ERROR(H5E_IO, H5E_BADRANGE, FAIL, "attempting I/O in temporary file space");
 
-    /* Treat global heap as raw data */
-    map_type = (type == H5FD_MEM_GHEAP) ? H5FD_MEM_DRAW : type;
+    /* Treat global heap as raw data -- except under VFD SWMR, where a
+     * global heap object must remain genuine metadata (type H5FD_MEM_GHEAP)
+     * so that it is tracked and published through the tick/shadow-index
+     * mechanism like any other metadata. Raw data is never tracked that
+     * way, so a reader has no means to detect a stale, previously cached
+     * copy of a global heap page if it were remapped to H5FD_MEM_DRAW here.
+     */
+    map_type = (type == H5FD_MEM_GHEAP && !f_sh->vfd_swmr) ? H5FD_MEM_DRAW : type;
 
     /* Pass through page buffer layer */
     if (H5PB_read(f_sh, map_type, addr, size, buf) < 0)
@@ -130,8 +136,10 @@ H5F_block_read(H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size, void *buf /
     if (H5_addr_le(f->shared->tmp_addr, (addr + size)))
         HGOTO_ERROR(H5E_IO, H5E_BADRANGE, FAIL, "attempting I/O in temporary file space");
 
-    /* Treat global heap as raw data */
-    map_type = (type == H5FD_MEM_GHEAP) ? H5FD_MEM_DRAW : type;
+    /* Treat global heap as raw data -- except under VFD SWMR; see the
+     * identical exception in H5F_shared_block_read() above for why.
+     */
+    map_type = (type == H5FD_MEM_GHEAP && !H5F_USE_VFD_SWMR(f)) ? H5FD_MEM_DRAW : type;
 
     /* Pass through page buffer layer */
     if (H5PB_read(f->shared, map_type, addr, size, buf) < 0)
@@ -170,8 +178,10 @@ H5F_shared_block_write(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t
     if (H5_addr_le(f_sh->tmp_addr, (addr + size)))
         HGOTO_ERROR(H5E_IO, H5E_BADRANGE, FAIL, "attempting I/O in temporary file space");
 
-    /* Treat global heap as raw data */
-    map_type = (type == H5FD_MEM_GHEAP) ? H5FD_MEM_DRAW : type;
+    /* Treat global heap as raw data -- except under VFD SWMR; see the
+     * identical exception in H5F_shared_block_read() for why.
+     */
+    map_type = (type == H5FD_MEM_GHEAP && !f_sh->vfd_swmr) ? H5FD_MEM_DRAW : type;
 
     /* Pass through page buffer layer */
     if (H5PB_write(f_sh, map_type, addr, size, buf) < 0)
@@ -211,8 +221,10 @@ H5F_block_write(H5F_t *f, H5FD_mem_t type, haddr_t addr, size_t size, const void
     if (H5_addr_le(f->shared->tmp_addr, (addr + size)))
         HGOTO_ERROR(H5E_IO, H5E_BADRANGE, FAIL, "attempting I/O in temporary file space");
 
-    /* Treat global heap as raw data */
-    map_type = (type == H5FD_MEM_GHEAP) ? H5FD_MEM_DRAW : type;
+    /* Treat global heap as raw data -- except under VFD SWMR; see the
+     * identical exception in H5F_shared_block_read() for why.
+     */
+    map_type = (type == H5FD_MEM_GHEAP && !H5F_USE_VFD_SWMR(f)) ? H5FD_MEM_DRAW : type;
 
     /* Pass through page buffer layer */
     if (H5PB_write(f->shared, map_type, addr, size, buf) < 0)

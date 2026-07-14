@@ -582,7 +582,7 @@ test_raw_data_handling(hid_t orig_fapl, const char *driver_name)
      * Get the number of pages inserted, and verify that it is the
      * the expected value.
      */
-    base_page_cnt = H5SL_count(f->shared->page_buf->slist_ptr);
+    base_page_cnt = (size_t)f->shared->page_buf->index_len;
     if (base_page_cnt != 1)
         TEST_ERROR;
 
@@ -608,7 +608,7 @@ test_raw_data_handling(hid_t orig_fapl, const char *driver_name)
 
     page_count++;
 
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
+    if ((size_t)f->shared->page_buf->index_len != page_count + base_page_cnt)
         FAIL_STACK_ERROR;
 
     /* update elements 300 - 450, with values 300 -  - this will
@@ -618,7 +618,7 @@ test_raw_data_handling(hid_t orig_fapl, const char *driver_name)
     if (H5F_block_write(f, H5FD_MEM_DRAW, addr + (sizeof(int) * 300), sizeof(int) * 150, data) < 0)
         FAIL_STACK_ERROR;
     page_count += 2;
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
+    if ((size_t)f->shared->page_buf->index_len != page_count + base_page_cnt)
         FAIL_STACK_ERROR;
 
     /* update elements 100 - 300, this will go to disk but also update
@@ -627,7 +627,7 @@ test_raw_data_handling(hid_t orig_fapl, const char *driver_name)
         data[i] = i + 100;
     if (H5F_block_write(f, H5FD_MEM_DRAW, addr + (sizeof(int) * 100), sizeof(int) * 200, data) < 0)
         FAIL_STACK_ERROR;
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
+    if ((size_t)f->shared->page_buf->index_len != page_count + base_page_cnt)
         FAIL_STACK_ERROR;
 
     /* Update elements 225-300 - this will update an existing page in the PB */
@@ -636,7 +636,7 @@ test_raw_data_handling(hid_t orig_fapl, const char *driver_name)
         data[i] = i + 450;
     if (H5F_block_write(f, H5FD_MEM_DRAW, addr + (sizeof(int) * 450), sizeof(int) * 150, data) < 0)
         FAIL_STACK_ERROR;
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
+    if ((size_t)f->shared->page_buf->index_len != page_count + base_page_cnt)
         FAIL_STACK_ERROR;
 
     /* Do a full page write to block 600-800 - should bypass the PB */
@@ -644,7 +644,7 @@ test_raw_data_handling(hid_t orig_fapl, const char *driver_name)
         data[i] = i + 600;
     if (H5F_block_write(f, H5FD_MEM_DRAW, addr + (sizeof(int) * 600), sizeof(int) * 200, data) < 0)
         FAIL_STACK_ERROR;
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
+    if ((size_t)f->shared->page_buf->index_len != page_count + base_page_cnt)
         FAIL_STACK_ERROR;
 
     /* read elements 800 - 1200, this should not affect the PB, and should read -1s */
@@ -656,7 +656,7 @@ test_raw_data_handling(hid_t orig_fapl, const char *driver_name)
             FAIL_STACK_ERROR;
         }
     }
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
+    if ((size_t)f->shared->page_buf->index_len != page_count + base_page_cnt)
         FAIL_STACK_ERROR;
 
     /* read elements 1200 - 1201, this should read -1 and bring in an
@@ -671,7 +671,7 @@ test_raw_data_handling(hid_t orig_fapl, const char *driver_name)
         }
     }
     page_count++;
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
+    if ((size_t)f->shared->page_buf->index_len != page_count + base_page_cnt)
         TEST_ERROR;
 
     /* read elements 175 - 225, this should use the PB existing pages */
@@ -685,7 +685,7 @@ test_raw_data_handling(hid_t orig_fapl, const char *driver_name)
             TEST_ERROR;
         }
     }
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
+    if ((size_t)f->shared->page_buf->index_len != page_count + base_page_cnt)
         TEST_ERROR;
 
     /* read elements 0 - 800 using the VFD.. this should result in -1s
@@ -714,7 +714,7 @@ test_raw_data_handling(hid_t orig_fapl, const char *driver_name)
      */
     if (H5F_block_read(f, H5FD_MEM_DRAW, addr, sizeof(int) * 800, data) < 0)
         FAIL_STACK_ERROR;
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
+    if ((size_t)f->shared->page_buf->index_len != page_count + base_page_cnt)
         TEST_ERROR;
     for (i = 0; i < 800; i++) {
         if (data[i] != i) {
@@ -732,7 +732,7 @@ test_raw_data_handling(hid_t orig_fapl, const char *driver_name)
     if (H5F_block_write(f, H5FD_MEM_DRAW, addr + (sizeof(int) * 400), sizeof(int) * 1000, data) < 0)
         FAIL_STACK_ERROR;
     page_count -= 2;
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
+    if ((size_t)f->shared->page_buf->index_len != page_count + base_page_cnt)
         TEST_ERROR;
 
     /* read elements 0 - 1000.. this should go to disk then update the
@@ -756,7 +756,7 @@ test_raw_data_handling(hid_t orig_fapl, const char *driver_name)
         }
         i++;
     }
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
+    if ((size_t)f->shared->page_buf->index_len != page_count + base_page_cnt)
         TEST_ERROR;
 
     if (H5Fclose(file_id) < 0)
@@ -851,7 +851,7 @@ test_lru_processing(hid_t orig_fapl, const char *driver_name)
      * Get the number of pages inserted, and verify that it is the
      * the expected value.
      */
-    base_page_cnt = H5SL_count(f->shared->page_buf->slist_ptr);
+    base_page_cnt = (size_t)f->shared->page_buf->index_len;
     if (base_page_cnt != 1)
         TEST_ERROR;
 
@@ -878,7 +878,7 @@ test_lru_processing(hid_t orig_fapl, const char *driver_name)
 
     page_count++;
 
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count + base_page_cnt)
+    if ((size_t)f->shared->page_buf->index_len != page_count + base_page_cnt)
         TEST_ERROR;
 
     /* update elements 300 - 450, with values 300 - 449 - this will
@@ -895,20 +895,20 @@ test_lru_processing(hid_t orig_fapl, const char *driver_name)
     /* at this point, the page buffer entry created at file open should
      * have been evicted -- thus no further need to consider base_page_cnt.
      */
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if ((size_t)f->shared->page_buf->index_len != page_count)
         FAIL_STACK_ERROR;
 
     /* The two pages should be the ones with address 100 and 200; 0
        should have been evicted */
     /* Changes: 200, 400 */
     search_addr = addr;
-    if (NULL != H5SL_search(f->shared->page_buf->slist_ptr, &(search_addr)))
+    if (H5PB_entry_exists(f->shared->page_buf, search_addr))
         FAIL_STACK_ERROR;
     search_addr = addr + sizeof(int) * 200;
-    if (NULL == H5SL_search(f->shared->page_buf->slist_ptr, &(search_addr)))
+    if (!H5PB_entry_exists(f->shared->page_buf, search_addr))
         FAIL_STACK_ERROR;
     search_addr = addr + sizeof(int) * 400;
-    if (NULL == H5SL_search(f->shared->page_buf->slist_ptr, &(search_addr)))
+    if (!H5PB_entry_exists(f->shared->page_buf, search_addr))
         FAIL_STACK_ERROR;
 
     /* update elements 150-151, this will update existing pages in the
@@ -918,7 +918,7 @@ test_lru_processing(hid_t orig_fapl, const char *driver_name)
         data[i] = i + 300;
     if (H5F_block_write(f, H5FD_MEM_DRAW, addr + (sizeof(int) * 300), sizeof(int) * 1, data) < 0)
         FAIL_STACK_ERROR;
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if ((size_t)f->shared->page_buf->index_len != page_count)
         FAIL_STACK_ERROR;
 
     /* read elements 600 - 601, this should read -1 and bring in an
@@ -932,22 +932,22 @@ test_lru_processing(hid_t orig_fapl, const char *driver_name)
             TEST_ERROR;
         } /* end if */
     }     /* end for */
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if ((size_t)f->shared->page_buf->index_len != page_count)
         FAIL_STACK_ERROR;
 
     /* Changes: 400 */
     search_addr = addr + sizeof(int) * 400;
-    if (NULL != H5SL_search(f->shared->page_buf->slist_ptr, &(search_addr)))
+    if (H5PB_entry_exists(f->shared->page_buf, search_addr))
         FAIL_STACK_ERROR;
 
     /* Changes: 200 */
     search_addr = addr + sizeof(int) * 200;
-    if (NULL == H5SL_search(f->shared->page_buf->slist_ptr, &(search_addr)))
+    if (!H5PB_entry_exists(f->shared->page_buf, search_addr))
         FAIL_STACK_ERROR;
 
     /* Changes: 1200 */
     search_addr = addr + sizeof(int) * 1200;
-    if (NULL == H5SL_search(f->shared->page_buf->slist_ptr, &(search_addr)))
+    if (!H5PB_entry_exists(f->shared->page_buf, search_addr))
         FAIL_STACK_ERROR;
     /* read elements 175 - 225, this should move 100 to the top, evict 600 and bring in 200 */
     /* Changes: 350 - 450; 200, 1200, 400 */
@@ -959,22 +959,22 @@ test_lru_processing(hid_t orig_fapl, const char *driver_name)
             TEST_ERROR;
         } /* end if */
     }     /* end for */
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if ((size_t)f->shared->page_buf->index_len != page_count)
         FAIL_STACK_ERROR;
 
     /* Changes: 1200 */
     search_addr = addr + sizeof(int) * 1200;
-    if (NULL != H5SL_search(f->shared->page_buf->slist_ptr, &(search_addr)))
+    if (H5PB_entry_exists(f->shared->page_buf, search_addr))
         FAIL_STACK_ERROR;
 
     /* Changes: 200 */
     search_addr = addr + sizeof(int) * 200;
-    if (NULL == H5SL_search(f->shared->page_buf->slist_ptr, &(search_addr)))
+    if (!H5PB_entry_exists(f->shared->page_buf, search_addr))
         FAIL_STACK_ERROR;
 
     /* Changes: 400 */
     search_addr = addr + sizeof(int) * 400;
-    if (NULL == H5SL_search(f->shared->page_buf->slist_ptr, &(search_addr)))
+    if (!H5PB_entry_exists(f->shared->page_buf, search_addr))
         FAIL_STACK_ERROR;
 
     /* update elements 200 - 700 to value 0, this will go to disk but
@@ -985,17 +985,17 @@ test_lru_processing(hid_t orig_fapl, const char *driver_name)
     if (H5F_block_write(f, H5FD_MEM_DRAW, addr + (sizeof(int) * 400), sizeof(int) * 1000, data) < 0)
         FAIL_STACK_ERROR;
     page_count -= 1;
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if ((size_t)f->shared->page_buf->index_len != page_count)
         FAIL_STACK_ERROR;
 
     /* Changes: 200 */
     search_addr = addr + sizeof(int) * 200;
-    if (NULL == H5SL_search(f->shared->page_buf->slist_ptr, &(search_addr)))
+    if (!H5PB_entry_exists(f->shared->page_buf, search_addr))
         FAIL_STACK_ERROR;
 
     /* Changes: 400 */
     search_addr = addr + sizeof(int) * 400;
-    if (NULL != H5SL_search(f->shared->page_buf->slist_ptr, &(search_addr)))
+    if (H5PB_entry_exists(f->shared->page_buf, search_addr))
         FAIL_STACK_ERROR;
 
     if (H5Fclose(file_id) < 0)
@@ -1098,8 +1098,8 @@ test_min_threshold(hid_t orig_fapl, const char *driver_name)
     assert(f->shared);
     assert(f->shared->page_buf);
 
-    base_raw_cnt  = f->shared->page_buf->raw_count;
-    base_meta_cnt = f->shared->page_buf->meta_count;
+    base_raw_cnt  = f->shared->page_buf->curr_rd_pages;
+    base_meta_cnt = f->shared->page_buf->curr_md_pages;
 
     if (base_raw_cnt != 0)
         TEST_ERROR;
@@ -1146,10 +1146,10 @@ test_min_threshold(hid_t orig_fapl, const char *driver_name)
 
     page_count += 5;
 
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if ((size_t)f->shared->page_buf->index_len != page_count)
         FAIL_STACK_ERROR;
 
-    if (page_buf->raw_count != 5 - base_meta_cnt)
+    if (page_buf->curr_rd_pages != 5 - base_meta_cnt)
         TEST_ERROR;
 
     /* write all meta data, this would end up in page buffer */
@@ -1168,13 +1168,13 @@ test_min_threshold(hid_t orig_fapl, const char *driver_name)
     if (H5F_block_read(f, H5FD_MEM_SUPER, meta_addr + (sizeof(int) * 800), sizeof(int) * 50, data) < 0)
         FAIL_STACK_ERROR;
 
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if ((size_t)f->shared->page_buf->index_len != page_count)
         FAIL_STACK_ERROR;
 
-    if (page_buf->meta_count != 5)
+    if (page_buf->curr_md_pages != 5)
         TEST_ERROR;
 
-    if (page_buf->raw_count != 0)
+    if (page_buf->curr_rd_pages != 0)
         TEST_ERROR;
 
     /* write and read more raw data and make sure that they don't end up in
@@ -1196,13 +1196,13 @@ test_min_threshold(hid_t orig_fapl, const char *driver_name)
     if (H5F_block_read(f, H5FD_MEM_DRAW, raw_addr + (sizeof(int) * 900), sizeof(int) * 100, data) < 0)
         FAIL_STACK_ERROR;
 
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if ((size_t)f->shared->page_buf->index_len != page_count)
         FAIL_STACK_ERROR;
 
-    if (page_buf->meta_count != 5)
+    if (page_buf->curr_md_pages != 5)
         TEST_ERROR;
 
-    if (page_buf->raw_count != 0)
+    if (page_buf->curr_rd_pages != 0)
         TEST_ERROR;
 
     if (H5Fclose(file_id) < 0)
@@ -1232,8 +1232,8 @@ test_min_threshold(hid_t orig_fapl, const char *driver_name)
     assert(f->shared);
     assert(f->shared->page_buf);
 
-    base_raw_cnt  = f->shared->page_buf->raw_count;
-    base_meta_cnt = f->shared->page_buf->meta_count;
+    base_raw_cnt  = f->shared->page_buf->curr_rd_pages;
+    base_meta_cnt = f->shared->page_buf->curr_md_pages;
 
     if (base_raw_cnt != 0)
         TEST_ERROR;
@@ -1277,9 +1277,9 @@ test_min_threshold(hid_t orig_fapl, const char *driver_name)
 
     page_count += 5;
 
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if ((size_t)f->shared->page_buf->index_len != page_count)
         FAIL_STACK_ERROR;
-    if (page_buf->meta_count != 5 - base_raw_cnt)
+    if (page_buf->curr_md_pages != 5 - base_raw_cnt)
         TEST_ERROR;
 
     /* write/read all raw data, this would end up in page buffer */
@@ -1298,13 +1298,13 @@ test_min_threshold(hid_t orig_fapl, const char *driver_name)
     if (H5F_block_read(f, H5FD_MEM_DRAW, raw_addr + (sizeof(int) * 800), sizeof(int) * 100, data) < 0)
         FAIL_STACK_ERROR;
 
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if ((size_t)f->shared->page_buf->index_len != page_count)
         FAIL_STACK_ERROR;
 
-    if (page_buf->raw_count != 5)
+    if (page_buf->curr_rd_pages != 5)
         TEST_ERROR;
 
-    if (page_buf->meta_count != 0)
+    if (page_buf->curr_md_pages != 0)
         TEST_ERROR;
 
     /* write and read more meta data and make sure that they don't end up in
@@ -1326,13 +1326,13 @@ test_min_threshold(hid_t orig_fapl, const char *driver_name)
     if (H5F_block_read(f, H5FD_MEM_SUPER, meta_addr + (sizeof(int) * 900), sizeof(int) * 50, data) < 0)
         FAIL_STACK_ERROR;
 
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if ((size_t)f->shared->page_buf->index_len != page_count)
         FAIL_STACK_ERROR;
 
-    if (page_buf->raw_count != 5)
+    if (page_buf->curr_rd_pages != 5)
         TEST_ERROR;
 
-    if (page_buf->meta_count != 0)
+    if (page_buf->curr_md_pages != 0)
         TEST_ERROR;
 
     if (H5Fclose(file_id) < 0)
@@ -1411,10 +1411,10 @@ test_min_threshold(hid_t orig_fapl, const char *driver_name)
 
     page_count += 5;
 
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if ((size_t)f->shared->page_buf->index_len != page_count)
         TEST_ERROR;
 
-    if (f->shared->page_buf->raw_count != 5 - base_meta_cnt)
+    if (f->shared->page_buf->curr_rd_pages != 5 - base_meta_cnt)
         TEST_ERROR;
 
     /* add 3 meta entries evicting 3 raw entries */
@@ -1427,13 +1427,13 @@ test_min_threshold(hid_t orig_fapl, const char *driver_name)
     if (H5F_block_write(f, H5FD_MEM_SUPER, meta_addr + (sizeof(int) * 400), sizeof(int) * 100, data) < 0)
         FAIL_STACK_ERROR;
 
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if ((size_t)f->shared->page_buf->index_len != page_count)
         FAIL_STACK_ERROR;
 
-    if (f->shared->page_buf->meta_count != 3)
+    if (f->shared->page_buf->curr_md_pages != 3)
         TEST_ERROR;
 
-    if (f->shared->page_buf->raw_count != 2)
+    if (f->shared->page_buf->curr_rd_pages != 2)
         TEST_ERROR;
 
     /* adding more meta entries should replace meta entries since raw data
@@ -1445,10 +1445,10 @@ test_min_threshold(hid_t orig_fapl, const char *driver_name)
     if (H5F_block_write(f, H5FD_MEM_SUPER, meta_addr + (sizeof(int) * 800), sizeof(int) * 100, data) < 0)
         FAIL_STACK_ERROR;
 
-    if (f->shared->page_buf->meta_count != 3)
+    if (f->shared->page_buf->curr_md_pages != 3)
         TEST_ERROR;
 
-    if (f->shared->page_buf->raw_count != 2)
+    if (f->shared->page_buf->curr_rd_pages != 2)
         TEST_ERROR;
 
     /* bring existing raw entries up the LRU */
@@ -1461,10 +1461,10 @@ test_min_threshold(hid_t orig_fapl, const char *driver_name)
     if (H5F_block_read(f, H5FD_MEM_DRAW, raw_addr + (sizeof(int) * 350), sizeof(int) * 100, data) < 0)
         FAIL_STACK_ERROR;
 
-    if (f->shared->page_buf->meta_count != 2)
+    if (f->shared->page_buf->curr_md_pages != 2)
         TEST_ERROR;
 
-    if (f->shared->page_buf->raw_count != 3)
+    if (f->shared->page_buf->curr_rd_pages != 3)
         TEST_ERROR;
 
     /* adding 2 meta entries should replace 2 entries at the bottom of the LRU */
@@ -1474,10 +1474,10 @@ test_min_threshold(hid_t orig_fapl, const char *driver_name)
     if (H5F_block_read(f, H5FD_MEM_SUPER, meta_addr + (sizeof(int) * 242), sizeof(int) * 100, data) < 0)
         FAIL_STACK_ERROR;
 
-    if (f->shared->page_buf->meta_count != 2)
+    if (f->shared->page_buf->curr_md_pages != 2)
         TEST_ERROR;
 
-    if (f->shared->page_buf->raw_count != 3)
+    if (f->shared->page_buf->curr_rd_pages != 3)
         TEST_ERROR;
 
     if (H5Fclose(file_id) < 0)
@@ -1538,7 +1538,7 @@ test_min_threshold(hid_t orig_fapl, const char *driver_name)
 
     page_count += 5;
 
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if ((size_t)f->shared->page_buf->index_len != page_count)
         FAIL_STACK_ERROR;
 
     /* add 2 meta entries evicting 2 raw entries */
@@ -1548,13 +1548,13 @@ test_min_threshold(hid_t orig_fapl, const char *driver_name)
     if (H5F_block_write(f, H5FD_MEM_SUPER, meta_addr + (sizeof(int) * 200), sizeof(int) * 100, data) < 0)
         FAIL_STACK_ERROR;
 
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if ((size_t)f->shared->page_buf->index_len != page_count)
         FAIL_STACK_ERROR;
 
-    if (f->shared->page_buf->meta_count != 2)
+    if (f->shared->page_buf->curr_md_pages != 2)
         TEST_ERROR;
 
-    if (f->shared->page_buf->raw_count != 3)
+    if (f->shared->page_buf->curr_rd_pages != 3)
         TEST_ERROR;
 
     /* bring the rest of the raw entries up the LRU */
@@ -1571,13 +1571,13 @@ test_min_threshold(hid_t orig_fapl, const char *driver_name)
     if (H5F_block_write(f, H5FD_MEM_DRAW, raw_addr + (sizeof(int) * 100), sizeof(int) * 100, data) < 0)
         FAIL_STACK_ERROR;
 
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if ((size_t)f->shared->page_buf->index_len != page_count)
         FAIL_STACK_ERROR;
 
-    if (f->shared->page_buf->meta_count != 1)
+    if (f->shared->page_buf->curr_md_pages != 1)
         TEST_ERROR;
 
-    if (f->shared->page_buf->raw_count != 4)
+    if (f->shared->page_buf->curr_rd_pages != 4)
         TEST_ERROR;
 
     /* write one more raw entry which should replace another raw entry
@@ -1586,13 +1586,13 @@ test_min_threshold(hid_t orig_fapl, const char *driver_name)
     if (H5F_block_write(f, H5FD_MEM_DRAW, raw_addr + (sizeof(int) * 300), sizeof(int) * 100, data) < 0)
         FAIL_STACK_ERROR;
 
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if ((size_t)f->shared->page_buf->index_len != page_count)
         FAIL_STACK_ERROR;
 
-    if (f->shared->page_buf->meta_count != 1)
+    if (f->shared->page_buf->curr_md_pages != 1)
         TEST_ERROR;
 
-    if (f->shared->page_buf->raw_count != 4)
+    if (f->shared->page_buf->curr_rd_pages != 4)
         TEST_ERROR;
 
     /* write a metadata entry that should replace the metadata entry
@@ -1601,13 +1601,13 @@ test_min_threshold(hid_t orig_fapl, const char *driver_name)
     if (H5F_block_write(f, H5FD_MEM_SUPER, meta_addr + (sizeof(int) * 500), sizeof(int) * 100, data) < 0)
         FAIL_STACK_ERROR;
 
-    if (H5SL_count(f->shared->page_buf->slist_ptr) != page_count)
+    if ((size_t)f->shared->page_buf->index_len != page_count)
         FAIL_STACK_ERROR;
 
-    if (f->shared->page_buf->meta_count != 1)
+    if (f->shared->page_buf->curr_md_pages != 1)
         TEST_ERROR;
 
-    if (f->shared->page_buf->raw_count != 4)
+    if (f->shared->page_buf->curr_rd_pages != 4)
         TEST_ERROR;
 
     if (H5Fclose(file_id) < 0)
@@ -1820,8 +1820,8 @@ test_stats_collection(hid_t orig_fapl, const char *driver_name)
     assert(f->shared);
     assert(f->shared->page_buf);
 
-    base_raw_cnt  = f->shared->page_buf->raw_count;
-    base_meta_cnt = f->shared->page_buf->meta_count;
+    base_raw_cnt  = f->shared->page_buf->curr_rd_pages;
+    base_meta_cnt = f->shared->page_buf->curr_md_pages;
 
     if (base_raw_cnt != 0)
         TEST_ERROR;

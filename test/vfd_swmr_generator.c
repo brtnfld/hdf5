@@ -102,19 +102,19 @@ gen_skeleton(const char *filename, hbool_t verbose, hbool_t vfd_swmr_write, int 
     unsigned               u, v;          /* Local index variable */
     H5F_vfd_swmr_config_t *config = NULL; /* Configuration for VFD SWMR */
 
-    HDassert(filename);
-    HDassert(index_type);
+    assert(filename);
+    assert(index_type);
 
     /* There are two chunk indexes tested here.
      * With one unlimited dimension, we get the extensible array index
      * type, with two unlimited dimensions, we get a v2 B-tree.
      */
-    if (!HDstrcmp(index_type, "b2"))
+    if (!strcmp(index_type, "b2"))
         max_dims[0] = H5S_UNLIMITED;
 
     /* Emit informational message */
     if (verbose)
-        HDfprintf(stderr, "Creating file\n");
+        fprintf(stderr, "Creating file\n");
 
     /*
      * Set up to create the file with VFD SWMR write configured.
@@ -122,7 +122,7 @@ gen_skeleton(const char *filename, hbool_t verbose, hbool_t vfd_swmr_write, int 
 
     if (vfd_swmr_write) {
         /* Allocate memory for the VFD SWMR configuration structure */
-        if ((config = HDcalloc(1, sizeof(*config))) == NULL)
+        if ((config = calloc(1, sizeof(*config))) == NULL)
             return -1;
 
         /* config, tick_len, max_lag, presume_posix_semantics, writer,
@@ -185,7 +185,7 @@ gen_skeleton(const char *filename, hbool_t verbose, hbool_t vfd_swmr_write, int 
     /* Currently fill values do not work because they can bump the dataspace
      * message to the second object header chunk.  We should enable the fillval
      * here when this is fixed.  -NAF 8/11/11 */
-    HDmemset(&fillval, 0, sizeof(fillval));
+    memset(&fillval, 0, sizeof(fillval));
     fillval.rec_id = (uint64_t)ULLONG_MAX;
     if (H5Pset_fill_value(dcpl, tid, &fillval) < 0)
         return -1;
@@ -193,10 +193,10 @@ gen_skeleton(const char *filename, hbool_t verbose, hbool_t vfd_swmr_write, int 
 
     /* Emit informational message */
     if (verbose)
-        HDfprintf(stderr, "Creating datasets\n");
+        fprintf(stderr, "Creating datasets\n");
 
 #if 0 /* delete this once the race condiditon bug is fixed */ /* JRM */
-    HDsleep(1);
+    sleep(1);
 #endif                                                        /* JRM */
 
     /* Create the datasets */
@@ -215,7 +215,7 @@ gen_skeleton(const char *filename, hbool_t verbose, hbool_t vfd_swmr_write, int 
              * moved out of chunk #0 of the object header
              * (Set to true for every fourth dataset)
              */
-            move_dataspace_message = !(HDrandom() % 4);
+            move_dataspace_message = !(random() % 4);
             if (move_dataspace_message) {
                 unsigned chunk_num; /* Object header chunk # for dataspace message */
 
@@ -238,7 +238,7 @@ gen_skeleton(const char *filename, hbool_t verbose, hbool_t vfd_swmr_write, int 
 
     /* Emit informational message */
     if (verbose)
-        HDfprintf(stderr, "Closing objects\n");
+        fprintf(stderr, "Closing objects\n");
 
     /* Close everything */
     if (H5Pclose(dcpl) < 0)
@@ -249,38 +249,38 @@ gen_skeleton(const char *filename, hbool_t verbose, hbool_t vfd_swmr_write, int 
         return -1;
 
     if (verbose)
-        HDfprintf(stderr, "Closing file\n");
+        fprintf(stderr, "Closing file\n");
 
     if (H5Fclose(fid) < 0)
         return -1;
 
     /* Free the config structure */
     if (config)
-        HDfree(config);
+        free(config);
     return 0;
 } /* end gen_skeleton() */
 
 static void
 usage(void)
 {
-    HDprintf("\n");
-    HDprintf("Usage error!\n");
-    HDprintf("\n");
-    HDprintf("Usage: swmr_generator [-q] [-s] [-c <deflate compression level>]\n");
-    HDprintf("    [-i <index type>] [-r <random seed>]\n");
-    HDprintf("\n");
-    HDprintf("NOTE: The random seed option is only used by the sparse test.  Other\n");
-    HDprintf("      tests specify the random seed as a reader/writer option.\n");
-    HDprintf("\n");
-    HDprintf("<deflate compression level> should be -1 (for no compression) or 0-9\n");
-    HDprintf("\n");
-    HDprintf("<index type> should be b2 or ea\n");
-    HDprintf("\n");
-    HDprintf("Defaults to verbose (no '-q' given), no VFD_SWMR_WRITE mode (no '-s' given) no\n");
-    HDprintf("compression ('-c -1'), v1 b-tree indexing (-i b1), and will generate a random\n");
-    HDprintf("seed (no -r given).\n");
-    HDprintf("\n");
-    HDexit(1);
+    printf("\n");
+    printf("Usage error!\n");
+    printf("\n");
+    printf("Usage: swmr_generator [-q] [-s] [-c <deflate compression level>]\n");
+    printf("    [-i <index type>] [-r <random seed>]\n");
+    printf("\n");
+    printf("NOTE: The random seed option is only used by the sparse test.  Other\n");
+    printf("      tests specify the random seed as a reader/writer option.\n");
+    printf("\n");
+    printf("<deflate compression level> should be -1 (for no compression) or 0-9\n");
+    printf("\n");
+    printf("<index type> should be b2 or ea\n");
+    printf("\n");
+    printf("Defaults to verbose (no '-q' given), no VFD_SWMR_WRITE mode (no '-s' given) no\n");
+    printf("compression ('-c -1'), v1 b-tree indexing (-i b1), and will generate a random\n");
+    printf("seed (no -r given).\n");
+    printf("\n");
+    exit(1);
 } /* end usage() */
 
 int
@@ -303,7 +303,7 @@ main(int argc, const char *argv[])
                 switch (argv[u][1]) {
                     /* Compress dataset chunks */
                     case 'c':
-                        comp_level = HDatoi(argv[u + 1]);
+                        comp_level = atoi(argv[u + 1]);
                         if (comp_level < -1 || comp_level > 9)
                             usage();
                         u += 2;
@@ -312,7 +312,7 @@ main(int argc, const char *argv[])
                     /* Chunk index type */
                     case 'i':
                         index_type = argv[u + 1];
-                        if (HDstrcmp(index_type, "ea") && HDstrcmp(index_type, "b2"))
+                        if (strcmp(index_type, "ea") && strcmp(index_type, "b2"))
                             usage();
                         u += 2;
                         break;
@@ -320,7 +320,7 @@ main(int argc, const char *argv[])
                     /* Random # seed */
                     case 'r':
                         use_seed = true;
-                        temp     = HDatoi(argv[u + 1]);
+                        temp     = atoi(argv[u + 1]);
                         if (temp < 0)
                             usage();
                         else
@@ -350,31 +350,31 @@ main(int argc, const char *argv[])
 
     /* Emit informational message */
     if (verbose) {
-        HDfprintf(stderr, "Parameters:\n");
-        HDfprintf(stderr, "\tswmr writes %s\n", vfd_swmr_write ? "on" : "off");
-        HDfprintf(stderr, "\tcompression level = %d\n", comp_level);
-        HDfprintf(stderr, "\tindex type = %s\n", index_type);
+        fprintf(stderr, "Parameters:\n");
+        fprintf(stderr, "\tswmr writes %s\n", vfd_swmr_write ? "on" : "off");
+        fprintf(stderr, "\tcompression level = %d\n", comp_level);
+        fprintf(stderr, "\tindex type = %s\n", index_type);
     } /* end if */
 
     /* Set the random seed */
     if (!use_seed) {
         struct timeval t;
 
-        HDgettimeofday(&t, NULL);
+        gettimeofday(&t, NULL);
         random_seed = (unsigned)(t.tv_usec);
     } /* end if */
-    HDsrandom(random_seed);
+    srandom(random_seed);
     /* ALWAYS emit the random seed for possible debugging */
-    HDfprintf(stderr, "Using generator random seed (used in sparse test only): %u\n", random_seed);
+    fprintf(stderr, "Using generator random seed (used in sparse test only): %u\n", random_seed);
 
     /* Emit informational message */
     if (verbose)
-        HDfprintf(stderr, "Generating skeleton file: %s\n", VFD_SWMR_FILENAME);
+        fprintf(stderr, "Generating skeleton file: %s\n", VFD_SWMR_FILENAME);
 
     /* Generate file skeleton */
     if (gen_skeleton(VFD_SWMR_FILENAME, verbose, vfd_swmr_write, comp_level, index_type, random_seed) < 0) {
-        HDfprintf(stderr, "Error generating skeleton file!\n");
-        HDexit(1);
+        fprintf(stderr, "Error generating skeleton file!\n");
+        exit(1);
     } /* end if */
 
     return 0;
@@ -385,7 +385,7 @@ main(int argc, const char *argv[])
 int
 main(void)
 {
-    HDfprintf(stderr, "Non-POSIX platform. Skipping.\n");
+    fprintf(stderr, "Non-POSIX platform. Skipping.\n");
     return EXIT_SUCCESS;
 } /* end main() */
 

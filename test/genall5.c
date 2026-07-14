@@ -513,7 +513,7 @@ vrfy_ns_grp_c(hid_t fid, const char *group_name, unsigned nlinks)
             slinkval = malloc(lnk_info.u.val_size);
 
             if (!slinkval) {
-                failure_mssg = "vrfy_ns_grp_c: HDmalloc of slinkval failed";
+                failure_mssg = "vrfy_ns_grp_c: malloc of slinkval failed";
                 return false;
             }
 
@@ -571,7 +571,7 @@ vrfy_ns_grp_c(hid_t fid, const char *group_name, unsigned nlinks)
             elinkval = malloc(lnk_info.u.val_size);
 
             if (!elinkval) {
-                failure_mssg = "vrfy_ns_grp_c: HDmalloc of elinkval failed.";
+                failure_mssg = "vrfy_ns_grp_c: malloc of elinkval failed.";
                 return false;
             }
 
@@ -863,7 +863,7 @@ vrfy_ns_grp_d(hid_t fid, const char *group_name, unsigned nlinks)
             slinkval = malloc(lnk_info.u.val_size);
 
             if (!slinkval) {
-                failure_mssg = "vrfy_ns_grp_d: HDmalloc of slinkval failed";
+                failure_mssg = "vrfy_ns_grp_d: malloc of slinkval failed";
                 return false;
             }
 
@@ -919,7 +919,7 @@ vrfy_ns_grp_d(hid_t fid, const char *group_name, unsigned nlinks)
             elinkval = malloc(lnk_info.u.val_size);
 
             if (!elinkval) {
-                failure_mssg = "vrfy_ns_grp_d: HDmalloc of elinkval failed.";
+                failure_mssg = "vrfy_ns_grp_d: malloc of elinkval failed.";
                 return false;
             }
 
@@ -1376,7 +1376,7 @@ vrfy_os_grp_n(hid_t fid, const char *group_name, int proc_num, unsigned nlinks)
             slinkval = malloc(lnk_info.u.val_size);
 
             if (!slinkval) {
-                failure_mssg = "vrfy_os_grp_n: HDmalloc of slinkval failed";
+                failure_mssg = "vrfy_os_grp_n: malloc of slinkval failed";
                 return false;
             }
 
@@ -1497,7 +1497,7 @@ ds_ctg_i(hid_t fid, const char *dset_name, hbool_t write_data)
         wdata = malloc(sizeof(int) * DSET_DIMS);
 
         if (!wdata) {
-            failure_mssg = "ds_ctg_i: HDmalloc of wdata failed.";
+            failure_mssg = "ds_ctg_i: malloc of wdata failed.";
             return false;
         }
 
@@ -1662,7 +1662,7 @@ vrfy_ds_ctg_i(hid_t fid, const char *dset_name, hbool_t write_data)
         rdata = malloc(sizeof(int) * DSET_DIMS);
 
         if (!rdata) {
-            failure_mssg = "vrfy_ds_ctg_i: HDmalloc of rdata failed.";
+            failure_mssg = "vrfy_ds_ctg_i: malloc of rdata failed.";
             return false;
         }
 
@@ -1780,7 +1780,7 @@ ds_chk_i(hid_t fid, const char *dset_name, hbool_t write_data)
         wdata = malloc(sizeof(int) * DSET_DIMS);
 
         if (!wdata) {
-            failure_mssg = "ds_chk_i: HDmalloc of wdata failed.";
+            failure_mssg = "ds_chk_i: malloc of wdata failed.";
             return false;
         }
 
@@ -1952,7 +1952,7 @@ vrfy_ds_chk_i(hid_t fid, const char *dset_name, hbool_t write_data)
         rdata = malloc(sizeof(int) * DSET_DIMS);
 
         if (!rdata) {
-            failure_mssg = "vrfy_ds_chk_i: HDmalloc of rdata failed.";
+            failure_mssg = "vrfy_ds_chk_i: malloc of rdata failed.";
             return false;
         }
 
@@ -2068,7 +2068,7 @@ ds_cpt_i(hid_t fid, const char *dset_name, hbool_t write_data)
         wdata = malloc(sizeof(int) * DSET_COMPACT_DIMS);
 
         if (!wdata) {
-            failure_mssg = "ds_cpt_i: HDmalloc of wdata failed.";
+            failure_mssg = "ds_cpt_i: malloc of wdata failed.";
             return false;
         }
 
@@ -2227,7 +2227,7 @@ vrfy_ds_cpt_i(hid_t fid, const char *dset_name, hbool_t write_data)
         rdata = malloc(sizeof(int) * DSET_COMPACT_DIMS);
 
         if (!rdata) {
-            failure_mssg = "vrfy_ds_cpt_i: HDmalloc of rdata failed.";
+            failure_mssg = "vrfy_ds_cpt_i: malloc of rdata failed.";
             return false;
         }
 
@@ -2322,7 +2322,7 @@ ds_ctg_v(hid_t fid, const char *dset_name, hbool_t write_data)
         wdata = malloc(sizeof(hvl_t) * DSET_SMALL_DIMS);
 
         if (!wdata) {
-            failure_mssg = "ds_ctg_v: HDmalloc of wdata failed.";
+            failure_mssg = "ds_ctg_v: malloc of wdata failed.";
             return false;
         }
 
@@ -2335,7 +2335,7 @@ ds_ctg_v(hid_t fid, const char *dset_name, hbool_t write_data)
             tdata = malloc(sizeof(int) * len);
 
             if (!tdata) {
-                failure_mssg = "ds_ctg_v: HDmalloc of tdata failed.";
+                failure_mssg = "ds_ctg_v: malloc of tdata failed.";
                 while (u > 0)
                     free(wdata[u--].p);
                 free(wdata);
@@ -2530,7 +2530,7 @@ vrfy_ds_ctg_v(hid_t fid, const char *dset_name, hbool_t write_data)
         rdata = malloc(sizeof(hvl_t) * DSET_SMALL_DIMS);
 
         if (!rdata) {
-            failure_mssg = "vrfy_ds_ctg_v: HDmalloc of rdata failed.";
+            failure_mssg = "vrfy_ds_ctg_v: malloc of rdata failed.";
             return false;
         }
 

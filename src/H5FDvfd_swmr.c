@@ -422,6 +422,14 @@ H5P_push_vfd_swmr_reader_vfd_on_fapl(hid_t fapl_id)
 
     FUNC_ENTER_NOAPI(FAIL)
 
+    /* Ensure the VFD SWMR reader VFD class is registered (assigns
+     * H5FD_VFD_SWMR_id_g) before it is used as a driver ID below.  Unlike
+     * sec2/core/etc., this VFD has no public H5Pset_fapl_*() entry point to
+     * trigger registration, so this internal push function must do it.
+     */
+    if (H5I_INVALID_HID == H5FD_vfd_swmr_init())
+        HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, FAIL, "unable to initialize vfd_swmr driver");
+
     /* sanity checks -- get ptr to plist in passing */
     if (NULL == (plist_ptr = H5P_object_verify(fapl_id, H5P_FILE_ACCESS, false)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list");
@@ -512,6 +520,7 @@ H5FD__swmr_reader_open(H5FD_vfd_swmr_t *file)
 
     if (file->api_elapsed_ticks == NULL)
         HGOTO_ERROR(H5E_VFL, H5E_CANTALLOC, FAIL, "could not allocate API elapsed ticks");
+
     if (!file->make_believe) {
         /* Retry on opening the metadata file */
         for (do_try         = H5_retry_init(&retry, H5FD_VFD_SWMR_MD_FILE_RETRY_MAX, H5_RETRY_DEFAULT_MINIVAL,
@@ -993,9 +1002,23 @@ H5FD__vfd_swmr_read(H5FD_t *_file, H5FD_mem_t type, hid_t H5_ATTR_UNUSED dxpl_id
     num_entries  = file->md_index.num_entries;
     fs_page_size = file->md_header.fs_page_size;
 
-    if (!fs_page_size) {
-        assert(!num_entries);
-        assert(file->make_believe);
+    /* Raw data is never published to the shadow index -- only metadata is
+     * (see H5PB__vfd_swmr_track_write()'s own exclusion of H5FD_MEM_DRAW).
+     * A raw-data page can, on disk, share a page-aligned address range with
+     * an unrelated metadata structure (e.g. a v1 B-tree node for a group's
+     * link index) that *is* published: the shadow index then holds a
+     * snapshot of that whole page taken when the metadata was last
+     * published, which freezes whatever raw bytes happened to be co-located
+     * on the page at that moment. A raw-data read must never be redirected
+     * through that stale snapshot -- it must always go straight to the real
+     * file, which the writer keeps immediately up to date for raw data (see
+     * the VFD-SWMR raw-data page-buffer bypass in H5PB_write()). Skip the
+     * index lookup entirely for raw data so it can never win a false match
+     * against a metadata page it happens to share.
+     */
+    if (!fs_page_size || H5FD_MEM_DRAW == type) {
+        assert(fs_page_size || !num_entries);
+        assert(fs_page_size || file->make_believe);
         entry = NULL;
     }
     else {

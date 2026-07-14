@@ -25,7 +25,7 @@ endmacro ()
 set (H5_UTIL_TESTS)
 
 if (HDF5_TEST_SWMR)
-  set (H5_UTIL_TESTS ${H5_UTIL_TESTS} swmr_check_compat_vfd)
+  set (H5_UTIL_TESTS ${H5_UTIL_TESTS} swmr_check_compat_vfd vfd_swmr_check_compat_vfd)
 endif ()
 
 if (H5_UTIL_TESTS)

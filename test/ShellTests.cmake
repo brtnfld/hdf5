@@ -52,6 +52,12 @@ elseif (UNIX)
     configure_file(${HDF5_TEST_SOURCE_DIR}/test_use_cases.sh.in ${HDF5_TEST_BINARY_DIR}/H5TEST/test_use_cases.sh @ONLY)
     configure_file(${HDF5_TEST_SOURCE_DIR}/test_swmr.sh.in ${HDF5_TEST_BINARY_DIR}/H5TEST/test_swmr.sh @ONLY)
     configure_file(${HDF5_TEST_SOURCE_DIR}/test_vds_swmr.sh.in ${HDF5_TEST_BINARY_DIR}/H5TEST/test_vds_swmr.sh @ONLY)
+    if (TARGET aux_process)
+      set (AUX_PROCESS "yes")
+    else ()
+      set (AUX_PROCESS "no")
+    endif ()
+    configure_file(${HDF5_TEST_SOURCE_DIR}/test_vfd_swmr.sh.in ${HDF5_TEST_BINARY_DIR}/H5TEST/test_vfd_swmr.sh @ONLY)
 
     ##############################################################################
     #  copy test programs to test dir
@@ -136,5 +142,50 @@ elseif (UNIX)
     if ("H5SHELL-test_vds_swmr" MATCHES "${HDF5_DISABLE_TESTS_REGEX}")
       set_tests_properties (H5SHELL-test_vds_swmr PROPERTIES DISABLED true)
     endif ()
+
+    # test_vfd_swmr.sh runs a set of independent scenarios (few_big, zoo,
+    # groups, sparse, ...); it accepts a scenario name as an argument to run
+    # just that one (see its all_tests handling). Register each scenario as
+    # its own ctest test so CI reports/parallelizes them individually instead
+    # of hiding them all behind one monolithic pass/fail. The scenarios all
+    # run in the same working directory and several of them communicate over a
+    # fixed socket port (DEFAULT_PORT in vfd_swmr_common.c) and share message/
+    # data filenames, so they must never run concurrently with each other --
+    # a shared RESOURCE_LOCK serializes them among themselves while still
+    # letting the rest of the suite run in parallel.
+    #
+    # These are the scenarios test_vfd_swmr.sh makes available at every
+    # test-express level (its default all_tests list).
+    set (H5_VFD_SWMR_SHELL_TESTS
+        generator expand shrink expand_shrink sparse vlstr_null vlstr_oob
+        zoo groups groups_attrs groups_ops few_big many_small
+    )
+    # Additional scenarios the script only enables for an exhaustive
+    # (HDF_TEST_EXPRESS=0) run -- registering them at other levels would make
+    # the script reject the argument as an "Unknown test".
+    if (HDF_TEST_EXPRESS EQUAL 0)
+      list (APPEND H5_VFD_SWMR_SHELL_TESTS
+          attrdset dsetops dsetops_ref dsetchks
+          os_groups_attrs os_groups_ops os_groups_seg independ_wr
+          gfail_entry_length gfail_checksum gfail_page_size gfail_index_space
+      )
+    endif ()
+
+    foreach (vfd_swmr_scenario ${H5_VFD_SWMR_SHELL_TESTS})
+      add_test (H5SHELL-test_vfd_swmr-${vfd_swmr_scenario}
+          ${SH_PROGRAM} ${HDF5_TEST_BINARY_DIR}/H5TEST/test_vfd_swmr.sh ${vfd_swmr_scenario})
+      set_tests_properties (H5SHELL-test_vfd_swmr-${vfd_swmr_scenario} PROPERTIES
+              # Forward the configured test-express level so the script honors it
+              # (it otherwise defaults to 1 = a heavier run than a HDF_TEST_EXPRESS=3
+              # build intends). Matches how the reference/autotools harness runs it.
+              ENVIRONMENT "LD_LIBRARY_PATH=$ENV{LD_LIBRARY_PATH}:${CMAKE_RUNTIME_OUTPUT_DIRECTORY};HDF5TestExpress=${HDF_TEST_EXPRESS}"
+              WORKING_DIRECTORY ${HDF5_TEST_BINARY_DIR}/H5TEST
+              TIMEOUT ${CTEST_VERY_LONG_TIMEOUT}
+              RESOURCE_LOCK vfd_swmr_h5test_dir
+      )
+      if ("H5SHELL-test_vfd_swmr-${vfd_swmr_scenario}" MATCHES "${HDF5_DISABLE_TESTS_REGEX}")
+        set_tests_properties (H5SHELL-test_vfd_swmr-${vfd_swmr_scenario} PROPERTIES DISABLED true)
+      endif ()
+    endforeach ()
   endif ()
 endif ()

@@ -371,6 +371,23 @@ H5AC_create(const H5F_t *f, H5AC_cache_config_t *config_ptr, H5AC_cache_image_co
                            H5F_START_MDC_LOG_ON_ACCESS(f)) < 0)
             HGOTO_ERROR(H5E_CACHE, H5E_LOGGING, FAIL, "mdc logging setup failed");
 
+    /* Configure the metadata cache for VFD SWMR reader operation if
+     * specified.  This must happen here, at cache-creation time and
+     * before the superblock is ever loaded, so that page_index[]
+     * insertion (gated on cache_ptr->vfd_swmr_reader) is already active
+     * by the time H5F__super_read() protects the superblock entry --
+     * otherwise the superblock is invisible to the VFD SWMR reader's
+     * end-of-tick refresh scan and its EOA is never kept in sync with
+     * the writer.
+     */
+    if (H5F_VFD_SWMR_CONFIG(f) && !f->shared->vfd_swmr_config.writer) {
+        assert(!(H5F_INTENT(f) & H5F_ACC_RDWR));
+        assert(f->shared->fs_page_size > 0);
+
+        if (H5C_set_vfd_swmr_reader(f->shared->cache, true, f->shared->fs_page_size) < 0)
+            HGOTO_ERROR(H5E_CACHE, H5E_CANTSET, FAIL, "can't configure MDC for VFD SWMR reader operations");
+    }
+
     /* Set the cache parameters */
     if (H5AC_set_cache_auto_resize_config(f->shared->cache, config_ptr) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTSET, FAIL, "auto resize configuration failed");
@@ -2239,8 +2256,12 @@ H5AC_evict_tagged_metadata(H5F_t *f, haddr_t metadata_tag, bool match_global)
     assert(f);
     assert(f->shared);
 
-    /* Call cache level function to evict metadata entries with specified tag */
-    if (H5C_evict_tagged_entries(f, metadata_tag, match_global) < 0)
+    /* Call cache level function to evict metadata entries with specified tag.
+     * This is a general-purpose evict-by-tag operation (not VFD SWMR
+     * end-of-tick processing), so a genuinely pinned entry here is still a
+     * real error -- do_refresh is false, tick is unused.
+     */
+    if (H5C_evict_tagged_entries(f, metadata_tag, match_global, false, 0) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Cannot evict metadata");
 
 done:

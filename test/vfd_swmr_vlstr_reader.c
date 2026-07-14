@@ -13,6 +13,8 @@
 #define H5C_FRIEND /*suppress error about including H5Cpkg   */
 #define H5F_FRIEND /*suppress error about including H5Fpkg   */
 
+#include "H5private.h" /* Generic Functions -- must be included before other private headers, see H5Fsuper.c */
+
 #include "hdf5.h"
 
 #include "H5Cpkg.h"
@@ -48,12 +50,12 @@ read_vl_dset(hid_t dset, hid_t type, char **data)
 static void
 usage(const char *progname)
 {
-    HDfprintf(stderr, "usage: %s [-W] [-V] [-t (oob|null)] \n", progname);
-    HDfprintf(stderr, "\n  -S: do not use VFD SWMR\n");
-    HDfprintf(stderr, "  -n: number of test steps to perform\n");
-    HDfprintf(stderr, "  -q: be quiet: few/no progress messages\n");
-    HDfprintf(stderr, "  -t (oob|null): select out-of-bounds or NULL test\n");
-    HDexit(EXIT_FAILURE);
+    fprintf(stderr, "usage: %s [-W] [-V] [-t (oob|null)] \n", progname);
+    fprintf(stderr, "\n  -S: do not use VFD SWMR\n");
+    fprintf(stderr, "  -n: number of test steps to perform\n");
+    fprintf(stderr, "  -q: be quiet: few/no progress messages\n");
+    fprintf(stderr, "  -t (oob|null): select out-of-bounds or NULL test\n");
+    exit(EXIT_FAILURE);
 }
 
 int
@@ -77,9 +79,9 @@ main(int argc, char **argv)
     const char            *s_opts   = "Sn:qt:";
     struct h5_long_options l_opts[] = {{NULL, 0, '\0'}};
 
-    HDassert(H5T_C_S1 != H5I_INVALID_HID);
+    assert(H5T_C_S1 != H5I_INVALID_HID);
 
-    if (NULL == (config = HDcalloc(1, sizeof(H5F_vfd_swmr_config_t))))
+    if (NULL == (config = calloc(1, sizeof(H5F_vfd_swmr_config_t))))
         PUTS_ERROR("memory allocation failed");
 
     while ((opt = H5_get_option(argc, (const char *const *)argv, s_opts, l_opts)) != EOF) {
@@ -89,19 +91,19 @@ main(int argc, char **argv)
                 break;
             case 'n':
                 errno = 0;
-                tmp   = HDstrtoul(H5_optarg, &end, 0);
+                tmp   = strtoul(H5_optarg, &end, 0);
                 if (end == optarg || *end != '\0') {
-                    HDfprintf(stderr, "couldn't parse `-n` argument `%s`", H5_optarg);
+                    fprintf(stderr, "couldn't parse `-n` argument `%s`", H5_optarg);
                     AT();
                     goto error;
                 }
                 else if (errno != 0) {
-                    HDfprintf(stderr, "couldn't parse `-n` argument `%s`", H5_optarg);
+                    fprintf(stderr, "couldn't parse `-n` argument `%s`", H5_optarg);
                     AT();
                     goto error;
                 }
                 else if (tmp > INT_MAX) {
-                    HDfprintf(stderr, "`-n` argument `%lu` too large", tmp);
+                    fprintf(stderr, "`-n` argument `%lu` too large", tmp);
                     AT();
                     goto error;
                 }
@@ -111,9 +113,9 @@ main(int argc, char **argv)
                 verbosity = 1;
                 break;
             case 't':
-                if (HDstrcmp(H5_optarg, "oob") == 0)
+                if (strcmp(H5_optarg, "oob") == 0)
                     sel = TEST_OOB;
-                else if (HDstrcmp(H5_optarg, "null") == 0)
+                else if (strcmp(H5_optarg, "null") == 0)
                     sel = TEST_NULL;
                 else
                     usage(argv[0]);
@@ -138,7 +140,10 @@ main(int argc, char **argv)
     if ((fapl = vfd_swmr_create_fapl(true, use_vfd_swmr, sel == TEST_OOB, 4096, config)) < 0)
         STACK_ERROR;
 
-    if ((fid = H5Fopen("vfd_swmr_vlstr.h5", H5F_ACC_RDONLY, fapl)) < 0)
+    /* Retry until the writer's file appears (the vlstr scenario launches
+     * writer and reader with no WRITER_MESSAGE gating) -- see
+     * vfd_swmr_reader_fopen(). */
+    if ((fid = vfd_swmr_reader_fopen("vfd_swmr_vlstr.h5", fapl)) < 0)
         STACK_ERROR;
 
     /* Create the VL string datatype and a scalar dataspace */
@@ -166,7 +171,7 @@ main(int argc, char **argv)
         } scanned_content;
 
         dbgf(2, "iteration %d which %d", i, which);
-        (void)HDsnprintf(name[which], sizeof(name[which]), "dset-%d", which);
+        (void)snprintf(name[which], sizeof(name[which]), "dset-%d", which);
         es = disable_estack();
 
         dset[which] = H5Dopen2(fid, name[which], H5P_DEFAULT);
@@ -180,8 +185,8 @@ main(int argc, char **argv)
             dbgf(2, ": couldn't read\n");
             continue;
         }
-        nconverted = HDsscanf(content[which], "content %d seq %d %96s", &scanned_content.which,
-                              &scanned_content.seq, scanned_content.tail);
+        nconverted = sscanf(content[which], "content %d seq %d %96s", &scanned_content.which,
+                            &scanned_content.seq, scanned_content.tail);
         if (nconverted != 3) {
             dbgf(2, ": couldn't scan\n");
             continue;
@@ -191,7 +196,7 @@ main(int argc, char **argv)
         H5Dclose(dset[which]);
 
         if (content[which] != NULL) {
-            HDfree(content[which]);
+            free(content[which]);
             content[which] = NULL;
         }
 
@@ -200,10 +205,10 @@ main(int argc, char **argv)
     }
 
     if (caught_out_of_bounds)
-        HDfprintf(stderr, "caught out of bounds\n");
+        fprintf(stderr, "caught out of bounds\n");
 
     if (read_null)
-        HDfprintf(stderr, "read NULL\n");
+        fprintf(stderr, "read NULL\n");
 
     if (H5Pclose(fapl) < 0)
         STACK_ERROR;
@@ -214,7 +219,7 @@ main(int argc, char **argv)
     if (H5Fclose(fid) < 0)
         STACK_ERROR;
 
-    HDfree(config);
+    free(config);
 
     if (sel == TEST_OOB)
         return caught_out_of_bounds ? EXIT_SUCCESS : EXIT_FAILURE;
@@ -233,7 +238,7 @@ error:
     }
     H5E_END_TRY;
 
-    HDfree(config);
+    free(config);
 }
 
 #else /* H5_HAVE_WIN32_API */
@@ -241,7 +246,7 @@ error:
 int
 main(void)
 {
-    HDfprintf(stderr, "Non-POSIX platform. Skipping.\n");
+    fprintf(stderr, "Non-POSIX platform. Skipping.\n");
     return EXIT_SUCCESS;
 }
 

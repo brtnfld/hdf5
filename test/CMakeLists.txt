@@ -838,6 +838,77 @@ foreach (h5_test ${H5_VDS_SWMR_TESTS})
   ADD_H5_VDS_EXE(${h5_test})
 endforeach ()
 
+##############################################################################
+###           V F D   S W M R   T E S T S                                 ###
+##############################################################################
+
+set (H5_VFD_SWMR_TESTS
+    vfd_swmr_addrem_writer
+    vfd_swmr_generator
+    vfd_swmr_reader
+    vfd_swmr_remove_reader
+    vfd_swmr_remove_writer
+    vfd_swmr_sparse_reader
+    vfd_swmr_sparse_writer
+    vfd_swmr_vlstr_reader
+    vfd_swmr_vlstr_writer
+    vfd_swmr_writer
+)
+
+foreach (h5_test ${H5_VFD_SWMR_TESTS})
+  ADD_H5_EXE(${h5_test})
+endforeach ()
+
+# Executables that share a source file with a sibling executable: which role
+# (writer/reader, or p0/p1) the program plays is decided at runtime by
+# inspecting argv[0] (see e.g. vfd_swmr_group_writer.c's use of
+# H5_basename()+HDstrstr() against "vfd_swmr_group_"), so the same .c file
+# must be compiled into two separately-named binaries.
+macro (ADD_H5_VFD_SWMR_EXE_SRC target source)
+  add_executable (${target} ${HDF5_TEST_SOURCE_DIR}/${source}.c ${ARGN})
+  target_include_directories (${target} PRIVATE "${HDF5_SRC_INCLUDE_DIRS};${HDF5_SRC_BINARY_DIR};${HDF5_TEST_BINARY_DIR};$<$<BOOL:${HDF5_ENABLE_PARALLEL}>:${MPI_C_INCLUDE_DIRS}>")
+  target_compile_options(${target} PRIVATE "${HDF5_CMAKE_C_FLAGS}")
+  target_compile_definitions(${target} PRIVATE "${HDF5_TEST_COMPILE_DEFS_PRIVATE}")
+  if (NOT BUILD_SHARED_LIBS)
+    TARGET_C_PROPERTIES (${target} STATIC)
+    target_link_libraries (${target} PRIVATE ${HDF5_TEST_LIB_TARGET})
+  else ()
+    TARGET_C_PROPERTIES (${target} SHARED)
+    target_link_libraries (${target} PRIVATE ${HDF5_TEST_LIBSH_TARGET})
+  endif ()
+  set_target_properties (${target} PROPERTIES FOLDER test)
+  if (HDF5_ENABLE_FORMATTERS)
+    clang_format (HDF5_TEST_${target}_FORMAT ${target})
+  endif ()
+endmacro ()
+
+ADD_H5_VFD_SWMR_EXE_SRC (vfd_swmr_zoo_writer vfd_swmr_zoo_writer ${HDF5_TEST_SOURCE_DIR}/genall5.c)
+ADD_H5_VFD_SWMR_EXE_SRC (vfd_swmr_zoo_reader vfd_swmr_zoo_writer ${HDF5_TEST_SOURCE_DIR}/genall5.c)
+
+ADD_H5_VFD_SWMR_EXE_SRC (vfd_swmr_group_writer vfd_swmr_group_writer)
+ADD_H5_VFD_SWMR_EXE_SRC (vfd_swmr_group_reader vfd_swmr_group_writer)
+
+ADD_H5_VFD_SWMR_EXE_SRC (vfd_swmr_bigset_writer vfd_swmr_bigset_writer)
+ADD_H5_VFD_SWMR_EXE_SRC (vfd_swmr_bigset_reader vfd_swmr_bigset_writer)
+
+ADD_H5_VFD_SWMR_EXE_SRC (vfd_swmr_attrdset_writer vfd_swmr_attrdset_writer)
+ADD_H5_VFD_SWMR_EXE_SRC (vfd_swmr_attrdset_reader vfd_swmr_attrdset_writer)
+
+ADD_H5_VFD_SWMR_EXE_SRC (vfd_swmr_dsetops_writer vfd_swmr_dsetops_writer)
+ADD_H5_VFD_SWMR_EXE_SRC (vfd_swmr_dsetops_reader vfd_swmr_dsetops_writer)
+
+ADD_H5_VFD_SWMR_EXE_SRC (vfd_swmr_dsetchks_writer vfd_swmr_dsetchks_writer)
+ADD_H5_VFD_SWMR_EXE_SRC (vfd_swmr_dsetchks_reader vfd_swmr_dsetchks_writer)
+
+ADD_H5_VFD_SWMR_EXE_SRC (vfd_swmr_gperf_writer vfd_swmr_gperf_writer)
+ADD_H5_VFD_SWMR_EXE_SRC (vfd_swmr_gperf_reader vfd_swmr_gperf_writer)
+
+ADD_H5_VFD_SWMR_EXE_SRC (vfd_swmr_gfail_writer vfd_swmr_gfail_writer)
+ADD_H5_VFD_SWMR_EXE_SRC (vfd_swmr_gfail_reader vfd_swmr_gfail_writer)
+
+ADD_H5_VFD_SWMR_EXE_SRC (vfd_swmr_indep_wr_p0 vfd_swmr_indep_rw_writer)
+ADD_H5_VFD_SWMR_EXE_SRC (vfd_swmr_indep_wr_p1 vfd_swmr_indep_rw_writer)
+
 #-- Adding test for accum_swmr_reader
 #   This has to be copied to the test directory for execve() to find it
 #   and it can't be renamed (i.e., no <foo>-shared).

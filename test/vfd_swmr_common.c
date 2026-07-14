@@ -22,6 +22,12 @@
 #include "vfd_swmr_common.h"
 #include "swmr_common.h"
 
+/* For poll() on the listen socket (POSIX); this test's socket code is
+ * POSIX-only, matching the guarded socket headers in vfd_swmr_common.h. */
+#ifdef H5_HAVE_SYS_SOCKET_H
+#include <poll.h>
+#endif
+
 /* Only need the pthread solution if sigtimedwait(2) isn't available.
  * There's currently no Windows solution, so ignore that for now.
  */
@@ -97,6 +103,40 @@ decisleep(uint32_t tenths)
     uint64_t nsec = tenths * 100 * 1000 * 1000;
 
     H5_nanosleep(nsec);
+}
+
+/* Open a VFD SWMR file as a reader, retrying until it appears.
+ *
+ * The writer and reader test processes are launched concurrently with no
+ * ordering guarantee (several scenarios have no WRITER_MESSAGE gating), so
+ * the reader can reach the open before the writer has created the file.
+ * Failing immediately would leave the writer blocked in the socket
+ * handshake's accept() forever, waiting for a reader that died at open --
+ * an observed multi-hour hang. Retrying tolerates the startup race
+ * generically for every reader that uses it. Returns the open file id, or
+ * H5I_INVALID_HID once the (~30s) retry budget is exhausted.
+ */
+hid_t
+vfd_swmr_reader_fopen(const char *filename, hid_t fapl)
+{
+    hid_t          fid = H5I_INVALID_HID;
+    unsigned       ntries;
+    const unsigned max_ntries = 300; /* ~30s at 0.1s each */
+
+    for (ntries = 0; ntries < max_ntries; ntries++) {
+        H5E_BEGIN_TRY
+        {
+            fid = H5Fopen(filename, H5F_ACC_RDONLY, fapl);
+        }
+        H5E_END_TRY;
+
+        if (fid >= 0)
+            break;
+
+        decisleep(1); /* 0.1s */
+    }
+
+    return fid;
 }
 
 /* Like vsnprintf(3), but abort the program with an error message on
@@ -317,10 +357,10 @@ await_signal(hid_t fid)
 #else
     for (;;) {
         /* Linux and other systems */
-        const int rc = HDsigtimedwait(&sleepset, NULL, &tick);
+        const int rc = sigtimedwait(&sleepset, NULL, &tick);
 
         if (rc != -1) {
-            fprintf(stderr, "Received %s, wrapping things up.\n", HDstrsignal(rc));
+            fprintf(stderr, "Received %s, wrapping things up.\n", strsignal(rc));
             break;
         }
         else if (rc == -1 && errno == EAGAIN) {
@@ -580,6 +620,33 @@ socket_connect(socket_state_t *sock, bool server)
             goto error;
         }
 
+        /* Wait for a client connection with a timeout, then accept it. A bare
+         * blocking accept() has no timeout, so a writer whose reader died (or
+         * never connected) would block here forever -- the mechanism behind an
+         * observed multi-hour hang. The reader-side retries (the H5Fopen retry
+         * in the test's reader path and the connect() retry below) make a
+         * connection arrive reliably within seconds; this timeout is a backstop
+         * that converts any residual failure-to-connect into a prompt,
+         * diagnosable error instead of an unbounded hang. */
+        {
+            struct pollfd pfd;
+            int           poll_ret;
+            const int     accept_timeout_ms = 120000; /* 2 minutes */
+
+            pfd.fd     = sock->listen_fd;
+            pfd.events = POLLIN;
+
+            poll_ret = poll(&pfd, 1, accept_timeout_ms);
+            if (poll_ret == 0) {
+                fprintf(stderr, "timed out waiting for client connection\n");
+                goto error;
+            }
+            else if (poll_ret < 0) {
+                fprintf(stderr, "error polling listen socket\n");
+                goto error;
+            }
+        }
+
         /* Accept a connection */
         socklen_t len = sizeof(client);
         sock->comm_fd = accept(sock->listen_fd, (struct sockaddr *)&client, &len);
@@ -597,11 +664,18 @@ socket_connect(socket_state_t *sock, bool server)
         sock->listen_fd = INVALID_SOCKET;
     }
     else { /* Client Code */
-        /* Create TCP socket */
-        if (INVALID_SOCKET == (sock->comm_fd = socket(AF_INET, SOCK_STREAM, 0))) {
-            fprintf(stderr, "error creating client socket\n");
-            goto error;
-        }
+        int  attempt;
+        bool connected = false;
+        /* ~30s worth of 0.1s retries. The writer (server) and reader
+         * (client) are launched with no ordering guarantee, so the client
+         * can reach connect() before the server has reached listen(). A
+         * single connect() attempt would then fail with ECONNREFUSED, the
+         * reader would die, and the server would block forever in accept()
+         * waiting for a client that already gave up -- a real, observed
+         * hang for scenarios (e.g. "groups") that don't gate the reader
+         * launch on a writer-ready message the way the bigset tests do.
+         * Retrying the connect tolerates the startup race generically. */
+        const int max_connect_attempts = 300;
 
         /* Set socket information */
         servaddr.sin_family = AF_INET;
@@ -613,8 +687,28 @@ socket_connect(socket_state_t *sock, bool server)
             goto error;
         }
 
-        /* Attempt server connection */
-        if (connect(sock->comm_fd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
+        /* Attempt server connection, retrying to tolerate the writer not
+         * having reached listen() yet. A fresh socket is created for each
+         * attempt, since a socket whose connect() failed must not be reused
+         * for a subsequent connect(). */
+        for (attempt = 0; attempt < max_connect_attempts; attempt++) {
+            if (INVALID_SOCKET == (sock->comm_fd = socket(AF_INET, SOCK_STREAM, 0))) {
+                fprintf(stderr, "error creating client socket\n");
+                goto error;
+            }
+
+            if (connect(sock->comm_fd, (struct sockaddr *)&servaddr, sizeof(servaddr)) == 0) {
+                connected = true;
+                break;
+            }
+
+            /* This attempt failed; discard the socket and pause before retrying */
+            close(sock->comm_fd);
+            sock->comm_fd = INVALID_SOCKET;
+            decisleep(1); /* 0.1s */
+        }
+
+        if (!connected) {
             fprintf(stderr, "socket communication connection error\n");
             goto error;
         }
