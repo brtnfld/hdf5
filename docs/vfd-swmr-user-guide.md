@@ -1,7 +1,7 @@
 # VFD SWMR User's Guide 
 
-**This document describes VFD SWMR prototype that is currently 
-available in the HDF5 GitHub repository [feature branch](https://github.com/LifeboatLLC/hdf5_swmr.git).**
+**This document describes VFD SWMR as implemented in the HDF5 GitHub repository
+[feature/vfd-swmr-port branch](https://github.com/HDFGroup/hdf5/tree/feature/vfd-swmr-port).**
 
 SWMR, which stands for Single Writer/Multiple Reader access mode, is a feature
 of the HDF5 library that lets a process write data to an HDF5 file
@@ -78,13 +78,13 @@ utilities built by the VFD SWMR project.
 
 ## Download
 
-Clone the HDF5 repository in a new directory, then switch to the 
-`feature/vfd_swmr` branch as follows:
+Clone the HDF5 repository in a new directory, then switch to the
+`feature/vfd-swmr-port` branch as follows:
 
 ```
 % git clone https://github.com/HDFGroup/hdf5 swmr
 % cd swmr
-% git checkout feature/vfd_swmr
+% git checkout feature/vfd-swmr-port
 ```
 
 ## Build
@@ -173,21 +173,22 @@ usage: vfd_swmr_bigset_writer [-F] [-M] [-S] [-V] [-W] [-a steps] [-b] [-c cols]
 
 ## The VFD SWMR demos
 
-The VFD SWMR demos are located in the `examples` directory of this source
-tree. Instructions for building the example programs are given in the README
-file in that directory. These programs are NOT installed via `cmake --install`
-and have to be built by hand with h5cc as described in the README.
+The VFD SWMR demos are located in the `HDF5Examples/C/TUTR` directory of this
+source tree. Instructions for building the example programs are given in the
+[README](../HDF5Examples/C/TUTR/README.md) file in that directory. These
+programs are NOT installed via `cmake --install` and must be built by hand
+with `h5cc` as described in the README.
 
-Two Gaussian programs are built, `wgaussians` and `rgaussians`.  If you start
+Two Gaussian programs are built, `wgaussians` and `rgaussians`. If you start
 both from the same directory in different terminals, you should see the
-"bouncing 2-D Gaussian distributions" in the `rgaussians` terminal.  This demo
+"bouncing 2-D Gaussian distributions" in the `rgaussians` terminal. This demo
 uses curses, so you may need to install the curses developers library to build
 (and this is probably not going to be easy to build on Windows).
 
 The creation-deletion (`credel`) demo is also run in two terminals.
 The two command lines are given in the README. You need to use the `h5ls`
 installed from the VFD SWMR branch, since only that version has the `--poll`
-option. Be careful to not use a non-VFD-SWMR system h5ls here.
+option. Be careful not to use a non-VFD-SWMR system `h5ls` here.
 
 # Developer tips
 
@@ -220,8 +221,8 @@ When configuring manually, the application must:
 
 The following sections describe the available VFD SWMR configuration parameters. 
 These parameters may be specified either in a VFD SWMR configuration file
-or programmatically through the `H5F_vfd_swmr_config_t` structure, which is documented in 
-[H5Fpublic.h](https://github.com/LifeboatLLC/hdf5_swmr/blob/feature/vfd_swmr/src/H5Fpublic.h). 
+or programmatically through the `H5F_vfd_swmr_config_t` structure, which is documented in
+[H5Fpublic.h](https://github.com/HDFGroup/hdf5/blob/feature/vfd-swmr-port/src/H5Fpublic.h).
 
 VFD SWMR relies on metadata reads and writes to go through the
 page buffer.  Note that the default page size is 4096 bytes. Finding good
@@ -295,7 +296,9 @@ All configuration parser interfaces accept the following parameters:
 *Note:* An error will occur if `create_file` is `true` while `writer` is `false`.
 
 #### Example configuration:
-The following example configuration is used by the `credel` demo program and is included in [credel_swmr_config.txt](https://github.com/LifeboatLLC/hdf5_swmr/blob/feature/vfd_swmr/examples/credel_swmr_config.txt). All three parser interfaces accept this same configuration format. 
+The following example configuration is used by the `credel` demo program and is included in
+[HDF5Examples/C/TUTR/credel_swmr_config.txt](../HDF5Examples/C/TUTR/credel_swmr_config.txt).
+All three parser interfaces accept this same configuration format.
 
 Comments have been added to explain field meanings and the use of boolean values (`0` and `1`). These comments are valid configuration syntax, but are included here for documentation and are not required for correct configuration.
 
@@ -485,28 +488,27 @@ file-access properties established on first open.
 
 ## Pushing HDF5 raw data to reader visibility
 
-At present, VFD SWMR is hard coded to flush raw data at the end of 
-each tick.  While this imposes additional overhead, it simplifies testing, 
-and is probably desirable for applications that do not require the best
-possible raw data throughput.  We plan to upgrade our tests and make this 
-user configurable in the first production release.
+Whether VFD SWMR flushes raw data at the end of each tick is controlled by
+the `flush_raw_data` field in `H5F_vfd_swmr_config_t` (and the corresponding
+`flush_raw_data` directive in the configuration file). When enabled, raw data
+is flushed to disk at every tick boundary, which ensures readers always see
+up-to-date dataset content at the cost of additional I/O overhead. For
+applications that do not require immediate raw data visibility, disabling
+`flush_raw_data` can improve throughput.
 
-With the currently hard coded flush of raw data at the end of each tick, 
-it should not be necessary to call H5Fflush().  In fact, when VFD SWMR is 
-active, H5Fflush() may require up to `max_lag` ticks to complete due to 
-metadata consistency issues.
+When `flush_raw_data` is enabled it should not be necessary to call
+`H5Fflush()`. In fact, when VFD SWMR is active, `H5Fflush()` may require up
+to `max_lag` ticks to complete due to metadata consistency requirements.
 
-Instead, a writer can make its last changes to HDF5 file visible to all
-readers immediately using the new call, `H5Fvfd_swmr_end_tick()`.  Note
-that this call should be used sparingly, as it terminates the current 
-tick early, thus effectively reducing `max_lag`.  Repeated calls in 
-quick succession can force a reader to overrun `max_lag`, and 
-read stale metadata.
+Instead, a writer can make its latest changes visible to all readers
+immediately using `H5Fvfd_swmr_end_tick()`. This call should be used
+sparingly: it terminates the current tick early, effectively reducing
+`max_lag`. Repeated calls in quick succession can force a reader to overrun
+`max_lag` and read stale metadata.
 
-When the flush of raw data at end of tick is disabled (not possible at present), 
-the `H5Fvfd_swmr_end_tick()` call will make the writers current view of metadata
-visible to the reader -- which may refer to raw data that hasn't been written to 
-the HDF5 file yet.
+When `flush_raw_data` is disabled, `H5Fvfd_swmr_end_tick()` makes the
+writer's current metadata snapshot visible to readers, but raw data that has
+not yet been flushed to disk may not be readable by the reader.
 
 ## Reading up-to-date content
 
