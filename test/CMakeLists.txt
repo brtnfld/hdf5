@@ -876,6 +876,15 @@ macro (ADD_H5_VFD_SWMR_EXE_SRC target source)
     TARGET_C_PROPERTIES (${target} SHARED)
     target_link_libraries (${target} PRIVATE ${HDF5_TEST_LIBSH_TARGET})
   endif ()
+  # Several of these sources (e.g. vfd_swmr_zoo_writer.c, vfd_swmr_group_writer.c,
+  # vfd_swmr_dsetops_writer.c, vfd_swmr_gfail_writer.c) call recv()/send() directly
+  # rather than through vfd_swmr_common.c's guarded wrapper, so the executable's own
+  # object needs Winsock linked too -- ws2_32.lib is already PRIVATE to
+  # HDF5_TEST_LIB_TARGET/HDF5_TEST_LIBSH_TARGET above, which does not propagate here.
+  target_link_libraries (${target} PRIVATE "$<$<OR:$<PLATFORM_ID:Windows>,$<PLATFORM_ID:MinGW>>:ws2_32.lib>")
+  if (MINGW)
+    target_link_libraries (${target} PRIVATE "wsock32.lib")
+  endif ()
   set_target_properties (${target} PROPERTIES FOLDER test)
   if (HDF5_ENABLE_FORMATTERS)
     clang_format (HDF5_TEST_${target}_FORMAT ${target})
