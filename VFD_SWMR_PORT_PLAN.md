@@ -2091,6 +2091,51 @@ MSYS2-clangarm64-Release`, and `Intel Workflows / windows-oneapi Release` were a
 the same pre-session baseline run (`29284564445`, 2026-07-13) used above — not new, not investigated
 further.
 
+### Third follow-up: fixed the `zoo_create_hook` DLL-linkage conflict too, confirmed via CI — every Windows MSVC job that was failing now passes
+
+Went back to the `zoo_create_hook` issue flagged as "needs a real Windows environment, not a blind
+attempt" above. On reflection, the actual fix doesn't require compiling on Windows to get right with
+confidence — it's a source-level redesign whose correctness can be fully reasoned about and verified
+on Linux, with the real Windows CI run as the final check (same approach already validated for the
+`ws2_32` fix).
+
+**The fix**: replaced the override-by-redefinition pattern with an explicit, overridable function
+pointer. `genall5.h` now declares `typedef void (*zoo_create_hook_t)(hid_t);` and
+`H5TEST_DLLVAR zoo_create_hook_t zoo_create_hook_g;` (using this codebase's existing
+`H5TEST_DLLVAR`/`H5_VAR_EXPORT`/`H5_VAR_IMPORT` convention for exported *variables* — already used for
+`n_tests_run_g` and others in `h5test.h` — rather than `H5TEST_DLL`, which is for functions and doesn't
+bundle the `extern` a variable declaration needs). `stubs.c` renames its default implementation to
+`static void zoo_create_hook_default()` and initializes `zoo_create_hook_g = zoo_create_hook_default;`
+at file scope (a plain, unexported definition, matching how `n_tests_run_g` itself is defined in
+`h5test.c` with no DLL macro at the definition site). `genall5.c`'s one call site now calls
+`zoo_create_hook_g(fid)`. `vfd_swmr_zoo_writer.c` renames its override to `static void
+zoo_writer_create_hook()` and reassigns `zoo_create_hook_g = zoo_writer_create_hook;` as the first
+statement in both of its `main()` variants (the `H5_USE_SOCKETS` one and the non-socket one), before
+any zoo operation can run — a plain runtime assignment, not a static initializer, so it isn't exposed
+to undefined cross-translation-unit static-initialization ordering. `cache_image` and `mirror_vfd`
+(which also compile `genall5.c` but never touch the hook) are unaffected and keep the default.
+
+**Verified without Windows, then confirmed with it.** All four affected executables
+(`vfd_swmr_zoo_writer`/`_reader`, `cache_image`, `mirror_vfd`) build clean locally;
+`clang-format --dry-run --Werror` clean on all four touched files; full ctest 2566/2566; the `zoo`
+scenario (which exercises the *real* hook behavior — the writer-side `decisleep(1)` — not just the
+default no-op) still passes end-to-end. Pushed and watched the real CI run: every Windows MSVC job
+that was failing on `zoo_create_hook` before — `Windows MSVC-Debug--CC`, `-Debug-TS-`,
+`-Release--CC`, `-Release-TS-`, `-Debug--`, `-Release--` (Minimum/Release/arm64 variants) — is now
+**green**, confirmed directly by grepping the new job's raw log for `zoo_create_hook`/`LNK2005`/
+`LNK1169`: zero matches (versus the old log's exact three-line failure signature). Both `-Werror`
+jobs and the `ws2_32` fix are also still green in the same run.
+
+**Full picture of this run, since "not all green" and "this session's fixes work" are both true at
+once:** `i386 Workflows / i386 Release` and the `Msys2 Workflows` group (`MSYS2-clangarm64-Release`
+fails; the other four MSYS2 variants — `mingw64`, `ucrt64`, `clang64`, `mingw32` — get
+fail-fast-cancelled as collateral, exact same pattern confirmed on the pre-session baseline run too)
+are the only real failures left, and both were already failing identically on that same
+pre-session baseline (`29284564445`) — not new, not caused by anything in this session.
+`Special Workflows / Intel DBG v2.0.0 default API no deprecated` and `Intel Workflows /
+windows-oneapi Release`, which *were* also failing on that baseline, are green in this run —
+likely flaky rather than fixed by anything here, but worth noting they're no longer red.
+
 ### Not done this session
 
 - The GitHub Actions CI workflow itself still only builds `RelWithDebInfo` (per Session N+4's own
@@ -2356,18 +2401,16 @@ make -j"$(nproc)"
     exceptions, two more `H5PB.c` asserts assuming tick-list/DWL entries can't be cleaned by an
     out-of-band flush, one incorrect single-page assumption in `H5FDvfd_swmr.c`'s mpmde read path,
     and two guaranteed-to-fail test-code asserts). Pushed and watched the real `hdf5 dev cmake CI`
-    run this time (see "Follow-up"/"Second follow-up" above): caught and fixed a Release-build
-    `-Werror=unused-variable` regression the `NDEBUG` gating introduced (confirmed green on a
-    re-run), and unmasked a new Windows MSVC link-stage failure in `vfd_swmr_zoo_writer`/`_reader`
-    previously hidden behind the compile-stage errors Session N+4 fixed — half of it (missing
-    `ws2_32` link, affecting four VFD SWMR test executables) **fixed and confirmed** via another
-    real CI run; the other half (a `zoo_create_hook` DLL-linkage/duplicate-symbol conflict, a
-    structural Linux-vs-Windows difference in this codebase's hook-override pattern) is **not
-    fixed** — needs a real Windows environment to redesign safely, not a blind attempt. **Next
-    natural step**: redesign the hook-override mechanism (function pointer, or restructure which
-    `genall5.c` functions are `H5TEST_DLL`-exported) with actual Windows/MSVC access; also still
-    worth adding a Debug (or otherwise non-`NDEBUG`) CI job so the sanity-check class of bug can't
-    regress silently again, now that this session confirmed CI only exercises `RelWithDebInfo`.
+    run this time (see "Follow-up"/"Second follow-up"/"Third follow-up" above): caught and fixed a
+    Release-build `-Werror=unused-variable` regression the `NDEBUG` gating introduced, and unmasked
+    (then fixed, both halves) a new Windows MSVC link-stage failure in `vfd_swmr_zoo_writer`/`_reader`
+    previously hidden behind the compile-stage errors Session N+4 fixed: the missing `ws2_32` link
+    (affecting four VFD SWMR test executables), and the `zoo_create_hook` DLL-linkage/duplicate-symbol
+    conflict (redesigned as an overridable function pointer). **All three fixes confirmed green on
+    real CI re-runs**, including every previously-failing Windows MSVC job (`Debug--CC`, `Debug-TS-`,
+    `Release--CC`, `Release-TS-`, `Debug--`, `Release--`, `arm64 Release--`). **Next natural step**:
+    add a Debug (or otherwise non-`NDEBUG`) CI job so the sanity-check class of bug can't regress
+    silently again, now that this session confirmed CI only exercises `RelWithDebInfo`.
 
 ---
 
@@ -2426,3 +2469,5 @@ make -j"$(nproc)"
 | Removed stale `is_dirty` asserts on tick-list/DWL entries | `src/H5PB.c`, `H5PB_vfd_swmr__update_index()`/`H5PB_vfd_swmr__release_delayed_writes()` | Session N+5, bug #4 |
 | mpmde read-size bound fix (`entry->length` not `fs_page_size`) | `src/H5FDvfd_swmr.c`, `H5FD__vfd_swmr_read()` | Session N+5, bug #5 |
 | Removed guaranteed-failing `H5T_C_S1` asserts | `test/vfd_swmr_vlstr_writer.c`, `test/vfd_swmr_vlstr_reader.c` | Session N+5, bug #6 |
+| `ws2_32.lib`/`wsock32.lib` link for VFD SWMR test executables (Windows/MinGW) | `test/CMakeLists.txt`, `ADD_H5_VFD_SWMR_EXE_SRC` macro | Session N+5, CI follow-up, Windows bug #1 |
+| `zoo_create_hook` redesigned as overridable function pointer `zoo_create_hook_g` | `test/genall5.h`, `test/stubs.c`, `test/genall5.c`, `test/vfd_swmr_zoo_writer.c` | Session N+5, CI follow-up, Windows bug #2 (confirmed fixed via real CI) |
