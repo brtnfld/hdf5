@@ -571,21 +571,42 @@ async function coordinateReviewers(github, context, core, {
   // synchronize-swap or additive-fill logic runs, so those paths see an already-
   // correct one-per-area baseline. (PR #6484: user pushed a commit that first
   // touched .github; GitHub assigned all 4 .github CODEOWNERS simultaneously.)
-  // justRequestedLogin's area is exempted — a human just deliberately asked
-  // for exactly that person, which looks identical to an avalanche (two
-  // owners now requested) but isn't one.
+  //
+  // A genuine multi-owner CODEOWNERS avalanche and "someone just manually
+  // review_requested a specific login on top of an already-settled pick"
+  // produce an identical shape (an area with >1 owner currently requested) —
+  // this run's own action can't tell them apart (PR #6530: the ready_for_review
+  // avalanche's own review_requested sub-events raced the ready_for_review
+  // action itself via cancel-in-progress, and one of them survived). So
+  // justRequestedLogin's area is never exempted from pruning; instead it's
+  // forced as that area's kept pick — still collapses a real avalanche to
+  // one person, while guaranteeing a direct review_requested is never the
+  // one removed.
   const avalancheAreas = eligibleAreas.filter(
     area => area.owners.filter(o => existingRequested.has(o)).length > 1
-      && !(justRequestedLogin && area.owners.includes(justRequestedLogin))
   );
   if (avalancheAreas.length > 0) {
-    const { selected: avalanchePruned, log: pruneLog } = chooseReviewers(avalancheAreas, {
+    const forcedAreas = justRequestedLogin
+      ? avalancheAreas.filter(a => a.owners.includes(justRequestedLogin))
+      : [];
+    const algorithmAreas = avalancheAreas.filter(a => !forcedAreas.includes(a));
+
+    const { selected: algoPicked, log: pruneLog } = chooseReviewers(algorithmAreas, {
       prAuthor,
       existingRequested: new Set(), // pick fresh: treat each area as uncovered
       reviewerLoad,
       LINE_THRESHOLD, AREA_THRESHOLDS, PUBLIC_HEADER,
     });
     for (const msg of pruneLog) core.info(msg);
+
+    const avalanchePruned = new Set(algoPicked);
+    if (forcedAreas.length > 0) {
+      avalanchePruned.add(justRequestedLogin);
+      core.info(
+        `Area(s) ${forcedAreas.map(a => a.label).join(', ')}: keeping explicitly ` +
+        `review_requested ${justRequestedLogin} instead of the load-balanced pick`
+      );
+    }
 
     const avalancheOwners = new Set(avalancheAreas.flatMap(a => a.owners));
     // Keep the pruned single pick per area; leave non-avalanche owners untouched.

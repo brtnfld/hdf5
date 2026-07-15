@@ -905,10 +905,12 @@ asyncTest('coordinateReviewers: synchronize with one owner per area does not pru
 // their area now had two currently-requested owners — themselves plus
 // whichever pick an earlier ready_for_review pruning pass had already made
 // — which is indistinguishable from an unpruned CODEOWNERS avalanche unless
-// the just-requested login is carved out).
+// the just-requested login is carved out). The area is still pruned to one
+// pick, same as any other avalanche — it's just forced to be the login that
+// was directly requested, rather than the load-balancer's own choice.
 // ----------------------------------------------------------------
 
-asyncTest('coordinateReviewers: review_requested for a specific login is not undone by avalanche pruning', async () => {
+asyncTest('coordinateReviewers: review_requested for a specific login becomes that area\'s forced pick', async () => {
   const github = makeGithubMock();
   const context = {
     eventName: 'pull_request_target',
@@ -934,8 +936,47 @@ asyncTest('coordinateReviewers: review_requested for a specific login is not und
 
   const { confirmedRequested } = await coordinateReviewers(github, context, makeCore(), args);
 
-  assert.strictEqual(github.calls.removeRequestedReviewers.length, 0, 'Nothing should be removed');
+  assert.deepStrictEqual(github.calls.removeRequestedReviewers, ['hyoklee'], 'The old pick is swapped out');
   assert.ok(confirmedRequested.has('jhendersonHDF'), 'The just-requested reviewer must stay');
+  assert.ok(!confirmedRequested.has('hyoklee'), 'The area keeps exactly one reviewer');
+});
+
+// ----------------------------------------------------------------
+// coordinateReviewers — a genuine multi-owner avalanche must still prune to
+// one even when the surviving run's own action is one of the avalanche's own
+// review_requested sub-events (PR #6530: ready_for_review fired the
+// ready_for_review action plus one review_requested per CODEOWNERS owner,
+// all near-simultaneously; concurrency: cancel-in-progress let one of the
+// review_requested runs survive instead of ready_for_review itself. Since a
+// checklist comment already existed from the draft-open phase, that survivor
+// fell through past the ready_for_review-only pruning branch entirely).
+// ----------------------------------------------------------------
+
+asyncTest('coordinateReviewers: review_requested surviving a ready_for_review avalanche still prunes to one', async () => {
+  const github = makeGithubMock();
+  const context = {
+    eventName: 'pull_request_target',
+    payload: {
+      action: 'review_requested',
+      requested_reviewer: { login: 'jhendersonHDF' },
+      sender: { type: 'User' },
+    },
+  };
+  const args = makeCoordinateBaseArgs({
+    prData: {
+      user: { login: 'lrknox' },
+      draft: false,
+      // GitHub's own CODEOWNERS avalanche assigned all 3 non-author owners —
+      // never pruned, since the surviving run isn't the ready_for_review action.
+      requested_reviewers: [{ login: 'hyoklee' }, { login: 'jhendersonHDF' }, { login: 'glennsong09' }],
+    },
+  });
+
+  const { confirmedRequested } = await coordinateReviewers(github, context, makeCore(), args);
+
+  assert.strictEqual(confirmedRequested.size, 1, 'Should prune to exactly one reviewer');
+  assert.ok(confirmedRequested.has('jhendersonHDF'), 'The directly-requested login wins the forced pick');
+  assert.strictEqual(github.calls.removeRequestedReviewers.length, 2, 'The other two avalanche owners are removed');
 });
 
 // ----------------------------------------------------------------
