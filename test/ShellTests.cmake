@@ -172,8 +172,23 @@ elseif (UNIX)
     endif ()
 
     foreach (vfd_swmr_scenario ${H5_VFD_SWMR_SHELL_TESTS})
+      # test_vfd_swmr.sh's own 'shrink' scenario does not regenerate its
+      # prerequisite .h5 file the way every other scenario does (see its
+      # "depends on the .h5 file left behind by the 'expand' test" check) --
+      # it is only ever meant to be invoked together with 'expand' in the
+      # same script run. RESOURCE_LOCK below only prevents these ctest
+      # tests from overlapping in time, it does not order them, so running
+      # 'shrink' with just its own name (as every other scenario here is)
+      # fails deterministically. Pass both scenario names to this one
+      # invocation instead, matching the script's own documented
+      # precondition, rather than relying on ctest scheduling order.
+      if (vfd_swmr_scenario STREQUAL "shrink")
+        set (vfd_swmr_scenario_args expand shrink)
+      else ()
+        set (vfd_swmr_scenario_args ${vfd_swmr_scenario})
+      endif ()
       add_test (H5SHELL-test_vfd_swmr-${vfd_swmr_scenario}
-          ${SH_PROGRAM} ${HDF5_TEST_BINARY_DIR}/H5TEST/test_vfd_swmr.sh ${vfd_swmr_scenario})
+          ${SH_PROGRAM} ${HDF5_TEST_BINARY_DIR}/H5TEST/test_vfd_swmr.sh ${vfd_swmr_scenario_args})
       set_tests_properties (H5SHELL-test_vfd_swmr-${vfd_swmr_scenario} PROPERTIES
               # Forward the configured test-express level so the script honors it
               # (it otherwise defaults to 1 = a heavier run than a HDF_TEST_EXPRESS=3
