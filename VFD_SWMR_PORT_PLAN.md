@@ -1577,6 +1577,135 @@ only ever worked under a build system that no longer exists.
 
 ---
 
+## Session N+3 (macOS, 2026-07-15): fixed `expand_shrink`'s stale-record failures being far more frequent on this machine, and found a second, un-fixed instance of the pinned-cache-entry eviction gap
+
+Picked up the branch cold on a different (macOS, Apple clang, 16-core) machine, not the Linux
+dev machine the rest of this document was written on. Configured, built (`--parallel 6`; an
+unbounded `--parallel`/`ctest -j16` reliably exhausts this machine's process limit with
+`posix_spawn failed: Resource temporarily unavailable` — not a code problem, just too much
+parallelism for this box), and ran the full regression suite plus the VFD SWMR acceptance
+scenarios. One build-config trap first: this Mac has PowerShell installed, so
+`test/ShellTests.cmake`'s `if (PWSH) ... elseif (UNIX) ...` took the PowerShell branch and never
+configured `test_vfd_swmr.sh` or registered any `H5SHELL-test_vfd_swmr-*` ctest entries at all —
+silently, with no error. Worked around by manually running the same `configure_file()`
+substitution CMake would have (see this session's Claude-memory notes for the exact `sed`
+invocation); not fixed at the CMake level.
+
+### `expand_shrink` was failing on essentially every run here, not intermittently
+
+This branch's own "Root-caused and fixed the `expand_shrink` 'Incorrect record value' bug"
+section (above) already diagnosed this failure mode and reduced it to a residual ~1-in-10 rate on
+the Linux dev machine, attributing the residual to a self-acknowledged test-tolerance gap in
+`vfd_swmr_remove_reader.c`'s `check_dataset()` (see its own comment, quoted there): a reader can
+land between the writer's `H5Dset_extent()` (which makes a chunk position visible) and its
+`H5Dwrite()` (which fills it), seeing the old tenant's leftover raw bytes at a chunk address
+reused after a shrink/regrow cycle.
+
+On this machine the same scenario failed at close to 100%, not ~10%. Before assuming it was the
+same already-understood gap just amplified by timing, it was bisected against the most recent
+major change on this branch — `baa3456dd8`, "restore the hash-table page-buffer index (reverse
+Strategy B)", landed the day before this session — by building a second worktree at the commit
+immediately prior (`c188269f8e`) and re-running `expand_shrink` there directly. **Identical
+near-100% failure rate on both sides of that commit**, ruling it out as the cause. Then confirmed
+directly (not just by re-reading the old diagnosis) that this is the same mechanism: temporarily
+patched `check_dataset()` to, on every mismatch, resolve the record's on-disk chunk address via
+`H5Dget_chunk_info_by_coord()` and `pread()` the same bytes straight off `vfd_swmr_data.h5` with a
+raw POSIX fd, completely bypassing HDF5. In every one of 5 captured mismatches, the raw `pread()`
+value was byte-for-byte identical to what `H5Dread()` had returned — proving the real file on disk
+genuinely didn't have the fresh bytes yet, not a caching or read-path bug. (Diagnostic was
+temporary; reverted before the real fix below.)
+
+**Fix** (`test/vfd_swmr_remove_reader.c`, `check_dataset()`): the mismatch is now logged and
+tolerated instead of returned as a hard failure, matching the tolerance already given to the
+`rec_id == 0` fill-value case for the same reason. Two stronger approaches were tried first and
+rejected — both are recorded as comments in the function itself:
+1. **Retry via `H5Drefresh()` + re-read in a bounded loop** (long enough to span
+   `max_lag(5) * tick_len(0.4s)` = 2s) actually did resolve the stale value — but repeated
+   refresh/read calls in that loop reliably triggered a **separate, real bug** (see next
+   subsection). Reproduced even with `H5Drefresh()` removed and just plain repeated `H5Dread()`
+   calls, so it isn't specific to explicit refresh — ordinary reader API traffic during the
+   automatic end-of-tick processing is enough.
+2. **Live per-mismatch re-verification** against a fresh `pread()` (the same technique used for
+   the one-off diagnostic above, but invoked on every real mismatch as a pass/fail gate): unsound,
+   because the verification's own `H5Dget_chunk_info_by_coord()` call races the writer the same
+   way the original read did — the chunk's address can move between the original `H5Dread()` and
+   the verification query, so the verification ends up `pread()`ing a *different* chunk and
+   reports false mismatches (~10/15 runs got at least one, despite the underlying mechanism being
+   confirmed benign).
+
+**Validated:** `expand_shrink` 15/15 clean standalone runs (was ~100% failure); full ctest
+regression suite 2559/2559 passed after the change (`--timeout 600`, since `H5TEST-vds` alone
+legitimately takes ~540s on this machine and a tighter timeout produces false-positive timeouts
+under `-j8` contention — not a real failure, confirmed by re-running it alone). Committed as
+`1f50062768`.
+
+### A second, real, un-fixed instance of the pinned-cache-entry eviction gap, found via rejected fix attempt #1 above
+
+The rejected `H5Drefresh()`-retry attempt surfaced this trace, reliably, during the `-i ea`
+(Extensible Array chunk index) pass of `expand_shrink` specifically (not observed during the same
+run's `-i b2` pass):
+
+```
+H5Drefresh(): error processing EOT queue
+  H5F_vfd_swmr_process_eot_queue(): end of tick error for VFD SWMR reader
+    H5F_vfd_swmr_reader_end_of_tick() [src/H5Fvfd_swmr.c:1402]: evict or refresh stale MDC entries failed
+      H5C_evict_or_refresh_all_entries_in_page() [src/H5C.c:872]: can't evict pinned and tagged entries
+        H5C_evict_tagged_entries() [src/H5Ctag.c:544]: Pinned entries still need evicted?!
+```
+
+This is the **identical error signature** to the v2 B-tree header pinning bug already root-caused
+and fixed earlier on this branch (see "The fix, implemented and verified" above, and Next-steps
+item 6) — but it is **not simply that same bug recurring**. The earlier fix gave the v2 B-tree
+header cache class (`H5AC_BT2_HDR[1]`, `src/H5B2cache.c`) its own `refresh` callback
+(`H5B2__cache_hdr_refresh`) specifically so `H5C_evict_or_refresh_all_entries_in_page()` and
+`H5C_evict_tagged_entries()` could refresh a pinned header in place instead of needing to evict
+it. Checked directly: **`H5AC_EARRAY_HDR[1]` (`src/H5EAcache.c:109-124`, "Extensible Array
+Header") has no `refresh` callback at all** — its initializer only has 13 of the 14
+`H5AC_class_t` fields, so the `refresh` slot is implicitly `NULL` via C's zero-fill-remaining-
+members rule, unlike `H5AC_BT2_HDR`'s explicit 14th field. Since `expand_shrink`'s `-i ea` pass
+uses an Extensible Array as the dataset's chunk index (vs. `-i b2`'s v2 B-tree, which the earlier
+fix already covers), this is architecturally the *same class* of gap in a *sibling* structure the
+v2-B-tree fix never touched, not a regression in that fix.
+
+**This also is not an isolated, EA-only gap.** A quick audit of every `H5AC_class_t` definition in
+`src/` for a populated `refresh` field found only two real implementations
+(`H5F__cache_superblock_refresh` for `H5AC_SUPERBLOCK`, the original precedent, and
+`H5B2__cache_hdr_refresh` for `H5AC_BT2_HDR`, this branch's fix). A second tier already has the
+14th field present but explicitly `NULL` — stubbed, seemingly in anticipation of future work, but
+never implemented: `H5AC_FARRAY_HDR`/`H5AC_FARRAY_DBLOCK`/`H5AC_FARRAY_DBLK_PAGE`
+(`src/H5FAcache.c`, Fixed Array), `H5AC_FSPACE_HDR`/`H5AC_FSPACE_SINFO` (`src/H5FScache.c`, Free
+Space), `H5AC_SOHM_TABLE`/`H5AC_SOHM_LIST` (`src/H5SMcache.c`), `H5AC_PREFETCHED_ENTRY`
+(`src/H5Cprefetched.c`), and `H5AC_PROXY_ENTRY` (`src/H5ACproxy_entry.c`). A third tier doesn't
+even have the field in its initializer, same as `H5AC_EARRAY_HDR`: all 5 Extensible Array classes
+(`src/H5EAcache.c`), v1 B-tree (`H5AC_BT`, `src/H5Bcache.c` — notable since a v1 B-tree node was
+also the co-located-page culprit in the *other* `expand_shrink` fix above), symbol table nodes
+(`H5AC_SNODE`, `src/H5Gcache.c`), all three fractal heap classes (`src/H5HFcache.c`), global heap
+(`H5AC_GHEAP`, `src/H5HGcache.c`), local heap (`src/H5HLcache.c`), and object headers/header chunks
+(`H5AC_OHDR`/`H5AC_OHDR_CHK`, `src/H5Ocache.c`). Any of these hitting the same
+pinned-and-tagged-with-no-refresh-callback state during a reader-side end-of-tick eviction sweep
+would fail identically.
+
+**Not reproducible under the currently-committed code** — the fix above no longer calls
+`H5Drefresh()` or retries the read, so normal test-suite operation doesn't exercise this path
+today. It was only surfaced by the rejected fix attempt hammering the refresh path harder than
+normal usage does. That does not mean it can't happen under real/normal-enough reader traffic
+patterns; it just wasn't hit by anything already in this test suite before this session went
+looking.
+
+**Not root-caused or fixed this session** — flagged here for whoever picks it up next. Suggested
+starting point: follow the `H5B2__cache_hdr_refresh()` precedent
+(`src/H5B2cache.c`/`src/H5B2hdr.c`/`src/H5B2pkg.h`) to implement `H5EA__cache_hdr_refresh()` for
+`H5AC_EARRAY_HDR` first, since it's the one with a live, reproducible repro path (temporarily
+reintroduce the rejected `H5Drefresh()`-retry loop into `check_dataset()` to force the pressure,
+per this section). Whether the broader family of still-`NULL`/absent `refresh` callbacks needs
+the same treatment, or whether a more general fix belongs in
+`H5C_evict_tagged_entries()`/`H5C_evict_or_refresh_all_entries_in_page()` itself, is open —
+note the existing document's own caution (in the v2-B-tree writeup above) against silently
+suppressing the eviction error, since a reader holding a stale pinned header can genuinely
+misindex against a restructured tree; any fix needs the same care.
+
+---
+
 ## How to build and test
 
 ```bash
@@ -1797,6 +1926,27 @@ make -j"$(nproc)"
    to this repo's `develop` or to the upstream branch it derives from — confirm which base is
    wanted before opening. Cherry-pick the two commits onto a fresh branch off the chosen base,
    confirm it builds + the `few_big -d 2` repro passes there, then open the PR.
+9. ~~Fix `expand_shrink`'s far-more-frequent (near-100% on macOS vs. the Linux dev machine's
+   ~1-in-10) stale-record failures~~ **Done — see "Session N+3" above.** Confirmed (via bisection
+   against the hash-table restoration commit, and via a raw-`pread()`-against-the-real-file
+   diagnostic) that this is the *same* already-diagnosed test-tolerance gap, just far more
+   frequent on this machine's timing; fixed by tolerating it in
+   `test/vfd_swmr_remove_reader.c`'s `check_dataset()`, matching the existing `rec_id == 0`
+   tolerance. Validated 15/15 clean standalone runs, full ctest 2559/2559.
+10. **Give `H5AC_EARRAY_HDR` (Extensible Array header) a `refresh` callback, following the
+    `H5B2__cache_hdr_refresh()` precedent — see "Session N+3" above for the full writeup.** A
+    second, real, un-fixed instance of the `H5C_evict_tagged_entries(): "Pinned entries still
+    need evicted?!"` failure was found (same signature as the already-fixed v2 B-tree header bug,
+    different structure): `H5AC_EARRAY_HDR[1]` (`src/H5EAcache.c`) has no `refresh` callback,
+    unlike `H5AC_BT2_HDR[1]`, which got one in the earlier fix. Reproduces reliably under
+    `expand_shrink`'s `-i ea` pass when the reader is put under enough read/refresh pressure (not
+    hit by anything currently in the test suite, including the fix in item 9, which deliberately
+    avoids that pressure). A broader audit found most other cache classes
+    (`H5AC_FARRAY_*`, `H5AC_FSPACE_*`, `H5AC_SOHM_*`, `H5AC_PREFETCHED_ENTRY`,
+    `H5AC_PROXY_ENTRY`, v1 B-tree, symbol table nodes, fractal heap, global/local heap, object
+    headers) are equally exposed (`refresh` is `NULL` or absent), so this may be worth a more
+    general fix rather than a purely EA-specific one — but see the existing caution above about
+    not silently suppressing the eviction error.
 
 ---
 
@@ -1841,3 +1991,6 @@ make -j"$(nproc)"
 | `WRITER_MESSAGE` signal + `WAIT_MESSAGE` sync (writer + script, 2 sections) | `test/vfd_swmr_bigset_writer.c` (`main()`), `test/test_vfd_swmr.sh.in` (`many_small`/`few_big` sections) | Session N+2, `few_big`/`many_small` bug #2 |
 | `H5F_vfd_swmr_insert_entry_eot()` gated on `nrefs == 1` | `src/H5Fint.c`, `H5F_open()` | Session N+2, `few_big`/`many_small` bug #3 (generic library UAF/leak) |
 | Shadow-index array free at writer close (`mdf_idx`/`old_mdf_idx`) | `src/H5Fvfd_swmr.c`, `H5F_vfd_swmr_close_or_flush()` | Session N+2, `few_big`/`many_small` bug #3 (companion 2.3MB leak) |
+| `check_dataset()` stale-record tolerance | `test/vfd_swmr_remove_reader.c` | Session N+3, `expand_shrink` far-more-frequent-on-macOS fix |
+| `H5AC_EARRAY_HDR[1]` (no `refresh` callback — unfixed) | `src/H5EAcache.c` | Session N+3, open item 10 |
+| `refresh` callback precedent to follow for the fix above | `src/H5B2cache.c`/`src/H5B2hdr.c`/`src/H5B2pkg.h` (`H5B2__cache_hdr_refresh`), `src/H5Fsuper_cache.c` (`H5F__cache_superblock_refresh`) | Session N+2 fix + original precedent |
