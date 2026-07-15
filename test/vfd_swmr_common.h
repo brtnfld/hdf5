@@ -48,8 +48,16 @@
 #define H5_USE_SOCKETS 1 /* Replace named pipes with socket communication */
 #endif                   /* H5_USE_SOCKETS */
 
-/* To make code more compatible with windows for later on. */
+/* Winsock (<winsock2.h>) already defines the real INVALID_SOCKET as
+ * (SOCKET)(~0); on POSIX platforms there is no such definition, so provide
+ * the conventional -1 sentinel here to match. Defining our own value
+ * unconditionally, as before, would silently shadow the real Winsock one
+ * (redefined to a different value: -1 truncated from a 32-bit int vs. the
+ * full-width (SOCKET)(~0)) wherever this header is included after
+ * <winsock2.h>, which is also what triggered a "macro redefined" warning. */
+#ifndef H5_HAVE_WIN32_API
 #define INVALID_SOCKET -1
+#endif
 
 /* Common definitions */
 #define MAX_IP_ADDR_LEN 16    /* xxx.xxx.xxx.xxx + null terminator */

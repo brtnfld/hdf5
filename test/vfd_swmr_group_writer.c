@@ -398,7 +398,7 @@ sock_wr_send_receive(state_t *s)
     unsigned int i;
     /* Bump up the value of notify to notice the reader to start to read */
     s->sock.notify++;
-    if (send(s->sock.comm_fd, &(s->sock.notify), sizeof(int), 0) < 0) {
+    if (send(s->sock.comm_fd, (const char *)&(s->sock.notify), sizeof(int), 0) < 0) {
         printf("send failed\n");
         TEST_ERROR;
     }
@@ -417,7 +417,7 @@ sock_wr_send_receive(state_t *s)
     /* Receive the same value from the reader and verify it before
      * going to the next step */
     (s->sock.verify)++;
-    if (recv(s->sock.comm_fd, &(s->sock.notify), sizeof(int), 0) < 0) {
+    if (recv(s->sock.comm_fd, (char *)&(s->sock.notify), sizeof(int), 0) < 0) {
         printf("recv failed\n");
         TEST_ERROR;
     }
@@ -459,7 +459,7 @@ sock_rd_receive(state_t *s)
     s->sock.verify++;
 
     /* Receive the notify that the writer bumped up the value */
-    if (recv(s->sock.comm_fd, &(s->sock.notify), sizeof(int), 0) < 0) {
+    if (recv(s->sock.comm_fd, (char *)&(s->sock.notify), sizeof(int), 0) < 0) {
         printf("recv failed\n");
         TEST_ERROR;
     }
@@ -491,7 +491,7 @@ static hbool_t
 sock_rd_send(state_t *s)
 {
 
-    if (send(s->sock.comm_fd, &(s->sock.notify), sizeof(int), 0) < 0) {
+    if (send(s->sock.comm_fd, (const char *)&(s->sock.notify), sizeof(int), 0) < 0) {
         H5_FAILED();
         AT();
         printf("send failed\n");
@@ -517,7 +517,7 @@ sock_send_error(state_t *s)
 {
     s->sock.notify = -1;
 
-    if (send(s->sock.comm_fd, &(s->sock.notify), sizeof(int), 0) < 0) {
+    if (send(s->sock.comm_fd, (const char *)&(s->sock.notify), sizeof(int), 0) < 0) {
         H5_FAILED();
         AT();
         printf("write failed\n");

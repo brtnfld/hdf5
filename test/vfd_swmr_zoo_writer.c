@@ -232,7 +232,7 @@ notify_and_wait_for_reader(hid_t fid, socket_state_t *sock)
     }
 
     /* Notify the reader of finishing zoo creation by sending the timestamp */
-    if (send(sock->comm_fd, &last, sizeof(last), 0) < 0) {
+    if (send(sock->comm_fd, (const char *)&last, sizeof(last), 0) < 0) {
         H5_FAILED();
         AT();
         printf("send failed");
@@ -252,7 +252,7 @@ notify_and_wait_for_reader(hid_t fid, socket_state_t *sock)
     }
 
     /* Wait until the reader finishes validating zoo creation */
-    if (recv(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
+    if (recv(sock->comm_fd, (char *)&sock->notify, sizeof(int), 0) < 0) {
         H5_FAILED();
         AT();
         printf("recv failed");
@@ -287,7 +287,7 @@ notify_reader(socket_state_t *sock)
     }
 
     /* Notify the reader about finishing zoo deletion by sending the timestamp */
-    if (send(sock->comm_fd, &last, sizeof(last), 0) < 0) {
+    if (send(sock->comm_fd, (const char *)&last, sizeof(last), 0) < 0) {
         H5_FAILED();
         AT();
         printf("send failed");
@@ -304,7 +304,7 @@ error:
 static int
 reader_verify(socket_state_t *sock)
 {
-    if (recv(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
+    if (recv(sock->comm_fd, (char *)&sock->notify, sizeof(int), 0) < 0) {
         H5_FAILED();
         AT();
         printf("recv failed");
@@ -334,7 +334,7 @@ reader_check_time_and_notify_writer(socket_state_t *sock)
     struct timespec last = {0, 0};
 
     /* Receive the notice of the writer finishing zoo creation (timestamp) */
-    if (recv(sock->comm_fd, &last, sizeof(last), 0) < 0) {
+    if (recv(sock->comm_fd, (char *)&last, sizeof(last), 0) < 0) {
         H5_FAILED();
         AT();
         printf("read failed");
@@ -350,7 +350,7 @@ reader_check_time_and_notify_writer(socket_state_t *sock)
     }
 
     /* Notify the writer that zoo validation is finished */
-    if (send(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
+    if (send(sock->comm_fd, (const char *)&sock->notify, sizeof(int), 0) < 0) {
         H5_FAILED();
         AT();
         printf("send failed");
@@ -372,7 +372,7 @@ reader_check_time_after_verify_deletion(socket_state_t *sock)
 {
     struct timespec last = {0, 0};
 
-    if (recv(sock->comm_fd, &last, sizeof(last), 0) < 0) {
+    if (recv(sock->comm_fd, (char *)&last, sizeof(last), 0) < 0) {
         H5_FAILED();
         AT();
         printf("recv failed");
@@ -544,7 +544,7 @@ main(int argc, char **argv)
 
         /* Writer tells reader to start */
         sock->notify = 1;
-        if (use_communication && send(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
+        if (use_communication && send(sock->comm_fd, (const char *)&sock->notify, sizeof(int), 0) < 0) {
             H5_FAILED();
             AT();
             printf("write failed");

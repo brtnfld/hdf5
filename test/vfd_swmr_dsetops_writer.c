@@ -2494,7 +2494,7 @@ sock_writer(bool result, unsigned step, const state_t *s, socket_state_t *sock, 
         /* At communication interval, notify the reader about the failure and quit */
         if (step % s->csteps == 0) {
             sock->notify = -1;
-            if (send(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
+            if (send(sock->comm_fd, (const char *)&sock->notify, sizeof(int), 0) < 0) {
                 printf("send failed\n");
                 TEST_ERROR;
             }
@@ -2506,7 +2506,7 @@ sock_writer(bool result, unsigned step, const state_t *s, socket_state_t *sock, 
         if (step % s->csteps == 0) {
             /* Bump up the value of notify to tell the reader to start reading */
             sock->notify++;
-            if (send(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
+            if (send(sock->comm_fd, (const char *)&sock->notify, sizeof(int), 0) < 0) {
                 printf("send failed\n");
                 TEST_ERROR;
             }
@@ -2552,7 +2552,7 @@ sock_reader(bool result, unsigned step, const state_t *s, socket_state_t *sock)
         /* At communication interval, tell the writer about the failure and exit */
         if (step % s->csteps == 0) {
             sock->notify = -1;
-            if (send(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
+            if (send(sock->comm_fd, (const char *)&sock->notify, sizeof(int), 0) < 0) {
                 printf("send failed\n");
                 TEST_ERROR;
             }
@@ -2564,7 +2564,7 @@ sock_reader(bool result, unsigned step, const state_t *s, socket_state_t *sock)
         if (step % s->csteps == 0) {
             /* Send back the same notify value for acknowledgement:
              *   --inform the writer to move to the next step */
-            if (send(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
+            if (send(sock->comm_fd, (const char *)&sock->notify, sizeof(int), 0) < 0) {
                 printf("send failed\n");
                 TEST_ERROR;
             }
@@ -2586,7 +2586,7 @@ sock_confirm_verify_notify(unsigned step, const state_t *s, socket_state_t *sock
 {
     if (step % s->csteps == 0) {
         sock->verify++;
-        if (recv(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
+        if (recv(sock->comm_fd, (char *)&sock->notify, sizeof(int), 0) < 0) {
             printf("recv failed\n");
             TEST_ERROR;
         }
@@ -2638,7 +2638,7 @@ closing_on_noflush(bool writer, state_t *s, dsets_state_t *ds, H5F_vfd_swmr_conf
         /* Bump up the value of notify to tell the reader the file is closed */
         dbgf(2, "Writer notifies reader that the file is closed (flush of raw data is disabled)\n");
         sock->notify++;
-        if (send(sock->comm_fd, &sock->notify, sizeof(int), 0) < 0) {
+        if (send(sock->comm_fd, (const char *)&sock->notify, sizeof(int), 0) < 0) {
             printf("send failed\n");
             TEST_ERROR;
         }
