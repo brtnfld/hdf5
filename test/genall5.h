@@ -68,12 +68,19 @@ H5TEST_DLL hbool_t vrfy_ds_cpt_i(hid_t fid, const char *dset_name, hbool_t write
 H5TEST_DLL hbool_t ds_ctg_v(hid_t fid, const char *dset_name, hbool_t write_data);
 H5TEST_DLL hbool_t vrfy_ds_ctg_v(hid_t fid, const char *dset_name, hbool_t write_data);
 
-/* Individual tests can override zoo_create_hook(), which is called
- * after each step of create_zoo().  The `hid_t` argument identifies
- * the file where the step was performed.  The test library provides a
- * default implementation of zoo_create_hook() that does nothing.
+/* Individual tests can override the zoo_create_hook_g callback, which is
+ * called after each step of create_zoo().  The `hid_t` argument identifies
+ * the file where the step was performed.  The test library initializes
+ * zoo_create_hook_g to a default implementation that does nothing;
+ * overriding it (rather than providing a same-named strong definition of a
+ * function also declared here) is deliberate: a function declared in a
+ * header shared with a DLL-exported default implementation (see stubs.c)
+ * cannot also be redefined in a different translation unit without a
+ * link-time conflict under Windows' DLL import/export model, even though
+ * that pattern works on Linux via ordinary symbol interposition.
  */
-H5TEST_DLL void zoo_create_hook(hid_t);
+typedef void (*zoo_create_hook_t)(hid_t);
+H5TEST_DLLVAR zoo_create_hook_t zoo_create_hook_g;
 
 #ifdef __cplusplus
 }

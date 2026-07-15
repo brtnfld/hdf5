@@ -13,11 +13,15 @@
 #include "h5test.h"
 #include "genall5.h"
 
-/* The default, do-nothing implementation of zoo_create_hook(), which
- * is called after each create_zoo() step.
+/* The default, do-nothing implementation of the zoo_create_hook_g callback,
+ * which is called after each create_zoo() step. Individual tests override
+ * zoo_create_hook_g itself (see genall5.h) rather than redefining this
+ * function.
  */
-void
-zoo_create_hook(hid_t H5_ATTR_UNUSED fid)
+static void
+zoo_create_hook_default(hid_t H5_ATTR_UNUSED fid)
 {
     return;
 }
+
+zoo_create_hook_t zoo_create_hook_g = zoo_create_hook_default;

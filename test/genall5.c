@@ -2748,7 +2748,7 @@ tend_zoo(hid_t fid, const char *base_path, struct timespec *lastmsgtime, zoo_con
             if (!create_or_validate_selection(fid, full_path, i, config, phase[j], &ok))
                 goto out;
             if (phase[j] == PHASE_CREATE || phase[j] == PHASE_DELETE)
-                zoo_create_hook(fid);
+                zoo_create_hook_g(fid);
         }
         random_pause(config.max_pause_msecs);
     }

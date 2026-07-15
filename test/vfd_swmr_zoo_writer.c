@@ -92,8 +92,8 @@ print_cache_hits(H5C_t H5_ATTR_UNUSED *cache)
 }
 #endif
 
-void
-zoo_create_hook(hid_t H5_ATTR_UNUSED fid)
+static void
+zoo_writer_create_hook(hid_t H5_ATTR_UNUSED fid)
 {
     dbgf(3, "%s: enter\n", __func__);
     if (writer)
@@ -402,6 +402,8 @@ main(int argc, char **argv)
     estack_state_t         es;
     H5F_vfd_swmr_config_t *vfd_swmr_config = NULL;
     socket_state_t        *sock            = NULL;
+
+    zoo_create_hook_g = zoo_writer_create_hook;
 
     if (NULL == (vfd_swmr_config = calloc(1, sizeof(H5F_vfd_swmr_config_t)))) {
         H5_FAILED();
@@ -1042,6 +1044,8 @@ main(int argc, char **argv)
     estack_state_t         es;
     H5F_vfd_swmr_config_t *vfd_swmr_config = NULL;
     int                    notify = 0, verify = 0;
+
+    zoo_create_hook_g = zoo_writer_create_hook;
 
     if (NULL == (vfd_swmr_config = calloc(1, sizeof(H5F_vfd_swmr_config_t)))) {
         H5_FAILED();
