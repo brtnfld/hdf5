@@ -2072,4 +2072,13 @@ error:
     return EXIT_FAILURE;
 } /* main */
 
+#else /* H5_HAVE_WIN32_API */
+
+int
+main(void)
+{
+    fprintf(stderr, "Non-POSIX platform. Skipping.\n");
+    return EXIT_SUCCESS;
+} /* end main() */
+
 #endif /* H5_HAVE_WIN32_API */

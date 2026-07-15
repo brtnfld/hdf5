@@ -863,9 +863,11 @@ H5_DLL herr_t H5Fswmr_config_string(const char *config_str, hid_t fapl_id, hid_t
                                     hbool_t create_file);
 H5_DLL herr_t H5Fswmr_config_env(hid_t fapl_id, hid_t fcpl_id, hbool_t writer, hbool_t create_file,
                                  const char *env_var_name);
-H5_DLL herr_t H5F_vfd_swmr_process_eot_queue(hbool_t entering_api);
 
-/* EOT queue global */
-H5_DLL extern eot_queue_t eot_queue_g;
+/* H5F_vfd_swmr_process_eot_queue() and the eot_queue_g global are declared in
+ * H5private.h, not here -- see the comment above, near struct eot_queue_entry_t
+ * / eot_queue_t. Redeclaring them here too is harmless under most compilers,
+ * but trips -Wredundant-decls under -Werror since H5private.h is already
+ * transitively included by this point. */
 
 #endif /* H5Fprivate_H */

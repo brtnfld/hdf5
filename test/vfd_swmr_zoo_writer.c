@@ -21,6 +21,7 @@
 #include "H5Fpkg.h"
 #include "H5HGprivate.h"
 #include "H5VLprivate.h"
+#include "H5timer.h"
 
 #include "testhdf5.h"
 #include "genall5.h"
@@ -54,6 +55,24 @@ zoo_config_t config = {.proc_num        = 0,
                        .skip_varlen     = true,
                        .max_pause_msecs = 0,
                        .msgival         = {.tv_sec = 0, .tv_nsec = 0}};
+
+/* clock_gettime()/CLOCK_MONOTONIC are POSIX-only and unavailable on Windows/MSVC.
+ * H5_now_usec() (src/H5timer.c) is the portable, monotonic-preferred microsecond
+ * timer already used elsewhere in the library; wrap it in a struct timespec so
+ * every call site below is unchanged. */
+static int
+zoo_gettime_monotonic(struct timespec *ts)
+{
+#if defined(H5_HAVE_CLOCK_GETTIME)
+    return clock_gettime(CLOCK_MONOTONIC, ts);
+#else
+    uint64_t usec = H5_now_usec();
+
+    ts->tv_sec  = (time_t)(usec / 1000000);
+    ts->tv_nsec = (long)((usec % 1000000) * 1000);
+    return 0;
+#endif
+}
 
 static void
 #ifndef H5C_COLLECT_CACHE_STATS
@@ -205,7 +224,7 @@ notify_and_wait_for_reader(hid_t fid, socket_state_t *sock)
     struct timespec last = {0, 0};
 
     /* Get the time when finishing zoo creation */
-    if (clock_gettime(CLOCK_MONOTONIC, &last) < 0) {
+    if (zoo_gettime_monotonic(&last) < 0) {
         H5_FAILED();
         AT();
         printf("clock_gettime failed");
@@ -260,7 +279,7 @@ notify_reader(socket_state_t *sock)
     struct timespec last = {0, 0};
 
     /* Get the time when finishing zoo deletion */
-    if (clock_gettime(CLOCK_MONOTONIC, &last) < 0) {
+    if (zoo_gettime_monotonic(&last) < 0) {
         H5_FAILED();
         AT();
         printf("clock_gettime failed");
@@ -801,7 +820,7 @@ notify_and_wait_for_reader(hid_t fid, int verify)
     struct timespec last = {0, 0};
 
     /* Get the time when finishing zoo creation */
-    if (clock_gettime(CLOCK_MONOTONIC, &last) < 0) {
+    if (zoo_gettime_monotonic(&last) < 0) {
         H5_FAILED();
         AT();
         printf("clock_gettime failed");
@@ -856,7 +875,7 @@ notify_reader(void)
     struct timespec last = {0, 0};
 
     /* Get the time when finishing zoo deletion */
-    if (clock_gettime(CLOCK_MONOTONIC, &last) < 0) {
+    if (zoo_gettime_monotonic(&last) < 0) {
         H5_FAILED();
         AT();
         printf("clock_gettime failed");
