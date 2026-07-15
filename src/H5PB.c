@@ -646,7 +646,20 @@ H5PB_update_entry(H5PB_t *page_buf, haddr_t addr, size_t size, const void *buf)
     haddr_t       page_addr;
     herr_t        ret_value = SUCCEED; /* Return value */
 
+    /* This function's only reachable HGOTO_ERROR call is inside
+     * H5PB__SEARCH_INDEX()'s sanity-check macros, which are gated on
+     * H5PB__DO_SANITY_CHECKS -- a compile-time constant tied to NDEBUG.
+     * When it's false (release builds), that call is unreachable and the
+     * NOERR entry macro (no err_occurred local) is required to avoid
+     * -Werror=unused-variable; when it's true (debug builds), the normal
+     * error-capable entry macro is required for the call to compile at
+     * all (it needs err_occurred/done). Match the two at compile time.
+     */
+#if H5PB__DO_SANITY_CHECKS
     FUNC_ENTER_NOAPI(FAIL)
+#else
+    FUNC_ENTER_NOAPI_NOERR
+#endif
 
     /* Sanity checks */
     assert(page_buf);
@@ -702,7 +715,14 @@ H5PB_remove_entry(const H5F_shared_t *f_sh, haddr_t addr)
     H5PB_entry_t *page_entry = NULL;    /* Pointer to the page entry being searched */
     herr_t        ret_value  = SUCCEED; /* Return value */
 
+    /* See H5PB_update_entry()'s comment above its own H5PB__DO_SANITY_CHECKS
+     * conditional: this function's only reachable HGOTO_ERROR calls are
+     * inside sanity-check-gated macros too. */
+#if H5PB__DO_SANITY_CHECKS
     FUNC_ENTER_NOAPI(FAIL)
+#else
+    FUNC_ENTER_NOAPI_NOERR
+#endif
 
     /* Sanity checks */
     assert(f_sh);
@@ -1926,7 +1946,14 @@ H5PB_entry_exists(H5PB_t *page_buf, haddr_t addr)
     H5PB_entry_t *entry_ptr;
     bool          ret_value = false; /* Return value */
 
+    /* See H5PB_update_entry()'s comment above its own H5PB__DO_SANITY_CHECKS
+     * conditional: this function's only reachable HGOTO_ERROR call is
+     * inside a sanity-check-gated macro too. */
+#if H5PB__DO_SANITY_CHECKS
     FUNC_ENTER_NOAPI(false)
+#else
+    FUNC_ENTER_NOAPI_NOERR
+#endif
 
     assert(page_buf);
 
@@ -1963,7 +1990,14 @@ H5PB__insert_entry(H5PB_t *page_buf, H5PB_entry_t *page_entry)
 {
     herr_t ret_value = SUCCEED; /* Return value */
 
+    /* See H5PB_update_entry()'s comment above its own H5PB__DO_SANITY_CHECKS
+     * conditional: this function's only reachable HGOTO_ERROR call is
+     * inside a sanity-check-gated macro too. */
+#if H5PB__DO_SANITY_CHECKS
     FUNC_ENTER_PACKAGE
+#else
+    FUNC_ENTER_PACKAGE_NOERR
+#endif
 
     /* Set the index key and metadata/raw classification. This classifies
      * H5F_MEM_PAGE_GHEAP as raw (matches the page-count classification this
@@ -2198,7 +2232,14 @@ H5PB_vfd_swmr__release_delayed_writes(H5F_shared_t *shared)
     H5PB_entry_t *entry_ptr = NULL;
     herr_t        ret_value = SUCCEED;
 
+    /* See H5PB_update_entry()'s comment above its own H5PB__DO_SANITY_CHECKS
+     * conditional: this function's only reachable HGOTO_ERROR calls are
+     * inside sanity-check-gated macros too. */
+#if H5PB__DO_SANITY_CHECKS
     FUNC_ENTER_NOAPI(FAIL)
+#else
+    FUNC_ENTER_NOAPI_NOERR
+#endif
 
     assert(shared);
     assert(shared->vfd_swmr);
@@ -2251,7 +2292,14 @@ H5PB_vfd_swmr__release_tick_list(H5F_shared_t *shared)
     H5PB_entry_t *entry_ptr = NULL;
     herr_t        ret_value = SUCCEED;
 
+    /* See H5PB_update_entry()'s comment above its own H5PB__DO_SANITY_CHECKS
+     * conditional: this function's only reachable HGOTO_ERROR call is
+     * inside a sanity-check-gated macro too. */
+#if H5PB__DO_SANITY_CHECKS
     FUNC_ENTER_NOAPI(FAIL)
+#else
+    FUNC_ENTER_NOAPI_NOERR
+#endif
 
     assert(shared);
     assert(shared->vfd_swmr);
