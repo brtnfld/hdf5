@@ -2136,6 +2136,54 @@ pre-session baseline (`29284564445`) — not new, not caused by anything in this
 windows-oneapi Release`, which *were* also failing on that baseline, are green in this run —
 likely flaky rather than fixed by anything here, but worth noting they're no longer red.
 
+### Fourth follow-up: "pre-existing on this fork" turned out to be the wrong bar — checked against real upstream CI, found and fixed a genuine, always-reproducible bug in this port's own ctest wiring
+
+The "confirmed pre-existing" framing two paragraphs up was directly challenged (correctly) and turned
+out to be an incomplete comparison: "already failing on this fork before this session" is not the same
+question as "does this fail on `HDFGroup/hdf5` upstream." Checked the latter directly:
+`gh run list --repo HDFGroup/hdf5 --branch develop --workflow call-workflows.yml` shows `i386 Release`
+and **every** MSYS2 variant, including `clangarm64`, passing cleanly on the real upstream `develop`.
+So neither of those is an acceptable "not our problem" — they needed the same real investigation as
+everything else this session.
+
+**`i386 Release`'s actual failure, read from the raw log rather than assumed:** `H5SHELL-test_vfd_swmr-shrink
+(Failed)`, and looking at the ctest line itself, it failed in **0.01 seconds** — far too fast to be a
+real multi-process VFD SWMR test outcome (compare: `expand` took 14.62s, `expand_shrink` took 25.57s
+in the same run). The actual captured output explains why immediately: `Cancelling the 'shrink' test:
+it depends on the .h5 file left behind by the 'expand' test.` Reading `test/test_vfd_swmr.sh.in`
+confirmed this is not a timing race at all: the `shrink` scenario's own code (unlike every other
+scenario, including `expand`, which regenerates its own skeleton file via the generator) checks a
+`do_expand` shell variable and refuses to proceed if it isn't set — and that variable is set purely
+from which scenario name(s) were passed as *arguments to that specific invocation* of the script, with
+no relation to any file a separate, earlier process might have left on disk. `test/ShellTests.cmake`
+registers every scenario, `shrink` included, as its own isolated ctest test invoking
+`test_vfd_swmr.sh <scenario-name>` with just that one name. The `RESOURCE_LOCK` there serializes these
+tests so they never *overlap*, but does nothing to *order* them, and even if it did, order wouldn't
+help: `shrink` invoked alone, as its own ctest test, can **never** see `do_expand=yes`, so this check
+fails **deterministically, every single time** — not a flaky race, an always-broken registration.
+
+This explains cleanly why local testing all session never caught it: every local invocation of
+`test_vfd_swmr.sh` in this session (and, per the log evidence above, probably in every prior session
+too) passed multiple scenario names to one script call (e.g. `test_vfd_swmr.sh generator expand shrink
+sparse groups`), which is exactly `shrink`'s own undocumented actual calling convention — never
+isolating it into its own single-scenario invocation the way ctest's per-scenario registration does.
+It also explains why upstream doesn't have this problem: upstream `develop` doesn't build or register
+any of this VFD-SWMR test infrastructure at all, so there was never a `H5SHELL-test_vfd_swmr-shrink`
+ctest test on that side to expose the bug.
+
+**Fixed** (`test/ShellTests.cmake`, the scenario-registration loop): special-cased `shrink` to invoke
+`test_vfd_swmr.sh expand shrink` (both names) instead of `test_vfd_swmr.sh shrink` alone, satisfying the
+script's own precondition directly rather than trying to fight ctest scheduling. `expand` is fully
+self-contained, so this makes the `shrink` ctest test self-sufficient with no change to the script
+itself. **Verified**: `H5SHELL-test_vfd_swmr-shrink` now passes standalone in 20.57s (a real run, not
+the 0.01s cancellation); `H5SHELL-test_vfd_swmr-expand` still passes unaffected on its own. Pushed;
+CI result pending as of this writing.
+
+**Worth remembering for next time**: "pre-existing" is not by itself a reason to stop investigating — it
+answers "did I cause this" but not "is this real." The right comparison for whether something is worth
+fixing is against upstream/reference behavior (when one exists and is reachable), not just against
+this branch's own history.
+
 ### Not done this session
 
 - The GitHub Actions CI workflow itself still only builds `RelWithDebInfo` (per Session N+4's own
@@ -2471,3 +2519,4 @@ make -j"$(nproc)"
 | Removed guaranteed-failing `H5T_C_S1` asserts | `test/vfd_swmr_vlstr_writer.c`, `test/vfd_swmr_vlstr_reader.c` | Session N+5, bug #6 |
 | `ws2_32.lib`/`wsock32.lib` link for VFD SWMR test executables (Windows/MinGW) | `test/CMakeLists.txt`, `ADD_H5_VFD_SWMR_EXE_SRC` macro | Session N+5, CI follow-up, Windows bug #1 |
 | `zoo_create_hook` redesigned as overridable function pointer `zoo_create_hook_g` | `test/genall5.h`, `test/stubs.c`, `test/genall5.c`, `test/vfd_swmr_zoo_writer.c` | Session N+5, CI follow-up, Windows bug #2 (confirmed fixed via real CI) |
+| `shrink` ctest registration fixed to invoke `expand shrink` (was always-broken standalone) | `test/ShellTests.cmake`, the `H5_VFD_SWMR_SHELL_TESTS` registration loop | Session N+5, found by comparing against real upstream CI, not just this fork's own history |
