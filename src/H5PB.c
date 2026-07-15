@@ -367,7 +367,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5PB__flush_entry_if_dirty(H5F_shared_t *f_sh, H5PB_entry_t *page_entry)
+H5PB__flush_entry_if_dirty(H5F_shared_t *f_sh, H5PB_t *page_buf, H5PB_entry_t *page_entry)
 {
     herr_t ret_value = SUCCEED; /* Return value */
 
@@ -376,11 +376,19 @@ H5PB__flush_entry_if_dirty(H5F_shared_t *f_sh, H5PB_entry_t *page_entry)
     /* Sanity checks */
     assert(page_entry);
     assert(f_sh);
+    assert(page_buf);
 
-    /* Flush the page if it's dirty */
-    if (page_entry->is_dirty)
+    /* Flush the page if it's dirty. Unlike H5PB__make_space()'s call to
+     * H5PB__write_entry() (which removes the entry from the index first),
+     * this entry stays in the index throughout, so the resulting
+     * dirty->clean transition must update the index's clean/dirty byte
+     * counts here.
+     */
+    if (page_entry->is_dirty) {
         if (H5PB__write_entry(f_sh, page_entry) < 0)
             HGOTO_ERROR(H5E_PAGEBUF, H5E_WRITEERROR, FAIL, "file write failed");
+        H5PB__UPDATE_INDEX_FOR_ENTRY_CLEAN(page_buf, page_entry);
+    }
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -420,7 +428,7 @@ H5PB_flush(H5F_shared_t *f_sh)
              * ever changes. */
             next_ptr = entry_ptr->il_next;
 
-            if (H5PB__flush_entry_if_dirty(f_sh, entry_ptr) < 0)
+            if (H5PB__flush_entry_if_dirty(f_sh, page_buf, entry_ptr) < 0)
                 HGOTO_ERROR(H5E_PAGEBUF, H5E_WRITEERROR, FAIL, "can't flush page buffer entry");
 
             entry_ptr = next_ptr;
@@ -600,6 +608,7 @@ H5PB_add_new_page(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t page_addr)
             HGOTO_ERROR(H5E_PAGEBUF, H5E_NOSPACE, FAIL, "memory allocation failed");
 
         /* Initialize page fields */
+        page_entry->magic    = H5PB__H5PB_ENTRY_T_MAGIC;
         page_entry->addr     = page_addr;
         page_entry->type     = (H5F_mem_page_t)type;
         page_entry->is_dirty = false;
@@ -633,10 +642,11 @@ done:
 herr_t
 H5PB_update_entry(H5PB_t *page_buf, haddr_t addr, size_t size, const void *buf)
 {
-    H5PB_entry_t *page_entry; /* Pointer to the corresponding page entry */
+    H5PB_entry_t *page_entry;           /* Pointer to the corresponding page entry */
     haddr_t       page_addr;
+    herr_t        ret_value = SUCCEED; /* Return value */
 
-    FUNC_ENTER_NOAPI_NOERR
+    FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
     assert(page_buf);
@@ -668,7 +678,8 @@ H5PB_update_entry(H5PB_t *page_buf, haddr_t addr, size_t size, const void *buf)
             H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
     } /* end if */
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* H5PB_update_entry */
 
 /*-------------------------------------------------------------------------
@@ -691,17 +702,7 @@ H5PB_remove_entry(const H5F_shared_t *f_sh, haddr_t addr)
     H5PB_entry_t *page_entry = NULL;    /* Pointer to the page entry being searched */
     herr_t        ret_value  = SUCCEED; /* Return value */
 
-    /* No HGOTO_ERROR call in this function is currently reachable:
-     * H5PB__SEARCH_INDEX()/H5PB__DELETE_FROM_INDEX()'s only error paths are
-     * gated on H5PB__DO_SANITY_CHECKS (H5PBpkg.h), which is hardcoded false.
-     * FUNC_ENTER_NOAPI_NOERR (vs. FUNC_ENTER_NOAPI) matches that: it doesn't
-     * declare the err_occurred local FUNC_ENTER_NOAPI would, which nothing
-     * in this function would ever read/write, tripping -Werror=unused-
-     * variable. If H5PB__DO_SANITY_CHECKS is ever re-enabled, the resulting
-     * HGOTO_ERROR calls would fail to compile here (err_occurred
-     * undeclared) -- a loud signal to revert this to FUNC_ENTER_NOAPI(FAIL),
-     * not a silent gap. */
-    FUNC_ENTER_NOAPI_NOERR
+    FUNC_ENTER_NOAPI(FAIL)
 
     /* Sanity checks */
     assert(f_sh);
@@ -1123,6 +1124,7 @@ H5PB_read(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, void *
                 if (NULL == (page_entry = H5FL_CALLOC(H5PB_entry_t)))
                     HGOTO_ERROR(H5E_PAGEBUF, H5E_NOSPACE, FAIL, "memory allocation failed");
 
+                page_entry->magic        = H5PB__H5PB_ENTRY_T_MAGIC;
                 page_entry->page_buf_ptr = new_page_buf;
                 page_entry->addr         = search_addr;
                 page_entry->type         = (H5F_mem_page_t)type;
@@ -1300,6 +1302,7 @@ H5PB__write_mpmde(H5F_shared_t *f_sh, H5PB_t *page_buf, H5FD_mem_t type, haddr_t
             HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTALLOC, FAIL, "memory allocation failed");
         }
 
+        entry_ptr->magic        = H5PB__H5PB_ENTRY_T_MAGIC;
         entry_ptr->page_buf_ptr = new_image;
         entry_ptr->addr         = page_addr;
         entry_ptr->page         = page_addr / page_buf->page_size;
@@ -1374,7 +1377,16 @@ H5PB__write_mpmde(H5F_shared_t *f_sh, H5PB_t *page_buf, H5FD_mem_t type, haddr_t
     }
 
     H5MM_memcpy(entry_ptr->page_buf_ptr, buf, size);
-    entry_ptr->is_dirty = true;
+
+    /* The entry is already in the index at this point (inserted above,
+     * either as a brand new entry or re-inserted after a grow), so a
+     * clean->dirty transition here must update the index's clean/dirty
+     * byte-count bookkeeping, not just the entry's own flag.
+     */
+    if (!entry_ptr->is_dirty) {
+        entry_ptr->is_dirty = true;
+        H5PB__UPDATE_INDEX_FOR_ENTRY_DIRTY(page_buf, entry_ptr);
+    }
 
     if (H5PB__vfd_swmr_track_write(f_sh, page_buf, entry_ptr, type) < 0)
         HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "VFD SWMR write tracking failed");
@@ -1488,7 +1500,7 @@ H5PB_write(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, const
 
 #ifdef H5_HAVE_PARALLEL
         if (bypass_pb) {
-            if (H5PB_update_entry(page_buf, addr, size, buf) > 0)
+            if (H5PB_update_entry(page_buf, addr, size, buf) < 0)
                 HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTUPDATE, FAIL, "failed to update PB with metadata cache");
             HGOTO_DONE(SUCCEED);
         } /* end if */
@@ -1549,8 +1561,14 @@ H5PB_write(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, const
                     H5MM_memcpy((uint8_t *)page_entry->page_buf_ptr + offset, buf,
                                 page_buf->page_size - (size_t)offset);
 
-                    /* Mark page dirty and push to top of LRU */
-                    page_entry->is_dirty = true;
+                    /* Mark page dirty and push to top of LRU. The entry is
+                     * already in the index, so a clean->dirty transition
+                     * must update the index's clean/dirty byte counts too.
+                     */
+                    if (!page_entry->is_dirty) {
+                        page_entry->is_dirty = true;
+                        H5PB__UPDATE_INDEX_FOR_ENTRY_DIRTY(page_buf, page_entry);
+                    }
                     H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
                 } /* end if */
             }     /* end if */
@@ -1569,8 +1587,14 @@ H5PB_write(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, const
                     H5MM_memcpy(page_entry->page_buf_ptr, (const uint8_t *)buf + offset,
                                 (size_t)((addr + size) - last_page_addr));
 
-                    /* Mark page dirty and push to top of LRU */
-                    page_entry->is_dirty = true;
+                    /* Mark page dirty and push to top of LRU. The entry is
+                     * already in the index, so a clean->dirty transition
+                     * must update the index's clean/dirty byte counts too.
+                     */
+                    if (!page_entry->is_dirty) {
+                        page_entry->is_dirty = true;
+                        H5PB__UPDATE_INDEX_FOR_ENTRY_DIRTY(page_buf, page_entry);
+                    }
                     H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
                 } /* end if */
             }     /* end else-if */
@@ -1629,7 +1653,10 @@ H5PB_write(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, const
                  * same next/prev pair, so touching the LRU here would
                  * corrupt both lists).
                  */
-                page_entry->is_dirty = true;
+                if (!page_entry->is_dirty) {
+                    page_entry->is_dirty = true;
+                    H5PB__UPDATE_INDEX_FOR_ENTRY_DIRTY(page_buf, page_entry);
+                }
                 if (!page_entry->is_mpmde && !page_entry->modified_this_tick &&
                     page_entry->delay_write_until == 0)
                     H5PB__MOVE_TO_TOP_LRU(page_buf, page_entry)
@@ -1730,6 +1757,7 @@ H5PB_write(H5F_shared_t *f_sh, H5FD_mem_t type, haddr_t addr, size_t size, const
                     if (NULL == (page_entry = H5FL_CALLOC(H5PB_entry_t)))
                         HGOTO_ERROR(H5E_PAGEBUF, H5E_CANTALLOC, FAIL, "memory allocation failed");
 
+                    page_entry->magic        = H5PB__H5PB_ENTRY_T_MAGIC;
                     page_entry->page_buf_ptr = new_page_buf;
                     page_entry->addr         = search_addr;
                     page_entry->type         = (H5F_mem_page_t)type;
@@ -1896,12 +1924,18 @@ bool
 H5PB_entry_exists(H5PB_t *page_buf, haddr_t addr)
 {
     H5PB_entry_t *entry_ptr;
+    bool          ret_value = false; /* Return value */
+
+    FUNC_ENTER_NOAPI(false)
 
     assert(page_buf);
 
-    H5PB__SEARCH_INDEX(page_buf, (addr / page_buf->page_size), entry_ptr, NULL);
+    H5PB__SEARCH_INDEX(page_buf, (addr / page_buf->page_size), entry_ptr, false);
 
-    return entry_ptr != NULL;
+    ret_value = entry_ptr != NULL;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5PB_entry_exists() */
 
 /*-------------------------------------------------------------------------
@@ -1929,10 +1963,7 @@ H5PB__insert_entry(H5PB_t *page_buf, H5PB_entry_t *page_entry)
 {
     herr_t ret_value = SUCCEED; /* Return value */
 
-    /* See H5PB_remove_entry()'s comment above FUNC_ENTER_NOAPI_NOERR: this
-     * function has no reachable HGOTO_ERROR call either, for the same
-     * reason (H5PB__DO_SANITY_CHECKS hardcoded false). */
-    FUNC_ENTER_PACKAGE_NOERR
+    FUNC_ENTER_PACKAGE
 
     /* Set the index key and metadata/raw classification. This classifies
      * H5F_MEM_PAGE_GHEAP as raw (matches the page-count classification this
@@ -1947,7 +1978,15 @@ H5PB__insert_entry(H5PB_t *page_buf, H5PB_entry_t *page_entry)
 
     /* Insert entry in the index */
     H5PB__INSERT_IN_INDEX(page_buf, page_entry, FAIL);
-    assert((size_t)page_buf->index_size <= page_buf->max_size);
+
+    /* Note: index_size is *not* guaranteed to stay within max_size here.
+     * H5PB_write()'s VFD SWMR metadata path deliberately lets the page
+     * buffer exceed max_size when every resident page is pinned on the
+     * current tick list and none can be evicted (see the "let it exceed
+     * max_size" comment there) -- that is the documented, intentional
+     * escape hatch, not a bug, so this insertion path can't assert the
+     * limit unconditionally.
+     */
 
     /* Insert entry in LRU */
     H5PB__INSERT_LRU(page_buf, page_entry)
@@ -2038,9 +2077,18 @@ H5PB__make_space(H5F_shared_t *f_sh, H5PB_t *page_buf, H5FD_mem_t inserted_type)
      * separate manual decrement is needed after this. */
     H5PB__DELETE_FROM_INDEX(page_buf, page_entry, FAIL);
 
-    /* Remove entry from LRU list */
+    /* Remove entry from LRU list.  Note: curr_pages is *not* guaranteed to
+     * equal LRU_len here in general -- under VFD SWMR write tracking,
+     * other entries elsewhere in the index can be legitimately parked off
+     * the LRU (on the tick list and/or delayed write list; see
+     * H5PB__vfd_swmr_track_write()) while still counted in curr_pages.
+     * H5PB_remove_entry() guards this same check with its own
+     * was_off_lru test for exactly this reason; page_entry itself is
+     * guaranteed to have been on the LRU (it was reached by walking
+     * LRU_tail_ptr/prev above), but that says nothing about the rest of
+     * the index.
+     */
     H5PB__REMOVE_LRU(page_buf, page_entry)
-    assert(page_buf->curr_pages == page_buf->LRU_len);
 
     /* Flush page if dirty */
     if (page_entry->is_dirty)
@@ -2150,11 +2198,7 @@ H5PB_vfd_swmr__release_delayed_writes(H5F_shared_t *shared)
     H5PB_entry_t *entry_ptr = NULL;
     herr_t        ret_value = SUCCEED;
 
-    /* See H5PB_remove_entry()'s comment above FUNC_ENTER_NOAPI_NOERR: this
-     * function has no reachable HGOTO_ERROR call either (H5PB__REMOVE_FROM_DWL()/
-     * H5PB__INSERT_LRU()'s error paths are gated on the same, hardcoded-false
-     * H5PB__DO_SANITY_CHECKS). */
-    FUNC_ENTER_NOAPI_NOERR
+    FUNC_ENTER_NOAPI(FAIL)
 
     assert(shared);
     assert(shared->vfd_swmr);
@@ -2168,7 +2212,11 @@ H5PB_vfd_swmr__release_delayed_writes(H5F_shared_t *shared)
 
         entry_ptr = page_buf->dwl_tail_ptr;
 
-        assert(entry_ptr->is_dirty);
+        /* entry_ptr is not guaranteed to still be dirty here: a full flush
+         * (H5PB_flush()) can clean a delayed-write-list entry without
+         * removing it from the list -- see the identical situation and
+         * explanation in H5PB_vfd_swmr__update_index().
+         */
 
         entry_ptr->delay_write_until = 0;
 
@@ -2203,10 +2251,7 @@ H5PB_vfd_swmr__release_tick_list(H5F_shared_t *shared)
     H5PB_entry_t *entry_ptr = NULL;
     herr_t        ret_value = SUCCEED;
 
-    /* See H5PB_remove_entry()'s comment above FUNC_ENTER_NOAPI_NOERR: this
-     * function has no reachable HGOTO_ERROR call either (H5PB__REMOVE_FROM_TL()'s
-     * error paths are gated on the same, hardcoded-false H5PB__DO_SANITY_CHECKS). */
-    FUNC_ENTER_NOAPI_NOERR
+    FUNC_ENTER_NOAPI(FAIL)
 
     assert(shared);
     assert(shared->vfd_swmr);
@@ -2402,7 +2447,15 @@ H5PB_vfd_swmr__update_index(H5F_t *f, uint32_t *idx_ent_added_ptr, uint32_t *idx
          */
         ie_ptr->entry_ptr           = entry->page_buf_ptr;
         ie_ptr->tick_of_last_change = tick_num;
-        assert(entry->is_dirty);
+
+        /* entry is not guaranteed to still be dirty here: a full flush
+         * (H5PB_flush(), e.g. via H5Fflush()/file close's
+         * H5F__flush_phase2()) can clean a tick-list entry mid-tick
+         * without removing it from the tick list -- tick-list membership
+         * only guarantees the entry's image must survive until this
+         * function reads it, not that it must still be dirty. The image
+         * in page_buf_ptr is valid either way, so publish it regardless.
+         */
         ie_ptr->clean              = false;
         ie_ptr->tick_of_last_flush = 0;
     }

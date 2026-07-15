@@ -79,8 +79,6 @@ main(int argc, char **argv)
     const char            *s_opts   = "Sn:qt:";
     struct h5_long_options l_opts[] = {{NULL, 0, '\0'}};
 
-    assert(H5T_C_S1 != H5I_INVALID_HID);
-
     if (NULL == (config = calloc(1, sizeof(H5F_vfd_swmr_config_t))))
         PUTS_ERROR("memory allocation failed");
 

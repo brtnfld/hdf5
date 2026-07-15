@@ -42,12 +42,18 @@
 #define H5PB__H5PB_ENTRY_T_MAGIC 0x02030405
 /* Sanity checks include clean_index_size/dirty_index_size invariants, which
  * require every is_dirty transition site (not just insert/delete) to call
- * H5PB__UPDATE_INDEX_FOR_ENTRY_CLEAN/DIRTY. That full wiring is a follow-up
- * refinement (see docs/H5PB_restore_hashtable_plan.md); off for now so the
- * initial hash-index bring-up isn't gated on it. Nothing outside these
- * macros reads clean/dirty_index_size, so leaving them unmaintained has no
- * functional effect while sanity checks are off. */
-#define H5PB__DO_SANITY_CHECKS          false
+ * H5PB__UPDATE_INDEX_FOR_ENTRY_CLEAN/DIRTY (see docs/H5PB_restore_hashtable_plan.md).
+ * That wiring is now done (H5PB.c's write/mpmde-write/flush paths), so
+ * sanity checks are gated on NDEBUG, matching the H5C_DO_SANITY_CHECKS
+ * convention: on by default in debug builds, off in release, overridable
+ * externally by pre-defining H5PB__DO_SANITY_CHECKS before this header. */
+#ifndef H5PB__DO_SANITY_CHECKS
+#ifndef NDEBUG
+#define H5PB__DO_SANITY_CHECKS true
+#else
+#define H5PB__DO_SANITY_CHECKS false
+#endif
+#endif
 #define H5PB__COLLECT_PAGE_BUFFER_STATS true
 
 /****************************************************************************
@@ -778,7 +784,7 @@
         (((page_buf)->curr_pages != ((page_buf)->curr_md_pages + (page_buf)->curr_rd_pages))) ||             \
         ((page_buf)->mpmde_count < 0) ||                                                                     \
         ((page_buf)->index_len != ((page_buf)->curr_pages + (page_buf)->mpmde_count))) {                     \
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, fail_val, "pre HT insert SC failed")                            \
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, fail_val, "pre HT insert SC failed");                            \
     }
 
 #define H5PB__POST_HT_INSERT_SC(page_buf, entry_ptr, fail_val)                                               \
@@ -789,7 +795,7 @@
         ((page_buf)->index_len != (page_buf)->il_len) ||                                                     \
         ((page_buf)->index_len != ((page_buf)->curr_pages + (page_buf)->mpmde_count)) ||                     \
         ((page_buf)->index_size != (page_buf)->il_size)) {                                                   \
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, fail_val, "post HT insert SC failed")                           \
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, fail_val, "post HT insert SC failed");                           \
     }
 
 #define H5PB__PRE_HT_REMOVE_SC(page_buf, entry_ptr)                                                          \
@@ -806,7 +812,7 @@
         ((page_buf)->index_size < ((page_buf)->clean_index_size)) ||                                         \
         ((page_buf)->index_size < ((page_buf)->dirty_index_size)) ||                                         \
         ((page_buf)->index_len != (page_buf)->il_len) || ((page_buf)->index_size != (page_buf)->il_size)) {  \
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "pre HT remove SC failed")                                \
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "pre HT remove SC failed");                                \
     }
 
 #define H5PB__POST_HT_REMOVE_SC(page_buf, entry_ptr)                                                         \
@@ -821,14 +827,14 @@
         (((page_buf)->curr_pages != ((page_buf)->curr_md_pages + (page_buf)->curr_rd_pages))) ||             \
         ((page_buf)->mpmde_count < 0) ||                                                                     \
         ((page_buf)->index_len != ((page_buf)->curr_pages + (page_buf)->mpmde_count))) {                     \
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "post HT remove SC failed")                               \
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "post HT remove SC failed");                               \
     }
 
 #define H5PB__PRE_HT_SEARCH_SC(page_buf, page, fail_val)                                                     \
     if (((page_buf) == NULL) || ((page_buf)->magic != H5PB__H5PB_T_MAGIC) ||                                 \
         ((page_buf)->index_size != ((page_buf)->clean_index_size + (page_buf)->dirty_index_size)) ||         \
         (H5PB__HASH_FCN(page) < 0) || (H5PB__HASH_FCN(page) >= H5PB__HASH_TABLE_LEN)) {                      \
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, fail_val, "pre HT search SC failed")                            \
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, fail_val, "pre HT search SC failed");                            \
     }
 
 #define H5PB__POST_SUC_HT_SEARCH_SC(page_buf, entry_ptr, k, fail_val)                                        \
@@ -840,12 +846,12 @@
         ((((page_buf)->ht)[k] == (entry_ptr)) && ((entry_ptr)->ht_prev != NULL)) ||                          \
         (((entry_ptr)->ht_prev != NULL) && ((entry_ptr)->ht_prev->ht_next != (entry_ptr))) ||                \
         (((entry_ptr)->ht_next != NULL) && ((entry_ptr)->ht_next->ht_prev != (entry_ptr)))) {                \
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, fail_val, "post successful HT search SC failed")                \
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, fail_val, "post successful HT search SC failed");                \
     }
 
 #define H5PB__POST_HT_SHIFT_TO_FRONT_SC(page_buf, entry_ptr, k, fail_val)                                    \
     if (((page_buf) == NULL) || (((page_buf)->ht)[k] != (entry_ptr)) || ((entry_ptr)->ht_prev != NULL)) {    \
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, fail_val, "post HT shift to front SC failed")                   \
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, fail_val, "post HT shift to front SC failed");                   \
     }
 
 #define H5PB__PRE_HT_ENTRY_SIZE_CHANGE_SC(page_buf, old_size, new_size, entry_ptr, was_clean)                \
@@ -859,7 +865,7 @@
          (((was_clean)) || ((page_buf)->dirty_index_size < (old_size)))) ||                                  \
         ((entry_ptr) == NULL) || ((page_buf)->index_len != (page_buf)->il_len) ||                            \
         ((page_buf)->index_size != (page_buf)->il_size)) {                                                   \
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "pre HT entry size change SC failed")                     \
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "pre HT entry size change SC failed");                     \
     }
 
 #define H5PB__POST_HT_ENTRY_SIZE_CHANGE_SC(page_buf, old_size, new_size, entry_ptr)                          \
@@ -872,7 +878,7 @@
          ((((entry_ptr)->is_dirty)) || ((page_buf)->clean_index_size < (new_size)))) ||                      \
         (((page_buf)->index_len == 1) && ((page_buf)->index_size != (new_size))) ||                          \
         ((page_buf)->index_len != (page_buf)->il_len) || ((page_buf)->index_size != (page_buf)->il_size)) {  \
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "post HT entry size change SC failed")                    \
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "post HT entry size change SC failed");                    \
     }
 
 #define H5PB__PRE_HT_UPDATE_FOR_ENTRY_CLEAN_SC(page_buf, entry_ptr)                                          \
@@ -883,7 +889,7 @@
         ((page_buf)->index_size != ((page_buf)->clean_index_size + (page_buf)->dirty_index_size)) ||         \
         ((page_buf)->index_size < ((page_buf)->clean_index_size)) ||                                         \
         ((page_buf)->index_size < ((page_buf)->dirty_index_size))) {                                         \
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "pre HT update for entry clean SC failed")                \
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "pre HT update for entry clean SC failed");                \
     }
 
 #define H5PB__PRE_HT_UPDATE_FOR_ENTRY_DIRTY_SC(page_buf, entry_ptr)                                          \
@@ -894,21 +900,21 @@
         ((page_buf)->index_size != ((page_buf)->clean_index_size + (page_buf)->dirty_index_size)) ||         \
         ((page_buf)->index_size < ((page_buf)->clean_index_size)) ||                                         \
         ((page_buf)->index_size < ((page_buf)->dirty_index_size))) {                                         \
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "pre HT update for entry dirty SC failed")                \
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "pre HT update for entry dirty SC failed");                \
     }
 
 #define H5PB__POST_HT_UPDATE_FOR_ENTRY_CLEAN_SC(page_buf, entry_ptr)                                         \
     if (((page_buf)->index_size != ((page_buf)->clean_index_size + (page_buf)->dirty_index_size)) ||         \
         ((page_buf)->index_size < ((page_buf)->clean_index_size)) ||                                         \
         ((page_buf)->index_size < ((page_buf)->dirty_index_size))) {                                         \
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "post HT update for entry clean SC failed")               \
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "post HT update for entry clean SC failed");               \
     }
 
 #define H5PB__POST_HT_UPDATE_FOR_ENTRY_DIRTY_SC(page_buf, entry_ptr)                                         \
     if (((page_buf)->index_size != ((page_buf)->clean_index_size + (page_buf)->dirty_index_size)) ||         \
         ((page_buf)->index_size < ((page_buf)->clean_index_size)) ||                                         \
         ((page_buf)->index_size < ((page_buf)->dirty_index_size))) {                                         \
-        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "post HT update for entry dirty SC failed")               \
+        HGOTO_ERROR(H5E_PAGEBUF, H5E_SYSTEM, FAIL, "post HT update for entry dirty SC failed");               \
     }
 
 #else /* H5PB__DO_SANITY_CHECKS */

@@ -1040,7 +1040,12 @@ H5FD__vfd_swmr_read(H5FD_t *_file, H5FD_mem_t type, hid_t H5_ATTR_UNUSED dxpl_id
 
     page_offset = addr - (target_page * fs_page_size);
 
-    assert((page_offset == 0) || ((!file->pb_configured) && (page_offset + size <= fs_page_size)));
+    /* page_offset + size may legitimately exceed fs_page_size for a
+     * multi-page metadata entry (mpmde) published as one contiguous blob
+     * larger than a page -- entry->length (checked below too) is the
+     * right bound to compare against, not fs_page_size.
+     */
+    assert((page_offset == 0) || ((!file->pb_configured) && (page_offset + size <= entry->length)));
 
     assert(entry->hdf5_page_offset * fs_page_size <= addr);
     assert(addr < (entry->hdf5_page_offset + 1) * fs_page_size);

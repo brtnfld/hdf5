@@ -634,7 +634,7 @@ H5MV__extend_md(H5F_shared_t *shared, hsize_t size)
     haddr_t eoa;
     haddr_t ret_value = HADDR_UNDEF; /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT
+    FUNC_ENTER_PACKAGE
 
     /* Get current end-of-allocated space address */
     eoa = shared->vfd_swmr_md_eoa;
