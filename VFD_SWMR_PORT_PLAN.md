@@ -1888,6 +1888,132 @@ whoever picks this up next.
 
 ---
 
+## Session N+5: re-enabled `H5PB__DO_SANITY_CHECKS`, and found this branch has never been run in a real (non-`NDEBUG`) Debug build until now
+
+The earlier "Aside, worth flagging separately" note (Session N+4, just above) called out
+`H5PB__DO_SANITY_CHECKS` being hardcoded `false` in every build as worth someone's attention. Picked
+that up this session.
+
+### Part 1: the actual sanity-check bookkeeping gap, fixed
+
+The gate's own comment (`src/H5PBpkg.h`) already correctly diagnosed the reason it was off:
+`clean_index_size`/`dirty_index_size` need every `is_dirty` transition site (not just insert/delete)
+to call `H5PB__UPDATE_INDEX_FOR_ENTRY_CLEAN`/`_DIRTY`, and that wiring was never done. Audited every
+`is_dirty` assignment in `src/H5PB.c` and found the gap was real: four sites flip `is_dirty` on an
+entry that is *already in the index* without updating the clean/dirty byte-count split —
+`H5PB__write_mpmde()` and three spots in `H5PB_write()` (partial-first-page, partial-last-page, and
+full-page hit paths). **Fixed**: each now checks whether the entry was clean first and, only on an
+actual clean→dirty transition, calls `H5PB__UPDATE_INDEX_FOR_ENTRY_DIRTY()` — the exact pattern
+`H5Centry.c` already uses for the analogous `H5C__UPDATE_INDEX_FOR_ENTRY_DIRTY()` call (save
+`was_clean` before flipping the flag, update only if it changed). The reverse (dirty→clean) transition
+had the same gap in `H5PB__flush_entry_if_dirty()` (called from `H5PB_flush()`, which flushes an entry
+**without** removing it from the index — unlike `H5PB__make_space()`'s call to the same
+`H5PB__write_entry()`, which deletes from the index first) — fixed by passing `page_buf` through and
+calling `H5PB__UPDATE_INDEX_FOR_ENTRY_CLEAN()` there too.
+
+**Then flipped the gate**: `H5PB__DO_SANITY_CHECKS` is now `#ifndef NDEBUG` (on in Debug, off in
+Release), mirroring the `H5C_DO_SANITY_CHECKS` convention exactly, and overridable by pre-defining the
+macro before `H5PBpkg.h` is included. **Reverted the four `FUNC_ENTER_*_NOERR` functions** the
+Session-N+4 `-Werror=unused-variable` fix had converted (`H5PB_remove_entry`, `H5PB__insert_entry`,
+`H5PB_vfd_swmr__release_delayed_writes`, `H5PB_vfd_swmr__release_tick_list`) back to
+`FUNC_ENTER_NOAPI(FAIL)`/`FUNC_ENTER_PACKAGE` — exactly the "loud signal to revert" that fix's own
+comment anticipated, now that these functions' sanity-check-gated `HGOTO_ERROR` calls are reachable
+again.
+
+### Part 2: getting a Debug build to actually compile at all surfaced 13 more never-before-compiled bugs, all in the same dead-code macros
+
+Building a genuine `-DCMAKE_BUILD_TYPE=Debug` configuration (the first time this has been done on this
+branch — every build so far, including all of Session N+4's CI fixes, used `RelWithDebInfo`, which
+defines `NDEBUG` and silently strips every `assert()` and now-satisfies-false `H5PB__DO_SANITY_CHECKS`
+too) immediately failed to compile: 13 of the HT-index sanity-check macros added during the
+hash-table-restoration work (`H5PB__PRE_HT_INSERT_SC` and 12 siblings, `src/H5PBpkg.h:787-917`) are
+missing the semicolon after their `HGOTO_ERROR(...)` call that the older, already-compiled DLL-list
+macros (and the analogous `H5C__PRE_HT_*_SC` macros) all have — `HGOTO_ERROR` expands to
+`do {...} while(0)` and needs one. Purely a copy/paste omission, invisible until this exact code path
+was compiled for the first time. **Fixed**: added the missing `;` to all 13.
+
+Two more, smaller compile-only gaps in the same category: `H5PB_update_entry()` and
+`H5PB_entry_exists()` (the latter a testing-support function with no error-handling scaffolding at
+all) call `H5PB__SEARCH_INDEX()` but had no `done:` label / `ret_value` for the now-reachable
+`HGOTO_ERROR` to jump to. **Fixed**: gave both proper `FUNC_ENTER_NOAPI`/`done:` scaffolding
+(`H5PB_entry_exists()` also had two callers checking `> 0` for failure instead of `< 0` on a function
+that, being `NOERR`, could never actually fail before — fixed both, in `src/H5Centry.c` and
+`src/H5PB.c`).
+
+### Part 3: once it compiled, running it surfaced a cascade of real, pre-existing bugs that have nothing to do with the sanity-check work — because they're `assert()`s, and this is the first Debug build ever
+
+Every one of these was reached by actually running `test_vfd_swmr.sh` scenarios (not just the
+non-shell ctest suite, which was clean throughout) under a real Debug build for the first time:
+
+1. **`H5PB_entry_t::magic` was never set.** All four `H5FL_CALLOC(H5PB_entry_t)` call sites in
+   `src/H5PB.c` left `magic` at its zeroed default instead of `H5PB__H5PB_ENTRY_T_MAGIC` — every
+   `assert(entry->magic == ...)` anywhere (several, pre-existing) was latently broken. **Fixed**: set
+   it at all four creation sites, matching how `H5PB_create()` already sets `page_buf->magic`.
+2. **`H5MV__extend_md()` used the wrong `FUNC_ENTER_*` macro** (`src/H5MV.c`): a double-underscore
+   ("package") function name entered via `FUNC_ENTER_NOAPI_NOINIT`, which asserts the
+   single-underscore ("private") naming convention via `H5_CHECK_FUNCTION_NAME`/`H5_IS_PRIVATE`. That
+   assert is itself `#ifndef NDEBUG`-gated, so this mismatch was invisible until now. **Fixed**:
+   `FUNC_ENTER_PACKAGE` (checks `H5_IS_PKG`, and — confirmed by comparing the two macro bodies in
+   `src/H5private.h` — is otherwise byte-for-byte identical to `FUNC_ENTER_NOAPI_NOINIT`, so this is a
+   pure naming-check fix with no other behavior change).
+3. **Two stale, overly-strict asserts in `src/H5PB.c` contradicted this same file's own documented,
+   intentional design.** `H5PB__insert_entry()` asserted `index_size <= max_size` unconditionally, but
+   `H5PB_write()`'s own comments describe a deliberate VFD-SWMR exception letting the page buffer
+   exceed `max_size` when every resident page is tick-list-pinned. `H5PB__make_space()` asserted
+   `curr_pages == LRU_len` unconditionally after an eviction, but `H5PB_remove_entry()` — a few hundred
+   lines away in the same file — already guards the *identical* assert with its own `was_off_lru`
+   check, for the documented reason that VFD-SWMR write tracking legitimately parks entries off the
+   LRU while they stay in the index. Both removed (with an explanatory comment each), since the entry
+   reached by the LRU-tail walk in `make_space` is provably still on-LRU by construction; it's the
+   *rest* of the index the old assert couldn't account for.
+4. **Two more asserts in `src/H5PB.c` assumed a tick-list/delayed-write-list entry must still be
+   dirty** (`H5PB_vfd_swmr__update_index()`, `H5PB_vfd_swmr__release_delayed_writes()`). Both false:
+   `H5PB_flush()` (called from `H5F__flush_phase2()`, e.g. at file close or `H5Fflush()`) can clean an
+   entry mid-tick without removing it from either list — the two mechanisms don't know about each
+   other. Confirmed via `gdb`/`coredumpctl` on both crashes: exactly this sequence, down to
+   `modified_this_tick == true` with `is_dirty == false`. Both removed, with a comment cross-referencing
+   the identical explanation.
+5. **A genuinely wrong bound in `src/H5FDvfd_swmr.c`'s `H5FD__vfd_swmr_read()`**: asserted
+   `page_offset + size <= fs_page_size`, which is only true for a single-page entry — an mpmde
+   (multi-page metadata entry, added to this branch after this assert was written) can span several
+   pages in one read. The very next line already has the correct check
+   (`page_offset + init_size <= entry->length`); confirmed via the core dump that the failing read's
+   numbers matched an mpmde exactly (`entry->length` == `page_offset + size`). **Fixed**: compare
+   against `entry->length` instead of `fs_page_size`, matching the neighboring (already-correct) check.
+6. **Two broken, unconditional test-code asserts**, unrelated to the library: `vfd_swmr_vlstr_writer.c`
+   and `vfd_swmr_vlstr_reader.c` each `assert(H5T_C_S1 != H5I_INVALID_HID)` as the very first line of
+   `main()`, before any HDF5 API call — but `H5T_C_S1` is populated lazily on first real library call
+   (no constructor-based eager init exists in this build), so this was guaranteed to fail every single
+   time, not an intermittent bug. Removed from both (no HDF5 call ever depended on it having run
+   early).
+
+### Verification
+
+- **Full ctest suite** (everything except the shell-based `test_vfd_swmr` scenarios, run separately
+  below since they need longer per-scenario timeouts): **2562/2562 passed, 0 failed**, in the new
+  Debug build, both before and after each round of the Part 3 fixes above (re-run after every fix to
+  confirm no regression).
+- **All 12 `test_vfd_swmr.sh` scenarios** (`zoo`, `generator`, `expand`, `shrink`, `sparse`, `groups`,
+  `vlstr_null`, `vlstr_oob`, `groups_attrs`, `groups_ops`, `few_big`, `many_small`) run to completion
+  cleanly (`exit=0`, "VFD SWMR tests passed") in the Debug/sanity-checks-on build — the first time any
+  of them have been exercised in a build where `assert()` actually does anything.
+- Each Part-3 bug was root-caused from an actual `coredumpctl`/`gdb` backtrace and variable inspection
+  before being fixed, not guessed at — see the numbered list above for the specific evidence per bug.
+
+### Not done this session
+
+- The GitHub Actions CI workflow itself still only builds `RelWithDebInfo` (per Session N+4's own
+  build recipe) — it will not exercise any of the Part 1/2/3 fixes above until/unless a Debug (or
+  otherwise non-`NDEBUG`) CI job is added. That would be a natural next step to keep this class of bug
+  from regressing silently again.
+- `few_big -d 2` (2D chunk growth) — the scenario Session N+2/N+3/N+4 spent the most effort on — was
+  only re-run as part of the `few_big`/`many_small` combined scenario in this session's final
+  verification pass, not isolated with the specific `-d 2 -l 10` flags those sessions used for deep
+  repro work. It passed as part of that combined run, but if the pinned-cache-entry class of bug is
+  ever suspected again, re-isolate it explicitly rather than trusting the combined run alone.
+
+---
+
 ## How to build and test
 
 ```bash
@@ -2129,6 +2255,19 @@ make -j"$(nproc)"
     headers) are equally exposed (`refresh` is `NULL` or absent), so this may be worth a more
     general fix rather than a purely EA-specific one — but see the existing caution above about
     not silently suppressing the eviction error.
+11. ~~Re-enable `H5PB__DO_SANITY_CHECKS`~~ **DONE — see "Session N+5" above.** Wired up the missing
+    `clean_index_size`/`dirty_index_size` bookkeeping, fixed 13 latent missing-semicolon compile
+    bugs in the never-before-compiled HT sanity-check macros, and gated the check on `NDEBUG`. Doing
+    this required a genuine Debug build — the first one ever run on this branch — which in turn
+    surfaced and required fixing six more real, pre-existing bugs unrelated to the sanity-check work
+    itself (an `H5PB_entry_t::magic` field never set, a `FUNC_ENTER_*` naming-check mismatch in
+    `H5MV.c`, two stale asserts in `H5PB.c` contradicting this file's own documented VFD-SWMR
+    exceptions, two more `H5PB.c` asserts assuming tick-list/DWL entries can't be cleaned by an
+    out-of-band flush, one incorrect single-page assumption in `H5FDvfd_swmr.c`'s mpmde read path,
+    and two guaranteed-to-fail test-code asserts). **Next natural step**: the CI workflow itself
+    still only builds `RelWithDebInfo` (see the build recipe below) and so will not exercise any of
+    this — consider adding a Debug (or otherwise non-`NDEBUG`) CI job so this class of bug (an
+    entire branch's worth of `assert()`s never having executed) can't recur silently.
 
 ---
 
@@ -2176,3 +2315,14 @@ make -j"$(nproc)"
 | `check_dataset()` stale-record tolerance | `test/vfd_swmr_remove_reader.c` | Session N+3, `expand_shrink` far-more-frequent-on-macOS fix |
 | `H5AC_EARRAY_HDR[1]` (no `refresh` callback — unfixed) | `src/H5EAcache.c` | Session N+3, open item 10 |
 | `refresh` callback precedent to follow for the fix above | `src/H5B2cache.c`/`src/H5B2hdr.c`/`src/H5B2pkg.h` (`H5B2__cache_hdr_refresh`), `src/H5Fsuper_cache.c` (`H5F__cache_superblock_refresh`) | Session N+2 fix + original precedent |
+| `H5PB__DO_SANITY_CHECKS` now `#ifndef NDEBUG`-gated | `src/H5PBpkg.h:50` | Session N+5 |
+| `H5PB__UPDATE_INDEX_FOR_ENTRY_DIRTY`/`_CLEAN` calls added at 4 dirty-transition + 1 clean-transition site | `src/H5PB.c`, `H5PB__write_mpmde()`, `H5PB_write()` (×3), `H5PB__flush_entry_if_dirty()` | Session N+5 |
+| Missing semicolons after `HGOTO_ERROR` in 13 HT sanity-check macros | `src/H5PBpkg.h:787-917` | Session N+5 |
+| `FUNC_ENTER_NOAPI(FAIL)`/`FUNC_ENTER_PACKAGE` reverted (4 functions) | `src/H5PB.c` (`H5PB_remove_entry`, `H5PB__insert_entry`, `H5PB_vfd_swmr__release_delayed_writes`, `H5PB_vfd_swmr__release_tick_list`) | Session N+5, undoes Session N+4's `-Werror=unused-variable` fix as anticipated |
+| `H5PB_update_entry()`/`H5PB_entry_exists()` error-handling scaffolding + 2 callers' `> 0`→`< 0` fix | `src/H5PB.c`, `src/H5Centry.c` | Session N+5 |
+| `H5PB_entry_t::magic` set at all 4 creation sites | `src/H5PB.c` | Session N+5, bug #1 |
+| `FUNC_ENTER_PACKAGE` fix for `H5MV__extend_md` | `src/H5MV.c` | Session N+5, bug #2 |
+| Removed stale `index_size<=max_size`/`curr_pages==LRU_len` asserts | `src/H5PB.c`, `H5PB__insert_entry()`/`H5PB__make_space()` | Session N+5, bug #3 |
+| Removed stale `is_dirty` asserts on tick-list/DWL entries | `src/H5PB.c`, `H5PB_vfd_swmr__update_index()`/`H5PB_vfd_swmr__release_delayed_writes()` | Session N+5, bug #4 |
+| mpmde read-size bound fix (`entry->length` not `fs_page_size`) | `src/H5FDvfd_swmr.c`, `H5FD__vfd_swmr_read()` | Session N+5, bug #5 |
+| Removed guaranteed-failing `H5T_C_S1` asserts | `test/vfd_swmr_vlstr_writer.c`, `test/vfd_swmr_vlstr_reader.c` | Session N+5, bug #6 |
