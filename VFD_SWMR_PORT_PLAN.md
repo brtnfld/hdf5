@@ -90,6 +90,21 @@ verified: `modify-vstr` passes 5/5 clean runs, the full non-shell-test regressio
 2726/2726, and every individually-tested `H5SHELL-test_vfd_swmr` scenario remains clean. See
 "Session N+2" below for full detail.
 
+**A follow-up session (macOS, "Session N+3") found a second, un-fixed instance of the pinned-cache-
+entry eviction gap** (`H5AC_EARRAY_HDR`, the Extensible Array header — same failure signature as
+the already-fixed v2 B-tree header, different structure) and fixed an unrelated, far-more-frequent-
+on-that-machine `expand_shrink` stale-record issue. **A further session ("Session N+4") fixed the
+`H5AC_EARRAY_HDR` gap** (following the v2 B-tree `refresh`-callback precedent exactly — no new
+mechanism needed, since unlike a B-tree's depth, an extensible array's shape never changes
+post-creation) **and separately discovered and fixed why CI has been red on this branch since Phase
+0 began**: a `-Werror=redundant-decls` violation left over from Phase 0c's `eot_queue_t`
+relocation, and two Windows/MSVC-only build breaks in the VFD SWMR test sources (an unconditional
+POSIX `clock_gettime(CLOCK_MONOTONIC, ...)` call, and one test file missing the Windows stub `main()`
+every sibling file has). With all of the above in place, the entire `test_vfd_swmr.sh` script — all
+13 default scenarios — completed in one clean, uninterrupted run for the first time this document
+records. See "Session N+4" below for full detail; CI itself has not yet been confirmed green from an
+actual push (not done this session), so treat that specific claim as fixed-but-unconfirmed.
+
 ---
 
 ## Phase 0 — Lifecycle integration (Done)
@@ -1703,6 +1718,126 @@ the same treatment, or whether a more general fix belongs in
 note the existing document's own caution (in the v2-B-tree writeup above) against silently
 suppressing the eviction error, since a reader holding a stale pinned header can genuinely
 misindex against a restructured tree; any fix needs the same care.
+
+---
+
+## Session N+4: fixed the `H5AC_EARRAY_HDR` pinned-cache-entry eviction gap (item 10 above)
+
+Picked up the top open item from "Session N+3": gave the Extensible Array header cache class a
+`refresh` callback, following the `H5B2__cache_hdr_refresh()` precedent exactly.
+
+**Simpler than the v2 B-tree case.** The B-tree fix needed a whole second mechanism
+(`node_info_depth_alloc`, `H5B2__hdr_extend_node_info()`) because `hdr->node_info[]` is derived
+from the tree's *depth*, which legitimately changes as the writer splits/merges the root. Checking
+`H5EA__hdr_init()` (`src/H5EAhdr.c:168-219`) directly showed the EA header has no equivalent
+problem: `hdr->nsblks`/`hdr->sblk_info[]` are derived solely from `cparam` (`max_nelmts_bits`,
+`data_blk_min_elmts`, `sup_blk_min_data_ptrs`) — creation-time constants that never change post
+creation, unlike a B-tree's depth. An extensible array's *shape* is fixed forever; only how much
+of it is in use changes. So no grow-only-table machinery was needed at all — just decode the
+fields that legitimately change (the six running statistics in `hdr->stats.stored`, and the index
+block's address, which transitions exactly once from `HADDR_UNDEF` to a real value and never moves
+again) directly into the live, pinned header, and defensively assert the rest (class ID, element
+size, and the other four `cparam` fields) unchanged, mirroring the B-tree callback's posture of
+distrusting a freshly re-read shadow-file image.
+
+**Fix** (`src/H5EAcache.c` only): implemented `H5EA__cache_hdr_refresh()`, decoding the identical
+byte layout `H5EA__cache_hdr_deserialize()` uses, and registered it in `H5AC_EARRAY_HDR[1]`'s
+previously-`NULL` 14th (`refresh`) field. `H5C_evict_tagged_entries()`/
+`H5C_evict_or_refresh_all_entries_in_page()` needed no changes — that dispatch logic (added for the
+B-tree fix) already keys generically on `entry_ptr->type->refresh != NULL`, with nothing
+B2-specific in it.
+
+**Verification:**
+- Confirmed the exact repro conditions first, since the bug wasn't reproducible under default
+  test settings (as "Session N+3" already noted): temporarily reintroduced a gated
+  (`getenv("H5EA_REFRESH_REPRO_TEMP")`) `H5Drefresh()`-plus-`H5Dread()` retry loop (10ms apart, up
+  to 2s) into `check_dataset()` (`test/vfd_swmr_remove_reader.c`), per the "Next steps" suggestion —
+  reverted after use, `git diff` confirms zero trace of it remains.
+- At this build's default `HDF_TEST_EXPRESS=2`, the repro loop alone did **not** trigger the bug
+  (2 attempts, clean both times) — the gap is real but load-sensitive, consistent with "Session
+  N+3"'s own account that it needed a specific machine/timing to surface. Raising the load
+  (`HDF5TestExpress=0`, the exhaustive/slowest setting) reproduced it **reliably**: 2/2 runs
+  against the pre-fix code hit `H5C_evict_tagged_entries(): "Pinned entries still need evicted?!"`
+  (20 occurrences of the signature, "15 unexpected errors").
+- With the fix applied, byte-for-byte the same repro (`HDF5TestExpress=0`, same retry loop): **0**
+  occurrences of the signature. A different, unrelated symptom (`"data pipeline read failed"` on
+  compressed-variant chunks) appeared in **both** the before- and after-fix runs at identical
+  counts (10/10) — confirmed pre-existing and independent of this fix (most likely an artifact of
+  the artificially aggressive 10ms-interval retry hammering itself racing a compressed chunk
+  mid-write, not something real traffic would hit); not investigated further, out of scope for this
+  fix.
+- Full regression suite: **2726/2726 passed, 0 failed** (`ctest -j 16 -E H5SHELL-test_vfd_swmr
+  --timeout 120`), both immediately after the change and again after reverting the temporary test
+  instrumentation.
+- `expand_shrink`/`zoo` at normal (non-hammered) settings: clean, "VFD SWMR tests passed."
+- **The entire `test_vfd_swmr.sh` script, all 13 default scenarios back-to-back in one
+  uninterrupted run** (`generator`, `expand`, `shrink`, `expand_shrink`, `sparse`,
+  `vlstr_null`/`vlstr_oob`, `zoo`, `groups`, `groups_attrs`, `groups_ops`, `few_big`,
+  `many_small` — including the `-V`/`-M` VDS variants and `-d 2` chunk-growth cases): completed in
+  under 8 minutes, **"VFD SWMR tests passed"**, with only the 2 intentionally-designed
+  `vlstr_null`/`vlstr_oob` error-path checks firing (as expected). This is the first fully clean,
+  single, uninterrupted full-script run recorded in this document — everything earlier either hung
+  on the original bugs this session and earlier ones fixed, or was deliberately stopped early to
+  conserve session time once individual-scenario/full-`ctest` evidence was judged sufficient.
+- Net diff: `src/H5EAcache.c` only, 151 lines added, nothing else touched.
+
+**Not done this session** (per item 10's own scope note, still open): the broader family of cache
+classes with a `NULL`/absent `refresh` slot (v1 B-tree, fractal heap, global/local heap, object
+headers, Fixed Array, Free Space, SOHM, etc.) — this session fixed only the one item that had a
+confirmed, reproducible failure.
+
+### A separate discovery this session: CI has been red since this port's work began, unrelated to any of the above
+
+Checking `gh run list` for this branch (it's a real GitHub repo — `push` triggers CI on every
+branch, not just PRs to `develop`) turned up something the local-machine-only regression numbers
+throughout this document never surfaced: **the `hdf5 dev cmake CI` workflow has failed on every
+run since `0f4a936a`** (2026-06-30, the last green run — immediately before Phase 0 began). Every
+one of the ~9 runs since has been red. None of the 2726/2726-clean regression numbers reported
+throughout this document are from CI; they're all from ad hoc local builds (Linux clang,
+macOS clang) that never used `-Werror` and never targeted Windows.
+
+Diagnosed two distinct, real, previously-unknown causes (both now fixed):
+
+1. **Linux `-Werror` build (`gcc DBG -Werror`) fails outright**: `H5Fprivate.h:866`/`:869` —
+   `error: redundant redeclaration of 'H5F_vfd_swmr_process_eot_queue'`/`'eot_queue_g'`
+   (`-Werror=redundant-decls`). Phase 0c's `eot_queue_t` relocation (see that section above)
+   correctly moved the *type* definitions into `H5private.h` but left the old *function/variable*
+   declarations behind in `H5Fprivate.h` too — harmless under a normal build (both declarations
+   agree, so no real conflict), but `-Wredundant-decls` flags the duplication itself, and nothing
+   in this session's local dev builds ever passed `-Werror`. **Fixed** (`src/H5Fprivate.h`):
+   removed the two redundant declarations, left a comment pointing at their real location.
+   Verified with both `gcc -Werror=redundant-decls` and `clang -Werror=redundant-decls` against
+   the actual build's compile command (extracted via `ninja -t commands`) — clean on both.
+2. **Windows MSVC Debug build fails on the VFD SWMR test sources themselves**, two independent
+   ways:
+   - `test/vfd_swmr_zoo_writer.c` calls POSIX `clock_gettime(CLOCK_MONOTONIC, ...)` unconditionally
+     at 4 call sites (`error C2065: 'CLOCK_MONOTONIC': undeclared identifier`) — `CLOCK_MONOTONIC`
+     doesn't exist on Windows. **Fixed**: added a small `zoo_gettime_monotonic()` wrapper that uses
+     `clock_gettime()` when `H5_HAVE_CLOCK_GETTIME` is set (every POSIX platform, unchanged
+     behavior) and falls back to `H5_now_usec()` (`src/H5timer.c` — the same portable,
+     monotonic-preferred microsecond timer already used elsewhere in the library, just not
+     previously `#include`d by this test file) on Windows, packed into the same `struct timespec`
+     every call site already expects. Verified: unchanged codepath still builds/links clean on
+     Linux; the `#else` (Windows) branch was syntax-checked standalone with
+     `clang -Wall -Wextra -Werror -fsyntax-only` (forcing `#undef H5_HAVE_CLOCK_GETTIME`) since no
+     Windows machine was available in this session — **not verified with an actual MSVC compile**,
+     flagged for whoever next sees a Windows CI run.
+   - `test/vfd_swmr_attrdset_writer.c` fails to **link** on Windows: `unresolved external symbol
+     main`. Every other VFD SWMR test file wraps its POSIX-only body in `#ifndef
+     H5_HAVE_WIN32_API` and provides a trivial `#else` stub `main()` that prints "Non-POSIX
+     platform. Skipping." and returns success, so the binary still links on Windows even though it
+     does nothing there (confirmed by auditing every `vfd_swmr_*.c` file for this pattern —
+     `vfd_swmr_attrdset_writer.c` was the only one missing the `#else` branch, an isolated
+     oversight, not a systemic gap). **Fixed**: added the identical stub, copied verbatim from
+     `vfd_swmr_generator.c`'s working version.
+
+**Verification**: full regression suite after all three fixes combined (plus the `H5AC_EARRAY_HDR`
+fix above) — **2726/2726 passed, 0 failed**. Net diff for the CI fixes: `src/H5Fprivate.h` (8
+lines), `test/vfd_swmr_zoo_writer.c` (27 lines), `test/vfd_swmr_attrdset_writer.c` (9 lines).
+**Not verified**: an actual green run of the GitHub Actions workflow itself (would require pushing
+and watching CI, not done this session), and the Windows-specific fixes could not be compiled on
+real Windows/MSVC in this environment — both are the natural next check for whoever picks this up
+next, before assuming CI is fully green.
 
 ---
 
