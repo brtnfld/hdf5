@@ -2000,6 +2000,58 @@ non-shell ctest suite, which was clean throughout) under a real Debug build for 
 - Each Part-3 bug was root-caused from an actual `coredumpctl`/`gdb` backtrace and variable inspection
   before being fixed, not guessed at — see the numbered list above for the specific evidence per bug.
 
+### Follow-up: pushed and watched the actual `hdf5 dev cmake CI` run, found and fixed a Release-build regression, and unmasked a new Windows-only bug
+
+Merged `upstream/develop` (17 commits, no overlap with any file touched above, clean merge) and
+pushed everything, then actually watched the fork's CI run rather than assuming the local Debug-build
+verification generalized.
+
+**A real regression, caught by CI, not by anything run locally:** the `gcc REL -Werror (build only)`
+job failed. Gating `H5PB__DO_SANITY_CHECKS` on `NDEBUG` (Part 1 above) reintroduced, in the *opposite*
+build direction, the exact problem Session N+4 fixed forward: `H5PB_update_entry`,
+`H5PB_remove_entry`, `H5PB_entry_exists`, `H5PB__insert_entry`,
+`H5PB_vfd_swmr__release_delayed_writes`, and `H5PB_vfd_swmr__release_tick_list` all have their only
+reachable `HGOTO_ERROR` calls inside sanity-check-gated macros. In a Release build (`NDEBUG` → checks
+off), those calls are unreachable again, so `FUNC_ENTER_NOAPI(FAIL)`/`FUNC_ENTER_PACKAGE`'s
+`err_occurred` goes unused → `-Werror=unused-variable`. Local testing never caught this because every
+local build all session was Debug. **Fixed** (`src/H5PB.c`, all six functions): pick the entry macro
+at compile time to match `H5PB__DO_SANITY_CHECKS`'s own value (`#if H5PB__DO_SANITY_CHECKS ...
+FUNC_ENTER_NOAPI(FAIL) #else FUNC_ENTER_NOAPI_NOERR #endif`, and the `_PACKAGE` equivalent for
+`H5PB__insert_entry`) — the error-capable variant when sanity checks are compiled in, the `NOERR`
+variant when they're compiled out. Verified by compiling `H5PB.c` standalone with the CI's exact
+`-Werror` flag set (`config/gnu-warnings/error-general`) against both a plain compile and a
+`-DNDEBUG` compile: clean both ways. Full ctest re-run: 2566/2566 (2562 + 4 new tests the
+`upstream/develop` merge added). `zoo`/`generator` re-verified clean in the Debug build too.
+
+**A separate, newly-*unmasked* Windows MSVC bug, not the one Session N+4 already fixed.** The
+`Windows MSVC-Debug--CC` job (and its `-TS-`/non-concurrency siblings) failed — but not on
+`CLOCK_MONOTONIC`/`vfd_swmr_attrdset_writer`'s missing `main()` stub (Session N+4's fixes for those
+are confirmed working: those specific errors are gone). Checking the job's raw log against a
+pre-Session-N+4 CI run (`29284564445`, 2026-07-13, before commit `03f165ce835`) shows the *old*
+failure was exactly those two compile-stage errors, with `vfd_swmr_zoo_writer.c`'s `zoo_create_hook`
+"inconsistent dll linkage" already present as a non-fatal warning even then. Fixing the compile-stage
+errors let the Windows build reach the *link* stage for the first time — where it now fails for real:
+`vfd_swmr_zoo_writer.exe`/`vfd_swmr_zoo_reader.exe` get `unresolved external symbol __imp_recv`/
+`__imp_send` (Windows needs `ws2_32.lib` linked for the raw-socket writer/reader handshake code;
+nothing currently links it) and `zoo_create_hook already defined` (`LNK2005`, between
+`hdf5_test_D.dll` and the executable's own object, alongside dozens of "inconsistent dll linkage"
+warnings for functions shared between `genall5.c`/`genall5.h` and the test DLL). This is a genuine,
+previously-invisible bug — not caused by anything in this session's own commits (confirmed: none of
+`H5PB.c`/`H5PBpkg.h`/`H5MV.c`/`H5FDvfd_swmr.c` touch sockets, DLL export macros, or `genall5.c`) — but
+newly reachable specifically because Session N+4's fix worked. **Not fixed** (no Windows environment
+available in this session either); left for whoever next has one. The Linux `gcc-Debug--CC`/
+`gcc-Debug-TS-` jobs that also showed red in the same run were confirmed to be simple fail-fast
+cancellations from this Windows failure (both were cut off mid-`ctest` at 2762/2764 tests, all
+passing so far) — not independent Linux problems.
+
+**Also confirmed, independent of the above:** `LifeboatLLC/hdf5_swmr` (the reference implementation's
+repo) has **zero GitHub Actions runs in its entire history** (`total_count: 0` via the Actions API).
+Its `feature/vfd_swmr` branch's autotools `Makefile.am` *did* include `test_vfd_swmr.sh` in
+`TEST_SCRIPT`, and its `main.yml` *did* configure autotools CI jobs (including a Debug one and a
+`-Werror` one) that would run `make check` — but none of it was ever actually executed. So the VFD
+SWMR shell-test suite has never been exercised by CI on the reference implementation, on any build
+system, at any point — this port is the first.
+
 ### Not done this session
 
 - The GitHub Actions CI workflow itself still only builds `RelWithDebInfo` (per Session N+4's own
@@ -2264,10 +2316,15 @@ make -j"$(nproc)"
     `H5MV.c`, two stale asserts in `H5PB.c` contradicting this file's own documented VFD-SWMR
     exceptions, two more `H5PB.c` asserts assuming tick-list/DWL entries can't be cleaned by an
     out-of-band flush, one incorrect single-page assumption in `H5FDvfd_swmr.c`'s mpmde read path,
-    and two guaranteed-to-fail test-code asserts). **Next natural step**: the CI workflow itself
-    still only builds `RelWithDebInfo` (see the build recipe below) and so will not exercise any of
-    this — consider adding a Debug (or otherwise non-`NDEBUG`) CI job so this class of bug (an
-    entire branch's worth of `assert()`s never having executed) can't recur silently.
+    and two guaranteed-to-fail test-code asserts). Pushed and watched the real `hdf5 dev cmake CI`
+    run this time (see "Follow-up" above): caught and fixed a Release-build `-Werror=unused-variable`
+    regression the `NDEBUG` gating introduced, and separately unmasked (but did not fix — no Windows
+    environment available) a new Windows MSVC link-stage failure in `vfd_swmr_zoo_writer`/`_reader`
+    (missing `ws2_32` link + a DLL-linkage/duplicate-symbol issue between `genall5.c` and the test
+    DLL), previously hidden behind the compile-stage errors Session N+4 fixed. **Next natural step**:
+    fix the Windows link-stage issue above (needs a Windows environment); also still worth adding a
+    Debug (or otherwise non-`NDEBUG`) CI job so the sanity-check class of bug can't regress silently
+    again, now that this session confirmed CI only exercises `RelWithDebInfo`.
 
 ---
 
