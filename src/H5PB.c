@@ -642,7 +642,7 @@ done:
 herr_t
 H5PB_update_entry(H5PB_t *page_buf, haddr_t addr, size_t size, const void *buf)
 {
-    H5PB_entry_t *page_entry;           /* Pointer to the corresponding page entry */
+    H5PB_entry_t *page_entry; /* Pointer to the corresponding page entry */
     haddr_t       page_addr;
     herr_t        ret_value = SUCCEED; /* Return value */
 
