@@ -1832,12 +1832,59 @@ Diagnosed two distinct, real, previously-unknown causes (both now fixed):
      `vfd_swmr_generator.c`'s working version.
 
 **Verification**: full regression suite after all three fixes combined (plus the `H5AC_EARRAY_HDR`
-fix above) — **2726/2726 passed, 0 failed**. Net diff for the CI fixes: `src/H5Fprivate.h` (8
-lines), `test/vfd_swmr_zoo_writer.c` (27 lines), `test/vfd_swmr_attrdset_writer.c` (9 lines).
-**Not verified**: an actual green run of the GitHub Actions workflow itself (would require pushing
-and watching CI, not done this session), and the Windows-specific fixes could not be compiled on
-real Windows/MSVC in this environment — both are the natural next check for whoever picks this up
-next, before assuming CI is fully green.
+fix above) — **2726/2726 passed, 0 failed**. Pushed and watched the actual `hdf5 dev cmake CI` run
+(`29420480325`) this time (previous sessions never had — see above), confirming the
+`-Werror=redundant-decls` failure was gone, but surfacing a **fourth, real, previously-hidden
+`-Werror` issue** the redundant-decls failure had been masking (the build stops at the first file
+that fails, so nothing past `H5Fprivate.h` had ever actually been try-compiled under `-Werror`
+before):
+
+4. **`gcc DBG -Werror`/`gcc REL -Werror` still fail, now on `-Werror=unused-variable` in
+   `src/H5PB.c`.** Four functions — `H5PB_remove_entry`, `H5PB__insert_entry`,
+   `H5PB_vfd_swmr__release_delayed_writes`, `H5PB_vfd_swmr__release_tick_list` — use
+   `FUNC_ENTER_NOAPI(FAIL)`/`FUNC_ENTER_PACKAGE`, which declare a `bool err_occurred` local
+   (`H5private.h`'s `H5_API_SETUP_ERROR_HANDLING`) that only `FUNC_LEAVE_API*` macros ever read
+   (confirmed by inspection: `FUNC_LEAVE_NOAPI`/`FUNC_LEAVE_PACKAGE` never reference it at all) —
+   so it's only "used" if the function itself calls `HGOTO_ERROR`/`HGOTO_DONE` (which set
+   `err_occurred = true` and self-assign to silence exactly this warning, per the existing trick in
+   `H5Eprivate.h`). Root cause: all four functions' *only* potential error paths run through the
+   restored hash-table index's sanity-check macros (`H5PB__SEARCH_INDEX`, `H5PB__DELETE_FROM_INDEX`,
+   `H5PB__REMOVE_FROM_DWL`, `H5PB__INSERT_LRU`, `H5PB__REMOVE_FROM_TL`), all gated on
+   `H5PB__DO_SANITY_CHECKS` (`src/H5PBpkg.h:50`) — which is **hardcoded `#define
+   H5PB__DO_SANITY_CHECKS false`**, not tied to `NDEBUG`/build type at all. With it permanently
+   off, these four functions genuinely have zero reachable `HGOTO_ERROR` calls, so `err_occurred`
+   goes truly unused. Confirmed this is real (not a false positive) by direct inspection of each
+   function body for `HGOTO_ERROR` calls (none in any of the four) and by reproducing the exact
+   failure locally with the CI job's own compile flags extracted from its log.
+   **Fixed** (`src/H5PB.c`, all four functions): swapped `FUNC_ENTER_NOAPI(FAIL)` →
+   `FUNC_ENTER_NOAPI_NOERR` and `FUNC_ENTER_PACKAGE` → `FUNC_ENTER_PACKAGE_NOERR` — the exact
+   upstream-HDF5-convention macro pair for "propagates but doesn't issue errors," which doesn't
+   declare `err_occurred` at all. Verified safe: the `err`/fail-value argument these functions used
+   to pass (`FAIL`) only ever reached `H5_PACKAGE_NO_INIT(err)` (since `H5PBmodule.h` sets
+   `H5_MY_PKG_INIT NO`), which doesn't reference `err` in its body regardless of value — so nothing
+   about `FUNC_ENTER_NOAPI_INIT`'s behavior changes. **Deliberately not a silent fix**: if
+   `H5PB__DO_SANITY_CHECKS` is ever flipped back to `true`, the newly-reachable `HGOTO_ERROR` calls
+   inside those sanity-check macros would fail to compile in a `_NOERR`-entered function
+   (`err_occurred` undeclared) — a loud, clear signal to revert these four functions back to
+   `FUNC_ENTER_NOAPI(FAIL)`/`FUNC_ENTER_PACKAGE`, not a resurrected silent gap. Verified locally
+   with the CI job's exact compile flags (`-Werror=unused-variable -Werror=unused-but-set-variable
+   -Werror=redundant-decls -fsyntax-only`): clean. Full regression suite: 2726/2726, 0 failed.
+
+**Aside, worth flagging separately**: `H5PB__DO_SANITY_CHECKS` being hardcoded `false` (not
+`NDEBUG`-gated, unlike the analogous `H5C_DO_SANITY_CHECKS`/`H5PB__TL`/`DWL` sanity-check
+convention used elsewhere) means the page-buffer index's sanity checks — which the Phase 3
+write-up above credits with catching several real bugs when first exercised — are now permanently
+disabled in every build, debug or release. Whether that's intentional (checks were expensive/noisy
+after the hash-table restoration) or an oversight from `baa3456dd8` is not established here; not
+investigated further this session, since re-enabling it is a behavior change with its own blast
+radius (four functions above would need reverting to their error-capable entry macros, and
+whatever the checks catch would need re-verifying), not just a build-warning fix.
+
+**Not verified**: an actual green run of the GitHub Actions workflow itself for this latest push
+(this fix was pushed but not yet watched to completion as of this writing — the previous push's run
+`29420480325` is what surfaced this fourth issue), and the Windows-specific fixes still could not
+be compiled on real Windows/MSVC in this environment. Both remain the natural next check for
+whoever picks this up next.
 
 ---
 
