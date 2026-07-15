@@ -63,6 +63,7 @@
 static herr_t H5EA__cache_hdr_get_initial_load_size(void *udata, size_t *image_len);
 static htri_t H5EA__cache_hdr_verify_chksum(const void *image_ptr, size_t len, void *udata_ptr);
 static void  *H5EA__cache_hdr_deserialize(const void *image, size_t len, void *udata, bool *dirty);
+static herr_t H5EA__cache_hdr_refresh(H5F_t *f, void *thing, const void *image, size_t *len_ptr);
 static herr_t H5EA__cache_hdr_image_len(const void *thing, size_t *image_len);
 static herr_t H5EA__cache_hdr_serialize(const H5F_t *f, void *image, size_t len, void *thing);
 static herr_t H5EA__cache_hdr_notify(H5AC_notify_action_t action, void *thing);
@@ -121,6 +122,7 @@ const H5AC_class_t H5AC_EARRAY_HDR[1] = {{
     H5EA__cache_hdr_notify,                /* 'notify' callback */
     H5EA__cache_hdr_free_icr,              /* 'free_icr' callback */
     NULL,                                  /* 'fsf_size' callback */
+    H5EA__cache_hdr_refresh,               /* VFD SWMR 'refresh' callback */
 }};
 
 /* H5EA index block inherits cache-like properties from H5AC */
@@ -388,6 +390,155 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5EA__cache_hdr_deserialize() */
+
+/*-------------------------------------------------------------------------
+ * Function:    H5EA__cache_hdr_refresh
+ *
+ * Purpose:     VFD SWMR reader callback: examine a freshly re-read
+ *              extensible array header image and update the live, pinned
+ *              in-memory header in place, instead of evicting it.
+ *
+ *              An extensible array header used as a dataset's chunk index
+ *              is opened once and kept open -- and reference-count-pinned
+ *              via H5EA__hdr_incr() -- for the dataset's entire lifetime,
+ *              the same situation as a v2 B-tree header (see
+ *              H5B2__cache_hdr_refresh(), src/H5B2cache.c, the precedent
+ *              this follows). Without this callback,
+ *              H5C_evict_or_refresh_all_entries_in_page() has no way to
+ *              bring a stale, rc-pinned header up to date: its fallback,
+ *              H5C_evict_tagged_entries() (src/H5Ctag.c), can only unpin
+ *              entries pinned via a flush-dependency relationship, not a
+ *              plain reference-count pin, so it fails outright with
+ *              "Pinned entries still need evicted?!".
+ *
+ *              Unlike the v2 B-tree header, none of the extensible array
+ *              header's depth-derived tables (nsblks/sblk_info[]) need
+ *              rebuilding here: they're derived solely from the creation
+ *              parameters (cparam), which never legitimately change
+ *              post-creation -- unlike a B-tree's depth, nothing about an
+ *              extensible array's *shape* changes as the writer inserts
+ *              elements, only how much of it is in use. The fields that DO
+ *              legitimately change are the running statistics (super/data
+ *              block counts and sizes, max index set, element count) and,
+ *              exactly once, the index block's address (undefined until
+ *              the array's first element is realized, then fixed for the
+ *              array's lifetime -- see H5EA__cache_hdr_deserialize()'s own
+ *              handling of the same field, mirrored here).
+ *
+ * Return:      SUCCEED/FAIL
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5EA__cache_hdr_refresh(H5F_t H5_ATTR_UNUSED *f, void *_thing, const void *_image, size_t *len_ptr)
+{
+    H5EA_hdr_t    *hdr   = (H5EA_hdr_t *)_thing;
+    const uint8_t *image = (const uint8_t *)_image;
+    const uint8_t *end   = image + *len_ptr - 1;
+    H5EA_cls_id_t  id;
+    haddr_t        new_idx_blk_addr;
+    herr_t         ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    assert(hdr);
+    assert(hdr->cache_info.type == H5AC_EARRAY_HDR);
+    assert(image);
+    assert(len_ptr);
+    assert(*len_ptr == hdr->size);
+
+    /* Magic number */
+    if (H5_IS_BUFFER_OVERFLOW(image, H5_SIZEOF_MAGIC, end))
+        HGOTO_ERROR(H5E_EARRAY, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+    if (memcmp(image, H5EA_HDR_MAGIC, (size_t)H5_SIZEOF_MAGIC) != 0)
+        HGOTO_ERROR(H5E_EARRAY, H5E_BADVALUE, FAIL, "wrong extensible array header signature");
+    image += H5_SIZEOF_MAGIC;
+
+    /* Version */
+    if (H5_IS_BUFFER_OVERFLOW(image, 1, end))
+        HGOTO_ERROR(H5E_EARRAY, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+    if (*image++ != H5EA_HDR_VERSION)
+        HGOTO_ERROR(H5E_EARRAY, H5E_VERSION, FAIL, "wrong extensible array header version");
+
+    /* Extensible array class -- must never change post-creation */
+    if (H5_IS_BUFFER_OVERFLOW(image, 1, end))
+        HGOTO_ERROR(H5E_EARRAY, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+    id = (H5EA_cls_id_t)*image++;
+    if (id >= H5EA_NUM_CLS_ID)
+        HGOTO_ERROR(H5E_EARRAY, H5E_BADTYPE, FAIL, "incorrect extensible array class");
+    if (id != hdr->cparam.cls->id)
+        HGOTO_ERROR(H5E_EARRAY, H5E_BADTYPE, FAIL, "extensible array class changed underneath refresh");
+
+    /* General array creation/configuration information -- must never change post-creation */
+    if (H5_IS_BUFFER_OVERFLOW(image, 6, end))
+        HGOTO_ERROR(H5E_EARRAY, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+    if (*image++ != hdr->cparam.raw_elmt_size)
+        HGOTO_ERROR(H5E_EARRAY, H5E_BADVALUE, FAIL,
+                    "extensible array element size changed underneath refresh");
+    if (*image++ != hdr->cparam.max_nelmts_bits)
+        HGOTO_ERROR(H5E_EARRAY, H5E_BADVALUE, FAIL,
+                    "extensible array max. # of elements bits changed underneath refresh");
+    if (*image++ != hdr->cparam.idx_blk_elmts)
+        HGOTO_ERROR(H5E_EARRAY, H5E_BADVALUE, FAIL,
+                    "extensible array index block element count changed underneath refresh");
+    if (*image++ != hdr->cparam.data_blk_min_elmts)
+        HGOTO_ERROR(H5E_EARRAY, H5E_BADVALUE, FAIL,
+                    "extensible array minimum data block element count changed underneath refresh");
+    if (*image++ != hdr->cparam.sup_blk_min_data_ptrs)
+        HGOTO_ERROR(H5E_EARRAY, H5E_BADVALUE, FAIL,
+                    "extensible array minimum super block data pointer count changed underneath refresh");
+    if (*image++ != hdr->cparam.max_dblk_page_nelmts_bits)
+        HGOTO_ERROR(H5E_EARRAY, H5E_BADVALUE, FAIL,
+                    "extensible array max. data block page elements bits changed underneath refresh");
+
+    /* Array statistics -- legitimately change as the writer realizes more elements */
+    if (H5_IS_BUFFER_OVERFLOW(image, (size_t)hdr->sizeof_size * 6, end))
+        HGOTO_ERROR(H5E_EARRAY, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+    H5F_DECODE_LENGTH(hdr->f, image, hdr->stats.stored.nsuper_blks);
+    H5F_DECODE_LENGTH(hdr->f, image, hdr->stats.stored.super_blk_size);
+    H5F_DECODE_LENGTH(hdr->f, image, hdr->stats.stored.ndata_blks);
+    H5F_DECODE_LENGTH(hdr->f, image, hdr->stats.stored.data_blk_size);
+    H5F_DECODE_LENGTH(hdr->f, image, hdr->stats.stored.max_idx_set);
+    H5F_DECODE_LENGTH(hdr->f, image, hdr->stats.stored.nelmts);
+
+    /* Index block address -- undefined until the array's first element is
+     * realized, then fixed for the array's lifetime; never moves once set. */
+    if (H5_IS_BUFFER_OVERFLOW(image, (size_t)hdr->sizeof_addr, end))
+        HGOTO_ERROR(H5E_EARRAY, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+    H5F_addr_decode(hdr->f, &image, &new_idx_blk_addr);
+    if (H5_addr_defined(hdr->idx_blk_addr)) {
+        if (!H5_addr_eq(hdr->idx_blk_addr, new_idx_blk_addr))
+            HGOTO_ERROR(H5E_EARRAY, H5E_BADVALUE, FAIL,
+                        "extensible array index block address changed underneath refresh");
+    }
+    else if (H5_addr_defined(new_idx_blk_addr)) {
+        H5EA_iblock_t iblock; /* Fake index block for computing size */
+
+        hdr->idx_blk_addr = new_idx_blk_addr;
+
+        /* Same computation H5EA__cache_hdr_deserialize() uses above, to keep
+         * reported statistics consistent now that an index block exists */
+        hdr->stats.computed.nindex_blks = 1;
+
+        iblock.hdr         = hdr;
+        iblock.nsblks      = H5EA_SBLK_FIRST_IDX(hdr->cparam.sup_blk_min_data_ptrs);
+        iblock.ndblk_addrs = 2 * ((size_t)hdr->cparam.sup_blk_min_data_ptrs - 1);
+        iblock.nsblk_addrs = hdr->nsblks - iblock.nsblks;
+
+        hdr->stats.computed.index_blk_size = H5EA_IBLOCK_SIZE(&iblock);
+    }
+
+    /* Metadata checksum -- already verified upstream by verify_chksum, so
+     * just skip past it (advance the image pointer for the sanity check). */
+    if (H5_IS_BUFFER_OVERFLOW(image, 4, end))
+        HGOTO_ERROR(H5E_EARRAY, H5E_OVERFLOW, FAIL, "ran off end of input buffer while decoding");
+    image += 4;
+
+    /* Sanity check */
+    assert((size_t)(image - (const uint8_t *)_image) == hdr->size);
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5EA__cache_hdr_refresh() */
 
 /*-------------------------------------------------------------------------
  * Function:    H5EA__cache_hdr_image_len
