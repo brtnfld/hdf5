@@ -2052,6 +2052,45 @@ Its `feature/vfd_swmr` branch's autotools `Makefile.am` *did* include `test_vfd_
 SWMR shell-test suite has never been exercised by CI on the reference implementation, on any build
 system, at any point — this port is the first.
 
+### Second follow-up: fixed the `ws2_32` half of the Windows failure, confirmed the other half needs a redesign
+
+Investigated the two Windows failures above further before giving up on them. The `recv`/`send`
+unresolved-external errors turned out to be a plain missing-link-library problem, fully fixable and
+low-risk: `vfd_swmr_zoo_writer.c` calls `recv()`/`send()` directly rather than through
+`vfd_swmr_common.c`'s `H5_HAVE_WIN32_API`-guarded wrapper, and an audit found `vfd_swmr_group_writer.c`,
+`vfd_swmr_dsetops_writer.c`, and `vfd_swmr_gfail_writer.c` all do the same. `ws2_32.lib` was already
+linked `PRIVATE` into `HDF5_TEST_LIB_TARGET`/`HDF5_TEST_LIBSH_TARGET` (`test/CMakeLists.txt`, since
+`vfd_swmr_common.c`'s guarded socket code lives there) but `PRIVATE` doesn't propagate to consumers,
+and the `ADD_H5_VFD_SWMR_EXE_SRC` macro used to build every VFD SWMR test executable never linked it
+directly. **Fixed** (`test/CMakeLists.txt`, the macro itself — one place fixes it for all four affected
+executables and any future one built the same way): added the identical conditional
+`ws2_32.lib`/`wsock32.lib` link already used for the test library targets, gated on
+`$<PLATFORM_ID:Windows>`/`$<PLATFORM_ID:MinGW>` so it's a no-op on Linux (confirmed: all eight affected
+executables still built clean locally after the change). Pushed and watched the real
+`Windows MSVC-Debug--CC` job again: the `__imp_recv`/`__imp_send` errors are completely gone, confirming
+the fix — only the `zoo_create_hook` `LNK2005` remains, exactly as predicted.
+
+That second half — `zoo_create_hook` (default no-op in `test/stubs.c`, part of the `hdf5_test`/
+`hdf5_test_D` DLL, overridden by a same-named strong definition in `vfd_swmr_zoo_writer.c`) — is
+**not** a missing-library problem, and deliberately not attempted blind. This "override a default hook
+via a same-named symbol in a different translation unit, resolved across a shared-library boundary" is
+a real, working pattern on Linux (dynamic-linker symbol interposition lets the executable's own
+definition win at runtime with no static link-time conflict at all), but has no equivalent under
+Windows' DLL import/export model: a symbol both `dllimport`-declared (via `H5TEST_DLL` in
+`genall5.h`, consumed from the executable) and locally defined is a hard static-link-time conflict,
+with dozens of "inconsistent dll linkage" (C4273) warnings for every other function `genall5.c` and
+the test DLL both reference confirming the same structural mismatch, not just this one symbol. Fixing
+it properly means redesigning the hook as an explicit function pointer (or restructuring which
+functions get `H5TEST_DLL`-exported at all) — real source-level design work needing iterative
+verification against an actual Windows/MSVC compile, which remains unavailable in this environment.
+**Left for whoever next has Windows access.**
+
+**Confirmed pre-existing, unrelated to anything touched this session or ever:** `Special Workflows /
+Intel DBG v2.0.0 default API no deprecated`, `i386 Workflows / i386 Release`, `Msys2 Workflows /
+MSYS2-clangarm64-Release`, and `Intel Workflows / windows-oneapi Release` were all already failing on
+the same pre-session baseline run (`29284564445`, 2026-07-13) used above — not new, not investigated
+further.
+
 ### Not done this session
 
 - The GitHub Actions CI workflow itself still only builds `RelWithDebInfo` (per Session N+4's own
@@ -2317,14 +2356,18 @@ make -j"$(nproc)"
     exceptions, two more `H5PB.c` asserts assuming tick-list/DWL entries can't be cleaned by an
     out-of-band flush, one incorrect single-page assumption in `H5FDvfd_swmr.c`'s mpmde read path,
     and two guaranteed-to-fail test-code asserts). Pushed and watched the real `hdf5 dev cmake CI`
-    run this time (see "Follow-up" above): caught and fixed a Release-build `-Werror=unused-variable`
-    regression the `NDEBUG` gating introduced, and separately unmasked (but did not fix — no Windows
-    environment available) a new Windows MSVC link-stage failure in `vfd_swmr_zoo_writer`/`_reader`
-    (missing `ws2_32` link + a DLL-linkage/duplicate-symbol issue between `genall5.c` and the test
-    DLL), previously hidden behind the compile-stage errors Session N+4 fixed. **Next natural step**:
-    fix the Windows link-stage issue above (needs a Windows environment); also still worth adding a
-    Debug (or otherwise non-`NDEBUG`) CI job so the sanity-check class of bug can't regress silently
-    again, now that this session confirmed CI only exercises `RelWithDebInfo`.
+    run this time (see "Follow-up"/"Second follow-up" above): caught and fixed a Release-build
+    `-Werror=unused-variable` regression the `NDEBUG` gating introduced (confirmed green on a
+    re-run), and unmasked a new Windows MSVC link-stage failure in `vfd_swmr_zoo_writer`/`_reader`
+    previously hidden behind the compile-stage errors Session N+4 fixed — half of it (missing
+    `ws2_32` link, affecting four VFD SWMR test executables) **fixed and confirmed** via another
+    real CI run; the other half (a `zoo_create_hook` DLL-linkage/duplicate-symbol conflict, a
+    structural Linux-vs-Windows difference in this codebase's hook-override pattern) is **not
+    fixed** — needs a real Windows environment to redesign safely, not a blind attempt. **Next
+    natural step**: redesign the hook-override mechanism (function pointer, or restructure which
+    `genall5.c` functions are `H5TEST_DLL`-exported) with actual Windows/MSVC access; also still
+    worth adding a Debug (or otherwise non-`NDEBUG`) CI job so the sanity-check class of bug can't
+    regress silently again, now that this session confirmed CI only exercises `RelWithDebInfo`.
 
 ---
 
