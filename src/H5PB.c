@@ -691,7 +691,17 @@ H5PB_remove_entry(const H5F_shared_t *f_sh, haddr_t addr)
     H5PB_entry_t *page_entry = NULL;    /* Pointer to the page entry being searched */
     herr_t        ret_value  = SUCCEED; /* Return value */
 
-    FUNC_ENTER_NOAPI(FAIL)
+    /* No HGOTO_ERROR call in this function is currently reachable:
+     * H5PB__SEARCH_INDEX()/H5PB__DELETE_FROM_INDEX()'s only error paths are
+     * gated on H5PB__DO_SANITY_CHECKS (H5PBpkg.h), which is hardcoded false.
+     * FUNC_ENTER_NOAPI_NOERR (vs. FUNC_ENTER_NOAPI) matches that: it doesn't
+     * declare the err_occurred local FUNC_ENTER_NOAPI would, which nothing
+     * in this function would ever read/write, tripping -Werror=unused-
+     * variable. If H5PB__DO_SANITY_CHECKS is ever re-enabled, the resulting
+     * HGOTO_ERROR calls would fail to compile here (err_occurred
+     * undeclared) -- a loud signal to revert this to FUNC_ENTER_NOAPI(FAIL),
+     * not a silent gap. */
+    FUNC_ENTER_NOAPI_NOERR
 
     /* Sanity checks */
     assert(f_sh);
@@ -1919,7 +1929,10 @@ H5PB__insert_entry(H5PB_t *page_buf, H5PB_entry_t *page_entry)
 {
     herr_t ret_value = SUCCEED; /* Return value */
 
-    FUNC_ENTER_PACKAGE
+    /* See H5PB_remove_entry()'s comment above FUNC_ENTER_NOAPI_NOERR: this
+     * function has no reachable HGOTO_ERROR call either, for the same
+     * reason (H5PB__DO_SANITY_CHECKS hardcoded false). */
+    FUNC_ENTER_PACKAGE_NOERR
 
     /* Set the index key and metadata/raw classification. This classifies
      * H5F_MEM_PAGE_GHEAP as raw (matches the page-count classification this
@@ -2137,7 +2150,11 @@ H5PB_vfd_swmr__release_delayed_writes(H5F_shared_t *shared)
     H5PB_entry_t *entry_ptr = NULL;
     herr_t        ret_value = SUCCEED;
 
-    FUNC_ENTER_NOAPI(FAIL)
+    /* See H5PB_remove_entry()'s comment above FUNC_ENTER_NOAPI_NOERR: this
+     * function has no reachable HGOTO_ERROR call either (H5PB__REMOVE_FROM_DWL()/
+     * H5PB__INSERT_LRU()'s error paths are gated on the same, hardcoded-false
+     * H5PB__DO_SANITY_CHECKS). */
+    FUNC_ENTER_NOAPI_NOERR
 
     assert(shared);
     assert(shared->vfd_swmr);
@@ -2186,7 +2203,10 @@ H5PB_vfd_swmr__release_tick_list(H5F_shared_t *shared)
     H5PB_entry_t *entry_ptr = NULL;
     herr_t        ret_value = SUCCEED;
 
-    FUNC_ENTER_NOAPI(FAIL)
+    /* See H5PB_remove_entry()'s comment above FUNC_ENTER_NOAPI_NOERR: this
+     * function has no reachable HGOTO_ERROR call either (H5PB__REMOVE_FROM_TL()'s
+     * error paths are gated on the same, hardcoded-false H5PB__DO_SANITY_CHECKS). */
+    FUNC_ENTER_NOAPI_NOERR
 
     assert(shared);
     assert(shared->vfd_swmr);
