@@ -2176,13 +2176,48 @@ ctest test on that side to expose the bug.
 script's own precondition directly rather than trying to fight ctest scheduling. `expand` is fully
 self-contained, so this makes the `shrink` ctest test self-sufficient with no change to the script
 itself. **Verified**: `H5SHELL-test_vfd_swmr-shrink` now passes standalone in 20.57s (a real run, not
-the 0.01s cancellation); `H5SHELL-test_vfd_swmr-expand` still passes unaffected on its own. Pushed;
-CI result pending as of this writing.
+the 0.01s cancellation); `H5SHELL-test_vfd_swmr-expand` still passes unaffected on its own. **Confirmed
+via real CI**: `i386 Release` is green (see "Fifth follow-up" below for the full run result).
 
 **Worth remembering for next time**: "pre-existing" is not by itself a reason to stop investigating — it
 answers "did I cause this" but not "is this real." The right comparison for whether something is worth
 fixing is against upstream/reference behavior (when one exists and is reachable), not just against
 this branch's own history.
+
+### Fifth follow-up: fixed the last real failure (MSYS2's stricter clang), then the full `hdf5 dev cmake CI` matrix went 100% green
+
+One CI job was still unaccounted for: `Msys2 Workflows / MSYS2-clangarm64-Release`. Same lesson as the
+`i386` case applied — checked upstream first this time instead of assuming: `HDFGroup/hdf5`'s `develop`
+passes every MSYS2 variant cleanly, so this needed a real fix too, not a shrug.
+
+**The actual failure, read from the raw log**: `error: incompatible pointer types passing 'int *' to
+parameter of type 'const char *'` (and similarly `struct timespec *` vs `char *`), 8 occurrences in
+`vfd_swmr_zoo_writer.c` alone — exactly matching its 8 `send()`/`recv()` call sites. MSYS2's `clangarm64`
+toolchain uses actual `clang`, which enforces strict pointer-type checking; Winsock's `send()`/`recv()`
+declare `const char *`/`char *` buffer parameters (`WINSOCK_API_LINKAGE int WSAAPI send(SOCKET s,const
+char *buf,int len,int flags)`), unlike POSIX's `const void *`/`void *` — and this codebase passes
+`int *`/`struct timespec *` pointers straight through with no cast. MSVC apparently doesn't treat this
+as fatal (or has a looser default), which is exactly why the earlier `ws2_32`/`zoo_create_hook` fixes
+got every Windows MSVC job green while this stayed hidden underneath — same root cause (raw,
+POSIX-signature socket calls with no Windows accommodation) as those two fixes, just the next layer of
+it, on a stricter compiler.
+
+**Fixed** (`vfd_swmr_zoo_writer.c`, `vfd_swmr_group_writer.c`, `vfd_swmr_dsetops_writer.c`,
+`vfd_swmr_gfail_writer.c` — all four files confirmed to call raw `send()`/`recv()`): cast every buffer
+argument to `(const char *)` for `send()`, `(char *)` for `recv()`, across all 24 call sites (done via a
+small scripted regex substitution given the volume, then verified by hand). Both casts are implicitly
+convertible to/from `void *` on POSIX, so no behavior change there, and satisfy Winsock's exact
+signature directly on Windows. Also fixed a related bug the same log flagged: `vfd_swmr_common.h`
+unconditionally `#define`s `INVALID_SOCKET -1`, silently shadowing Winsock's real `(SOCKET)(~0)`
+wherever this header is included after `<winsock2.h>` — guarded it with `#ifndef H5_HAVE_WIN32_API` so
+Windows uses the real Winsock definition (POSIX behavior unchanged).
+
+**Verified**: all 8 affected executables build clean; full ctest 2566/2566; `zoo`/`expand`/`shrink`/
+`groups` scenarios (which exercise the real `send()`/`recv()` calls, not just default no-op paths)
+pass end-to-end. Pushed and watched the real CI run: **the entire `hdf5 dev cmake CI` matrix came back
+100% green — 95 success, 5 skipped, 0 failures** — including every job that had ever been red this
+session (`gcc DBG/REL -Werror`, every Windows MSVC variant, every MSYS2 variant including
+`clangarm64`, and `i386 Release`).
 
 ### Not done this session
 
@@ -2454,11 +2489,15 @@ make -j"$(nproc)"
     (then fixed, both halves) a new Windows MSVC link-stage failure in `vfd_swmr_zoo_writer`/`_reader`
     previously hidden behind the compile-stage errors Session N+4 fixed: the missing `ws2_32` link
     (affecting four VFD SWMR test executables), and the `zoo_create_hook` DLL-linkage/duplicate-symbol
-    conflict (redesigned as an overridable function pointer). **All three fixes confirmed green on
-    real CI re-runs**, including every previously-failing Windows MSVC job (`Debug--CC`, `Debug-TS-`,
-    `Release--CC`, `Release-TS-`, `Debug--`, `Release--`, `arm64 Release--`). **Next natural step**:
-    add a Debug (or otherwise non-`NDEBUG`) CI job so the sanity-check class of bug can't regress
-    silently again, now that this session confirmed CI only exercises `RelWithDebInfo`.
+    conflict (redesigned as an overridable function pointer). Two more real bugs surfaced and fixed by
+    checking against real upstream CI instead of stopping at "pre-existing on this fork" (see "Fourth"/
+    "Fifth follow-up" above): an always-broken (not flaky) `test_vfd_swmr-shrink` ctest registration,
+    and a set of `send()`/`recv()` buffer-pointer-type mismatches (Winsock wants `char *`, not
+    POSIX's `void *`) across four VFD SWMR test files, caught by MSYS2's stricter `clang`. **The
+    entire `hdf5 dev cmake CI` matrix is now 100% green** (95 success, 5 skipped, 0 failures) —
+    confirmed on a real CI run, not assumed. **Next natural step**: add a Debug (or otherwise
+    non-`NDEBUG`) CI job so the sanity-check class of bug can't regress silently again, now that this
+    session confirmed CI only exercises `RelWithDebInfo`.
 
 ---
 
@@ -2520,3 +2559,5 @@ make -j"$(nproc)"
 | `ws2_32.lib`/`wsock32.lib` link for VFD SWMR test executables (Windows/MinGW) | `test/CMakeLists.txt`, `ADD_H5_VFD_SWMR_EXE_SRC` macro | Session N+5, CI follow-up, Windows bug #1 |
 | `zoo_create_hook` redesigned as overridable function pointer `zoo_create_hook_g` | `test/genall5.h`, `test/stubs.c`, `test/genall5.c`, `test/vfd_swmr_zoo_writer.c` | Session N+5, CI follow-up, Windows bug #2 (confirmed fixed via real CI) |
 | `shrink` ctest registration fixed to invoke `expand shrink` (was always-broken standalone) | `test/ShellTests.cmake`, the `H5_VFD_SWMR_SHELL_TESTS` registration loop | Session N+5, found by comparing against real upstream CI, not just this fork's own history |
+| `send()`/`recv()` buffer args cast to `(const char *)`/`(char *)` for Winsock (24 call sites) | `test/vfd_swmr_zoo_writer.c`, `test/vfd_swmr_group_writer.c`, `test/vfd_swmr_dsetops_writer.c`, `test/vfd_swmr_gfail_writer.c` | Session N+5, found via MSYS2-clangarm64 CI |
+| `INVALID_SOCKET` guarded with `#ifndef H5_HAVE_WIN32_API` (was shadowing Winsock's real definition) | `test/vfd_swmr_common.h` | Session N+5, same CI log as the fix above |
