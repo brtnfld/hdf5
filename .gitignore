@@ -18,6 +18,13 @@ src/H5config.h.in
 .claude/
 /CLAUDE.md
 /CMakeUserPresets.json
+
+# Local-only VFD SWMR port planning/design docs -- kept on disk for reference,
+# not checked in.
+/VFD_SWMR_PORT_PLAN.md
+/docs/H5PB_index_design_analysis.md
+/docs/H5PB_restore_hashtable_plan.md
+/docs/VFD_SWMR_config_TOML_migration_plan.md
 HDF5Examples/CMakeUserPresets.json
 /CLAUDE.md
 
