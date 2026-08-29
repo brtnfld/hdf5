@@ -2033,15 +2033,7 @@ H5F_vfd_swmr_process_eot_queue(hbool_t entering_api)
         H5F_t        *f      = head->vfd_swmr_file;
         H5F_shared_t *shared = f->shared;
 
-/* This runs on *every* outermost API entry and exit, so the clock read here
- * is on the hot path.  A coarse clock costs ~2ns against ~17ns for the precise
- * one, and its ~1-4ms resolution only ever makes a tick fire late, never
- * early, which is immaterial against a tick length of 100ms or more.
- */
-#if defined(H5_HAVE_CLOCK_GETTIME) && defined(CLOCK_REALTIME_COARSE)
-        if (clock_gettime(CLOCK_REALTIME_COARSE, &now) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time via clock_gettime");
-#elif defined(H5_HAVE_TIMESPEC_GET)
+#if defined(H5_HAVE_TIMESPEC_GET)
         if (timespec_get(&now, TIME_UTC) != TIME_UTC)
             HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "can't get time via timespec_get");
 #elif defined(H5_HAVE_CLOCK_GETTIME)
