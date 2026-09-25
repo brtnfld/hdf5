@@ -1264,9 +1264,9 @@ done:
 static herr_t
 H5P__ocrt_pipeline_enc(const void *value, void **_pp, size_t *size)
 {
-    const H5O_pline_t *pline     = (const H5O_pline_t *)value;
-    uint8_t          **pp        = (uint8_t **)_pp;
-    size_t             u;                          /* Local index variable */
+    const H5O_pline_t *pline = (const H5O_pline_t *)value;
+    uint8_t          **pp    = (uint8_t **)_pp;
+    size_t             u; /* Local index variable */
     herr_t             ret_value = SUCCEED;
 
     FUNC_ENTER_PACKAGE
