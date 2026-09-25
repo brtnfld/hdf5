@@ -264,6 +264,33 @@ test_parser(void)
         TEST_ERROR;
     PASSED();
 
+    /* The two cases above use TOML's inf/nan keywords.  These two arrive as
+     * ordinary decimal literals that strtod() cannot represent, and are the
+     * regressions found reviewing https://github.com/cktan/tomlc17/pull/50:
+     * a literal overflowing to infinity was accepted wherever isfinite() had
+     * been folded away by a fast-math build, and one underflowing to -0.0 was
+     * accepted everywhere, because the sign bit made the bit pattern nonzero.
+     * Neither needs a special build to assert on -- both must be rejected. */
+    TESTING("H5Zconfig_get_double: literal overflowing to inf rejected");
+    H5E_BEGIN_TRY
+    {
+        ret = H5Zconfig_get_double("tol = 1e400", "tol", &dval);
+    }
+    H5E_END_TRY
+    if (ret >= 0)
+        TEST_ERROR;
+    PASSED();
+
+    TESTING("H5Zconfig_get_double: literal underflowing to -0.0 rejected");
+    H5E_BEGIN_TRY
+    {
+        ret = H5Zconfig_get_double("tol = -1e-400", "tol", &dval);
+    }
+    H5E_END_TRY
+    if (ret >= 0)
+        TEST_ERROR;
+    PASSED();
+
     TESTING("H5Zconfig_get_int: semicolon outside quotes rejected");
     H5E_BEGIN_TRY
     {
@@ -2029,8 +2056,12 @@ error:
 /* -----------------------------------------------------------------------
  * 8c. Canonicalization can grow a parameter string past H5Z_CONFIG_STRING_MAX
  * even when the caller's raw input is well under it -- hex-float rewriting
- * expands "0x1p0" (5 bytes) to "1.0000000000000000e+00" (23 bytes).  Nothing
- * re-validates the canonicalized string's length before it is persisted, so
+ * expands "0x1.0001p0" (10 bytes) to "1.0000152587890625" (18 bytes): the
+ * canonical form is the shortest decimal that round-trips
+ * (H5Z__format_double_canonical()), so a value whose mantissa doesn't line
+ * up with a short decimal, not any short hex-float token, is what still
+ * forces close to the full DBL_DECIMAL_DIG-17 digits.  Nothing re-validates
+ * the canonicalized string's length before it is persisted, so
  * H5Pappend_filter must reject it here: H5O__pline_decode caps a stored
  * config string at H5Z_CONFIG_STRING_MAX on read, so anything longer than
  * that can never be recovered from disk once written.
@@ -2094,13 +2125,16 @@ test_config_string_canonicalization_growth(void)
     }
     raw[0] = '\0';
 
-    /* Pack short hex-float fields ("aN=0x1p0,") up to ~half the raw limit --
-     * each field individually is tiny, but every "0x1p0" the canonicalizer
-     * sees becomes a 23-byte decimal literal, so ~half the raw budget in
-     * 9-11-byte fields canonicalizes to well over the full budget. */
-    for (n = 0; pos < H5Z_CONFIG_STRING_MAX / 2; n++) {
+    /* Pack short hex-float fields ("aN=0x1.0001p0,") up to just under the
+     * raw sanity ceiling below -- each field individually is tiny, but every
+     * "0x1.0001p0" the canonicalizer sees becomes an 18-byte decimal literal
+     * (its mantissa doesn't line up with a short decimal, so the shortest
+     * round-trip form -- H5Z__format_double_canonical() -- still needs all
+     * 17 significant digits), so packing close to the raw ceiling in
+     * 14-15-byte fields canonicalizes to well over the full budget. */
+    for (n = 0; pos < H5Z_CONFIG_STRING_MAX * 3 / 4 - 128; n++) {
         char field[32];
-        int  flen = snprintf(field, sizeof(field), "a%u=0x1p0,", n);
+        int  flen = snprintf(field, sizeof(field), "a%u=0x1.0001p0,", n);
         if (flen < 0 || pos + (size_t)flen >= H5Z_CONFIG_STRING_MAX)
             break;
         memcpy(raw + pos, field, (size_t)flen);
@@ -3190,8 +3224,14 @@ test_config_string_ondisk(hid_t fapl)
         TEST_ERROR;
     PASSED();
 
-    /* --- fmt-05: libver high bound below V300 silently omits the string --- */
-    TESTING("config string: silent v2 downgrade when libver bound too low");
+    /* --- fmt-05: libver high bound below V300 rejects the create, rather
+     * than silently persisting the dataset without the config string ---
+     * (H5O_pline_set_version() now fails outright instead of downgrading
+     * the pipeline message version and dropping the string: a caller who
+     * set a config string is entitled to know it will not round-trip,
+     * rather than getting a success return and a file that silently no
+     * longer carries the exact string they set.) */
+    TESTING("config string: create fails when libver bound too low to persist it");
     if ((fapl_dg = H5Pcopy(fapl)) < 0)
         TEST_ERROR;
     if (H5Pset_libver_bounds(fapl_dg, H5F_LIBVER_EARLIEST, H5F_LIBVER_V200) < 0)
@@ -3200,26 +3240,36 @@ test_config_string_ondisk(hid_t fapl)
         TEST_ERROR;
     if ((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_dg)) < 0)
         TEST_ERROR;
+    H5E_BEGIN_TRY
+    {
+        dset = H5Dcreate2(file, "dset", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+    }
+    H5E_END_TRY
+    if (dset >= 0)
+        TEST_ERROR; /* must fail: string cannot be persisted at this libver bound */
+    dset = H5I_INVALID_HID;
+    if (H5Pclose(dcpl) < 0)
+        TEST_ERROR;
+    dcpl = H5I_INVALID_HID;
+
+    /* The same filter with no config string (a fresh DCPL, raw cd_values
+     * form) is unaffected by the bound and still succeeds. */
+    {
+        hsize_t  chunk[2] = {4, 4};
+        unsigned cd[1]    = {5};
+
+        if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
+            TEST_ERROR;
+        if (H5Pset_chunk(dcpl, 2, chunk) < 0)
+            TEST_ERROR;
+        if (H5Pset_filter(dcpl, CFG_ONDISK_FILTER_ID, 0, 1, cd) < 0)
+            TEST_ERROR;
+    }
     if ((dset = H5Dcreate2(file, "dset", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
         TEST_ERROR;
-    if (H5Dclose(dset) < 0 || H5Pclose(dcpl) < 0 || H5Fclose(file) < 0)
+    if (H5Dclose(dset) < 0 || H5Pclose(dcpl) < 0 || H5Fclose(file) < 0 || H5Pclose(fapl_dg) < 0)
         TEST_ERROR;
-    dset = dcpl = file = H5I_INVALID_HID;
-    /* Plugin still registered: getter falls back to get_config ("level = 5"),
-     * proving the verbatim string was not persisted at v2. */
-    if ((file = H5Fopen(filename, H5F_ACC_RDONLY, fapl)) < 0)
-        TEST_ERROR;
-    if ((dset = H5Dopen2(file, "dset", H5P_DEFAULT)) < 0)
-        TEST_ERROR;
-    if ((dcpl_out = H5Dget_create_plist(dset)) < 0)
-        TEST_ERROR;
-    if (cfg_ondisk_get_params(dcpl_out, pbuf, sizeof(pbuf)) < 0)
-        TEST_ERROR;
-    if (strcmp(pbuf, "level = 5") != 0) /* get_config form, not the stored "level=5" */
-        TEST_ERROR;
-    if (H5Pclose(dcpl_out) < 0 || H5Dclose(dset) < 0 || H5Fclose(file) < 0 || H5Pclose(fapl_dg) < 0)
-        TEST_ERROR;
-    dcpl_out = dset = file = fapl_dg = H5I_INVALID_HID;
+    dset = dcpl = file = fapl_dg = H5I_INVALID_HID;
     PASSED();
 
     /* --- fmt-07: H5Pmodify_filter clears the stored string --- */
@@ -6463,7 +6513,8 @@ error:
  *
  * The stored string is normalised so the bytes on disk are a valid TOML
  * v1.0.0 document: optional outer braces are stripped, and C99 hex-float
- * literals are rewritten to %.16e decimal.  Neither the braced form nor a
+ * literals are rewritten to the shortest bit-exact decimal (up to
+ * DBL_DECIMAL_DIG == 17 significant digits).  Neither the braced form nor a
  * hex-float literal is accepted by a stock TOML parser, and the persisted
  * string is meant to be readable by tools that are not the HDF5 library
  * (pure-reimplementation readers such as jHDF and pyfive parse the object
@@ -6894,17 +6945,17 @@ test_config_canonicalization(hid_t fapl)
         TEST_ERROR;
     PASSED();
 
-    /* --- canon-03: hex-float rewritten to %.16e decimal --- */
+    /* --- canon-03: hex-float rewritten to the shortest round-trip decimal --- */
     TESTING("canonicalization: hex-float rewritten to decimal");
-    if (canon_check("rate = 0x1.8p+1", "rate = 3.0000000000000000e+00") < 0)
+    if (canon_check("rate = 0x1.8p+1", "rate = 3.0") < 0)
         TEST_ERROR;
-    if (canon_check("rate = 0x1.cp+1", "rate = 3.5000000000000000e+00") < 0)
+    if (canon_check("rate = 0x1.cp+1", "rate = 3.5") < 0)
         TEST_ERROR;
     PASSED();
 
     /* --- canon-04: both normalisations at once --- */
     TESTING("canonicalization: braces and hex-float together");
-    if (canon_check("{ rate = 0x1.8p+1 }", "rate = 3.0000000000000000e+00") < 0)
+    if (canon_check("{ rate = 0x1.8p+1 }", "rate = 3.0") < 0)
         TEST_ERROR;
     PASSED();
 
@@ -6976,7 +7027,7 @@ test_config_canonicalization(hid_t fapl)
     if (H5Pget_filter_params_by_idx(dcpl_out, 0, pbuf, sizeof(pbuf), &plen) < 0)
         TEST_ERROR;
     /* Canonical: no outer brace, no hex-float -- parseable as plain TOML */
-    if (strcmp(pbuf, "rate = 3.0000000000000000e+00") != 0)
+    if (strcmp(pbuf, "rate = 3.0") != 0)
         TEST_ERROR;
     if (pbuf[0] == '{' || strstr(pbuf, "0x") != NULL)
         TEST_ERROR;
@@ -7317,7 +7368,7 @@ test_modify_filter_by_idx(hid_t fapl)
         TEST_ERROR;
     if (H5Pget_filter_params_by_idx(dcpl, 0, pbuf, sizeof(pbuf), &plen) < 0)
         TEST_ERROR;
-    if (strcmp(pbuf, "rate = 3.0000000000000000e+00") != 0)
+    if (strcmp(pbuf, "rate = 3.0") != 0)
         TEST_ERROR;
     if (H5Pclose(dcpl) < 0)
         TEST_ERROR;

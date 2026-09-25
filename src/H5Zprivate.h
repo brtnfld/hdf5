@@ -229,8 +229,9 @@ H5_DLL herr_t H5Z_state_term(struct H5O_pline_t *pline);
 /* True if any entry's class defines init (and so needs state at I/O time). */
 H5_DLL bool H5Z_pline_needs_state(const struct H5O_pline_t *pline);
 /* Normalise a parameter string into the form persisted in pipeline v3:
- * outer braces stripped and hex-float literals rewritten to %.16e decimal,
- * so the stored bytes are valid TOML v1.0.0.  Caller frees with H5MM_xfree(). */
+ * outer braces stripped and hex-float literals rewritten to the shortest
+ * bit-exact decimal (up to DBL_DECIMAL_DIG == 17 significant digits), so the
+ * stored bytes are valid TOML v1.0.0.  Caller frees with H5MM_xfree(). */
 H5_DLL char *H5Z_canonicalize_params(const char *params);
 
 /* Filter blob storage (in-file large binary configuration) */

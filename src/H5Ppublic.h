@@ -2838,16 +2838,19 @@ H5_DLL herr_t H5Pset_filter(hid_t plist_id, H5Z_filter_t filter, unsigned int fl
  *          parameter string is persisted to disk (see
  *          H5Pget_filter_params_by_idx()) only when the file's high bound,
  *          set with H5Pset_libver_bounds(), is at least #H5F_LIBVER_V300.
- *          Below that bound the pipeline is encoded in the older,
- *          string-free on-disk format instead: the filter still applies
- *          exactly as configured and \c H5Pappend_filter() still succeeds,
- *          but the string is silently dropped and cannot later be
- *          recovered verbatim -- consistent with how the library-version
- *          bound gates other format features.  To confirm a string was
- *          actually persisted, reopen the dataset and call
- *          H5Pget_filter_params_by_idx(); a string that differs from what
- *          was set (or a lossily-reconstructed one) means the bound was
- *          too low.
+ *          \c H5Pappend_filter() itself always succeeds regardless of the
+ *          bound, since it only builds the property list and does not yet
+ *          know which file it will be used with. The bound is checked
+ *          later, when the pipeline is actually written -- \c H5Dcreate(),
+ *          \c H5Dcreate_anon(), or \c H5Ocopy() into a lower-bound file --
+ *          and if the file's high bound is below #H5F_LIBVER_V300 while any
+ *          filter in the pipeline carries a configuration string, that call
+ *          fails with a minor error code of \c H5E_BADRANGE rather than silently persisting the
+ *          filter without its string. Either raise the file's high bound
+ *          with H5Pset_libver_bounds(), or append the filter with
+ *          #H5Z_PARAMS_CDVALUES (or a filter with no \c set_config at all)
+ *          instead of a configuration string, if the lower bound is
+ *          required.
  *
  * \anchor subsec_filter_param_string
  * <b>Parameter string syntax (#H5Z_PARAMS_STRING)</b>
@@ -3064,6 +3067,15 @@ H5_DLL herr_t H5Pget_filter_blob(hid_t plist_id, unsigned idx, size_t offset, vo
  *          Call with \p params_buf NULL to obtain the required character count
  *          (excluding NUL) in \p params_len, then allocate \p params_len + 1
  *          bytes and call again with \p params_buf_size = \p params_len + 1.
+ *
+ * \note    If \p params_buf is non-NULL but \p params_buf_size is smaller
+ *          than the required size, \p params_buf is still filled with a
+ *          truncated, NUL-terminated string (in case the caller wants the
+ *          partial content), \p params_len (if non-NULL) is still set to the
+ *          true, untruncated required length, and the function fails with a
+ *          minor error code of \c H5E_OVERFLOW. Check the return value, not
+ *          just whether \p params_buf came back non-empty, to detect
+ *          truncation.
  *
  * \since 3.0.0
  */

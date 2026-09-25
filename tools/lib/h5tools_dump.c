@@ -3185,12 +3185,19 @@ h5tools_print_fill_value(h5tools_str_t *buffer /*in,out*/, const h5tool_format_t
  *              equivalently at most three hexadecimal fraction digits.
  *
  *              This is the selection rule for the hexadecimal annotation
- *              emitted alongside PARAMS_STRING.  Annotating merely because
- *              the hexadecimal form is shorter than the decimal would be
- *              nearly vacuous: 0.1 renders as 0x1.999999999999ap-4, shorter
- *              than its canonical decimal form but no more readable, so
- *              almost every float would acquire a comment that tells the
- *              reader nothing.
+ *              emitted alongside PARAMS_STRING.  A length comparison against
+ *              the hexadecimal form is not used instead, and fails in both
+ *              directions: since the canonical decimal is itself the
+ *              shortest round-trip form (H5Z__format_double_canonical()),
+ *              exactly the values this annotation is for -- 0.5, 0.25, 3.0
+ *              -- already have a canonical decimal ("0.5", "0.25", "3.0")
+ *              shorter than their hex spelling ("0x1p-1", "0x1p-2",
+ *              "0x1.8p+1"), so a shorter-than-hex test would stay silent on
+ *              all of them; conversely a value with no short binary
+ *              structure at all can still have a hex form shorter than its
+ *              17-digit canonical decimal by coincidence of digit patterns.
+ *              Testing the value's structure directly, as below, is
+ *              unaffected by either spelling's length.
  *
  * Return:      true if the value should be annotated, false otherwise
  *-------------------------------------------------------------------------
@@ -3205,8 +3212,30 @@ h5tools_float_is_short_binary(double v)
     double f;
     int    e;
 
+    /* Reject zero and non-finite input on the bit pattern rather than with
+     * "v == 0.0" and isfinite(); each of those fails differently.  A
+     * fast-math build -- Intel icx's -fp-model=fast (its default at -O2 and
+     * above), or gcc/clang -ffast-math or -ffinite-math-only -- may assume
+     * every operand is finite and fold isfinite() to 1, sending an inf or a
+     * nan on into the frexp() below to be annotated as if it were short.
+     * And under denormals-are-zero (DAZ, MXCSR bit 6, which -ffast-math and
+     * icx -fp-model=fast set process-wide) "v == 0.0" is true for a genuine
+     * subnormal, suppressing the annotation for exactly the values whose
+     * hexadecimal spelling is most worth showing.  A magnitude of zero is
+     * +-0.0; one at or above the all-ones exponent is inf or nan. */
+#if H5_SIZEOF_DOUBLE == 8
+    {
+        uint64_t mag;
+
+        memcpy(&mag, &v, sizeof(v));
+        mag &= 0x7fffffffffffffffULL; /* drop the sign bit */
+        if (mag == 0 || mag >= 0x7ff0000000000000ULL)
+            return false;
+    }
+#else
     if (v == 0.0 || !isfinite(v))
         return false;
+#endif
 
     /* frexp normalizes to f in [0.5, 1), so the significand of a value with
      * at most 13 significant bits is f * 2^13 -- scaling by 8192 makes
@@ -3871,13 +3900,16 @@ h5tools_dump_dcpl(FILE *stream, const h5tool_format_t *info, h5tools_context_t *
                 const char  *filter_descr    = NULL; /* library-owned, no free needed */
                 bool         have_extra; /* true if this filter has a PARAMS_STRING and/or DESCRIPTION */
 
-                if (!params_str_buf || !params_annot) {
-                    free(params_str_buf);
-                    free(params_annot);
-                    continue;
-                }
-
-                params_annot[0] = '\0';
+                /* On allocation failure, do NOT skip the whole filter: fall through
+                 * with both buffers left NULL, so the guard below simply omits the
+                 * PARAMS_STRING/DESCRIPTION decoration (have_extra stays false) while
+                 * the filter's own FILTERS{} entry is still rendered by the switch
+                 * below. Silently dropping an entire filter from -p output would make
+                 * the DDL look complete while actually under-reporting the pipeline.
+                 * The unconditional free() calls at the end of this loop iteration
+                 * handle cleanup either way (free(NULL) is a no-op). */
+                if (params_annot)
+                    params_annot[0] = '\0';
 
                 cd_nelmts = NELMTS(cd_values);
                 filtn     = H5Pget_filter2(dcpl_id, (unsigned)i, &filt_flags, &cd_nelmts, cd_values,
@@ -3890,8 +3922,10 @@ h5tools_dump_dcpl(FILE *stream, const h5tool_format_t *info, h5tools_context_t *
                 }
 
                 /* -p prints PARAMS_STRING and DESCRIPTION nested inside this
-                 * filter's own FILTERS{} entry. */
-                if (dcpl_id >= 0 && ctx->show_filter_params) {
+                 * filter's own FILTERS{} entry. Both buffers must have allocated
+                 * successfully above; if either failed, skip decoration for this
+                 * filter (have_extra stays false below) rather than the whole entry. */
+                if (dcpl_id >= 0 && ctx->show_filter_params && params_str_buf && params_annot) {
                     size_t plen = 0;
                     if (H5Pget_filter_params_by_idx(dcpl_id, (unsigned)i, params_str_buf, params_buf_size,
                                                     &plen) >= 0 &&

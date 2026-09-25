@@ -33,14 +33,23 @@
 
 #include "H5Zmodule.h"
 
-#include <locale.h> /* localeconv() for decimal_point */
-
 #include "H5private.h"   /* Generic Functions   */
 #include "H5Eprivate.h"  /* Error handling      */
 #include "H5MMprivate.h" /* Memory management   */
 #include "H5Zpkg.h"      /* Filter internals    */
 
+/* Renames every public tomlc17 symbol to an H5Z__toml_c17_-prefixed name so
+ * a statically-linked libhdf5.a cannot collide with an application's own
+ * copy of tomlc17 (see h5_toml_prefix.h for the full rationale). Must be
+ * included before tomlc17.h so every call site below picks up the renamed
+ * declarations. */
+#include "tomlc17/h5_toml_prefix.h"
 #include "tomlc17/tomlc17.h"
+
+/* Same treatment for the vendored Ryu shortest-round-trip float formatter
+ * (see ryu/h5_ryu_prefix.h); must precede ryu/ryu.h for the same reason. */
+#include "ryu/h5_ryu_prefix.h"
+#include "ryu/ryu.h"
 
 /* Append one source character to the output buffer, or skip it if full. */
 static inline void
@@ -63,22 +72,185 @@ H5Z__copy_chars2(char *out, size_t cap, size_t *pos, const char **p)
     (*p) += 2;
 }
 
+/* Is v an inf or a nan?
+ *
+ * Decided on the bit pattern rather than with isnan()/isinf(): a fast-math
+ * build -- Intel icx's -fp-model=fast (its default at -O2 and above), or
+ * gcc/clang -ffast-math or -ffinite-math-only -- may assume no operand is
+ * ever inf or nan and fold both classifiers to 0, letting through exactly
+ * the values the caller means to reject.  An exponent field of all ones is
+ * inf (zero mantissa) or nan (nonzero mantissa). */
+static inline bool
+H5Z__fp64_is_inf_or_nan(double v)
+{
+#if H5_SIZEOF_DOUBLE == 8
+    uint64_t bits;
+
+    memcpy(&bits, &v, sizeof(v));
+    return (bits & 0x7ff0000000000000ULL) == 0x7ff0000000000000ULL;
+#else
+    return isnan(v) || isinf(v);
+#endif
+}
+
+/* TOML's spelling of a non-finite double ("nan", "inf", "-inf"), or NULL if V
+ * is finite.  Ryu spells these "NaN", "Infinity" and "-Infinity", none of
+ * which any TOML scanner accepts.  Discriminates on the bit pattern for the
+ * same fast-math reason as H5Z__fp64_is_inf_or_nan() above. */
+static inline const char *
+H5Z__fp64_nonfinite_toml(double v)
+{
+    if (!H5Z__fp64_is_inf_or_nan(v))
+        return NULL;
+
+#if H5_SIZEOF_DOUBLE == 8
+    {
+        uint64_t bits;
+
+        memcpy(&bits, &v, sizeof(v));
+        if (bits & 0x000fffffffffffffULL)
+            return "nan";
+        return (bits & 0x8000000000000000ULL) ? "-inf" : "inf";
+    }
+#else
+    if (isnan(v))
+        return "nan";
+    return (v < 0.0) ? "-inf" : "inf";
+#endif
+}
+
+/*
+ * H5Z__format_double_canonical - format VAL into BUF (capacity BUFSIZE) as
+ * the shortest decimal literal that round-trips back to the identical IEEE
+ * 754 double, and that a TOML scanner types as a float rather than an
+ * integer.
+ *
+ * The digits come from the vendored Ryu library (src/ryu), which computes the
+ * shortest round-tripping decimal directly from the bit pattern.  HDF5 does
+ * not attempt that conversion itself: getting it right in every rounding
+ * corner is the whole subject of a PLDI paper, and the result is written into
+ * the file format, where a wrong digit is permanent.  See
+ * <https://github.com/HDFGroup/hdf5/issues/6153>.
+ *
+ * Ryu emits scientific notation unconditionally and with no padding -- 3.0 is
+ * "3E0", 0.1 is "1E-1" -- which would make the canonical form of an ordinary
+ * compression level read `rate = 3.5E0`.  Its output is therefore taken apart
+ * into the digit string and decimal exponent it really represents and laid
+ * out again below, using printf("%g")'s rule: fixed-point while the exponent
+ * stays in human-scale range, scientific outside it.  That re-layout only
+ * moves the decimal point -- it never rounds, drops or adds a significant
+ * digit -- so Ryu's round-trip guarantee carries over verbatim, and no
+ * strtod() readback is needed to confirm it.
+ *
+ * Nothing here is locale-sensitive.  Ryu writes ASCII digits directly instead
+ * of going through snprintf(), so LC_NUMERIC cannot substitute ',' for the
+ * '.' that TOML requires.
+ *
+ * TOML types a bare "8" as an integer, not a float, which would fail the
+ * typed getters; the fixed-point branch appends ".0" whenever the digits run
+ * out at the decimal point, and the scientific branch always carries an
+ * exponent, so every result lexes as a float.
+ *
+ * Returns the length written (excluding the NUL), or -1 if BUFSIZE was too
+ * small.
+ */
+static int
+H5Z__format_double_canonical(char *buf, size_t bufsize, double val)
+{
+    const char *nonfinite = H5Z__fp64_nonfinite_toml(val);
+    char        ryu[32]; /* d2s_buffered_n() writes at most 24 chars */
+    char        dig[24]; /* at most 17 significant digits */
+    char        tmp[40]; /* longest result is 24 chars + NUL */
+    int         ryu_len, i, ndigits = 0, e10 = 0, n = 0;
+    bool        neg, exp_neg;
+
+    if (nonfinite) {
+        n = (int)strlen(nonfinite);
+        if ((size_t)n >= bufsize)
+            return -1;
+        memcpy(buf, nonfinite, (size_t)n + 1);
+        return n;
+    }
+
+    /* Ryu's output is "[-]d[.ddd]E[-]ddd", and d2s_buffered_n() returns its
+     * length without NUL-terminating it.  Split it back into sign, the
+     * significant digits with the '.' removed, and the exponent of the
+     * leading digit. */
+    ryu_len = d2s_buffered_n(val, ryu);
+
+    i   = 0;
+    neg = (ryu[0] == '-');
+    if (neg)
+        i++;
+    while (i < ryu_len && ryu[i] != 'E') {
+        if (ryu[i] != '.')
+            dig[ndigits++] = ryu[i];
+        i++;
+    }
+    i++; /* skip 'E' */
+    exp_neg = (ryu[i] == '-');
+    if (exp_neg)
+        i++;
+    while (i < ryu_len)
+        e10 = e10 * 10 + (ryu[i++] - '0');
+    if (exp_neg)
+        e10 = -e10;
+
+    if (neg)
+        tmp[n++] = '-';
+
+    if (e10 >= -4 && e10 < ndigits) {
+        /* Fixed-point.  e10 < ndigits keeps the decimal point inside the
+         * digits, so no zero padding is ever needed on the right. */
+        if (e10 >= 0) {
+            for (i = 0; i <= e10; i++)
+                tmp[n++] = dig[i];
+            tmp[n++] = '.';
+            if (e10 + 1 == ndigits)
+                tmp[n++] = '0'; /* force float lexical class */
+            else
+                for (i = e10 + 1; i < ndigits; i++)
+                    tmp[n++] = dig[i];
+        }
+        else {
+            tmp[n++] = '0';
+            tmp[n++] = '.';
+            for (i = 0; i < -e10 - 1; i++)
+                tmp[n++] = '0';
+            for (i = 0; i < ndigits; i++)
+                tmp[n++] = dig[i];
+        }
+    }
+    else {
+        /* Scientific, spelled the way printf("%e") would: a signed exponent
+         * of at least two digits. */
+        int abs_e10 = (e10 < 0) ? -e10 : e10;
+
+        tmp[n++] = dig[0];
+        if (ndigits > 1) {
+            tmp[n++] = '.';
+            for (i = 1; i < ndigits; i++)
+                tmp[n++] = dig[i];
+        }
+        tmp[n++] = 'e';
+        tmp[n++] = (e10 < 0) ? '-' : '+';
+        if (abs_e10 >= 100)
+            tmp[n++] = (char)('0' + abs_e10 / 100);
+        tmp[n++] = (char)('0' + (abs_e10 / 10) % 10);
+        tmp[n++] = (char)('0' + abs_e10 % 10);
+    }
+    tmp[n] = '\0';
+
+    if ((size_t)n >= bufsize)
+        return -1;
+    memcpy(buf, tmp, (size_t)n + 1);
+    return n;
+}
+
 /*
  * H5Z__rewrite_hexfloats - return a copy of `src` with every C99 hex-float
  * literal (e.g. "0x1.8p+1", "-0x1p-1") replaced by an equivalent decimal
- * string.  Uses %.16e: it always carries a decimal point and exponent (so
- * tomlc17 types it TOML_FP64, not TOML_INTEGER) and emits DBL_DECIMAL_DIG ==
- * 17 significant digits, the minimum that round-trips every IEEE 754 double.
- *
- * The width is deliberate.  C11 7.22.1.3p11 recommends correct rounding only
- * up to DECIMAL_DIG significant digits.  DECIMAL_DIG is sized for long
- * double, so it is 21 where that is x87 80-bit but 17 where long double ==
- * double (MSVC among others); %.17e would emit 18 digits, exceeding
- * DECIMAL_DIG on those targets for no benefit.  Contrast 7.22.1.3p9, which
- * *requires* correct rounding for the hexadecimal form -- the asymmetry
- * this rewrite trades away.  %.17g must not be substituted: it drops the
- * decimal point for whole values ("8.0" -> "8"), which a TOML parser reads
- * as an integer.
+ * string, via H5Z__format_double_canonical() above.
  *
  * Lets callers write `%a` hex-float literals for exact float encoding
  * without requiring hex-float support in the vendored tomlc17 scanner.
@@ -95,7 +267,9 @@ H5Z__rewrite_hexfloats(const char *src)
     char       *out;
     size_t      pos = 0;
 
-    /* Worst case: every 3-char token "0x1" expands to ~23 chars "%.16e" -> 8x.
+    /* Worst case: a short token whose value needs the full 17 significant
+     * digits, e.g. "0x1p99" (6 chars) -> "6.338253001141147e+29" (21), just
+     * under 4x; 8x leaves ample headroom.
      * Guard against size_t overflow in the multiplication; callers normally
      * cap input at H5Z_CONFIG_STRING_MAX, but enforce the bound here too so
      * this static helper is safe for any future caller. */
@@ -171,34 +345,19 @@ H5Z__rewrite_hexfloats(const char *src)
                         double val = strtod(tmp, &end);
                         if (end == tmp + tok_len) {
                             /* Decimal form of the hex-float literal; see
-                             * H5Z__rewrite_hexfloats() rationale above. */
+                             * H5Z__format_double_canonical() above.
+                             * localeconv() returns thread-shared static
+                             * storage inside that call; HDF5_ENABLE_THREADSAFE
+                             * builds serialize concurrent setlocale() calls
+                             * via the global library lock, making this
+                             * safe. */
                             char dec[32];
-                            int  n = snprintf(dec, sizeof(dec), "%.16e", val);
-                            /* snprintf() is locale-sensitive: LC_NUMERIC may
-                             * substitute e.g. ',' for '.', but TOML requires '.'.
-                             * Look up the actual separator via localeconv()
-                             * rather than assuming ','. */
-                            if (n > 0 && n < (int)sizeof(dec)) {
-                                /* localeconv() returns thread-shared static storage;
-                                 * decimal_point[0] is read exactly once.  HDF5_ENABLE_THREADSAFE
-                                 * builds serialize concurrent setlocale() calls via the global
-                                 * library lock, making this safe. */
-                                const char *locale_sep = localeconv()->decimal_point; /* always non-NULL */
-                                if (locale_sep[0] != '.' && locale_sep[0] != '\0') {
-                                    char *dp;
-                                    for (dp = dec; *dp; dp++) {
-                                        if (*dp == locale_sep[0]) {
-                                            *dp = '.';
-                                            break; /* one separator per number */
-                                        }
-                                    }
-                                }
-                                if (pos + (size_t)n < cap) {
-                                    memcpy(out + pos, dec, (size_t)n);
-                                    pos += (size_t)n;
-                                    p = q;
-                                    continue;
-                                }
+                            int  n = H5Z__format_double_canonical(dec, sizeof(dec), val);
+                            if (n >= 0 && pos + (size_t)n < cap) {
+                                memcpy(out + pos, dec, (size_t)n);
+                                pos += (size_t)n;
+                                p = q;
+                                continue;
                             }
                         }
                     }
@@ -269,7 +428,9 @@ H5Z__toml_wrap(const char *params)
  * Purpose:     Return a heap copy of PARAMS in the canonical form persisted
  *              on disk (filter pipeline v3): optional outer braces and
  *              surrounding whitespace stripped, and C99 hex-float literals
- *              rewritten to bit-exact %.16e decimal.  Both normalisations
+ *              rewritten to the shortest bit-exact decimal (up to
+ *              DBL_DECIMAL_DIG == 17 significant digits; see
+ *              H5Z__format_double_canonical()).  Both normalisations
  *              exist because the stored bytes must be valid TOML v1.0.0 --
  *              pure-reimplementation readers (e.g. jHDF, pyfive) parse the
  *              object header directly with a stock TOML parser, for which a
@@ -338,6 +499,30 @@ done:
 } /* end H5Z_canonicalize_params() */
 
 /*
+ * H5Z__count_table_keys - recursively count leaf key=value assignments in a
+ * parsed TOML table, including keys nested inside inline tables / dotted-key
+ * groups (a nested table itself is not counted, only its own leaves are).
+ * Used to enforce H5Z_CONFIG_MAX_PARAMS.
+ */
+static size_t
+H5Z__count_table_keys(toml_datum_t tab)
+{
+    size_t  count = 0;
+    int32_t i;
+
+    for (i = 0; i < tab.u.tab.size; i++) {
+        toml_datum_t v = tab.u.tab.value[i];
+
+        if (v.type == TOML_TABLE)
+            count += H5Z__count_table_keys(v);
+        else
+            count++;
+    }
+
+    return count;
+}
+
+/*
  * H5Z__toml_parse_params - wrap params as a TOML document and parse it.
  *
  * On success: *tr_out holds a valid result; *ptab_out is the inline-table
@@ -397,6 +582,14 @@ H5Z__toml_parse_params(const char *params, toml_result_t *tr_out, toml_datum_t *
         memset(tr_out, 0, sizeof(*tr_out));
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "malformed filter parameter string (not a valid TOML inline table)");
+    }
+
+    if (H5Z__count_table_keys(*ptab_out) > H5Z_CONFIG_MAX_PARAMS) {
+        toml_free(*tr_out);
+        memset(tr_out, 0, sizeof(*tr_out));
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+                    "filter parameter string exceeds H5Z_CONFIG_MAX_PARAMS (%d key-value pairs)",
+                    H5Z_CONFIG_MAX_PARAMS);
     }
 
 done:
@@ -690,7 +883,7 @@ H5Zconfig_get_double(const char *params, const char *key, double *out)
 
     if (d.type != TOML_FP64)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "type mismatch: key '%s' is not a TOML float", key);
-    if (isnan(d.u.fp64) || isinf(d.u.fp64))
+    if (H5Z__fp64_is_inf_or_nan(d.u.fp64))
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "inf/nan float values are not supported for filter parameters (key '%s')", key);
     *out      = d.u.fp64;

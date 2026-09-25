@@ -2673,24 +2673,31 @@ static int scan_float(scanner_t *sp, token_t *tok) {
   char *q;
   double fp64 = strtod(buffer, &q);
   // glibc sets ERANGE on underflow even when strtod's result is correctly
-  // rounded, e.g. 5e-324; allow acceptance of such subnormal results.  Test
-  // the raw bit pattern rather than "fp64 != 0.0": under flush-to-zero mode
-  // (enabled by default at -O2 and above by some compilers, e.g. Intel's
-  // icc/icx via -fp-model=fast unless -fp-model=precise is given), the CPU
-  // treats a genuinely nonzero subnormal operand as 0.0 for the purposes of
-  // an SSE floating-point comparison, without altering the value in memory.
-  // An integer comparison against the bit pattern is immune to that.
+  // rounded, e.g. 5e-324; accept such results, but still reject a value that
+  // underflowed to zero or overflowed to infinity.  Decide on the raw bit
+  // pattern rather than with "fp64 != 0.0" and isfinite(), each of which
+  // fails in its own way:
+  //
+  //   - denormals-are-zero (DAZ, MXCSR bit 6) makes an SSE compare read a
+  //     subnormal operand as 0.0, so "fp64 != 0.0" is false for a value the
+  //     conversion got right.  This is the reported bug (issue #49): with
+  //     DAZ set the old check rejects 5e-324, and with only flush-to-zero
+  //     (FTZ, bit 15) set it does not -- FTZ acts on results, DAZ on inputs.
+  //     Toolchains that enable DAZ process-wide include Intel icc/icx under
+  //     -fp-model=fast, their default at -O2 and above, and gcc/clang under
+  //     -ffast-math, which links a startup that sets it.
+  //
+  //   - isfinite() is folded to 1 by gcc and clang under -ffast-math and
+  //     -ffinite-math-only, which would let an overflow to infinity through.
+  //
+  // Integer tests on the bits depend on neither.
   // Reported/fixed upstream: https://github.com/cktan/tomlc17/pull/50
+  static_assert(sizeof(fp64) == sizeof(uint64_t), "double must be 64 bits");
   uint64_t fp64_bits;
-  memcpy(&fp64_bits, &fp64, sizeof(fp64_bits));
-  // Shift out the sign bit before testing: a genuine underflow-to-zero
-  // rounds to -0.0 for a negative literal, whose bit pattern (sign bit
-  // set, exponent and mantissa all zero) is nonzero as a raw uint64_t
-  // comparison, incorrectly passing the "is this a real subnormal, not a
-  // zero" check below. Comparing only the exponent+mantissa bits (as
-  // "<<1" leaves them, having discarded the sign bit) correctly rejects
-  // -0.0 the same way +0.0 is already rejected.
-  int is_ok_subnormal = (errno == ERANGE) && (fp64_bits << 1) != 0 && isfinite(fp64);
+  memcpy(&fp64_bits, &fp64, sizeof(fp64));
+  uint64_t fp64_mag = fp64_bits & 0x7fffffffffffffffULL; // drop the sign bit
+  int is_ok_subnormal =
+      (errno == ERANGE) && fp64_mag != 0 && fp64_mag < 0x7ff0000000000000ULL;
   if ((errno && !is_ok_subnormal) || *q || q == buffer) {
     return SETERROR(sp->ebuf, lineno, "error parsing float");
   }

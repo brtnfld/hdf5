@@ -25,12 +25,12 @@ vendored files are identified by their SHA-256 checksums:
 
 Use these hashes to identify the exact upstream commit.  They are the
 checksums of the **pristine** upstream files; `tomlc17.c` as it sits in this
-directory carries three local changes (see below) and hashes to
-`2568604e512865c0146f0f309271441b5ca1f3b0b9b8b3257eef96b8988d7458`.
+directory carries two local changes (see below) and hashes to
+`f3b41671ae5a99fc0d12807ce6b998dcb7139827333b29f668e9d6cdd9682d19`.
 
 ## HDF5-local modifications
 
-**Three**, all in `tomlc17.c` `scan_float()`.  They are otherwise the exact
+**Two**, both in `tomlc17.c` `scan_float()`.  They are otherwise the exact
 upstream sources, and are intentionally excluded from the HDF5 clang-format
 pass (see `.github/workflows/clang-format-check.yml` and `bin/format_source`)
 so that future upstream updates can be dropped in without any re-formatting
@@ -51,9 +51,10 @@ rounding to a subnormal was therefore a syntax error -- `x = 5e-324` as surely
 as `x = 2.2250738585072011e-308`.
 
 For HDF5 this reached the filter configuration API through canonicalization:
-`H5Z__rewrite_hexfloats()` rewrites hex-float literals to `%.16e` decimal, and
-the decimal spelling of a subnormal is inexact even when the hex spelling was
-exact, so `rate = 0x1p-1074` became a parse error on the way to disk.
+`H5Z__rewrite_hexfloats()` rewrites hex-float literals to the shortest
+bit-exact decimal (`H5Z__format_double_canonical()`), and the decimal
+spelling of a subnormal is inexact even when the hex spelling was exact, so
+`rate = 0x1p-1074` became a parse error on the way to disk.
 
 Reported as <https://github.com/cktan/tomlc17/issues/48> and fixed upstream the
 same week.  The fix landed two days after `R260821` was tagged, so it is in
@@ -66,62 +67,69 @@ Covered by `canon-10` in `test/tfilter2.c`, which asserts value transparency
 across the hex-to-decimal rewrite at exact powers of two from 2^-1074 to
 2^1023.
 
-### `scan_float()`: the flush-to-zero fix, also ahead of a release
+### `scan_float()`: the fast-math fix, also ahead of a release
 
-A second, independent change to the same `is_ok_subnormal` line: it compared
-the parsed value with `fp64 != 0.0`, a floating-point comparison. Under
-flush-to-zero (FTZ) mode -- the default for Intel's icc/icx at `-O2` and above
-via `-fp-model=fast`, unless `-fp-model=precise`/`-fp-model=strict` is given --
-the CPU evaluates that comparison as if a genuinely nonzero subnormal `fp64`
-were `0.0`, without altering the value in memory. `is_ok_subnormal` then comes
-out false and the same class of literal the `64a063b86` fix above was meant to
-accept (e.g. `x = 5e-324`) is rejected again, but only on FTZ-default builds --
-this is why it surfaced as an Intel-only CI failure (`tfilter2`'s
-`canon-10`/`test_config_canonicalization`) rather than on GCC or Clang.
+A second, independent change to the same `is_ok_subnormal` line, which decided
+whether to forgive `ERANGE` using `fp64 != 0.0` and `isfinite(fp64)` -- two
+floating-point operations a fast-math build is free to reinterpret. Intel's
+icc/icx use `-fp-model=fast` by default at `-O2` and above (unless
+`-fp-model=precise`/`-fp-model=strict` is given), under which the compiler may
+assume no operand is subnormal and every operand is finite. `is_ok_subnormal`
+then comes out false for a correctly-rounded subnormal, and the same class of
+literal the `64a063b86` fix above was meant to accept (e.g. `x = 5e-324`) is
+rejected again. This is why it surfaced as an Intel-only CI failure
+(`tfilter2`'s `canon-10`/`test_config_canonicalization`) rather than on GCC or
+Clang.
 
-The fix compares the raw bit pattern instead, which an integer comparison
-cannot flush: `uint64_t fp64_bits; memcpy(&fp64_bits, &fp64,
-sizeof(fp64_bits)); ... fp64_bits != 0 ...`.
+The flag responsible is DAZ (denormals-are-zero, `MXCSR` bit 6), not FTZ.
+FTZ acts on the *results* of SSE arithmetic; DAZ acts on its *inputs*, which
+is what makes a comparison read a subnormal operand as `0.0`. Measured
+against the parser as of `64a063b86`, with the register read back to confirm
+each setting took effect:
+
+```
+default   (FTZ=0 DAZ=0)   x = 5e-324 -> ACCEPT
+FTZ only  (FTZ=1 DAZ=0)   x = 5e-324 -> ACCEPT
+FTZ+DAZ   (FTZ=1 DAZ=1)   x = 5e-324 -> REJECT
+```
+
+The toolchains named above enable both together, which is why the original
+diagnosis pointed at the right behaviour under the wrong name. Note that a
+build need not use fast-math itself to be affected: DAZ is process-wide
+state, so anything that sets it -- including a shared library elsewhere in
+the process built with `-ffast-math` -- puts the parser in this mode.
+
+The fix decides on the raw bit pattern, which no FP mode or fast-math
+assumption can alter: mask off the sign bit, then require the magnitude to be
+nonzero (rejecting an underflow to +-0.0) and below the infinity/NaN exponent
+(rejecting an overflow). Testing the exponent bits directly also replaces
+`isfinite()`, which gcc and clang fold to 1 under `-ffast-math` and
+`-ffinite-math-only`.
 
 Reported as <https://github.com/cktan/tomlc17/issues/49>, fix proposed as
 <https://github.com/cktan/tomlc17/pull/50>. Not yet merged upstream at the time
 of this vendoring, hence the second delta. **Drop it at the next update**:
 once a tag containing that fix exists, replacing these files with that tag
-leaves no local change for this issue -- but see the third change below first,
-since PR #50's form of the check (as transcribed here) has a bug of its own
-that a straight adoption of the upstream tag would reintroduce.
+leaves no local change for this issue.
 
 Covered by the same `canon-10` test above; the failure is otherwise silent on
-compilers that do not default to FTZ, so it will not reproduce locally on a
-typical GCC/Clang build.
+compilers that do not default to fast-math, so it will not reproduce locally on
+a typical GCC/Clang build.
 
-### `scan_float()`: sign-bit fix on top of the flush-to-zero fix, local only
+### What this patch does *not* fix
 
-A third change, on top of the previous one, not present in PR #50 (as
-transcribed here) at all: `fp64_bits != 0` treats the raw bit pattern of a
-genuine `-0.0` (sign bit set, exponent and mantissa both zero) as "nonzero,"
-because the comparison includes the sign bit. A TOML literal that truly
-underflows to zero when negative -- e.g. `x = -1e-400`, far below even the
-smallest subnormal -- has that exact bit pattern, so it was silently
-*accepted* as if it were a correctly-rounded subnormal instead of rejected as
-a parse error, while the equivalent positive literal (`x = 1e-400`, bit
-pattern all zero) was still correctly rejected. Asymmetric, silent acceptance
-of malformed input on the negative side only.
-
-The fix shifts the sign bit out before comparing: `(fp64_bits << 1) != 0`,
-which is nonzero exactly when the exponent or mantissa bits are, regardless
-of sign -- so `-0.0` and `+0.0` are now rejected identically.
-
-Not filed upstream as a separate issue since PR #50 has not merged yet; when
-adopting a tag containing PR #50's fix, re-verify this sign-bit case
-(`-1e-400` should still be a parse error) and re-apply this change if the
-upstream form doesn't already handle it. **Drop it once upstream's own fix
-handles the sign bit correctly** -- check by grepping for `fp64_bits` and
-confirming the comparison masks or shifts out the sign bit, not a bare
-`!= 0`.
-
-No dedicated test exercises this path yet (a negative underflow literal like
-`-1e-400`); add one alongside any future work in this area.
+It only helps where `strtod()` itself returned a genuine subnormal and the
+parser then misjudged it. On platforms whose libc flushes inside `strtod()`
+under ambient FTZ/DAZ -- observed on Windows Intel oneAPI and MSYS2
+clangarm64, where `0x1p-1074` round-trips to a literal `0.0` -- the bits truly
+are zero, no bit-pattern test can recover the value, and tomlc17 still rejects
+the literal. HDF5 handles that case outside the parser: `tfilter2` probes the
+platform's `strtod`/`snprintf` round-trip at run time and skips only the two
+true-subnormal exponents when the probe shows the libc does not preserve them
+(see `test/tfilter2.c`). Filter parameters that are exact subnormal doubles
+(magnitude below ~2.2e-308) are not a realistic compression level, tolerance,
+or scale factor, so this is a documented limitation rather than a gap to close
+in the parser.
 
 ## Files
 
@@ -142,14 +150,10 @@ No dedicated test exercises this path yet (a negative underflow literal like
 4a. Check whether the new tag already contains upstream commit `64a063b86`
    (grep for `is_ok_subnormal`).  If it does, drop that local change and
    delete its section above.  If not, re-apply it verbatim.
-4b. Check whether the new tag already contains the flush-to-zero fix from
-   <https://github.com/cktan/tomlc17/pull/50> (grep for `fp64_bits`).  If it
+4b. Check whether the new tag already contains the fast-math fix from
+   <https://github.com/cktan/tomlc17/pull/50> (grep for `fp64_mag`).  If it
    does, drop that local change too and delete its section above.  If not,
    re-apply it verbatim.
-4c. Check whether the new tag's form of the flush-to-zero fix already rejects
-   a negative underflow literal (e.g. `x = -1e-400` should be a parse error,
-   same as `x = 1e-400`).  If it does, drop the sign-bit change too and
-   delete its section above.  If not, re-apply it verbatim.
-4d. Record the resulting file's new post-patch checksum in the table above.
+4c. Record the resulting file's new post-patch checksum in the table above.
 5. Do **not** run clang-format on these files.
 6. Run the HDF5 test suite (`ctest -R tfilter2`) to verify compatibility.
