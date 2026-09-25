@@ -271,15 +271,23 @@ typedef herr_t (*H5Z_get_config_func_t)(unsigned flags, size_t cd_nelmts, const 
 /**
  * \brief Extended filter callback type for H5Z_class3_t.
  *
- * Extends \c H5Z_func_t with two additional parameters: the active data-transfer
- * property list (\p dxpl_id) and the chunk's scaled coordinates (\p scaled, \p ndims).
+ * Extends \c H5Z_func_t with three additional parameters: the active
+ * data-transfer property list (\p dxpl_id), the chunk's scaled coordinates
+ * (\p scaled, \p ndims), and the per-dataset filter state (\p state) that the
+ * class's \c init callback produced for this pipeline entry.
  * \c H5Z_class2_t continues to use \c H5Z_func_t; this type is used only by
  * \c H5Z_class3_t.
+ *
+ * \p state is NULL when the class has no \c init callback, or when \c init
+ * stored NULL.  When the class does have \c init, the library never invokes
+ * this callback for an entry whose \c init did not succeed: the pipeline fails
+ * (or, for an optional filter on write, skips the entry) instead.  The callback
+ * must treat \p state as read-only unless it provides its own synchronization.
  *
  * \since 3.0.0
  */
 typedef size_t (*H5Z_func2_t)(unsigned int flags, size_t cd_nelmts, const unsigned int cd_values[],
-                              hid_t dxpl_id, const hsize_t *scaled, size_t ndims, size_t nbytes,
+                              hid_t dxpl_id, const hsize_t *scaled, size_t ndims, void *state, size_t nbytes,
                               size_t *buf_size, void **buf);
 
 /**
@@ -305,11 +313,11 @@ typedef size_t (*H5Z_func2_t)(unsigned int flags, size_t cd_nelmts, const unsign
  */
 typedef struct H5Z_blob_loc_t {
     haddr_t addr; /**< Global heap collection address for the library's
-                    *  default storage; must not be #HADDR_UNDEF for any
-                    *  custom storage scheme either                    */
-    size_t  idx;  /**< Object index within the collection for the library's
-                    *  default storage; must fit a 32-bit unsigned integer
-                    *  for any custom storage scheme too                */
+                   *  default storage; must not be #HADDR_UNDEF for any
+                   *  custom storage scheme either                    */
+    size_t idx;   /**< Object index within the collection for the library's
+                   *  default storage; must fit a 32-bit unsigned integer
+                   *  for any custom storage scheme too                */
 } H5Z_blob_loc_t;
 
 /**
@@ -326,11 +334,11 @@ typedef struct H5Z_blob_loc_t {
  * \details Called once per blob-bearing filter during H5Dcreate(), after the
  *          \c set_local callback runs.  If the filter class leaves this field
  *          NULL, the library uses its default global-heap (H5HG) writer --
- *          but only if \c read_blob is \e also left NULL: #H5Zregister
- *          rejects a class supplying exactly one of the two,
- *          since a filter that persists its blob one way but recovers it the
- *          library's way (or vice versa) misinterprets whichever locator it
- *          is handed.
+ *          but only if \c read_blob and \c delete_blob are \e also left NULL:
+ *          #H5Zregister rejects a class supplying some but not all three,
+ *          since a filter that persists its blob one way but recovers or
+ *          reclaims it the library's way (or vice versa) misinterprets
+ *          whichever locator it is handed.
  *
  * \attention In a parallel job, this callback runs on every rank and \b must
  *            perform identical file-modifying operations on every rank (or
@@ -357,19 +365,47 @@ typedef herr_t (*H5Z_write_blob_func_t)(hid_t file_id, const void *buf, size_t s
  * \return Non-negative on success; negative on failure.
  *
  * \details If the filter class leaves this field NULL, the library uses its
- *          default global-heap (H5HG) reader -- but only if \c write_blob is
- *          \e also left NULL; see \c write_blob's own documentation for why
- *          the two are registered as a pair, never one without the other.
+ *          default global-heap (H5HG) reader -- but only if \c write_blob and
+ *          \c delete_blob are \e also left NULL; see \c write_blob's own
+ *          documentation for why the three are registered together.
  *          A non-NULL \c read_blob additionally requires a non-NULL
  *          \c close_blob (below): the library cannot safely assume a buffer
- *          this callback allocated came from its own allocator. A filter
- *          whose blob is a reference to another object (e.g. a mask
- *          dataset) may dereference it here using \p file_id and cache the
- *          result for later \c H5Z_func2_t invocations.
+ *          this callback allocated came from its own allocator.
+ *
+ *          This callback only recovers bytes.  A filter consumes its blob in
+ *          its \c init callback, which runs after this one and reads the blob
+ *          with H5Pget_filter_blob(); whatever \c init builds from it (a
+ *          deserialized model, an open mask dataset) is the \c state every
+ *          \c H5Z_func2_t call receives.  Do not cache blob-derived data in
+ *          plugin-global storage for the filter callback to find: nothing that
+ *          callback receives identifies which dataset's blob it needs.
  *
  * \since 3.0.0
  */
 typedef herr_t (*H5Z_read_blob_func_t)(hid_t file_id, H5Z_blob_loc_t loc, void **buf_out, size_t *size_out);
+
+/**
+ * \brief Callback to reclaim a custom-stored blob's file space.
+ *
+ * \param[in] file_id  The file the blob was written to.
+ * \param[in] loc      Locator \c write_blob produced.
+ *
+ * \return Non-negative on success; negative on failure.
+ *
+ * \details Called when the pipeline entry owning the blob is deleted (the
+ *          dataset is deleted, or the entry is removed).  Set if and only if
+ *          \c write_blob is set: the library cannot interpret a custom locator
+ *          and never passes one to its own global-heap routines.  If the
+ *          filter's plugin cannot be loaded at that point, the space is not
+ *          reclaimed; that leaks file space but does not corrupt the file.
+ *
+ * \attention In a parallel job this runs on every rank and must perform
+ *            identical file-modifying operations on every rank, as
+ *            \c write_blob must.
+ *
+ * \since 3.0.0
+ */
+typedef herr_t (*H5Z_delete_blob_func_t)(hid_t file_id, H5Z_blob_loc_t loc);
 
 /**
  * \brief Callback to release the in-memory blob buffer returned by \c read_blob.
@@ -394,8 +430,59 @@ typedef herr_t (*H5Z_read_blob_func_t)(hid_t file_id, H5Z_blob_loc_t loc, void *
 typedef herr_t (*H5Z_close_blob_func_t)(void *buf, size_t size);
 
 /**
- * \brief Version 3 filter class structure with optional string-configuration
- *        and blob-storage callbacks.
+ * \brief Callback to build a filter's per-dataset state.
+ *
+ * \param[in]  file_id    File containing the dataset.
+ * \param[in]  dcpl_id    The dataset's creation property list.
+ * \param[in]  type_id    The dataset's datatype.
+ * \param[in]  space_id   A dataspace with the dataset's chunk dimensions -- the
+ *                        same shape \c set_local receives.
+ * \param[in]  idx        This entry's position in the pipeline, for index-based
+ *                        property accessors (a pipeline may contain the same
+ *                        filter ID more than once).
+ * \param[out] state_out  Receives the state handed to every \c H5Z_func2_t
+ *                        call for this entry; may be set to NULL.
+ *
+ * \return Non-negative on success; negative on failure.
+ *
+ * \details Called once per pipeline entry when a dataset is created (after
+ *          \c set_local) and when it is first opened, so that expensive setup
+ *          -- deserializing a model, compiling a kernel, uploading weights to a
+ *          device -- happens once per open dataset instead of once per chunk.
+ *          The state is released by \c term when the last handle to the dataset
+ *          closes.  It is never copied into property lists.
+ *
+ *          At dataset creation a failure fails H5Dcreate().  At dataset open a
+ *          failure does not fail H5Dopen(); the entry is marked unusable and
+ *          any later I/O through it fails, the same way I/O fails today when a
+ *          filter plugin cannot be loaded.
+ *
+ * \attention The callback must not modify the file.  In a parallel job it runs
+ *            on every rank during the collective H5Dcreate() or H5Dopen() and
+ *            must make the same HDF5 calls on every rank.
+ *
+ * \since 3.0.0
+ */
+typedef herr_t (*H5Z_init_func_t)(hid_t file_id, hid_t dcpl_id, hid_t type_id, hid_t space_id, unsigned idx,
+                                  void **state_out);
+
+/**
+ * \brief Callback to release a filter's per-dataset state.
+ *
+ * \param[in] state  The value \c init stored; may be NULL.
+ *
+ * \return Non-negative on success; negative on failure.
+ *
+ * \details Called exactly once for every successful \c init, when the last
+ *          handle to the dataset closes (or when a failed H5Dcreate() unwinds).
+ *
+ * \since 3.0.0
+ */
+typedef herr_t (*H5Z_term_func_t)(void *state);
+
+/**
+ * \brief Version 3 filter class structure with optional string-configuration,
+ *        per-dataset state, and blob-storage callbacks.
  *
  * Plugin authors use H5Z_class3_t directly rather than relying on the H5Z_class_t alias.
  * This struct is NOT derived from H5Z_class2_t; it is an independent flat struct.
@@ -413,21 +500,33 @@ typedef struct H5Z_class3_t {
     H5Z_can_apply_func_t  can_apply; /**< The "can apply" callback for a filter      */
     H5Z_set_local_func_t  set_local; /**< The "set local" callback for a filter      */
     H5Z_func2_t           filter;    /**< Extended filter callback: dxpl_id + scaled */
-    H5Z_set_config_func_t set_config; /**< String configuration callback; may be NULL */
-    H5Z_get_config_func_t get_config; /**< Parameter string reconstruction; may be NULL */
-    H5Z_write_blob_func_t write_blob; /**< Blob persist callback; NULL selects the default
-                                         global-heap writer */
-    H5Z_read_blob_func_t read_blob;   /**< Blob recover callback; NULL selects the default
-                                         global-heap reader */
-    H5Z_close_blob_func_t close_blob; /**< Blob release callback; NULL and the library
-                                         frees the buffer itself */
-    const char *description;         /**< Human-readable description of the filter (e.g., "Deflate (zlib)
-                                        general-purpose compression"); may be NULL. Appended last (not
-                                        inserted after \c name) so that a caller positionally initializing
-                                        this struct from an H5Z_class2_t literal -- version, id,
-                                        encoder_present, decoder_present, name, can_apply, set_local, filter --
-                                        and simply appending the new v3 fields keeps every original field in
-                                        its original slot. */
+    H5Z_set_config_func_t set_config;  /**< String configuration callback; may be NULL */
+    H5Z_get_config_func_t get_config;  /**< Parameter string reconstruction; may be NULL */
+    const char           *description; /**< Human-readable description of the filter (e.g., "Deflate (zlib)
+                                          general-purpose compression"); may be NULL. Appended last (not
+                                          inserted after \c name) so the first eight fields -- version, id,
+                                          encoder_present, decoder_present, name, can_apply, set_local, filter --
+                                          share the same slots an H5Z_class2_t literal would occupy positionally.
+                                          \warning That slot correspondence does NOT make \c filter itself
+                                          reusable: it is typed \c H5Z_func2_t here (10 parameters, adding
+                                          \p dxpl_id, \p scaled, \p ndims, \p state) versus \c H5Z_func_t (6
+                                          parameters) in H5Z_class2_t. A callback written against the old signature
+                                          must be rewritten to accept and, if unneeded, ignore the four new parameters
+                                          before it can be assigned to this field -- reusing the old function
+                                          pointer as-is is undefined behavior. */
+    /* Members added after description are appended, never inserted, so a
+     * positional initializer written for an earlier layout still places
+     * every field it names correctly and zero-initializes the rest. */
+    H5Z_init_func_t       init;         /**< Per-dataset state setup; may be NULL */
+    H5Z_term_func_t       term;         /**< Per-dataset state release; may be NULL */
+    H5Z_write_blob_func_t write_blob;   /**< Blob persist callback; NULL selects the default
+                                           global-heap writer (with read_blob and delete_blob) */
+    H5Z_read_blob_func_t read_blob;     /**< Blob recover callback; NULL selects the default
+                                           global-heap reader (with write_blob and delete_blob) */
+    H5Z_delete_blob_func_t delete_blob; /**< Blob reclaim callback; NULL selects the default
+                                           global-heap reclaim (with write_blob and read_blob) */
+    H5Z_close_blob_func_t close_blob;   /**< Blob release callback; NULL and the library
+                                           frees the buffer itself */
 } H5Z_class3_t;
 //! <!-- [H5Z_class3_t_snip] -->
 

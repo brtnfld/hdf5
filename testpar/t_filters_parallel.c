@@ -10344,7 +10344,8 @@ test_par_append_filter_builtin_string_pipeline(hid_t fapl_id)
 static size_t
 par_blob_passthrough_func(unsigned int flags, size_t cd_nelmts, const unsigned int *cd_values,
                           hid_t H5_ATTR_UNUSED dxpl_id, const hsize_t H5_ATTR_UNUSED *scaled,
-                          size_t H5_ATTR_UNUSED ndims, size_t nbytes, size_t *buf_size, void **buf)
+                          size_t H5_ATTR_UNUSED ndims, void H5_ATTR_UNUSED *state, size_t nbytes,
+                          size_t *buf_size, void **buf)
 {
     (void)flags;
     (void)cd_nelmts;
@@ -10365,10 +10366,13 @@ static const H5Z_class3_t par_blob_cls = {
     par_blob_passthrough_func, /* filter          */
     NULL,                      /* set_config      */
     NULL,                      /* get_config      */
+    NULL,                      /* description     */
+    NULL,                      /* init            */
+    NULL,                      /* term            */
     NULL,                      /* write_blob: use default global-heap storage */
     NULL,                      /* read_blob       */
+    NULL,                      /* delete_blob     */
     NULL,                      /* close_blob      */
-    NULL,                      /* description     */
 };
 
 /* Every rank must call H5Pappend_filter_blob with identical bytes: dataset
@@ -10377,6 +10381,110 @@ static const H5Z_class3_t par_blob_cls = {
  * perform an identical H5HG_insert rather than broadcasting a locator from
  * rank 0.  This test exercises exactly that path with the default (NULL
  * write_blob/read_blob) global-heap storage. */
+/* par-blob-05: segmentation and content sharing under parallel HDF5.
+ * A blob larger than one segment is written collectively; a second dataset
+ * whose DCPL each rank builds separately, but with identical bytes, must
+ * reuse the stored blob on every rank (the sharing decision depends only on
+ * content and on collective writes, so it cannot diverge).  File sizes are
+ * compared across ranks, and every rank reads both blobs back after a
+ * reopen.  In a debug build the library also cross-checks each written
+ * locator against rank 0's. */
+#define PAR_BLOB_SEG_SIZE ((size_t)3 * 1024 * 1024)
+static void
+test_par_blob_segmented_sharing(hid_t fapl_id)
+{
+    hid_t          file_id = H5I_INVALID_HID, group_id = H5I_INVALID_HID;
+    hid_t          dset_id = H5I_INVALID_HID, fspace_id = H5I_INVALID_HID;
+    hsize_t        dims[2]  = {(hsize_t)(mpi_size * 4), 4};
+    hsize_t        chunk[2] = {4, 4};
+    hsize_t        size_before, size_after;
+    unsigned long  grow1, grow2, lo, hi;
+    unsigned char *blob = NULL, *got = NULL;
+    const char    *names[2] = {"seg1", "seg2"};
+    herr_t         ret;
+
+    if (MAINPROCESS)
+        puts("Testing par-blob-05: segmented blob and content sharing across MPI ranks");
+
+    VRFY((H5Zregister(&par_blob_cls) >= 0), "H5Zregister(par_blob_cls) succeeded");
+
+    blob = (unsigned char *)malloc(PAR_BLOB_SEG_SIZE);
+    got  = (unsigned char *)malloc(PAR_BLOB_SEG_SIZE);
+    VRFY((blob != NULL && got != NULL), "malloc blob buffers succeeded");
+    for (size_t i = 0; i < PAR_BLOB_SEG_SIZE; i++)
+        blob[i] = (unsigned char)(i * 13 + 5);
+
+    file_id = H5Fopen(filenames[0], H5F_ACC_RDWR, fapl_id);
+    VRFY((file_id >= 0), "H5Fopen succeeded");
+    group_id = H5Gcreate2(file_id, "par_blob_segmented_sharing", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    VRFY((group_id >= 0), "H5Gcreate2 succeeded");
+    fspace_id = H5Screate_simple(2, dims, NULL);
+    VRFY((fspace_id >= 0), "H5Screate_simple succeeded");
+
+    for (int k = 0; k < 2; k++) {
+        /* A fresh DCPL per dataset: sharing must not depend on reusing one */
+        hid_t dcpl_id = H5Pcreate(H5P_DATASET_CREATE);
+
+        VRFY((dcpl_id >= 0), "H5Pcreate DCPL succeeded");
+        VRFY((H5Pset_chunk(dcpl_id, 2, chunk) >= 0), "H5Pset_chunk succeeded");
+        ret = H5Pappend_filter_blob(dcpl_id, PAR_BLOB_FILTER_ID, 0, blob, PAR_BLOB_SEG_SIZE);
+        VRFY((ret >= 0), "H5Pappend_filter_blob succeeded");
+
+        VRFY((H5Fget_filesize(file_id, &size_before) >= 0), "H5Fget_filesize succeeded");
+        dset_id =
+            H5Dcreate2(group_id, names[k], HDF5_DATATYPE_NAME, fspace_id, H5P_DEFAULT, dcpl_id, H5P_DEFAULT);
+        VRFY((dset_id >= 0), "H5Dcreate2 succeeded");
+        VRFY((H5Dclose(dset_id) >= 0), "H5Dclose succeeded");
+        VRFY((H5Fget_filesize(file_id, &size_after) >= 0), "H5Fget_filesize succeeded");
+        VRFY((H5Pclose(dcpl_id) >= 0), "H5Pclose succeeded");
+
+        if (k == 0)
+            grow1 = (unsigned long)(size_after - size_before);
+        else
+            grow2 = (unsigned long)(size_after - size_before);
+    }
+
+    /* First create stored the blob; the second reused it */
+    VRFY((grow1 >= PAR_BLOB_SEG_SIZE), "first create stored the whole blob");
+    VRFY((grow2 < PAR_BLOB_SEG_SIZE / 2), "second create shared the stored blob");
+
+    /* ...and every rank saw the same file */
+    MPI_Allreduce(&grow2, &lo, 1, MPI_UNSIGNED_LONG, MPI_MIN, comm);
+    MPI_Allreduce(&grow2, &hi, 1, MPI_UNSIGNED_LONG, MPI_MAX, comm);
+    VRFY((lo == hi), "file growth is identical on every rank");
+
+    VRFY((H5Sclose(fspace_id) >= 0), "H5Sclose succeeded");
+    VRFY((H5Gclose(group_id) >= 0), "H5Gclose succeeded");
+    VRFY((H5Fclose(file_id) >= 0), "H5Fclose succeeded");
+
+    /* Reopen: every rank reads both blobs back */
+    file_id = H5Fopen(filenames[0], H5F_ACC_RDONLY, fapl_id);
+    VRFY((file_id >= 0), "H5Fopen succeeded");
+    group_id = H5Gopen2(file_id, "par_blob_segmented_sharing", H5P_DEFAULT);
+    VRFY((group_id >= 0), "H5Gopen2 succeeded");
+    for (int k = 0; k < 2; k++) {
+        hid_t  dcpl_out;
+        size_t got_size = PAR_BLOB_SEG_SIZE;
+
+        dset_id = H5Dopen2(group_id, names[k], H5P_DEFAULT);
+        VRFY((dset_id >= 0), "H5Dopen2 succeeded");
+        dcpl_out = H5Dget_create_plist(dset_id);
+        VRFY((dcpl_out >= 0), "H5Dget_create_plist succeeded");
+        memset(got, 0, PAR_BLOB_SEG_SIZE);
+        ret = H5Pget_filter_blob(dcpl_out, 0, 0, got, &got_size);
+        VRFY((ret >= 0 && got_size == PAR_BLOB_SEG_SIZE), "H5Pget_filter_blob returned the whole blob");
+        VRFY((0 == memcmp(got, blob, PAR_BLOB_SEG_SIZE)), "blob bytes read back intact");
+        VRFY((H5Pclose(dcpl_out) >= 0), "H5Pclose succeeded");
+        VRFY((H5Dclose(dset_id) >= 0), "H5Dclose succeeded");
+    }
+    VRFY((H5Gclose(group_id) >= 0), "H5Gclose succeeded");
+    VRFY((H5Fclose(file_id) >= 0), "H5Fclose succeeded");
+
+    free(blob);
+    free(got);
+    VRFY((H5Zunregister(PAR_BLOB_FILTER_ID) >= 0), "H5Zunregister succeeded");
+}
+
 static void
 test_par_append_filter_blob(hid_t fapl_id)
 {
@@ -11157,6 +11265,7 @@ main(int argc, char **argv)
         test_par_append_filter_blob(fapl_id);
         test_par_blob_cache_sync_stress(fapl_id);
         test_par_blob_allocation_settings_matrix(fapl_id);
+        test_par_blob_segmented_sharing(fapl_id);
     }
     else {
         if (MAINPROCESS)

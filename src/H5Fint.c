@@ -36,6 +36,7 @@
 #include "H5SMprivate.h" /* Shared Object Header Messages            */
 #include "H5Tprivate.h"  /* Datatypes                                */
 #include "H5VLprivate.h" /* Virtual Object Layer                     */
+#include "H5Zprivate.h"  /* Filters (blob sharing table)             */
 
 #include "H5VLnative_private.h" /* Native VOL connector                     */
 
@@ -1633,6 +1634,9 @@ H5F__dest(H5F_t *f, bool flush, bool free_on_failure)
         for (actype = 0; actype < (int)H5AC_NTYPES; actype++)
             if (f->shared->retries[actype])
                 f->shared->retries[actype] = (uint32_t *)H5MM_xfree(f->shared->retries[actype]);
+
+        /* Forget the filter blobs this file stored (content-sharing table) */
+        H5Z_blob_share_release(f->shared);
 
         /* Destroy shared file struct */
         f->shared = (H5F_shared_t *)H5FL_FREE(H5F_shared_t, f->shared);

@@ -541,18 +541,16 @@ H5Z_register3(const H5Z_class3_t *cls)
         }
     }
 
-    /* write_blob and read_blob describe two halves of one storage scheme
-     * and must be supplied together (or both left NULL, selecting the
-     * library's default global-heap storage for both halves).  A filter
-     * registering only one silently falls through to the *default*
-     * handler for the other, which then misinterprets whatever the
-     * custom half produced -- e.g. a custom write_blob's opaque locator
-     * gets handed to H5HG_read() as if it were a real global-heap
-     * address, or a filter expecting its own read_blob to run never
-     * gets the chance because the default reader already consumed the
-     * locator.  Rejecting the mismatch here, at registration, turns a
-     * silent misconfiguration into a clear, actionable error instead of
-     * data corruption discovered later.
+    /* write_blob, read_blob and delete_blob describe one storage scheme
+     * and must be supplied together (or all left NULL, selecting the
+     * library's default global-heap storage).  A filter registering only
+     * some silently falls through to the *default* handler for the rest,
+     * which then misinterprets whatever the custom part produced -- e.g. a
+     * custom write_blob's opaque locator gets handed to H5HG_read() or
+     * H5HG_remove() as if it were a real global-heap address, or custom
+     * storage is never reclaimed.  Rejecting the mismatch here, at
+     * registration, turns a silent misconfiguration into a clear,
+     * actionable error instead of data corruption discovered later.
      *
      * Separately, read_blob's buffer is documented (H5Zdevelop.h) as
      * "allocated by the callback"; H5Z_blob_release() falls back to
@@ -560,9 +558,10 @@ H5Z_register3(const H5Z_class3_t *cls)
      * the buffer came from the library's own allocator.  A read_blob
      * without a close_blob invites exactly the cross-allocator free
      * that assumption is meant to avoid, so require the pair. */
-    if ((cls->write_blob != NULL) != (cls->read_blob != NULL))
+    if ((cls->write_blob != NULL) != (cls->read_blob != NULL) ||
+        (cls->write_blob != NULL) != (cls->delete_blob != NULL))
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-                    "write_blob and read_blob must be supplied together, or both left NULL");
+                    "write_blob, read_blob and delete_blob must be supplied together, or all left NULL");
     if (cls->read_blob != NULL && cls->close_blob == NULL)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
                     "read_blob requires a matching close_blob (the default release path assumes "
@@ -583,7 +582,10 @@ H5Z_register3(const H5Z_class3_t *cls)
     entry.get_config           = cls->get_config;
     entry.write_blob           = cls->write_blob;
     entry.read_blob            = cls->read_blob;
+    entry.delete_blob          = cls->delete_blob;
     entry.close_blob           = cls->close_blob;
+    entry.init                 = cls->init;
+    entry.term                 = cls->term;
 
     if (H5Z__insert_entry(&entry) < 0)
         HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "unable to insert filter into table");
@@ -1310,6 +1312,14 @@ H5Z_can_apply_direct(const H5O_pline_t *pline)
     if (H5Z__prelude_callback(pline, (hid_t)-1, (hid_t)-1, (hid_t)-1, H5Z_PRELUDE_CAN_APPLY) < 0)
         HGOTO_ERROR(H5E_PLINE, H5E_CANAPPLY, FAIL, "unable to apply filter");
 
+    /* A byte-stream pipeline (a group's fractal heap) belongs to no dataset,
+     * so a filter that needs per-dataset state could never run on it.  Refuse
+     * it when the heap is created (at the first dense link or attribute
+     * insert), rather than at the first heap write. */
+    if (H5Z_pline_needs_state(pline))
+        HGOTO_ERROR(H5E_PLINE, H5E_CANAPPLY, FAIL,
+                    "filters with a per-dataset init callback cannot be applied to a group");
+
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5Z_can_apply_direct() */
@@ -1345,6 +1355,213 @@ H5Z_set_local_direct(const H5O_pline_t *pline)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5Z_set_local_direct() */
+
+/*-------------------------------------------------------------------------
+ * Function: H5Z_pline_needs_state
+ *
+ * Purpose:  Reports whether any registered class in PLINE defines an init
+ *           callback, i.e. whether the pipeline can only run with
+ *           per-dataset state.  Unregistered filters are not loaded here.
+ *
+ * Return:   true/false
+ *-------------------------------------------------------------------------
+ */
+bool
+H5Z_pline_needs_state(const H5O_pline_t *pline)
+{
+    size_t u;
+    bool   ret_value = false;
+
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    if (pline)
+        for (u = 0; u < pline->nused; u++) {
+            int idx = H5Z__find_idx(pline->filter[u].id);
+
+            if (idx >= 0 && H5Z_table_g[idx].init) {
+                ret_value = true;
+                break;
+            }
+        }
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5Z_pline_needs_state() */
+
+/*-------------------------------------------------------------------------
+ * Function: H5Z_state_init
+ *
+ * Purpose:  Runs the init callback of every class in PLINE that defines
+ *           one, storing each result on its pipeline entry.  Filters not
+ *           yet registered are loaded as plugins first, the same way the
+ *           can_apply/set_local prelude and H5Z_pipeline load them.
+ *
+ *           STRICT (dataset create, object copy): any init failure is an
+ *           error, after releasing the state already built by this call.
+ *
+ *           Not STRICT (dataset open): nothing here fails the open.  A class
+ *           that cannot be loaded leaves its entry H5Z_STATE_NONE; an init
+ *           that fails leaves it H5Z_STATE_FAILED.  H5Z_pipeline refuses to
+ *           run either, so the error surfaces at the first I/O -- the same
+ *           point it surfaces today when a filter plugin is missing.
+ *
+ * Return:   Non-negative on success/Negative on failure
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Z_state_init(H5O_pline_t *pline, H5F_t *f, hid_t dcpl_id, hid_t type_id, const hsize_t *chunk_dims,
+               unsigned rank, bool strict)
+{
+    hid_t  file_id  = H5I_INVALID_HID; /* Registered on first use */
+    hid_t  space_id = H5I_INVALID_HID; /* Chunk-shaped dataspace, built on first use */
+    bool   paused   = false;           /* Error stack paused around a lenient init */
+    size_t u;
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    assert(pline);
+    assert(f);
+    assert(chunk_dims || rank == 0);
+
+    for (u = 0; u < pline->nused; u++) {
+        H5Z_filter_info_t *fi        = &pline->filter[u];
+        H5Z_entry_t       *entry     = NULL;
+        void              *new_state = NULL; /* not "state": H5_BEFORE_USER_CB declares one */
+        herr_t             status;
+
+        if (fi->state_status == H5Z_STATE_READY)
+            continue;
+
+        /* Load the filter if necessary.  A class that cannot be loaded is not
+         * this function's error to report: at create, can_apply has already
+         * rejected a missing required filter; at open, the first I/O will. */
+        H5E_PAUSE_ERRORS
+            if (H5Z__find_idx(fi->id) < 0) {
+                H5PL_key_t          key;
+                const H5Z_class2_t *filter_info;
+
+                key.id = (int)fi->id;
+                if (NULL != (filter_info = (const H5Z_class2_t *)H5PL_load(H5PL_TYPE_FILTER, &key)))
+                    (void)H5Z_register(filter_info);
+            }
+            (void)H5Z_find_entry(true, fi->id, &entry);
+        H5E_RESUME_ERRORS
+
+        if (NULL == entry || NULL == entry->init)
+            continue;
+
+        /* Build the callback's handles once, on the first filter that needs them */
+        if (file_id == H5I_INVALID_HID && (file_id = H5F_get_id(f)) < 0)
+            HGOTO_ERROR(H5E_PLINE, H5E_CANTGET, FAIL, "can't get file ID for filter init callback");
+        if (space_id == H5I_INVALID_HID) {
+            hsize_t  dims[H5O_LAYOUT_NDIMS];
+            H5S_t   *space;
+            unsigned d;
+
+            for (d = 0; d < rank; d++)
+                dims[d] = chunk_dims[d];
+            if (NULL == (space = H5S_create_simple(rank, dims, NULL)))
+                HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCREATE, FAIL, "can't create chunk dataspace");
+            if ((space_id = H5I_register(H5I_DATASPACE, space, false)) < 0) {
+                (void)H5S_close(space);
+                HGOTO_ERROR(H5E_ID, H5E_CANTREGISTER, FAIL, "unable to register dataspace ID");
+            }
+        }
+
+        if (!strict) {
+            H5E_PAUSE_ERRORS
+                paused = true;
+        }
+        if (entry->base.id < H5Z_FILTER_RESERVED)
+            status = (entry->init)(file_id, dcpl_id, type_id, space_id, (unsigned)u, &new_state);
+        else {
+            H5_BEFORE_USER_CB(FAIL)
+                {
+                    status = (entry->init)(file_id, dcpl_id, type_id, space_id, (unsigned)u, &new_state);
+                }
+            H5_AFTER_USER_CB(FAIL)
+        }
+        if (paused) {
+H5E_RESUME_ERRORS
+paused = false;
+}
+
+if (status < 0) {
+    if (strict)
+        HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "init callback for filter %d failed", (int)fi->id);
+    fi->state_status = H5Z_STATE_FAILED;
+    continue;
+}
+
+fi->state        = new_state;
+fi->state_status = H5Z_STATE_READY;
+}
+
+done : if (paused)
+H5E_RESUME_ERRORS
+if (ret_value < 0)
+    /* Unwind: a strict caller treats the whole pipeline as uninitialized */
+    (void)H5Z_state_term(pline);
+if (space_id != H5I_INVALID_HID && H5I_dec_ref(space_id) < 0)
+    HDONE_ERROR(H5E_PLINE, H5E_CANTRELEASE, FAIL, "unable to close chunk dataspace");
+if (file_id != H5I_INVALID_HID && H5I_dec_ref(file_id) < 0)
+    HDONE_ERROR(H5E_PLINE, H5E_CANTDEC, FAIL, "can't release file ID");
+
+FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5Z_state_init() */
+
+/*-------------------------------------------------------------------------
+ * Function: H5Z_state_term
+ *
+ * Purpose:  Releases the per-dataset state on every H5Z_STATE_READY entry
+ *           of PLINE and returns all entries to H5Z_STATE_NONE.  Every
+ *           entry is visited even if one term callback fails.
+ *
+ * Return:   Non-negative on success/Negative on failure
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Z_state_term(H5O_pline_t *pline)
+{
+    size_t u;
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    assert(pline);
+
+    for (u = 0; u < pline->nused; u++) {
+        H5Z_filter_info_t *fi    = &pline->filter[u];
+        H5Z_entry_t       *entry = NULL;
+
+        if (fi->state_status == H5Z_STATE_READY) {
+            /* H5Zunregister refuses a filter still used by an open dataset,
+             * so the class that built this state is still registered. */
+            (void)H5Z_find_entry(true, fi->id, &entry);
+            if (entry && entry->term) {
+                herr_t status = SUCCEED;
+
+                if (entry->base.id < H5Z_FILTER_RESERVED)
+                    status = (entry->term)(fi->state);
+                else {
+                    H5_BEFORE_USER_CB_NOERR(FAIL)
+                        {
+                            status = (entry->term)(fi->state);
+                        }
+                    H5_AFTER_USER_CB_NOERR(FAIL)
+                }
+                if (status < 0)
+                    HDONE_ERROR(H5E_PLINE, H5E_CANTRELEASE, FAIL, "term callback for filter %d failed",
+                                (int)fi->id);
+            }
+        }
+        fi->state        = NULL;
+        fi->state_status = H5Z_STATE_NONE;
+    }
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5Z_state_term() */
 
 /*-------------------------------------------------------------------------
  * Function: H5Z_ignore_filters
@@ -1566,6 +1783,8 @@ H5Z_append(H5O_pline_t *pline, H5Z_filter_t filter, unsigned flags, size_t cd_ne
     pline->filter[idx].aux          = NULL; /*set by H5Pappend_filter_blob or pline decode*/
     pline->filter[idx].aux_loc.addr = HADDR_UNDEF;
     pline->filter[idx].aux_loc.idx  = 0;
+    pline->filter[idx].state        = NULL; /*set only on an open dataset's pipeline*/
+    pline->filter[idx].state_status = H5Z_STATE_NONE;
     if (cd_nelmts > 0) {
         size_t i; /* Local index variable */
 
@@ -1780,6 +1999,23 @@ H5Z_pipeline(const H5O_pline_t *pline, unsigned flags, hid_t dxpl_id, const hsiz
 
             fclass = &H5Z_table_g[fclass_idx];
 
+            /* A filter with per-dataset state is never run without it: its
+             * init either failed at open, or never ran because this pipeline
+             * does not belong to an open dataset (e.g. a group's heap). */
+            if (fclass->init && pline->filter[idx].state_status != H5Z_STATE_READY)
+                HGOTO_ERROR(H5E_PLINE, H5E_READERROR, FAIL,
+                            "filter %d has no per-dataset state (its init callback %s)",
+                            (int)pline->filter[idx].id,
+                            pline->filter[idx].state_status == H5Z_STATE_FAILED ? "failed at dataset open"
+                                                                                : "was not run");
+
+            /* Nor without its blob: a custom-stored blob whose plugin was
+             * unavailable at open was left unread (H5Z_blob_read()) */
+            if (H5_addr_defined(pline->filter[idx].aux_loc.addr) && NULL == pline->filter[idx].aux)
+                HGOTO_ERROR(H5E_PLINE, H5E_READERROR, FAIL,
+                            "filter %d blob was not loaded when the dataset was opened",
+                            (int)pline->filter[idx].id);
+
 #ifdef H5Z_DEBUG
             fstats = &H5Z_stat_table_g[fclass_idx];
             H5_timer_start(&timer);
@@ -1801,7 +2037,7 @@ H5Z_pipeline(const H5O_pline_t *pline, unsigned flags, hid_t dxpl_id, const hsiz
                     if (fclass->filter2)
                         new_nbytes = (fclass->filter2)(tmp_flags, pline->filter[idx].cd_nelmts,
                                                        pline->filter[idx].cd_values,
-                                                       dxpl_id, scaled, ndims,
+                                                       dxpl_id, scaled, ndims, pline->filter[idx].state,
                                                        *nbytes, buf_size, buf);
                     else
                         new_nbytes = (fclass->base.filter)(tmp_flags, pline->filter[idx].cd_nelmts,
@@ -1814,7 +2050,7 @@ H5Z_pipeline(const H5O_pline_t *pline, unsigned flags, hid_t dxpl_id, const hsiz
                             if (fclass->filter2)
                                 new_nbytes = (fclass->filter2)(tmp_flags, pline->filter[idx].cd_nelmts,
                                                                pline->filter[idx].cd_values,
-                                                               dxpl_id, scaled, ndims,
+                                                               dxpl_id, scaled, ndims, pline->filter[idx].state,
                                                                *nbytes, buf_size, buf);
                             else
                                 new_nbytes = (fclass->base.filter)(tmp_flags, pline->filter[idx].cd_nelmts,
@@ -1887,6 +2123,27 @@ H5Z_pipeline(const H5O_pline_t *pline, unsigned flags, hid_t dxpl_id, const hsiz
 
             fclass = &H5Z_table_g[fclass_idx];
 
+            /* Same rule as the read path; an optional filter is skipped, the
+             * way an unregistered optional filter is skipped above. */
+            if (fclass->init && pline->filter[idx].state_status != H5Z_STATE_READY) {
+                if ((pline->filter[idx].flags & H5Z_FLAG_OPTIONAL) == 0)
+                    HGOTO_ERROR(H5E_PLINE, H5E_WRITEERROR, FAIL,
+                                "filter %d has no per-dataset state (its init callback %s)",
+                                (int)pline->filter[idx].id,
+                                pline->filter[idx].state_status == H5Z_STATE_FAILED ? "failed at dataset open"
+                                                                                    : "was not run");
+                failed |= (unsigned)1 << idx;
+                continue; /* filter excluded */
+            }
+            if (H5_addr_defined(pline->filter[idx].aux_loc.addr) && NULL == pline->filter[idx].aux) {
+                if ((pline->filter[idx].flags & H5Z_FLAG_OPTIONAL) == 0)
+                    HGOTO_ERROR(H5E_PLINE, H5E_WRITEERROR, FAIL,
+                                "filter %d blob was not loaded when the dataset was opened",
+                                (int)pline->filter[idx].id);
+                failed |= (unsigned)1 << idx;
+                continue; /* filter excluded */
+            }
+
 #ifdef H5Z_DEBUG
             fstats = &H5Z_stat_table_g[fclass_idx];
             H5_timer_start(&timer);
@@ -1906,7 +2163,7 @@ H5Z_pipeline(const H5O_pline_t *pline, unsigned flags, hid_t dxpl_id, const hsiz
                         new_nbytes = (fclass->filter2)(flags | (pline->filter[idx].flags),
                                                        pline->filter[idx].cd_nelmts,
                                                        pline->filter[idx].cd_values,
-                                                       dxpl_id, scaled, ndims,
+                                                       dxpl_id, scaled, ndims, pline->filter[idx].state,
                                                        *nbytes, buf_size, buf);
                     else
                         new_nbytes = (fclass->base.filter)(flags | (pline->filter[idx].flags),
@@ -1921,7 +2178,7 @@ H5Z_pipeline(const H5O_pline_t *pline, unsigned flags, hid_t dxpl_id, const hsiz
                                 new_nbytes = (fclass->filter2)(flags | (pline->filter[idx].flags),
                                                                pline->filter[idx].cd_nelmts,
                                                                pline->filter[idx].cd_values,
-                                                               dxpl_id, scaled, ndims,
+                                                               dxpl_id, scaled, ndims, pline->filter[idx].state,
                                                                *nbytes, buf_size, buf);
                             else
                                 new_nbytes = (fclass->base.filter)(flags | (pline->filter[idx].flags),
@@ -2295,13 +2552,440 @@ H5Z_blob_release(H5Z_filter_info_t *fi)
 } /* end H5Z_blob_release() */
 
 /*-------------------------------------------------------------------------
+ * Default blob storage: segmentation, checksums, and content sharing
+ *
+ * A default-storage blob is one global-heap object when it fits in
+ * H5Z_BLOB_SEGMENT_SIZE, and otherwise a sequence of segment objects named
+ * by a segment index object:
+ *
+ *     [nsegments:4] then nsegments x [addr:A][idx:4]
+ *
+ * Every global-heap collection is a single metadata-cache entry, and
+ * H5HG_insert() puts an oversized object in a collection of exactly its
+ * size; segmenting keeps each collection near 1 MiB however large the blob,
+ * well under H5C_MAX_ENTRY_SIZE.
+ *
+ * The object the entry's locator names (the single object, or the index)
+ * carries the global heap's own on-disk reference count, set to the number
+ * of pipeline entries that point at it.  H5Z_blob_write() reuses a blob
+ * this file already stores when the bytes match exactly, and bumps that
+ * count instead of writing a copy; H5Z_blob_unref() removes the objects
+ * only when it drops to zero.  Candidates for reuse come from a per-file
+ * table filled only by writes -- never by reads at H5Dopen -- because
+ * writes (dataset creation, object copy) are collective under parallel
+ * HDF5 and reads need not be: a table fed by an independent H5Dopen on one
+ * rank would make ranks disagree on whether a later collective create
+ * reuses or writes, breaking the identical-metadata-operations rule.
+ *-------------------------------------------------------------------------
+ */
+
+/* Most pipeline entries one stored blob is shared by; one below the global
+ * heap's own link-count limit (H5HG_MAXLINK), so an increment never fails */
+#define H5Z_BLOB_MAX_SHARES 65534
+
+/* One default-storage blob a file holds, for content sharing */
+typedef struct H5Z_blob_share_t {
+    const void              *file_shared; /* owning H5F_shared_t; identity only */
+    uint32_t                 checksum;
+    size_t                   size;
+    uint8_t                  kind;
+    H5Z_blob_loc_t           loc; /* object carrying the reference count */
+    H5Z_blob_buf_t          *buf; /* the bytes, to confirm a match       */
+    struct H5Z_blob_share_t *next;
+} H5Z_blob_share_t;
+
+static H5Z_blob_share_t *H5Z_blob_share_g = NULL;
+
+/* Remove one heap object, ignoring a NULL/undefined locator */
+static herr_t
+H5Z__blob_heap_remove_one(H5F_t *f, haddr_t addr, size_t idx)
+{
+    H5HG_t hobj;
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    hobj.addr = addr;
+    hobj.idx  = idx;
+    if (H5HG_remove(f, &hobj) < 0)
+        HGOTO_ERROR(H5E_PLINE, H5E_CANTREMOVE, FAIL, "unable to remove filter blob object from global heap");
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5Z__blob_heap_remove_one() */
+
+/* Read and validate a segment index object; *segs_out is H5MM-allocated */
+static herr_t
+H5Z__blob_read_index(H5F_t *f, const H5Z_blob_loc_t *loc, H5HG_t **segs_out, size_t *nsegs_out)
+{
+    H5HG_t         hobj;
+    uint8_t       *ibuf  = NULL;
+    size_t         isize = 0;
+    H5HG_t        *segs  = NULL;
+    const uint8_t *p;
+    uint32_t       nsegs;
+    size_t         entry_size = (size_t)H5F_SIZEOF_ADDR(f) + 4;
+    herr_t         ret_value  = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    hobj.addr = loc->addr;
+    hobj.idx  = loc->idx;
+    if (NULL == (ibuf = (uint8_t *)H5HG_read(f, &hobj, NULL, &isize)))
+        HGOTO_ERROR(H5E_PLINE, H5E_READERROR, FAIL, "unable to read filter blob segment index");
+    if (isize < 4)
+        HGOTO_ERROR(H5E_PLINE, H5E_BADVALUE, FAIL, "filter blob segment index is truncated");
+    p = ibuf;
+    UINT32DECODE(p, nsegs);
+    if (nsegs == 0 || (isize - 4) / entry_size < nsegs)
+        HGOTO_ERROR(H5E_PLINE, H5E_BADVALUE, FAIL, "filter blob segment index is malformed");
+    if (NULL == (segs = (H5HG_t *)H5MM_malloc(nsegs * sizeof(H5HG_t))))
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for blob segment list");
+    for (uint32_t k = 0; k < nsegs; k++) {
+        uint32_t idx;
+
+        H5F_addr_decode(f, &p, &segs[k].addr);
+        UINT32DECODE(p, idx);
+        segs[k].idx = (size_t)idx;
+    }
+
+    *segs_out  = segs;
+    *nsegs_out = nsegs;
+    segs       = NULL;
+
+done:
+    H5MM_xfree(ibuf);
+    H5MM_xfree(segs);
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5Z__blob_read_index() */
+
+/* Remove a default-storage blob's heap objects: every segment, then the
+ * index, or the single object */
+static herr_t
+H5Z__blob_heap_remove(H5F_t *f, const H5Z_blob_loc_t *loc, uint8_t kind)
+{
+    H5HG_t *segs      = NULL;
+    size_t  nsegs     = 0;
+    herr_t  ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    if (kind == H5Z_BLOB_KIND_SEGMENTED) {
+        if (H5Z__blob_read_index(f, loc, &segs, &nsegs) < 0)
+            HGOTO_ERROR(H5E_PLINE, H5E_CANTREMOVE, FAIL, "unable to read filter blob segment index");
+        for (size_t k = 0; k < nsegs; k++)
+            if (H5Z__blob_heap_remove_one(f, segs[k].addr, segs[k].idx) < 0)
+                HGOTO_ERROR(H5E_PLINE, H5E_CANTREMOVE, FAIL, "unable to remove filter blob segment");
+    }
+    if (H5Z__blob_heap_remove_one(f, loc->addr, loc->idx) < 0)
+        HGOTO_ERROR(H5E_PLINE, H5E_CANTREMOVE, FAIL, "unable to remove filter blob");
+
+done:
+    H5MM_xfree(segs);
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5Z__blob_heap_remove() */
+
+/* Store a blob in the global heap, segmenting it if large.  The named
+ * object's reference count is set to one. */
+static herr_t
+H5Z__blob_heap_store(H5F_t *f, const void *data, size_t size, H5Z_blob_loc_t *loc_out, uint8_t *kind_out)
+{
+    H5HG_t   hobj;
+    H5HG_t  *segs      = NULL;
+    size_t   nsegs     = 0;
+    size_t   nstored   = 0;
+    uint8_t *ibuf      = NULL;
+    bool     have_obj  = false;
+    herr_t   ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    if (size <= H5Z_BLOB_SEGMENT_SIZE) {
+        if (H5HG_insert(f, size, data, &hobj) < 0)
+            HGOTO_ERROR(H5E_PLINE, H5E_CANTINSERT, FAIL, "unable to insert filter blob into global heap");
+        have_obj  = true;
+        *kind_out = H5Z_BLOB_KIND_SINGLE;
+    }
+    else {
+        size_t   entry_size = (size_t)H5F_SIZEOF_ADDR(f) + 4;
+        size_t   isize;
+        uint8_t *p;
+
+        nsegs = (size + H5Z_BLOB_SEGMENT_SIZE - 1) / H5Z_BLOB_SEGMENT_SIZE;
+        if (nsegs > UINT32_MAX)
+            HGOTO_ERROR(H5E_PLINE, H5E_BADVALUE, FAIL, "filter blob is too large to segment");
+        if (NULL == (segs = (H5HG_t *)H5MM_malloc(nsegs * sizeof(H5HG_t))))
+            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for blob segment list");
+
+        for (nstored = 0; nstored < nsegs; nstored++) {
+            size_t off = nstored * H5Z_BLOB_SEGMENT_SIZE;
+            size_t len = MIN(H5Z_BLOB_SEGMENT_SIZE, size - off);
+
+            if (H5HG_insert(f, len, (const uint8_t *)data + off, &segs[nstored]) < 0)
+                HGOTO_ERROR(H5E_PLINE, H5E_CANTINSERT, FAIL, "unable to insert filter blob segment");
+        }
+
+        isize = 4 + nsegs * entry_size;
+        if (NULL == (ibuf = (uint8_t *)H5MM_malloc(isize)))
+            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for blob segment index");
+        p = ibuf;
+        UINT32ENCODE(p, (uint32_t)nsegs);
+        for (size_t k = 0; k < nsegs; k++) {
+            H5F_addr_encode(f, &p, segs[k].addr);
+            UINT32ENCODE(p, (uint32_t)segs[k].idx);
+        }
+        if (H5HG_insert(f, isize, ibuf, &hobj) < 0)
+            HGOTO_ERROR(H5E_PLINE, H5E_CANTINSERT, FAIL, "unable to insert filter blob segment index");
+        have_obj  = true;
+        *kind_out = H5Z_BLOB_KIND_SEGMENTED;
+    }
+
+    /* The named object counts the pipeline entries that point at it */
+    if (H5HG_link(f, &hobj, 1) < 0)
+        HGOTO_ERROR(H5E_PLINE, H5E_CANTINC, FAIL, "unable to set filter blob reference count");
+
+    loc_out->addr = hobj.addr;
+    loc_out->idx  = hobj.idx;
+
+done:
+    if (ret_value < 0) {
+        /* best effort; don't clobber the real error */
+        if (have_obj)
+            (void)H5HG_remove(f, &hobj);
+        for (size_t k = 0; k < nstored; k++)
+            (void)H5HG_remove(f, &segs[k]);
+    }
+    H5MM_xfree(ibuf);
+    H5MM_xfree(segs);
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5Z__blob_heap_store() */
+
+/* Load a default-storage blob; returns an H5MM buffer of *size_out bytes */
+static void *
+H5Z__blob_heap_load(H5F_t *f, const H5Z_blob_loc_t *loc, uint8_t kind, hsize_t expected, size_t *size_out)
+{
+    H5HG_t   hobj;
+    H5HG_t  *segs      = NULL;
+    size_t   nsegs     = 0;
+    uint8_t *data      = NULL;
+    void    *seg       = NULL;
+    void    *ret_value = NULL;
+
+    FUNC_ENTER_PACKAGE
+
+    if (kind == H5Z_BLOB_KIND_SINGLE) {
+        hobj.addr = loc->addr;
+        hobj.idx  = loc->idx;
+        if (NULL == (data = (uint8_t *)H5HG_read(f, &hobj, NULL, size_out)))
+            HGOTO_ERROR(H5E_PLINE, H5E_READERROR, NULL, "unable to read filter blob from global heap");
+    }
+    else {
+        size_t filled = 0;
+
+        if (expected == 0 || (hsize_t)(size_t)expected != expected)
+            HGOTO_ERROR(H5E_PLINE, H5E_BADVALUE, NULL, "segmented filter blob has an invalid size");
+        if (H5Z__blob_read_index(f, loc, &segs, &nsegs) < 0)
+            HGOTO_ERROR(H5E_PLINE, H5E_READERROR, NULL, "unable to read filter blob segment index");
+        if (NULL == (data = (uint8_t *)H5MM_malloc((size_t)expected)))
+            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for filter blob");
+        for (size_t k = 0; k < nsegs; k++) {
+            size_t seg_size = 0;
+
+            if (NULL == (seg = H5HG_read(f, &segs[k], NULL, &seg_size)))
+                HGOTO_ERROR(H5E_PLINE, H5E_READERROR, NULL, "unable to read filter blob segment");
+            if (seg_size > (size_t)expected - filled)
+                HGOTO_ERROR(H5E_PLINE, H5E_BADVALUE, NULL, "filter blob segments exceed the recorded size");
+            H5MM_memcpy(data + filled, seg, seg_size);
+            filled += seg_size;
+            seg = H5MM_xfree(seg);
+        }
+        *size_out = filled;
+    }
+
+    ret_value = data;
+    data      = NULL;
+
+done:
+    H5MM_xfree(seg);
+    H5MM_xfree(data);
+    H5MM_xfree(segs);
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5Z__blob_heap_load() */
+
+/* Look for a stored blob in F with exactly these bytes; NULL if none */
+static H5Z_blob_share_t *
+H5Z__blob_share_find(H5F_t *f, const void *data, size_t size, uint32_t checksum)
+{
+    const void *sh = H5F_SHARED(f);
+
+    for (H5Z_blob_share_t *e = H5Z_blob_share_g; e; e = e->next)
+        if (e->file_shared == sh && e->checksum == checksum && e->size == size &&
+            (size == 0 || 0 == memcmp(e->buf->data, data, size)))
+            return e;
+    return NULL;
+}
+
+/* Forget the table entry for the stored object at LOC in F, if any */
+static void
+H5Z__blob_share_forget(H5F_t *f, const H5Z_blob_loc_t *loc)
+{
+    const void        *sh = H5F_SHARED(f);
+    H5Z_blob_share_t **pp = &H5Z_blob_share_g;
+
+    while (*pp) {
+        H5Z_blob_share_t *e = *pp;
+
+        if (e->file_shared == sh && H5_addr_eq(e->loc.addr, loc->addr) && e->loc.idx == loc->idx) {
+            *pp                 = e->next;
+            H5Z_blob_buf_t   *b = e->buf;
+            H5Z_filter_info_t tmp;
+
+            memset(&tmp, 0, sizeof(tmp));
+            tmp.aux = b;
+            H5Z_blob_release(&tmp);
+            H5MM_xfree(e);
+            return;
+        }
+        pp = &e->next;
+    }
+}
+
+/*-------------------------------------------------------------------------
+ * Function: H5Z_blob_share_release
+ *
+ * Purpose:  Drops every content-sharing table entry for a file whose
+ *           shared struct is being destroyed.
+ *-------------------------------------------------------------------------
+ */
+void
+H5Z_blob_share_release(const void *file_shared)
+{
+    H5Z_blob_share_t **pp = &H5Z_blob_share_g;
+
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
+
+    while (*pp) {
+        H5Z_blob_share_t *e = *pp;
+
+        if (e->file_shared == file_shared) {
+            H5Z_filter_info_t tmp;
+
+            *pp = e->next;
+            memset(&tmp, 0, sizeof(tmp));
+            tmp.aux = e->buf;
+            H5Z_blob_release(&tmp);
+            H5MM_xfree(e);
+        }
+        else
+            pp = &e->next;
+    }
+
+    FUNC_LEAVE_NOAPI_VOID
+} /* end H5Z_blob_share_release() */
+
+/* Load a filter plugin if the filter is not registered yet, silently */
+static void
+H5Z__blob_try_load(H5Z_filter_t id)
+{
+    H5E_PAUSE_ERRORS
+        if (H5Z__find_idx(id) < 0) {
+            H5PL_key_t          key;
+            const H5Z_class2_t *filter_info;
+
+            key.id = (int)id;
+            if (NULL != (filter_info = (const H5Z_class2_t *)H5PL_load(H5PL_TYPE_FILTER, &key)))
+                (void)H5Z_register(filter_info);
+        }
+    H5E_RESUME_ERRORS
+}
+
+/*-------------------------------------------------------------------------
+ * Function: H5Z_blob_unref
+ *
+ * Purpose:  Drops one pipeline entry's reference to its stored blob.
+ *
+ *           Default storage: decrement the named object's reference count;
+ *           at zero, remove every heap object the blob uses and forget it
+ *           in the sharing table.  An object whose count is already zero
+ *           was written before counts were kept and has a single owner.
+ *
+ *           Custom storage: call the filter's delete_blob.  If the plugin
+ *           cannot be loaded the space is left in place -- a leak, never
+ *           corruption, since a custom locator is never interpreted here.
+ *
+ * Return:   Non-negative on success/Negative on failure
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Z_blob_unref(H5F_t *f, H5Z_filter_info_t *fi)
+{
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    assert(f);
+    assert(fi);
+
+    if (!H5_addr_defined(fi->aux_loc.addr))
+        HGOTO_DONE(SUCCEED);
+
+    if (fi->blob_default_storage) {
+        H5HG_t hobj;
+        int    nrefs;
+
+        hobj.addr = fi->aux_loc.addr;
+        hobj.idx  = fi->aux_loc.idx;
+        if ((nrefs = H5HG_link(f, &hobj, 0)) < 0)
+            HGOTO_ERROR(H5E_PLINE, H5E_CANTGET, FAIL, "unable to read filter blob reference count");
+        if (nrefs > 1) {
+            if (H5HG_link(f, &hobj, -1) < 0)
+                HGOTO_ERROR(H5E_PLINE, H5E_CANTDEC, FAIL, "unable to decrement filter blob reference count");
+        }
+        else {
+            H5Z__blob_share_forget(f, &fi->aux_loc);
+            if (H5Z__blob_heap_remove(f, &fi->aux_loc, fi->blob_kind) < 0)
+                HGOTO_ERROR(H5E_PLINE, H5E_CANTREMOVE, FAIL, "unable to remove filter blob");
+        }
+    }
+    else {
+        H5Z_entry_t *entry = NULL;
+
+        H5Z__blob_try_load(fi->id);
+        (void)H5Z_find_entry(true, fi->id, &entry);
+        if (entry && entry->delete_blob) {
+            hid_t  file_id;
+            herr_t status = FAIL;
+
+            if ((file_id = H5F_get_id(f)) < 0)
+                HGOTO_ERROR(H5E_PLINE, H5E_CANTGET, FAIL, "can't get file ID for blob callback");
+            H5_BEFORE_USER_CB_NOERR(FAIL)
+                {
+                    status = (entry->delete_blob)(file_id, fi->aux_loc);
+                }
+            H5_AFTER_USER_CB_NOERR(FAIL)
+            if (H5I_dec_ref(file_id) < 0)
+                HGOTO_ERROR(H5E_PLINE, H5E_CANTDEC, FAIL, "can't release file ID");
+            if (status < 0)
+                HGOTO_ERROR(H5E_PLINE, H5E_CALLBACK, FAIL, "filter delete_blob callback failed");
+        }
+    }
+
+    fi->aux_loc.addr = HADDR_UNDEF;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5Z_blob_unref() */
+
+/*-------------------------------------------------------------------------
  * Function: H5Z_blob_write
  *
  * Purpose:  Persist each blob-bearing filter's bytes at dataset-creation
- *           time, populating the filter's on-disk locator before the
- *           pipeline message is encoded.  Filters with a custom write_blob
- *           callback control their own storage; otherwise the bytes are
- *           inserted into the file's global heap.
+ *           time, populating the filter's on-disk locator, storage kind,
+ *           size, and checksum before the pipeline message is encoded.
+ *           Filters with a custom write_blob callback control their own
+ *           storage.  Otherwise the bytes go to the file's global heap --
+ *           reusing an identical blob the file already stores, or else
+ *           segmented if large (see "Default blob storage" above).
  *
  *           For parallel access, EVERY rank performs the identical write
  *           (same bytes, same point in H5D__create's collective metadata
@@ -2311,23 +2995,17 @@ H5Z_blob_release(H5Z_filter_info_t *fi)
  *           every rank, so H5MF_alloc allocates the same file-space address
  *           deterministically on every rank, exactly as it already does for
  *           every other piece of metadata dataset creation writes (object
- *           header, layout message, etc).  A rank-0-writes-then-broadcasts
- *           protocol was considered and rejected: H5HG_insert dirties a
- *           metadata-cache entry, and only rank 0 doing so would desync the
- *           parallel metadata cache's identical-operations invariant across
- *           ranks.  A custom write_blob callback MUST follow the same rule:
- *           perform identical file-modifying operations on every rank (or
- *           none, by delegating to the default writer); per-rank divergent
- *           behavior is undefined.
+ *           header, layout message, etc).  The sharing decision is made from
+ *           the bytes and a table fed only by such collective writes, so it
+ *           too is identical on every rank.  A custom write_blob callback
+ *           MUST follow the same rule: perform identical file-modifying
+ *           operations on every rank (or none, by delegating to the default
+ *           writer); per-rank divergent behavior is undefined.
  *
  *           A mid-loop failure (the Nth filter's blob fails to write after
- *           the first N-1 succeeded) rolls back the library-managed
- *           (default global-heap storage) blobs this call itself just
- *           persisted, so a partial failure does not orphan file space.
- *           A custom write_blob's bytes cannot be generically undone here
- *           -- the H5Z_class3_t API has no matching "undo" callback -- so,
- *           like H5O__pline_delete(), those are left in place; the filter
- *           that wrote them owns that on-disk layout.
+ *           the first N-1 succeeded) drops the references this call itself
+ *           just created (H5Z_blob_unref(), which calls a custom filter's
+ *           delete_blob), so a partial failure does not orphan file space.
  *
  * Return:   Non-negative on success / Negative on failure
  *-------------------------------------------------------------------------
@@ -2353,6 +3031,8 @@ H5Z_blob_write(H5F_t *f, H5O_pline_t *pline)
         H5Z_filter_info_t *fi    = &pline->filter[u];
         H5Z_entry_t       *entry = NULL;
         H5Z_blob_loc_t     loc;
+        uint8_t            kind = H5Z_BLOB_KIND_SINGLE;
+        uint32_t           checksum;
         bool               default_storage;
 
         if (fi->aux == NULL)
@@ -2360,17 +3040,24 @@ H5Z_blob_write(H5F_t *f, H5O_pline_t *pline)
 
         loc.addr = HADDR_UNDEF;
         loc.idx  = 0;
+        checksum = H5_checksum_lookup3(fi->aux->data, fi->aux->size, 0);
 
         (void)H5Z_find_entry(true, fi->id, &entry);
 
         if (entry && entry->write_blob) {
-            hid_t file_id;
+            hid_t  file_id;
+            herr_t status = FAIL;
 
             default_storage = false;
 
             if ((file_id = H5F_get_id(f)) < 0)
                 HGOTO_ERROR(H5E_PLINE, H5E_CANTGET, FAIL, "can't get file ID for blob callback");
-            if ((entry->write_blob)(file_id, fi->aux->data, fi->aux->size, &loc) < 0) {
+            H5_BEFORE_USER_CB_NOERR(FAIL)
+                {
+                    status = (entry->write_blob)(file_id, fi->aux->data, fi->aux->size, &loc);
+                }
+            H5_AFTER_USER_CB_NOERR(FAIL)
+            if (status < 0) {
                 (void)H5I_dec_ref(file_id);
                 HGOTO_ERROR(H5E_PLINE, H5E_CALLBACK, FAIL, "filter write_blob callback failed");
             }
@@ -2378,14 +3065,51 @@ H5Z_blob_write(H5F_t *f, H5O_pline_t *pline)
                 HGOTO_ERROR(H5E_PLINE, H5E_CANTDEC, FAIL, "can't release file ID");
         }
         else {
-            H5HG_t hobj;
+            H5Z_blob_share_t *e;
 
             default_storage = true;
 
-            if (H5HG_insert(f, fi->aux->size, fi->aux->data, &hobj) < 0)
-                HGOTO_ERROR(H5E_PLINE, H5E_CANTINSERT, FAIL, "unable to insert filter blob into global heap");
-            loc.addr = hobj.addr;
-            loc.idx  = hobj.idx;
+            if (NULL != (e = H5Z__blob_share_find(f, fi->aux->data, fi->aux->size, checksum))) {
+                H5HG_t hobj;
+                int    nrefs;
+
+                hobj.addr = e->loc.addr;
+                hobj.idx  = e->loc.idx;
+                if ((nrefs = H5HG_link(f, &hobj, 0)) < 0)
+                    HGOTO_ERROR(H5E_PLINE, H5E_CANTGET, FAIL, "unable to read filter blob reference count");
+                if (nrefs >= H5Z_BLOB_MAX_SHARES)
+                    e = NULL; /* saturated: store a fresh copy below */
+                else {
+                    if (H5HG_link(f, &hobj, 1) < 0)
+                        HGOTO_ERROR(H5E_PLINE, H5E_CANTINC, FAIL,
+                                    "unable to increment filter blob reference count");
+                    loc  = e->loc;
+                    kind = e->kind;
+                }
+            }
+
+            if (e == NULL) {
+                H5Z_blob_share_t *ne;
+
+                if (H5Z__blob_heap_store(f, fi->aux->data, fi->aux->size, &loc, &kind) < 0)
+                    HGOTO_ERROR(H5E_PLINE, H5E_CANTINSERT, FAIL,
+                                "unable to store filter blob in global heap");
+
+                /* Remember it for later creates in this file */
+                if (NULL == (ne = (H5Z_blob_share_t *)H5MM_calloc(sizeof(H5Z_blob_share_t)))) {
+                    (void)H5Z__blob_heap_remove(f, &loc, kind);
+                    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for blob table");
+                }
+                ne->file_shared = H5F_SHARED(f);
+                ne->checksum    = checksum;
+                ne->size        = fi->aux->size;
+                ne->kind        = kind;
+                ne->loc         = loc;
+                ne->buf         = fi->aux;
+                H5Z_blob_buf_incref(fi->aux);
+                ne->next         = H5Z_blob_share_g;
+                H5Z_blob_share_g = ne;
+            }
         }
 
         if (!H5_addr_defined(loc.addr))
@@ -2424,24 +3148,16 @@ H5Z_blob_write(H5F_t *f, H5O_pline_t *pline)
 
         fi->aux_loc              = loc;
         fi->blob_default_storage = default_storage;
+        fi->blob_kind            = kind;
+        fi->blob_checksum        = checksum;
+        fi->blob_size            = (hsize_t)fi->aux->size;
         written_idx[n_written++] = u;
     }
 
 done:
-    if (ret_value < 0 && n_written > 0) {
-        for (size_t k = n_written; k > 0; k--) {
-            H5Z_filter_info_t *fi = &pline->filter[written_idx[k - 1]];
-
-            if (fi->blob_default_storage) {
-                H5HG_t hobj;
-
-                hobj.addr = fi->aux_loc.addr;
-                hobj.idx  = fi->aux_loc.idx;
-                (void)H5HG_remove(f, &hobj); /* best-effort: don't clobber the real error */
-            }
-            fi->aux_loc.addr = HADDR_UNDEF;
-        }
-    }
+    if (ret_value < 0 && n_written > 0)
+        for (size_t k = n_written; k > 0; k--)
+            (void)H5Z_blob_unref(f, &pline->filter[written_idx[k - 1]]); /* best effort */
     H5MM_xfree(written_idx);
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5Z_blob_write() */
@@ -2450,10 +3166,18 @@ done:
  * Function: H5Z_blob_read
  *
  * Purpose:  Recover each blob-bearing filter's bytes at dataset-open time,
- *           populating aux from the locator decoded out of
- *           the version-3 pipeline message.  Filters with a custom
- *           read_blob callback recover their own storage; otherwise the
- *           bytes are read from the file's global heap.
+ *           populating aux from the locator decoded out of the version-3
+ *           pipeline message, and verify them against the recorded size
+ *           and checksum.  A mismatch is an error, as for any other
+ *           metadata checksum failure.
+ *
+ *           Default storage is read from the global heap.  Custom storage
+ *           is read by the filter's read_blob; if the plugin cannot be
+ *           loaded the entry is left without its blob and this is not an
+ *           error -- the locator is opaque and is never handed to the
+ *           global-heap routines, and H5Z_pipeline() refuses to run an
+ *           entry whose blob was not loaded, so I/O through it fails the
+ *           way it does today when a filter plugin is missing.
  *
  * Return:   Non-negative on success / Negative on failure
  *-------------------------------------------------------------------------
@@ -2478,8 +3202,6 @@ H5Z_blob_read(H5F_t *f, H5O_pline_t *pline)
         if (!H5_addr_defined(fi->aux_loc.addr) || fi->aux != NULL)
             continue;
 
-        (void)H5Z_find_entry(true, fi->id, &entry);
-
         /* Dispatch on the persisted storage-ownership bit (set by
          * H5Z_blob_write() at write time, decoded from disk by
          * H5O__pline_decode()), not on whether a read_blob callback
@@ -2491,25 +3213,27 @@ H5Z_blob_read(H5F_t *f, H5O_pline_t *pline)
          * or hand an opaque, filter-defined value to H5HG_read() as if
          * it were one. */
         if (fi->blob_default_storage) {
-            H5HG_t hobj;
-
-            hobj.addr = fi->aux_loc.addr;
-            hobj.idx  = fi->aux_loc.idx;
-            if (NULL == (data = H5HG_read(f, &hobj, NULL, &size)))
-                HGOTO_ERROR(H5E_PLINE, H5E_READERROR, FAIL, "unable to read filter blob from global heap");
-            from_callback = false; /* H5HG_read allocates with H5MM */
+            if (NULL == (data = H5Z__blob_heap_load(f, &fi->aux_loc, fi->blob_kind, fi->blob_size, &size)))
+                HGOTO_ERROR(H5E_PLINE, H5E_READERROR, FAIL, "unable to read filter blob");
+            from_callback = false; /* allocated with H5MM */
         }
         else {
-            hid_t file_id;
+            hid_t  file_id;
+            herr_t status = FAIL;
 
+            H5Z__blob_try_load(fi->id);
+            (void)H5Z_find_entry(true, fi->id, &entry);
             if (!(entry && entry->read_blob))
-                HGOTO_ERROR(H5E_PLINE, H5E_NOFILTER, FAIL,
-                            "filter blob uses custom storage but its read_blob callback is not "
-                            "available; register or load the filter first");
+                continue; /* plugin unavailable: leave the entry without its blob */
 
             if ((file_id = H5F_get_id(f)) < 0)
                 HGOTO_ERROR(H5E_PLINE, H5E_CANTGET, FAIL, "can't get file ID for blob callback");
-            if ((entry->read_blob)(file_id, fi->aux_loc, &data, &size) < 0) {
+            H5_BEFORE_USER_CB_NOERR(FAIL)
+                {
+                    status = (entry->read_blob)(file_id, fi->aux_loc, &data, &size);
+                }
+            H5_AFTER_USER_CB_NOERR(FAIL)
+            if (status < 0) {
                 (void)H5I_dec_ref(file_id);
                 HGOTO_ERROR(H5E_PLINE, H5E_CALLBACK, FAIL, "filter read_blob callback failed");
             }
@@ -2518,17 +3242,27 @@ H5Z_blob_read(H5F_t *f, H5O_pline_t *pline)
             from_callback = true;
         }
 
-        if (NULL ==
-            (fi->aux = H5Z_blob_buf_new(data, size, from_callback, from_callback ? entry->close_blob : NULL))) {
-            if (from_callback) {
-                if (entry && entry->close_blob)
-                    (void)(entry->close_blob)(data, size);
-                else
-                    H5MM_xfree(data);
-            }
+        if (NULL == (fi->aux = H5Z_blob_buf_new(data, size, from_callback,
+                                                from_callback ? entry->close_blob : NULL))) {
+            if (from_callback)
+                (void)(entry->close_blob)(data, size);
             else
                 H5MM_xfree(data);
             HGOTO_ERROR(H5E_PLINE, H5E_CANTALLOC, FAIL, "memory allocation failed for blob buffer");
+        }
+
+        /* Verify what came back against what was written */
+        if ((hsize_t)size != fi->blob_size ||
+            H5_checksum_lookup3(fi->aux->data, fi->aux->size, 0) != fi->blob_checksum) {
+            H5Z_blob_buf_t   *bad = fi->aux;
+            H5Z_filter_info_t tmp;
+
+            memset(&tmp, 0, sizeof(tmp));
+            tmp.aux = bad;
+            H5Z_blob_release(&tmp);
+            fi->aux = NULL;
+            HGOTO_ERROR(H5E_PLINE, H5E_READERROR, FAIL,
+                        "filter %d blob failed its size or checksum check (corrupted file?)", (int)fi->id);
         }
     }
 
@@ -2612,10 +3346,10 @@ H5Zget_filter_class_info(H5Z_filter_t filter, H5Z_class_info_t *info /*out*/)
     if (entry->base.decoder_present)
         info->config_flags |= H5Z_FILTER_CONFIG_DECODE_ENABLED;
 
-    info->name               = entry->base.name;   /* may be NULL for class2 entries */
-    info->description        = entry->description; /* may be NULL */
-    info->has_set_config     = (entry->set_config != NULL);
-    info->has_get_config     = (entry->get_config != NULL);
+    info->name           = entry->base.name;   /* may be NULL for class2 entries */
+    info->description    = entry->description; /* may be NULL */
+    info->has_set_config = (entry->set_config != NULL);
+    info->has_get_config = (entry->get_config != NULL);
     /* AND, not OR: H5Z_register3() now rejects registering only one of the
      * two, so in practice they are always both-NULL or both-set -- but
      * report the conjunction regardless, so this field's documented

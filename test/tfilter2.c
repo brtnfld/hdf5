@@ -35,6 +35,13 @@ static const char *FILENAME[] = {"tfilter2",
                                  "tfilter2_blob_ocopy_src",
                                  "tfilter2_blob_ocopy_dst",
                                  "tfilter2_blob_rollback",
+                                 "tfilter2_state",
+                                 "tfilter2_state_copy",
+                                 "tfilter2_blob_seg",
+                                 "tfilter2_blob_sum",
+                                 "tfilter2_blob_share",
+                                 "tfilter2_blob_cdel",
+                                 "tfilter2_blob_noplug",
                                  NULL};
 
 /* -----------------------------------------------------------------------
@@ -1052,7 +1059,8 @@ error:
 static size_t
 title_filter_func(unsigned int flags, size_t cd_nelmts, const unsigned int *cd_values,
                   hid_t H5_ATTR_UNUSED dxpl_id, const hsize_t H5_ATTR_UNUSED *scaled,
-                  size_t H5_ATTR_UNUSED ndims, size_t nbytes, size_t *buf_size, void **buf)
+                  size_t H5_ATTR_UNUSED ndims, void H5_ATTR_UNUSED *state, size_t nbytes, size_t *buf_size,
+                  void **buf)
 {
     (void)flags;
     (void)cd_nelmts;
@@ -1076,10 +1084,13 @@ test_canonical_name_display(void)
         title_filter_func,   /* filter         */
         NULL,                /* set_config     */
         NULL,                /* get_config     */
+        NULL,                /* description    */
+        NULL,                /* init */
+        NULL,                /* term */
         NULL,                /* write_blob: use default global-heap storage */
         NULL,                /* read_blob  */
+        NULL,                /* delete_blob */
         NULL,                /* close_blob */
-        NULL,                /* description    */
     };
     hid_t    dcpl = H5I_INVALID_HID;
     unsigned flags;
@@ -1131,7 +1142,8 @@ error:
 static size_t
 name_filter_func(unsigned int flags, size_t cd_nelmts, const unsigned int *cd_values,
                  hid_t H5_ATTR_UNUSED dxpl_id, const hsize_t H5_ATTR_UNUSED *scaled,
-                 size_t H5_ATTR_UNUSED ndims, size_t nbytes, size_t *buf_size, void **buf)
+                 size_t H5_ATTR_UNUSED ndims, void H5_ATTR_UNUSED *state, size_t nbytes, size_t *buf_size,
+                 void **buf)
 {
     (void)flags;
     (void)cd_nelmts;
@@ -1159,10 +1171,13 @@ test_class3_name(void)
             name_filter_func, /* filter         */
             NULL,             /* set_config     */
             NULL,             /* get_config     */
+            NULL,             /* description    */
+            NULL,             /* init */
+            NULL,             /* term */
             NULL,             /* write_blob: use default global-heap storage */
             NULL,             /* read_blob  */
+            NULL,             /* delete_blob */
             NULL,             /* close_blob */
-            NULL,             /* description    */
         };
         H5E_BEGIN_TRY
         {
@@ -1187,10 +1202,13 @@ test_class3_name(void)
             name_filter_func,   /* filter         */
             NULL,               /* set_config     */
             NULL,               /* get_config     */
+            NULL,               /* description    */
+            NULL,               /* init */
+            NULL,               /* term */
             NULL,               /* write_blob: use default global-heap storage */
             NULL,               /* read_blob  */
+            NULL,               /* delete_blob */
             NULL,               /* close_blob */
-            NULL,               /* description    */
         };
         if (H5Zregister(&valid_cls) < 0)
             TEST_ERROR;
@@ -1238,7 +1256,8 @@ fastpath_set_config(const char *params, unsigned *flags, size_t *cd_nelmts, unsi
 static size_t
 fastpath_filter_func(unsigned int flags, size_t cd_nelmts, const unsigned int *cd_values,
                      hid_t H5_ATTR_UNUSED dxpl_id, const hsize_t H5_ATTR_UNUSED *scaled,
-                     size_t H5_ATTR_UNUSED ndims, size_t nbytes, size_t *buf_size, void **buf)
+                     size_t H5_ATTR_UNUSED ndims, void H5_ATTR_UNUSED *state, size_t nbytes, size_t *buf_size,
+                     void **buf)
 {
     (void)flags;
     (void)cd_nelmts;
@@ -1262,10 +1281,13 @@ test_empty_string_fast_path(void)
         fastpath_filter_func, /* filter          */
         fastpath_set_config,  /* set_config      */
         NULL,                 /* get_config      */
+        NULL,                 /* description     */
+        NULL,                 /* init */
+        NULL,                 /* term */
         NULL,                 /* write_blob: use default global-heap storage */
         NULL,                 /* read_blob  */
+        NULL,                 /* delete_blob */
         NULL,                 /* close_blob */
-        NULL,                 /* description     */
     };
     static const H5Z_class3_t nocfg_cls = {
         2,                    /* version         */
@@ -1278,10 +1300,13 @@ test_empty_string_fast_path(void)
         fastpath_filter_func, /* filter          */
         NULL,                 /* set_config (intentionally absent) */
         NULL,                 /* get_config      */
+        NULL,                 /* description     */
+        NULL,                 /* init */
+        NULL,                 /* term */
         NULL,                 /* write_blob: use default global-heap storage */
         NULL,                 /* read_blob  */
+        NULL,                 /* delete_blob */
         NULL,                 /* close_blob */
-        NULL,                 /* description     */
     };
     hid_t  dcpl = H5I_INVALID_HID;
     herr_t ret;
@@ -1393,7 +1418,8 @@ error:
 static size_t
 cdvals_filter_func(unsigned int flags, size_t cd_nelmts, const unsigned int *cd_values,
                    hid_t H5_ATTR_UNUSED dxpl_id, const hsize_t H5_ATTR_UNUSED *scaled,
-                   size_t H5_ATTR_UNUSED ndims, size_t nbytes, size_t *buf_size, void **buf)
+                   size_t H5_ATTR_UNUSED ndims, void H5_ATTR_UNUSED *state, size_t nbytes, size_t *buf_size,
+                   void **buf)
 {
     (void)flags;
     (void)cd_nelmts;
@@ -1417,10 +1443,13 @@ test_cdvalues_path(void)
         cdvals_filter_func, /* filter          */
         NULL,               /* set_config      */
         NULL,               /* get_config      */
+        NULL,               /* description     */
+        NULL,               /* init */
+        NULL,               /* term */
         NULL,               /* write_blob: use default global-heap storage */
         NULL,               /* read_blob  */
+        NULL,               /* delete_blob */
         NULL,               /* close_blob */
-        NULL,               /* description     */
     };
     hid_t        dcpl   = H5I_INVALID_HID;
     unsigned     vals[] = {42, 99};
@@ -1521,7 +1550,8 @@ cdvals_clean_set_config(const char *params, unsigned *flags, size_t *cd_nelmts, 
 static size_t
 cdvals_clean_filter_func(unsigned int flags, size_t cd_nelmts, const unsigned int *cd_values,
                          hid_t H5_ATTR_UNUSED dxpl_id, const hsize_t H5_ATTR_UNUSED *scaled,
-                         size_t H5_ATTR_UNUSED ndims, size_t nbytes, size_t *buf_size, void **buf)
+                         size_t H5_ATTR_UNUSED ndims, void H5_ATTR_UNUSED *state, size_t nbytes,
+                         size_t *buf_size, void **buf)
 {
     (void)flags;
     (void)cd_nelmts;
@@ -1545,10 +1575,13 @@ test_cdvalues_no_name_pollution(void)
         cdvals_clean_filter_func, /* filter          */
         cdvals_clean_set_config,  /* set_config      */
         NULL,                     /* get_config      */
+        NULL,                     /* description     */
+        NULL,                     /* init */
+        NULL,                     /* term */
         NULL,                     /* write_blob: use default global-heap storage */
         NULL,                     /* read_blob  */
+        NULL,                     /* delete_blob */
         NULL,                     /* close_blob */
-        NULL,                     /* description     */
     };
     hid_t    dcpl = H5I_INVALID_HID;
     unsigned flags2;
@@ -1599,7 +1632,8 @@ error:
 static size_t
 persist_filter_func(unsigned int flags, size_t cd_nelmts, const unsigned int *cd_values,
                     hid_t H5_ATTR_UNUSED dxpl_id, const hsize_t H5_ATTR_UNUSED *scaled,
-                    size_t H5_ATTR_UNUSED ndims, size_t nbytes, size_t *buf_size, void **buf)
+                    size_t H5_ATTR_UNUSED ndims, void H5_ATTR_UNUSED *state, size_t nbytes, size_t *buf_size,
+                    void **buf)
 {
     (void)flags;
     (void)cd_nelmts;
@@ -1623,10 +1657,13 @@ test_canonical_name_persistence(void)
         persist_filter_func, /* filter         */
         NULL,                /* set_config      */
         NULL,                /* get_config      */
+        NULL,                /* description     */
+        NULL,                /* init */
+        NULL,                /* term */
         NULL,                /* write_blob: use default global-heap storage */
         NULL,                /* read_blob  */
+        NULL,                /* delete_blob */
         NULL,                /* close_blob */
-        NULL,                /* description     */
     };
     hid_t    dcpl = H5I_INVALID_HID;
     unsigned flags2;
@@ -1714,7 +1751,8 @@ error:
 static size_t
 longtitle_filter_func(unsigned int flags, size_t cd_nelmts, const unsigned int *cd_values,
                       hid_t H5_ATTR_UNUSED dxpl_id, const hsize_t H5_ATTR_UNUSED *scaled,
-                      size_t H5_ATTR_UNUSED ndims, size_t nbytes, size_t *buf_size, void **buf)
+                      size_t H5_ATTR_UNUSED ndims, void H5_ATTR_UNUSED *state, size_t nbytes,
+                      size_t *buf_size, void **buf)
 {
     (void)flags;
     (void)cd_nelmts;
@@ -1745,10 +1783,13 @@ test_canonical_name_length_limit(void)
         longtitle_filter_func, /* filter          */
         NULL,                  /* set_config      */
         NULL,                  /* get_config      */
+        NULL,                  /* description     */
+        NULL,                  /* init */
+        NULL,                  /* term */
         NULL,                  /* write_blob: use default global-heap storage */
         NULL,                  /* read_blob  */
+        NULL,                  /* delete_blob */
         NULL,                  /* close_blob */
-        NULL,                  /* description     */
     };
     herr_t ret;
 
@@ -1796,7 +1837,7 @@ test_canonical_name_length_limit(void)
         size_t i;
 
         for (i = 0; i < sizeof(bad) / sizeof(bad[0]); i++) {
-            H5Z_class3_t c = {2,    LONGTITLE_FILTER_ID, 1,    1,    bad[i], NULL,
+            H5Z_class3_t c = {2,    LONGTITLE_FILTER_ID,   1,    1,    bad[i], NULL,
                               NULL, longtitle_filter_func, NULL, NULL, NULL};
             H5E_BEGIN_TRY
             {
@@ -1811,7 +1852,7 @@ test_canonical_name_length_limit(void)
         }
 
         for (i = 0; i < sizeof(good) / sizeof(good[0]); i++) {
-            H5Z_class3_t c = {2,    LONGTITLE_FILTER_ID, 1,    1,    good[i], NULL,
+            H5Z_class3_t c = {2,    LONGTITLE_FILTER_ID,   1,    1,    good[i], NULL,
                               NULL, longtitle_filter_func, NULL, NULL, NULL};
             if (H5Zregister(&c) < 0) {
                 fprintf(stderr, "\n   rejected valid name \"%s\"\n", good[i]);
@@ -1840,11 +1881,13 @@ error:
 static int
 test_canonical_name_uniqueness(void)
 {
-    H5Z_class3_t cls_a = {2,    UNIQUENAME_FILTER_ID_A, 1,    1,    "test-unique-name", NULL,
-                          NULL, longtitle_filter_func,  NULL, NULL, NULL};
-    H5Z_class3_t cls_b = {2,    UNIQUENAME_FILTER_ID_B, 1,    1,    "test-unique-name", NULL,
-                          NULL, longtitle_filter_func,  NULL, NULL, NULL};
-    herr_t       ret;
+    H5Z_class3_t cls_a = {
+        2,   UNIQUENAME_FILTER_ID_A, 1, 1, "test-unique-name", NULL, NULL, longtitle_filter_func, NULL, NULL,
+        NULL};
+    H5Z_class3_t cls_b = {
+        2,   UNIQUENAME_FILTER_ID_B, 1, 1, "test-unique-name", NULL, NULL, longtitle_filter_func, NULL, NULL,
+        NULL};
+    herr_t ret;
 
     TESTING("H5Zregister: canonical_name collision across different filter ids is rejected");
 
@@ -1998,8 +2041,9 @@ error:
 static size_t
 growth_filter_func(unsigned H5_ATTR_UNUSED flags, size_t H5_ATTR_UNUSED cd_nelmts,
                    const unsigned H5_ATTR_UNUSED *cd_values, hid_t H5_ATTR_UNUSED dxpl_id,
-                   const hsize_t H5_ATTR_UNUSED *scaled, size_t H5_ATTR_UNUSED ndims, size_t nbytes,
-                   size_t H5_ATTR_UNUSED *buf_size, void H5_ATTR_UNUSED **buf)
+                   const hsize_t H5_ATTR_UNUSED *scaled, size_t H5_ATTR_UNUSED ndims,
+                   void H5_ATTR_UNUSED *state, size_t nbytes, size_t H5_ATTR_UNUSED *buf_size,
+                   void H5_ATTR_UNUSED **buf)
 {
     return nbytes; /* pass-through; never actually applied by this test */
 }
@@ -2029,8 +2073,9 @@ test_config_string_canonicalization_growth(void)
         growth_filter_func, /* filter          */
         growth_set_config,  /* set_config      */
         NULL,               /* get_config      */
-        NULL,               /* write_blob (remaining fields -- read_blob, close_blob,
-                              * description -- default to NULL)                     */
+        NULL,               /* description     */
+        NULL,               /* init */
+        NULL,               /* term */
     };
     hid_t    dcpl = H5I_INVALID_HID;
     char    *raw  = NULL;
@@ -2164,7 +2209,8 @@ callback_get_config(unsigned flags, size_t cd_nelmts, const unsigned cd_values[]
 static size_t
 callback_filter_func(unsigned int flags, size_t cd_nelmts, const unsigned int *cd_values,
                      hid_t H5_ATTR_UNUSED dxpl_id, const hsize_t H5_ATTR_UNUSED *scaled,
-                     size_t H5_ATTR_UNUSED ndims, size_t nbytes, size_t *buf_size, void **buf)
+                     size_t H5_ATTR_UNUSED ndims, void H5_ATTR_UNUSED *state, size_t nbytes, size_t *buf_size,
+                     void **buf)
 {
     (void)flags;
     (void)cd_nelmts;
@@ -2188,10 +2234,13 @@ test_set_get_config_callbacks(void)
         callback_filter_func, /* filter          */
         callback_set_config,  /* set_config      */
         callback_get_config,  /* get_config      */
+        NULL,                 /* description     */
+        NULL,                 /* init */
+        NULL,                 /* term */
         NULL,                 /* write_blob: use default global-heap storage */
         NULL,                 /* read_blob  */
+        NULL,                 /* delete_blob */
         NULL,                 /* close_blob */
-        NULL,                 /* description     */
     };
     hid_t  dcpl = H5I_INVALID_HID;
     char   pbuf[256];
@@ -2351,11 +2400,13 @@ static ctxpass_state_t g_ctxpass;
 
 static size_t
 ctxpass_filter_cb(unsigned int flags, size_t cd_nelmts, const unsigned int *cd_values, hid_t dxpl_id,
-                  const hsize_t *scaled, size_t ndims, size_t nbytes, size_t *buf_size, void **buf)
+                  const hsize_t *scaled, size_t ndims, void *state, size_t nbytes, size_t *buf_size,
+                  void **buf)
 {
     (void)flags;
     (void)cd_nelmts;
     (void)cd_values;
+    (void)state; /* class has no init callback */
     (void)buf_size;
     (void)buf;
 
@@ -2384,7 +2435,6 @@ static const H5Z_class3_t ctxpass_cls = {
     NULL,
     NULL,
     ctxpass_filter_cb,
-    NULL,
     NULL,
     NULL,
     NULL,
@@ -2514,6 +2564,471 @@ error:
 }
 
 /* -----------------------------------------------------------------------
+ * Per-dataset filter state: H5Z_class3_t init/term and the H5Z_func2_t
+ * state parameter.
+ *
+ * The test filter tags its state with cd_values[0], read back from the
+ * DCPL inside init, and the filter callback checks every call's state
+ * against the cd_values it is invoked with.  A state that reached the
+ * wrong dataset or the wrong pipeline entry therefore shows up as a
+ * mismatch, not just a missing pointer.
+ * ---------------------------------------------------------------------- */
+
+#define STATE_FILTER_ID 540
+#define STATE_MAGIC     0x53544154u /* "STAT" */
+
+typedef struct state_obj_t {
+    unsigned magic;
+    unsigned tag;    /* cd_values[0] seen by init */
+    int      rank;   /* rank of the chunk dataspace init received */
+    unsigned ncalls; /* filter calls that received this state */
+} state_obj_t;
+
+static struct {
+    unsigned     ninit;           /* successful init calls */
+    unsigned     nterm;           /* term calls */
+    unsigned     nbad;            /* filter or term calls with a missing or wrong state */
+    unsigned     nattempts;       /* init calls, successful or not */
+    unsigned     fail_on_attempt; /* make the Nth init call fail (0 = never) */
+    bool         fail_init;       /* make every init call fail */
+    state_obj_t *last;            /* state built by the most recent init */
+} g_state;
+
+static herr_t
+state_init(hid_t file_id, hid_t dcpl_id, hid_t type_id, hid_t space_id, unsigned idx, void **state_out)
+{
+    state_obj_t *st;
+    unsigned     flags;
+    size_t       cd_nelmts = 1;
+    unsigned     cd[1]     = {0};
+
+    g_state.nattempts++;
+    if (g_state.fail_init || g_state.nattempts == g_state.fail_on_attempt)
+        return -1;
+    if (H5Iget_type(file_id) != H5I_FILE || H5Iget_type(type_id) != H5I_DATATYPE)
+        return -1;
+
+    /* idx must name this entry: a pipeline may hold the same ID twice */
+    if (H5Pget_filter2(dcpl_id, idx, &flags, &cd_nelmts, cd, 0, NULL, NULL) != STATE_FILTER_ID)
+        return -1;
+
+    if (NULL == (st = (state_obj_t *)calloc(1, sizeof(*st))))
+        return -1;
+    st->magic = STATE_MAGIC;
+    st->tag   = cd[0];
+    st->rank  = H5Sget_simple_extent_ndims(space_id);
+
+    g_state.ninit++;
+    g_state.last = st;
+    *state_out   = st;
+    return 0;
+}
+
+static herr_t
+state_term(void *state)
+{
+    state_obj_t *st = (state_obj_t *)state;
+
+    if (!st || st->magic != STATE_MAGIC) {
+        g_state.nbad++;
+        return -1;
+    }
+    st->magic = 0;
+    free(st);
+    g_state.nterm++;
+    return 0;
+}
+
+static size_t
+state_filter(unsigned int H5_ATTR_UNUSED flags, size_t cd_nelmts, const unsigned int cd_values[],
+             hid_t H5_ATTR_UNUSED dxpl_id, const hsize_t H5_ATTR_UNUSED *scaled, size_t H5_ATTR_UNUSED ndims,
+             void *state, size_t nbytes, size_t H5_ATTR_UNUSED *buf_size, void H5_ATTR_UNUSED **buf)
+{
+    state_obj_t *st = (state_obj_t *)state;
+
+    if (!st || st->magic != STATE_MAGIC || cd_nelmts < 1 || st->tag != cd_values[0])
+        g_state.nbad++;
+    else
+        st->ncalls++;
+
+    return nbytes; /* pass-through */
+}
+
+static const H5Z_class3_t state_cls = {
+    2,    STATE_FILTER_ID, 1,          1, "test_state_filter", NULL, NULL, state_filter, NULL, NULL,
+    NULL, state_init,      state_term,
+};
+
+/* Create a 2-D 8x8 int dataset, 4x4 chunks, with one state-filter entry
+ * per element of TAGS.  The chunk cache is disabled so the filter runs
+ * inside H5Dwrite/H5Dread rather than at a later flush. */
+static hid_t
+state_create_dset(hid_t loc, const char *name, const unsigned *tags, size_t ntags)
+{
+    static const hsize_t dims[2]   = {8, 8};
+    static const hsize_t chunks[2] = {4, 4};
+    hid_t                dcpl      = H5I_INVALID_HID;
+    hid_t                dapl      = H5I_INVALID_HID;
+    hid_t                sid       = H5I_INVALID_HID;
+    hid_t                dset      = H5I_INVALID_HID;
+
+    if ((sid = H5Screate_simple(2, dims, NULL)) < 0)
+        goto done;
+    if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
+        goto done;
+    if (H5Pset_chunk(dcpl, 2, chunks) < 0)
+        goto done;
+    for (size_t i = 0; i < ntags; i++)
+        if (H5Pset_filter(dcpl, STATE_FILTER_ID, H5Z_FLAG_MANDATORY, 1, &tags[i]) < 0)
+            goto done;
+    if ((dapl = H5Pcreate(H5P_DATASET_ACCESS)) < 0)
+        goto done;
+    if (H5Pset_chunk_cache(dapl, 0, H5D_CHUNK_CACHE_NBYTES_DEFAULT, H5D_CHUNK_CACHE_W0_DEFAULT) < 0)
+        goto done;
+    dset = H5Dcreate2(loc, name, H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, dapl);
+
+done:
+    H5E_BEGIN_TRY
+    {
+        H5Pclose(dapl);
+        H5Pclose(dcpl);
+        H5Sclose(sid);
+    }
+    H5E_END_TRY
+    return dset;
+}
+
+static hid_t
+state_open_dset(hid_t loc, const char *name)
+{
+    hid_t dapl = H5I_INVALID_HID;
+    hid_t dset = H5I_INVALID_HID;
+
+    if ((dapl = H5Pcreate(H5P_DATASET_ACCESS)) < 0)
+        return H5I_INVALID_HID;
+    if (H5Pset_chunk_cache(dapl, 0, H5D_CHUNK_CACHE_NBYTES_DEFAULT, H5D_CHUNK_CACHE_W0_DEFAULT) >= 0)
+        dset = H5Dopen2(loc, name, dapl);
+    H5Pclose(dapl);
+    return dset;
+}
+
+static int
+test_filter_state(hid_t fapl_in)
+{
+    const unsigned tag_a = 7, tag_b = 9, tags_dup[2] = {1, 2}, tag_v = 5;
+    hid_t          fapl = H5I_INVALID_HID;
+    hid_t          file = H5I_INVALID_HID, file2 = H5I_INVALID_HID;
+    hid_t          dset = H5I_INVALID_HID, dset2 = H5I_INVALID_HID, dset3 = H5I_INVALID_HID;
+    hid_t          dcpl = H5I_INVALID_HID, gcpl = H5I_INVALID_HID;
+    hid_t          sid = H5I_INVALID_HID, vtype = H5I_INVALID_HID, grp = H5I_INVALID_HID;
+    int            wbuf[64], rbuf[64];
+    char           filename[1024], filename2[1024];
+    herr_t         ret;
+
+    for (int i = 0; i < 64; i++)
+        wbuf[i] = i * 3;
+
+    /* Latest format: dense group storage (the fractal-heap case) needs it */
+    if ((fapl = H5Pcopy(fapl_in)) < 0)
+        TEST_ERROR;
+    if (H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0)
+        TEST_ERROR;
+    h5_fixname(FILENAME[13], fapl, filename, sizeof(filename));
+    h5_fixname(FILENAME[14], fapl, filename2, sizeof(filename2));
+
+    if (H5Zregister(&state_cls) < 0)
+        TEST_ERROR;
+
+    /* ------------------------------------------------------------------ */
+    TESTING("filter state: init at create, reaches every chunk, term at close");
+
+    memset(&g_state, 0, sizeof(g_state));
+    if ((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+        TEST_ERROR;
+    if ((dset = state_create_dset(file, "a", &tag_a, 1)) < 0)
+        TEST_ERROR;
+    if (g_state.ninit != 1 || g_state.nterm != 0 || g_state.last->rank != 2)
+        TEST_ERROR;
+    if (H5Dwrite(dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, wbuf) < 0)
+        TEST_ERROR;
+    if (H5Dread(dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, rbuf) < 0)
+        TEST_ERROR;
+    if (memcmp(wbuf, rbuf, sizeof(wbuf)) != 0)
+        TEST_ERROR;
+    /* 4 chunks written + 4 read, all with this dataset's state */
+    if (g_state.nbad != 0 || g_state.last->ncalls != 8)
+        TEST_ERROR;
+    if (H5Dclose(dset) < 0)
+        TEST_ERROR;
+    dset = H5I_INVALID_HID;
+    if (g_state.nterm != 1)
+        TEST_ERROR;
+
+    PASSED();
+
+    /* ------------------------------------------------------------------ */
+    TESTING("filter state: rebuilt at open, one per dataset, shared by handles");
+
+    if ((dset = state_create_dset(file, "b", &tag_b, 1)) < 0)
+        TEST_ERROR;
+    if (H5Dwrite(dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, wbuf) < 0)
+        TEST_ERROR;
+    if (H5Dclose(dset) < 0)
+        TEST_ERROR;
+    dset = H5I_INVALID_HID;
+    if (H5Fclose(file) < 0)
+        TEST_ERROR;
+    file = H5I_INVALID_HID;
+
+    memset(&g_state, 0, sizeof(g_state));
+    if ((file = H5Fopen(filename, H5F_ACC_RDWR, fapl)) < 0)
+        TEST_ERROR;
+    if ((dset = state_open_dset(file, "a")) < 0)
+        TEST_ERROR;
+    if ((dset2 = state_open_dset(file, "a")) < 0) /* second handle, same shared dataset */
+        TEST_ERROR;
+    if (g_state.ninit != 1)
+        TEST_ERROR;
+    if ((dset3 = state_open_dset(file, "b")) < 0)
+        TEST_ERROR;
+    if (g_state.ninit != 2)
+        TEST_ERROR;
+    /* Reading each dataset checks its chunks against its own tag */
+    if (H5Dread(dset2, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, rbuf) < 0)
+        TEST_ERROR;
+    if (memcmp(wbuf, rbuf, sizeof(wbuf)) != 0)
+        TEST_ERROR;
+    if (H5Dread(dset3, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, rbuf) < 0)
+        TEST_ERROR;
+    if (memcmp(wbuf, rbuf, sizeof(wbuf)) != 0)
+        TEST_ERROR;
+    if (g_state.nbad != 0)
+        TEST_ERROR;
+    if (H5Dclose(dset) < 0)
+        TEST_ERROR;
+    dset = H5I_INVALID_HID;
+    if (g_state.nterm != 0) /* "a" still open through dset2 */
+        TEST_ERROR;
+    if (H5Dclose(dset2) < 0 || H5Dclose(dset3) < 0)
+        TEST_ERROR;
+    dset2 = dset3 = H5I_INVALID_HID;
+    if (g_state.nterm != 2)
+        TEST_ERROR;
+
+    PASSED();
+
+    /* ------------------------------------------------------------------ */
+    TESTING("filter state: duplicate entries each get their own state");
+
+    memset(&g_state, 0, sizeof(g_state));
+    if ((dset = state_create_dset(file, "dup", tags_dup, 2)) < 0)
+        TEST_ERROR;
+    if (g_state.ninit != 2)
+        TEST_ERROR;
+    if (H5Dwrite(dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, wbuf) < 0)
+        TEST_ERROR;
+    if (H5Dread(dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, rbuf) < 0)
+        TEST_ERROR;
+    if (memcmp(wbuf, rbuf, sizeof(wbuf)) != 0 || g_state.nbad != 0)
+        TEST_ERROR;
+    if (H5Dclose(dset) < 0)
+        TEST_ERROR;
+    dset = H5I_INVALID_HID;
+    if (g_state.nterm != 2)
+        TEST_ERROR;
+
+    PASSED();
+
+    /* ------------------------------------------------------------------ */
+    TESTING("filter state: init failure fails H5Dcreate without leaking");
+
+    memset(&g_state, 0, sizeof(g_state));
+    g_state.fail_init = true;
+    H5E_BEGIN_TRY
+    {
+        dset = state_create_dset(file, "c", &tag_a, 1);
+    }
+    H5E_END_TRY
+    g_state.fail_init = false;
+    if (dset >= 0)
+        TEST_ERROR;
+    dset = H5I_INVALID_HID;
+    if (g_state.ninit != 0 || g_state.nterm != 0)
+        TEST_ERROR;
+    if (H5Lexists(file, "c", H5P_DEFAULT) != 0)
+        TEST_ERROR;
+
+    /* Two entries where only the second init fails: the first entry's
+     * state must be released as the create unwinds */
+    {
+        const unsigned tags2[2] = {3, 4};
+
+        memset(&g_state, 0, sizeof(g_state));
+        g_state.fail_on_attempt = 2;
+        H5E_BEGIN_TRY
+        {
+            dset = state_create_dset(file, "c2", tags2, 2);
+        }
+        H5E_END_TRY
+        g_state.fail_on_attempt = 0;
+        if (dset >= 0)
+            TEST_ERROR;
+        dset = H5I_INVALID_HID;
+        if (g_state.ninit != 1 || g_state.nterm != 1 || g_state.nbad != 0)
+            TEST_ERROR;
+    }
+
+    PASSED();
+
+    /* ------------------------------------------------------------------ */
+    TESTING("filter state: init failure at open defers the error to I/O");
+
+    if (H5Fclose(file) < 0)
+        TEST_ERROR;
+    file = H5I_INVALID_HID;
+    memset(&g_state, 0, sizeof(g_state));
+    if ((file = H5Fopen(filename, H5F_ACC_RDONLY, fapl)) < 0)
+        TEST_ERROR;
+    g_state.fail_init = true;
+    if ((dset = state_open_dset(file, "a")) < 0) /* metadata stays reachable */
+        TEST_ERROR;
+    g_state.fail_init = false;
+    if ((dcpl = H5Dget_create_plist(dset)) < 0)
+        TEST_ERROR;
+    H5E_BEGIN_TRY
+    {
+        ret = H5Dread(dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, rbuf);
+    }
+    H5E_END_TRY
+    if (ret >= 0)
+        TEST_ERROR;
+    if (H5Dclose(dset) < 0)
+        TEST_ERROR;
+    dset = H5I_INVALID_HID;
+    if (H5Pclose(dcpl) < 0)
+        TEST_ERROR;
+    dcpl = H5I_INVALID_HID;
+    if (g_state.ninit != 0 || g_state.nterm != 0 || g_state.nbad != 0)
+        TEST_ERROR;
+
+    PASSED();
+
+    /* ------------------------------------------------------------------ */
+    TESTING("filter state: rejected on a group's fractal heap");
+
+    if (H5Fclose(file) < 0)
+        TEST_ERROR;
+    file = H5I_INVALID_HID;
+    if ((file = H5Fopen(filename, H5F_ACC_RDWR, fapl)) < 0)
+        TEST_ERROR;
+    if ((gcpl = H5Pcreate(H5P_GROUP_CREATE)) < 0)
+        TEST_ERROR;
+    if (H5Pset_link_phase_change(gcpl, 0, 0) < 0) /* dense storage from the start */
+        TEST_ERROR;
+    if (H5Pset_filter(gcpl, STATE_FILTER_ID, H5Z_FLAG_MANDATORY, 1, &tag_a) < 0)
+        TEST_ERROR;
+    /* The group itself is created; its fractal heap is created, and the
+     * filter refused, when the first link is inserted */
+    if ((grp = H5Gcreate2(file, "g", H5P_DEFAULT, gcpl, H5P_DEFAULT)) < 0)
+        TEST_ERROR;
+    H5E_BEGIN_TRY
+    {
+        ret = H5Lcreate_soft("/a", grp, "link", H5P_DEFAULT, H5P_DEFAULT);
+    }
+    H5E_END_TRY
+    if (ret >= 0)
+        TEST_ERROR;
+    if (H5Gclose(grp) < 0)
+        TEST_ERROR;
+    grp = H5I_INVALID_HID;
+
+    PASSED();
+
+    /* ------------------------------------------------------------------ */
+    TESTING("filter state: H5Ocopy of variable-length data brackets init/term");
+
+    {
+        static const hsize_t vdims[1] = {4}, vchunk[1] = {2};
+        int                  v0[1] = {10}, v1[2] = {20, 21}, v2[3] = {30, 31, 32}, v3[1] = {40};
+        hvl_t                vw[4] = {{1, v0}, {2, v1}, {3, v2}, {1, v3}}, vr[4];
+
+        if ((vtype = H5Tvlen_create(H5T_NATIVE_INT)) < 0)
+            TEST_ERROR;
+        if ((sid = H5Screate_simple(1, vdims, NULL)) < 0)
+            TEST_ERROR;
+        if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
+            TEST_ERROR;
+        if (H5Pset_chunk(dcpl, 1, vchunk) < 0)
+            TEST_ERROR;
+        if (H5Pset_filter(dcpl, STATE_FILTER_ID, H5Z_FLAG_MANDATORY, 1, &tag_v) < 0)
+            TEST_ERROR;
+        if ((dset = H5Dcreate2(file, "v", vtype, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
+            TEST_ERROR;
+        if (H5Dwrite(dset, vtype, H5S_ALL, H5S_ALL, H5P_DEFAULT, vw) < 0)
+            TEST_ERROR;
+        if (H5Dclose(dset) < 0)
+            TEST_ERROR;
+        dset = H5I_INVALID_HID;
+
+        if ((file2 = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+            TEST_ERROR;
+        memset(&g_state, 0, sizeof(g_state));
+        if (H5Ocopy(file, "v", file2, "v", H5P_DEFAULT, H5P_DEFAULT) < 0)
+            TEST_ERROR;
+        /* The copy decoded and re-encoded every chunk with its own state */
+        if (g_state.ninit != 1 || g_state.nterm != 1 || g_state.nbad != 0)
+            TEST_ERROR;
+
+        if ((dset = H5Dopen2(file2, "v", H5P_DEFAULT)) < 0)
+            TEST_ERROR;
+        if (H5Dread(dset, vtype, H5S_ALL, H5S_ALL, H5P_DEFAULT, vr) < 0)
+            TEST_ERROR;
+        for (size_t i = 0; i < 4; i++) {
+            if (vr[i].len != vw[i].len || memcmp(vr[i].p, vw[i].p, vw[i].len * sizeof(int)) != 0)
+                TEST_ERROR;
+        }
+        if (H5Treclaim(vtype, sid, H5P_DEFAULT, vr) < 0)
+            TEST_ERROR;
+        if (H5Dclose(dset) < 0)
+            TEST_ERROR;
+        dset = H5I_INVALID_HID;
+        if (g_state.nbad != 0 || g_state.ninit != g_state.nterm)
+            TEST_ERROR;
+    }
+
+    PASSED();
+
+    H5Tclose(vtype);
+    H5Sclose(sid);
+    H5Pclose(dcpl);
+    H5Pclose(gcpl);
+    H5Fclose(file2);
+    H5Fclose(file);
+    H5Pclose(fapl);
+    H5Zunregister(STATE_FILTER_ID);
+    return 0;
+
+error:
+    H5E_BEGIN_TRY
+    {
+        H5Gclose(grp);
+        H5Dclose(dset);
+        H5Dclose(dset2);
+        H5Dclose(dset3);
+        H5Tclose(vtype);
+        H5Sclose(sid);
+        H5Pclose(dcpl);
+        H5Pclose(gcpl);
+        H5Fclose(file2);
+        H5Fclose(file);
+        H5Pclose(fapl);
+        H5Zunregister(STATE_FILTER_ID);
+    }
+    H5E_END_TRY
+    return -1;
+}
+
+/* -----------------------------------------------------------------------
  * On-disk configuration-string storage (pipeline v3, RFC-HDFG-2026-001)
  *
  * This filter's stored parameter string ("level=N", no spaces) differs
@@ -2556,7 +3071,8 @@ cfg_ondisk_get_config(unsigned H5_ATTR_UNUSED flags, size_t cd_nelmts, const uns
 static size_t
 cfg_ondisk_filter_func(unsigned int flags, size_t cd_nelmts, const unsigned int *cd_values,
                        hid_t H5_ATTR_UNUSED dxpl_id, const hsize_t H5_ATTR_UNUSED *scaled,
-                       size_t H5_ATTR_UNUSED ndims, size_t nbytes, size_t *buf_size, void **buf)
+                       size_t H5_ATTR_UNUSED ndims, void H5_ATTR_UNUSED *state, size_t nbytes,
+                       size_t *buf_size, void **buf)
 {
     (void)flags;
     (void)cd_nelmts;
@@ -2577,10 +3093,13 @@ static const H5Z_class3_t cfg_ondisk_cls = {
     cfg_ondisk_filter_func, /* filter         */
     cfg_ondisk_set_config,  /* set_config      */
     cfg_ondisk_get_config,  /* get_config      */
+    NULL,                   /* description     */
+    NULL,                   /* init */
+    NULL,                   /* term */
     NULL,                   /* write_blob      */
     NULL,                   /* read_blob       */
+    NULL,                   /* delete_blob */
     NULL,                   /* close_blob      */
-    NULL,                   /* description     */
 };
 
 /* Build a chunked, filter-configured DCPL from a parameter string */
@@ -2810,7 +3329,8 @@ error:
 static size_t
 blob_passthrough_func(unsigned int flags, size_t cd_nelmts, const unsigned int *cd_values,
                       hid_t H5_ATTR_UNUSED dxpl_id, const hsize_t H5_ATTR_UNUSED *scaled,
-                      size_t H5_ATTR_UNUSED ndims, size_t nbytes, size_t *buf_size, void **buf)
+                      size_t H5_ATTR_UNUSED ndims, void H5_ATTR_UNUSED *state, size_t nbytes,
+                      size_t *buf_size, void **buf)
 {
     (void)flags;
     (void)cd_nelmts;
@@ -2912,10 +3432,13 @@ test_blob_default_storage(hid_t fapl)
         blob_passthrough_func,  /* filter          */
         NULL,                   /* set_config      */
         NULL,                   /* get_config      */
+        NULL,                   /* description     */
+        NULL,                   /* init */
+        NULL,                   /* term */
         NULL,                   /* write_blob: use default global-heap storage */
         NULL,                   /* read_blob       */
+        NULL,                   /* delete_blob */
         NULL,                   /* close_blob      */
-        NULL,                   /* description     */
     };
     char           filename[1024];
     unsigned char *blob     = NULL;
@@ -3084,6 +3607,7 @@ static size_t        blob_custom_store_size = 0;
 static int           blob_write_count       = 0;
 static int           blob_read_count        = 0;
 static int           blob_close_count       = 0;
+static int           blob_delete_count      = 0;
 
 static herr_t
 blob_custom_write(hid_t file_id, const void *buf, size_t size, H5Z_blob_loc_t *loc_out)
@@ -3098,6 +3622,19 @@ blob_custom_write(hid_t file_id, const void *buf, size_t size, H5Z_blob_loc_t *l
     /* Arbitrary token the library must hand back unchanged at read time */
     loc_out->addr = (haddr_t)0x1234;
     loc_out->idx  = 42;
+    return SUCCEED;
+}
+
+/* Reclaims the filter-managed storage; must receive write's token unchanged */
+static herr_t
+blob_custom_delete(hid_t file_id, H5Z_blob_loc_t loc)
+{
+    if (H5Iget_type(file_id) != H5I_FILE)
+        return FAIL;
+    if (loc.addr != (haddr_t)0x1234 || loc.idx != 42)
+        return FAIL;
+    blob_custom_store_size = 0;
+    blob_delete_count++;
     return SUCCEED;
 }
 
@@ -3140,10 +3677,13 @@ test_blob_custom_callbacks(hid_t fapl)
         blob_passthrough_func, /* filter          */
         NULL,                  /* set_config      */
         NULL,                  /* get_config      */
+        NULL,                  /* description     */
+        NULL,                  /* init */
+        NULL,                  /* term */
         blob_custom_write,     /* write_blob      */
         blob_custom_read,      /* read_blob       */
+        blob_custom_delete,    /* delete_blob */
         blob_custom_close,     /* close_blob      */
-        NULL,                  /* description     */
     };
     char             filename[1024];
     unsigned char    small_blob[1024];
@@ -3280,10 +3820,13 @@ test_blob_errors(void)
         blob_passthrough_func,  /* filter          */
         NULL,                   /* set_config      */
         NULL,                   /* get_config      */
+        NULL,                   /* description     */
+        NULL,                   /* init */
+        NULL,                   /* term */
         NULL,                   /* write_blob      */
         NULL,                   /* read_blob       */
+        NULL,                   /* delete_blob */
         NULL,                   /* close_blob      */
-        NULL,                   /* description     */
     };
     unsigned char    bytes[16] = {1, 2, 3, 4};
     H5Z_class_info_t info;
@@ -3371,10 +3914,13 @@ test_blob_getter(void)
         blob_passthrough_func,  /* filter          */
         NULL,                   /* set_config      */
         NULL,                   /* get_config      */
+        NULL,                   /* description     */
+        NULL,                   /* init */
+        NULL,                   /* term */
         NULL,                   /* write_blob      */
         NULL,                   /* read_blob       */
+        NULL,                   /* delete_blob */
         NULL,                   /* close_blob      */
-        NULL,                   /* description     */
     };
     unsigned char bytes[64];
     unsigned char half[32];
@@ -3527,10 +4073,13 @@ test_blob_delete_reclaims_heap(hid_t fapl)
         blob_passthrough_func,  /* filter          */
         NULL,                   /* set_config      */
         NULL,                   /* get_config      */
+        NULL,                   /* description     */
+        NULL,                   /* init */
+        NULL,                   /* term */
         NULL,                   /* write_blob      */
         NULL,                   /* read_blob       */
+        NULL,                   /* delete_blob */
         NULL,                   /* close_blob      */
-        NULL,                   /* description     */
     };
     char           filename[1024];
     unsigned char *blob = NULL;
@@ -3659,10 +4208,13 @@ test_blob_duplicate_filter_ids(hid_t fapl)
         blob_passthrough_func,  /* filter          */
         NULL,                   /* set_config      */
         NULL,                   /* get_config      */
+        NULL,                   /* description     */
+        NULL,                   /* init */
+        NULL,                   /* term */
         NULL,                   /* write_blob      */
         NULL,                   /* read_blob       */
+        NULL,                   /* delete_blob */
         NULL,                   /* close_blob      */
-        NULL,                   /* description     */
     };
     char          filename[1024];
     unsigned char blob_a[256], blob_b[256];
@@ -3772,10 +4324,13 @@ test_blob_per_dataset_copy_then_tweak(hid_t fapl)
         blob_passthrough_func,  /* filter          */
         NULL,                   /* set_config      */
         NULL,                   /* get_config      */
+        NULL,                   /* description     */
+        NULL,                   /* init */
+        NULL,                   /* term */
         NULL,                   /* write_blob      */
         NULL,                   /* read_blob       */
+        NULL,                   /* delete_blob */
         NULL,                   /* close_blob      */
-        NULL,                   /* description     */
     };
     char          filename[1024];
     unsigned char blob_1[128], blob_2[128];
@@ -3890,71 +4445,78 @@ error:
 }
 
 /* Use Case B pattern: a filter stores a companion mask dataset's path in
- * its blob. On reopen, the filter's read_blob callback opens the mask via
- * H5Dopen2(file_id, path, ...) using the file_id it's handed and reads
- * correct contents -- exercising blob-as-cross-reference, not just
- * blob-as-opaque-bytes. */
+ * its blob.  The filter's init callback -- which runs at H5Dcreate and again
+ * at H5Dopen -- reads the path back with H5Pget_filter_blob, opens the mask
+ * via H5Dopen2(file_id, path, ...) using the file_id it is handed, and keeps
+ * the mask in its per-dataset state; every chunk call then receives that
+ * state, and term closes the mask.  This is the route from a blob to the
+ * chunk path on a reopened file: the chunk callback checks the mask it is
+ * given on every call, so the test fails if the blob never reached it. */
 #define USECASEB_MASK_PATH "/mask"
-static int
-usecaseb_read_blob(hid_t file_id, H5Z_blob_loc_t loc, void **buf_out, size_t *size_out)
+#define USECASEB_FILTER_ID 545
+
+typedef struct usecaseb_state_t {
+    hid_t mask_dset; /* held open for the dataset's lifetime */
+    int   mask[4];
+} usecaseb_state_t;
+
+static unsigned usecaseb_good_calls = 0; /* chunk calls that saw the right mask */
+static unsigned usecaseb_bad_calls  = 0;
+static unsigned usecaseb_terms      = 0;
+
+static herr_t
+usecaseb_init(hid_t file_id, hid_t dcpl_id, hid_t H5_ATTR_UNUSED type_id, hid_t H5_ATTR_UNUSED space_id,
+              unsigned idx, void **state_out)
 {
-    hid_t   mask_dset = H5I_INVALID_HID, mask_sid = H5I_INVALID_HID;
-    hsize_t mask_dims[1] = {4};
-    int     mask_data[4];
-    int    *result = NULL;
+    usecaseb_state_t *st = NULL;
+    char              path[64];
+    size_t            size = sizeof(path);
 
-    if (H5Iget_type(file_id) != H5I_FILE)
+    /* The blob holds the path, NUL-terminated */
+    if (H5Pget_filter_blob(dcpl_id, idx, 0, path, &size) < 0 || size == 0 || size > sizeof(path) ||
+        path[size - 1] != '\0')
         return FAIL;
-    if (loc.addr != (haddr_t)0xB100B || loc.idx != 7)
+    if (NULL == (st = (usecaseb_state_t *)calloc(1, sizeof(*st))))
         return FAIL;
-
-    if ((mask_dset = H5Dopen2(file_id, USECASEB_MASK_PATH, H5P_DEFAULT)) < 0)
-        return FAIL;
-    if ((mask_sid = H5Dget_space(mask_dset)) < 0) {
-        H5Dclose(mask_dset);
+    if ((st->mask_dset = H5Dopen2(file_id, path, H5P_DEFAULT)) < 0) {
+        free(st);
         return FAIL;
     }
-    if (H5Sget_simple_extent_dims(mask_sid, mask_dims, NULL) < 0) {
-        H5Sclose(mask_sid);
-        H5Dclose(mask_dset);
+    if (H5Dread(st->mask_dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, st->mask) < 0) {
+        H5Dclose(st->mask_dset);
+        free(st);
         return FAIL;
     }
-    H5Sclose(mask_sid);
-    if (H5Dread(mask_dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, mask_data) < 0) {
-        H5Dclose(mask_dset);
-        return FAIL;
-    }
-    if (H5Dclose(mask_dset) < 0)
-        return FAIL;
-
-    if (NULL == (result = (int *)malloc(sizeof(mask_data))))
-        return FAIL;
-    memcpy(result, mask_data, sizeof(mask_data));
-    *buf_out  = result;
-    *size_out = sizeof(mask_data);
+    *state_out = st;
     return SUCCEED;
 }
 
 static herr_t
-usecaseb_write_blob(hid_t file_id, const void *buf, size_t size, H5Z_blob_loc_t *loc_out)
+usecaseb_term(void *state)
 {
-    (void)buf;
-    (void)size;
-    if (H5Iget_type(file_id) != H5I_FILE)
+    usecaseb_state_t *st = (usecaseb_state_t *)state;
+
+    if (!st)
         return FAIL;
-    /* The blob is the path string itself; this filter's on-disk locator
-     * is a fixed token since it never varies -- the path is recovered
-     * from the blob bytes the library already stores, not from loc. */
-    loc_out->addr = (haddr_t)0xB100B;
-    loc_out->idx  = 7;
+    H5Dclose(st->mask_dset);
+    free(st);
+    usecaseb_terms++;
     return SUCCEED;
 }
 
-static herr_t
-usecaseb_close_blob(void *buf, size_t H5_ATTR_UNUSED size)
+static size_t
+usecaseb_filter(unsigned int H5_ATTR_UNUSED flags, size_t H5_ATTR_UNUSED cd_nelmts,
+                const unsigned int H5_ATTR_UNUSED *cd_values, hid_t H5_ATTR_UNUSED dxpl_id,
+                const hsize_t H5_ATTR_UNUSED *scaled, size_t H5_ATTR_UNUSED ndims, void *state, size_t nbytes,
+                size_t H5_ATTR_UNUSED *buf_size, void H5_ATTR_UNUSED **buf)
 {
-    free(buf);
-    return SUCCEED;
+    const usecaseb_state_t *st = (const usecaseb_state_t *)state;
+
+    if (st && st->mask[0] == 10 && st->mask[1] == 20 && st->mask[2] == 30 && st->mask[3] == 40)
+        usecaseb_good_calls++;
+    else
+        usecaseb_bad_calls++;
+    return nbytes; /* pass-through */
 }
 
 static int
@@ -3962,27 +4524,35 @@ test_blob_usecaseb_path_association(hid_t fapl)
 {
     static const H5Z_class3_t blob_cls = {
         2,                      /* version         */
-        BLOB_CUSTOM_FILTER_ID,  /* id              */
+        USECASEB_FILTER_ID,     /* id              */
         1,                      /* encoder_present */
         1,                      /* decoder_present */
         "blob_usecaseb_filter", /* canonical_name  */
         NULL,                   /* can_apply       */
         NULL,                   /* set_local       */
-        blob_passthrough_func,  /* filter          */
+        usecaseb_filter,        /* filter          */
         NULL,                   /* set_config      */
         NULL,                   /* get_config      */
-        usecaseb_write_blob,    /* write_blob      */
-        usecaseb_read_blob,     /* read_blob       */
-        usecaseb_close_blob,    /* close_blob      */
         NULL,                   /* description     */
+        usecaseb_init,          /* init            */
+        usecaseb_term,          /* term            */
+        NULL,                   /* write_blob: default storage */
+        NULL,                   /* read_blob       */
+        NULL,                   /* delete_blob     */
+        NULL,                   /* close_blob      */
     };
     char    filename[1024];
     hid_t   file = H5I_INVALID_HID, sid = H5I_INVALID_HID, mask_sid = H5I_INVALID_HID;
     hid_t   dcpl = H5I_INVALID_HID, dset = H5I_INVALID_HID, mask_dset = H5I_INVALID_HID;
     hsize_t dims[2] = {4, 4}, chunk[2] = {2, 2}, mask_dims[1] = {4};
     int     mask_data[4] = {10, 20, 30, 40};
+    int     wdata[16], rdata[16];
 
     TESTING("H5Pappend_filter_blob: path-string dataset association (Use Case B)");
+
+    for (int i = 0; i < 16; i++)
+        wdata[i] = i * 7;
+    usecaseb_good_calls = usecaseb_bad_calls = usecaseb_terms = 0;
 
     if (H5Zregister(&blob_cls) < 0)
         TEST_ERROR;
@@ -4007,7 +4577,7 @@ test_blob_usecaseb_path_association(hid_t fapl)
         TEST_ERROR;
     if (H5Pset_chunk(dcpl, 2, chunk) < 0)
         TEST_ERROR;
-    if (H5Pappend_filter_blob(dcpl, BLOB_CUSTOM_FILTER_ID, 0, (const void *)USECASEB_MASK_PATH,
+    if (H5Pappend_filter_blob(dcpl, USECASEB_FILTER_ID, 0, (const void *)USECASEB_MASK_PATH,
                               strlen(USECASEB_MASK_PATH) + 1) < 0)
         TEST_ERROR;
 
@@ -4015,15 +4585,21 @@ test_blob_usecaseb_path_association(hid_t fapl)
         TEST_ERROR;
     if ((dset = H5Dcreate2(file, "filtered", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
         TEST_ERROR;
+    if (H5Dwrite(dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, wdata) < 0)
+        TEST_ERROR;
     if (H5Dclose(dset) < 0)
         TEST_ERROR;
     dset = H5I_INVALID_HID;
     if (H5Fclose(file) < 0)
         TEST_ERROR;
     file = H5I_INVALID_HID;
+    /* 4 chunks written with the mask from the blob; state released at close */
+    if (usecaseb_good_calls != 4 || usecaseb_bad_calls != 0 || usecaseb_terms != 1)
+        TEST_ERROR;
 
-    /* Reopen: the filter's read_blob callback must open the mask dataset
-     * by the path recovered from its blob and read back correct data. */
+    /* Reopen: init must find the mask again through the stored path, and
+     * the read path's chunk calls must receive it */
+    usecaseb_good_calls = usecaseb_bad_calls = usecaseb_terms = 0;
     if ((file = H5Fopen(filename, H5F_ACC_RDONLY, fapl)) < 0)
         TEST_ERROR;
     if ((dset = H5Dopen2(file, "filtered", H5P_DEFAULT)) < 0)
@@ -4034,21 +4610,30 @@ test_blob_usecaseb_path_association(hid_t fapl)
 
         if (dcpl_out < 0)
             TEST_ERROR;
-        ret = blob_check_getter(dcpl_out, 0, (const unsigned char *)mask_data, sizeof(mask_data));
+        ret = blob_check_getter(dcpl_out, 0, (const unsigned char *)USECASEB_MASK_PATH,
+                                strlen(USECASEB_MASK_PATH) + 1);
         H5Pclose(dcpl_out);
         if (ret < 0)
             TEST_ERROR;
     }
+    if (H5Dread(dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, rdata) < 0)
+        TEST_ERROR;
+    if (memcmp(wdata, rdata, sizeof(wdata)) != 0)
+        TEST_ERROR;
+    if (usecaseb_good_calls != 4 || usecaseb_bad_calls != 0)
+        TEST_ERROR;
     if (H5Dclose(dset) < 0)
         TEST_ERROR;
     dset = H5I_INVALID_HID;
+    if (usecaseb_terms != 1)
+        TEST_ERROR;
     if (H5Fclose(file) < 0)
         TEST_ERROR;
     file = H5I_INVALID_HID;
     if (H5Sclose(sid) < 0 || H5Sclose(mask_sid) < 0 || H5Pclose(dcpl) < 0)
         TEST_ERROR;
     sid = mask_sid = dcpl = H5I_INVALID_HID;
-    if (H5Zunregister(BLOB_CUSTOM_FILTER_ID) < 0)
+    if (H5Zunregister(USECASEB_FILTER_ID) < 0)
         TEST_ERROR;
 
     PASSED();
@@ -4063,9 +4648,593 @@ error:
         H5Sclose(mask_sid);
         H5Sclose(sid);
         H5Fclose(file);
+        H5Zunregister(USECASEB_FILTER_ID);
+    }
+    H5E_END_TRY
+    return -1;
+}
+
+/* -----------------------------------------------------------------------
+ * Blob storage: segmentation, checksum, content sharing, custom delete,
+ * and a custom-storage plugin missing at open.
+ * ---------------------------------------------------------------------- */
+
+static const H5Z_class3_t blob_store_cls = {
+    2,                      /* version         */
+    BLOB_DEFAULT_FILTER_ID, /* id              */
+    1,                      /* encoder_present */
+    1,                      /* decoder_present */
+    "blob_default_filter",  /* canonical_name  */
+    NULL,                   /* can_apply       */
+    NULL,                   /* set_local       */
+    blob_passthrough_func,  /* filter          */
+    NULL,                   /* set_config      */
+    NULL,                   /* get_config      */
+    NULL,                   /* description     */
+    NULL,                   /* init            */
+    NULL,                   /* term            */
+    NULL,                   /* write_blob: default storage */
+    NULL,                   /* read_blob       */
+    NULL,                   /* delete_blob     */
+    NULL,                   /* close_blob      */
+};
+
+static const H5Z_class3_t blob_cstore_cls = {
+    2,                     /* version         */
+    BLOB_CUSTOM_FILTER_ID, /* id              */
+    1,                     /* encoder_present */
+    1,                     /* decoder_present */
+    "blob_custom_filter",  /* canonical_name  */
+    NULL,                  /* can_apply       */
+    NULL,                  /* set_local       */
+    blob_passthrough_func, /* filter          */
+    NULL,                  /* set_config      */
+    NULL,                  /* get_config      */
+    NULL,                  /* description     */
+    NULL,                  /* init            */
+    NULL,                  /* term            */
+    blob_custom_write,     /* write_blob      */
+    blob_custom_read,      /* read_blob       */
+    blob_custom_delete,    /* delete_blob     */
+    blob_custom_close,     /* close_blob      */
+};
+
+/* Create an 8x8 chunked int dataset carrying BLOB on filter FILTER_ID */
+static hid_t
+blob_make_dset(hid_t loc, const char *name, H5Z_filter_t filter_id, const void *blob, size_t size)
+{
+    hsize_t dims[2] = {8, 8}, chunk[2] = {4, 4};
+    hid_t   sid = H5I_INVALID_HID, dcpl = H5I_INVALID_HID, dset = H5I_INVALID_HID;
+    int     wdata[64];
+
+    for (int i = 0; i < 64; i++)
+        wdata[i] = i;
+    if ((sid = H5Screate_simple(2, dims, NULL)) < 0)
+        goto done;
+    if ((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0)
+        goto done;
+    if (H5Pset_chunk(dcpl, 2, chunk) < 0)
+        goto done;
+    if (H5Pappend_filter_blob(dcpl, filter_id, 0, blob, size) < 0)
+        goto done;
+    if ((dset = H5Dcreate2(loc, name, H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
+        goto done;
+    if (H5Dwrite(dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, wdata) < 0) {
+        H5E_BEGIN_TRY
+        {
+            H5Dclose(dset);
+        }
+        H5E_END_TRY
+        dset = H5I_INVALID_HID;
+    }
+
+done:
+    H5E_BEGIN_TRY
+    {
+        H5Pclose(dcpl);
+        H5Sclose(sid);
+    }
+    H5E_END_TRY
+    return dset;
+}
+
+/* Open NAME and check its blob round-trips exactly */
+static int
+blob_verify_dset(hid_t loc, const char *name, const unsigned char *blob, size_t size)
+{
+    hid_t dset = H5I_INVALID_HID, dcpl = H5I_INVALID_HID;
+    int   ret = -1;
+
+    if ((dset = H5Dopen2(loc, name, H5P_DEFAULT)) < 0)
+        return -1;
+    if ((dcpl = H5Dget_create_plist(dset)) >= 0) {
+        ret = blob_check_getter(dcpl, 0, blob, size);
+        H5Pclose(dcpl);
+    }
+    H5Dclose(dset);
+    return ret;
+}
+
+/* blob-10: a blob far larger than one metadata-cache entry may be.  In a
+ * debug build the cache asserts on an entry over H5C_MAX_ENTRY_SIZE (32 MiB),
+ * so this passes only because the default writer segments the blob. */
+#define BLOB_SEG_TEST_SIZE ((size_t)64 * 1024 * 1024)
+static int
+test_blob_segmented(hid_t fapl)
+{
+    char           filename[1024];
+    unsigned char *blob = NULL;
+    hid_t          file = H5I_INVALID_HID, dset = H5I_INVALID_HID;
+    hssize_t       fs_before, fs_after;
+
+    TESTING("H5Pappend_filter_blob: 64 MiB blob is segmented, round-trips, and is reclaimed");
+
+    if (H5Zregister(&blob_store_cls) < 0)
+        TEST_ERROR;
+    if (NULL == (blob = (unsigned char *)malloc(BLOB_SEG_TEST_SIZE)))
+        TEST_ERROR;
+    blob_fill_pattern(blob, BLOB_SEG_TEST_SIZE);
+
+    h5_fixname(FILENAME[15], fapl, filename, sizeof(filename));
+    if ((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+        TEST_ERROR;
+    if ((dset = blob_make_dset(file, "big", BLOB_DEFAULT_FILTER_ID, blob, BLOB_SEG_TEST_SIZE)) < 0)
+        TEST_ERROR;
+    if (H5Dclose(dset) < 0)
+        TEST_ERROR;
+    dset = H5I_INVALID_HID;
+    if (H5Fclose(file) < 0)
+        TEST_ERROR;
+
+    if ((file = H5Fopen(filename, H5F_ACC_RDWR, fapl)) < 0)
+        TEST_ERROR;
+    if (blob_verify_dset(file, "big", blob, BLOB_SEG_TEST_SIZE) < 0)
+        TEST_ERROR;
+
+    /* Deleting it releases every segment, not just the index */
+    if ((fs_before = H5Fget_freespace(file)) < 0)
+        TEST_ERROR;
+    if (H5Ldelete(file, "big", H5P_DEFAULT) < 0)
+        TEST_ERROR;
+    if ((fs_after = H5Fget_freespace(file)) < 0)
+        TEST_ERROR;
+    if (fs_after - fs_before < (hssize_t)(BLOB_SEG_TEST_SIZE / 2))
+        TEST_ERROR;
+
+    if (H5Fclose(file) < 0)
+        TEST_ERROR;
+    file = H5I_INVALID_HID;
+    if (H5Zunregister(BLOB_DEFAULT_FILTER_ID) < 0)
+        TEST_ERROR;
+    free(blob);
+    PASSED();
+    return 0;
+
+error:
+    H5E_BEGIN_TRY
+    {
+        H5Dclose(dset);
+        H5Fclose(file);
+        H5Zunregister(BLOB_DEFAULT_FILTER_ID);
+    }
+    H5E_END_TRY
+    free(blob);
+    return -1;
+}
+
+/* Flip the first byte after MARKER in FILENAME; -1 if the marker is absent */
+static int
+blob_corrupt_after_marker(const char *filename, const char *marker, size_t offset)
+{
+    FILE          *fp   = NULL;
+    unsigned char *buf  = NULL;
+    long           size = 0;
+    size_t         mlen = strlen(marker);
+    int            ret  = -1;
+
+    if (NULL == (fp = fopen(filename, "r+b")))
+        return -1;
+    if (fseek(fp, 0, SEEK_END) != 0 || (size = ftell(fp)) <= 0 || fseek(fp, 0, SEEK_SET) != 0)
+        goto done;
+    if (NULL == (buf = (unsigned char *)malloc((size_t)size)))
+        goto done;
+    if (fread(buf, 1, (size_t)size, fp) != (size_t)size)
+        goto done;
+    for (long i = 0; i + (long)(mlen + offset) < size; i++)
+        if (0 == memcmp(buf + i, marker, mlen)) {
+            unsigned char b = (unsigned char)(buf[i + (long)(mlen + offset)] ^ 0x5A);
+
+            if (fseek(fp, i + (long)(mlen + offset), SEEK_SET) != 0 || fwrite(&b, 1, 1, fp) != 1)
+                goto done;
+            ret = 0;
+            break;
+        }
+
+done:
+    free(buf);
+    fclose(fp);
+    return ret;
+}
+
+/* blob-11: a corrupted blob byte fails the open instead of reaching the
+ * filter.  Checked for a single-object blob and for a middle segment of a
+ * segmented one. */
+static int
+test_blob_checksum(hid_t fapl)
+{
+    static const char marker[] = "BLOB-CHECKSUM-MARKER";
+    const size_t      sizes[2] = {4096, 3 * 1024 * 1024};
+    char              filename[1024];
+    unsigned char    *blob = NULL;
+    hid_t             file = H5I_INVALID_HID, dset = H5I_INVALID_HID;
+
+    TESTING("H5Pappend_filter_blob: corrupted blob fails its checksum at open");
+
+    if (H5Zregister(&blob_store_cls) < 0)
+        TEST_ERROR;
+    h5_fixname(FILENAME[16], fapl, filename, sizeof(filename));
+
+    for (int v = 0; v < 2; v++) {
+        size_t size = sizes[v];
+        size_t mpos = size / 2; /* inside a middle segment when segmented */
+
+        if (NULL == (blob = (unsigned char *)calloc(1, size)))
+            TEST_ERROR;
+        memcpy(blob + mpos, marker, sizeof(marker) - 1);
+
+        if ((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+            TEST_ERROR;
+        if ((dset = blob_make_dset(file, "d", BLOB_DEFAULT_FILTER_ID, blob, size)) < 0)
+            TEST_ERROR;
+        if (H5Dclose(dset) < 0 || H5Fclose(file) < 0)
+            TEST_ERROR;
+        dset = file = H5I_INVALID_HID;
+
+        /* Intact: opens.  Then corrupt one byte of the blob in the file. */
+        if ((file = H5Fopen(filename, H5F_ACC_RDONLY, fapl)) < 0)
+            TEST_ERROR;
+        if (blob_verify_dset(file, "d", blob, size) < 0)
+            TEST_ERROR;
+        if (H5Fclose(file) < 0)
+            TEST_ERROR;
+        file = H5I_INVALID_HID;
+        if (blob_corrupt_after_marker(filename, marker, 4) < 0)
+            TEST_ERROR;
+
+        if ((file = H5Fopen(filename, H5F_ACC_RDONLY, fapl)) < 0)
+            TEST_ERROR;
+        H5E_BEGIN_TRY
+        {
+            dset = H5Dopen2(file, "d", H5P_DEFAULT);
+        }
+        H5E_END_TRY
+        if (dset >= 0)
+            TEST_ERROR;
+        dset = H5I_INVALID_HID;
+        if (H5Fclose(file) < 0)
+            TEST_ERROR;
+        file = H5I_INVALID_HID;
+        free(blob);
+        blob = NULL;
+    }
+
+    if (H5Zunregister(BLOB_DEFAULT_FILTER_ID) < 0)
+        TEST_ERROR;
+    PASSED();
+    return 0;
+
+error:
+    H5E_BEGIN_TRY
+    {
+        H5Dclose(dset);
+        H5Fclose(file);
+        H5Zunregister(BLOB_DEFAULT_FILTER_ID);
+    }
+    H5E_END_TRY
+    free(blob);
+    return -1;
+}
+
+/* blob-12: identical blobs in one file are stored once and freed with the
+ * last dataset that uses them; a different blob gets its own copy.  Run for
+ * a single-object and a segmented blob. */
+static int
+test_blob_sharing(hid_t fapl)
+{
+    const size_t   sizes[2] = {256 * 1024, 3 * 1024 * 1024};
+    char           filename[1024];
+    unsigned char *blob = NULL, *other = NULL;
+    hid_t          file = H5I_INVALID_HID, dset = H5I_INVALID_HID;
+    haddr_t        eoa_before, eoa_after;
+    hsize_t        fsize;
+    hssize_t       fs_before, fs_after;
+    char           name[16];
+
+    TESTING("H5Pappend_filter_blob: identical blobs are stored once and freed with the last user");
+
+    if (H5Zregister(&blob_store_cls) < 0)
+        TEST_ERROR;
+    h5_fixname(FILENAME[17], fapl, filename, sizeof(filename));
+
+    for (int v = 0; v < 2; v++) {
+        size_t size = sizes[v];
+
+        if (NULL == (blob = (unsigned char *)malloc(size)) || NULL == (other = (unsigned char *)malloc(size)))
+            TEST_ERROR;
+        blob_fill_pattern(blob, size);
+        memcpy(other, blob, size);
+        other[size - 1] ^= 0xFF; /* differs in one byte */
+
+        if ((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+            TEST_ERROR;
+
+        /* First user stores the blob */
+        if ((dset = blob_make_dset(file, "d0", BLOB_DEFAULT_FILTER_ID, blob, size)) < 0 || H5Dclose(dset) < 0)
+            TEST_ERROR;
+        if (H5Fget_filesize(file, &fsize) < 0)
+            TEST_ERROR;
+        eoa_before = (haddr_t)fsize;
+
+        /* Two more users of the same bytes, each through its own DCPL */
+        for (int k = 1; k <= 2; k++) {
+            snprintf(name, sizeof(name), "d%d", k);
+            if ((dset = blob_make_dset(file, name, BLOB_DEFAULT_FILTER_ID, blob, size)) < 0 ||
+                H5Dclose(dset) < 0)
+                TEST_ERROR;
+        }
+        if (H5Fget_filesize(file, &fsize) < 0)
+            TEST_ERROR;
+        eoa_after = (haddr_t)fsize;
+        if (eoa_after - eoa_before >= size / 2) /* no second copy was written */
+            TEST_ERROR;
+
+        /* A blob that differs gets its own copy */
+        eoa_before = eoa_after;
+        if ((dset = blob_make_dset(file, "other", BLOB_DEFAULT_FILTER_ID, other, size)) < 0 ||
+            H5Dclose(dset) < 0)
+            TEST_ERROR;
+        if (H5Fget_filesize(file, &fsize) < 0)
+            TEST_ERROR;
+        if ((haddr_t)fsize - eoa_before < size)
+            TEST_ERROR;
+        dset = H5I_INVALID_HID;
+
+        /* Deleting two of the three users keeps the stored blob... */
+        if ((fs_before = H5Fget_freespace(file)) < 0)
+            TEST_ERROR;
+        if (H5Ldelete(file, "d0", H5P_DEFAULT) < 0 || H5Ldelete(file, "d1", H5P_DEFAULT) < 0)
+            TEST_ERROR;
+        if ((fs_after = H5Fget_freespace(file)) < 0)
+            TEST_ERROR;
+        if (fs_after - fs_before >= (hssize_t)(size / 2))
+            TEST_ERROR;
+        if (blob_verify_dset(file, "d2", blob, size) < 0)
+            TEST_ERROR;
+
+        /* ...and deleting the last one frees it */
+        if ((fs_before = H5Fget_freespace(file)) < 0)
+            TEST_ERROR;
+        if (H5Ldelete(file, "d2", H5P_DEFAULT) < 0)
+            TEST_ERROR;
+        if ((fs_after = H5Fget_freespace(file)) < 0)
+            TEST_ERROR;
+        if (fs_after - fs_before < (hssize_t)(size / 2))
+            TEST_ERROR;
+
+        /* The distinct blob is unaffected */
+        if (blob_verify_dset(file, "other", other, size) < 0)
+            TEST_ERROR;
+        if (H5Fclose(file) < 0)
+            TEST_ERROR;
+        file = H5I_INVALID_HID;
+
+        /* And survives a reopen */
+        if ((file = H5Fopen(filename, H5F_ACC_RDONLY, fapl)) < 0)
+            TEST_ERROR;
+        if (blob_verify_dset(file, "other", other, size) < 0)
+            TEST_ERROR;
+        if (H5Fclose(file) < 0)
+            TEST_ERROR;
+        file = H5I_INVALID_HID;
+
+        free(blob);
+        free(other);
+        blob = other = NULL;
+    }
+
+    if (H5Zunregister(BLOB_DEFAULT_FILTER_ID) < 0)
+        TEST_ERROR;
+    PASSED();
+    return 0;
+
+error:
+    H5E_BEGIN_TRY
+    {
+        H5Dclose(dset);
+        H5Fclose(file);
+        H5Zunregister(BLOB_DEFAULT_FILTER_ID);
+    }
+    H5E_END_TRY
+    free(blob);
+    free(other);
+    return -1;
+}
+
+/* blob-13: deleting a dataset whose blob a custom writer stored calls that
+ * filter's delete_blob with the writer's own locator, once */
+static int
+test_blob_custom_delete(hid_t fapl)
+{
+    char          filename[1024];
+    unsigned char blob[256];
+    hid_t         file = H5I_INVALID_HID, dset = H5I_INVALID_HID;
+
+    TESTING("H5Pappend_filter_blob: deleting a custom-stored blob calls delete_blob");
+
+    blob_fill_pattern(blob, sizeof(blob));
+    if (H5Zregister(&blob_cstore_cls) < 0)
+        TEST_ERROR;
+    h5_fixname(FILENAME[18], fapl, filename, sizeof(filename));
+    if ((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+        TEST_ERROR;
+
+    blob_write_count = blob_read_count = blob_close_count = blob_delete_count = 0;
+    if ((dset = blob_make_dset(file, "d", BLOB_CUSTOM_FILTER_ID, blob, sizeof(blob))) < 0 ||
+        H5Dclose(dset) < 0)
+        TEST_ERROR;
+    dset = H5I_INVALID_HID;
+    if (blob_write_count != 1 || blob_delete_count != 0)
+        TEST_ERROR;
+    if (H5Ldelete(file, "d", H5P_DEFAULT) < 0)
+        TEST_ERROR;
+    if (blob_delete_count != 1)
+        TEST_ERROR;
+
+    if (H5Fclose(file) < 0)
+        TEST_ERROR;
+    file = H5I_INVALID_HID;
+    if (H5Zunregister(BLOB_CUSTOM_FILTER_ID) < 0)
+        TEST_ERROR;
+    PASSED();
+    return 0;
+
+error:
+    H5E_BEGIN_TRY
+    {
+        H5Dclose(dset);
+        H5Fclose(file);
         H5Zunregister(BLOB_CUSTOM_FILTER_ID);
     }
     H5E_END_TRY
+    return -1;
+}
+
+/* blob-14: with the custom-storage filter unavailable, the dataset still
+ * opens (its locator is opaque and must never be read as a global-heap
+ * object), I/O through the filter fails, and once the filter is back a
+ * reopen reads normally */
+static int
+test_blob_custom_missing_plugin(hid_t fapl)
+{
+    char          filename[1024];
+    unsigned char blob[256];
+    int           rdata[64];
+    hid_t         file = H5I_INVALID_HID, dset = H5I_INVALID_HID;
+    herr_t        ret;
+
+    TESTING("H5Pappend_filter_blob: custom-stored blob with its plugin missing at open");
+
+    blob_fill_pattern(blob, sizeof(blob));
+    if (H5Zregister(&blob_cstore_cls) < 0)
+        TEST_ERROR;
+    h5_fixname(FILENAME[19], fapl, filename, sizeof(filename));
+    if ((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+        TEST_ERROR;
+    if ((dset = blob_make_dset(file, "d", BLOB_CUSTOM_FILTER_ID, blob, sizeof(blob))) < 0 ||
+        H5Dclose(dset) < 0)
+        TEST_ERROR;
+    dset = H5I_INVALID_HID;
+    if (H5Fclose(file) < 0)
+        TEST_ERROR;
+    file = H5I_INVALID_HID;
+
+    if (H5Zunregister(BLOB_CUSTOM_FILTER_ID) < 0)
+        TEST_ERROR;
+    blob_read_count = 0;
+    if ((file = H5Fopen(filename, H5F_ACC_RDONLY, fapl)) < 0)
+        TEST_ERROR;
+    if ((dset = H5Dopen2(file, "d", H5P_DEFAULT)) < 0) /* opens: nothing tries to read the locator */
+        TEST_ERROR;
+    if (blob_read_count != 0)
+        TEST_ERROR;
+    H5E_BEGIN_TRY
+    {
+        ret = H5Dread(dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, rdata);
+    }
+    H5E_END_TRY
+    if (ret >= 0)
+        TEST_ERROR;
+
+    /* Registering the filter now does not retroactively load the blob... */
+    if (H5Zregister(&blob_cstore_cls) < 0)
+        TEST_ERROR;
+    H5E_BEGIN_TRY
+    {
+        ret = H5Dread(dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, rdata);
+    }
+    H5E_END_TRY
+    if (ret >= 0)
+        TEST_ERROR;
+    if (H5Dclose(dset) < 0)
+        TEST_ERROR;
+
+    /* ...a reopen does */
+    if ((dset = H5Dopen2(file, "d", H5P_DEFAULT)) < 0)
+        TEST_ERROR;
+    if (H5Dread(dset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, rdata) < 0)
+        TEST_ERROR;
+    for (int i = 0; i < 64; i++)
+        if (rdata[i] != i)
+            TEST_ERROR;
+    if (blob_read_count != 1)
+        TEST_ERROR;
+    if (H5Dclose(dset) < 0 || H5Fclose(file) < 0)
+        TEST_ERROR;
+    dset = file = H5I_INVALID_HID;
+    if (H5Zunregister(BLOB_CUSTOM_FILTER_ID) < 0)
+        TEST_ERROR;
+    PASSED();
+    return 0;
+
+error:
+    H5E_BEGIN_TRY
+    {
+        H5Dclose(dset);
+        H5Fclose(file);
+        H5Zunregister(BLOB_CUSTOM_FILTER_ID);
+    }
+    H5E_END_TRY
+    return -1;
+}
+
+/* blob-E03: write_blob/read_blob/delete_blob are all set or all NULL */
+static int
+test_blob_partial_storage_callbacks(void)
+{
+    H5Z_class3_t cls = blob_cstore_cls;
+    herr_t       ret;
+
+    TESTING("H5Zregister: partial blob storage callbacks are rejected");
+
+    cls.delete_blob = NULL; /* write + read without delete */
+    H5E_BEGIN_TRY
+    {
+        ret = H5Zregister(&cls);
+    }
+    H5E_END_TRY
+    if (ret >= 0) {
+        H5Zunregister(BLOB_CUSTOM_FILTER_ID);
+        TEST_ERROR;
+    }
+
+    cls             = blob_cstore_cls;
+    cls.write_blob  = NULL; /* read + delete without write */
+    cls.read_blob   = blob_custom_read;
+    cls.delete_blob = blob_custom_delete;
+    H5E_BEGIN_TRY
+    {
+        ret = H5Zregister(&cls);
+    }
+    H5E_END_TRY
+    if (ret >= 0) {
+        H5Zunregister(BLOB_CUSTOM_FILTER_ID);
+        TEST_ERROR;
+    }
+
+    PASSED();
+    return 0;
+
+error:
     return -1;
 }
 
@@ -4074,7 +5243,7 @@ error:
  * chunk I/O path -- the blob is configuration data loaded once at open
  * time, not something the per-chunk filter pipeline touches on every
  * I/O call. */
-#define OVERSIZED_BLOB_SIZE (4 * 1024 * 1024) /* 4 MiB */
+#define OVERSIZED_BLOB_SIZE     (4 * 1024 * 1024)                /* 4 MiB */
 #define ENCODE_BOUND_OVER_LIMIT ((size_t)(64 * 1024 * 1024) + 1) /* just over H5Z_BLOB_DECODE_MAX */
 static int
 test_blob_oversized_default_storage(hid_t fapl)
@@ -4090,10 +5259,13 @@ test_blob_oversized_default_storage(hid_t fapl)
         blob_passthrough_func,  /* filter          */
         NULL,                   /* set_config      */
         NULL,                   /* get_config      */
+        NULL,                   /* description     */
+        NULL,                   /* init */
+        NULL,                   /* term */
         NULL,                   /* write_blob      */
         NULL,                   /* read_blob       */
+        NULL,                   /* delete_blob */
         NULL,                   /* close_blob      */
-        NULL,                   /* description     */
     };
     char           filename[1024];
     unsigned char *blob = NULL;
@@ -4212,16 +5384,19 @@ test_blob_ocopy_relocation(hid_t fapl)
         blob_passthrough_func,  /* filter          */
         NULL,                   /* set_config      */
         NULL,                   /* get_config      */
+        NULL,                   /* description     */
+        NULL,                   /* init */
+        NULL,                   /* term */
         NULL,                   /* write_blob: use default global-heap storage */
         NULL,                   /* read_blob       */
+        NULL,                   /* delete_blob */
         NULL,                   /* close_blob      */
-        NULL,                   /* description     */
     };
     char           src_filename[1024], dst_filename[1024];
-    unsigned char *blob = NULL;
+    unsigned char *blob     = NULL;
     hid_t          src_file = H5I_INVALID_HID, dst_file = H5I_INVALID_HID, sid = H5I_INVALID_HID;
     hid_t          dcpl = H5I_INVALID_HID, dcpl_out = H5I_INVALID_HID;
-    hid_t          dset = H5I_INVALID_HID;
+    hid_t          dset    = H5I_INVALID_HID;
     hsize_t        dims[2] = {8, 8}, chunk[2] = {4, 4};
     int            wdata[8][8], rdata[8][8];
 
@@ -4360,16 +5535,19 @@ test_blob_encode_decode_bound(void)
         blob_passthrough_func,  /* filter          */
         NULL,                   /* set_config      */
         NULL,                   /* get_config      */
+        NULL,                   /* description     */
+        NULL,                   /* init */
+        NULL,                   /* term */
         NULL,                   /* write_blob: use default global-heap storage */
         NULL,                   /* read_blob       */
+        NULL,                   /* delete_blob */
         NULL,                   /* close_blob      */
-        NULL,                   /* description     */
     };
-    unsigned char *big_blob    = NULL;
-    hid_t          dcpl_big    = H5I_INVALID_HID;
-    hid_t          dcpl_small  = H5I_INVALID_HID, dcpl_dec = H5I_INVALID_HID;
-    void          *enc_buf     = NULL;
-    size_t         enc_size    = 0;
+    unsigned char *big_blob   = NULL;
+    hid_t          dcpl_big   = H5I_INVALID_HID;
+    hid_t          dcpl_small = H5I_INVALID_HID, dcpl_dec = H5I_INVALID_HID;
+    void          *enc_buf  = NULL;
+    size_t         enc_size = 0;
     herr_t         encode_ret;
 
     TESTING("H5Pencode/H5Pdecode: a blob over the decode bound is rejected at encode time");
@@ -4441,16 +5619,22 @@ error:
  * filter in the pipeline fails after an earlier one already succeeded. */
 static herr_t
 blob_failing_write(hid_t H5_ATTR_UNUSED file_id, const void H5_ATTR_UNUSED *buf, size_t H5_ATTR_UNUSED size,
-                    H5Z_blob_loc_t H5_ATTR_UNUSED *loc_out)
+                   H5Z_blob_loc_t H5_ATTR_UNUSED *loc_out)
 {
     return FAIL;
+}
+
+static herr_t
+blob_failing_delete(hid_t H5_ATTR_UNUSED file_id, H5Z_blob_loc_t H5_ATTR_UNUSED loc)
+{
+    return FAIL; /* never reached: nothing was ever written */
 }
 
 /* Never reached in this test (write_blob always fails first); required to
  * pair with write_blob for H5Zregister() to accept this class. */
 static herr_t
 blob_failing_read(hid_t H5_ATTR_UNUSED file_id, H5Z_blob_loc_t H5_ATTR_UNUSED loc,
-                   void H5_ATTR_UNUSED **buf_out, size_t H5_ATTR_UNUSED *size_out)
+                  void H5_ATTR_UNUSED **buf_out, size_t H5_ATTR_UNUSED *size_out)
 {
     return FAIL;
 }
@@ -4479,10 +5663,13 @@ test_blob_write_rollback_on_partial_failure(hid_t fapl)
         blob_passthrough_func,  /* filter          */
         NULL,                   /* set_config      */
         NULL,                   /* get_config      */
+        NULL,                   /* description     */
+        NULL,                   /* init */
+        NULL,                   /* term */
         NULL,                   /* write_blob: use default global-heap storage */
         NULL,                   /* read_blob       */
+        NULL,                   /* delete_blob */
         NULL,                   /* close_blob      */
-        NULL,                   /* description     */
     };
     static const H5Z_class3_t bad_cls = {
         2,                        /* version         */
@@ -4495,18 +5682,21 @@ test_blob_write_rollback_on_partial_failure(hid_t fapl)
         blob_passthrough_func,    /* filter          */
         NULL,                     /* set_config      */
         NULL,                     /* get_config      */
+        NULL,                     /* description     */
+        NULL,                     /* init */
+        NULL,                     /* term */
         blob_failing_write,       /* write_blob: always fails */
         blob_failing_read,        /* read_blob: never reached, required to pair */
+        blob_failing_delete,      /* delete_blob */
         blob_failing_close,       /* close_blob: never reached, required alongside read_blob */
-        NULL,                     /* description     */
     };
-    char           filename[1024];
-    unsigned char  blob_a[64], blob_b[64];
-    hid_t          file = H5I_INVALID_HID, sid = H5I_INVALID_HID, dcpl = H5I_INVALID_HID;
-    hid_t          dset2 = H5I_INVALID_HID;
-    hsize_t        dims[2] = {8, 8}, chunk[2] = {4, 4};
-    herr_t         create_ret;
-    haddr_t        eoa_before, eoa_after;
+    char          filename[1024];
+    unsigned char blob_a[64], blob_b[64];
+    hid_t         file = H5I_INVALID_HID, sid = H5I_INVALID_HID, dcpl = H5I_INVALID_HID;
+    hid_t         dset2   = H5I_INVALID_HID;
+    hsize_t       dims[2] = {8, 8}, chunk[2] = {4, 4};
+    herr_t        create_ret;
+    haddr_t       eoa_before, eoa_after;
 
     TESTING("H5Z_blob_write: a mid-pipeline failure rolls back earlier blobs, not the file");
 
@@ -4654,7 +5844,8 @@ static size_t
 libpressio_pattern_filter_func(unsigned int H5_ATTR_UNUSED flags, size_t H5_ATTR_UNUSED cd_nelmts,
                                const unsigned int H5_ATTR_UNUSED *cd_values, hid_t H5_ATTR_UNUSED dxpl_id,
                                const hsize_t H5_ATTR_UNUSED *scaled, size_t H5_ATTR_UNUSED ndims,
-                               size_t nbytes, size_t H5_ATTR_UNUSED *buf_size, void H5_ATTR_UNUSED **buf)
+                               void H5_ATTR_UNUSED *state, size_t nbytes, size_t H5_ATTR_UNUSED *buf_size,
+                               void H5_ATTR_UNUSED **buf)
 {
     /* Pass-through: this example is about the configuration path (the
      * part LibPressio's author flagged as broken), not about actually
@@ -4763,10 +5954,13 @@ test_blob_libpressio_migration_pattern(hid_t fapl)
         libpressio_pattern_filter_func, /* filter        */
         NULL,                           /* set_config      */
         NULL,                           /* get_config      */
+        NULL,                           /* description     */
+        NULL,                           /* init */
+        NULL,                           /* term */
         NULL,                           /* write_blob: default global-heap storage */
         NULL,                           /* read_blob       */
+        NULL,                           /* delete_blob */
         NULL,                           /* close_blob      */
-        NULL,                           /* description     */
     };
     char           filename[1024];
     unsigned char *options_blob = NULL;
@@ -5322,8 +6516,9 @@ canon_get_config(unsigned H5_ATTR_UNUSED flags, size_t cd_nelmts, const unsigned
 static size_t
 canon_filter_func(unsigned int H5_ATTR_UNUSED flags, size_t H5_ATTR_UNUSED cd_nelmts,
                   const unsigned int H5_ATTR_UNUSED *cd_values, hid_t H5_ATTR_UNUSED dxpl_id,
-                  const hsize_t H5_ATTR_UNUSED *scaled, size_t H5_ATTR_UNUSED ndims, size_t nbytes,
-                  size_t H5_ATTR_UNUSED *buf_size, void H5_ATTR_UNUSED **buf)
+                  const hsize_t H5_ATTR_UNUSED *scaled, size_t H5_ATTR_UNUSED ndims,
+                  void H5_ATTR_UNUSED *state, size_t nbytes, size_t H5_ATTR_UNUSED *buf_size,
+                  void H5_ATTR_UNUSED **buf)
 {
     return nbytes; /* pass-through */
 }
@@ -5339,8 +6534,9 @@ static const H5Z_class3_t canon_cls = {
     canon_filter_func, /* filter          */
     canon_set_config,  /* set_config      */
     canon_get_config,  /* get_config      */
-    NULL,              /* write_blob (remaining fields -- read_blob, close_blob,
-                        * description -- default to NULL)                     */
+    NULL,              /* description     */
+    NULL,              /* init */
+    NULL,              /* term */
 };
 
 /* Append CANON_FILTER_ID configured with PARAMS and return the DCPL */
@@ -5455,8 +6651,8 @@ mixv2_filter_func(unsigned int flags, size_t H5_ATTR_UNUSED cd_nelmts,
 static size_t
 mixv3_filter_func(unsigned int flags, size_t H5_ATTR_UNUSED cd_nelmts,
                   const unsigned int H5_ATTR_UNUSED *cd_values, hid_t H5_ATTR_UNUSED dxpl_id,
-                  const hsize_t H5_ATTR_UNUSED *scaled, size_t H5_ATTR_UNUSED ndims, size_t nbytes,
-                  size_t H5_ATTR_UNUSED *buf_size, void **buf)
+                  const hsize_t H5_ATTR_UNUSED *scaled, size_t H5_ATTR_UNUSED ndims,
+                  void H5_ATTR_UNUSED *state, size_t nbytes, size_t H5_ATTR_UNUSED *buf_size, void **buf)
 {
     unsigned char *p = (unsigned char *)*buf;
     size_t         i;
@@ -5510,8 +6706,9 @@ static const H5Z_class3_t mixv3_cls = {
     mixv3_filter_func, /* filter          */
     mixv3_set_config,  /* set_config      */
     NULL,              /* get_config      */
-    NULL,              /* write_blob (remaining fields -- read_blob, close_blob,
-                        * description -- default to NULL)                     */
+    NULL,              /* description     */
+    NULL,              /* init */
+    NULL,              /* term */
 };
 
 static int
@@ -6370,6 +7567,12 @@ main(void)
     nerrors += test_blob_encode_decode_bound() < 0 ? 1 : 0;
     nerrors += test_blob_write_rollback_on_partial_failure(fapl) < 0 ? 1 : 0;
     nerrors += test_blob_libpressio_migration_pattern(fapl) < 0 ? 1 : 0;
+    nerrors += test_blob_segmented(fapl) < 0 ? 1 : 0;
+    nerrors += test_blob_checksum(fapl) < 0 ? 1 : 0;
+    nerrors += test_blob_sharing(fapl) < 0 ? 1 : 0;
+    nerrors += test_blob_custom_delete(fapl) < 0 ? 1 : 0;
+    nerrors += test_blob_custom_missing_plugin(fapl) < 0 ? 1 : 0;
+    nerrors += test_blob_partial_storage_callbacks() < 0 ? 1 : 0;
 
     /* Decode a fixed, checked-in golden file (not encoded this run) */
     nerrors += test_config_string_golden_file() < 0 ? 1 : 0;
@@ -6391,6 +7594,9 @@ main(void)
 
     /* H5Pmodify_filter_by_idx */
     nerrors += test_modify_filter_by_idx(fapl) < 0 ? 1 : 0;
+
+    /* Per-dataset filter state (init/term) */
+    nerrors += test_filter_state(fapl) < 0 ? 1 : 0;
 
     if (H5Fclose(file) < 0)
         goto error;

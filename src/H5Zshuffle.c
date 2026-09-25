@@ -23,25 +23,28 @@
 /* Local function prototypes */
 static herr_t H5Z__set_local_shuffle(hid_t dcpl_id, hid_t type_id, hid_t space_id);
 static size_t H5Z__filter_shuffle(unsigned flags, size_t cd_nelmts, const unsigned cd_values[], hid_t dxpl_id,
-                                  const hsize_t *scaled, size_t ndims, size_t nbytes, size_t *buf_size,
-                                  void **buf);
+                                  const hsize_t *scaled, size_t ndims, void *state, size_t nbytes,
+                                  size_t *buf_size, void **buf);
 
 /* This message derives from H5Z */
 H5_ATTR_VISIBILITY_HIDDEN const H5Z_class3_t H5Z_SHUFFLE[1] = {{
-    2,                                                              /* H5Z_class3_t version */
-    H5Z_FILTER_SHUFFLE,                                             /* Filter id number */
-    1,                                                              /* encoder_present flag (set to true) */
-    1,                                                              /* decoder_present flag (set to true) */
-    "shuffle",                                                      /* name */
-    NULL,                                                           /* The "can apply" callback */
-    H5Z__set_local_shuffle,                                         /* The "set local" callback */
-    H5Z__filter_shuffle,                                            /* The actual filter function */
-    H5Z__no_params_set_config,                                      /* String config setter */
-    NULL, /* No string config getter (no user params) */
+    2,                         /* H5Z_class3_t version */
+    H5Z_FILTER_SHUFFLE,        /* Filter id number */
+    1,                         /* encoder_present flag (set to true) */
+    1,                         /* decoder_present flag (set to true) */
+    "shuffle",                 /* name */
+    NULL,                      /* The "can apply" callback */
+    H5Z__set_local_shuffle,    /* The "set local" callback */
+    H5Z__filter_shuffle,       /* The actual filter function */
+    H5Z__no_params_set_config, /* String config setter */
+    NULL,                      /* No string config getter (no user params) */
+    "Byte shuffle preprocessing to improve downstream compression", /* description */
+    NULL,                                                           /* init */
+    NULL,                                                           /* term */
     NULL, /* write_blob: use default global-heap storage */
     NULL, /* read_blob */
+    NULL, /* delete_blob */
     NULL, /* close_blob */
-    "Byte shuffle preprocessing to improve downstream compression", /* description */
 }};
 
 /* Local macros */
@@ -115,7 +118,8 @@ done:
 static size_t
 H5Z__filter_shuffle(unsigned flags, size_t cd_nelmts, const unsigned cd_values[],
                     hid_t H5_ATTR_UNUSED dxpl_id, const hsize_t H5_ATTR_UNUSED *scaled,
-                    size_t H5_ATTR_UNUSED ndims, size_t nbytes, size_t *buf_size, void **buf)
+                    size_t H5_ATTR_UNUSED ndims, void H5_ATTR_UNUSED *state, size_t nbytes, size_t *buf_size,
+                    void **buf)
 {
     void          *dest  = NULL;  /* Buffer to deposit [un]shuffled bytes into */
     unsigned char *_src  = NULL;  /* Alias for source buffer */

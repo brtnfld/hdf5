@@ -74,11 +74,11 @@ typedef struct H5Z_filter_info_t H5Z_filter_info_t;
  * instead of deep-copying a potentially multi-megabyte blob. Freed when
  * the last reference is released (H5Z_blob_release). */
 typedef struct H5Z_blob_buf_t {
-    void  *data;          /*blob bytes                                     */
-    size_t size;          /*byte length of data                          */
-    bool   from_callback; /*data was allocated by the filter's read_blob
-                           *callback and must be released via close_blob,
-                           *not H5MM_xfree                                */
+    void  *data;                      /*blob bytes                                     */
+    size_t size;                      /*byte length of data                          */
+    bool   from_callback;             /*data was allocated by the filter's read_blob
+                                       *callback and must be released via close_blob,
+                                       *not H5MM_xfree                                */
     H5Z_close_blob_func_t close_blob; /*the owning filter's close_blob callback
                                        *at the time this buffer was created, captured
                                        *here rather than re-resolved by a filter-table
@@ -121,7 +121,32 @@ struct H5Z_filter_info_t {
                                                     *be, and the locator's meaning must not
                                                     *change with that.  Meaningless when
                                                     *aux_loc is undefined.                 */
+    /* Persisted alongside aux_loc in the BLOB extension block */
+    uint8_t  blob_kind;     /*H5Z_BLOB_KIND_*: how aux_loc is read     */
+    uint32_t blob_checksum; /*lookup3 over the blob bytes              */
+    hsize_t  blob_size;     /*blob length in bytes                     */
+    /* Per-dataset runtime state from the class's init callback.  Only ever
+     * set on an open dataset's own pipeline (dcpl_cache.pline) or on a
+     * transient copy owned by H5D__chunk_copy; never carried into property
+     * lists or pipeline copies (H5O__pline_copy clears both fields). */
+    void    *state;        /*value init stored; passed to the filter callback  */
+    unsigned state_status; /*H5Z_STATE_* below                                 */
 };
+
+/* Values for H5Z_filter_info_t.blob_kind (the BLOB block's "kind" byte).
+ * Custom storage always records SINGLE and its locator is opaque. */
+#define H5Z_BLOB_KIND_SINGLE    0 /* aux_loc names one heap object holding the blob */
+#define H5Z_BLOB_KIND_SEGMENTED 1 /* aux_loc names a segment index object           */
+
+/* Default storage splits a blob larger than this into segments of this size,
+ * so no global-heap collection -- each one a single metadata-cache entry --
+ * grows anywhere near H5C_MAX_ENTRY_SIZE. */
+#define H5Z_BLOB_SEGMENT_SIZE ((size_t)1024 * 1024)
+
+/* Values for H5Z_filter_info_t.state_status */
+#define H5Z_STATE_NONE   0 /* init not run (no init callback, or not an open dataset) */
+#define H5Z_STATE_READY  1 /* init succeeded; term owed                               */
+#define H5Z_STATE_FAILED 2 /* init failed or class unavailable at open; I/O must fail  */
 
 /*
  * Internal filter table entry.  H5Z_class2_t is embedded as the first member
@@ -133,13 +158,16 @@ struct H5Z_filter_info_t {
 typedef struct H5Z_entry_t {
     H5Z_class2_t base; /* must stay first; safe to cast to H5Z_class2_t * */
     /* --- V3 extensions (NULL for v1/v2 plugins) --- */
-    H5Z_func2_t           filter2; /* Extended callback (class3); NULL for class1/class2 */
-    H5Z_set_config_func_t set_config;
-    H5Z_get_config_func_t get_config;
-    const char           *description; /* free-form description; may be NULL */
-    H5Z_write_blob_func_t write_blob;  /* NULL selects the default H5HG writer */
-    H5Z_read_blob_func_t  read_blob;   /* NULL selects the default H5HG reader */
-    H5Z_close_blob_func_t close_blob;  /* NULL and the library frees the buffer */
+    H5Z_func2_t            filter2; /* Extended callback (class3); NULL for class1/class2 */
+    H5Z_set_config_func_t  set_config;
+    H5Z_get_config_func_t  get_config;
+    H5Z_init_func_t        init;        /* per-dataset state setup; may be NULL */
+    H5Z_term_func_t        term;        /* per-dataset state release; may be NULL */
+    const char            *description; /* free-form description; may be NULL */
+    H5Z_write_blob_func_t  write_blob;  /* NULL selects the default H5HG writer */
+    H5Z_read_blob_func_t   read_blob;   /* NULL selects the default H5HG reader */
+    H5Z_delete_blob_func_t delete_blob; /* NULL selects the default H5HG reclaim */
+    H5Z_close_blob_func_t  close_blob;  /* NULL and the library frees the buffer */
 } H5Z_entry_t;
 
 /*****************************/
@@ -188,6 +216,18 @@ H5_DLL htri_t             H5Z_all_filters_avail(const struct H5O_pline_t *pline)
 H5_DLL htri_t             H5Z_filter_avail(H5Z_filter_t id);
 H5_DLL herr_t             H5Z_delete(struct H5O_pline_t *pline, H5Z_filter_t filter);
 H5_DLL herr_t             H5Z_get_filter_info(H5Z_filter_t filter, unsigned int *filter_config_flags);
+/* Run each class's init callback on PLINE, which must be a pipeline the
+ * caller owns for the lifetime of the state (an open dataset's
+ * dcpl_cache.pline, or a transient copy).  CHUNK_DIMS/RANK describe one
+ * chunk, excluding the element-size dimension.  STRICT: fail on the first
+ * init failure or missing class (create, copy); otherwise record
+ * H5Z_STATE_FAILED on the entry and succeed (open). */
+H5_DLL herr_t H5Z_state_init(struct H5O_pline_t *pline, struct H5F_t *f, hid_t dcpl_id, hid_t type_id,
+                             const hsize_t *chunk_dims, unsigned rank, bool strict);
+/* Call term for every entry in the H5Z_STATE_READY state and clear it. */
+H5_DLL herr_t H5Z_state_term(struct H5O_pline_t *pline);
+/* True if any entry's class defines init (and so needs state at I/O time). */
+H5_DLL bool H5Z_pline_needs_state(const struct H5O_pline_t *pline);
 /* Normalise a parameter string into the form persisted in pipeline v3:
  * outer braces stripped and hex-float literals rewritten to %.16e decimal,
  * so the stored bytes are valid TOML v1.0.0.  Caller frees with H5MM_xfree(). */
@@ -198,6 +238,14 @@ struct H5F_t; /*forward decl*/
 H5_DLL herr_t H5Z_blob_write(struct H5F_t *f, struct H5O_pline_t *pline);
 H5_DLL herr_t H5Z_blob_read(struct H5F_t *f, struct H5O_pline_t *pline);
 H5_DLL void   H5Z_blob_release(H5Z_filter_info_t *fi);
+/* Drop one pipeline entry's reference to its stored blob, removing the
+ * heap object(s) when the last reference goes (default storage) or calling
+ * the filter's delete_blob (custom storage).  Used by the pipeline
+ * message's delete handler. */
+H5_DLL herr_t H5Z_blob_unref(struct H5F_t *f, H5Z_filter_info_t *fi);
+/* Release the per-file table of stored blobs used for content sharing.
+ * Called when the shared file struct is destroyed. */
+H5_DLL void H5Z_blob_share_release(const void *file_shared);
 
 /* Reference-counted blob buffer: H5Z_blob_buf_new() takes ownership of
  * data (nrefs=1); H5Z_blob_buf_incref() shares an existing buffer across

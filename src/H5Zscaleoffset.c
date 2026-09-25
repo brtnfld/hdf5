@@ -54,8 +54,8 @@ static herr_t                 H5Z__scaleoffset_set_parms_fillval(H5P_genplist_t 
                                                                  int need_convert);
 static herr_t                 H5Z__set_local_scaleoffset(hid_t dcpl_id, hid_t type_id, hid_t space_id);
 static size_t H5Z__filter_scaleoffset(unsigned flags, size_t cd_nelmts, const unsigned cd_values[],
-                                      hid_t dxpl_id, const hsize_t *scaled, size_t ndims, size_t nbytes,
-                                      size_t *buf_size, void **buf);
+                                      hid_t dxpl_id, const hsize_t *scaled, size_t ndims, void *state,
+                                      size_t nbytes, size_t *buf_size, void **buf);
 static void   H5Z__scaleoffset_convert(void *buf, unsigned d_nelmts, unsigned dtype_size);
 static H5_ATTR_CONST unsigned H5Z__scaleoffset_log2(unsigned long long num);
 static void   H5Z__scaleoffset_precompress_i(void *data, unsigned d_nelmts, enum H5Z_scaleoffset_t type,
@@ -95,20 +95,23 @@ static herr_t H5Z__scaleoffset_get_config(unsigned flags, size_t cd_nelmts, cons
 
 /* This message derives from H5Z */
 H5_ATTR_VISIBILITY_HIDDEN H5Z_class3_t H5Z_SCALEOFFSET[1] = {{
-    2,                      /* H5Z_class3_t version */
-    H5Z_FILTER_SCALEOFFSET, /* Filter id number */
-    1,                      /* Assume encoder present: check before registering */
-    1,                      /* decoder_present flag (set to true) */
-    "scaleoffset",          /* name */
-    H5Z__can_apply_scaleoffset,                              /* The "can apply" callback */
-    H5Z__set_local_scaleoffset,                              /* The "set local" callback */
-    H5Z__filter_scaleoffset,                                 /* The actual filter function */
-    H5Z__scaleoffset_set_config,                             /* String config setter */
-    H5Z__scaleoffset_get_config,                             /* String config getter */
+    2,                           /* H5Z_class3_t version */
+    H5Z_FILTER_SCALEOFFSET,      /* Filter id number */
+    1,                           /* Assume encoder present: check before registering */
+    1,                           /* decoder_present flag (set to true) */
+    "scaleoffset",               /* name */
+    H5Z__can_apply_scaleoffset,  /* The "can apply" callback */
+    H5Z__set_local_scaleoffset,  /* The "set local" callback */
+    H5Z__filter_scaleoffset,     /* The actual filter function */
+    H5Z__scaleoffset_set_config, /* String config setter */
+    H5Z__scaleoffset_get_config, /* String config getter */
+    "Scale+offset lossy compression for integer/float data", /* description */
+    NULL,                                                    /* init */
+    NULL,                                                    /* term */
     NULL,                                                    /* write_blob: use default global-heap storage */
     NULL,                                                    /* read_blob */
+    NULL,                                                    /* delete_blob */
     NULL,                                                    /* close_blob */
-    "Scale+offset lossy compression for integer/float data", /* description */
 }};
 
 /* Local macros */
@@ -1242,7 +1245,8 @@ done:
 static size_t
 H5Z__filter_scaleoffset(unsigned flags, size_t cd_nelmts, const unsigned cd_values[],
                         hid_t H5_ATTR_UNUSED dxpl_id, const hsize_t H5_ATTR_UNUSED *scaled,
-                        size_t H5_ATTR_UNUSED ndims, size_t nbytes, size_t *buf_size, void **buf)
+                        size_t H5_ATTR_UNUSED ndims, void H5_ATTR_UNUSED *state, size_t nbytes,
+                        size_t *buf_size, void **buf)
 {
     size_t                 ret_value = 0; /* return value */
     size_t                 size_out  = 0; /* size of output buffer */

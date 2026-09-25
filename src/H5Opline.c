@@ -25,6 +25,10 @@
 #include "H5Opkg.h"      /* Object headers               */
 #include "H5Zpkg.h"      /* Data filters                 */
 
+/* Size of a BLOB extension block's payload:
+ * [kind:1][reserved:3][checksum:4][size:L][addr:A][idx:4] */
+#define H5O_PLINE_BLOB_PAYLOAD_SIZE(F) (8 + H5F_SIZEOF_SIZE(F) + H5F_SIZEOF_ADDR(F) + 4)
+
 /* PRIVATE PROTOTYPES */
 static herr_t H5O__pline_encode(H5F_t *f, uint8_t *p, const void *mesg);
 static void  *H5O__pline_decode(H5F_t *f, H5O_t *open_oh, unsigned mesg_flags, unsigned *ioflags,
@@ -37,8 +41,7 @@ static herr_t H5O__pline_delete(H5F_t *f, H5O_t *open_oh, void *_mesg);
 static herr_t H5O__pline_pre_copy_file(H5F_t *file_src, const void *mesg_src, bool *deleted,
                                        const H5O_copy_t *cpy_info, void *_udata);
 static void  *H5O__pline_copy_file(H5F_t *file_src, const H5O_msg_class_t *mesg_type, void *native_src,
-                                   H5F_t *file_dst, bool *recompute_size, H5O_copy_t *cpy_info,
-                                   void *udata);
+                                   H5F_t *file_dst, bool *recompute_size, H5O_copy_t *cpy_info, void *udata);
 static herr_t H5O__pline_debug(H5F_t *f, const void *_mesg, FILE *stream, int indent, int fwidth);
 
 /* Set up & include shared message "interface" info */
@@ -318,13 +321,26 @@ H5O__pline_decode(H5F_t *f, H5O_t H5_ATTR_UNUSED *open_oh, unsigned H5_ATTR_UNUS
                                         "filter blob extension block sets an unrecognized flags bit "
                                         "(0x%02x)",
                                         ext_flags & ~H5O_PLINE_EXT_BLOB_FLAGS_KNOWN);
-                        if (ext_length != (uint32_t)(H5F_SIZEOF_ADDR(f) + 4))
+                        if (ext_length != (uint32_t)H5O_PLINE_BLOB_PAYLOAD_SIZE(f))
                             HGOTO_ERROR(H5E_PLINE, H5E_CANTLOAD, NULL,
                                         "filter blob locator has unexpected length");
+                        filter->blob_default_storage =
+                            (ext_flags & H5O_PLINE_EXT_BLOB_FLAG_DEFAULT_STORAGE) != 0;
+                        filter->blob_kind = *bp;
+                        bp += 4; /* kind + 3 reserved bytes */
+                        if (filter->blob_kind != H5Z_BLOB_KIND_SINGLE &&
+                            filter->blob_kind != H5Z_BLOB_KIND_SEGMENTED)
+                            HGOTO_ERROR(H5E_PLINE, H5E_CANTLOAD, NULL,
+                                        "filter blob locator has an unrecognized storage kind (%u)",
+                                        (unsigned)filter->blob_kind);
+                        if (!filter->blob_default_storage && filter->blob_kind != H5Z_BLOB_KIND_SINGLE)
+                            HGOTO_ERROR(H5E_PLINE, H5E_CANTLOAD, NULL,
+                                        "custom-storage filter blob cannot be segmented");
+                        UINT32DECODE(bp, filter->blob_checksum);
+                        H5F_DECODE_LENGTH(f, bp, filter->blob_size);
                         H5F_addr_decode(f, &bp, &filter->aux_loc.addr);
                         UINT32DECODE(bp, idx);
-                        filter->aux_loc.idx           = (size_t)idx;
-                        filter->blob_default_storage  = (ext_flags & H5O_PLINE_EXT_BLOB_FLAG_DEFAULT_STORAGE) != 0;
+                        filter->aux_loc.idx = (size_t)idx;
                         break;
                     }
 
@@ -479,10 +495,17 @@ H5O__pline_encode(H5F_t *f, uint8_t *p /*out*/, const void *mesg)
              * dataset-creation time. */
             if (have_blob) {
                 UINT16ENCODE(p, H5O_PLINE_EXT_BLOB);
-                *p++ = (uint8_t)(H5O_PLINE_EXT_FLAG_CRITICAL |
-                                (filter->blob_default_storage ? H5O_PLINE_EXT_BLOB_FLAG_DEFAULT_STORAGE : 0));
+                *p++ =
+                    (uint8_t)(H5O_PLINE_EXT_FLAG_CRITICAL |
+                              (filter->blob_default_storage ? H5O_PLINE_EXT_BLOB_FLAG_DEFAULT_STORAGE : 0));
                 *p++ = 0; /* reserved */
-                UINT32ENCODE(p, (uint32_t)(H5F_SIZEOF_ADDR(f) + 4));
+                UINT32ENCODE(p, (uint32_t)H5O_PLINE_BLOB_PAYLOAD_SIZE(f));
+                *p++ = filter->blob_kind;
+                *p++ = 0; /* reserved */
+                *p++ = 0;
+                *p++ = 0;
+                UINT32ENCODE(p, filter->blob_checksum);
+                H5F_ENCODE_LENGTH(f, p, filter->blob_size);
                 H5F_addr_encode(f, &p, filter->aux_loc.addr);
                 UINT32ENCODE(p, (uint32_t)filter->aux_loc.idx);
             }
@@ -544,6 +567,10 @@ H5O__pline_copy(const void *_src, void *_dst /*out*/)
              * The real reference is taken further down, once every fallible
              * allocation for this entry has already succeeded. */
             dst->filter[i].aux = NULL;
+            /* Per-dataset state belongs to the pipeline it was built on; a
+             * copy (a property list, another dataset) starts without it */
+            dst->filter[i].state        = NULL;
+            dst->filter[i].state_status = H5Z_STATE_NONE;
 
             /* Filter name */
             if (src->filter[i].name) {
@@ -648,8 +675,8 @@ done:
  */
 static void *
 H5O__pline_copy_file(H5F_t *file_src, const H5O_msg_class_t H5_ATTR_UNUSED *mesg_type, void *native_src,
-                     H5F_t *file_dst, bool H5_ATTR_UNUSED *recompute_size, H5O_copy_t H5_ATTR_UNUSED *cpy_info,
-                     void H5_ATTR_UNUSED *udata)
+                     H5F_t *file_dst, bool H5_ATTR_UNUSED *recompute_size,
+                     H5O_copy_t H5_ATTR_UNUSED *cpy_info, void H5_ATTR_UNUSED *udata)
 {
     H5O_pline_t *dst_pline = NULL;
     void        *ret_value = NULL;
@@ -749,7 +776,7 @@ H5O__pline_size(const H5F_t *f, const void *mesg)
             if (config_length)
                 ret_value += H5O_PLINE_EXT_HDR_SIZE + config_length;
             if (H5_addr_defined(pline->filter[i].aux_loc.addr))
-                ret_value += H5O_PLINE_EXT_HDR_SIZE + (size_t)H5F_SIZEOF_ADDR(f) + 4;
+                ret_value += H5O_PLINE_EXT_HDR_SIZE + (size_t)H5O_PLINE_BLOB_PAYLOAD_SIZE(f);
         }
     } /* end for */
 
@@ -835,12 +862,15 @@ H5O__pline_free(void *mesg)
  * Function:    H5O__pline_delete
  *
  * Purpose:     Free file space referenced by the message: each blob-bearing
- *              filter's global-heap object is removed, analogous to how the
- *              fill-value message's delete handler frees vlen data.
+ *              entry drops its reference to its stored blob, analogous to
+ *              how the fill-value message's delete handler frees vlen data.
+ *              A default-storage blob may be shared by several entries
+ *              (H5Z_blob_write() reuses identical blobs), so its heap
+ *              objects are removed only with the last reference.
  *
  *              Filters that implement a custom write_blob callback own
- *              their on-disk layout; the library cannot reclaim storage it
- *              did not allocate, so those locators are skipped.  Which case
+ *              their on-disk layout; their delete_blob callback reclaims
+ *              it (H5Z_blob_unref()).  Which case
  *              applies is read from H5Z_filter_info_t.blob_default_storage
  *              (persisted on disk in the BLOB extension block's flags byte
  *              and populated at decode time) rather than inferred from
@@ -859,7 +889,7 @@ static herr_t
 H5O__pline_delete(H5F_t *f, H5O_t H5_ATTR_UNUSED *open_oh, void *_mesg)
 {
     H5O_pline_t *pline     = (H5O_pline_t *)_mesg; /* Pipeline message */
-    haddr_t      eoa       = HADDR_UNDEF; /* End of allocated file space, lazily fetched below */
+    haddr_t      eoa       = HADDR_UNDEF;          /* End of allocated file space, lazily fetched below */
     herr_t       ret_value = SUCCEED;
 
     FUNC_ENTER_PACKAGE
@@ -868,15 +898,17 @@ H5O__pline_delete(H5F_t *f, H5O_t H5_ATTR_UNUSED *open_oh, void *_mesg)
     assert(pline);
 
     for (size_t i = 0; i < pline->nused; i++) {
-        H5HG_t hobj;
-
         if (!H5_addr_defined(pline->filter[i].aux_loc.addr))
             continue;
 
-        /* Custom-storage filters own their on-disk layout; the library
-         * cannot reclaim it. */
-        if (!pline->filter[i].blob_default_storage)
+        /* Custom-storage filters own their on-disk layout: the filter's
+         * delete_blob reclaims it (H5Z_blob_unref); the locator is opaque,
+         * so the address check below does not apply to it. */
+        if (!pline->filter[i].blob_default_storage) {
+            if (H5Z_blob_unref(f, &pline->filter[i]) < 0)
+                HGOTO_ERROR(H5E_PLINE, H5E_CANTREMOVE, FAIL, "unable to reclaim custom filter blob storage");
             continue;
+        }
 
         /* A corrupted DEFAULT_STORAGE flag paired with an arbitrary on-disk
          * address would otherwise reach H5HG_remove() unchecked -- the
@@ -894,11 +926,10 @@ H5O__pline_delete(H5F_t *f, H5O_t H5_ATTR_UNUSED *open_oh, void *_mesg)
             HGOTO_ERROR(H5E_PLINE, H5E_BADVALUE, FAIL,
                         "filter blob locator address is beyond the file's allocated space");
 
-        hobj.addr = pline->filter[i].aux_loc.addr;
-        hobj.idx  = pline->filter[i].aux_loc.idx;
-        if (H5HG_remove(f, &hobj) < 0)
+        /* Drops this entry's reference; the heap object (and, for a
+         * segmented blob, every segment) goes only with the last one */
+        if (H5Z_blob_unref(f, &pline->filter[i]) < 0)
             HGOTO_ERROR(H5E_PLINE, H5E_CANTREMOVE, FAIL, "unable to remove filter blob from global heap");
-        pline->filter[i].aux_loc.addr = HADDR_UNDEF;
     }
 
 done:
@@ -1005,8 +1036,9 @@ H5O__pline_debug(H5F_t H5_ATTR_UNUSED *f, const void *mesg, FILE *stream, int in
         if (H5_addr_defined(pline->filter[i].aux_loc.addr)) {
             fprintf(stream, "%*s%-*s %" PRIuHADDR "/%zu\n", indent + 3, "", MAX(0, fwidth - 3),
                     "Blob locator (addr/idx):", pline->filter[i].aux_loc.addr, pline->filter[i].aux_loc.idx);
-            fprintf(stream, "%*s%-*s %s\n", indent + 3, "", MAX(0, fwidth - 3),
-                    "Blob storage:", pline->filter[i].blob_default_storage ? "library (global heap)" : "custom (filter-owned)");
+            fprintf(stream, "%*s%-*s %s\n", indent + 3, "", MAX(0, fwidth - 3), "Blob storage:",
+                    pline->filter[i].blob_default_storage ? "library (global heap)"
+                                                          : "custom (filter-owned)");
         }
         if (pline->filter[i].aux)
             fprintf(stream, "%*s%-*s %zu bytes\n", indent + 3, "", MAX(0, fwidth - 3),

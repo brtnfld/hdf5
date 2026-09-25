@@ -48,8 +48,9 @@ static int            repack_blob_read_count  = 0;
 static size_t
 repack_blob_filter(unsigned int H5_ATTR_UNUSED flags, size_t H5_ATTR_UNUSED cd_nelmts,
                    const unsigned int H5_ATTR_UNUSED *cd_values, hid_t H5_ATTR_UNUSED dxpl_id,
-                   const hsize_t H5_ATTR_UNUSED *scaled, size_t H5_ATTR_UNUSED ndims, size_t nbytes,
-                   size_t H5_ATTR_UNUSED *buf_size, void H5_ATTR_UNUSED **buf)
+                   const hsize_t H5_ATTR_UNUSED *scaled, size_t H5_ATTR_UNUSED ndims,
+                   void H5_ATTR_UNUSED *state, size_t nbytes, size_t H5_ATTR_UNUSED *buf_size,
+                   void H5_ATTR_UNUSED **buf)
 {
     return nbytes; /* pass-through */
 }
@@ -72,6 +73,17 @@ repack_blob_write(hid_t file_id, const void *buf, size_t size, H5Z_blob_loc_t *l
         repack_blob_write_log[repack_blob_write_count] = *loc_out;
     repack_blob_write_count++;
     return SUCCEED;
+}
+
+/* The tokens name no file space, so there is nothing to reclaim; accept
+ * only a token this filter actually issued */
+static herr_t
+repack_blob_delete(hid_t file_id, H5Z_blob_loc_t loc)
+{
+    if (H5Iget_type(file_id) != H5I_FILE)
+        return FAIL;
+    return (loc.addr >= (haddr_t)0x9000 && loc.addr < (haddr_t)(0x9000 + repack_blob_write_count)) ? SUCCEED
+                                                                                                   : FAIL;
 }
 
 static herr_t
@@ -1697,10 +1709,13 @@ main(void)
             repack_blob_filter,    /* filter          */
             NULL,                  /* set_config      */
             NULL,                  /* get_config      */
+            NULL,                  /* description     */
+            NULL,                  /* init            */
+            NULL,                  /* term            */
             repack_blob_write,     /* write_blob      */
             repack_blob_read,      /* read_blob       */
+            repack_blob_delete,    /* delete_blob     */
             repack_blob_close,     /* close_blob      */
-            NULL,                  /* description     */
         };
         const char   *blob_src = "h5repack_blob_src.h5";
         const char   *blob_out = "h5repack_blob_OUT.h5";
