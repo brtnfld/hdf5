@@ -143,10 +143,27 @@ struct H5Z_filter_info_t {
  * grows anywhere near H5C_MAX_ENTRY_SIZE. */
 #define H5Z_BLOB_SEGMENT_SIZE ((size_t)1024 * 1024)
 
-/* Values for H5Z_filter_info_t.state_status */
-#define H5Z_STATE_NONE   0 /* init not run (no init callback, or not an open dataset) */
-#define H5Z_STATE_READY  1 /* init succeeded; term owed                               */
-#define H5Z_STATE_FAILED 2 /* init failed or class unavailable at open; I/O must fail  */
+/* Values for H5Z_filter_info_t.state_status.  PENDING marks an entry whose
+ * class was not registered when the dataset was opened: whether it defines
+ * init is unknown until the class is available, which H5D__filter_state_ensure()
+ * checks (loading the plugin if need be) before the dataset's first I/O
+ * that needs the pipeline. */
+#define H5Z_STATE_NONE    0 /* init not run (no init callback, or not an open dataset) */
+#define H5Z_STATE_READY   1 /* init succeeded; term owed                               */
+#define H5Z_STATE_FAILED  2 /* init failed; I/O through the entry must fail           */
+#define H5Z_STATE_PENDING 3 /* class unregistered at open; init deferred to first I/O  */
+
+/* How H5Z_state_init() treats classes and init failures */
+typedef enum H5Z_state_mode_t {
+    H5Z_STATE_INIT_STRICT,     /* dataset create, object copy: load missing classes as
+                                * plugins; a missing class is skipped, any init failure
+                                * is an error */
+    H5Z_STATE_INIT_REGISTERED, /* dataset open: registered classes only, never loads a
+                                * plugin; an unregistered class leaves its entry
+                                * H5Z_STATE_PENDING, an init failure H5Z_STATE_FAILED */
+    H5Z_STATE_INIT_LOAD        /* first I/O after open: as REGISTERED, but loads a missing
+                                * class as a plugin first */
+} H5Z_state_mode_t;
 
 /*
  * Internal filter table entry.  H5Z_class2_t is embedded as the first member
@@ -219,11 +236,11 @@ H5_DLL herr_t             H5Z_get_filter_info(H5Z_filter_t filter, unsigned int 
 /* Run each class's init callback on PLINE, which must be a pipeline the
  * caller owns for the lifetime of the state (an open dataset's
  * dcpl_cache.pline, or a transient copy).  CHUNK_DIMS/RANK describe one
- * chunk, excluding the element-size dimension.  STRICT: fail on the first
- * init failure or missing class (create, copy); otherwise record
- * H5Z_STATE_FAILED on the entry and succeed (open). */
+ * chunk, excluding the element-size dimension.  Entries already READY or
+ * FAILED are left alone.  MODE: see H5Z_state_mode_t.  PENDING (optional):
+ * set true if any entry is H5Z_STATE_PENDING on return. */
 H5_DLL herr_t H5Z_state_init(struct H5O_pline_t *pline, struct H5F_t *f, hid_t dcpl_id, hid_t type_id,
-                             const hsize_t *chunk_dims, unsigned rank, bool strict);
+                             const hsize_t *chunk_dims, unsigned rank, H5Z_state_mode_t mode, bool *pending);
 /* Call term for every entry in the H5Z_STATE_READY state and clear it. */
 H5_DLL herr_t H5Z_state_term(struct H5O_pline_t *pline);
 /* True if any entry's class defines init (and so needs state at I/O time). */

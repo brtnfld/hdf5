@@ -73,11 +73,12 @@ static const bool DUMP_DEBUG_STATS_g = false;
 #endif /* H5Z_DEBUG */
 
 /* Local functions */
-static herr_t H5Z__validate_class3_name(const char *name);
-static int    H5Z__find_idx(H5Z_filter_t id);
-static int    H5Z__check_unregister_dset_cb(void *obj_ptr, hid_t obj_id, void *key);
-static int    H5Z__check_unregister_group_cb(void *obj_ptr, hid_t obj_id, void *key);
-static int    H5Z__flush_file_cb(void *obj_ptr, hid_t obj_id, void *key);
+static herr_t      H5Z__validate_class3_name(const char *name);
+static int         H5Z__find_idx(H5Z_filter_t id);
+static int         H5Z__check_unregister_dset_cb(void *obj_ptr, hid_t obj_id, void *key);
+static int         H5Z__check_unregister_group_cb(void *obj_ptr, hid_t obj_id, void *key);
+static int         H5Z__flush_file_cb(void *obj_ptr, hid_t obj_id, void *key);
+static const char *H5Z__state_status_str(unsigned state_status);
 
 /*-------------------------------------------------------------------------
  * Function: H5Z__init_package
@@ -1389,32 +1390,82 @@ H5Z_pline_needs_state(const H5O_pline_t *pline)
 } /* end H5Z_pline_needs_state() */
 
 /*-------------------------------------------------------------------------
+ * Function: H5Z__state_status_str
+ *
+ * Purpose:  Describes why an entry whose class defines init has no state,
+ *           for H5Z_pipeline's error message.
+ *
+ * Return:   Static string
+ *-------------------------------------------------------------------------
+ */
+static const char *
+H5Z__state_status_str(unsigned state_status)
+{
+    const char *ret_value = NULL;
+
+    FUNC_ENTER_PACKAGE_NOERR
+
+    switch (state_status) {
+        case H5Z_STATE_FAILED:
+            ret_value = "failed";
+            break;
+        case H5Z_STATE_PENDING:
+            ret_value = "has not run: the filter was not available when the dataset was opened or "
+                        "before this I/O";
+            break;
+        default:
+            ret_value = "was not run";
+            break;
+    }
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5Z__state_status_str() */
+
+/*-------------------------------------------------------------------------
  * Function: H5Z_state_init
  *
  * Purpose:  Runs the init callback of every class in PLINE that defines
- *           one, storing each result on its pipeline entry.  Filters not
- *           yet registered are loaded as plugins first, the same way the
- *           can_apply/set_local prelude and H5Z_pipeline load them.
+ *           one, storing each result on its pipeline entry.  Entries that
+ *           are already H5Z_STATE_READY or H5Z_STATE_FAILED are skipped, so
+ *           calling this again on the same pipeline runs init only for
+ *           entries that have not been initialized.
  *
- *           STRICT (dataset create, object copy): any init failure is an
- *           error, after releasing the state already built by this call.
+ *           H5Z_STATE_INIT_STRICT (dataset create, object copy): filters
+ *           not yet registered are loaded as plugins first, the same way the
+ *           can_apply/set_local prelude and H5Z_pipeline load them, and any
+ *           init failure is an error, after releasing the state already
+ *           built by this call.
  *
- *           Not STRICT (dataset open): nothing here fails the open.  A class
- *           that cannot be loaded leaves its entry H5Z_STATE_NONE; an init
- *           that fails leaves it H5Z_STATE_FAILED.  H5Z_pipeline refuses to
- *           run either, so the error surfaces at the first I/O -- the same
- *           point it surfaces today when a filter plugin is missing.
+ *           H5Z_STATE_INIT_REGISTERED (dataset open): only classes already
+ *           registered are considered; no plugin is loaded.  An entry whose
+ *           class is not registered becomes H5Z_STATE_PENDING.  Nothing here
+ *           fails: an init that fails leaves its entry H5Z_STATE_FAILED, and
+ *           H5Z_pipeline refuses to run it, so the error surfaces at the
+ *           first I/O -- the same point it surfaces when a filter plugin is
+ *           missing.
+ *
+ *           H5Z_STATE_INIT_LOAD (first I/O after open): as REGISTERED, but a
+ *           class that is not registered is loaded as a plugin first.  One
+ *           that still cannot be found stays H5Z_STATE_PENDING.
+ *
+ *           In the two lenient modes an entry whose blob could not be read
+ *           at open (its custom reader's plugin was unavailable) stays
+ *           H5Z_STATE_PENDING without running init, since init could not
+ *           see the blob; H5Z_pipeline reports the missing blob.
  *
  * Return:   Non-negative on success/Negative on failure
  *-------------------------------------------------------------------------
  */
 herr_t
 H5Z_state_init(H5O_pline_t *pline, H5F_t *f, hid_t dcpl_id, hid_t type_id, const hsize_t *chunk_dims,
-               unsigned rank, bool strict)
+               unsigned rank, H5Z_state_mode_t mode, bool *pending)
 {
-    hid_t  file_id  = H5I_INVALID_HID; /* Registered on first use */
-    hid_t  space_id = H5I_INVALID_HID; /* Chunk-shaped dataspace, built on first use */
-    bool   paused   = false;           /* Error stack paused around a lenient init */
+    hid_t  file_id     = H5I_INVALID_HID; /* Registered on first use */
+    hid_t  space_id    = H5I_INVALID_HID; /* Chunk-shaped dataspace, built on first use */
+    bool   strict      = (mode == H5Z_STATE_INIT_STRICT);
+    bool   load        = (mode != H5Z_STATE_INIT_REGISTERED);
+    bool   paused      = false; /* Error stack paused around a lenient init */
+    bool   any_pending = false;
     size_t u;
     herr_t ret_value = SUCCEED;
 
@@ -1430,14 +1481,15 @@ H5Z_state_init(H5O_pline_t *pline, H5F_t *f, hid_t dcpl_id, hid_t type_id, const
         void              *new_state = NULL; /* not "state": H5_BEFORE_USER_CB declares one */
         herr_t             status;
 
-        if (fi->state_status == H5Z_STATE_READY)
+        if (fi->state_status == H5Z_STATE_READY || fi->state_status == H5Z_STATE_FAILED)
             continue;
 
-        /* Load the filter if necessary.  A class that cannot be loaded is not
-         * this function's error to report: at create, can_apply has already
-         * rejected a missing required filter; at open, the first I/O will. */
+        /* Load the filter if this mode allows it.  A class that cannot be
+         * found is not this function's error to report: at create,
+         * can_apply has already rejected a missing required filter; after
+         * open, H5Z_pipeline reports it at the I/O that needs it. */
         H5E_PAUSE_ERRORS
-            if (H5Z__find_idx(fi->id) < 0) {
+            if (load && H5Z__find_idx(fi->id) < 0) {
                 H5PL_key_t          key;
                 const H5Z_class2_t *filter_info;
 
@@ -1448,8 +1500,22 @@ H5Z_state_init(H5O_pline_t *pline, H5F_t *f, hid_t dcpl_id, hid_t type_id, const
             (void)H5Z_find_entry(true, fi->id, &entry);
         H5E_RESUME_ERRORS
 
-        if (NULL == entry || NULL == entry->init)
+        if (NULL == entry) {
+            if (!strict) {
+                fi->state_status = H5Z_STATE_PENDING;
+                any_pending      = true;
+            }
             continue;
+        }
+        if (NULL == entry->init) {
+            fi->state_status = H5Z_STATE_NONE;
+            continue;
+        }
+        if (!strict && H5_addr_defined(fi->aux_loc.addr) && NULL == fi->aux) {
+            fi->state_status = H5Z_STATE_PENDING;
+            any_pending      = true;
+            continue;
+        }
 
         /* Build the callback's handles once, on the first filter that needs them */
         if (file_id == H5I_INVALID_HID && (file_id = H5F_get_id(f)) < 0)
@@ -1498,6 +1564,9 @@ fi->state        = new_state;
 fi->state_status = H5Z_STATE_READY;
 }
 
+if (pending)
+    *pending = any_pending;
+
 done : if (paused)
 H5E_RESUME_ERRORS
 if (ret_value < 0)
@@ -1515,7 +1584,8 @@ FUNC_LEAVE_NOAPI(ret_value)
  * Function: H5Z_state_term
  *
  * Purpose:  Releases the per-dataset state on every H5Z_STATE_READY entry
- *           of PLINE and returns all entries to H5Z_STATE_NONE.  Every
+ *           of PLINE and returns all entries to H5Z_STATE_NONE.  FAILED and
+ *           PENDING entries own no state, so no term runs for them.  Every
  *           entry is visited even if one term callback fails.
  *
  * Return:   Non-negative on success/Negative on failure
@@ -2000,22 +2070,23 @@ H5Z_pipeline(const H5O_pline_t *pline, unsigned flags, hid_t dxpl_id, const hsiz
 
             fclass = &H5Z_table_g[fclass_idx];
 
-            /* A filter with per-dataset state is never run without it: its
-             * init either failed at open, or never ran because this pipeline
-             * does not belong to an open dataset (e.g. a group's heap). */
-            if (fclass->init && pline->filter[idx].state_status != H5Z_STATE_READY)
-                HGOTO_ERROR(H5E_PLINE, H5E_READERROR, FAIL,
-                            "filter %d has no per-dataset state (its init callback %s)",
-                            (int)pline->filter[idx].id,
-                            pline->filter[idx].state_status == H5Z_STATE_FAILED ? "failed at dataset open"
-                                                                                : "was not run");
-
-            /* Nor without its blob: a custom-stored blob whose plugin was
-             * unavailable at open was left unread (H5Z_blob_read()) */
+            /* A filter is never run without its blob: a custom-stored blob
+             * whose plugin was unavailable at open was left unread
+             * (H5Z_blob_read()) */
             if (H5_addr_defined(pline->filter[idx].aux_loc.addr) && NULL == pline->filter[idx].aux)
                 HGOTO_ERROR(H5E_PLINE, H5E_READERROR, FAIL,
                             "filter %d blob was not loaded when the dataset was opened",
                             (int)pline->filter[idx].id);
+
+            /* Nor, if it has per-dataset state, without that state: its init
+             * failed, or has not run because the class was not available
+             * before this I/O, or never runs because this pipeline does not
+             * belong to an open dataset (e.g. a group's heap). */
+            if (fclass->init && pline->filter[idx].state_status != H5Z_STATE_READY)
+                HGOTO_ERROR(H5E_PLINE, H5E_READERROR, FAIL,
+                            "filter %d has no per-dataset state (its init callback %s)",
+                            (int)pline->filter[idx].id,
+                            H5Z__state_status_str(pline->filter[idx].state_status));
 
 #ifdef H5Z_DEBUG
             fstats = &H5Z_stat_table_g[fclass_idx];
@@ -2124,23 +2195,22 @@ H5Z_pipeline(const H5O_pline_t *pline, unsigned flags, hid_t dxpl_id, const hsiz
 
             fclass = &H5Z_table_g[fclass_idx];
 
-            /* Same rule as the read path; an optional filter is skipped, the
+            /* Same rules as the read path; an optional filter is skipped, the
              * way an unregistered optional filter is skipped above. */
-            if (fclass->init && pline->filter[idx].state_status != H5Z_STATE_READY) {
-                if ((pline->filter[idx].flags & H5Z_FLAG_OPTIONAL) == 0)
-                    HGOTO_ERROR(H5E_PLINE, H5E_WRITEERROR, FAIL,
-                                "filter %d has no per-dataset state (its init callback %s)",
-                                (int)pline->filter[idx].id,
-                                pline->filter[idx].state_status == H5Z_STATE_FAILED ? "failed at dataset open"
-                                                                                    : "was not run");
-                failed |= (unsigned)1 << idx;
-                continue; /* filter excluded */
-            }
             if (H5_addr_defined(pline->filter[idx].aux_loc.addr) && NULL == pline->filter[idx].aux) {
                 if ((pline->filter[idx].flags & H5Z_FLAG_OPTIONAL) == 0)
                     HGOTO_ERROR(H5E_PLINE, H5E_WRITEERROR, FAIL,
                                 "filter %d blob was not loaded when the dataset was opened",
                                 (int)pline->filter[idx].id);
+                failed |= (unsigned)1 << idx;
+                continue; /* filter excluded */
+            }
+            if (fclass->init && pline->filter[idx].state_status != H5Z_STATE_READY) {
+                if ((pline->filter[idx].flags & H5Z_FLAG_OPTIONAL) == 0)
+                    HGOTO_ERROR(H5E_PLINE, H5E_WRITEERROR, FAIL,
+                                "filter %d has no per-dataset state (its init callback %s)",
+                                (int)pline->filter[idx].id,
+                                H5Z__state_status_str(pline->filter[idx].state_status));
                 failed |= (unsigned)1 << idx;
                 continue; /* filter excluded */
             }

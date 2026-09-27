@@ -589,6 +589,10 @@ struct H5D_shared_t {
     H5O_layout_t     layout;                /* Data layout                  */
     bool             layout_copied_to_dcpl; /* Whether the layout has change not present in the DCPL */
     bool             checked_filters;       /* true if dataset passes can_apply check */
+    /* Some pipeline entry is H5Z_STATE_PENDING: its class was not registered
+     * at open, so its init (if any) runs in H5D__filter_state_ensure() */
+    bool filter_state_pending;
+    bool filter_state_load_tried; /* H5D__filter_state_ensure() has tried loading plugins */
 
     /* Cached dataspace info */
     unsigned ndims;                       /* The dataset's dataspace rank */
@@ -714,6 +718,10 @@ H5_DLL herr_t  H5D__refresh(H5D_t *dataset, hid_t dset_id);
 
 /* To convert a dataset's chunk indexing type to v1 B-tree */
 H5_DLL herr_t H5D__format_convert(H5D_t *dataset);
+/* Run the init deferred from open for pipeline entries whose class is now
+ * available; callers test dset->shared->filter_state_pending first, so the
+ * common case costs one flag check.  Call before the dataset's pipeline runs. */
+H5_DLL herr_t H5D__filter_state_ensure(const H5D_t *dset);
 
 /* Internal I/O routines */
 H5_DLL herr_t H5D__read(size_t count, H5D_dset_io_info_t *dset_info);

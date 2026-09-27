@@ -1357,7 +1357,7 @@ H5D__create(H5F_t *file, hid_t type_id, const H5S_t *space, hid_t dcpl_id, hid_t
     if (new_dset->shared->dcpl_cache.pline.nused > 0 && H5D_CHUNKED == new_dset->shared->layout.type) {
         if (H5Z_state_init(&new_dset->shared->dcpl_cache.pline, file, new_dset->shared->dcpl_id,
                            new_dset->shared->type_id, new_dset->shared->layout.u.chunk.dim,
-                           new_dset->shared->layout.u.chunk.ndims - 1, true) < 0)
+                           new_dset->shared->layout.u.chunk.ndims - 1, H5Z_STATE_INIT_STRICT, NULL) < 0)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, NULL, "unable to initialize filter state");
         filter_state_init = true;
     }
@@ -1796,13 +1796,17 @@ H5D__open_oid(H5D_t *dataset, hid_t dapl_id)
     /* Indicate that the layout information was initialized */
     layout_init = true;
 
-    /* Build per-dataset filter state.  Lenient: an unavailable plugin or a
-     * failing init does not fail the open (the pipeline reports it at the
-     * first I/O, as for a missing plugin), so metadata stays readable. */
+    /* Build per-dataset filter state for the classes already registered;
+     * opening a dataset loads no filter plugin.  Entries whose class is not
+     * registered are left pending, and H5D__filter_state_ensure() runs their
+     * init before the first I/O that needs the pipeline.  Lenient: a failing
+     * init does not fail the open (the pipeline reports it at the first I/O,
+     * as for a missing plugin), so metadata stays readable. */
     if (dataset->shared->dcpl_cache.pline.nused > 0 && H5D_CHUNKED == dataset->shared->layout.type) {
         if (H5Z_state_init(&dataset->shared->dcpl_cache.pline, dataset->oloc.file, dataset->shared->dcpl_id,
                            dataset->shared->type_id, dataset->shared->layout.u.chunk.dim,
-                           dataset->shared->layout.u.chunk.ndims - 1, false) < 0)
+                           dataset->shared->layout.u.chunk.ndims - 1, H5Z_STATE_INIT_REGISTERED,
+                           &dataset->shared->filter_state_pending) < 0)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to initialize filter state");
         filter_state_init = true;
     }
@@ -3384,6 +3388,49 @@ done:
 } /* end H5D__flush() */
 
 /*-------------------------------------------------------------------------
+ * Function: H5D__filter_state_ensure
+ *
+ * Purpose:  Runs the per-dataset init that H5D__open_oid() deferred for
+ *           pipeline entries whose filter class was not registered when the
+ *           dataset was opened.  The first call may load those classes as
+ *           plugins, as H5Z_pipeline would; later calls only pick up classes
+ *           registered since (e.g. by H5Zregister), so a filter that stays
+ *           unavailable costs no repeated plugin-path search.  An init that
+ *           fails leaves its entry H5Z_STATE_FAILED and does not fail this
+ *           call; a class that still cannot be found leaves its entry
+ *           pending.  H5Z_pipeline reports either at the I/O that needs it.
+ *
+ *           Must run on the thread driving the I/O, before the pipeline is
+ *           used for this dataset: callers check filter_state_pending first.
+ *
+ * Return:   Non-negative on success/Negative on failure
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5D__filter_state_ensure(const H5D_t *dset)
+{
+    H5D_shared_t    *shared = dset->shared;
+    H5Z_state_mode_t mode;
+    bool             pending   = false;
+    herr_t           ret_value = SUCCEED;
+
+    FUNC_ENTER_PACKAGE
+
+    assert(shared->filter_state_pending);
+    assert(H5D_CHUNKED == shared->layout.type);
+
+    mode = shared->filter_state_load_tried ? H5Z_STATE_INIT_REGISTERED : H5Z_STATE_INIT_LOAD;
+    if (H5Z_state_init(&shared->dcpl_cache.pline, dset->oloc.file, shared->dcpl_id, shared->type_id,
+                       shared->layout.u.chunk.dim, shared->layout.u.chunk.ndims - 1, mode, &pending) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to initialize filter state");
+    shared->filter_state_load_tried = true;
+    shared->filter_state_pending    = pending;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5D__filter_state_ensure() */
+
+/*-------------------------------------------------------------------------
  * Function: H5D__format_convert
  *
  * Purpose:  For chunked: downgrade the chunk indexing type to version 1 B-tree
@@ -3412,6 +3459,10 @@ H5D__format_convert(H5D_t *dataset)
     switch (dataset->shared->layout.type) {
         case H5D_CHUNKED:
             assert(dataset->shared->layout.u.chunk.idx_type != H5D_CHUNK_IDX_BTREE);
+
+            /* Converting partial edge chunks runs the pipeline */
+            if (dataset->shared->filter_state_pending && H5D__filter_state_ensure(dataset) < 0)
+                HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to initialize filter state");
 
             if (NULL == (newlayout = (H5O_layout_t *)H5MM_calloc(sizeof(H5O_layout_t))))
                 HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "unable to allocate buffer");

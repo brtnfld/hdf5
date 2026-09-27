@@ -4256,6 +4256,11 @@ H5D__chunk_flush_entry(const H5D_t *dset, H5D_rdcc_ent_t *ent, bool reset)
             /* Assign alloc and check for overflow */
             H5_CHECKED_ASSIGN(alloc, size_t, udata.chunk_block.length, hsize_t);
 
+            /* Run filter init deferred from open (e.g. a chunk dirtied while a
+             * filter class was unavailable, flushed after it was registered) */
+            if (dset->shared->filter_state_pending && H5D__filter_state_ensure(dset) < 0)
+                HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to initialize filter state");
+
             /* Retrieve filter settings from API context */
             if (H5CX_get_err_detect(&err_detect) < 0)
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't get error detection info");
@@ -4842,6 +4847,13 @@ H5D__chunk_lock(const H5D_io_info_t H5_ATTR_NDEBUG_UNUSED *io_info, const H5D_ds
                     H5Z_EDC_t err_detect; /* Error detection info */
                     H5Z_cb_t  filter_cb;  /* I/O filter callback function */
 
+                    /* Run filter init deferred from open.  H5D__read and
+                     * H5D__write have normally done this already; this covers
+                     * chunk reads outside them (H5Dset_extent's edge-chunk
+                     * and pruning paths). */
+                    if (dset->shared->filter_state_pending && H5D__filter_state_ensure(dset) < 0)
+                        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, NULL, "unable to initialize filter state");
+
                     /* Retrieve filter settings from API context */
                     if (H5CX_get_err_detect(&err_detect) < 0)
                         HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, NULL, "can't get error detection info");
@@ -5258,6 +5270,12 @@ H5D__chunk_allocate(const H5D_t *dset, bool full_overwrite, const hsize_t old_di
     assert(dset && H5D_CHUNKED == layout->type);
     assert(layout->u.chunk.ndims > 0 && layout->u.chunk.ndims <= H5O_LAYOUT_NDIMS);
     H5D_CHUNK_STORAGE_INDEX_CHK(sc);
+
+    /* Run filter init deferred from open: fill-value chunks are filtered
+     * below.  Allocation can be reached without H5D__write (H5Dset_extent,
+     * H5Dwrite_chunk, early allocation at open). */
+    if (dset->shared->filter_state_pending && H5D__filter_state_ensure(dset) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to initialize filter state");
 
     /* Retrieve the dataset dimensions */
     space_dim   = dset->shared->curr_dims;
@@ -7320,7 +7338,7 @@ H5D__chunk_copy(H5F_t *f_src, H5O_layout_t *layout_src, H5F_t *f_dst, H5O_layout
             HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, FAIL, "can't set I/O pipeline");
 
         if (H5Z_state_init(&state_pline, f_src, state_dcpl_id, state_type_id, layout_src->u.chunk.dim,
-                           layout_src->u.chunk.ndims - 1, true) < 0)
+                           layout_src->u.chunk.ndims - 1, H5Z_STATE_INIT_STRICT, NULL) < 0)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to initialize filter state");
         pline = &state_pline;
     }

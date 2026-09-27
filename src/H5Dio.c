@@ -154,6 +154,11 @@ H5D__read(size_t count, H5D_dset_io_info_t *dset_info)
         /* Set metadata tagging with dset oheader addr */
         H5AC_tag(dset_info[i].dset->oloc.addr, &prev_tag);
 
+        /* Run filter init deferred from open, before any chunk is unfiltered */
+        if (dset_info[i].dset->shared->filter_state_pending &&
+            H5D__filter_state_ensure(dset_info[i].dset) < 0)
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to initialize filter state");
+
         /* Set up datatype info for operation */
         if (H5D__typeinfo_init(&io_info, &(dset_info[i]), dset_info[i].mem_type) < 0)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to set up type info");
@@ -565,6 +570,11 @@ H5D__write(size_t count, H5D_dset_io_info_t *dset_info)
 
         /* Set metadata tagging with dset oheader addr */
         H5AC_tag(dset_info[i].dset->oloc.addr, &prev_tag);
+
+        /* Run filter init deferred from open, before any chunk is filtered */
+        if (dset_info[i].dset->shared->filter_state_pending &&
+            H5D__filter_state_ensure(dset_info[i].dset) < 0)
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to initialize filter state");
 
         /* All filters in the DCPL must have encoding enabled. */
         if (!dset_info[i].dset->shared->checked_filters) {
