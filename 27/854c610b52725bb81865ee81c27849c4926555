@@ -1,0 +1,19 @@
+.github/workflows/clang-format-fix.yml
+  s_62ddf0e82c689a::t_3294781f51ceb7 28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "27854c610b52725bb81865ee81c27849c4926555",
+  "prompts": {},
+  "sessions": {
+    "s_62ddf0e82c689a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5004ff61-3ec1-4b14-accd-f53e96e622a1",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "M. Scot Breitenfeld <brtnfld@hdfgroup.org>"
+    }
+  }
+}
