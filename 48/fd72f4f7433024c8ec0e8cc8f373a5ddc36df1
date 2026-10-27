@@ -1,0 +1,23 @@
+.github/ISSUE_TEMPLATE/feature-request.md
+  s_ccd1726459f93b::t_ede759761af10b 10-14
+.github/ISSUE_TEMPLATE/blank-non-secu-issue.md
+  s_ccd1726459f93b::t_ede759761af10b 15-17
+.github/ISSUE_TEMPLATE/bug_report.md
+  s_ccd1726459f93b::t_ede759761af10b 15-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "48fd72f4f7433024c8ec0e8cc8f373a5ddc36df1",
+  "prompts": {},
+  "sessions": {
+    "s_ccd1726459f93b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9c42c39c-049b-42f3-ad02-fc24b3c329c3",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "M. Scot Breitenfeld <brtnfld@hdfgroup.org>"
+    }
+  }
+}
