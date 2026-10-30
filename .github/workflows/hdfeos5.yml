@@ -24,7 +24,6 @@ jobs:
   build:
     name: Build hdfeos5
     runs-on: ubuntu-latest
-    if: "github.repository_owner == 'HDFGroup'"
     steps:
       - name: Install System dependencies
         run: |
