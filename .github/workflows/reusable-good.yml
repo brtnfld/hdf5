@@ -7,8 +7,9 @@ jobs:
   build:
     strategy:
       matrix:
+        name: ["A"]
         include:
-          - name: "A"
+          - name: "A renamed"
             os: ubuntu-latest
     name: "${{ matrix.name }}"
     runs-on: ${{ matrix.os }}
