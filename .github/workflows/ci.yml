@@ -1,0 +1,12 @@
+name: exp CI
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  good:
+    uses: ./.github/workflows/reusable-good.yml
+  other:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo other
