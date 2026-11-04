@@ -1,0 +1,34 @@
+name: CI status reporter
+on:
+  workflow_run:
+    workflows: ["exp CI"]
+    types: [requested, completed]
+permissions: {}
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    steps:
+      - name: Post the run's result as the "CI status" commit status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          ACTION: ${{ github.event.action }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          EVENT: ${{ github.event.workflow_run.event }}
+        run: |
+          echo "action=$ACTION event=$EVENT conclusion=$CONCLUSION sha=$SHA"
+          if [ "$ACTION" = requested ]; then
+            state=pending; desc="Running"
+          else
+            case "$CONCLUSION" in
+              success)   state=success; desc="Every job passed or was skipped" ;;
+              cancelled) state=error;   desc="The run was canceled" ;;
+              *)         state=failure; desc="The run concluded: $CONCLUSION" ;;
+            esac
+          fi
+          gh api -X POST "repos/$REPO/statuses/$SHA" -f state="$state" \
+            -f context="CI status" -f description="$desc" -f target_url="$RUN_URL" --jq .state
