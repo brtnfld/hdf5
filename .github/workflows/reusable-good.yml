@@ -1,0 +1,16 @@
+name: reusable-good
+on:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - name: "A"
+            os: ubuntu-latest
+    name: "${{ matrix.name }}"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - run: echo ok

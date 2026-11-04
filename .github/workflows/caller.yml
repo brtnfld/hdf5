@@ -1,0 +1,68 @@
+name: exp CI
+on:
+  push:
+    branches: [exp-base]
+    paths-ignore:
+      - '.github/CODEOWNERS'
+      - '.github/FUNDING.yml'
+      - 'docs/**'
+      - 'release_docs/**'
+      - 'ACKNOWLEDGEMENTS'
+      - 'LICENSE**'
+      - '**.md'
+  pull_request:
+    branches: [exp-base]
+permissions:
+  contents: read
+jobs:
+  check-changes:
+    name: "Check changed files"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      code: ${{ steps.check.outputs.code }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          code=true
+          if [ "$EVENT" = pull_request ]; then
+            files=$(gh api --paginate "repos/$REPO/pulls/$PR/files" --jq '.[] | .filename, (.previous_filename // empty)')
+            n=$(printf '%s\n' "$files" | grep -c . || true)
+            if [ "$n" -gt 0 ] && [ "$n" -lt 3000 ]; then
+              code=false
+              while IFS= read -r f; do
+                case "$f" in
+                  .github/CODEOWNERS|.github/FUNDING.yml|docs/*|release_docs/*|ACKNOWLEDGEMENTS|LICENSE*|*.md) ;;
+                  *) code=true; break ;;
+                esac
+              done <<< "$files"
+            fi
+            printf 'Changed files (%s):\n%s\n' "$n" "$files"
+          fi
+          echo "code=$code" | tee -a "$GITHUB_OUTPUT"
+  call-a:
+    needs: check-changes
+    if: needs.check-changes.outputs.code == 'true'
+    uses: ./.github/workflows/reusable-good.yml
+  call-b-dependent:
+    needs: call-a
+    uses: ./.github/workflows/reusable-good.yml
+  ci-status:
+    name: "CI status"
+    if: always()
+    needs: [check-changes, call-a, call-b-dependent]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail unless every job succeeded or was skipped
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          echo "$NEEDS" | jq -e 'all(.[]; .result == "success" or .result == "skipped")' > /dev/null
