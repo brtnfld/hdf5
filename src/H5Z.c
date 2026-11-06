@@ -307,6 +307,7 @@ H5Z__upgrade_class_vers(const void *_cls, H5Z_class3_t *cls3_buf)
         cls3_buf->set_local       = cls_old->set_local;
         cls3_buf->filter          = cls_old->filter;
         cls3_buf->feature_flags   = 0;
+        cls3_buf->ext             = NULL;
 
         /* Set cls_real to point to the translated structure */
         ret_value = cls3_buf;
@@ -326,6 +327,7 @@ H5Z__upgrade_class_vers(const void *_cls, H5Z_class3_t *cls3_buf)
         cls3_buf->set_local       = cls_old->set_local;
         cls3_buf->filter          = cls_old->filter;
         cls3_buf->feature_flags   = 0;
+        cls3_buf->ext             = NULL;
 
         /* Set cls_real to point to the translated structure */
         ret_value = cls3_buf;
@@ -338,8 +340,12 @@ H5Z__upgrade_class_vers(const void *_cls, H5Z_class3_t *cls3_buf)
     else {
         /* Native H5Z_class3_t. Check the filter callback here so that plugins, which
          * do not go through H5Zregister(), are checked too. */
-        if (cls->filter == NULL)
+        if (cls->filter == NULL) {
+            if (cls->ext != NULL)
+                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,
+                            "filter %d requires a newer version of the HDF5 library", (int)cls->id);
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "no filter function specified");
+        }
 
         ret_value = cls;
     }

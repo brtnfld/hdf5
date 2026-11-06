@@ -285,6 +285,7 @@
  *     NULL,                                // The "set local" callback
  *     (H5Z_func_t)H5Z_filter_bzip2,        // The actual filter function
  *     0,                                   // Feature flags supported
+ *     NULL,                                // Reserved extension pointer
  *   }};
  * \endcode
  *

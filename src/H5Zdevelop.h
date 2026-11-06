@@ -213,6 +213,7 @@ typedef struct H5Z_class3_t {
     H5Z_set_local_func_t set_local;       /**< The "set local" callback for a filter        */
     H5Z_func_t           filter;          /**< The actual filter function                   */
     uint64_t             feature_flags;   /**< Feature flags                                */
+    const void          *ext;             /**< Reserved for extensions; must be NULL        */
 } H5Z_class3_t;
 //! <!-- [H5Z_class3_t_snip] -->
 
@@ -329,6 +330,12 @@ extern "C" {
  *          All other bits will be ignored. The filter should set all other bits
  *          to zero so they are not erroneously interpreted as features by a
  *          future version of the library.
+ *
+ *          \c ext is reserved so that a future version of the library can
+ *          extend H5Z_class3_t without a new structure version. It must be
+ *          set to NULL. This version of the library ignores it, so a filter
+ *          built for a later version that sets \c ext still registers as
+ *          long as it also sets \c filter.
  *
  *          The statistics associated with a filter are not reset by this
  *          function; they accumulate over the life of the library.

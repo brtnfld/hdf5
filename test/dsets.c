@@ -20259,6 +20259,7 @@ const H5Z_class3_t H5Z_ERROR_MSG[1] = {{
     NULL,                    /* The "set local" callback */
     filter_error_msg,        /* The actual filter function */
     0,                       /* Threading disabled */
+    NULL,                    /* Reserved extension pointer */
 }};
 static const char *filter_error_msg_msg =
     "Hello I am a unique error message written for the test_filter_error_msg test in dsets.c";
@@ -20725,6 +20726,7 @@ const H5Z_class3_t H5Z_THREADS_REQUIRED[1] = {{
     filter_threads_required,     /* The actual filter function */
     H5Z_FEAT_FILTER_THREADSAFE |
         H5Z_FEAT_FILTER_NO_H5_CALLS, /* This filter is thread-safe and does not re-enter the HDF5 API */
+    NULL,                            /* Reserved extension pointer */
 }};
 
 static int          threads_required_nthreads_passed;
@@ -20832,6 +20834,7 @@ const H5Z_class3_t H5Z_NON_THREADSAFE[1] = {{
     NULL,                        /* The "set local" callback */
     filter_non_threadsafe,       /* The actual filter function */
     H5Z_FEAT_FILTER_NO_H5_CALLS, /* This filter is not thread-safe and does not re-enter the HDF5 API */
+    NULL,                        /* Reserved extension pointer */
 }};
 
 /* This message derives from H5Z */
@@ -20846,6 +20849,7 @@ const H5Z_class3_t H5Z_NON_THREADSAFE_LIE[1] = {{
     filter_non_threadsafe,                                    /* The actual filter function */
     H5Z_FEAT_FILTER_THREADSAFE | H5Z_FEAT_FILTER_NO_H5_CALLS, /* This filter falsely claims to be thread-safe
                                                                  and does not re-enter the HDF5 API */
+    NULL,                                                     /* Reserved extension pointer */
 }};
 
 /* This message derives from H5Z */
@@ -20860,6 +20864,7 @@ const H5Z_class3_t H5Z_NON_THREADSAFE_LIE2[1] = {{
     filter_non_threadsafe,          /* The actual filter function */
     H5Z_FEAT_FILTER_THREADSAFE, /* This filter falsely claims to be thread-safe and falsely claims to re-enter
                                    the HDF5 API */
+    NULL,                       /* Reserved extension pointer */
 }};
 
 static int non_threadsafe_threads_in_flight;
@@ -20913,6 +20918,7 @@ const H5Z_class3_t H5Z_REENTER_H5[1] = {{
     NULL,                       /* The "set local" callback */
     filter_reenter_h5,          /* The actual filter function */
     H5Z_FEAT_FILTER_THREADSAFE, /* This filter is thread-safe and does re-enter the HDF5 API */
+    NULL,                       /* Reserved extension pointer */
 }};
 
 static size_t
@@ -20954,6 +20960,7 @@ const H5Z_class3_t H5Z_H5_ALLOCATE[1] = {{
     filter_h5_allocate,     /* The actual filter function */
     H5Z_FEAT_FILTER_THREADSAFE |
         H5Z_FEAT_FILTER_NO_H5_CALLS, /* This filter is thread-safe and does not re-enter the HDF5 API */
+    NULL,                            /* Reserved extension pointer */
 }};
 
 static size_t
@@ -21644,6 +21651,7 @@ const H5Z_class3_t H5Z_CANNOT_APPLY[1] = {{
     filter_cannot_apply,     /* The actual filter function */
     H5Z_FEAT_FILTER_THREADSAFE |
         H5Z_FEAT_FILTER_NO_H5_CALLS, /* This filter is thread-safe and does not re-enter the HDF5 API */
+    NULL,                            /* Reserved extension pointer */
 }};
 
 static htri_t
@@ -21937,7 +21945,8 @@ filter_class3_register(unsigned int H5_ATTR_UNUSED flags, size_t H5_ATTR_UNUSED 
  * Function:    test_class3_register
  *
  * Purpose:     Tests H5Zregister() with H5Z_class3_t: the name is what a
- *              DCPL reports, and a missing filter callback is rejected.
+ *              DCPL reports, and the reserved ext pointer is ignored
+ *              unless the filter callback is missing.
  *
  * Return:      Success:    0
  *              Failure:    -1
@@ -21946,13 +21955,15 @@ filter_class3_register(unsigned int H5_ATTR_UNUSED flags, size_t H5_ATTR_UNUSED 
 static herr_t
 test_class3_register(void)
 {
-    char         name_out[64];
-    H5Z_class3_t cls;
-    hid_t        dcpl = H5I_INVALID_HID;
-    unsigned     flags;
-    size_t       cd_nelmts = 0;
-    unsigned     filter_config;
-    herr_t       ret;
+    /* A non-NULL ext, as a filter built for a later library might set */
+    static const int ext_placeholder = 0;
+    char             name_out[64];
+    H5Z_class3_t     cls;
+    hid_t            dcpl = H5I_INVALID_HID;
+    unsigned         flags;
+    size_t           cd_nelmts = 0;
+    unsigned         filter_config;
+    herr_t           ret;
 
     TESTING("H5Z_class3_t registration");
 
@@ -21963,6 +21974,7 @@ test_class3_register(void)
     cls.decoder_present = 1;
     cls.name            = "class3_test-1.0";
     cls.filter          = filter_class3_register;
+    cls.ext             = NULL;
 
     /* A valid class3 filter registers, and its name is what the DCPL reports */
     if (H5Zregister(&cls) < 0)
@@ -21982,8 +21994,25 @@ test_class3_register(void)
     if (H5Zunregister(H5Z_FILTER_CLASS3_REGISTER) < 0)
         TEST_ERROR;
 
-    /* Without a filter callback, registration fails */
+    /* A non-NULL ext is ignored when the filter callback is set */
+    cls.name = "class3_test";
+    cls.ext  = &ext_placeholder;
+    if (H5Zregister(&cls) < 0)
+        TEST_ERROR;
+    if (H5Zunregister(H5Z_FILTER_CLASS3_REGISTER) < 0)
+        TEST_ERROR;
+
+    /* Without a filter callback, registration fails whether or not ext is set */
     cls.filter = NULL;
+    H5E_BEGIN_TRY
+    {
+        ret = H5Zregister(&cls);
+    }
+    H5E_END_TRY
+    if (ret >= 0)
+        FAIL_PUTS_ERROR("    H5Zregister accepted a NULL filter callback with ext set");
+
+    cls.ext = NULL;
     H5E_BEGIN_TRY
     {
         ret = H5Zregister(&cls);

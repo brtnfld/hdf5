@@ -177,11 +177,11 @@ We would like to thank the many HDF5 community members who contributed to this r
    filter makes no HDF5 calls except for H5OPEN, H5allocate_memory(),
    H5resize_memory(), and H5free_memory().
 
-### Defined the name of an H5Z_class3_t filter as its canonical name
+### Reserved an extension pointer in H5Z_class3_t and defined its name as canonical
+
+   `H5Z_class3_t` gains a final member, `ext`, which must be set to NULL. A later release will use it to add callbacks to `H5Z_class3_t` without introducing an `H5Z_class4_t`; this release ignores it. An `H5Z_class3_t` filter with no `filter` callback is now rejected when it is loaded as a plugin, as `H5Zregister()` already did, with an error naming a newer library as the cause when `ext` is set.
 
    The `name` member of an `H5Z_class3_t` filter is now documented as its canonical name rather than a debugging comment: 1 to `H5Z_FILTER_NAME_MAX_LEN` (255) bytes from `[A-Za-z0-9_.-]`, unique among `H5Z_class3_t` filters, and stable across releases. This release does not enforce these rules.
-
-   An `H5Z_class3_t` filter with no `filter` callback is now rejected when it is loaded as a plugin, as `H5Zregister()` already did.
 
 ### Added support for internally concurrent multithreaded reads of chunked datasets
 
