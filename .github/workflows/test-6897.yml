@@ -1,0 +1,21 @@
+name: test 6897 binary checks
+on:
+  push:
+    branches: [test/6897-ci]
+permissions:
+  contents: read
+jobs:
+  tarball:
+    uses: ./.github/workflows/tarball.yml
+    with:
+      use_ignore: ignore
+      use_tag: snapshot
+      use_environ: snapshots
+  ctest:
+    needs: tarball
+    uses: ./.github/workflows/ctest-6897.yml
+    with:
+      cmake_version: 'latest'
+      preset_name: ci-StdShar
+      file_base: ${{ needs.tarball.outputs.file_base }}
+      use_environ: snapshots

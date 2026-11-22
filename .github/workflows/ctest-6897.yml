@@ -1,0 +1,288 @@
+name: test-6897 dev CTest runs
+
+# Triggers the workflow on a call from another workflow
+on:
+  workflow_call:
+    inputs:
+      snap_name:
+        description: 'The name in the source tarballs'
+        type: string
+        required: false
+        default: hdfsrc
+      file_base:
+        description: "The common base name of the source tarballs"
+        required: true
+        type: string
+      preset_name:
+        description: "The common base name of the preset configuration name to control the build"
+        required: true
+        type: string
+      use_environ:
+        description: 'Environment to locate files'
+        type: string
+        required: true
+        default: snapshots
+      cmake_version:
+        description: "3.26.0 or later, latest"
+        required: true
+        type: string
+      maven_enabled:
+        description: 'Enable Maven artifact generation and upload'
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  CTEST_OUTPUT_ON_FAILURE: 1
+
+jobs:
+  check-secret:
+    name: Check Secrets exists
+    runs-on: ubuntu-latest
+    outputs:
+      sign-state: ${{ steps.set-signing-state.outputs.BINSIGN }}
+    steps:
+      - name: Identify Signing Status
+        id: set-signing-state
+        env: 
+            signing_secret: ${{ secrets.AZURE_ENDPOINT }}
+        run: |
+          if [[ '${{ env.signing_secret }}' == '' ]]
+          then
+            SIGN_VAL=$(echo 'notexists')
+          else
+            SIGN_VAL=$(echo 'exists')
+          fi
+          echo "BINSIGN=$SIGN_VAL" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - run: echo "signing is ${{ steps.set-signing-state.outputs.BINSIGN }}."
+
+  build_and_test_linux_glibc228:
+  # Linux binary with a glibc 2.28 baseline
+  #
+  # Built against glibc 2.28, so the tarball runs on every distribution with
+  # glibc 2.28 or newer: RHEL 8+, SLES 15, Debian 10+, Ubuntu 20.04+ and
+  # Amazon Linux 2023. The ubuntu-24.04 binary above is built against glibc
+  # 2.38 and runs on none of those.
+  #
+  # Only the build runs in the container, started with "docker run" from an
+  # ordinary job rather than a job-level "container:". The runner's own node
+  # and every action therefore stay on the host, so the image's glibc never
+  # has to satisfy whatever node version GitHub ships.
+    name: "AlmaLinux 8 gcc (glibc 2.28)"
+    runs-on: ubuntu-latest
+    needs: [check-secret]
+    env:
+      # AlmaLinux 8.10, glibc 2.28, gcc-toolset-14 including gfortran, CMake.
+      # Pinned by digest; AlmaLinux 8 is supported until 2029-05-31.
+      GLIBC228_IMAGE: quay.io/pypa/manylinux_2_28_x86_64@sha256:e0adf18521ad35192df733a6c62d35df7801957d24e0470238aacecfab2188a3
+      GLIBC228_PRESET: ${{ inputs.preset_name }}-GNUC-Glibc228
+      # The highest glibc symbol version the published binary may require
+      GLIBC_BASELINE: GLIBC_2.28
+    steps:
+      - name: Get Actions
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/scripts
+          persist-credentials: false # The workspace is mounted into the build container
+
+      - name: Set file base name (Linux glibc 2.28)
+        id: set-file-base
+        run: |
+          FILE_NAME_BASE=$(echo "${{ inputs.file_base }}")
+          echo "FILE_BASE=$FILE_NAME_BASE" >> $GITHUB_OUTPUT
+          if [[ '${{ inputs.use_environ }}' == 'release' ]]
+          then
+            SOURCE_NAME_BASE=$(echo "${{ inputs.snap_name }}")
+          else
+            SOURCE_NAME_BASE=$(echo "hdfsrc")
+          fi
+          echo "SOURCE_BASE=$SOURCE_NAME_BASE" >> $GITHUB_OUTPUT
+        shell: bash
+
+      # Get files created by release script
+      - name: Get tgz-tarball (Linux glibc 2.28)
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6
+        with:
+              name: tgz-tarball
+              path: ${{ github.workspace }}
+
+      - name: Uncompress source (Linux glibc 2.28)
+        run: tar -zxf ${{ github.workspace }}/${{ steps.set-file-base.outputs.FILE_BASE }}.tar.gz
+        shell: bash
+
+      - name: Run CTest in a glibc 2.28 container (Linux glibc 2.28)
+        run: |
+          docker run --rm \
+            --volume "${{ github.workspace }}:/work" \
+            --workdir /work \
+            "${GLIBC228_IMAGE}" \
+            /work/.github/scripts/build-linux-glibc228.sh \
+              "${{ steps.set-file-base.outputs.SOURCE_BASE }}" \
+              "${GLIBC228_PRESET}" \
+              "$(id -u)" "$(id -g)"
+        shell: bash
+
+      # The point of this binary, so fail the job if the baseline regresses.
+      # This is a ceiling, not an equality: a build that happens to need less
+      # than the image provides is fine, and gets reported as what it needs.
+      - name: Check glibc baseline (Linux glibc 2.28)
+        run: |
+          lib=$(find "${{ github.workspace }}/build/${GLIBC228_PRESET}" -name 'libhdf5.so.*.*' | head -1)
+          echo "Checking ${lib}"
+          objdump -p "${lib}" | awk '/NEEDED/{print $2}'
+          needs=$(objdump -T "${lib}" | grep -o 'GLIBC_[0-9.]*' | sort -V -u | tail -1)
+          highest=$(printf '%s\n%s\n' "${needs}" "${GLIBC_BASELINE}" | sort -V | tail -1)
+          if [ "${highest}" != "${GLIBC_BASELINE}" ]; then
+            echo "::error::requires ${needs}, above the ${GLIBC_BASELINE} baseline"
+            objdump -T "${lib}" | grep -F "${needs}" | head
+            exit 1
+          fi
+          echo "Requires ${needs}, within the ${GLIBC_BASELINE} baseline"
+          echo "Linux x86_64 binary requires ${needs} or newer" >> "${GITHUB_STEP_SUMMARY}"
+        shell: bash
+
+      # Use the binary the way a user would, on the runner rather than in the
+      # build container, so a path that only exists in the container (such as
+      # gcc-toolset's compilers or the install prefix) fails the job.
+      # gfortran-14 matches the toolset's gfortran, so the .mod files load.
+      - name: Test binary outside the build container (Linux glibc 2.28)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc g++ gfortran-14 pkg-config
+          mkdir -p "${RUNNER_TEMP}/compilers"
+          ln -sf "$(command -v gfortran-14)" "${RUNNER_TEMP}/compilers/gfortran"
+          export PATH="${RUNNER_TEMP}/compilers:${PATH}"
+
+          mkdir "${RUNNER_TEMP}/binary"
+          tar -xzf ${{ github.workspace }}/build/${GLIBC228_PRESET}/HDF5-*-Linux.tar.gz -C "${RUNNER_TEMP}/binary"
+          root=$(dirname "$(dirname "$(find "${RUNNER_TEMP}/binary" -path '*/bin/h5cc' | head -1)")")
+          ${{ github.workspace }}/.github/scripts/test-linux-binary.sh "${root}" "${RUNNER_TEMP}/binary-test"
+        shell: bash
+
+      - name: Publish binary (Linux glibc 2.28)
+        id: publish-ctest-binary
+        run: |
+          mkdir "${{ runner.workspace }}/buildlinux"
+          mkdir "${{ runner.workspace }}/buildlinux/hdf5"
+          cp ${{ github.workspace }}/${{ steps.set-file-base.outputs.SOURCE_BASE }}/LICENSE ${{ runner.workspace }}/buildlinux/hdf5
+          cp ${{ github.workspace }}/build/${GLIBC228_PRESET}/README.md ${{ runner.workspace }}/buildlinux/hdf5
+          cp ${{ github.workspace }}/build/${GLIBC228_PRESET}/*.tar.gz ${{ runner.workspace }}/buildlinux/hdf5
+          cd "${{ runner.workspace }}/buildlinux"
+          tar -zcvf ${{ steps.set-file-base.outputs.FILE_BASE }}-linux-x86_64_gcc.tar.gz hdf5
+        shell: bash
+
+      # Save files created by CTest script
+      - name: Save published binary (Linux glibc 2.28)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5
+        with:
+              name: tgz-linux-x86_64_gcc-binary
+              path: ${{ runner.workspace }}/buildlinux/${{ steps.set-file-base.outputs.FILE_BASE }}-linux-x86_64_gcc.tar.gz
+              if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
+
+  build_and_test_linux_intel:
+  # Linux (Ubuntu) w/ OneAPI
+  #
+    name: "Ubuntu Intel"
+    runs-on: ubuntu-24.04
+    needs: [check-secret]
+    steps:
+      - name: Get Actions
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
+      - name: Install Dependencies (Linux_intel)
+        run: |
+          sudo apt-get update
+          sudo apt-get install ninja-build graphviz pkg-config
+
+      - name: add oneAPI to env
+        uses: fortran-lang/setup-fortran@be037f0a45b1160f139d4ccd0b96f9e9bfd6a682 # v1
+        id: setup-fortran
+        with:
+          compiler: intel
+          version: '2025.0'
+
+      - name: Install CMake
+        uses: lukka/get-cmake@fffaaafeea488556c2c12dad60690008bc1caacb # latest
+        with:
+            cmakeVersion: ${{ inputs.cmake_version }}
+            ninjaVersion: latest
+
+      - name: Set file base name (Linux_intel)
+        id: set-file-base
+        run: |
+          FILE_NAME_BASE=$(echo "${{ inputs.file_base }}")
+          echo "FILE_BASE=$FILE_NAME_BASE" >> $GITHUB_OUTPUT
+          if [[ '${{ inputs.use_environ }}' == 'release' ]]
+          then
+            SOURCE_NAME_BASE=$(echo "${{ inputs.snap_name }}")
+          else
+            SOURCE_NAME_BASE=$(echo "hdfsrc")
+          fi
+          echo "SOURCE_BASE=$SOURCE_NAME_BASE" >> $GITHUB_OUTPUT
+
+      # Get files created by release script
+      - name: Get tgz-tarball (Linux_intel)
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6
+        with:
+              name: tgz-tarball
+              path: ${{ github.workspace }}
+
+      - name: List files for the space (Linux_intel)
+        run: |
+              ls -l ${{ github.workspace }}
+              ls ${{ runner.workspace }}
+
+      - name: Uncompress source (Linux_intel)
+        run: tar -zxvf ${{ github.workspace }}/${{ steps.set-file-base.outputs.FILE_BASE }}.tar.gz
+
+      - name: Run CTest (Linux_intel)
+        env:
+          FC: ${{ steps.setup-fortran.outputs.fc }}
+          CC: ${{ steps.setup-fortran.outputs.cc }}
+        run: |
+          cd "${{ runner.workspace }}/hdf5/${{ steps.set-file-base.outputs.SOURCE_BASE }}"
+          cmake --workflow --preset=${{ inputs.preset_name }}-Intel --fresh
+        shell: bash
+
+      # Use the binary the way a user would. The oneAPI compilers are on PATH
+      # from setup-fortran, as they are for a user who sources setvars.sh.
+      - name: Test binary (Linux_intel)
+        run: |
+          mkdir "${RUNNER_TEMP}/binary"
+          tar -xzf ${{ runner.workspace }}/hdf5/build/${{ inputs.preset_name }}-Intel/HDF5-*-Linux.tar.gz -C "${RUNNER_TEMP}/binary"
+          root=$(dirname "$(dirname "$(find "${RUNNER_TEMP}/binary" -path '*/bin/h5cc' | head -1)")")
+          ${{ github.workspace }}/.github/scripts/test-linux-binary.sh "${root}" "${RUNNER_TEMP}/binary-test"
+        shell: bash
+
+      - name: Publish binary (Linux_intel)
+        id: publish-ctest-binary
+        run: |
+          mkdir "${{ runner.workspace }}/build"
+          mkdir "${{ runner.workspace }}/build/hdf5"
+          cp ${{ runner.workspace }}/hdf5/${{ steps.set-file-base.outputs.SOURCE_BASE }}/LICENSE ${{ runner.workspace }}/build/hdf5
+          cp ${{ runner.workspace }}/hdf5/build/${{ inputs.preset_name }}-Intel/README.md ${{ runner.workspace }}/build/hdf5
+          cp ${{ runner.workspace }}/hdf5/build/${{ inputs.preset_name }}-Intel/*.tar.gz ${{ runner.workspace }}/build/hdf5
+          cd "${{ runner.workspace }}/build"
+          tar -zcvf ${{ steps.set-file-base.outputs.FILE_BASE }}-ubuntu-2404_intel.tar.gz hdf5
+        shell: bash
+
+      - name: List files in the space (Linux_intel)
+        run: |
+              ls ${{ github.workspace }}
+              ls -l ${{ runner.workspace }}
+
+      # Save files created by CTest script
+      - name: Save published binary (Linux_intel)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5
+        with:
+              name: tgz-ubuntu-2404_intel-binary
+              path: ${{ runner.workspace }}/build/${{ steps.set-file-base.outputs.FILE_BASE }}-ubuntu-2404_intel.tar.gz
+              if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
