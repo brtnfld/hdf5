@@ -1,7 +1,7 @@
 name: test 6897 binary checks
 on:
   push:
-    branches: [test/6897-ci]
+    branches: [ci-test-6897]
 permissions:
   contents: read
 jobs:
